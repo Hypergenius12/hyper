@@ -434,8 +434,8 @@
             const dt = Math.min((time - lastTime) / 16.66, 3);
             lastTime = time;
             
-            const w = document.documentElement.clientWidth;
-            const h = document.documentElement.clientHeight;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
 
             for (let i = 0; i < cardData.length; i++) {
                 const a = cardData[i];
@@ -445,32 +445,31 @@
                     a.vy *= 0.85;
                 } else {
                     const speed = Math.sqrt(a.vx*a.vx + a.vy*a.vy);
-                    const targetSpeed = 1.2;
-                    // Float smoothly towards target speed without random jitter
-                    if (speed > 0 && speed < targetSpeed * 2) {
-                        const boost = (targetSpeed - speed) * 0.02;
+                    const targetSpeed = 1.5; // Slightly faster for floaty feel
+                    if (speed > 0 && speed < targetSpeed) {
+                        const boost = (targetSpeed - speed) * 0.05;
                         a.vx += (a.vx / speed) * boost;
                         a.vy += (a.vy / speed) * boost;
+                    } else if (speed > targetSpeed * 1.5) {
+                        a.vx *= 0.95;
+                        a.vy *= 0.95;
                     }
                 }
                 
-                a.x += a.vx * dt;
-                a.y += a.vy * dt;
+                // Use fixed dt for perfectly smooth interpolation
+                a.x += a.vx;
+                a.y += a.vy;
 
                 // Wall Collisions
                 if (a.x < 0) {
-                    a.x = 0;
                     a.vx = Math.abs(a.vx);
                 } else if (a.x + a.width > w) {
-                    a.x = w - a.width;
                     a.vx = -Math.abs(a.vx);
                 }
 
                 if (a.y < 0) {
-                    a.y = 0;
                     a.vy = Math.abs(a.vy);
                 } else if (a.y + a.height > h) {
-                    a.y = h - a.height;
                     a.vy = -Math.abs(a.vy);
                 }
             }
@@ -486,15 +485,6 @@
                         a.y < b.y + b.height &&
                         a.y + a.height > b.y) {
                         
-                        // They overlap! Swap velocities
-                        const tempVx = a.vx;
-                        const tempVy = a.vy;
-                        a.vx = b.vx;
-                        a.vy = b.vy;
-                        b.vx = tempVx;
-                        b.vy = tempVy;
-
-                        // Calculate centers to determine push direction
                         const ax = a.x + a.width/2;
                         const ay = a.y + a.height/2;
                         const bx = b.x + b.width/2;
@@ -502,18 +492,25 @@
                         const dx = ax - bx;
                         const dy = ay - by;
 
-                        // Separate them
                         const overlapX = (a.width/2 + b.width/2) - Math.abs(dx);
                         const overlapY = (a.height/2 + b.height/2) - Math.abs(dy);
 
                         if (overlapX < overlapY) {
-                            // Push apart horizontally
-                            const push = (overlapX / 2) + 1;
+                            // Horizontal bounce
+                            const tempVx = a.vx;
+                            a.vx = b.vx;
+                            b.vx = tempVx;
+                            
+                            const push = (overlapX / 2) + 0.5;
                             a.x += dx > 0 ? push : -push;
                             b.x -= dx > 0 ? push : -push;
                         } else {
-                            // Push apart vertically
-                            const push = (overlapY / 2) + 1;
+                            // Vertical bounce
+                            const tempVy = a.vy;
+                            a.vy = b.vy;
+                            b.vy = tempVy;
+                            
+                            const push = (overlapY / 2) + 0.5;
                             a.y += dy > 0 ? push : -push;
                             b.y -= dy > 0 ? push : -push;
                         }
@@ -521,9 +518,15 @@
                 }
             }
 
-            // Render transforms
+            // Final safety clamp and render
             for (let i = 0; i < cardData.length; i++) {
                 const a = cardData[i];
+                
+                if (a.x < 0) a.x = 0;
+                if (a.x + a.width > w) a.x = w - a.width;
+                if (a.y < 0) a.y = 0;
+                if (a.y + a.height > h) a.y = h - a.height;
+                
                 // WebGL-like 3D Tilt
                 const rotY = Math.min(Math.max(a.vx * 4, -25), 25);
                 const rotX = Math.min(Math.max(-a.vy * 4, -25), 25);
