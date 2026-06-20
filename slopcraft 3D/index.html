@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SlopCraft 3D</title>
+    <meta name="description" content="Explore infinite procedurally generated planets with dungeons, magic wands, and epic bossfights.">
+    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/geometric.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>">
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <div class="start-content">
+            <h1 class="game-title" style="font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif; font-size: 6rem; text-transform: none; text-shadow: 4px 4px 0 #5c3a21; letter-spacing: -2px; transform: rotate(-3deg);">
+                <span style="color: #8b5a2b;">Slop</span><span style="color: #4da64d;">Craft</span> <span style="color: #aaa;">3D</span>
+            </h1>
+            <p class="subtitle" style="font-family: 'Comic Sans MS'; color: #aa8866; font-size: 1.5rem; margin-top: -10px;">It's literally dirt. Enjoy.</p>
+            <div style="margin: 16px 0; display: flex; align-items: center; gap: 10px; justify-content: center;">
+                <label style="color: #aa8866; font-family: 'Comic Sans MS'; font-size: 1rem;">World Seed:</label>
+                <input id="seed-input" type="text" placeholder="(random)" maxlength="40"
+                    style="background: rgba(0,0,0,0.5); border: 1px solid #664422; color: #eeddbb; padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; border-radius: 6px; width: 200px; outline: none;"/>
+            </div>
+            <div class="start-actions">
+                <button id="btn-new-game" class="menu-btn primary">New Game</button>
+            </div>
+            <p class="start-hint">Click to lock mouse · WASD to move · Space to jump</p>
+        </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-screen" class="hidden">
+        <div class="start-content">
+            <h1 class="game-title" style="font-size: 3rem;">Paused</h1>
+            <div class="start-actions" style="margin-top: 2rem;">
+                <button id="btn-resume" class="menu-btn primary">Resume</button>
+                <div style="margin: 20px 0; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <label style="display: block; color: white; margin-bottom: 10px; font-family: 'Outfit';">Render Distance: <span id="render-distance-val">8</span></label>
+                    <input type="range" id="render-distance-slider" min="2" max="16" value="8" style="width: 100%; cursor: pointer;">
+                </div>
+                <div style="margin: 20px 0; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <label style="display: block; color: white; margin-bottom: 10px; font-family: 'Outfit';">Field of View: <span id="fov-val">75</span></label>
+                    <input type="range" id="fov-slider" min="30" max="120" value="75" style="width: 100%; cursor: pointer;">
+                </div>
+                <div style="margin: 10px 0; background: rgba(0,0,0,0.5); padding: 16px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px;">
+                    <span style="color: rgba(255,255,255,0.7); font-family: 'Outfit'; font-size: 0.9rem;">World Seed:</span>
+                    <span id="current-seed-display" style="color: #aaddff; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; flex: 1;">-</span>
+                    <button id="btn-copy-seed" class="menu-btn" style="padding: 6px 14px; font-size: 0.8rem; margin: 0;">Copy</button>
+                </div>
+                <button id="btn-quit" class="menu-btn">Quit to Title</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Info (F3 Menu) -->
+    <div id="debug-info" class="hidden" style="position: absolute; top: 10px; left: 10px; color: white; text-shadow: 1px 1px 0 #000; font-family: 'JetBrains Mono', monospace; font-size: 14px; pointer-events: none; z-index: 1000; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px;">
+        <div id="debug-fps">FPS: 0</div>
+        <div id="debug-pos">XYZ: 0, 0, 0</div>
+        <div id="debug-biome">Biome: None</div>
+        <div id="debug-block">Looking at: None</div>
+    </div>
+    
+    <!-- Boss Health Bar -->
+    <div id="boss-health-container" style="display:none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 400px; text-align: center; pointer-events: none; z-index: 1000;">
+        <div id="boss-name" style="color: #ffaa00; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; letter-spacing: 2px; margin-bottom: 5px; text-transform: uppercase;">BOSS NAME</div>
+        <div style="width: 100%; height: 16px; background: rgba(0,0,0,0.8); border: 2px solid #555; border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.5);">
+            <div id="boss-health-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #ff0000, #ff5555); transition: width 0.2s ease-out;"></div>
+        </div>
+    </div>
+
+    <!-- HUD overlay for the game -->
+    <div id="error-overlay" style="display:none; position:absolute; top:10%; left:10%; right:10%; background:rgba(255,0,0,0.8); color:white; padding:20px; z-index:9999; font-family:monospace; border:3px solid white; white-space:pre-wrap;"></div>
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            var el = document.getElementById('error-overlay');
+            el.style.display = 'block';
+            el.innerHTML += "ERROR: " + msg + "\nURL: " + url + "\nLine: " + lineNo + ":" + columnNo + "\n" + (error ? error.stack : "") + "\n\n";
+            return false;
+        };
+        window.addEventListener("unhandledrejection", function(e) {
+            var el = document.getElementById('error-overlay');
+            el.style.display = 'block';
+            el.innerHTML += "UNHANDLED PROMISE REJECTION: " + e.reason + "\n\n";
+        });
+    </script>
+    
+    <!-- Geometric UI overlay -->
+    <div id="geometric-ui" class="hidden">
+        <div class="inv-wrapper">
+            <!-- Equipment column -->
+            <div class="equipment-col">
+                <div class="inv-slot armor-slot" data-slot="head"></div>
+                <div class="inv-slot armor-slot" data-slot="chest"></div>
+                <div class="inv-slot armor-slot" data-slot="legs"></div>
+                <div class="inv-slot armor-slot" data-slot="boots"></div>
+                <div style="height: 20px;"></div>
+                <div class="inv-slot offhand-slot" data-slot="offhand"></div>
+            </div>
+            
+            <div class="main-inv-col">
+                <!-- Main grid (3 rows of 9) -->
+                <div class="main-grid" id="main-inventory-grid">
+                    <!-- Filled by JS -->
+                </div>
+                
+                <div style="height: 20px;"></div>
+                
+                <!-- Inventory separated hotbar -->
+                <div class="main-grid" id="inv-hotbar-grid" style="grid-template-rows: 60px;">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+
+            <!-- Crafting Panel -->
+            <div class="crafting-col" id="crafting-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="color: white; font-weight: bold; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7;">Crafting</div>
+                    <button id="btn-recipe-book" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;">📖 Recipe Book</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="crafting-grid" id="crafting-grid">
+                        <!-- 4 crafting slots, filled by JS -->
+                    </div>
+                    <div style="font-size: 1.4rem; color: rgba(255,255,255,0.5);">→</div>
+                    <div class="inv-slot crafting-output" id="crafting-output"></div>
+                </div>
+                <div id="crafting-recipe-name" style="margin-top: 10px; font-size: 0.75rem; color: rgba(255,255,255,0.4); font-family: 'JetBrains Mono', monospace;"></div>
+            </div>
+
+            <!-- Wand Configurator -->
+            <div class="wand-config-col hidden" id="wand-config-panel">
+                <div style="color: white; font-weight: bold; margin-bottom: 10px; font-size: 1.2rem;" id="wand-config-title">Wand Configuration</div>
+                <div class="wand-slots-grid" id="wand-slots-grid" style="display: grid; grid-template-columns: repeat(2, 60px); gap: 10px;">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+
+            <!-- Chest Inventory Panel -->
+            <div class="crafting-col hidden" id="chest-panel" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="color: white; font-weight: bold; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7;">Chest</div>
+                </div>
+                <div class="main-grid" id="chest-grid" style="grid-template-rows: repeat(3, 60px);">
+                    <!-- 27 chest slots, filled by JS -->
+                </div>
+            </div>
+
+            <!-- Dungeon Menu Panel -->
+            <div class="crafting-col hidden" id="dungeon-menu-panel" style="margin-top: 20px; text-align: center;">
+                <div style="color: white; font-weight: bold; font-size: 1.2rem; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 2px;">Dungeon Entrance</div>
+                <p style="color: rgba(255,255,255,0.7); margin-bottom: 20px;">Beyond this door lies a dangerous dungeon.<br/>Do you wish to enter?</p>
+                <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" style="padding: 10px 20px; background: rgba(255,50,50,0.8); border: 2px solid white; color: white; cursor: pointer; font-weight: bold; border-radius: 4px;">Enter Dungeon</button>
+                <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" style="padding: 10px 20px; background: rgba(100,100,100,0.8); border: 2px solid white; color: white; cursor: pointer; font-weight: bold; border-radius: 4px; margin-left: 10px;">Leave</button>
+            </div>
+
+
+            <!-- Furnace Panel -->
+            <div class="crafting-col hidden" id="furnace-panel" style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="color: white; font-weight: bold; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7;">Furnace</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div class="inv-slot" id="furnace-input" style="border: 2px solid rgba(255,255,255,0.4);"></div>
+                        <div style="text-align: center; color: rgba(255,100,0,0.8); font-size: 1.2rem;" id="furnace-fire">🔥</div>
+                        <div class="inv-slot" id="furnace-fuel" style="border: 2px solid rgba(255,255,255,0.4);"></div>
+                    </div>
+                    <div style="width: 40px; height: 10px; background: rgba(0,0,0,0.5); border-radius: 5px; overflow: hidden; position: relative;">
+                        <div id="furnace-progress" style="width: 0%; height: 100%; background: white;"></div>
+                    </div>
+                    <div class="inv-slot crafting-output" id="furnace-output"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recipe Book Modal -->
+    <div id="recipe-book-modal" class="hidden" style="position: absolute; top: 10%; left: 50%; transform: translateX(-50%); width: 400px; max-height: 80%; background: rgba(20,20,25,0.95); border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 20px; color: white; overflow-y: auto; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px;">
+            <h2 style="margin: 0; font-size: 1.2rem;">Recipe Book</h2>
+            <button id="btn-close-recipes" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div id="recipe-list" style="font-size: 0.9rem; line-height: 1.5; color: #ccc;">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+    
+    <!-- Item Tooltip -->
+    <div id="item-tooltip" class="hidden"></div>
+    
+    <!-- Dragging Item Icon -->
+    <div id="drag-item-icon" class="hidden"></div>
+
+    <!-- Always visible geometric hotbar -->
+    <div id="geometric-hotbar">
+        <div class="hotbar-grid" id="main-hotbar-grid">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+    <script type="module" src="js/main.js?v=6"></script>
+</body>
+</html>
