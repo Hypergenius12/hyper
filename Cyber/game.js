@@ -511,6 +511,12 @@ RULES:
 
 // Initialize Game
 async function initGame() {
+    const userKey = localStorage.getItem('openrouter_key');
+    if (!userKey) {
+        document.getElementById('apiModal').classList.remove('hidden');
+        return;
+    }
+
     showLoading(true);
 
     if (gameState.themeColor) {
@@ -588,9 +594,11 @@ ${roomsList || 'none yet'}
     ];
 
     try {
-        const userKey = localStorage.getItem('openrouter_key') || prompt("Your old API key was revoked. Please paste a new free OpenRouter API Key to play (it will be saved in your browser):");
-        if (!userKey) throw new Error("API key is required to play.");
-        localStorage.setItem('openrouter_key', userKey);
+        const userKey = localStorage.getItem('openrouter_key');
+        if (!userKey) {
+            document.getElementById('apiModal').classList.remove('hidden');
+            throw new Error("API key is required to play.");
+        }
 
         const response = await fetch(CONFIG.apiEndpoint, {
             method: 'POST',
@@ -609,6 +617,11 @@ ${roomsList || 'none yet'}
         });
 
         if (!response.ok) {
+            if (response.status === 401) {
+                localStorage.removeItem('openrouter_key');
+                document.getElementById('apiModal').classList.remove('hidden');
+                throw new Error("API key was revoked or invalid.");
+            }
             let errorDetail = '';
             try {
                 const errorData = await response.json();
@@ -2895,6 +2908,15 @@ async function handleInput() {
 
 // Event Listeners
 function initEventListeners() {
+    document.getElementById('submitApiBtn')?.addEventListener('click', () => {
+        const key = document.getElementById('apiInput').value.trim();
+        if (key) {
+            localStorage.setItem('openrouter_key', key);
+            document.getElementById('apiModal').classList.add('hidden');
+            window.location.reload();
+        }
+    });
+
     elements.submitBtn.addEventListener('click', handleInput);
     elements.gameInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleInput();
