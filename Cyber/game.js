@@ -2841,7 +2841,11 @@ function resetGame() {
         isDead: false,
         hp: 100,
         maxHp: 100,
-        settings: gameState.settings
+        settings: gameState.settings || { scanlines: true, flicker: true, textAnimation: true, textSpeed: 'normal' },
+        achievements: gameState.achievements || {},
+        puzzlesCompleted: 0,
+        terminalsAccessed: 0,
+        commandCount: 0
     };
 
     localStorage.removeItem('exodusGameState');
@@ -3160,6 +3164,7 @@ function renderAchievements() {
 
 function unlockAchievement(id) {
     if (!ACHIEVEMENTS[id]) return;
+    if (!gameState.achievements) gameState.achievements = {};
     if (gameState.achievements[id]) return; // Already unlocked
 
     gameState.achievements[id] = { unlockedAt: Date.now() };
