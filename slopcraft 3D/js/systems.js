@@ -538,8 +538,11 @@ class UISystem {
             this.dragState.sourceType = type;
             this.dragState.sourceIndex = index;
 
-            if (e.button === 2 && slot.item.stackable && slot.count > 1) {
-                const dragCount = Math.floor(slot.count / 2);
+            if ((e.button === 2 || e.shiftKey) && slot.item.stackable && slot.count > 1) {
+                let dragCount = 1;
+                if (!e.shiftKey && e.button === 2) {
+                    dragCount = Math.floor(slot.count / 2);
+                }
                 slot.count -= dragCount;
                 this.dragState.itemData = { item: slot.item, count: dragCount };
                 this.dragState.isSplit = true;
@@ -549,6 +552,7 @@ class UISystem {
                 // If not split, temporarily clear the source slot so it doesn't render while dragging
                 if (type === 'inventory') this.currentPlayer.inventory.slots[index] = null;
                 else if (type === 'crafting') this.craftingSlots[index] = null;
+                else if (type === 'chest') this.chestInventory[index] = null;
                 else if (type === 'armor') this.currentPlayer.inventory.armor[index] = null;
                 else if (type === 'furnace') {
                     if (index === 0) this.furnaceData.input = null;
@@ -681,179 +685,82 @@ class UISystem {
             const temp = this.currentPlayer.inventory.armor[targetIndex];
             this.currentPlayer.inventory.armor[targetIndex] = this.currentPlayer.inventory.armor[srcIndex];
             this.currentPlayer.inventory.armor[srcIndex] = temp;
-        } else if (srcType === 'crafting' && targetType === 'inventory') {
-            // Move from crafting to inventory
-            const targetSlot = inv[targetIndex];
-            if (!targetSlot) {
-                inv[targetIndex] = itemData;
-                this.craftingSlots[srcIndex] = null;
-            } else {
-                this.craftingSlots[srcIndex] = targetSlot;
-                inv[targetIndex] = itemData;
-            }
-        } else if (srcType === 'inventory' && targetType === 'crafting') {
-            // Move from inventory to crafting
-            const targetCraft = this.craftingSlots[targetIndex];
-            if (!targetCraft) {
-                this.craftingSlots[targetIndex] = itemData;
-            } else if (targetCraft.item.type === itemData.item.type && targetCraft.item.subtype === itemData.item.subtype && itemData.item.stackable) {
-                const add = Math.min(itemData.count, itemData.item.maxStack - targetCraft.count);
-                targetCraft.count += add;
-                itemData.count -= add;
-                if (itemData.count > 0) {
-                    if (this.dragState.isSplit) inv[srcIndex].count += itemData.count;
-                    else inv[srcIndex] = itemData;
-                }
-            } else {
-                if (this.dragState.isSplit) inv[srcIndex].count += itemData.count;
-                else {
-                    this.craftingSlots[targetIndex] = itemData;
-                    inv[srcIndex] = targetCraft;
-                }
-            }
-        } else if (srcType === 'crafting' && targetType === 'crafting') {
-            const temp = this.craftingSlots[targetIndex];
-            this.craftingSlots[targetIndex] = itemData;
-            this.craftingSlots[srcIndex] = temp;
-        } else if (srcType === 'inventory' && targetType === 'inventory') {
-            const targetSlot = inv[targetIndex];
-            if (!targetSlot) {
-                inv[targetIndex] = itemData;
-            } else if (targetSlot.item.type === itemData.item.type && targetSlot.item.subtype === itemData.item.subtype && targetSlot.item.stackable) {
-                // Stack
-                const add = Math.min(itemData.count, targetSlot.item.maxStack - targetSlot.count);
-                targetSlot.count += add;
-                itemData.count -= add;
-                if (itemData.count > 0) {
-                    if (this.dragState.isSplit) inv[srcIndex].count += itemData.count;
-                    else inv[srcIndex] = itemData;
-                }
-            } else {
-                // Swap
-                if (this.dragState.isSplit) inv[srcIndex].count += itemData.count;
-                else {
-                    inv[srcIndex] = targetSlot;
-                    inv[targetIndex] = itemData;
-                }
-            }
-        } 
-        else if (srcType === 'wand' && targetType === 'wand') {
-            const temp = wand.spellSlots[targetIndex];
-            wand.spellSlots[targetIndex] = wand.spellSlots[srcIndex];
-            wand.spellSlots[srcIndex] = temp;
-        }
-        else if (srcType === 'inventory' && targetType === 'wand') {
-            if (itemData.item.type === 'spell') {
-                const targetSpell = wand.spellSlots[targetIndex];
-                wand.spellSlots[targetIndex] = itemData.item;
-                
-                // Swap spell back to inventory if present, else empty src
-                if (targetSpell) inv[srcIndex] = { item: targetSpell, count: 1 };
-                else inv[srcIndex] = null;
-            } else if (itemData.item.type === 'modifier') {
-                const targetSpell = wand.spellSlots[targetIndex];
-                if (targetSpell && targetSpell.addModifier) {
-                    const success = targetSpell.addModifier(itemData.item);
-                    if (success) {
-                        inv[srcIndex].count -= 1;
-                        if (inv[srcIndex].count <= 0) inv[srcIndex] = null;
-                        this.renderWandConfig(this.currentPlayer.inventory.slots[this.currentPlayer.selectedSlot].item);
-                    }
-                }
-            }
-        } else if (srcType === 'wand' && targetType === 'inventory') {
-            const targetSlot = inv[targetIndex];
-            // Only swap if empty or also a spell
-            if (!targetSlot) {
-                inv[targetIndex] = { item: wand.spellSlots[srcIndex], count: 1 };
-                wand.spellSlots[srcIndex] = null;
-            } else if (targetSlot.item.type === 'spell') {
-                wand.spellSlots[srcIndex] = targetSlot.item;
-                inv[targetIndex] = { item: itemData.item, count: 1 };
-            }
-        } else if (srcType === 'chest' || targetType === 'chest') {
-            let sList = srcType === 'inventory' ? inv : (srcType === 'chest' ? this.chestInventory : null);
-            let tList = targetType === 'inventory' ? inv : (targetType === 'chest' ? this.chestInventory : null);
-            
-            if (sList && tList) {
-                const targetSlot = tList[targetIndex];
-                if (targetSlot && targetSlot.item.type === itemData.item.type && targetSlot.item.subtype === itemData.item.subtype && targetSlot.item.stackable) {
-                    const add = Math.min(itemData.count, targetSlot.item.maxStack - targetSlot.count);
-                    targetSlot.count += add;
-                    itemData.count -= add;
-                    if (itemData.count > 0) {
-                        if (this.dragState.isSplit) sList[srcIndex].count += itemData.count;
-                        else sList[srcIndex] = itemData;
-                    }
-                } else {
-                    // Swap
-                    if (this.dragState.isSplit) {
-                        sList[srcIndex].count += itemData.count; // Return half to source if swapping
-                    } else {
-                        sList[srcIndex] = targetSlot;
-                        tList[targetIndex] = itemData;
-                    }
-                }
-            }
-        } else if (srcType === 'furnace' || targetType === 'furnace') {
+        const standardTypes = ['inventory', 'crafting', 'chest', 'furnace'];
+        if (standardTypes.includes(srcType) && standardTypes.includes(targetType)) {
             if (targetType === 'furnace' && targetIndex === 2) {
                 // Cannot drop into output
                 this.cancelDrag();
                 return;
             }
-            
-            // For simplicity, just swap or place item directly. Furnace slots are not a simple array.
-            const getFurnaceSlot = (i) => i === 0 ? this.furnaceData.input : (i === 1 ? this.furnaceData.fuel : this.furnaceData.output);
-            const setFurnaceSlot = (i, val) => {
-                if (i === 0) this.furnaceData.input = val;
-                else if (i === 1) this.furnaceData.fuel = val;
-                else if (i === 2) this.furnaceData.output = val;
+
+            const getListSlot = (lType, idx) => {
+                if (lType === 'inventory') return inv[idx];
+                if (lType === 'crafting') return this.craftingSlots[idx];
+                if (lType === 'chest') return this.chestInventory[idx];
+                if (lType === 'furnace') return idx === 0 ? this.furnaceData.input : (idx === 1 ? this.furnaceData.fuel : this.furnaceData.output);
+                return null;
+            };
+            const setListSlot = (lType, idx, val) => {
+                if (lType === 'inventory') inv[idx] = val;
+                else if (lType === 'crafting') this.craftingSlots[idx] = val;
+                else if (lType === 'chest') this.chestInventory[idx] = val;
+                else if (lType === 'furnace') {
+                    if (idx === 0) this.furnaceData.input = val;
+                    else if (idx === 1) this.furnaceData.fuel = val;
+                    else if (idx === 2) this.furnaceData.output = val;
+                }
             };
 
-            if (srcType === 'inventory' && targetType === 'furnace') {
-                const targetSlot = getFurnaceSlot(targetIndex);
-                if (targetSlot && targetSlot.item.type === itemData.item.type && targetSlot.item.subtype === itemData.item.subtype && targetSlot.item.stackable) {
-                    const add = Math.min(itemData.count, targetSlot.item.maxStack - targetSlot.count);
+            const targetSlot = getListSlot(targetType, targetIndex);
+            let keepDragging = false;
+
+            if (!targetSlot) {
+                if (e.shiftKey && itemData.count > 1) {
+                    setListSlot(targetType, targetIndex, { item: itemData.item, count: 1 });
+                    itemData.count -= 1;
+                    keepDragging = true;
+                } else {
+                    setListSlot(targetType, targetIndex, itemData);
+                }
+            } else if (targetSlot.item.type === itemData.item.type && targetSlot.item.subtype === itemData.item.subtype && targetSlot.item.stackable) {
+                const add = (e.shiftKey && itemData.count > 1) ? 1 : Math.min(itemData.count, targetSlot.item.maxStack - targetSlot.count);
+                if (add > 0) {
                     targetSlot.count += add;
                     itemData.count -= add;
-                    if (itemData.count > 0) {
-                        if (this.dragState.isSplit) inv[srcIndex].count += itemData.count;
-                        else inv[srcIndex] = itemData;
-                    }
-                } else {
-                    if (this.dragState.isSplit) {
-                        inv[srcIndex].count += itemData.count;
+                }
+                if (itemData.count > 0) {
+                    if (e.shiftKey && add > 0) {
+                        keepDragging = true;
                     } else {
-                        setFurnaceSlot(targetIndex, itemData);
-                        inv[srcIndex] = targetSlot;
+                        if (this.dragState.isSplit) {
+                            const s = getListSlot(srcType, srcIndex);
+                            if (s) s.count += itemData.count;
+                            else setListSlot(srcType, srcIndex, itemData);
+                        } else {
+                            setListSlot(srcType, srcIndex, itemData);
+                        }
                     }
                 }
-            } else if (srcType === 'furnace' && targetType === 'inventory') {
-                const targetSlot = inv[targetIndex];
-                if (targetSlot && targetSlot.item.type === itemData.item.type && targetSlot.item.subtype === itemData.item.subtype && targetSlot.item.stackable) {
-                    const add = Math.min(itemData.count, targetSlot.item.maxStack - targetSlot.count);
-                    targetSlot.count += add;
-                    itemData.count -= add;
-                    if (itemData.count > 0) {
-                        if (this.dragState.isSplit) getFurnaceSlot(srcIndex).count += itemData.count;
-                        else setFurnaceSlot(srcIndex, itemData);
-                    }
-                } else {
-                    if (this.dragState.isSplit) {
-                        getFurnaceSlot(srcIndex).count += itemData.count;
-                    } else {
-                        inv[targetIndex] = itemData;
-                        setFurnaceSlot(srcIndex, targetSlot);
-                    }
-                }
-            } else if (srcType === 'furnace' && targetType === 'furnace') {
-                const targetSlot = getFurnaceSlot(targetIndex);
+            } else {
+                // Swap
                 if (this.dragState.isSplit) {
-                    getFurnaceSlot(srcIndex).count += itemData.count;
+                    const s = getListSlot(srcType, srcIndex);
+                    if (s) s.count += itemData.count;
+                    else setListSlot(srcType, srcIndex, itemData);
                 } else {
-                    setFurnaceSlot(targetIndex, itemData);
-                    setFurnaceSlot(srcIndex, targetSlot);
+                    setListSlot(srcType, srcIndex, targetSlot);
+                    setListSlot(targetType, targetIndex, itemData);
                 }
+            }
+
+            if (keepDragging) {
+                this.elements.dragIcon._cacheKey = null; // force update
+                this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData);
+                this._updateInventory();
+                this._updateCraftingSlots();
+                this._updateArmorSlots();
+                this._updateFurnaceSlots();
+                return; // Exit early, do not clear drag state
             }
         }
 
