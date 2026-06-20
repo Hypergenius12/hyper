@@ -5,7 +5,7 @@
 // Configuration
 const CONFIG = {
     apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    model: 'nex-agi/nex-n2-pro:free',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
     maxTokens: 2000
 };
 
@@ -979,11 +979,13 @@ function processAIResponse(response, isInitial = false) {
     }
 
     // Check for multi-floor explorer
-    if (!gameState.visitedFloors) {
-        gameState.visitedFloors = new Set();
+    if (!gameState.visitedFloors || !Array.isArray(gameState.visitedFloors)) {
+        gameState.visitedFloors = [];
     }
-    gameState.visitedFloors.add(gameState.currentFloor);
-    if (gameState.visitedFloors.size >= 3) {
+    if (!gameState.visitedFloors.includes(gameState.currentFloor)) {
+        gameState.visitedFloors.push(gameState.currentFloor);
+    }
+    if (gameState.visitedFloors.length >= 3) {
         unlockAchievement('multi_floor_explorer');
     }
 
@@ -2893,12 +2895,11 @@ async function handleInput() {
     let retryCount = 0;
     const maxRetries = 2;
 
+    let aiResponse = null;
+
     while (retryCount <= maxRetries) {
         try {
-            const response = await sendToAI(input);
-            if (response) {
-                processAIResponse(response);
-            }
+            aiResponse = await sendToAI(input);
             break; // Success, exit retry loop
         } catch (error) {
             console.error('Error:', error);
@@ -2920,6 +2921,15 @@ async function handleInput() {
                 // Wait before retry
                 await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
             }
+        }
+    }
+
+    if (aiResponse) {
+        try {
+            processAIResponse(aiResponse);
+        } catch (processError) {
+            console.error('Error processing AI response:', processError);
+            displayError(`SYSTEM ERROR during response processing: ${processError.message}`);
         }
     }
 
