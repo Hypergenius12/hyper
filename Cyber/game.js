@@ -5,7 +5,7 @@
 // Configuration
 const CONFIG = {
     apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    model: 'google/gemini-3.5-flash',
+    model: 'nex-agi/nex-n2-pro:free',
     maxTokens: 2000
 };
 
@@ -641,6 +641,15 @@ ${roomsList || 'none yet'}
         }
 
         const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(`OpenRouter Error: ${data.error.message || JSON.stringify(data.error)}`);
+        }
+        
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            throw new Error(`Invalid response format from AI: ${JSON.stringify(data)}`);
+        }
+
         const aiMessage = data.choices[0].message.content;
 
         gameState.conversationHistory.push({
