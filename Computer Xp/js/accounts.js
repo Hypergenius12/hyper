@@ -172,7 +172,7 @@ window.renderLoginScreen = function() {
     addBtn.className = 'login-user';
     addBtn.style.marginTop = '15px';
     addBtn.onclick = function() { showCreateAccountDialog(); };
-    addBtn.innerHTML = '<img src="Windows XP Icons/add.png" style="width:16px; margin-right:10px; vertical-align:middle;"><span style="font-size:14px; color:white; text-shadow:1px 1px 2px black;">Create New Account</span>';
+    addBtn.innerHTML = '<img src="Windows XP Icons/Add.png" style="width:16px; margin-right:10px; vertical-align:middle;"><span style="font-size:14px; color:white; text-shadow:1px 1px 2px black;">Create New Account</span>';
     rightPanel.appendChild(addBtn);
     
     // Reset password area

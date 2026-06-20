@@ -484,14 +484,209 @@
             </div>
         </div>
         <div class="window-body" style="padding:0; margin:0; width:100%; height:calc(100% - 24px); display:flex; background-color:black;">
+            <div class="menu-dropdown-container">
+                <span onclick="toggleAppMenu(this, event)"><u>F</u>ile</span>
+                <div class="app-menu-dropdown">
+                    <div class="app-menu-item" onclick="closeTaskManager()">Exit Task Manager</div>
+                </div>
+            </div>
+            <div class="menu-dropdown-container">
+                <span onclick="toggleAppMenu(this, event)"><u>H</u>elp</span>
+                <div class="app-menu-dropdown">
+                    <div class="app-menu-item" onclick="if(typeof openHelpTopic==='function') openHelpTopic('taskmgr'); else { openProgram('help-window'); showHelpTopic('taskmgr'); }">Help Topics</div>
+                    <div class="app-menu-divider"></div>
+                    <div class="app-menu-item" onclick="xpDialog('About Task Manager', 'Task Manager\nVersion 5.1', 'info')">About Task Manager</div>
+                </div>
+            </div>
+        </div>
+        <div class="content" style="flex-direction: column; background: #ECE9D8; padding: 10px; display: flex; height: calc(100% - 60px);">
+            <div class="tabs" style="margin-bottom: 5px;">
+                <div class="tab active" id="taskmgr-tab-btn-apps" onclick="switchTaskmgrTab('apps')">Applications</div>
+                <div class="tab" id="taskmgr-tab-btn-perf" onclick="switchTaskmgrTab('perf')">Performance</div>
+            </div>
+            <div class="tab-pane" id="taskmgr-tab-apps" style="display: flex; flex-direction: column; flex: 1; padding: 0; overflow: hidden; background: transparent;">
+                <div style="border: 1px solid #ACA899; background: #FFF; width: 100%; flex: 1; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-family: Tahoma; font-size: 11px;">
+                        <thead style="background: #ECE9D8; border-bottom: 1px solid #ACA899; position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th style="padding: 2px; text-align: left; border-right: 1px solid #ACA899;">Task</th>
+                                <th style="padding: 2px; text-align: right; border-right: 1px solid #ACA899; width: 50px;">CPU</th>
+                                <th style="padding: 2px; text-align: right; border-right: 1px solid #ACA899; width: 80px;">Mem Usage</th>
+                                <th style="padding: 2px; text-align: center; width: 60px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskmgr-tbody">
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 5px; display: flex; justify-content: flex-end;">
+                    <button onclick="endSelectedTask()" style="font-family: Tahoma; font-size: 11px; padding: 3px 12px; background: #ECE9D8; border: 1px solid #ACA899; cursor: pointer; box-shadow: inset -1px -1px 1px #888, inset 1px 1px 1px #fff;">End Task</button>
+                </div>
+            </div>
+            <div class="tab-pane" id="taskmgr-tab-perf" style="display: none; flex-direction: column; flex: 1; padding: 0; overflow: hidden; background: transparent;">
+                <div style="width: 100%; display: flex; flex-direction: column; flex: 1; font-family: Tahoma; font-size: 11px;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">CPU Usage History</div>
+                    <div style="flex: 1; border: 1px solid #00ff00; background: black; position: relative; min-height: 120px;">
+                        <canvas id="taskmgr-cpu-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+                    </div>
+                    <div style="margin-top: 8px; display: flex; justify-content: space-between; width: 100%;">
+                        <span>CPU Usage:</span>
+                        <span id="taskmgr-cpu-percentage" style="font-weight: bold; color: green; font-family: monospace; font-size: 12px;">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 5px; font-family:Tahoma; font-size:10px; color:#888;">
+                Ctrl+Shift+Esc to open Task Manager.
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Background Frame (For Matrix/Animated Wallpapers) -->
+    <iframe id="bg-iframe" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; border:none; pointer-events:none;"></iframe>
+
+    <div id="desktop" oncontextmenu="showContextMenu(event, 'desktop'); return false;" ondrop="dropDesktop(event)"
+        ondragover="allowDrop(event)" onmousedown="if(typeof startDesktopSelection === 'function') startDesktopSelection(event);">
+        <div id="desktop-selection-box" style="display:none; position:absolute; border:1px solid rgba(0,0,200,0.6); background:rgba(0, 50, 255, 0.2); z-index:9000; pointer-events:none;"></div>
+    </div>
+
+    
+    <!-- Start Menu Item Context Menu -->
+    <div id="context-menu-startitem" class="context-menu" style="position: absolute; background: #fff; border: 1px solid #ACA899; box-shadow: 3px 3px 0px rgba(0,0,0,0.3); display: none; flex-direction: column; z-index: 100005; padding: 2px; min-width: 150px;">
+        <div class="context-item" id="ctx-startitem-pin" style="font-weight: bold;">Pin to Start menu</div>
+        <div class="context-divider"></div>
+        <div class="context-item" id="ctx-startitem-open">Open</div>
+        <div class="context-item" onclick="document.getElementById('context-menu-startitem').style.display='none'; if(typeof openFileLocation==='function') openFileLocation();">Open File Location</div>
+    </div>
+        <div id="context-menu-desktop" class="context-menu-container"
+        style="display:none; flex-direction:column; position:absolute; z-index:9999; background:#fff; border:1px solid #ACA899; box-shadow:2px 2px 5px rgba(0,0,0,0.2); padding:2px; min-width:150px; font-family:Tahoma; font-size:11px;">
+        <div class="context-item has-submenu">
+            Arrange Icons By <span style="font-size: 8px; float:right;">&#x25B6;</span>
+            <div class="context-submenu">
+                <div class="context-item" onclick="arrangeIcons('default')"><span class="menu-check" id="check-default"><div class="menu-check-icon"></div></span> Default</div>
+                <div class="context-item" onclick="arrangeIcons('name')"><span class="menu-check" id="check-name"></span> Name</div>
+                <div class="context-item" onclick="arrangeIcons('size')"><span class="menu-check"
+                        id="check-size"></span> Size</div>
+                <div class="context-item" onclick="arrangeIcons('type')"><span class="menu-check"
+                        id="check-type"></span> Type</div>
+                <div class="context-item" onclick="arrangeIcons('modified')"><span class="menu-check"
+                        id="check-modified"></span> Modified</div>
+                <div class="context-divider"></div>
+                <div class="context-item" onclick="toggleAutoArrange()"><span class="menu-check"
+                        id="check-auto"></span> Auto Arrange</div>
+                <div class="context-item" onclick="toggleGridAlign()"><span class="menu-check" id="check-grid"><div class="menu-check-icon"></div></span>
+                    Align to Grid</div>
+            </div>
+        </div>
+        <div class="context-item" onclick="refreshDesktop()">Refresh</div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="triggerPaste()">Paste (Ctrl+V)</div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="createNew('folder')">New Folder</div>
+        <div class="context-item" onclick="createNew('txt')">New Text Document</div>
+        <div class="context-item" onclick="importHostFiles()">Import File(s)...</div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="document.getElementById('context-menu-desktop').style.display='none'; openSettings('desktop');">Properties</div>
+    </div>
+
+    
+    <!-- Context Menu for Folder/Explorer -->
+    <div id="context-menu-folder" class="context-menu-container"
+        style="display:none; position:absolute; z-index:9999; background:#fff; border:1px solid #ACA899; box-shadow:2px 2px 5px rgba(0,0,0,0.2); width:150px; flex-direction:column; padding:2px; font-family:Tahoma; font-size:11px;">
+        <div class="context-item" style="color:#aaa;">View</div>
+        <div class="context-item" style="color:#aaa;">&#x25A1;</div>
+        <div class="context-item" onclick="document.getElementById('context-menu-folder').style.display='none'; if(window.currentPath) window.renderExplorer(window.currentPath);">Refresh</div>
+        <div class="app-menu-divider"></div>
+        <div class="context-item" id="context-item-hidden-files" onclick="document.getElementById('context-menu-folder').style.display='none'; if(typeof window.toggleHiddenFiles === 'function') window.toggleHiddenFiles();">Show Hidden Files</div>
+        <div class="app-menu-divider"></div>
+        <div class="context-item" style="color:#aaa;">Properties</div>
+    </div>
+    <div id="context-menu-file" class="context-menu-container"
+        style="display:none; flex-direction:column; position:absolute; z-index:9999; background:#fff; border:1px solid #ACA899; box-shadow:2px 2px 5px rgba(0,0,0,0.2); padding:2px; min-width:150px; font-family:Tahoma; font-size:11px;">
+        <div class="context-item" style="font-weight:bold;" onclick="triggerFileOpen()">Open</div>
+        <div class="context-item" id="menu-item-open-location" style="display:none;" onclick="if(typeof openFileLocation==='function') openFileLocation();">Open File Location</div>
+        <div class="context-item" id="menu-item-pin" style="display:none;" onclick="pinSelectedFile()">Pin to Start Menu</div>
+        <div class="context-item" id="menu-item-unpin" style="display:none;" onclick="unpinSelectedFile()">Unpin from Start Menu</div>
+        <div class="context-item has-submenu" id="menu-item-open-with" style="display:none;">
+            Open With <span style="font-size: 8px; float:right;">&#x25B6;</span>
+            <div class="context-submenu" id="submenu-open-with">
+            </div>
+        </div>
+        <div class="context-item" onclick="if(typeof openHelpForSelected==='function') openHelpForSelected();">Help and
+            Support Center</div>
+        <div class="context-item" id="menu-item-restore" style="display:none;" onclick="restoreFile()">Restore</div>
+        <div class="context-divider"></div>
+        <div class="context-item has-submenu">
+            Send To <span style="font-size: 8px; float:right;">&#x25B6;</span>
+            <div class="context-submenu">
+                <div class="context-item" onclick="zipSelected()">Compressed (zipped) Folder</div>
+                <div class="context-item" onclick="xpDialog('Send To', 'Bluetooth device not found.', 'error')">
+                    Bluetooth Device</div>
+                <div class="context-item" onclick="sendToMailRecipient()">Mail Recipient</div>
+            </div>
+        </div>
+        <div class="context-item" id="menu-item-extract" style="display:none;" onclick="unzipSelected()">Extract All...
+        </div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="triggerCopy()">Copy (Ctrl+C)</div>
+        <div class="context-item" onclick="triggerCutContextMenu()">Cut (Ctrl+X)</div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="triggerDeleteContextMenu()">Delete (Del)</div>
+        <div class="context-item" onclick="triggerRenameContextMenu()">Rename (F2)</div>
+        <div class="context-item" onclick="triggerCreateShortcut()">Create Shortcut</div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="document.getElementById('context-menu-file').style.display='none'; addToFavorites()">Add to Favorites</div>
+        <div class="context-item" id="menu-item-properties"
+                onclick="document.getElementById('context-menu-file').style.display='none'; if(typeof showFileProperties==='function') showFileProperties(); else openSettings();">Properties</div>
+    </div>
+
+    <!-- Regedit Context Menu -->
+    <div id="context-menu-regedit" class="context-menu-container"
+        style="display:none; flex-direction:column; position:absolute; z-index:9999; background:#fff; border:1px solid #ACA899; box-shadow:2px 2px 5px rgba(0,0,0,0.2); padding:2px; min-width:150px; font-family:Tahoma; font-size:11px;">
+        <div class="context-item has-submenu">
+            New <span style="font-size: 8px; float:right;">&#x25B6;</span>
+            <div class="context-submenu">
+                <div class="context-item" onclick="if(typeof regeditNewKey==='function') regeditNewKey()">Key</div>
+                <div class="context-divider"></div>
+                <div class="context-item" onclick="if(typeof regeditNewString==='function') regeditNewString()">String Value</div>
+                <div class="context-item" onclick="if(typeof regeditNewDword==='function') regeditNewDword()">DWORD Value</div>
+            </div>
+        </div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="if(typeof regeditDeleteSelected==='function') regeditDeleteSelected()">Delete</div>
+        <div class="context-item" onclick="if(typeof regeditRenameSelected==='function') regeditRenameSelected()">Rename</div>
+    </div>
+
+    <!-- Taskbar Context Menu -->
+    <div id="context-menu-taskbar" class="context-menu-container" style="display:none; flex-direction:column; position:absolute; z-index:999999; background:#fff; border:1px solid #ACA899; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); width: 150px;">
+        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar').style.display='none'; if(window.contextTaskbarWinId && typeof window.restoreWindow==='function') window.restoreWindow(window.contextTaskbarWinId);">Restore</div>
+        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar').style.display='none'; if(window.contextTaskbarWinId && typeof window.minimizeWindow==='function') window.minimizeWindow(window.contextTaskbarWinId);">Minimize</div>
+        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar').style.display='none'; if(window.contextTaskbarWinId && typeof window.maximizeWindow==='function') window.maximizeWindow(window.contextTaskbarWinId);">Maximize</div>
+        <div class="context-divider"></div>
+        <div class="context-item" style="font-weight:bold;" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar').style.display='none'; if(window.contextTaskbarWinId && typeof window.closeWindow==='function') window.closeWindow(window.contextTaskbarWinId);">Close</div>
+    </div>
+    
+    <!-- XP Tour Window -->
+    <div id="xptour-window" class="window" style="width:800px; height:600px; display:none; background:#000; position:absolute; top:50px; left:50px; box-shadow: 2px 2px 10px rgba(0,0,0,0.5);" onmousedown="bringToFront(this)">
+        <div class="title-bar" id="xptour-window-title">
+            <div class="title-bar-text">
+                <img src="Windows XP Icons/Tour XP.png" class="sys-icon-small" style="margin-right:5px;" onerror="this.style.display='none'"> Take a Tour of Windows XP
+            </div>
+            <div class="window-controls">
+                <div class="win-btn" onclick="minimizeWindow('xptour-window')"><img src="Windows XP Icons/Minimize.png" alt="-"></div>
+                <div class="win-btn" onclick="maximizeWindow('xptour-window')"><img src="Windows XP Icons/Maximize.png" alt="[]"></div>
+                <div class="win-btn" onclick="closeWindow('xptour-window'); window.stopXpTour();"><img src="Windows XP Icons/Exit.png" alt="X"></div>
+            </div>
+        </div>
+        <div class="window-body" style="padding:0; margin:0; width:100%; height:calc(100% - 24px); display:flex; background-color:black;">
             <div id="xptour-content" style="flex:1; width:100%; height:100%;"></div>
         </div>
     </div>
     <div class="window" id="main-window" onmousedown="bringToFront(this)">
         <div class="title-bar" id="main-window-title">
-            <span style="display:flex; align-items:center; gap:5px;"><img id="main-window-icon" src="Windows XP Icons/mouse.png"
+            <span style="display:flex; align-items:center; gap:5px;"><img id="main-window-icon" src="Windows XP Icons/Mouse.png"
                     class="sys-icon-small"
-                    onerror="this.src='data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='16' height='16' fill='blue'/></svg>'">
+                    onerror="this.src='Windows XP Icons/Application Window.png'">
                 Data Miner</span>
             <div class="window-controls">
                 <div class="win-btn" onclick="minimizeWindow('main-window')"><img src="Windows XP Icons/Minimize.png" alt="-"></div>
@@ -571,7 +766,7 @@
     <div class="window" id="tetris-window" onmousedown="bringToFront(this)">
         <div class="title-bar" id="tetris-window-title">
             <span style="display:flex; align-items:center; gap:5px;">
-                <img src="Windows XP Icons/tetris.webp" class="sys-icon-small" style="width:16px;height:16px;"> Tetris XP
+                <img src="Windows XP Icons/Tetris.png" class="sys-icon-small" style="width:16px;height:16px;"> Tetris XP
             </span>
             <div class="window-controls">
                 <div class="win-btn" onclick="minimizeWindow('tetris-window')"><img src="Windows XP Icons/Minimize.png" alt="-"></div>
@@ -654,7 +849,7 @@
             style="flex-direction: column; align-items: center; background: #C0C0C0; border: 3px outset #ECE9D8; padding: 10px;">
             <div class="minesweeper-header">
                 <div class="mine-display" id="mine-count">010</div>
-                <button id="mine-face" onclick="initMinesweeper()"><img src="minesweeper icons/happy.png" style="height:80%;"></button>
+                <button id="mine-face" onclick="initMinesweeper()"><img src="Minesweeper Icons/Happy.png" style="height:80%;"></button>
                 <div class="mine-display" id="mine-timer">000</div>
             </div>
             <div id="minesweeper-grid" class="minesweeper-grid"></div>
@@ -730,7 +925,7 @@
             </div>
         </div>
         <div class="explorer-toolbar">
-            <button onclick="explorerGoBack()"><img src="Windows XP Icons/back.png" onerror="this.style.display='none'" class="sys-icon-small" style="vertical-align:middle; margin-right:3px;"> Back</button>
+            <button onclick="explorerGoBack()"><img src="Windows XP Icons/Back.png" onerror="this.style.display='none'" class="sys-icon-small" style="vertical-align:middle; margin-right:3px;"> Back</button>
             <button onclick="explorerGoUp()"><img src="Windows XP Icons/Folder Closed.png" class="sys-icon-small" style="vertical-align:middle; margin-right:3px;"> Up</button>
             <button onclick="if(typeof triggerSearch==='function') triggerSearch()"><img src="Windows XP Icons/Search.png" onerror="this.src='Windows XP Icons/My Computer.png'" class="sys-icon-small" style="vertical-align:middle; margin-right:3px;"> Search</button>
             <button><img src="Windows XP Icons/Folder Closed.png" class="sys-icon-small" style="vertical-align:middle; margin-right:3px;"> Folders</button>
@@ -1033,7 +1228,7 @@
                             <option value="silver">Silver</option>
                         </select>
                         <div
-                            style="text-align: center; border: 2px inset #ECE9D8; height: 120px; background: url('Windows XP Icons/bliss_bg.png') center/cover; display:flex; align-items:center; justify-content:center; margin-top: 10px; border-radius:3px;">
+                            style="text-align: center; border: 2px inset #ECE9D8; height: 120px; background: url('Windows XP Icons/Bliss.png') center/cover; display:flex; align-items:center; justify-content:center; margin-top: 10px; border-radius:3px;">
                             <div
                                 style="background: rgba(255,255,255,0.8); padding: 5px; border: 1px solid #0055E5; color: black; font-weight: bold; border-radius:2px;">
                                 Preview</div>
@@ -1047,7 +1242,7 @@
                         <div
                             style="flex:1; border:2px inset #ECE9D8; height:120px; background: #004E98; border-radius:3px; display:flex; align-items:center; justify-content:center;">
                             <div id="desktop-preview"
-                                style="width:80%; height:80%; background:url('Windows XP Icons/bliss_bg.png') center/cover; border:1px solid #fff; box-shadow:0 0 5px rgba(0,0,0,0.5);">
+                                style="width:80%; height:80%; background:url('Windows XP Icons/Bliss.png') center/cover; border:1px solid #fff; box-shadow:0 0 5px rgba(0,0,0,0.5);">
                             </div>
                         </div>
                         <div style="width:180px;">
@@ -1127,7 +1322,7 @@
                                 <div id="user-row-admin" class="cp-item"
                                     style="width:100%; justify-content:flex-start; height:auto; padding:8px;"
                                     onclick="showUserSettings('Administrator')">
-                                    <img src="Windows XP Icons/admin_login_icon.png"
+                                    <img src="Windows XP Icons/Admin Login Icon.png"
                                         style="width:32px; height:32px; border:1px solid #ACA899;">
                                     <div style="display:flex; flex-direction:column; text-align:left;">
                                         <span
@@ -1140,7 +1335,7 @@
                                 <div id="user-row-guest" class="cp-item"
                                     style="width:100%; justify-content:flex-start; height:auto; padding:8px;"
                                     onclick="showUserSettings('Guest')">
-                                    <img src="Windows XP Icons/flower.jpeg"
+                                    <img src="Windows XP Icons/Flower.jpeg"
                                         style="width:32px; height:32px; border:1px solid #ACA899;">
                                     <div style="display:flex; flex-direction:column; text-align:left;">
                                         <span style="font-size:11px; font-weight:bold; margin-top:0;">Guest</span>
@@ -1664,86 +1859,6 @@
         <div onmousedown="setPaintColor('#FF00FF', event)" style="width: 15px; height: 15px; background: #F0F; border: 1px inset #fff;"></div>
     </div>
 </div>
-<div style="flex:1; overflow:auto; background:#808080; padding:10px;">
-                <canvas id="paint-canvas" width="600" height="400" style="background:#FFF; cursor:crosshair; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); transform-origin: top left; transition: transform 0.2s;"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Registry Editor Window -->
-    <div class="window" id="regedit-window" onmousedown="bringToFront(this)"
-        style="display:none; width: 600px; height: 400px; z-index:1000; background: #fff;">
-        <div class="title-bar" id="regedit-window-title">
-            <span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/Registry Editor.png"
-                    class="sys-icon-small" onerror="this.style.display='none'"> Registry Editor</span>
-            <div class="window-controls">
-                <div class="win-btn" onclick="minimizeWindow('regedit-window')"><img src="Windows XP Icons/Minimize.png" alt="-"></div>
-                <div class="win-btn" onclick="maximizeWindow('regedit-window')"><img src="Windows XP Icons/Maximize.png" alt="[]"></div>
-                <div class="win-btn" onclick="closeWindow('regedit-window')"><img src="Windows XP Icons/Exit.png" alt="X"></div>
-            </div>
-        </div>
-        <div class="menu-bar">
-            <div class="menu-dropdown-container">
-                <span onclick="toggleAppMenu(this, event)"><u>F</u>ile</span>
-                <div class="app-menu-dropdown">
-                    <div class="app-menu-item" onclick="closeWindow('regedit-window')">Exit</div>
-                </div>
-            </div>
-            <div class="menu-dropdown-container">
-                <span onclick="toggleAppMenu(this, event)"><u>E</u>dit</span>
-                <div class="app-menu-dropdown">
-                    <div class="app-menu-item has-submenu" style="position:relative;">
-                        New <span style="float:right;">&#x25B6;</span>
-                        <div class="app-submenu" style="position:absolute; left:100%; top:0; background:#fff; border:1px solid #ACA899; box-shadow:2px 2px 5px rgba(0,0,0,0.2); display:none; flex-direction:column; min-width:120px;">
-                            <div class="app-menu-item" onclick="regeditNewKey()">Key</div>
-                            <div class="app-menu-divider"></div>
-                            <div class="app-menu-item" onclick="regeditNewString()">String Value</div>
-                            <div class="app-menu-item" onclick="regeditNewDword()">DWORD Value</div>
-                        </div>
-                    </div>
-                    <div class="app-menu-divider"></div>
-                    <div class="app-menu-item" onclick="regeditDeleteSelected()">Delete</div>
-                    <div class="app-menu-item" onclick="regeditRenameSelected()">Rename</div>
-                </div>
-            </div>
-            <div class="menu-dropdown-container">
-                <span onclick="toggleAppMenu(this, event)"><u>H</u>elp</span>
-                <div class="app-menu-dropdown">
-                    <div class="app-menu-item" onclick="if(typeof openHelpTopic==='function') openHelpTopic('regedit'); else { openProgram('help-window'); showHelpTopic('regedit'); }">Help Topics</div>
-                </div>
-            </div>
-        </div>
-        <div class="content" style="display:flex; height: calc(100% - 46px); background: #fff; font-family: Tahoma; font-size: 11px;">
-            <div id="regedit-tree" style="flex: 1; border-right: 1px solid #ACA899; padding: 5px; overflow-y: auto;">
-                <!-- Tree view populated by JS -->
-            </div>
-            <div id="regedit-values" style="flex: 2; padding: 5px; overflow-y: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="border-bottom: 1px solid #ACA899; text-align: left;">
-                            <th style="padding: 2px; width: 40%;">Name</th>
-                            <th style="padding: 2px; width: 20%;">Type</th>
-                            <th style="padding: 2px;">Data</th>
-                        </tr>
-                    </thead>
-                    <tbody id="regedit-values-list">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sound Recorder Window -->
-    <div class="window" id="soundrecorder-window" onmousedown="bringToFront(this)"
-        style="display:none; width: 350px; height: 160px;">
-        <div class="title-bar" id="soundrecorder-window-title">
-            <span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/volume alt.png"
-                    class="sys-icon-small" onerror="this.style.display='none'"> Sound Recorder</span>
-            <div class="window-controls">
-                <div class="win-btn" onclick="minimizeWindow('soundrecorder-window')"><img src="Windows XP Icons/Minimize.png" alt="-"></div>
-                <div class="win-btn" onclick="closeWindow('soundrecorder-window')"><img src="Windows XP Icons/Exit.png" alt="X"></div>
-            </div>
-        </div>
         <div class="menu-bar">
             <div class="menu-dropdown-container">
                 <span onclick="toggleAppMenu(this, event)"><u>F</u>ile</span>
@@ -1778,7 +1893,7 @@
             <div style="display:flex; gap: 5px; justify-content: center; margin-top: auto;">
                 <button onclick="playRecord()" style="width: 40px; height:30px;" title="Play"><img src="Windows XP Icons/Play.png" style="width:16px"></button>
                 <button onclick="stopRecord()" style="width: 40px; height:30px;" title="Stop"><img src="Windows XP Icons/Stop.png" style="width:16px"></button>
-                <button onclick="startRecord()" style="width: 40px; height:30px; color:red;" title="Record"><img src="Windows XP Icons/volume alt.png" style="width:16px"></button>
+                <button onclick="startRecord()" style="width: 40px; height:30px; color:red;" title="Record"><img src="Windows XP Icons/Volume Alt.png" style="width:16px"></button>
             </div>
         </div>
     </div>
