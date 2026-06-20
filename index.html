@@ -201,7 +201,7 @@
 <canvas id="bg-canvas"></canvas>
 
 <div class="header-bar">
-    <button class="share-btn" onclick="alert('Sharing is currently disabled.')">Share Game</button>
+    <button class="share-btn" onclick="shareSite()">Share Game</button>
 </div>
 
 <div class="container">
@@ -368,6 +368,26 @@
     }
     
     animate();
+
+    // Share functionality
+    function shareSite() {
+        if (navigator.share) {
+            navigator.share({
+                title: 'hypergenius 12',
+                text: 'Check out this awesome collection of web games and experiments!',
+                url: window.location.href
+            }).catch(err => {
+                console.error('Error sharing:', err);
+            });
+        } else {
+            // Fallback to copying to clipboard
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                alert('Link copied to clipboard!');
+            }).catch(err => {
+                alert('Failed to copy link.');
+            });
+        }
+    }
 </script>
 </body>
 </html>
