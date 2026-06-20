@@ -390,19 +390,23 @@
     }
     // === 3D WebGL-style Physics Bouncing Cards ===
     window.addEventListener('load', () => {
-        const cards = Array.from(document.querySelectorAll('.project-card'));
+        const cards = document.querySelectorAll('.project-card');
         const cardData = [];
-        
-        cards.forEach((card, index) => {
+        cards.forEach(card => {
             const rect = card.getBoundingClientRect();
+            // Random movement angle uniformly distributed
+            const angle = Math.random() * Math.PI * 2;
+            const initSpeed = 1.5;
+            
             cardData.push({
                 el: card,
                 x: Math.random() * Math.max(window.innerWidth - rect.width, 0),
                 y: Math.random() * Math.max(window.innerHeight - rect.height, 0),
                 width: rect.width,
                 height: rect.height,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
+                vx: Math.cos(angle) * initSpeed,
+                vy: Math.sin(angle) * initSpeed,
+                rotationZ: (Math.random() - 0.5) * 15, // Subtle random tilt
                 mass: 1,
                 isHovered: false
             });
@@ -532,7 +536,7 @@
                 const rotX = Math.min(Math.max(-a.vy * 4, -25), 25);
                 const scale = a.isHovered ? 1.05 : 1;
                 
-                a.el.style.transform = `translate3d(${a.x}px, ${a.y}px, 0) perspective(1000px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${scale})`;
+                a.el.style.transform = `translate3d(${a.x}px, ${a.y}px, 0) perspective(1000px) rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${a.rotationZ}deg) scale(${scale})`;
             }
 
             requestAnimationFrame(physicsLoop);
