@@ -512,7 +512,10 @@ RULES:
 // Initialize Game
 async function initGame() {
     const userKey = localStorage.getItem('openrouter_key');
+    const userModel = localStorage.getItem('openrouter_model') || CONFIG.model;
     if (!userKey) {
+        document.getElementById('apiInput').value = userKey || '';
+        document.getElementById('modelInput').value = userModel;
         document.getElementById('apiModal').classList.remove('hidden');
         return;
     }
@@ -595,7 +598,10 @@ ${roomsList || 'none yet'}
 
     try {
         const userKey = localStorage.getItem('openrouter_key');
+        const userModel = localStorage.getItem('openrouter_model') || CONFIG.model;
         if (!userKey) {
+            document.getElementById('apiInput').value = userKey || '';
+            document.getElementById('modelInput').value = userModel;
             document.getElementById('apiModal').classList.remove('hidden');
             throw new Error("API key is required to play.");
         }
@@ -609,7 +615,7 @@ ${roomsList || 'none yet'}
                 'X-Title': 'EXODUS'
             },
             body: JSON.stringify({
-                model: CONFIG.model,
+                model: userModel,
                 messages: messages,
                 max_tokens: CONFIG.maxTokens,
                 temperature: 0.7
@@ -617,10 +623,12 @@ ${roomsList || 'none yet'}
         });
 
         if (!response.ok) {
-            if (response.status === 401 || response.status === 402) {
-                localStorage.removeItem('openrouter_key');
+            if (response.status === 401 || response.status === 402 || response.status === 404) {
+                if (response.status === 401) localStorage.removeItem('openrouter_key');
+                document.getElementById('apiInput').value = localStorage.getItem('openrouter_key') || '';
+                document.getElementById('modelInput').value = userModel;
                 document.getElementById('apiModal').classList.remove('hidden');
-                throw new Error("API key was revoked, invalid, or requires credits.");
+                throw new Error("API key was revoked, invalid, requires credits, or model is invalid.");
             }
             let errorDetail = '';
             try {
@@ -2909,14 +2917,18 @@ async function handleInput() {
 // Event Listeners
 function initEventListeners() {
     document.getElementById('openApiSettingsBtn')?.addEventListener('click', () => {
+        document.getElementById('apiInput').value = localStorage.getItem('openrouter_key') || '';
+        document.getElementById('modelInput').value = localStorage.getItem('openrouter_model') || CONFIG.model;
         toggleSettings();
         document.getElementById('apiModal').classList.remove('hidden');
     });
 
     document.getElementById('submitApiBtn')?.addEventListener('click', () => {
         const key = document.getElementById('apiInput').value.trim();
-        if (key) {
+        const model = document.getElementById('modelInput').value.trim();
+        if (key && model) {
             localStorage.setItem('openrouter_key', key);
+            localStorage.setItem('openrouter_model', model);
             document.getElementById('apiModal').classList.add('hidden');
             window.location.reload();
         }

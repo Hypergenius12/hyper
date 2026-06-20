@@ -183,17 +183,22 @@
     <!-- API Key Modal -->
     <div id="apiModal" class="reset-modal hidden">
         <div class="reset-modal-content" style="text-align: center; padding: 30px; max-width: 500px;">
-            <h3 class="reset-title" style="margin-bottom: 20px; font-size: 24px;">// SYSTEM REQUIREMENT //</h3>
+            <h3 class="reset-title" style="margin-bottom: 20px; font-size: 24px;">// SYSTEM CONFIG //</h3>
             <p class="reset-message" style="margin-bottom: 20px; font-size: 16px;">
-                AI Core Offline. Please provide your OpenRouter API Key to initialize the subroutines.
+                AI Core Offline. Please configure your connection.
             </p>
-            <input type="password" id="apiInput" class="game-input" style="width: 100%; margin-bottom: 20px; text-align: center;" placeholder="sk-or-v1-..." autocomplete="off">
+            <label style="display:block; text-align:left; color:var(--text-secondary); margin-bottom:5px;">OpenRouter API Key:</label>
+            <input type="password" id="apiInput" class="game-input" style="width: 100%; margin-bottom: 15px; text-align: center;" placeholder="sk-or-v1-..." autocomplete="off">
+            
+            <label style="display:block; text-align:left; color:var(--text-secondary); margin-bottom:5px;">AI Model ID:</label>
+            <input type="text" id="modelInput" class="game-input" style="width: 100%; margin-bottom: 20px; text-align: center;" value="google/gemini-2.0-flash-exp:free" autocomplete="off">
+            
             <div class="reset-buttons" style="justify-content: center; gap: 15px;">
                 <button id="submitApiBtn" class="reset-confirm-btn">INITIALIZE</button>
                 <button id="helpApiBtn" class="reset-cancel-btn" onclick="window.open('https://openrouter.ai/keys', '_blank')">GET FREE KEY</button>
             </div>
             <p style="margin-top: 15px; font-size: 14px; color: var(--text-dim); text-align: justify;">
-                Click "GET FREE KEY" to create a free OpenRouter account. Once you generate a key, paste it above. It will be stored securely in your browser's local storage and never sent anywhere else.
+                Keys are stored securely in your browser's local storage. Valid free models include 'google/gemini-2.0-flash-exp:free' and 'google/gemini-2.0-pro-exp-02-05:free'.
             </p>
         </div>
     </div>
