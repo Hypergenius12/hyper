@@ -4,8 +4,7 @@
 
 // Configuration
 const CONFIG = {
-    apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    apiKey: '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',
+    apiEndpoint: 'http://localhost:5000/api/chat',
     model: 'google/gemini-2.0-flash-exp:free',
     maxTokens: 2000
 };
@@ -593,7 +592,6 @@ ${roomsList || 'none yet'}
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${CONFIG.apiKey}`,
                 'HTTP-Referer': window.location.href,
                 'X-Title': 'EXODUS'
             },
