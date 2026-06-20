@@ -4,7 +4,7 @@
 
 // Configuration
 const CONFIG = {
-    apiEndpoint: 'http://localhost:5000/api/chat',
+    apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
     model: 'google/gemini-2.0-flash-exp:free',
     maxTokens: 2000
 };
@@ -588,10 +588,15 @@ ${roomsList || 'none yet'}
     ];
 
     try {
+        const userKey = localStorage.getItem('openrouter_key') || prompt("Your old API key was revoked. Please paste a new free OpenRouter API Key to play (it will be saved in your browser):");
+        if (!userKey) throw new Error("API key is required to play.");
+        localStorage.setItem('openrouter_key', userKey);
+
         const response = await fetch(CONFIG.apiEndpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${userKey}`,
                 'HTTP-Referer': window.location.href,
                 'X-Title': 'EXODUS'
             },
