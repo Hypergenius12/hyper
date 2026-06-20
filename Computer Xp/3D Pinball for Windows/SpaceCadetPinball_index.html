@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8">
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+    <title>3D Pinball for Windows - Space Cadet</title>
+    <style>
+        body {
+            font-family: Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #fff;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+
+        canvas.emscripten {
+            border: 0 none;
+            background-color: #000;
+            display: block;
+            outline: none;
+        }
+
+        #loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: #000;
+            z-index: 10;
+        }
+
+        #loading-thumb {
+            max-width: 80%;
+            max-height: 60%;
+            border: 3px solid #333;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 102, 255, 0.4);
+            margin-bottom: 20px;
+        }
+
+        #status {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        progress {
+            width: 200px;
+            height: 15px;
+            border: 1px solid #555;
+            background-color: #222;
+            border-radius: 3px;
+        }
+
+        progress::-webkit-progress-bar {
+            background-color: #222;
+            border-radius: 3px;
+        }
+
+        progress::-webkit-progress-value {
+            background: linear-gradient(to bottom, #00ff00, #008800);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Loading Screen -->
+        <div id="loading-screen">
+            <img id="loading-thumb" src="../__ia_thumb.jpg" alt="Loading 3D Pinball..." onerror="this.style.display='none'">
+            <div id="status">Downloading game files...</div>
+            <progress id="progress" max="100" value="0" hidden></progress>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1" width="600" height="416"></canvas>
+    </div>
+
+    <script>
+        var statusElement = document.getElementById("status");
+        var progressElement = document.getElementById("progress");
+        var loadingScreen = document.getElementById("loading-screen");
+        var canvas = document.getElementById("canvas");
+
+        var Module = {
+            preRun: [],
+            postRun: [],
+            print: (function() {
+                return function(text) {
+                    if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                    console.log(text);
+                };
+            })(),
+            printErr: function(text) {
+                if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                console.error(text);
+            },
+            canvas: (function() {
+                canvas.addEventListener("webglcontextlost", function(e) {
+                    alert("WebGL context lost. You will need to reload the page.");
+                    e.preventDefault();
+                }, false);
+                return canvas;
+            })(),
+            setStatus: function(text) {
+                if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+                if (text === Module.setStatus.last.text) return;
+                
+                var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+                var now = Date.now();
+                if (m && now - Module.setStatus.last.time < 30) return; // limit updates
+                
+                Module.setStatus.last.time = now;
+                Module.setStatus.last.text = text;
+                
+                if (m) {
+                    text = m[1];
+                    progressElement.value = parseInt(m[2]);
+                    progressElement.max = parseInt(m[4]);
+                    progressElement.hidden = false;
+                } else {
+                    progressElement.value = null;
+                    progressElement.max = null;
+                    progressElement.hidden = true;
+                }
+                
+                statusElement.innerHTML = text;
+                
+                // Hide loading screen if text is empty OR if it says "Running..." or anything indicating it's done downloading
+                if (text === "" || text.toLowerCase().includes("running") || text.toLowerCase().includes("exception")) {
+                    loadingScreen.style.display = "none";
+                    canvas.style.display = "block";
+                    canvas.focus();
+                }
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+                Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+                if (left === 0) {
+                    setTimeout(() => {
+                        loadingScreen.style.display = "none";
+                        canvas.style.display = "block";
+                        canvas.focus();
+                    }, 500);
+                }
+            }
+        };
+
+        Module.setStatus("Downloading...");
+        window.onerror = function(event) {
+            Module.setStatus("Exception thrown, see JavaScript console");
+            Module.setStatus = function(text) {
+                if (text) console.error('[post-exception status] ' + text);
+            };
+        };
+
+        // Automatically keep focus on canvas when playing
+        window.addEventListener('click', function() {
+            if (canvas.style.display === "block") {
+                canvas.focus();
+            }
+        });
+    </script>
+    <script src="SpaceCadetPinball_assets.js"></script>
+    <script async src="SpaceCadetPinball.js"></script>
+</body>
+</html>

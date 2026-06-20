@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXODUS - Deep Space Survival</title>
+    <meta name="description"
+        content="An AI-powered text adventure game. Wake up from cryo-sleep and find your way back to Earth.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="crt-overlay"></div>
+    <div class="scanlines"></div>
+
+    <div class="game-container">
+        <!-- Header -->
+        <header class="game-header">
+            <div class="header-left">
+                <h1 class="game-title">[ EXODUS ]</h1>
+                <div class="header-hud">
+                    <span class="hud-label">LOCATION:</span>
+                    <span id="currentLocationText" class="hud-value">UNKNOWN SECTOR</span>
+                    <span class="hud-separator">|</span>
+                    <span class="hud-label">HP:</span>
+                    <div class="hp-bar-container">
+                        <div id="hpFill" class="hp-bar-fill" style="width: 100%;"></div>
+                    </div>
+                    <span id="hpValue" class="hud-value">100/100</span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button id="achievementsBtn" class="control-btn" title="Achievements" onclick="toggleAchievements()">
+                    <span class="btn-icon">[A]</span>
+                    <span class="btn-text">ACHIEVEMENTS</span>
+                </button>
+                <button id="mapToggleBtn" class="control-btn" title="Toggle Ship Map">
+                    <span class="btn-icon">[M]</span>
+                    <span class="btn-text">MAP</span>
+                </button>
+                <button id="settingsBtn" class="control-btn" title="Settings">
+                    <span class="btn-icon">[S]</span>
+                    <span class="btn-text">SETTINGS</span>
+                </button>
+                <button id="resetBtn" class="control-btn danger" title="Reset Adventure">
+                    <span class="btn-icon">[R]</span>
+                    <span class="btn-text">RESET</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Game Area -->
+        <main class="game-main">
+            <!-- Game Output -->
+            <section class="game-output-section">
+                <div id="gameOutput" class="game-output">
+                    <div class="welcome-message">
+                        <p class="ascii-art">
+                            ███████╗██╗ ██╗ ██████╗ ██████╗ ██╗ ██╗███████╗
+                            ██╔════╝╚██╗██╔╝██╔═══██╗██╔══██╗██║ ██║██╔════╝
+                            █████╗ ╚███╔╝ ██║ ██║██║ ██║██║ ██║███████╗
+                            ██╔══╝ ██╔██╗ ██║ ██║██║ ██║██║ ██║╚════██║
+                            ███████╗██╔╝ ██╗╚██████╔╝██████╔╝╚██████╔╝███████║
+                            ╚══════╝╚═╝ ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
+
+                            D E E P S P A C E S U R V I V A L
+
+                            ─────────────────────────────────────────────────
+                            [ INITIALIZING CRYO-REVIVAL SEQUENCE ]
+                            ─────────────────────────────────────────────────
+                        </p>
+                        <p class="intro-text">SYSTEMS COMING ONLINE...</p>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-area">
+                    <span class="input-prompt">&gt;</span>
+                    <input type="text" id="gameInput" class="game-input" placeholder="Enter command..."
+                        autocomplete="off" autofocus>
+                    <button id="submitBtn" class="submit-btn">EXECUTE</button>
+                </div>
+            </section>
+
+            <!-- Inventory Panel -->
+            <aside class="inventory-panel">
+                <h2 class="panel-title">[ INVENTORY ]</h2>
+                <div id="inventoryList" class="inventory-list">
+                    <p class="empty-inventory">No items.</p>
+                </div>
+    </div>
+    </aside>
+    </main>
+    </div>
+
+    <!-- Map Overlay -->
+    <div id="mapOverlay" class="map-overlay hidden">
+        <div class="map-container">
+            <div class="map-header">
+                <h2 class="map-title">[ SHIP SCHEMATIC ]</h2>
+                <div id="floorSelector" class="floor-selector hidden">
+                    <span>DECK:</span>
+                    <select id="floorSelect"></select>
+                </div>
+                <button id="closeMapBtn" class="close-map-btn">X</button>
+            </div>
+            <div class="map-viewport">
+                <canvas id="mapCanvas" class="map-canvas"></canvas>
+                <div id="mapTooltip" class="map-tooltip hidden"></div>
+            </div>
+            <div class="map-footer">
+                <p class="map-hint">Drag to pan | Scroll to zoom | Click room for details</p>
+                <span id="zoomLevel" class="zoom-level">100%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Detail Modal -->
+    <div id="roomDetailModal" class="room-detail-modal hidden">
+        <div class="room-detail-content">
+            <button id="closeRoomDetail" class="close-modal-btn">X</button>
+            <h3 id="roomDetailTitle" class="room-detail-title"></h3>
+            <div class="room-detail-layout">
+                <div class="room-schematic">
+                    <canvas id="roomSchematicCanvas" width="300" height="250"></canvas>
+                </div>
+                <div class="room-info">
+                    <div class="room-section">
+                        <h4 class="room-section-title">EXITS</h4>
+                        <ul id="roomExitsList" class="room-exits-list"></ul>
+                    </div>
+                    <div class="room-section">
+                        <h4 class="room-section-title">OBJECTS</h4>
+                        <ul id="roomObjectsList" class="room-objects-list"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Item Detail Modal -->
+    <div id="itemModal" class="item-modal hidden">
+        <div class="item-modal-content">
+            <button id="closeItemModal" class="close-modal-btn">X</button>
+            <h3 id="itemName" class="item-name"></h3>
+            <pre id="itemDiagram" class="item-diagram"></pre>
+            <p id="itemDescription" class="item-description"></p>
+        </div>
+    </div>
+
+    </div>
+    </div>
+
+    <!-- Hacking Puzzle Modal -->
+    <div id="puzzleModal" class="puzzle-modal hidden">
+        <div class="puzzle-content">
+            <h3 class="puzzle-title">SECURITY BREACH IN PROGRESS</h3>
+            <div class="puzzle-timer-bar">
+                <div id="puzzleTimer" class="puzzle-timer-fill"></div>
+            </div>
+            <div class="puzzle-grid-container">
+                <div id="puzzleGrid" class="puzzle-grid"></div>
+            </div>
+            <p id="puzzleInstruction" class="puzzle-instruction">MATCH THE SYMBOLS TO BYPASS FIREWALL</p>
+            <div class="puzzle-status" id="puzzleStatus"></div>
+        </div>
+    </div>
+    <div id="resetModal" class="reset-modal hidden">
+        <div class="reset-modal-content">
+            <h3 class="reset-title">// WARNING //</h3>
+            <p class="reset-message">RESET ADVENTURE? All progress will be lost.</p>
+            <div class="reset-buttons">
+                <button id="confirmReset" class="reset-confirm-btn">CONFIRM RESET</button>
+                <button id="cancelReset" class="reset-cancel-btn">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="victoryModal" class="victory-modal hidden">
+        <div class="victory-modal-content">
+            <h2 class="victory-title">MISSION COMPLETE</h2>
+            <p class="victory-subtitle">You have returned to Earth.</p>
+            <pre class="victory-art">
+        *  .  *       .             *
+                 *       *    .        *     .
+    .    *           ___---___                    .
+             .     .--\        --.     .     *
+                  .\. .\..Earth../. ./.
+       *         .  .\:.  \:::/  .:./.  .
+    .              . -_\::. .::/_- .             *
+            .       .  -___:___-  .       .
+                *    .    | |    .
+      .                 * | | *
+            .             | |           .
+        *        .        | |     *
+                   .     _|_|_               *
+            </pre>
+            <p class="victory-message">Against all odds, you navigated the damaged vessel through the void of space and
+                made it home. The journey took everything you had, but you survived.</p>
+            <button id="playAgainBtn" class="play-again-btn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <!-- Death Modal -->
+    <div id="deathModal" class="death-modal hidden">
+        <div class="death-modal-content">
+            <h2 class="death-title">// SESSION TERMINATED //</h2>
+            <p class="death-subtitle">Vital signs lost.</p>
+            <pre class="death-art">
+        ______
+     .-"      "-.
+    /            \
+   |              |
+   |,  .-.  .-.  ,|
+   | )(__/  \__)( |
+   |/     /\     \|
+   (_     ^^     _)
+    \__|IIIIII|__/
+     | \IIIIII/ |
+     \          /
+      `--------`
+            </pre>
+            <p id="deathMessage" class="death-message">The harsh vacuum of space claimed another soul. The Exodus drifts
+                on, a tomb for the unwary.</p>
+            <button id="respawnBtn" class="respawn-btn">RESTORE FROM LAST BACKUP</button>
+        </div>
+    </div>
+
+    <!-- Achievements Modal -->
+    <div id="achievementsModal" class="achievements-modal hidden">
+        <div class="achievements-modal-content">
+            <button class="close-modal-btn" onclick="toggleAchievements()">X</button>
+            <h3 class="achievements-title">[ ACHIEVEMENTS ]</h3>
+            <div class="achievements-progress-container">
+                <div class="achievements-progress-bar">
+                    <div id="achievementProgress" class="achievements-progress-fill"></div>
+                </div>
+                <span id="achievementProgressText" class="achievements-progress-text">0/100</span>
+            </div>
+            <div id="achievementsList" class="achievements-list">
+                <!-- Achievements will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="settings-modal hidden">
+        <div class="settings-modal-content">
+            <button id="closeSettings" class="close-modal-btn">X</button>
+            <h3 class="settings-title">[ SETTINGS ]</h3>
+
+            <div class="settings-section">
+                <label class="settings-label">TERMINAL COLOR</label>
+                <div class="color-presets">
+                    <button class="color-preset" data-color="#ffb000" style="background: #ffb000;"
+                        title="Amber"></button>
+                    <button class="color-preset" data-color="#00ff88" style="background: #00ff88;"
+                        title="Green"></button>
+                    <button class="color-preset" data-color="#00d4ff" style="background: #00d4ff;"
+                        title="Cyan"></button>
+                    <button class="color-preset" data-color="#ff00ff" style="background: #ff00ff;"
+                        title="Magenta"></button>
+                    <button class="color-preset" data-color="#ff4444" style="background: #ff4444;" title="Red"></button>
+                    <button class="color-preset" data-color="#ffffff" style="background: #ffffff;"
+                        title="White"></button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <label class="settings-label">CUSTOM COLOR</label>
+                <div class="custom-color-row">
+                    <input type="color" id="customColorPicker" class="color-picker" value="#00ff88">
+                    <input type="text" id="customColorHex" class="color-hex-input" value="#00ff88" maxlength="7">
+                    <button id="applyCustomColor" class="apply-color-btn">APPLY</button>
+                </div>
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <div class="settings-section">
+                <label class="settings-label">AUDIO</label>
+                <div class="audio-controls">
+                    <div class="audio-row">
+                        <span class="audio-label">Master Volume</span>
+                        <input type="range" id="masterVolume" class="volume-slider" min="0" max="100" value="70">
+                        <span id="masterVolumeValue" class="volume-value">70%</span>
+                    </div>
+                    <div class="audio-row">
+                        <span class="audio-label">Sound Effects</span>
+                        <input type="range" id="sfxVolume" class="volume-slider" min="0" max="100" value="80">
+                        <span id="sfxVolumeValue" class="volume-value">80%</span>
+                    </div>
+                    <div class="audio-row">
+                        <span class="audio-label">Ambient Sound</span>
+                        <input type="range" id="ambientVolume" class="volume-slider" min="0" max="100" value="50">
+                        <span id="ambientVolumeValue" class="volume-value">50%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-divider"></div>
+
+            <div class="settings-section">
+                <label class="settings-label">DISPLAY</label>
+                <div class="toggle-controls">
+                    <div class="toggle-row">
+                        <span class="toggle-label">CRT Scanlines</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="scanlineToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-row">
+                        <span class="toggle-label">Screen Flicker</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="flickerToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-row">
+                        <span class="toggle-label">Text Animation</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="textAnimToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <label class="settings-label">TEXT SPEED</label>
+                <div class="speed-controls">
+                    <button class="speed-btn" data-speed="slow">SLOW</button>
+                    <button class="speed-btn active" data-speed="normal">NORMAL</button>
+                    <button class="speed-btn" data-speed="fast">FAST</button>
+                    <button class="speed-btn" data-speed="instant">INSTANT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">PROCESSING...</p>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

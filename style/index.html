@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operating System UI Evolution</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="os-xp theme-luna">
+    <div id="desktop">
+        
+        <div id="mac-menu-bar">
+            <div class="mac-menu-left">
+                <span class="apple-logo"></span>
+                <span class="mac-menu-bold">Widget Showcase</span>
+                <span>File</span>
+                <span>Edit</span>
+                <span>View</span>
+                <span>Window</span>
+                <span>Help</span>
+            </div>
+            <div class="mac-menu-right">
+                <span class="mac-time">Tue 7:07 PM</span>
+            </div>
+        </div>
+
+        <div id="ubuntu-top-bar">
+            <div class="ubuntu-menu-left">
+                <span>Activities</span>
+            </div>
+            <div class="ubuntu-menu-center">
+                <span>Tue 7:07 PM</span>
+            </div>
+            <div class="ubuntu-menu-right">
+                <span>🔊</span>
+                <span>🔋</span>
+                <span>▼</span>
+            </div>
+        </div>
+        
+        <div id="kali-top-bar">
+            <div class="kali-menu-left">
+                <span class="kali-logo">🐉 Applications</span>
+                <span>Places</span>
+            </div>
+            <div class="kali-menu-right">
+                <span>eth0 1000Mb/s</span>
+                <span>Tue 7:07 PM</span>
+                <span>root</span>
+            </div>
+        </div>
+
+        <div id="ubuntu-dock">
+            <div class="ubuntu-icon" style="background: #e95420; color: white; display:flex; align-items:center; justify-content:center; border-radius: 5px;">A</div>
+            <div class="ubuntu-icon" style="background: #777; color: white; display:flex; align-items:center; justify-content:center; border-radius: 5px;">📁</div>
+            <div class="ubuntu-icon" style="background: #333; color: white; display:flex; align-items:center; justify-content:center; border-radius: 5px;">⚙</div>
+        </div>
+
+        <div id="chromeos-shelf">
+            <div class="chromeos-app-launcher">◎</div>
+            <div class="chromeos-apps">
+                <div class="chromeos-icon" style="background: #ea4335;"></div>
+                <div class="chromeos-icon" style="background: #4285f4;"></div>
+                <div class="chromeos-icon" style="background: #34a853;"></div>
+                <div class="chromeos-icon" style="background: #fbbc05;"></div>
+            </div>
+            <div class="chromeos-status-area">
+                <span>📶</span>
+                <span>🔋</span>
+                <span>7:07 PM</span>
+            </div>
+        </div>
+
+        <div class="xp-window" id="draggable-window">
+            
+            <div class="title-bar" id="window-title-bar">
+                <div class="win31-control-box"></div>
+                <div class="macsys7-close-box"></div>
+                
+                <div class="title-bar-text">Widget Showcase Properties</div>
+                
+                <div class="title-bar-controls">
+                    <button class="minimize"></button>
+                    <button class="maximize"></button>
+                    <button class="close"></button>
+                </div>
+            </div>
+
+            <div class="window-body">
+                
+                <div class="window-tabs">
+                    <div class="window-tab active" data-target="panel-general">General</div>
+                    <div class="window-tab" data-target="panel-advanced">Advanced</div>
+                    <div class="window-tab" data-target="panel-network">Network</div>
+                </div>
+
+                <div class="tab-panel active" id="panel-general">
+                    <p>Welcome to the ultimate UI style showcase.</p>
+                    
+                    <fieldset>
+                        <legend>Interactive Elements</legend>
+                        
+                        <div class="field-row">
+                            <button class="xp-button">Classic Button</button>
+                            <button class="xp-button" disabled>Disabled</button>
+                        </div>
+
+                        <div class="field-row">
+                            <label for="xp-dropdown">Era Theme:</label>
+                            <select id="xp-dropdown" class="xp-select">
+                                <option value="theme-luna">Luna (Blue)</option>
+                                <option value="theme-olive">Olive Green</option>
+                                <option value="theme-silver">Silver</option>
+                            </select>
+                        </div>
+
+                        <div class="field-row">
+                            <input type="checkbox" id="checkbox1" class="custom-checkbox" checked>
+                            <label for="checkbox1">Enable animations</label>
+                        </div>
+
+                        <div class="field-row">
+                            <label for="volume-slider">Volume Level:</label>
+                            <input type="range" id="volume-slider" class="xp-slider" min="0" max="100" value="75">
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="tab-panel" id="panel-advanced">
+                    <fieldset>
+                        <legend>System Settings</legend>
+                        <div class="field-row" style="align-items: flex-start;">
+                            <label for="system-logs">System Logs:</label>
+                            <textarea id="system-logs" class="xp-textarea" rows="4">Boot sequence initiated...
+Loading graphical interface...
+Mounting drives...
+System ready.</textarea>
+                        </div>
+                        <div class="field-row">
+                            <input type="checkbox" id="checkbox2" class="custom-checkbox">
+                            <label for="checkbox2">Show hidden files and folders</label>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="tab-panel" id="panel-network">
+                    <fieldset>
+                        <legend>Connection Properties</legend>
+                        <div class="field-row">
+                            <input type="radio" id="radio-home" name="network" class="custom-radio" checked>
+                            <label for="radio-home">Home network</label>
+                            
+                            <input type="radio" id="radio-work" name="network" class="custom-radio" style="margin-left:10px;">
+                            <label for="radio-work">Work network</label>
+                        </div>
+                        <div class="field-row">
+                            <label>Default Path:</label>
+                            <input type="text" class="xp-input" value="C:\Documents and Settings\">
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="progress-area">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="theme-progress"></div>
+                    </div>
+                    <span id="progress-text">Ready.</span>
+                </div>
+
+                <div class="bottom-actions">
+                    <button class="xp-button">OK</button>
+                    <button class="xp-button">Cancel</button>
+                    <button class="xp-button" id="apply-btn">Apply Theme</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mac-dock-container">
+            <div id="mac-dock">
+                <div class="dock-item">
+                    <div class="dock-icon finder-icon" style="background: linear-gradient(to bottom, #7fc1ff, #388ced); display:flex; align-items:center; justify-content:center; color:white; font-size:24px;">🙂</div>
+                    <div class="dock-dot"></div>
+                </div>
+                <div class="dock-item">
+                    <div class="dock-icon safari-icon" style="background: radial-gradient(circle, #fff, #51a1e0); display:flex; align-items:center; justify-content:center; color:#0e5a9c; font-size:24px;">🧭</div>
+                    <div class="dock-dot"></div>
+                </div>
+                <div class="dock-item">
+                    <div class="dock-icon message-icon" style="background: #34c759; display:flex; align-items:center; justify-content:center; color:white; font-size:20px;">💬</div>
+                    <div class="dock-dot"></div>
+                </div>
+                <div class="dock-separator"></div>
+                <div class="dock-item">
+                    <div class="dock-icon trash-icon" style="background: linear-gradient(to bottom, #e3e3e3, #c5c5c5); border: 2px solid #aaa; display:flex; align-items:center; justify-content:center; color:#555; font-size:20px;">🗑</div>
+                    <div class="dock-dot"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="taskbar">
+            <div class="start-button">
+                <span class="start-logo"></span>
+                <span class="start-text">start</span>
+            </div>
+            
+            <div class="taskbar-center-apps"></div>
+            
+            <div class="taskbar-right-tray">
+                <div class="mint-tray-icons" style="display:none; color:white; padding-right:10px; align-items:center; gap:8px;">
+                    <span>🛡️</span>
+                    <span>🔊</span>
+                    <span>📅 7:07 PM</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="universal-os-switcher">
+            <label for="os-toggle">Operating System:</label>
+            <select id="os-toggle" class="universal-select">
+                <optgroup label="Windows">
+                    <option value="os-win31">Windows 3.1</option>
+                    <option value="os-win95">Windows 95/98</option>
+                    <option value="os-win2000">Windows 2000</option>
+                    <option value="os-xp" selected>Windows XP</option>
+                    <option value="os-vista">Windows Vista</option>
+                    <option value="os-win7">Windows 7</option>
+                    <option value="os-win8">Windows 8</option>
+                    <option value="os-win10">Windows 10</option>
+                    <option value="os-win11">Windows 11</option>
+                </optgroup>
+                <optgroup label="Apple macOS">
+                    <option value="os-macsys7">System 7</option>
+                    <option value="os-macos9">Mac OS 9</option>
+                    <option value="os-macosx">Mac OS X (Aqua)</option>
+                    <option value="os-osx-yosemite">OS X Yosemite</option>
+                    <option value="os-macos">macOS (Modern)</option>
+                </optgroup>
+                <optgroup label="Linux & Chrome">
+                    <option value="os-ubuntu">Ubuntu (GNOME)</option>
+                    <option value="os-mint">Linux Mint (Cinnamon)</option>
+                    <option value="os-kali">Kali Linux (XFCE)</option>
+                    <option value="os-chromeos">Chrome OS</option>
+                </optgroup>
+            </select>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

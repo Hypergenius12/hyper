@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agar.io Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <canvas id="gameCanvas" tabindex="1"></canvas>
+
+    <div id="overlays">
+        <div id="startMenu">
+            <h1>Agar.io</h1>
+            <input type="text" id="playerNameInput" placeholder="Nick-name" maxlength="15" autofocus>
+            <div style="margin: 10px 0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <label for="playerColor" style="color: #666; font-family: sans-serif; font-weight: bold;">Color:</label>
+                <input type="color" id="playerColor" value="#ff0000" style="cursor: pointer;">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="playBtn" style="flex: 1;">Play</button>
+                <button id="spectateBtn" style="flex: 1; background-color: #95a5a6;">Spectate</button>
+            </div>
+            <div id="spectateTip" class="hidden" style="margin-top: 15px; color: #666; font-family: sans-serif; font-size: 14px;">Press ESC to return to menu</div>
+        </div>
+
+        <div id="leaderboard" class="hidden">
+            <h3>Leaderboard</h3>
+            <div id="leaderboardList"></div>
+        </div>
+
+        <div id="scoreBox" class="hidden">
+            Score: <span id="scoreDisplay">0</span>
+        </div>
+    </div>
+
+    <!-- Load scripts in order -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="entities.js"></script>
+    <script src="bot.js"></script>
+    <script src="player.js"></script>
+    <script src="game.js"></script>
+    <script src="renderer.js"></script>
+    <script src="main.js"></script>
+
+</body>
+</html>

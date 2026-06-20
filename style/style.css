@@ -1,0 +1,1143 @@
+/* General reset and font setup */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body, html { width: 100%; height: 100%; font-family: Tahoma, "Segoe UI", Geneva, sans-serif; font-size: 11px; overflow: hidden; background-color: #000; }
+
+/* ---------------------------------------------------
+   BASE DESKTOP & WINDOW STRUCTURE
+--------------------------------------------------- */
+#desktop { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; transition: background 0.3s ease; }
+.xp-window { position: absolute; top: 50px; left: 50px; width: 440px; border-radius: 8px 8px 0 0; box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; transition: all 0.2s ease; }
+.title-bar { padding: 3px 5px 3px 5px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: 7px; border-top-right-radius: 7px; cursor: default; user-select: none; transition: background 0.2s ease; position: relative; }
+.title-bar-text { font-weight: bold; font-size: 13px; letter-spacing: 0.5px; }
+.title-bar-controls { display: flex; gap: 2px; }
+.title-bar-controls button { width: 21px; height: 21px; border: 1px solid transparent; cursor: default; display: flex; justify-content: center; align-items: center; transition: all 0.1s; position: relative; }
+.window-body { padding: 12px; flex-grow: 1; display: flex; flex-direction: column; }
+.window-body p { margin-bottom: 12px; }
+fieldset { border: 1px solid #dcdad5; padding: 12px 10px 10px 10px; margin-bottom: 15px; }
+legend { padding: 0 5px; }
+.field-row { margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.xp-button { padding: 4px 12px; font-size: 11px; min-width: 75px; cursor: default; }
+.xp-input, .xp-select { padding: 4px; width: 100%; font-family: inherit; }
+.xp-textarea { width: 100%; resize: none; font-family: inherit; font-size: 11px; padding: 4px; }
+.xp-select { width: auto; }
+.bottom-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+.win31-control-box, .macsys7-close-box { display: none; }
+
+/* ---------------------------------------------------
+   TABS AND PANELS
+--------------------------------------------------- */
+.window-tabs { display: flex; gap: 2px; margin-bottom: -1px; z-index: 10; position: relative; }
+.window-tab { padding: 4px 12px; background: #e0e0e0; border: 1px solid #999; border-bottom: none; border-radius: 3px 3px 0 0; cursor: default; font-weight: normal; margin-top: 3px; }
+.window-tab.active { background: #ece9d8; font-weight: bold; padding-bottom: 5px; margin-top: 0; z-index: 11; }
+.tab-panel { display: none; background: transparent; padding-top: 10px; }
+.tab-panel.active { display: block; }
+
+/* ---------------------------------------------------
+   PROGRESS BAR
+--------------------------------------------------- */
+.progress-area { display: flex; align-items: center; gap: 10px; margin-top: auto; margin-bottom: 5px; }
+.progress-bar-container { flex-grow: 1; height: 16px; background: #fff; border: 1px solid #999; border-radius: 2px; overflow: hidden; }
+.progress-bar-fill { width: 0%; height: 100%; background: #00d900; transition: width 0.1s linear; }
+#progress-text { min-width: 60px; font-size: 10px; color: #555; }
+
+/* ---------------------------------------------------
+   CUSTOM INPUTS (Checkboxes, Radios, Sliders)
+--------------------------------------------------- */
+.custom-checkbox, .custom-radio { appearance: none; -webkit-appearance: none; width: 13px; height: 13px; background: #fff; border: 1px solid #1c5180; outline: none; cursor: default; position: relative; display: inline-flex; align-items: center; justify-content: center; margin: 0; padding: 0; }
+.custom-radio { border-radius: 50%; }
+.custom-checkbox:checked::before { content: "✔"; font-size: 10px; color: #000; position: absolute; }
+.custom-radio:checked::before { content: ""; width: 5px; height: 5px; background: #000; border-radius: 50%; position: absolute; }
+.xp-slider { appearance: none; width: 100%; height: 6px; background: #ddd; outline: none; border-radius: 3px; border: 1px solid #999; }
+.xp-slider::-webkit-slider-thumb { appearance: none; width: 12px; height: 18px; background: #ccc; border: 1px solid #666; border-radius: 2px; cursor: pointer; }
+
+
+/* ---------------------------------------------------
+   UNIVERSAL FLOATING OS SWITCHER
+--------------------------------------------------- */
+#universal-os-switcher { position: fixed; bottom: 15px; right: 15px; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(15px); padding: 10px 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2); display: flex; align-items: center; gap: 10px; z-index: 9999; color: white; font-family: -apple-system, "Segoe UI", sans-serif; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.universal-select { background: #222; color: white; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; outline: none; font-family: -apple-system, "Segoe UI", sans-serif; cursor: pointer; }
+
+
+/* ---------------------------------------------------
+   OS: WINDOWS 3.1 (RETRO 16-BIT)
+--------------------------------------------------- */
+.os-win31 body { font-family: "Fixedsys", "MS Sans Serif", monospace; font-size: 12px; }
+.os-win31 #desktop { background-image: url('data:image/svg+xml;utf8,<svg width="4" height="4" xmlns="http://www.w3.org/2000/svg"><rect width="2" height="2" fill="%23000"/><rect x="2" y="2" width="2" height="2" fill="%23000"/><rect x="2" width="2" height="2" fill="%23008080"/><rect y="2" width="2" height="2" fill="%23008080"/></svg>'); }
+.os-win31 .xp-window { background-color: #ffffff; border: 3px solid #000; border-radius: 0; box-shadow: none; padding: 2px; }
+.os-win31 .title-bar { background: #0000a8; border-radius: 0; padding: 2px; height: 24px; justify-content: center; position: relative; }
+.os-win31 .title-bar-text { color: white; font-weight: bold; text-shadow: none; font-size: 14px; background: #0000a8; padding: 0 5px; }
+.os-win31 .win31-control-box { display: block; position: absolute; left: 2px; width: 18px; height: 18px; background: #c0c0c0; border: 2px solid #000; box-shadow: inset -1px -1px #fff; }
+.os-win31 .win31-control-box::before { content: "-"; display: block; text-align: center; font-weight: bold; font-size: 16px; line-height: 12px; }
+.os-win31 .title-bar-controls { position: absolute; right: 2px; gap: 0; }
+.os-win31 .title-bar-controls button { width: 18px; height: 18px; background: #c0c0c0; border: 2px solid #000; box-shadow: inset -1px -1px #fff; border-radius: 0; margin-left: 2px; }
+.os-win31 .close { display: none; } 
+.os-win31 .minimize::before { content: "▼"; font-size: 10px; color: #000; }
+.os-win31 .maximize::before { content: "▲"; font-size: 10px; color: #000; }
+.os-win31 .window-body { background-color: #ffffff; border: 2px solid #000; margin: 2px; padding: 10px; }
+
+/* Win31 Widgets */
+.os-win31 .window-tab { background: #fff; border: 2px solid #000; border-bottom: none; border-radius: 0; margin-top: 2px; color: #000; }
+.os-win31 .window-tab.active { background: #fff; border: 2px solid #000; border-bottom: none; margin-top: 0; text-decoration: underline; }
+.os-win31 fieldset { border: 2px solid #000; border-radius: 0; }
+.os-win31 legend { color: #000; background: #fff; padding: 0 5px; border: 1px solid #000; }
+.os-win31 .xp-button { background: #ffffff; border: 2px solid #000; border-radius: 0; box-shadow: 2px 2px #000; color: #000; padding: 4px 10px; text-transform: uppercase; font-weight: bold; margin-bottom: 2px; margin-right: 2px; }
+.os-win31 .xp-button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: none; margin-bottom: 4px; margin-right: 4px; }
+.os-win31 .xp-button:disabled { color: #888; border-color: #888; box-shadow: 2px 2px #888; }
+.os-win31 .xp-input, .os-win31 .xp-select, .os-win31 .xp-textarea { background: #fff; border: 2px solid #000; border-radius: 0; padding: 4px; color: #000; }
+.os-win31 .custom-checkbox, .os-win31 .custom-radio { border: 2px solid #000; border-radius: 0; width: 14px; height: 14px; box-shadow: none; }
+.os-win31 .custom-checkbox:checked::before { content: "X"; font-family: monospace; font-size: 12px; font-weight: bold; }
+.os-win31 .custom-radio { border-radius: 50%; }
+.os-win31 .progress-bar-container { border: 2px solid #000; border-radius: 0; }
+.os-win31 .progress-bar-fill { background: #000; }
+.os-win31 #progress-text { color: #000; font-family: "Fixedsys"; }
+.os-win31 .xp-slider { border: 2px solid #000; border-radius: 0; background: #fff; }
+.os-win31 .xp-slider::-webkit-slider-thumb { background: #000; border-radius: 0; border: none; }
+
+
+/* ---------------------------------------------------
+   OS: WINDOWS 95 / 98
+--------------------------------------------------- */
+.os-win95 body { font-family: "MS Sans Serif", Arial, sans-serif; font-size: 11px; }
+.os-win95 #desktop { background-color: #008080; } 
+.os-win95 .xp-window { background-color: #c0c0c0; border: 2px solid; border-color: #dfdfdf #000 #000 #dfdfdf; border-radius: 0; box-shadow: none; padding: 2px; }
+.os-win95 .title-bar { background: #000080; border-radius: 0; padding: 2px 3px; height: 20px; }
+.os-win95 .title-bar-text { color: white; font-weight: bold; text-shadow: none; font-size: 12px; }
+.os-win95 .title-bar-controls button { width: 16px; height: 14px; background: #c0c0c0; border: 2px solid; border-color: #dfdfdf #000 #000 #dfdfdf; border-radius: 0; box-shadow: none; margin-left: 2px; }
+.os-win95 .title-bar-controls button:active { border-color: #000 #dfdfdf #dfdfdf #000; }
+.os-win95 .close::before { content: "✕"; font-size: 10px; font-weight: bold; color: #000; }
+.os-win95 .minimize::before { content: "_"; font-size: 10px; font-weight: bold; color: #000; position: relative; top: -3px; }
+.os-win95 .maximize::before { content: "◻"; font-size: 10px; font-weight: bold; color: #000; }
+.os-win95 .window-body { background-color: #c0c0c0; border: none; padding: 10px; }
+
+/* Win95 Widgets */
+.os-win95 .window-tab { background: #c0c0c0; border: 2px solid; border-color: #dfdfdf #888 #888 #dfdfdf; border-bottom: none; border-radius: 0; margin-top: 3px; color: #000; }
+.os-win95 .window-tab.active { margin-top: 0; border-color: #dfdfdf #000 #c0c0c0 #dfdfdf; padding-bottom: 6px; }
+.os-win95 .window-tabs { border-bottom: 2px solid #dfdfdf; }
+.os-win95 fieldset { border: 2px solid; border-color: #dfdfdf #fff #fff #dfdfdf; border-radius: 0; }
+.os-win95 legend { color: #000; }
+.os-win95 .xp-button { background: #c0c0c0; border: 2px solid; border-color: #dfdfdf #000 #000 #dfdfdf; border-radius: 0; box-shadow: inset 1px 1px #fff, inset -1px -1px #888; color: #000; padding: 4px 10px; }
+.os-win95 .xp-button:active:not(:disabled) { border-color: #000 #dfdfdf #dfdfdf #000; padding: 5px 9px 3px 11px; box-shadow: inset 1px 1px #888; }
+.os-win95 .xp-button:disabled { color: #888; text-shadow: 1px 1px 0 #fff; }
+.os-win95 .xp-input, .os-win95 .xp-select, .os-win95 .xp-textarea { background: #fff; border: 2px solid; border-color: #888 #dfdfdf #dfdfdf #888; border-radius: 0; padding: 2px; box-shadow: inset 1px 1px #000; color: #000; }
+.os-win95 .custom-checkbox, .os-win95 .custom-radio { background: #fff; border: 2px solid; border-color: #888 #dfdfdf #dfdfdf #888; box-shadow: inset 1px 1px #000; border-radius: 0; }
+.os-win95 .custom-radio { border-radius: 50%; }
+.os-win95 .progress-bar-container { border: 2px solid; border-color: #888 #dfdfdf #dfdfdf #888; border-radius: 0; background: #c0c0c0; }
+.os-win95 .progress-bar-fill { background: #000080; } /* Dark Blue progress */
+.os-win95 #progress-text { color: #000; }
+.os-win95 .xp-slider { border: 2px solid; border-color: #888 #dfdfdf #dfdfdf #888; border-radius: 0; background: #000; height: 4px; }
+.os-win95 .xp-slider::-webkit-slider-thumb { background: #c0c0c0; border: 2px solid; border-color: #dfdfdf #000 #000 #dfdfdf; box-shadow: inset 1px 1px #fff, inset -1px -1px #888; border-radius: 0; height: 20px; width: 10px; }
+
+
+/* ---------------------------------------------------
+   OS: WINDOWS 2000 (PROFESSIONAL BEIGE)
+--------------------------------------------------- */
+.os-win2000 body { font-family: Tahoma, "MS Sans Serif", sans-serif; font-size: 11px; }
+.os-win2000 #desktop { background-color: #3a6ea5; } 
+.os-win2000 .xp-window { background-color: #d4d0c8; border: 2px solid; border-color: #f5f4f1 #404040 #404040 #f5f4f1; border-radius: 0; box-shadow: none; padding: 2px; }
+.os-win2000 .title-bar { background: linear-gradient(to right, #0a246a 0%, #a6caf0 100%); border-radius: 0; padding: 2px 3px; height: 20px; }
+.os-win2000 .title-bar-text { color: white; font-weight: bold; text-shadow: none; font-size: 11px; }
+.os-win2000 .title-bar-controls button { width: 16px; height: 14px; background: #d4d0c8; border: 2px solid; border-color: #f5f4f1 #404040 #404040 #f5f4f1; border-radius: 0; box-shadow: none; margin-left: 2px; }
+.os-win2000 .title-bar-controls button:active { border-color: #404040 #f5f4f1 #f5f4f1 #404040; }
+.os-win2000 .close::before { content: "✕"; font-size: 10px; font-weight: bold; color: #000; }
+.os-win2000 .minimize::before { content: "_"; font-size: 10px; font-weight: bold; color: #000; position: relative; top: -3px; }
+.os-win2000 .maximize::before { content: "◻"; font-size: 10px; font-weight: bold; color: #000; }
+.os-win2000 .window-body { background-color: #d4d0c8; border: none; padding: 10px; }
+
+/* Win 2000 Widgets */
+.os-win2000 .window-tab { background: #d4d0c8; border: 2px solid; border-color: #f5f4f1 #808080 #808080 #f5f4f1; border-bottom: none; border-radius: 0; margin-top: 3px; color: #000; }
+.os-win2000 .window-tab.active { margin-top: 0; border-color: #f5f4f1 #404040 #d4d0c8 #f5f4f1; padding-bottom: 6px; }
+.os-win2000 .window-tabs { border-bottom: 2px solid #f5f4f1; }
+.os-win2000 fieldset { border: 2px solid; border-color: #dfdfdf #fff #fff #dfdfdf; border-radius: 0; }
+.os-win2000 legend { color: #000; }
+.os-win2000 .xp-button { background: #d4d0c8; border: 2px solid; border-color: #f5f4f1 #404040 #404040 #f5f4f1; border-radius: 0; box-shadow: none; color: #000; padding: 4px 10px; }
+.os-win2000 .xp-button:active:not(:disabled) { border-color: #404040 #f5f4f1 #f5f4f1 #404040; padding: 5px 9px 3px 11px; }
+.os-win2000 .xp-button:disabled { color: #808080; text-shadow: 1px 1px 0 #fff; }
+.os-win2000 .xp-input, .os-win2000 .xp-select, .os-win2000 .xp-textarea { background: #fff; border: 2px solid; border-color: #808080 #f5f4f1 #f5f4f1 #808080; border-radius: 0; padding: 2px; color: #000; }
+.os-win2000 .custom-checkbox, .os-win2000 .custom-radio { background: #fff; border: 2px solid; border-color: #808080 #f5f4f1 #f5f4f1 #808080; border-radius: 0; }
+.os-win2000 .custom-radio { border-radius: 50%; }
+.os-win2000 .progress-bar-container { border: 2px solid; border-color: #808080 #f5f4f1 #f5f4f1 #808080; border-radius: 0; background: #d4d0c8; }
+.os-win2000 .progress-bar-fill { background: #0a246a; } 
+.os-win2000 #progress-text { color: #000; }
+.os-win2000 .xp-slider { border: 2px solid; border-color: #808080 #f5f4f1 #f5f4f1 #808080; border-radius: 0; background: #000; height: 4px; }
+.os-win2000 .xp-slider::-webkit-slider-thumb { background: #d4d0c8; border: 2px solid; border-color: #f5f4f1 #404040 #404040 #f5f4f1; border-radius: 0; height: 18px; width: 10px; }
+
+
+/* ---------------------------------------------------
+   OS: WINDOWS XP
+--------------------------------------------------- */
+.os-xp #desktop { background-color: #245edb; background-image: linear-gradient(to bottom, #2d6de1 0%, #3a7eed 100%); }
+.os-xp .xp-button { background: linear-gradient(to bottom, #f2f2f2 0%, #ebebeb 50%, #dddddd 51%, #cfcfcf 100%); border: 1px solid #707070; border-radius: 3px; font-family: Tahoma; color: #000; box-shadow: inset 1px 1px 0px rgba(255, 255, 255, 0.8); }
+.os-xp .xp-button:active:not(:disabled) { background: linear-gradient(to bottom, #e3e3e3 0%, #d1d1d1 50%, #c4c4c4 51%, #b8b8b8 100%); box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3); }
+.os-xp .xp-button:disabled { color: #838383; background: #f4f4f4; border-color: #c9c7ba; box-shadow: none; }
+.os-xp .xp-input, .os-xp .xp-select, .os-xp .xp-textarea { border: 1px solid #7f9db9; font-family: Tahoma; background-color: #fff; }
+.os-xp .title-bar-text { color: white; text-shadow: 1px 1px #0f1089; }
+.os-xp .custom-checkbox, .os-xp .custom-radio { border-color: #1c5180; background: linear-gradient(135deg, #dfdfdf 0%, #ffffff 100%); }
+.os-xp .custom-checkbox:checked::before { color: #21a121; font-weight: bold; } /* Green check for XP */
+.os-xp .custom-radio:checked::before { background: #21a121; }
+
+/* XP Tabs & Progress */
+.os-xp .window-tab { background: #f0f0ea; border: 1px solid #91a0c0; border-bottom: none; border-radius: 3px 3px 0 0; color: #000; }
+.os-xp .window-tab.active { background: #fff; border-top: 3px solid #e26b0a; margin-top: -2px; padding-bottom: 7px; z-index: 12; }
+.os-xp .window-tabs { border-bottom: 1px solid #91a0c0; }
+.os-xp .tab-panel { background: #fff; border: 1px solid #91a0c0; border-top: none; padding: 10px; margin-top: -1px; }
+.os-xp fieldset { background: #fff; }
+.os-xp .progress-bar-container { border: 1px solid #7f9db9; background: #eee; }
+.os-xp .progress-bar-fill { background: linear-gradient(to bottom, #a4e58b 0%, #29b828 50%, #159b14 51%, #5ce55a 100%); } /* XP Green Block */
+.os-xp #progress-text { color: #000; }
+.os-xp .xp-slider { background: #c5d6eb; border: 1px solid #7f9db9; height: 5px; }
+.os-xp .xp-slider::-webkit-slider-thumb { background: linear-gradient(to bottom, #f2f2f2 0%, #cfcfcf 100%); border: 1px solid #1c5180; border-radius: 3px; height: 16px; width: 10px; }
+
+/* XP THEME: LUNA (BLUE) */
+.theme-luna .xp-window { background-color: #ece9d8; border: 3px solid #0055ea; }
+.theme-luna .title-bar { background: linear-gradient(to bottom, #0058e6 0%, #3a93ff 8%, #288eff 40%, #127dff 88%, #036bba 100%); }
+.theme-luna .window-body { background-color: #ece9d8; }
+.theme-luna .minimize, .theme-luna .maximize { background: linear-gradient(to bottom, #fff 0%, #a4bde6 100%); border-color: #fff #2c5ba4 #2c5ba4 #fff; }
+.theme-luna .close { background: linear-gradient(to bottom, #e4a28f 0%, #d85c3b 100%); border-color: #fff #9b280e #9b280e #fff; color: white; }
+
+/* XP THEME: OLIVE GREEN */
+.theme-olive .xp-window { background-color: #f3f3eb; border: 3px solid #72764b; }
+.theme-olive .title-bar { background: linear-gradient(to bottom, #b7ba8c 0%, #d0daba 8%, #b9bd90 40%, #909462 88%, #72764b 100%); }
+.theme-olive .title-bar-text { text-shadow: 1px 1px #484b2c; }
+.theme-olive .window-body { background-color: #f3f3eb; }
+.theme-olive legend { color: #515e21; }
+.theme-olive .minimize, .theme-olive .maximize { background: linear-gradient(to bottom, #fff 0%, #cdd1b6 100%); border-color: #fff #6a6f44 #6a6f44 #fff; }
+.theme-olive .close { background: linear-gradient(to bottom, #e3ae97 0%, #d76840 100%); border-color: #fff #9b280e #9b280e #fff; color: white;}
+.theme-olive .window-tab.active { border-top-color: #e26b0a; }
+
+/* XP THEME: SILVER */
+.theme-silver .xp-window { background-color: #fcfcfc; border: 3px solid #8e95a9; }
+.theme-silver .title-bar { background: linear-gradient(to bottom, #c0c2cd 0%, #f1f2f6 8%, #d5d8e2 40%, #aab0c1 88%, #8e95a9 100%); }
+.theme-silver .title-bar-text { text-shadow: 1px 1px #5a5d6c; }
+.theme-silver .window-body { background-color: #fdfdfd; }
+.theme-silver legend { color: #8f9095; }
+.theme-silver .minimize, .theme-silver .maximize { background: linear-gradient(to bottom, #fff 0%, #cfd2db 100%); border-color: #fff #7b8196 #7b8196 #fff; }
+.theme-silver .close { background: linear-gradient(to bottom, #e29f8a 0%, #d65538 100%); border-color: #fff #9b280e #9b280e #fff; color: white;}
+.theme-silver .window-tab.active { border-top-color: #a3a6b5; }
+
+.os-xp .minimize::before { content: ""; display: block; width: 7px; height: 2px; background: white; margin-top: 8px; margin-left: 2px; }
+.os-xp .maximize::before { content: ""; display: block; width: 9px; height: 8px; border: 1px solid white; border-top-width: 2px; }
+.os-xp .close::before { content: "×"; font-weight: bold; font-size: 18px; font-family: Arial, sans-serif; line-height: 10px; }
+
+
+/* ---------------------------------------------------
+   OS: WINDOWS VISTA
+--------------------------------------------------- */
+.os-vista body { font-family: "Segoe UI", Tahoma, sans-serif; font-size: 12px; }
+.os-vista #desktop { background: radial-gradient(circle at center, #1b5368 0%, #03151c 100%); }
+
+/* Vista Theme: Aero Glass */
+.theme-aero.os-vista .xp-window { background-color: transparent; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 10px 30px rgba(0, 0, 0, 0.6); }
+.theme-aero.os-vista .title-bar { background: rgba(18, 25, 33, 0.6); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
+.theme-aero.os-vista .title-bar-text { color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+
+/* Vista Theme: Basic (Opaque) */
+.theme-basic.os-vista .xp-window { background-color: #b5c7d8; border: 1px solid #7188a1; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
+.theme-basic.os-vista .title-bar { background: linear-gradient(to bottom, #d2e4f5 0%, #a4bed8 100%); border-bottom: 1px solid #84a2c0; }
+.theme-basic.os-vista .title-bar-text { color: #000; text-shadow: 1px 1px 2px rgba(255,255,255,0.8); }
+
+.os-vista .window-body { background-color: #f0f0f0; border: 1px solid rgba(0, 0, 0, 0.5); border-top: none; border-radius: 0 0 7px 7px; }
+.os-vista fieldset { background-color: #ffffff; border-radius: 4px; }
+.os-vista legend { color: #003399; font-weight: normal; }
+.os-vista .title-bar-controls button { border-radius: 2px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); box-shadow: inset 0 0 2px rgba(255,255,255,0.4); }
+.os-vista .close { background: rgba(200, 30, 30, 0.5); }
+.os-vista .close::before { content: "x"; color: white; font-family: sans-serif; font-size: 12px; margin-bottom: 2px; }
+.os-vista .minimize::before { content: "-"; color: white; font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+.os-vista .maximize::before { content: "□"; color: white; font-size: 14px; margin-bottom: 2px;}
+.os-vista .xp-button { background: linear-gradient(to bottom, #fefefe 0%, #ebebeb 49%, #dcdcdc 50%, #f4f4f4 100%); border: 1px solid #707070; border-radius: 2px; padding: 4px 15px; }
+.os-vista .xp-button:active:not(:disabled) { background: linear-gradient(to bottom, #e5f1fb 0%, #d1e8ff 49%, #b1d8f6 50%, #c4e1f7 100%); border-color: #3c7fb1; }
+.os-vista .xp-input, .os-vista .xp-select, .os-vista .xp-textarea { border: 1px solid #abadb3; border-radius: 2px; padding: 4px; }
+.os-vista .custom-checkbox, .os-vista .custom-radio { border-color: #8e8f8f; background: linear-gradient(to bottom, #fff, #eaeaea); border-radius: 3px; }
+.os-vista .custom-radio { border-radius: 50%; }
+.os-vista .custom-checkbox:checked::before { color: #222; }
+
+/* Vista Tabs & Progress */
+.os-vista .window-tab { background: #e0e0e0; border: 1px solid #abadb3; border-radius: 3px 3px 0 0; }
+.os-vista .window-tab.active { background: #fff; border-bottom: 1px solid #fff; margin-bottom: -1px; z-index: 10; padding-bottom: 6px; }
+.os-vista .window-tabs { border-bottom: 1px solid #abadb3; }
+.os-vista .tab-panel { background: #fff; border: 1px solid #abadb3; border-top: none; padding: 10px; }
+.os-vista .progress-bar-container { border: 1px solid #abadb3; background: #e0e0e0; border-radius: 3px; }
+.os-vista .progress-bar-fill { background: linear-gradient(to bottom, #7be15e 0%, #3bb618 50%, #209900 51%, #40c619 100%); border-radius: 2px; }
+.os-vista #progress-text { color: #333; }
+.os-vista .xp-slider { background: #dcdcdc; border: 1px solid #abadb3; border-radius: 4px; height: 6px; }
+.os-vista .xp-slider::-webkit-slider-thumb { background: linear-gradient(to bottom, #fefefe 0%, #dcdcdc 100%); border: 1px solid #707070; border-radius: 3px; height: 18px; width: 10px; }
+
+
+/* ---------------------------------------------------
+   OS: WINDOWS 7
+--------------------------------------------------- */
+.os-win7 body { font-family: "Segoe UI", Tahoma, sans-serif; font-size: 12px; }
+.os-win7 #desktop { background: radial-gradient(circle at center, #268bd2 0%, #0c3e66 100%); }
+
+/* Win7 Theme: Aero */
+.theme-aero.os-win7 .xp-window { background-color: transparent; border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 8px; box-shadow: 0 0 10px rgba(255,255,255,0.3) inset, 0 15px 35px rgba(0,0,0,0.5); }
+.theme-aero.os-win7 .title-bar { background: rgba(140, 185, 230, 0.5); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.5); height: 30px; }
+.theme-aero.os-win7 .title-bar-text { color: #000; text-shadow: 0 0 5px rgba(255,255,255,0.8); }
+
+/* Win7 Theme: Basic */
+.theme-basic.os-win7 .xp-window { background-color: #c1d3e8; border: 1px solid #8ba4c3; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+.theme-basic.os-win7 .title-bar { background: linear-gradient(to bottom, #e1eaf5 0%, #bacde4 100%); height: 30px; border-bottom: 1px solid #99b4d1; }
+.theme-basic.os-win7 .title-bar-text { color: #000; }
+
+.os-win7 .window-body { background-color: #f0f0f0; border: 1px solid #8e8f8f; border-top: none; border-radius: 0 0 7px 7px; }
+.os-win7 fieldset { background-color: #ffffff; border-radius: 3px; border-color: #d9d9d9; }
+.os-win7 legend { color: #003399; }
+.os-win7 .title-bar-controls button { width: 28px; height: 18px; border: 1px solid rgba(255,255,255,0.5); border-radius: 3px; background: linear-gradient(to bottom, rgba(255,255,255,0.3), rgba(255,255,255,0)); box-shadow: inset 0 1px 1px rgba(255,255,255,0.8); }
+.os-win7 .close { width: 45px; border-top-right-radius: 6px; background: linear-gradient(to bottom, rgba(220,100,100,0.4), rgba(200,30,30,0.8)); border-color: #901010; }
+.os-win7 .close::before { content: "✕"; color: white; font-size: 10px; }
+.os-win7 .minimize::before { content: "_"; color: #000; font-weight: bold; position: relative; top: -4px; }
+.os-win7 .maximize::before { content: "◻"; color: #000; font-size: 14px; }
+.os-win7 .xp-button { background: linear-gradient(to bottom, #f2f2f2 0%, #ebebeb 49%, #dddddd 50%, #cfcfcf 100%); border: 1px solid #707070; border-radius: 3px; padding: 4px 15px; box-shadow: inset 0 0 1px #fff; }
+.os-win7 .xp-button:hover { background: linear-gradient(to bottom, #eaf6fd 0%, #d9f0fc 49%, #bee6fd 50%, #a7d9f5 100%); border-color: #3c7fb1; }
+.os-win7 .xp-input, .os-win7 .xp-select, .os-win7 .xp-textarea { border: 1px solid #abadb3; border-radius: 2px; padding: 4px; }
+.os-win7 .custom-checkbox, .os-win7 .custom-radio { border-color: #8e8f8f; background: linear-gradient(to bottom, #fff, #eaeaea); border-radius: 3px; }
+.os-win7 .custom-radio { border-radius: 50%; }
+
+/* Win7 Tabs & Progress */
+.os-win7 .window-tab { background: #e6f0fa; border: 1px solid #8e8f8f; border-radius: 3px 3px 0 0; }
+.os-win7 .window-tab.active { background: #fff; border-bottom: 1px solid #fff; margin-bottom: -1px; z-index: 10; padding-bottom: 6px; }
+.os-win7 .window-tabs { border-bottom: 1px solid #8e8f8f; }
+.os-win7 .tab-panel { background: #fff; border: 1px solid #8e8f8f; border-top: none; padding: 10px; }
+.os-win7 .progress-bar-container { border: 1px solid #bcbcbc; background: #e6e6e6; border-radius: 3px; }
+.os-win7 .progress-bar-fill { background: linear-gradient(to bottom, #8fde64 0%, #44b726 50%, #209900 51%, #56c927 100%); border-radius: 2px; box-shadow: inset 0 0 5px rgba(255,255,255,0.6); }
+.os-win7 #progress-text { color: #333; }
+.os-win7 .xp-slider { background: #e0e0e0; border: 1px solid #8e8f8f; border-radius: 4px; height: 6px; }
+.os-win7 .xp-slider::-webkit-slider-thumb { background: linear-gradient(to bottom, #f2f2f2 0%, #cfcfcf 100%); border: 1px solid #707070; border-radius: 3px; height: 18px; width: 10px; box-shadow: inset 0 1px 1px #fff; }
+
+
+/* ---------------------------------------------------
+   OS: WINDOWS 8 & 10 & 11 (FLAT UI BASE)
+--------------------------------------------------- */
+.os-win8 body, .os-win10 body { font-family: "Segoe UI", sans-serif; font-size: 13px; }
+.os-win11 body { font-family: "Segoe UI Variable", "Segoe UI", sans-serif; font-size: 14px; }
+
+/* WINDOWS 8 */
+.os-win8 #desktop { background: #1f0133; } 
+.os-win8 .xp-window { border-radius: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.os-win8 .title-bar { border-radius: 0; padding: 8px; justify-content: center; position: relative; }
+.os-win8 .title-bar-text { font-weight: normal; text-align: center; width: 100%; text-shadow: none; font-size: 14px; }
+.os-win8 .title-bar-controls { position: absolute; right: 0; top: 0; height: 100%; gap: 0; }
+.os-win8 .title-bar-controls button { width: 30px; height: 100%; border: none; background: transparent; border-radius: 0; }
+.os-win8 .close:hover { background: #e81123; color: white; }
+.os-win8 .close::before { content: "✕"; font-size: 12px; }
+.os-win8 .minimize::before { content: "—"; font-size: 10px; }
+.os-win8 .maximize::before { content: "◻"; font-size: 14px; }
+.os-win8 .window-body { border-radius: 0; border: none; }
+.os-win8 fieldset { border-radius: 0; }
+.os-win8 .xp-button { border: 2px solid transparent; border-radius: 0; padding: 5px 15px; }
+.os-win8 .xp-input, .os-win8 .xp-select, .os-win8 .xp-textarea { border: 2px solid #ccc; border-radius: 0; padding: 5px; }
+.os-win8 .custom-checkbox, .os-win8 .custom-radio { border: 2px solid #ccc; border-radius: 0; }
+
+/* Win 8 Light Mode */
+.theme-light.os-win8 .xp-window { background-color: #ffffff; border: 2px solid #5a008c; }
+.theme-light.os-win8 .title-bar { background: #ffffff; color: #000; }
+.theme-light.os-win8 .title-bar-text { color: #000; }
+.theme-light.os-win8 .title-bar-controls button:hover { background: #e5e5e5; }
+.theme-light.os-win8 .title-bar-controls button::before { color: #000; }
+.theme-light.os-win8 .close:hover::before { color: #fff; }
+.theme-light.os-win8 .window-body { background-color: #ffffff; color: #000; }
+.theme-light.os-win8 fieldset { border-color: #dcdcdc; background: #ffffff; }
+.theme-light.os-win8 legend { color: #5a008c; font-weight: 600; }
+.theme-light.os-win8 .xp-button { background: #e1e1e1; color: #000; }
+.theme-light.os-win8 .xp-button:hover { border-color: #5a008c; }
+.theme-light.os-win8 .xp-button:active:not(:disabled) { background: #000; color: #fff; }
+.theme-light.os-win8 .xp-input, .theme-light.os-win8 .xp-select, .theme-light.os-win8 .xp-textarea { background: #fff; color: #000; border-color: #ccc; }
+.theme-light.os-win8 .custom-checkbox, .theme-light.os-win8 .custom-radio { border-color: #000; background: #fff; }
+.theme-light.os-win8 .custom-checkbox:checked::before { color: #000; }
+.theme-light.os-win8 .custom-radio:checked::before { background: #000; }
+.theme-light.os-win8 .window-tab { background: #f0f0f0; border: none; color: #000; margin-right: 2px; }
+.theme-light.os-win8 .window-tab.active { background: #5a008c; color: #fff; }
+.theme-light.os-win8 .tab-panel { border: 2px solid #5a008c; padding: 10px; }
+.theme-light.os-win8 .progress-bar-container { border: 1px solid #ccc; background: #f0f0f0; border-radius: 0; }
+.theme-light.os-win8 .progress-bar-fill { background: #5a008c; }
+.theme-light.os-win8 #progress-text { color: #000; }
+.theme-light.os-win8 .xp-slider { background: #ccc; border: none; border-radius: 0; }
+.theme-light.os-win8 .xp-slider::-webkit-slider-thumb { background: #5a008c; border: none; border-radius: 0; width: 10px; height: 20px; }
+
+/* Win 8 Dark Mode */
+.theme-dark.os-win8 .xp-window { background-color: #222222; border: 2px solid #000; }
+.theme-dark.os-win8 .title-bar { background: #000; color: #fff; }
+.theme-dark.os-win8 .title-bar-text { color: #fff; }
+.theme-dark.os-win8 .title-bar-controls button:hover { background: #333; }
+.theme-dark.os-win8 .title-bar-controls button::before { color: #fff; }
+.theme-dark.os-win8 .window-body { background-color: #222222; color: #fff; }
+.theme-dark.os-win8 fieldset { border-color: #555; background: #222; }
+.theme-dark.os-win8 legend { color: #8039a8; font-weight: 600; }
+.theme-dark.os-win8 .xp-button { background: #444; color: #fff; }
+.theme-dark.os-win8 .xp-button:hover { border-color: #8039a8; }
+.theme-dark.os-win8 .xp-button:active:not(:disabled) { background: #fff; color: #000; }
+.theme-dark.os-win8 .xp-input, .theme-dark.os-win8 .xp-select, .theme-dark.os-win8 .xp-textarea { background: #333; color: #fff; border-color: #555; }
+.theme-dark.os-win8 .custom-checkbox, .theme-dark.os-win8 .custom-radio { border-color: #888; background: #333; }
+.theme-dark.os-win8 .custom-checkbox:checked::before { color: #fff; }
+.theme-dark.os-win8 .custom-radio:checked::before { background: #fff; }
+.theme-dark.os-win8 .window-tab { background: #333; border: none; color: #fff; margin-right: 2px; }
+.theme-dark.os-win8 .window-tab.active { background: #8039a8; color: #fff; }
+.theme-dark.os-win8 .tab-panel { border: 2px solid #8039a8; padding: 10px; }
+.theme-dark.os-win8 .progress-bar-container { border: 1px solid #555; background: #333; border-radius: 0; }
+.theme-dark.os-win8 .progress-bar-fill { background: #8039a8; }
+.theme-dark.os-win8 #progress-text { color: #fff; }
+.theme-dark.os-win8 .xp-slider { background: #555; border: none; border-radius: 0; }
+.theme-dark.os-win8 .xp-slider::-webkit-slider-thumb { background: #8039a8; border: none; border-radius: 0; width: 10px; height: 20px; }
+
+
+/* WINDOWS 10 */
+.os-win10 #desktop { background: linear-gradient(135deg, #001f4c 0%, #005999 100%); }
+.os-win10 .xp-window { border-radius: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.os-win10 .title-bar { padding: 0 0 0 10px; height: 32px; border-radius: 0; }
+.os-win10 .title-bar-text { font-weight: normal; font-size: 12px; text-shadow: none; }
+.os-win10 .title-bar-controls { height: 100%; gap: 0; }
+.os-win10 .title-bar-controls button { width: 46px; height: 100%; border: none; background: transparent; border-radius: 0; }
+.os-win10 .close:hover { background: #e81123; }
+.os-win10 .close::before { content: "✕"; font-size: 12px; font-weight: lighter; }
+.os-win10 .minimize::before { content: "—"; font-size: 10px; font-weight: lighter; }
+.os-win10 .maximize::before { content: "◻"; font-size: 16px; font-weight: lighter; }
+.os-win10 fieldset { border-radius: 0; }
+.os-win10 .xp-button { border: 2px solid transparent; border-radius: 0; padding: 6px 20px; transition: background 0.1s; }
+.os-win10 .xp-input, .os-win10 .xp-select, .os-win10 .xp-textarea { border-radius: 0; padding: 6px; }
+.os-win10 .custom-checkbox, .os-win10 .custom-radio { border: 2px solid; border-radius: 0; }
+.os-win10 .custom-radio { border-radius: 50%; }
+
+/* Win 10 Light Mode */
+.theme-light.os-win10 .xp-window { background-color: #ffffff; border: 1px solid #0078d7; }
+.theme-light.os-win10 .title-bar { background: #ffffff; color: #000; }
+.theme-light.os-win10 .title-bar-text { color: #000; }
+.theme-light.os-win10 .title-bar-controls button:hover { background: #e5e5e5; }
+.theme-light.os-win10 .title-bar-controls button::before { color: #000; }
+.theme-light.os-win10 .close:hover::before { color: #fff; }
+.theme-light.os-win10 .window-body { background-color: #ffffff; color: #000; }
+.theme-light.os-win10 fieldset { border-color: #d3d3d3; }
+.theme-light.os-win10 legend { color: #0078d7; }
+.theme-light.os-win10 .xp-button { background: #cccccc; color: #000; }
+.theme-light.os-win10 .xp-button:hover { border: 2px solid #0078d7; background: #cccccc; }
+.theme-light.os-win10 .xp-button:active:not(:disabled) { background: #999999; border-color: transparent; }
+.theme-light.os-win10 .xp-input, .theme-light.os-win10 .xp-select, .theme-light.os-win10 .xp-textarea { border: 1px solid #999; background: #fff; color: #000; }
+.theme-light.os-win10 .custom-checkbox, .theme-light.os-win10 .custom-radio { border-color: #000; background: #fff; }
+.theme-light.os-win10 .custom-checkbox:checked, .theme-light.os-win10 .custom-radio:checked { background: #0078d7; border-color: #0078d7; }
+.theme-light.os-win10 .custom-checkbox:checked::before { color: #fff; }
+.theme-light.os-win10 .custom-radio:checked::before { background: #fff; }
+.theme-light.os-win10 .window-tab { background: #fff; border: none; border-bottom: 2px solid transparent; color: #000; }
+.theme-light.os-win10 .window-tab.active { border-bottom: 2px solid #0078d7; font-weight: bold; }
+.theme-light.os-win10 .window-tabs { border-bottom: 1px solid #ccc; }
+.theme-light.os-win10 .tab-panel { padding-top: 15px; }
+.theme-light.os-win10 .progress-bar-container { border: none; background: #cccccc; border-radius: 0; height: 6px; }
+.theme-light.os-win10 .progress-bar-fill { background: #0078d7; }
+.theme-light.os-win10 #progress-text { color: #000; }
+.theme-light.os-win10 .xp-slider { background: #cccccc; border: none; border-radius: 0; height: 2px; }
+.theme-light.os-win10 .xp-slider::-webkit-slider-thumb { background: #0078d7; border: none; border-radius: 50%; width: 16px; height: 16px; margin-top: -7px; }
+
+/* Win 10 Dark Mode */
+.theme-dark.os-win10 .xp-window { background-color: #2b2b2b; border: 1px solid #333; }
+.theme-dark.os-win10 .title-bar { background: #2b2b2b; color: #fff; }
+.theme-dark.os-win10 .title-bar-text { color: #fff; }
+.theme-dark.os-win10 .title-bar-controls button:hover { background: #444; }
+.theme-dark.os-win10 .title-bar-controls button::before { color: #fff; }
+.theme-dark.os-win10 .window-body { background-color: #1e1e1e; color: #fff; }
+.theme-dark.os-win10 fieldset { border-color: #555; }
+.theme-dark.os-win10 legend { color: #4da6ff; }
+.theme-dark.os-win10 .xp-button { background: #333; color: #fff; border: 2px solid #555; }
+.theme-dark.os-win10 .xp-button:hover { border: 2px solid #4da6ff; background: #333; }
+.theme-dark.os-win10 .xp-button:active:not(:disabled) { background: #555; }
+.theme-dark.os-win10 .xp-input, .theme-dark.os-win10 .xp-select, .theme-dark.os-win10 .xp-textarea { border: 1px solid #555; background: #2b2b2b; color: #fff; }
+.theme-dark.os-win10 .custom-checkbox, .theme-dark.os-win10 .custom-radio { border-color: #888; background: #1e1e1e; }
+.theme-dark.os-win10 .custom-checkbox:checked, .theme-dark.os-win10 .custom-radio:checked { background: #4da6ff; border-color: #4da6ff; }
+.theme-dark.os-win10 .custom-checkbox:checked::before { color: #000; }
+.theme-dark.os-win10 .custom-radio:checked::before { background: #000; }
+.theme-dark.os-win10 .window-tab { background: #1e1e1e; border: none; border-bottom: 2px solid transparent; color: #fff; }
+.theme-dark.os-win10 .window-tab.active { border-bottom: 2px solid #4da6ff; font-weight: bold; }
+.theme-dark.os-win10 .window-tabs { border-bottom: 1px solid #555; }
+.theme-dark.os-win10 .tab-panel { padding-top: 15px; }
+.theme-dark.os-win10 .progress-bar-container { border: none; background: #555; border-radius: 0; height: 6px; }
+.theme-dark.os-win10 .progress-bar-fill { background: #4da6ff; }
+.theme-dark.os-win10 #progress-text { color: #fff; }
+.theme-dark.os-win10 .xp-slider { background: #555; border: none; border-radius: 0; height: 2px; }
+.theme-dark.os-win10 .xp-slider::-webkit-slider-thumb { background: #4da6ff; border: none; border-radius: 50%; width: 16px; height: 16px; margin-top: -7px; }
+
+
+/* WINDOWS 11 */
+.os-win11 #desktop { background: radial-gradient(circle at 50% 100%, #1e528e 0%, #05162a 100%); }
+.os-win11 .xp-window { border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+.os-win11 .title-bar { padding: 0 0 0 15px; height: 35px; }
+.os-win11 .title-bar-text { font-weight: normal; font-size: 13px; text-shadow: none; }
+.os-win11 .title-bar-controls { height: 100%; gap: 0; }
+.os-win11 .title-bar-controls button { width: 46px; height: 100%; border: none; background: transparent; border-radius: 0; }
+.os-win11 .close { border-top-right-radius: 8px !important; }
+.os-win11 .close:hover { background: #e81123; }
+.os-win11 .close::before { content: "✕"; font-size: 12px; font-weight: lighter; }
+.os-win11 .minimize::before { content: "—"; font-size: 10px; font-weight: lighter; }
+.os-win11 .maximize::before { content: "◻"; font-size: 14px; font-weight: lighter; border-radius: 2px; }
+.os-win11 fieldset { border-radius: 6px; }
+.os-win11 .xp-button { border-radius: 4px; padding: 6px 20px; transition: all 0.1s; }
+.os-win11 .xp-input, .os-win11 .xp-select, .os-win11 .xp-textarea { border-radius: 4px; padding: 6px 10px; }
+.os-win11 .custom-checkbox, .os-win11 .custom-radio { border-radius: 4px; border: 1px solid rgba(0,0,0,0.2); }
+.os-win11 .custom-radio { border-radius: 50%; }
+
+/* Win 11 Light Mode */
+.theme-light.os-win11 .xp-window { background-color: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.4); }
+.theme-light.os-win11 .title-bar { background: transparent; color: #1a1a1a; }
+.theme-light.os-win11 .title-bar-text { color: #1a1a1a; }
+.theme-light.os-win11 .title-bar-controls button:hover { background: rgba(0,0,0,0.05); }
+.theme-light.os-win11 .title-bar-controls button::before { color: #1a1a1a; }
+.theme-light.os-win11 .close:hover::before { color: #fff; }
+.theme-light.os-win11 .window-body { background-color: transparent; color: #1a1a1a; }
+.theme-light.os-win11 fieldset { border: 1px solid rgba(0,0,0,0.1); background: rgba(255,255,255,0.5); }
+.theme-light.os-win11 legend { color: #0067c0; font-weight: 600; }
+.theme-light.os-win11 .xp-button { background: #fdfdfd; border: 1px solid rgba(0,0,0,0.1); border-bottom-color: rgba(0,0,0,0.2); box-shadow: 0 1px 2px rgba(0,0,0,0.05); color: #000; }
+.theme-light.os-win11 .xp-button:hover { background: #f6f6f6; }
+.theme-light.os-win11 .xp-button:active:not(:disabled) { background: #f0f0f0; border-bottom-color: rgba(0,0,0,0.1); transform: translateY(1px); box-shadow: none; }
+.theme-light.os-win11 .xp-input, .theme-light.os-win11 .xp-select, .theme-light.os-win11 .xp-textarea { border: 1px solid rgba(0,0,0,0.1); border-bottom-color: rgba(0,0,0,0.4); background: rgba(255,255,255,0.7); color: #000; }
+.theme-light.os-win11 .custom-checkbox, .theme-light.os-win11 .custom-radio { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.3); border-bottom-color: rgba(0,0,0,0.5); }
+.theme-light.os-win11 .custom-checkbox:checked, .theme-light.os-win11 .custom-radio:checked { background: #0067c0; border-color: #0067c0; }
+.theme-light.os-win11 .custom-checkbox:checked::before { color: #fff; }
+.theme-light.os-win11 .custom-radio:checked::before { background: #fff; }
+.theme-light.os-win11 .window-tab { background: transparent; border: none; border-bottom: 3px solid transparent; color: #1a1a1a; margin: 0 5px; border-radius: 0; padding: 6px 12px; transition: 0.2s; }
+.theme-light.os-win11 .window-tab:hover { background: rgba(0,0,0,0.05); border-radius: 4px; }
+.theme-light.os-win11 .window-tab.active { border-bottom: 3px solid #0067c0; font-weight: 600; background: transparent; }
+.theme-light.os-win11 .window-tabs { border-bottom: 1px solid rgba(0,0,0,0.1); }
+.theme-light.os-win11 .progress-bar-container { border: none; background: rgba(0,0,0,0.1); border-radius: 3px; height: 6px; }
+.theme-light.os-win11 .progress-bar-fill { background: #0067c0; border-radius: 3px; }
+.theme-light.os-win11 #progress-text { color: #1a1a1a; }
+.theme-light.os-win11 .xp-slider { background: rgba(0,0,0,0.1); border: none; border-radius: 3px; height: 4px; }
+.theme-light.os-win11 .xp-slider::-webkit-slider-thumb { background: #0067c0; border: 2px solid #fff; border-radius: 50%; width: 18px; height: 18px; margin-top: -7px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+/* Win 11 Dark Mode */
+.theme-dark.os-win11 .xp-window { background-color: rgba(32, 32, 32, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
+.theme-dark.os-win11 .title-bar { background: transparent; color: #fff; }
+.theme-dark.os-win11 .title-bar-text { color: #fff; }
+.theme-dark.os-win11 .title-bar-controls button:hover { background: rgba(255,255,255,0.1); }
+.theme-dark.os-win11 .title-bar-controls button::before { color: #fff; }
+.theme-dark.os-win11 .window-body { background-color: transparent; color: #fff; }
+.theme-dark.os-win11 fieldset { border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); }
+.theme-dark.os-win11 legend { color: #60cdff; font-weight: 600; }
+.theme-dark.os-win11 .xp-button { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-top-color: rgba(255,255,255,0.2); color: #fff; }
+.theme-dark.os-win11 .xp-button:hover { background: rgba(255,255,255,0.08); }
+.theme-dark.os-win11 .xp-button:active:not(:disabled) { background: rgba(255,255,255,0.03); border-top-color: rgba(255,255,255,0.1); }
+.theme-dark.os-win11 .xp-input, .theme-dark.os-win11 .xp-select, .theme-dark.os-win11 .xp-textarea { border: 1px solid rgba(255,255,255,0.1); border-bottom-color: rgba(255,255,255,0.4); background: rgba(0,0,0,0.5); color: #fff; }
+.theme-dark.os-win11 .custom-checkbox, .theme-dark.os-win11 .custom-radio { background: rgba(0,0,0,0.5); border-color: rgba(255,255,255,0.2); border-bottom-color: rgba(255,255,255,0.4); }
+.theme-dark.os-win11 .custom-checkbox:checked, .theme-dark.os-win11 .custom-radio:checked { background: #60cdff; border-color: #60cdff; }
+.theme-dark.os-win11 .custom-checkbox:checked::before { color: #000; }
+.theme-dark.os-win11 .custom-radio:checked::before { background: #000; }
+.theme-dark.os-win11 .window-tab { background: transparent; border: none; border-bottom: 3px solid transparent; color: #fff; margin: 0 5px; border-radius: 0; padding: 6px 12px; transition: 0.2s; }
+.theme-dark.os-win11 .window-tab:hover { background: rgba(255,255,255,0.05); border-radius: 4px; }
+.theme-dark.os-win11 .window-tab.active { border-bottom: 3px solid #60cdff; font-weight: 600; background: transparent; }
+.theme-dark.os-win11 .window-tabs { border-bottom: 1px solid rgba(255,255,255,0.1); }
+.theme-dark.os-win11 .progress-bar-container { border: none; background: rgba(255,255,255,0.1); border-radius: 3px; height: 6px; }
+.theme-dark.os-win11 .progress-bar-fill { background: #60cdff; border-radius: 3px; }
+.theme-dark.os-win11 #progress-text { color: #fff; }
+.theme-dark.os-win11 .xp-slider { background: rgba(255,255,255,0.1); border: none; border-radius: 3px; height: 4px; }
+.theme-dark.os-win11 .xp-slider::-webkit-slider-thumb { background: #60cdff; border: 2px solid #222; border-radius: 50%; width: 18px; height: 18px; margin-top: -7px; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+
+
+/* ---------------------------------------------------
+   OS: MAC SYSTEM 7 (1991 CLASSIC B&W)
+--------------------------------------------------- */
+.os-macsys7 body { font-family: "Chicago", "Geneva", sans-serif; font-size: 11px; }
+.os-macsys7 #desktop { background-image: url('data:image/svg+xml;utf8,<svg width="2" height="2" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1" fill="%23fff"/><rect x="1" y="1" width="1" height="1" fill="%23fff"/><rect x="1" width="1" height="1" fill="%23555"/><rect y="1" width="1" height="1" fill="%23555"/></svg>'); }
+.os-macsys7 .xp-window { background-color: #fff; border: 1px solid #000; border-radius: 0; box-shadow: 1px 1px 0 #000; padding: 1px; }
+.os-macsys7 .title-bar { background: #fff; border: 1px solid #000; border-radius: 0; height: 18px; padding: 0; justify-content: center; position: relative; }
+/* Horizontal stripes for active System 7 window */
+.os-macsys7 .title-bar::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: repeating-linear-gradient(to bottom, #000, #000 1px, #fff 1px, #fff 2px); z-index: 1; }
+.os-macsys7 .title-bar-text { color: #000; font-weight: normal; font-size: 12px; background: #fff; padding: 0 10px; z-index: 2; text-align: center; }
+.os-macsys7 .macsys7-close-box { display: block; position: absolute; left: 4px; top: 2px; width: 12px; height: 12px; background: #fff; border: 1px solid #000; z-index: 3; }
+.os-macsys7 .title-bar-controls { display: none; } /* Only the close box existed natively on the left usually */
+.os-macsys7 .window-body { background: #fff; color: #000; border: 1px solid #000; border-top: none; }
+
+/* Sys7 Widgets */
+.os-macsys7 .window-tab { background: #fff; border: 1px solid #000; border-bottom: none; border-radius: 4px 4px 0 0; margin-top: 4px; color: #000; font-family: "Chicago"; }
+.os-macsys7 .window-tab.active { background: #fff; border: 2px solid #000; border-bottom: none; margin-top: 0; padding-bottom: 6px; }
+.os-macsys7 .window-tabs { border-bottom: 2px solid #000; }
+.os-macsys7 fieldset { border: 1px solid #000; border-radius: 0; }
+.os-macsys7 legend { color: #000; background: #fff; padding: 0 4px; }
+.os-macsys7 .xp-button { background: #fff; border: 1px solid #000; border-radius: 4px; box-shadow: 1px 1px 0 #000; color: #000; padding: 4px 14px; font-family: "Chicago", sans-serif; }
+.os-macsys7 .xp-button:active:not(:disabled) { background: #000; color: #fff; box-shadow: inset 1px 1px 0 #000; }
+.os-macsys7 .xp-input, .os-macsys7 .xp-select, .os-macsys7 .xp-textarea { border: 1px solid #000; border-radius: 0; background: #fff; color: #000; box-shadow: inset 1px 1px 0 #000; padding: 3px; }
+.os-macsys7 .custom-checkbox, .os-macsys7 .custom-radio { border: 1px solid #000; border-radius: 0; box-shadow: 1px 1px 0 #000; background: #fff; width: 12px; height: 12px; }
+.os-macsys7 .custom-radio { border-radius: 50%; }
+.os-macsys7 .custom-checkbox:checked::before { content: "x"; font-family: sans-serif; font-size: 14px; font-weight: normal; color: #000; top: -3px; }
+.os-macsys7 .progress-bar-container { border: 1px solid #000; background: #fff; box-shadow: inset 1px 1px 0 #000; }
+.os-macsys7 .progress-bar-fill { background: url('data:image/svg+xml;utf8,<svg width="4" height="4" xmlns="http://www.w3.org/2000/svg"><rect width="2" height="2" fill="%23000"/><rect x="2" y="2" width="2" height="2" fill="%23000"/><rect x="2" width="2" height="2" fill="%23fff"/><rect y="2" width="2" height="2" fill="%23fff"/></svg>'); }
+.os-macsys7 #progress-text { color: #000; font-family: "Chicago"; }
+.os-macsys7 .xp-slider { background: #fff; border: 1px solid #000; border-radius: 0; height: 4px; }
+.os-macsys7 .xp-slider::-webkit-slider-thumb { background: #fff; border: 1px solid #000; border-radius: 0; height: 14px; width: 8px; box-shadow: 1px 1px 0 #000; }
+
+
+/* ---------------------------------------------------
+   OS: MAC OS 9 (CLASSIC PLATINUM)
+--------------------------------------------------- */
+.os-macos9 body { font-family: "Geneva", Tahoma, sans-serif; font-size: 11px; }
+.os-macos9 #desktop { background-color: #6666bb; background-image: url('data:image/svg+xml;utf8,<svg width="2" height="2" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1" fill="%235555aa"/><rect x="1" y="1" width="1" height="1" fill="%235555aa"/></svg>'); }
+.theme-platinum.os-macos9 .xp-window { background-color: #dddddd; border: 1px solid #000; border-radius: 0; box-shadow: 2px 2px 0 rgba(0,0,0,0.5); }
+.theme-platinum.os-macos9 .title-bar { background: #dddddd; border-bottom: 1px solid #000; border-radius: 0; height: 22px; padding: 1px; display: flex; position: relative; justify-content: center; /* Striped background */ background-image: repeating-linear-gradient(to bottom, #dddddd, #dddddd 1px, #aaaaaa 1px, #aaaaaa 2px); }
+.theme-platinum.os-macos9 .title-bar-text { background: #dddddd; padding: 0 5px; color: #000; font-family: 'Charcoal', sans-serif; font-weight: normal; font-size: 12px; z-index: 2; border: 1px solid #dddddd; }
+/* Push controls to left */
+.theme-platinum.os-macos9 .title-bar-controls { position: absolute; left: 2px; top: 2px; z-index: 3; background: #dddddd; padding-right: 4px; gap: 2px; }
+.theme-platinum.os-macos9 .title-bar-controls button { width: 14px; height: 14px; border: 1px solid #000; background: #eeeeee; box-shadow: inset 1px 1px #fff, inset -1px -1px #888; border-radius: 0; }
+.theme-platinum.os-macos9 .title-bar-controls button:active { box-shadow: inset 1px 1px #888, inset -1px -1px #fff; background: #cccccc; }
+.theme-platinum.os-macos9 .close::before { content: ""; display: block; width: 6px; height: 1px; background: #000; }
+.theme-platinum.os-macos9 .minimize, .theme-platinum.os-macos9 .maximize { display: none; }
+.theme-platinum.os-macos9 .window-body { background: #dddddd; color: #000; }
+
+/* Mac OS 9 Widgets */
+.theme-platinum.os-macos9 .window-tab { background: #cccccc; border: 1px solid #888; border-bottom: none; border-radius: 4px 4px 0 0; color: #000; font-family: "Geneva"; margin-top: 3px; }
+.theme-platinum.os-macos9 .window-tab.active { background: #dddddd; border: 1px solid #888; border-bottom: none; margin-top: 0; padding-bottom: 6px; }
+.theme-platinum.os-macos9 .window-tabs { border-bottom: 1px solid #888; }
+.theme-platinum.os-macos9 fieldset { border: 1px solid #888; border-radius: 0; }
+.theme-platinum.os-macos9 legend { color: #000; }
+.theme-platinum.os-macos9 .xp-button { background: #eeeeee; border: 1px solid #000; border-radius: 0; box-shadow: inset 1px 1px #fff, inset -1px -1px #888; color: #000; }
+.theme-platinum.os-macos9 .xp-button:active:not(:disabled) { box-shadow: inset 1px 1px #888, inset -1px -1px #fff; background: #cccccc; }
+.theme-platinum.os-macos9 .xp-input, .theme-platinum.os-macos9 .xp-select, .theme-platinum.os-macos9 .xp-textarea { border: 1px solid #000; border-radius: 0; box-shadow: inset 1px 1px #888; background: #fff; }
+.theme-platinum.os-macos9 .custom-checkbox, .theme-platinum.os-macos9 .custom-radio { border: 1px solid #000; border-radius: 0; box-shadow: inset 1px 1px #888; background: #fff; }
+.theme-platinum.os-macos9 .custom-radio { border-radius: 50%; }
+.theme-platinum.os-macos9 .custom-checkbox:checked::before { content: "x"; font-family: 'Charcoal', sans-serif; font-size: 14px; font-weight: normal; color: #000; top: -3px; }
+.theme-platinum.os-macos9 .progress-bar-container { border: 1px solid #888; background: #fff; box-shadow: inset 1px 1px #888; border-radius: 0; }
+.theme-platinum.os-macos9 .progress-bar-fill { background: #6666bb; } /* Platinum Highlight Color */
+.theme-platinum.os-macos9 #progress-text { color: #000; font-family: "Geneva"; }
+.theme-platinum.os-macos9 .xp-slider { background: #aaa; border: 1px solid #888; border-radius: 0; height: 4px; box-shadow: inset 1px 1px #888; }
+.theme-platinum.os-macos9 .xp-slider::-webkit-slider-thumb { background: #eeeeee; border: 1px solid #000; border-radius: 0; height: 16px; width: 10px; box-shadow: inset 1px 1px #fff, inset -1px -1px #888; }
+
+
+/* ---------------------------------------------------
+   OS: MAC OS X (AQUA)
+--------------------------------------------------- */
+.os-macosx body { font-family: "Lucida Grande", sans-serif; font-size: 12px; }
+.os-macosx #desktop { background: #26558b; }
+.os-macosx .xp-window { border-radius: 8px; box-shadow: 0 15px 30px rgba(0,0,0,0.5); }
+.os-macosx .title-bar { height: 26px; border-top-left-radius: 8px; border-top-right-radius: 8px; flex-direction: row-reverse; padding: 0 8px; justify-content: space-between; border-bottom: 1px solid #888; }
+.os-macosx .title-bar-text { color: #333; font-weight: bold; font-size: 13px; text-shadow: 0 1px 0 rgba(255,255,255,0.8); width: 100%; text-align: center; position: absolute; left: 0; pointer-events: none; }
+.os-macosx .title-bar-controls { flex-direction: row-reverse; gap: 6px; z-index: 2; }
+.os-macosx .title-bar-controls button { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.5); box-shadow: inset 0 -3px 3px rgba(255,255,255,0.6), inset 0 2px 4px rgba(255,255,255,0.8); }
+.os-macosx .title-bar-controls button::before { display: none; }
+
+/* Jelly Buttons */
+.os-macosx .close { background: radial-gradient(circle at center, #ff5c5c 0%, #ff0000 80%); border-color: #a00; }
+.os-macosx .minimize { background: radial-gradient(circle at center, #ffbd4c 0%, #ff9900 80%); border-color: #a60; }
+.os-macosx .maximize { background: radial-gradient(circle at center, #00d900 0%, #00a600 80%); border-color: #060; }
+
+.os-macosx .window-body { border-radius: 0 0 8px 8px; }
+
+/* Aqua Widgets */
+.os-macosx .window-tab { background: linear-gradient(to bottom, #f3f3f3 0%, #d8d8d8 100%); border: 1px solid #888; border-bottom: none; border-radius: 6px 6px 0 0; color: #333; margin-top: 2px; }
+.os-macosx .window-tab.active { background: #e8e8e8; border-bottom: 1px solid #e8e8e8; margin-bottom: -1px; margin-top: 0; padding-bottom: 6px; z-index: 10; font-weight: bold; }
+.os-macosx .window-tabs { border-bottom: 1px solid #888; }
+.os-macosx .tab-panel { padding-top: 15px; }
+.os-macosx fieldset { border-radius: 4px; border: 1px solid #b0b0b0; background: rgba(255,255,255,0.3); }
+.os-macosx legend { font-weight: bold; color: #333; }
+.os-macosx .xp-button { border-radius: 12px; padding: 4px 16px; border: 1px solid #888; box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 1px 2px rgba(0,0,0,0.2); }
+.os-macosx .xp-input, .os-macosx .xp-select, .os-macosx .xp-textarea { border-radius: 4px; border: 1px solid #888; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); padding: 4px; }
+.os-macosx .custom-checkbox, .os-macosx .custom-radio { border-radius: 3px; border: 1px solid #888; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); background: #fff; }
+.os-macosx .custom-radio { border-radius: 50%; }
+.os-macosx .custom-checkbox:checked::before { color: #333; }
+
+/* Classic Aqua Barber Pole Progress Bar */
+.os-macosx .progress-bar-container { border: 1px solid #888; background: #dcdcdc; border-radius: 8px; height: 14px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
+.os-macosx .progress-bar-fill { background: repeating-linear-gradient( -45deg, #4da4f3, #4da4f3 10px, #2681df 10px, #2681df 20px ); border-radius: 8px; box-shadow: inset 0 2px 5px rgba(255,255,255,0.8), inset 0 -2px 5px rgba(0,0,0,0.3); animation: macos-aqua-progress 1s linear infinite; }
+@keyframes macos-aqua-progress { 0% { background-position: 0 0; } 100% { background-position: 28px 0; } }
+.os-macosx #progress-text { color: #333; font-weight: bold; }
+.os-macosx .xp-slider { background: #dcdcdc; border: 1px solid #888; border-radius: 8px; height: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
+.os-macosx .xp-slider::-webkit-slider-thumb { background: linear-gradient(to bottom, #fff 0%, #dcdcdc 100%); border: 1px solid #888; border-radius: 50%; height: 16px; width: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+
+/* OS X Theme: Aqua */
+.theme-aqua.os-macosx .xp-window { background: #e8e8e8; border: 1px solid #999; }
+.theme-aqua.os-macosx .title-bar { background: linear-gradient(to bottom, #f3f3f3 0%, #d8d8d8 50%, #c4c4c4 51%, #e6e6e6 100%); }
+.theme-aqua.os-macosx .window-body { background: #e8e8e8; /* Pinstripe effect */ background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px); }
+.theme-aqua.os-macosx .xp-button { background: linear-gradient(to bottom, #ffffff 0%, #e6e6e6 50%, #d4d4d4 51%, #f3f3f3 100%); color: #000; }
+.theme-aqua.os-macosx .xp-button:active:not(:disabled) { background: linear-gradient(to bottom, #c0c0c0 0%, #a0a0a0 50%, #909090 51%, #d0d0d0 100%); }
+
+/* OS X Theme: Graphite */
+.theme-graphite.os-macosx .xp-window { background: #dfdfdf; border: 1px solid #777; }
+.theme-graphite.os-macosx .title-bar { background: linear-gradient(to bottom, #e4e4e4 0%, #cccccc 50%, #b8b8b8 51%, #d9d9d9 100%); }
+.theme-graphite.os-macosx .close, .theme-graphite.os-macosx .minimize, .theme-graphite.os-macosx .maximize { background: radial-gradient(circle at center, #bbbbbb 0%, #888888 80%); border-color: #555; }
+.theme-graphite.os-macosx .window-body { background: #dfdfdf; }
+.theme-graphite.os-macosx .xp-button { background: linear-gradient(to bottom, #eeeeee 0%, #cccccc 50%, #bbbbbb 51%, #dddddd 100%); color: #000; }
+.theme-graphite.os-macosx .progress-bar-fill { background: repeating-linear-gradient( -45deg, #a0a0a0, #a0a0a0 10px, #888888 10px, #888888 20px ); box-shadow: inset 0 2px 5px rgba(255,255,255,0.8), inset 0 -2px 5px rgba(0,0,0,0.3); }
+
+
+/* ---------------------------------------------------
+   OS: OS X YOSEMITE (FLAT TRANSLUCENT)
+--------------------------------------------------- */
+.os-osx-yosemite body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 13px; }
+.os-osx-yosemite #desktop { background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs><linearGradient id="yg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%238bb9e6"/><stop offset="50%" stop-color="%23d88151"/><stop offset="100%" stop-color="%2356396e"/></linearGradient></defs><rect width="100%" height="100%" fill="url(%23yg)"/></svg>') no-repeat center center fixed; background-size: cover; }
+.os-osx-yosemite .xp-window { border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 1px solid rgba(0,0,0,0.2); }
+.os-osx-yosemite .title-bar { height: 22px; border-top-left-radius: 6px; border-top-right-radius: 6px; flex-direction: row-reverse; padding: 0 10px; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.1); background: rgba(236, 236, 236, 0.95); backdrop-filter: blur(10px); }
+.os-osx-yosemite .title-bar-text { color: #444; font-weight: 500; font-size: 13px; width: 100%; text-align: center; position: absolute; left: 0; pointer-events: none; text-shadow: none; }
+.os-osx-yosemite .title-bar-controls { flex-direction: row-reverse; gap: 8px; z-index: 2; }
+.os-osx-yosemite .title-bar-controls button { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; box-shadow: none; }
+.os-osx-yosemite .close { background: #fc5753; }
+.os-osx-yosemite .minimize { background: #fdbc40; }
+.os-osx-yosemite .maximize { background: #33c748; }
+
+/* Hover icons for Yosemite */
+.os-osx-yosemite .title-bar-controls:hover button::before { display: block; color: rgba(0,0,0,0.6); font-size: 8px; font-weight: bold; }
+.os-osx-yosemite .close:hover::before { content: "✕"; font-size: 7px; }
+.os-osx-yosemite .minimize:hover::before { content: "—"; font-size: 8px; }
+.os-osx-yosemite .maximize:hover::before { content: "＋"; font-size: 9px; }
+
+.os-osx-yosemite .window-body { border-radius: 0 0 6px 6px; background: #ececec; color: #333; }
+
+/* Yosemite Widgets */
+.os-osx-yosemite .window-tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: #555; border-radius: 0; margin: 0 5px; padding: 4px 8px; transition: color 0.2s; }
+.os-osx-yosemite .window-tab.active { border-bottom: 2px solid #1473e6; color: #333; font-weight: 500; }
+.os-osx-yosemite .window-tabs { border-bottom: 1px solid #ccc; justify-content: center; }
+.os-osx-yosemite .tab-panel { padding-top: 15px; }
+
+.os-osx-yosemite fieldset { border-radius: 4px; border: 1px solid #ccc; background: #fff; }
+.os-osx-yosemite legend { font-weight: 500; color: #333; }
+.os-osx-yosemite .xp-button { border-radius: 4px; padding: 4px 14px; border: 1px solid #b8b8b8; background: linear-gradient(to bottom, #fff, #f0f0f0); box-shadow: 0 1px 1px rgba(0,0,0,0.05); font-weight: 400; color: #333; }
+.os-osx-yosemite .xp-input, .os-osx-yosemite .xp-select, .os-osx-yosemite .xp-textarea { border-radius: 4px; border: 1px solid #b8b8b8; padding: 4px 8px; background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
+.os-osx-yosemite .custom-checkbox, .os-osx-yosemite .custom-radio { border-radius: 3px; border: 1px solid #b8b8b8; background: #fff; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
+.os-osx-yosemite .custom-radio { border-radius: 50%; }
+.os-osx-yosemite .custom-checkbox:checked, .os-osx-yosemite .custom-radio:checked { background: #1473e6; border-color: #1473e6; }
+.os-osx-yosemite .custom-checkbox:checked::before, .os-osx-yosemite .custom-radio:checked::before { color: #fff; }
+
+.os-osx-yosemite .progress-bar-container { border: 1px solid #b8b8b8; background: #e0e0e0; border-radius: 4px; height: 10px; }
+.os-osx-yosemite .progress-bar-fill { background: #1473e6; border-radius: 4px; }
+.os-osx-yosemite #progress-text { color: #333; }
+.os-osx-yosemite .xp-slider { background: #dcdcdc; border: 1px solid #b8b8b8; border-radius: 4px; height: 4px; }
+.os-osx-yosemite .xp-slider::-webkit-slider-thumb { background: #fff; border: 1px solid #b8b8b8; border-radius: 50%; height: 16px; width: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+
+
+/* ---------------------------------------------------
+   OS: macOS (MODERN BIG SUR/MONTEREY)
+--------------------------------------------------- */
+.os-macos body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 13px; }
+.os-macos #desktop { background: linear-gradient(135deg, #a40606 0%, #d98324 40%, #00a1c1 100%); background-size: cover; background-attachment: fixed; }
+.theme-dark.os-macos #desktop { background: linear-gradient(135deg, #2b0057 0%, #002d5b 100%); background-size: cover; background-attachment: fixed; }
+
+.os-macos .xp-window { border-radius: 10px; box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1); border: none; }
+.os-macos .title-bar { height: 28px; border-top-left-radius: 10px; border-top-right-radius: 10px; flex-direction: row-reverse; padding: 0 12px; justify-content: space-between; border-bottom: none; }
+.os-macos .title-bar-text { font-weight: 600; font-size: 13px; width: 100%; text-align: center; position: absolute; left: 0; pointer-events: none; text-shadow: none; }
+.os-macos .title-bar-controls { flex-direction: row-reverse; gap: 8px; z-index: 2; }
+.os-macos .title-bar-controls button { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; }
+
+/* macOS Hover specific controls */
+.os-macos .title-bar-controls:hover button::before { display: block; color: rgba(0,0,0,0.6); font-size: 8px; font-weight: bold; }
+.os-macos .close { background: #ff5f56; }
+.os-macos .close:hover::before { content: "✕"; font-size: 7px; }
+.os-macos .minimize { background: #ffbd2e; }
+.os-macos .minimize:hover::before { content: "—"; font-size: 8px; }
+.os-macos .maximize { background: #27c93f; }
+.os-macos .maximize:hover::before { content: "＋"; font-size: 9px; }
+
+.os-macos .window-body { border-radius: 0 0 10px 10px; }
+.os-macos fieldset { border-radius: 6px; border: 1px solid rgba(128,128,128,0.2); }
+.os-macos legend { font-weight: 500; }
+.os-macos .xp-button { border-radius: 5px; padding: 4px 14px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 1px 1px rgba(0,0,0,0.05); font-weight: 500; }
+.os-macos .xp-input, .os-macos .xp-select, .os-macos .xp-textarea { border-radius: 5px; border: 1px solid rgba(0,0,0,0.1); padding: 5px 8px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); }
+.os-macos .custom-checkbox, .os-macos .custom-radio { border-radius: 4px; border: 1px solid rgba(0,0,0,0.2); }
+.os-macos .custom-radio { border-radius: 50%; }
+
+/* macOS Theme: Light */
+.theme-light.os-macos .xp-window { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); }
+.theme-light.os-macos .title-bar { background: transparent; }
+.theme-light.os-macos .title-bar-text { color: #333; }
+.theme-light.os-macos .window-body { background: transparent; color: #333; }
+.theme-light.os-macos fieldset { background: rgba(255,255,255,0.5); }
+.theme-light.os-macos legend { color: #333; }
+.theme-light.os-macos .xp-button { background: #ffffff; color: #333; }
+.theme-light.os-macos .xp-button:active:not(:disabled) { background: #e0e0e0; }
+.theme-light.os-macos .xp-input, .theme-light.os-macos .xp-select, .theme-light.os-macos .xp-textarea { background: #ffffff; color: #333; }
+.theme-light.os-macos .custom-checkbox, .theme-light.os-macos .custom-radio { background: #fff; border-color: rgba(0,0,0,0.2); }
+.theme-light.os-macos .custom-checkbox:checked, .theme-light.os-macos .custom-radio:checked { background: #007aff; border-color: #007aff; }
+.theme-light.os-macos .custom-checkbox:checked::before, .theme-light.os-macos .custom-radio:checked::before { color: #fff; }
+
+.theme-light.os-macos .window-tab { background: transparent; border: none; color: #555; padding: 4px 10px; margin: 0 2px; border-radius: 5px; transition: 0.2s; }
+.theme-light.os-macos .window-tab:hover { background: rgba(0,0,0,0.05); }
+.theme-light.os-macos .window-tab.active { background: #fff; color: #333; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.theme-light.os-macos .window-tabs { background: rgba(0,0,0,0.05); padding: 2px; border-radius: 6px; display: inline-flex; justify-content: center; margin: 0 auto; margin-bottom: 15px; }
+
+.theme-light.os-macos .progress-bar-container { border: none; background: rgba(0,0,0,0.1); border-radius: 5px; height: 8px; }
+.theme-light.os-macos .progress-bar-fill { background: #007aff; border-radius: 5px; }
+.theme-light.os-macos #progress-text { color: #333; }
+.theme-light.os-macos .xp-slider { background: rgba(0,0,0,0.1); border: none; border-radius: 4px; height: 4px; }
+.theme-light.os-macos .xp-slider::-webkit-slider-thumb { background: #fff; border: 1px solid rgba(0,0,0,0.2); border-radius: 50%; height: 16px; width: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+
+/* macOS Theme: Dark */
+.theme-dark.os-macos .xp-window { background: rgba(30, 30, 30, 0.95); backdrop-filter: blur(20px); box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1); }
+.theme-dark.os-macos .title-bar { background: transparent; }
+.theme-dark.os-macos .title-bar-text { color: #fff; }
+.theme-dark.os-macos .title-bar-controls button { border: 1px solid rgba(255,255,255,0.1); }
+.theme-dark.os-macos .window-body { background: transparent; color: #fff; }
+.theme-dark.os-macos fieldset { background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.1); }
+.theme-dark.os-macos legend { color: #fff; }
+.theme-dark.os-macos .xp-button { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.1); color: #fff; }
+.theme-dark.os-macos .xp-button:active:not(:disabled) { background: rgba(255,255,255,0.2); }
+.theme-dark.os-macos .xp-input, .theme-dark.os-macos .xp-select, .theme-dark.os-macos .xp-textarea { background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.1); color: #fff; }
+.theme-dark.os-macos .custom-checkbox, .theme-dark.os-macos .custom-radio { background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.2); }
+.theme-dark.os-macos .custom-checkbox:checked, .theme-dark.os-macos .custom-radio:checked { background: #0a84ff; border-color: #0a84ff; }
+.theme-dark.os-macos .custom-checkbox:checked::before, .theme-dark.os-macos .custom-radio:checked::before { color: #fff; }
+
+.theme-dark.os-macos .window-tab { background: transparent; border: none; color: #ccc; padding: 4px 10px; margin: 0 2px; border-radius: 5px; transition: 0.2s; }
+.theme-dark.os-macos .window-tab:hover { background: rgba(255,255,255,0.1); }
+.theme-dark.os-macos .window-tab.active { background: #444; color: #fff; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.theme-dark.os-macos .window-tabs { background: rgba(255,255,255,0.05); padding: 2px; border-radius: 6px; display: inline-flex; justify-content: center; margin: 0 auto; margin-bottom: 15px; }
+
+.theme-dark.os-macos .progress-bar-container { border: none; background: rgba(255,255,255,0.1); border-radius: 5px; height: 8px; }
+.theme-dark.os-macos .progress-bar-fill { background: #0a84ff; border-radius: 5px; }
+.theme-dark.os-macos #progress-text { color: #fff; }
+.theme-dark.os-macos .xp-slider { background: rgba(255,255,255,0.1); border: none; border-radius: 4px; height: 4px; }
+.theme-dark.os-macos .xp-slider::-webkit-slider-thumb { background: #ddd; border: 1px solid rgba(0,0,0,0.5); border-radius: 50%; height: 16px; width: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+
+
+/* ---------------------------------------------------
+   OS: UBUNTU LINUX (GNOME)
+--------------------------------------------------- */
+.os-ubuntu body { font-family: "Ubuntu", sans-serif; font-size: 13px; }
+.os-ubuntu #desktop { background: radial-gradient(circle at center, #6b2149 0%, #1e111a 100%); }
+.os-ubuntu .xp-window { border-radius: 8px 8px 0 0; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.os-ubuntu .title-bar { height: 32px; border-top-left-radius: 8px; border-top-right-radius: 8px; flex-direction: row-reverse; padding: 0 10px; justify-content: space-between; }
+.os-ubuntu .title-bar-text { color: #dfdfdf; font-weight: normal; font-size: 14px; width: 100%; text-align: center; position: absolute; left: 0; pointer-events: none; text-shadow: none; }
+.os-ubuntu .title-bar-controls { flex-direction: row-reverse; gap: 8px; z-index: 2; }
+.os-ubuntu .title-bar-controls button { width: 18px; height: 18px; border-radius: 50%; border: none; color: transparent; display: flex; align-items: center; justify-content: center; }
+.os-ubuntu .title-bar-controls button:hover { color: #333; }
+.os-ubuntu .close { background: #e95420; }
+.os-ubuntu .close::before { content: "✕"; font-size: 10px; }
+.os-ubuntu .minimize { background: #dddddd; }
+.os-ubuntu .minimize::before { content: "—"; font-size: 10px; }
+.os-ubuntu .maximize { background: #dddddd; }
+.os-ubuntu .maximize::before { content: "◻"; font-size: 10px; }
+.os-ubuntu .window-body { border-radius: 0; border: none; }
+.os-ubuntu fieldset { border-radius: 4px; }
+.os-ubuntu .xp-button { border-radius: 4px; padding: 6px 16px; border: 1px solid rgba(0,0,0,0.2); box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+.os-ubuntu .xp-input, .os-ubuntu .xp-select, .os-ubuntu .xp-textarea { border-radius: 4px; border: 1px solid rgba(0,0,0,0.3); padding: 5px; }
+
+/* Ubuntu Widgets */
+.os-ubuntu .window-tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: inherit; border-radius: 0; margin-right: 5px; }
+.os-ubuntu .window-tab.active { border-bottom: 2px solid #e95420; font-weight: bold; }
+.os-ubuntu .window-tabs { border-bottom: 1px solid rgba(0,0,0,0.1); }
+.theme-yaru.os-ubuntu .window-tabs { border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+/* Ubuntu Theme: Yaru (Dark) */
+.theme-yaru.os-ubuntu .xp-window { background: #3d3d3d; border: 1px solid #111; }
+.theme-yaru.os-ubuntu .title-bar { background: #2f2f2f; border-bottom: 1px solid #111; }
+.theme-yaru.os-ubuntu .window-body { background: #3d3d3d; color: #eee; }
+.theme-yaru.os-ubuntu fieldset { border-color: #222; background: #333; }
+.theme-yaru.os-ubuntu legend { color: #e95420; font-weight: bold; }
+.theme-yaru.os-ubuntu .xp-button { background: #4f4f4f; color: #eee; }
+.theme-yaru.os-ubuntu .xp-button:hover { background: #5f5f5f; }
+.theme-yaru.os-ubuntu .xp-button:active:not(:disabled) { background: #e95420; color: #fff; border-color: #e95420; }
+.theme-yaru.os-ubuntu .xp-input, .theme-yaru.os-ubuntu .xp-select, .theme-yaru.os-ubuntu .xp-textarea { background: #2f2f2f; color: #eee; }
+.theme-yaru.os-ubuntu .xp-input:focus, .theme-yaru.os-ubuntu .xp-textarea:focus { border-color: #e95420; outline: none; }
+.theme-yaru.os-ubuntu .custom-checkbox, .theme-yaru.os-ubuntu .custom-radio { background: #2f2f2f; border-color: #555; }
+.theme-yaru.os-ubuntu .custom-checkbox:checked, .theme-yaru.os-ubuntu .custom-radio:checked { background: #e95420; border-color: #e95420; }
+.theme-yaru.os-ubuntu .custom-checkbox:checked::before { color: #fff; }
+.theme-yaru.os-ubuntu .progress-bar-container { border: none; background: #222; border-radius: 4px; height: 6px; }
+.theme-yaru.os-ubuntu .progress-bar-fill { background: #e95420; border-radius: 4px; }
+.theme-yaru.os-ubuntu #progress-text { color: #eee; }
+.theme-yaru.os-ubuntu .xp-slider { background: #222; border: none; border-radius: 3px; height: 4px; }
+.theme-yaru.os-ubuntu .xp-slider::-webkit-slider-thumb { background: #eee; border: none; border-radius: 50%; height: 16px; width: 16px; }
+
+/* Ubuntu Theme: Ambiance (Classic) */
+.theme-ambiance.os-ubuntu .xp-window { background: #f2f1f0; border: 1px solid #3c3b37; }
+.theme-ambiance.os-ubuntu .title-bar { background: linear-gradient(to bottom, #504f4a 0%, #3c3b37 100%); }
+.theme-ambiance.os-ubuntu .window-body { background: #f2f1f0; color: #333; }
+.theme-ambiance.os-ubuntu fieldset { border-color: #cdcbbd; background: #fff; }
+.theme-ambiance.os-ubuntu legend { color: #dd4814; font-weight: bold; }
+.theme-ambiance.os-ubuntu .xp-button { background: linear-gradient(to bottom, #f9f9f8 0%, #e0dfdc 100%); color: #333; }
+.theme-ambiance.os-ubuntu .xp-button:hover { background: #fff; }
+.theme-ambiance.os-ubuntu .xp-button:active:not(:disabled) { background: #dd4814; color: #fff; border-color: #dd4814; }
+.theme-ambiance.os-ubuntu .xp-input, .theme-ambiance.os-ubuntu .xp-select, .theme-ambiance.os-ubuntu .xp-textarea { background: #fff; color: #333; border-color: #cdcbbd; }
+.theme-ambiance.os-ubuntu .xp-input:focus, .theme-ambiance.os-ubuntu .xp-textarea:focus { border-color: #dd4814; outline: none; }
+.theme-ambiance.os-ubuntu .custom-checkbox, .theme-ambiance.os-ubuntu .custom-radio { background: #fff; border-color: #ccc; }
+.theme-ambiance.os-ubuntu .custom-checkbox:checked, .theme-ambiance.os-ubuntu .custom-radio:checked { background: #dd4814; border-color: #dd4814; }
+.theme-ambiance.os-ubuntu .custom-checkbox:checked::before { color: #fff; }
+.theme-ambiance.os-ubuntu .progress-bar-container { border: 1px solid #cdcbbd; background: #fff; border-radius: 4px; height: 10px; }
+.theme-ambiance.os-ubuntu .progress-bar-fill { background: url('data:image/svg+xml;utf8,<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="%23f47b20" stroke-width="2"><path d="M-5 25L25 -5 M0 20L20 0 M5 25L25 5"/></g></svg>'); background-color: #dd4814; border-radius: 3px; }
+.theme-ambiance.os-ubuntu #progress-text { color: #333; }
+.theme-ambiance.os-ubuntu .xp-slider { background: #cdcbbd; border: 1px solid #aaa; border-radius: 3px; height: 6px; }
+.theme-ambiance.os-ubuntu .xp-slider::-webkit-slider-thumb { background: linear-gradient(to bottom, #f9f9f8 0%, #e0dfdc 100%); border: 1px solid #888; border-radius: 50%; height: 16px; width: 16px; }
+
+
+/* ---------------------------------------------------
+   OS: LINUX MINT (CINNAMON)
+--------------------------------------------------- */
+.os-mint body { font-family: "Ubuntu", "Segoe UI", sans-serif; font-size: 13px; }
+.os-mint #desktop { background: radial-gradient(circle at center, #2e3436 0%, #111 100%); }
+.os-mint .xp-window { border-radius: 6px 6px 0 0; box-shadow: 0 8px 24px rgba(0,0,0,0.6); background: #3c3b37; border: 1px solid #222; }
+.os-mint .title-bar { height: 28px; border-top-left-radius: 6px; border-top-right-radius: 6px; background: #2f2f2f; border-bottom: 1px solid #111; padding: 0 8px; justify-content: space-between; }
+.os-mint .title-bar-text { color: #ccc; font-weight: normal; font-size: 13px; }
+.os-mint .title-bar-controls { gap: 4px; }
+.os-mint .title-bar-controls button { width: 20px; height: 20px; border-radius: 50%; border: none; background: transparent; display: flex; align-items: center; justify-content: center; color: #999; }
+.os-mint .title-bar-controls button:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.os-mint .close:hover { background: #cc0000; color: #fff; }
+.os-mint .close::before { content: "✕"; font-size: 12px; }
+.os-mint .minimize::before { content: "—"; font-size: 10px; }
+.os-mint .maximize::before { content: "◻"; font-size: 14px; }
+.os-mint .window-body { background: #383838; color: #ddd; border-radius: 0; }
+
+/* Mint Widgets */
+.os-mint .window-tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: #aaa; border-radius: 0; margin-right: 5px; }
+.os-mint .window-tab.active { border-bottom: 2px solid #8fa876; color: #fff; font-weight: bold; }
+.os-mint .window-tabs { border-bottom: 1px solid #222; }
+.os-mint fieldset { border: 1px solid #444; border-radius: 4px; background: #333; }
+.os-mint legend { color: #8fa876; font-weight: bold; } /* Mint Green */
+.os-mint .xp-button { background: #444; border: 1px solid #222; border-radius: 4px; color: #ddd; padding: 5px 15px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
+.os-mint .xp-button:hover { background: #555; }
+.os-mint .xp-button:active:not(:disabled) { background: #8fa876; color: #fff; border-color: #8fa876; }
+.os-mint .xp-input, .os-mint .xp-select, .os-mint .xp-textarea { background: #222; border: 1px solid #111; color: #ddd; border-radius: 3px; padding: 5px; }
+.os-mint .xp-input:focus, .os-mint .xp-select:focus, .os-mint .xp-textarea:focus { border-color: #8fa876; outline: none; }
+.os-mint .custom-checkbox, .os-mint .custom-radio { background: #222; border: 1px solid #555; border-radius: 3px; }
+.os-mint .custom-radio { border-radius: 50%; }
+.os-mint .custom-checkbox:checked, .os-mint .custom-radio:checked { background: #8fa876; border-color: #8fa876; }
+.os-mint .custom-checkbox:checked::before { color: #fff; }
+
+.os-mint .progress-bar-container { border: 1px solid #222; background: #222; border-radius: 4px; height: 8px; }
+.os-mint .progress-bar-fill { background: #8fa876; border-radius: 3px; }
+.os-mint #progress-text { color: #ddd; }
+.os-mint .xp-slider { background: #222; border: 1px solid #111; border-radius: 3px; height: 6px; }
+.os-mint .xp-slider::-webkit-slider-thumb { background: #8fa876; border: none; border-radius: 50%; height: 16px; width: 16px; }
+
+
+/* ---------------------------------------------------
+   OS: KALI LINUX (XFCE)
+--------------------------------------------------- */
+.os-kali body { font-family: "San Francisco", "Helvetica", sans-serif; font-size: 12px; }
+.os-kali #desktop { background: radial-gradient(circle at center, #1a2332 0%, #080c14 100%); } /* Dark hacker blue */
+.os-kali .xp-window { border-radius: 4px; box-shadow: 0 5px 20px rgba(0,0,0,0.8); background: #222; border: 1px solid #111; }
+.os-kali .title-bar { height: 26px; border-top-left-radius: 4px; border-top-right-radius: 4px; background: #181818; border-bottom: 1px solid #111; padding: 0 8px; justify-content: space-between; }
+.os-kali .title-bar-text { color: #bbb; font-weight: normal; font-size: 12px; text-align: center; width: 100%; position: absolute; left: 0; pointer-events: none; }
+.os-kali .title-bar-controls { gap: 4px; z-index: 2; }
+.os-kali .title-bar-controls button { width: 16px; height: 16px; border-radius: 50%; border: none; background: transparent; display: flex; align-items: center; justify-content: center; color: #888; }
+.os-kali .title-bar-controls button:hover { background: #333; color: #fff; }
+.os-kali .close:hover { background: #e74c3c; color: white; }
+.os-kali .close::before { content: "✕"; font-size: 10px; }
+.os-kali .minimize::before { content: "_"; font-size: 10px; position: relative; top: -2px; }
+.os-kali .maximize::before { content: "◻"; font-size: 12px; }
+.os-kali .window-body { background: #2a2a2a; color: #eee; border-radius: 0; }
+
+/* Kali Widgets */
+.os-kali .window-tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: #aaa; border-radius: 0; margin-right: 5px; }
+.os-kali .window-tab.active { border-bottom: 2px solid #268bd2; color: #fff; font-weight: bold; }
+.os-kali .window-tabs { border-bottom: 1px solid #111; }
+.os-kali fieldset { border: 1px solid #444; border-radius: 2px; background: #222; }
+.os-kali legend { color: #268bd2; font-weight: bold; } /* Cyan accent */
+.os-kali .xp-button { background: #333; border: 1px solid #111; border-radius: 2px; color: #eee; padding: 4px 12px; }
+.os-kali .xp-button:hover { background: #444; border-color: #268bd2; }
+.os-kali .xp-button:active:not(:disabled) { background: #268bd2; color: #fff; }
+.os-kali .xp-input, .os-kali .xp-select, .os-kali .xp-textarea { background: #111; border: 1px solid #444; color: #eee; border-radius: 2px; padding: 4px; }
+.os-kali .xp-input:focus, .os-kali .xp-select:focus, .os-kali .xp-textarea:focus { border-color: #268bd2; outline: none; }
+.os-kali .custom-checkbox, .os-kali .custom-radio { background: #111; border: 1px solid #555; border-radius: 2px; }
+.os-kali .custom-radio { border-radius: 50%; }
+.os-kali .custom-checkbox:checked, .os-kali .custom-radio:checked { background: #268bd2; border-color: #268bd2; }
+.os-kali .custom-checkbox:checked::before { color: #fff; }
+
+.os-kali .progress-bar-container { border: 1px solid #111; background: #111; border-radius: 2px; height: 6px; }
+.os-kali .progress-bar-fill { background: #268bd2; }
+.os-kali #progress-text { color: #268bd2; font-family: monospace; }
+.os-kali .xp-slider { background: #111; border: 1px solid #444; border-radius: 2px; height: 4px; }
+.os-kali .xp-slider::-webkit-slider-thumb { background: #268bd2; border: none; border-radius: 2px; height: 14px; width: 8px; }
+
+
+/* ---------------------------------------------------
+   OS: CHROME OS
+--------------------------------------------------- */
+.os-chromeos body { font-family: "Roboto", "Segoe UI", sans-serif; font-size: 13px; }
+.os-chromeos #desktop { background: radial-gradient(circle at top left, #cfd8dc 0%, #90a4ae 100%); }
+.os-chromeos .xp-window { border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+.os-chromeos .title-bar { height: 32px; border-top-left-radius: 8px; border-top-right-radius: 8px; padding: 0 10px; justify-content: space-between; }
+.os-chromeos .title-bar-text { font-weight: normal; font-size: 13px; width: 100%; text-align: left; text-shadow: none; margin-left: 5px; }
+.os-chromeos .title-bar-controls { gap: 4px; }
+.os-chromeos .title-bar-controls button { width: 24px; height: 24px; border-radius: 50%; border: none; background: transparent; display: flex; align-items: center; justify-content: center; }
+.os-chromeos .close::before { content: "✕"; font-size: 12px; }
+.os-chromeos .minimize::before { content: "—"; font-size: 10px; }
+.os-chromeos .maximize::before { content: "◻"; font-size: 12px; }
+.os-chromeos .window-body { border-radius: 0 0 8px 8px; border: none; }
+
+/* Chrome OS Widgets */
+.os-chromeos .window-tab { background: transparent; border: none; border-bottom: 2px solid transparent; color: inherit; border-radius: 0; padding: 6px 12px; transition: 0.2s; }
+.os-chromeos .window-tab:hover { background: rgba(0,0,0,0.05); }
+.os-chromeos .window-tab.active { border-bottom: 2px solid #1a73e8; color: #1a73e8; font-weight: 500; }
+.os-chromeos .window-tabs { border-bottom: 1px solid rgba(0,0,0,0.1); }
+.os-chromeos fieldset { border-radius: 8px; }
+.os-chromeos .xp-button { border-radius: 16px; padding: 6px 16px; border: none; font-weight: 500; font-family: "Roboto", sans-serif; }
+.os-chromeos .xp-input, .os-chromeos .xp-select, .os-chromeos .xp-textarea { border-radius: 4px; padding: 6px 10px; border: 1px solid transparent; }
+.os-chromeos .custom-checkbox, .os-chromeos .custom-radio { border-radius: 4px; }
+.os-chromeos .custom-radio { border-radius: 50%; }
+
+/* Chrome OS Theme: Light Mode */
+.theme-light.os-chromeos .xp-window { background: #ffffff; border: 1px solid rgba(0,0,0,0.1); }
+.theme-light.os-chromeos .title-bar { background: #f1f3f4; }
+.theme-light.os-chromeos .title-bar-text { color: #202124; }
+.theme-light.os-chromeos .title-bar-controls button:hover { background: rgba(0,0,0,0.05); }
+.theme-light.os-chromeos .title-bar-controls button::before { color: #5f6368; }
+.theme-light.os-chromeos .window-body { background: #ffffff; color: #202124; }
+.theme-light.os-chromeos fieldset { border: 1px solid #dadce0; }
+.theme-light.os-chromeos legend { color: #1a73e8; }
+.theme-light.os-chromeos .xp-button { background: #e8f0fe; color: #1a73e8; }
+.theme-light.os-chromeos .xp-button:hover { background: #d2e3fc; }
+.theme-light.os-chromeos .xp-button:active:not(:disabled) { background: #aecbfa; }
+.theme-light.os-chromeos .xp-input, .theme-light.os-chromeos .xp-select, .theme-light.os-chromeos .xp-textarea { background: #f1f3f4; color: #202124; border-bottom: 2px solid #5f6368; }
+.theme-light.os-chromeos .xp-input:focus, .theme-light.os-chromeos .xp-select:focus, .theme-light.os-chromeos .xp-textarea:focus { border-bottom: 2px solid #1a73e8; outline: none; background: #e8eaed; }
+.theme-light.os-chromeos .custom-checkbox, .theme-light.os-chromeos .custom-radio { background: #fff; border: 2px solid #5f6368; }
+.theme-light.os-chromeos .custom-checkbox:checked, .theme-light.os-chromeos .custom-radio:checked { background: #1a73e8; border-color: #1a73e8; }
+.theme-light.os-chromeos .custom-checkbox:checked::before { color: #fff; }
+
+.theme-light.os-chromeos .progress-bar-container { border: none; background: #dadce0; border-radius: 4px; height: 4px; }
+.theme-light.os-chromeos .progress-bar-fill { background: #1a73e8; border-radius: 4px; }
+.theme-light.os-chromeos #progress-text { color: #5f6368; }
+.theme-light.os-chromeos .xp-slider { background: #dadce0; border: none; border-radius: 2px; height: 4px; }
+.theme-light.os-chromeos .xp-slider::-webkit-slider-thumb { background: #1a73e8; border: none; border-radius: 50%; height: 16px; width: 16px; }
+
+/* Chrome OS Theme: Dark Mode */
+.theme-dark.os-chromeos .xp-window { background: #202124; border: 1px solid rgba(255,255,255,0.1); }
+.theme-dark.os-chromeos .title-bar { background: #292a2d; }
+.theme-dark.os-chromeos .title-bar-text { color: #e8eaed; }
+.theme-dark.os-chromeos .title-bar-controls button:hover { background: rgba(255,255,255,0.05); }
+.theme-dark.os-chromeos .title-bar-controls button::before { color: #9aa0a6; }
+.theme-dark.os-chromeos .window-body { background: #202124; color: #e8eaed; }
+.theme-dark.os-chromeos fieldset { border: 1px solid #5f6368; }
+.theme-dark.os-chromeos legend { color: #8ab4f8; }
+.theme-dark.os-chromeos .xp-button { background: rgba(138, 180, 248, 0.1); color: #8ab4f8; }
+.theme-dark.os-chromeos .xp-button:hover { background: rgba(138, 180, 248, 0.15); }
+.theme-dark.os-chromeos .xp-button:active:not(:disabled) { background: rgba(138, 180, 248, 0.2); }
+.theme-dark.os-chromeos .xp-input, .theme-dark.os-chromeos .xp-select, .theme-dark.os-chromeos .xp-textarea { background: #292a2d; color: #e8eaed; border-bottom: 2px solid #9aa0a6; }
+.theme-dark.os-chromeos .xp-input:focus, .theme-dark.os-chromeos .xp-select:focus, .theme-dark.os-chromeos .xp-textarea:focus { border-bottom: 2px solid #8ab4f8; outline: none; background: #3c4043; }
+.theme-dark.os-chromeos .custom-checkbox, .theme-dark.os-chromeos .custom-radio { background: #202124; border: 2px solid #9aa0a6; }
+.theme-dark.os-chromeos .custom-checkbox:checked, .theme-dark.os-chromeos .custom-radio:checked { background: #8ab4f8; border-color: #8ab4f8; }
+.theme-dark.os-chromeos .custom-checkbox:checked::before { color: #202124; }
+.theme-dark.os-chromeos .custom-radio:checked::before { background: #202124; }
+
+.theme-dark.os-chromeos .window-tab:hover { background: rgba(255,255,255,0.05); }
+.theme-dark.os-chromeos .window-tab.active { border-bottom: 2px solid #8ab4f8; color: #8ab4f8; }
+.theme-dark.os-chromeos .window-tabs { border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+.theme-dark.os-chromeos .progress-bar-container { border: none; background: #5f6368; border-radius: 4px; height: 4px; }
+.theme-dark.os-chromeos .progress-bar-fill { background: #8ab4f8; border-radius: 4px; }
+.theme-dark.os-chromeos #progress-text { color: #9aa0a6; }
+.theme-dark.os-chromeos .xp-slider { background: #5f6368; border: none; border-radius: 2px; height: 4px; }
+.theme-dark.os-chromeos .xp-slider::-webkit-slider-thumb { background: #8ab4f8; border: none; border-radius: 50%; height: 16px; width: 16px; }
+
+
+/* ---------------------------------------------------
+   TASKBAR / MAC DOCK / UBUNTU UI / CHROME OS SHELF
+--------------------------------------------------- */
+#taskbar { position: absolute; bottom: 0; left: 0; width: 100%; height: 30px; display: flex; justify-content: space-between; align-items: center; padding-right: 15px; z-index: 1000; transition: all 0.3s ease; }
+
+/* Windows Taskbars */
+.os-win31 #taskbar { display: none; } /* Win3.1 has no taskbar, relies on Program Manager */
+
+.os-win95 #taskbar { background: #c0c0c0; border-top: 2px solid #dfdfdf; box-shadow: inset 0 1px 0 #fff; height: 28px; }
+.os-win95 .start-button { background: #c0c0c0; border: 2px solid; border-color: #dfdfdf #000 #000 #dfdfdf; height: 22px; margin-left: 2px; padding: 0 5px; display: flex; align-items: center; cursor: default; }
+.os-win95 .start-button:active { border-color: #000 #dfdfdf #dfdfdf #000; padding: 1px 4px 0 6px; }
+.os-win95 .start-text { color: #000; font-weight: bold; font-size: 12px; margin-left: 3px; }
+
+.os-win2000 #taskbar { background: #d4d0c8; border-top: 2px solid #f5f4f1; height: 28px; }
+.os-win2000 .start-button { background: #d4d0c8; border: 2px solid; border-color: #f5f4f1 #404040 #404040 #f5f4f1; height: 22px; margin-left: 2px; padding: 0 5px; display: flex; align-items: center; cursor: default; }
+.os-win2000 .start-button:active { border-color: #404040 #f5f4f1 #f5f4f1 #404040; padding: 1px 4px 0 6px; }
+.os-win2000 .start-text { color: #000; font-weight: bold; font-size: 12px; margin-left: 3px; }
+
+.os-xp #taskbar { background: linear-gradient(to bottom, #245edb 0%, #3f8cf3 10%, #245edb 50%, #1941a5 100%); border-top: 1px solid #5a8eef; }
+.os-xp .start-button { background: linear-gradient(to bottom, #398c38 0%, #41a541 15%, #2a732a 50%, #1e521e 100%); height: 100%; border-top-right-radius: 10px; border-bottom-right-radius: 10px; box-shadow: inset 1px 1px 3px rgba(255,255,255,0.5), 2px 0 3px rgba(0,0,0,0.3); display: flex; align-items: center; padding: 0 15px; cursor: default; }
+.os-xp .start-text { color: white; font-style: italic; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px rgba(0,0,0,0.6); }
+
+.os-vista #taskbar { background: rgba(10, 10, 10, 0.6); backdrop-filter: blur(10px); border-top: 1px solid rgba(255,255,255,0.2); height: 40px; }
+.os-vista .start-button { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #59a6d8 0%, #0c335e 80%); border: 2px solid rgba(255,255,255,0.4); box-shadow: 0 0 10px rgba(89, 166, 216, 0.8), inset 0 0 5px rgba(255,255,255,0.8); margin-left: 10px; display: flex; align-items: center; justify-content: center; }
+.os-vista .start-text { display: none; }
+
+.os-win7 #taskbar { background: rgba(200, 220, 240, 0.4); backdrop-filter: blur(15px); border-top: 1px solid rgba(255,255,255,0.6); height: 40px; box-shadow: 0 -1px 5px rgba(0,0,0,0.2); }
+.os-win7 .start-button { width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #88c6f1 0%, #155594 80%); border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 0 5px rgba(0,0,0,0.3), inset 0 0 8px rgba(255,255,255,0.8); margin-left: 10px; }
+.os-win7 .start-text { display: none; }
+
+.os-win8 #taskbar { background: #111111; height: 40px; border-top: none; }
+.os-win8 .start-button { width: 50px; height: 100%; background: transparent; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+.os-win8 .start-button:hover { background: #333; }
+.os-win8 .start-button::before { content: "⊞"; color: white; font-size: 20px; }
+.os-win8 .start-text { display: none; }
+
+.os-win10 #taskbar { background: rgba(20, 20, 20, 0.95); height: 40px; border-top: none; }
+.os-win10 .start-button { width: 48px; height: 100%; background: transparent; display: flex; align-items: center; justify-content: center; }
+.os-win10 .start-button:hover { background: rgba(255,255,255,0.1); }
+.os-win10 .start-button::before { content: "⊞"; color: white; font-size: 18px; }
+.os-win10 .start-text { display: none; }
+
+/* Fixed Win 11 Taskbar Centering */
+.os-win11 #taskbar { background: rgba(243, 243, 243, 0.85); backdrop-filter: blur(25px); height: 48px; border-top: 1px solid rgba(255,255,255,0.4); display: flex; justify-content: center; position: relative; }
+.theme-dark.os-win11 #taskbar { background: rgba(32, 32, 32, 0.85); border-top-color: rgba(255,255,255,0.1); }
+.os-win11 .taskbar-center-apps { display: flex; align-items: center; gap: 5px; margin: 0 auto; }
+.os-win11 .start-button { width: 36px; height: 36px; background: transparent; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: background 0.1s; cursor: default; }
+.os-win11 .start-button:hover { background: rgba(255,255,255,0.5); }
+.theme-dark.os-win11 .start-button:hover { background: rgba(255,255,255,0.1); }
+.os-win11 .start-button::before { content: "⊞"; color: #0078d4; font-size: 22px; font-weight: bold; } /* Win11 Logo look */
+.theme-dark.os-win11 .start-button::before { color: #60cdff; }
+.os-win11 .start-text { display: none; }
+.os-win11 .taskbar-right-tray { width: 100px; } /* Empty placeholder to balance flex center */
+
+/* Linux Mint Taskbar */
+.os-mint #taskbar { background: #222; border-top: 1px solid #111; height: 32px; }
+.os-mint .start-button { background: transparent; height: 100%; margin-left: 5px; display: flex; align-items: center; justify-content: center; padding: 0 10px; cursor: pointer; border-radius: 3px; }
+.os-mint .start-button:hover { background: rgba(255,255,255,0.1); }
+.os-mint .start-button::before { content: "LM"; font-weight: bold; color: #8fa876; font-size: 16px; margin-right: 5px; }
+.os-mint .start-text { color: #ddd; font-size: 14px; display: block; }
+.os-mint .mint-tray-icons { display: flex !important; } /* Unhide tray for Mint */
+
+
+/* Alternative OS Hidden Elements */
+#mac-menu-bar, #mac-dock-container, #ubuntu-top-bar, #ubuntu-dock, #chromeos-shelf, #kali-top-bar { display: none; position: absolute; z-index: 1000; }
+
+#mac-menu-bar { top: 0; left: 0; width: 100%; height: 24px; padding: 0 15px; display: none; justify-content: space-between; align-items: center; color: #000; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.mac-menu-left { display: flex; gap: 15px; align-items: center; }
+.mac-menu-bold { font-weight: bold; }
+.apple-logo { font-size: 16px; position: relative; top: -1px; }
+
+/* High Accuracy Mac Dock */
+#mac-dock-container { bottom: 5px; left: 0; width: 100%; display: none; justify-content: center; align-items: flex-end; pointer-events: none; }
+#mac-dock { display: flex; gap: 10px; align-items: flex-end; padding: 8px 10px; position: relative; pointer-events: auto; }
+.dock-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.dock-icon { width: 50px; height: 50px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.2s, margin 0.2s; cursor: pointer; }
+.dock-item:hover .dock-icon { transform: scale(1.4) translateY(-10px); margin: 0 10px; }
+.dock-dot { width: 4px; height: 4px; background: rgba(255,255,255,0.8); border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.dock-separator { width: 1px; height: 40px; background: rgba(255,255,255,0.3); margin: 0 5px 10px 5px; }
+
+#ubuntu-top-bar { top: 0; left: 0; width: 100%; height: 26px; background: rgba(0,0,0,0.85); color: #fff; font-size: 13px; display: none; justify-content: space-between; align-items: center; padding: 0 10px; font-family: "Ubuntu", sans-serif; }
+#ubuntu-dock { top: 26px; left: 0; height: calc(100vh - 26px); width: 48px; background: rgba(0,0,0,0.6); display: none; flex-direction: column; align-items: center; gap: 8px; padding-top: 10px; }
+.ubuntu-icon { width: 36px; height: 36px; font-size: 20px; transition: 0.1s; cursor: pointer; }
+.ubuntu-icon:hover { background: rgba(255,255,255,0.2) !important; }
+
+#kali-top-bar { top: 0; left: 0; width: 100%; height: 24px; background: #111; border-bottom: 1px solid #000; color: #ccc; font-size: 12px; display: none; justify-content: space-between; align-items: center; padding: 0 10px; }
+.kali-menu-left, .kali-menu-right { display: flex; gap: 15px; align-items: center; }
+.kali-logo { font-weight: bold; color: #fff; }
+
+/* Chrome OS Shelf */
+#chromeos-shelf { bottom: 5px; left: 50%; transform: translateX(-50%); height: 48px; border-radius: 24px; padding: 0 10px; display: none; align-items: center; gap: 10px; }
+.theme-light.os-chromeos #chromeos-shelf { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); }
+.theme-dark.os-chromeos #chromeos-shelf { background: rgba(32,33,36,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
+.chromeos-app-launcher { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #5f6368; }
+.theme-light.os-chromeos .chromeos-app-launcher { background: rgba(0,0,0,0.05); }
+.theme-dark.os-chromeos .chromeos-app-launcher { background: rgba(255,255,255,0.1); color: #e8eaed; }
+.chromeos-apps { display: flex; gap: 8px; }
+.chromeos-icon { width: 36px; height: 36px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.chromeos-status-area { background: rgba(0,0,0,0.05); border-radius: 18px; padding: 5px 12px; display: flex; gap: 8px; font-size: 13px; font-family: "Roboto", sans-serif; align-items: center; }
+.theme-dark.os-chromeos .chromeos-status-area { background: rgba(255,255,255,0.1); color: #e8eaed; }
+
+
+/* Hiding/Showing specific UI parts */
+.os-macsys7 #taskbar, .os-macos9 #taskbar, .os-macosx #taskbar, .os-osx-yosemite #taskbar, .os-macos #taskbar, .os-ubuntu #taskbar, .os-kali #taskbar, .os-chromeos #taskbar, .os-win31 #taskbar { display: none; }
+
+.os-macsys7 #mac-menu-bar, .os-macos9 #mac-menu-bar, .os-macosx #mac-menu-bar, .os-osx-yosemite #mac-menu-bar, .os-macos #mac-menu-bar { display: flex; }
+.os-macosx #mac-dock-container, .os-osx-yosemite #mac-dock-container, .os-macos #mac-dock-container { display: flex; }
+/* OS 9 and Sys 7 didn't have the OS X Dock */
+
+.os-ubuntu #ubuntu-top-bar { display: flex; }
+.os-ubuntu #ubuntu-dock { display: flex; }
+
+.os-kali #kali-top-bar { display: flex; }
+
+.os-chromeos #chromeos-shelf { display: flex; }
+
+/* Mac Menu/Dock specific styling per era */
+.os-macsys7 #mac-menu-bar { background: #fff; border-bottom: 1px solid #000; font-family: "Chicago", sans-serif; font-size: 12px; }
+.os-macos9 #mac-menu-bar { background: #dddddd; border-bottom: 1px solid #000; font-family: "Geneva", sans-serif; font-size: 12px; }
+.os-macosx #mac-menu-bar { background: rgba(255,255,255,0.8); border-bottom: 1px solid #999; backdrop-filter: blur(5px); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.os-osx-yosemite #mac-menu-bar { background: rgba(255,255,255,0.5); border-bottom: 1px solid rgba(0,0,0,0.1); backdrop-filter: blur(10px); color: #333; }
+.os-macos #mac-menu-bar { background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); color: white; border-bottom: none; }
+.theme-dark.os-macos #mac-menu-bar { background: rgba(0,0,0,0.2); color: white; }
+
+/* Era-specific Dock Styling */
+.os-macosx #mac-dock { background: rgba(255,255,255,0.2); border-top: 1px solid rgba(255,255,255,0.8); box-shadow: inset 0 10px 20px rgba(255,255,255,0.5), 0 -2px 10px rgba(0,0,0,0.3); border-radius: 0; padding: 5px 20px; width: 100%; justify-content: center; } /* Pseudo 3D shelf for Aqua */
+.os-macosx .dock-icon { border-radius: 50%; } /* More circular icons for classic OS X */
+.os-macosx .dock-dot { background: rgba(0,0,0,0.6); box-shadow: none; }
+
+.os-osx-yosemite #mac-dock { background: rgba(255,255,255,0.4); backdrop-filter: blur(15px); border-radius: 5px 5px 0 0; border: 1px solid rgba(255,255,255,0.5); border-bottom: none; }
+.os-osx-yosemite .dock-icon { border-radius: 50%; } /* Yosemite still had many circular icons */
+.os-osx-yosemite .dock-dot { background: #333; }
+
+.os-macos #mac-dock { background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 5px; }
+.theme-dark.os-macos #mac-dock { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.1); }
+.os-macos .dock-icon { border-radius: 22%; } /* Perfect Squircle for modern macOS */

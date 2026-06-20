@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hypergenius 12 - Projects</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f5;
+            --text-color: #18181b;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-hover: rgba(228, 228, 231, 0.95);
+            --border-color: rgba(212, 212, 216, 0.8);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #09090b;
+                --text-color: #f4f4f5;
+                --card-bg: rgba(24, 24, 27, 0.85);
+                --card-hover: rgba(39, 39, 42, 0.95);
+                --border-color: rgba(63, 63, 70, 0.8);
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .header-bar {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            padding: 1.5rem 2rem;
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        .share-btn {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s;
+        }
+
+        .share-btn:hover {
+            background-color: #2563eb;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            padding: 5rem 2rem 2rem 2rem;
+            box-sizing: border-box;
+            flex-grow: 1;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.05em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        p.subtitle {
+            font-size: 1.1rem;
+            color: #71717a;
+            margin-bottom: 3rem;
+            font-weight: 400;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            p.subtitle {
+                color: #a1a1aa;
+            }
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .project-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-color);
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .project-card:hover {
+            transform: translateY(-4px);
+            background-color: var(--card-hover);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+            border-color: transparent;
+        }
+
+        .project-image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .project-content {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .project-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .project-desc {
+            font-size: 0.95rem;
+            color: #71717a;
+            margin: 0 0 1rem 0;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .project-desc {
+                color: #a1a1aa;
+            }
+        }
+
+        .project-arrow {
+            align-self: flex-end;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            font-size: 1.2rem;
+            margin-top: auto;
+        }
+
+        .project-card:hover .project-arrow {
+            opacity: 1;
+            transform: translateX(4px);
+        }
+
+        .footer {
+            width: 100%;
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.9rem;
+            color: #71717a;
+            margin-top: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+        @media (prefers-color-scheme: dark) {
+            .footer {
+                color: #a1a1aa;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="header-bar">
+    <button class="share-btn" onclick="alert('Sharing is currently disabled.')">Share Game</button>
+</div>
+
+<div class="container">
+    <h1>hypergenius 12</h1>
+    <p class="subtitle">A curated selection of my web projects and experiments.</p>
+
+    <div class="projects-grid">
+        <a href="Computer%20Xp/index.html" class="project-card">
+            <img src="screenshot_xp.png" alt="Computer XP" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Computer XP</h2>
+                <p class="project-desc">A fully interactive, web-based recreation of the classic Windows XP desktop environment.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+        
+        <a href="slopcraft%203D/index.html" class="project-card">
+            <img src="screenshot_slopcraft.png" alt="Slopcraft 3D" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Slopcraft 3D</h2>
+                <p class="project-desc">A 3D voxel-based building game bringing creative block-building to the web.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="style/index.html" class="project-card">
+            <img src="screenshot_style.png" alt="Style" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">OS Style Showcase</h2>
+                <p class="project-desc">A visual showcase exploring the UI evolution of different operating systems.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="cmd/index.html" class="project-card">
+            <img src="screenshot_cmd.png" alt="CMD Terminal" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">CMD Terminal</h2>
+                <p class="project-desc">Hacker-Sim: The Elias Thorne Mystery. A command prompt based puzzle and hacking simulation.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="agar/index.html" class="project-card">
+            <img src="screenshot_agar.png" alt="Agar" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Agar</h2>
+                <p class="project-desc">A web-based multiplayer-style blob eating game with smooth rendering and mechanics.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="Cyber/index.html" class="project-card">
+            <img src="screenshot_cyber.png" alt="Cyber" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Cyber</h2>
+                <p class="project-desc">A cyberpunk-inspired web project with neon aesthetics.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="trillion/index.html" class="project-card">
+            <img src="screenshot_trillion.png" alt="Trillion" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Trillion</h2>
+                <p class="project-desc">An interactive simulation exploring large numbers and cosmic scales.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<footer class="footer">
+    &copy; 2026 hypergenius 12. All rights reserved.
+</footer>
+
+<!-- Three.js for WebGL Parallax Background -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+    // Set up WebGL 3D parallax scene
+    const canvas = document.getElementById('bg-canvas');
+    const scene = new THREE.Scene();
+    
+    // Check if dark mode to set background and particle colors
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    scene.background = new THREE.Color(isDark ? 0x09090b : 0xf4f4f5);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Create particles
+    const geometry = new THREE.BufferGeometry();
+    const particlesCount = 2000;
+    const posArray = new Float32Array(particlesCount * 3);
+
+    for(let i = 0; i < particlesCount * 3; i++) {
+        // distribute particles around space
+        posArray[i] = (Math.random() - 0.5) * 15;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    
+    const material = new THREE.PointsMaterial({
+        size: 0.02,
+        color: isDark ? 0xa1a1aa : 0x71717a,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    const particlesMesh = new THREE.Points(geometry, material);
+    scene.add(particlesMesh);
+
+    camera.position.z = 3;
+
+    // Mouse Parallax Interaction
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetX = 0;
+    let targetY = 0;
+
+    const windowHalfX = window.innerWidth / 2;
+    const windowHalfY = window.innerHeight / 2;
+
+    document.addEventListener('mousemove', (event) => {
+        mouseX = (event.clientX - windowHalfX);
+        mouseY = (event.clientY - windowHalfY);
+    });
+
+    // Handle theme change dynamically
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        const newIsDark = e.matches;
+        scene.background.setHex(newIsDark ? 0x09090b : 0xf4f4f5);
+        material.color.setHex(newIsDark ? 0xa1a1aa : 0x71717a);
+    });
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation Loop
+    const clock = new THREE.Clock();
+
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        const elapsedTime = clock.getElapsedTime();
+
+        // Base slow rotation
+        particlesMesh.rotation.y = elapsedTime * 0.05;
+        particlesMesh.rotation.x = elapsedTime * 0.02;
+
+        // Mouse Parallax effect
+        targetX = mouseX * 0.001;
+        targetY = mouseY * 0.001;
+        
+        particlesMesh.rotation.y += 0.05 * (targetX - particlesMesh.rotation.y);
+        particlesMesh.rotation.x += 0.05 * (targetY - particlesMesh.rotation.x);
+
+        renderer.render(scene, camera);
+    }
+    
+    animate();
+</script>
+</body>
+</html>

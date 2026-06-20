@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hacker-Sim: The Elias Thorne Mystery</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-win95">
+    <div id="desktop">
+        <div id="window">
+            <div id="title-bar">
+                <div id="title-left">
+                    <div id="title-icon">C:\</div>
+                    <div id="title-text">Command Prompt - SYSTEM_OS</div>
+                </div>
+                <div id="title-right">
+                    <button class="win-btn" id="btn-minimize">_</button>
+                    <button class="win-btn" id="btn-maximize">□</button>
+                    <button class="win-btn" id="btn-close">X</button>
+                </div>
+            </div>
+            
+            <div id="terminal-container">
+                <div id="crt-overlay"></div>
+                <div id="terminal-output"></div>
+                <div id="input-container">
+                    <span id="prompt">C:\Users\Guest&gt;</span>
+                    <span id="input-text"></span><span id="cursor">█</span>
+                    <input type="text" id="hidden-input" autocomplete="off" spellcheck="false" />
+                </div>
+            </div>
+        </div>
+        
+        <div id="achievements"></div>
+
+        <div id="taskbar">
+            <div id="start-btn">
+                <span style="font-weight: bold; font-style: italic; margin-right: 5px;">Hacker</span>Start
+            </div>
+            <div class="taskbar-divider"></div>
+            <div class="taskbar-app active-app">
+                <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><rect width='12' height='12' fill='black'/><text x='1' y='10' fill='white' font-family='monospace' font-size='10'>_</text></svg>" alt="cmd">
+                Command Prompt
+            </div>
+            <div style="flex-grow: 1;"></div>
+            <div id="taskbar-settings">
+                <label for="theme-selector" style="font-size: 11px; margin-right: 5px;">OS Theme:</label>
+                <select id="theme-selector">
+                    <option value="theme-win95">Windows 95</option>
+                    <option value="theme-win31">Windows 3.1</option>
+                    <option value="theme-win7">Windows 7</option>
+                    <option value="theme-win11">Windows 11</option>
+                    <option value="theme-ubuntu">Ubuntu Linux</option>
+                </select>
+            </div>
+            <div id="taskbar-clock">12:00 PM</div>
+        </div>
+    </div>
+    
+    <script src="state.js"></script>
+    <script src="audio.js"></script>
+    <script src="api.js"></script>
+    <script src="games.js"></script>
+    
+    <script src="ui.js"></script>
+    <script src="core.js"></script>
+    <script src="parser.js"></script>
+</body>
+</html>

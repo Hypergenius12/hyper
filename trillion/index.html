@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spend Elon's Money</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/e/ed/Elon_Musk_Royal_Society.jpg" alt="Elon Musk" class="profile-pic">
+            <h1>Spend Elon Musk's Money</h1>
+        </header>
+        
+        <div id="balance-bar" class="balance-bar">
+            $<span id="balance">250,000,000,000</span>
+        </div>
+        
+        <div id="items-grid" class="items-grid">
+            <!-- Items injected via JS -->
+        </div>
+        
+        <div class="receipt-section" id="receipt-section">
+            <h2>Your Receipt</h2>
+            <div id="receipt-items" class="receipt-items">
+                <!-- Receipt injected via JS -->
+            </div>
+            <div class="receipt-total">
+                <span>TOTAL</span>
+                <span id="total-spent" class="total-spent-amount">$0</span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
