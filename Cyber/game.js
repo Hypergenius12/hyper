@@ -617,10 +617,10 @@ ${roomsList || 'none yet'}
         });
 
         if (!response.ok) {
-            if (response.status === 401) {
+            if (response.status === 401 || response.status === 402) {
                 localStorage.removeItem('openrouter_key');
                 document.getElementById('apiModal').classList.remove('hidden');
-                throw new Error("API key was revoked or invalid.");
+                throw new Error("API key was revoked, invalid, or requires credits.");
             }
             let errorDetail = '';
             try {
@@ -2908,6 +2908,11 @@ async function handleInput() {
 
 // Event Listeners
 function initEventListeners() {
+    document.getElementById('openApiSettingsBtn')?.addEventListener('click', () => {
+        toggleSettings();
+        document.getElementById('apiModal').classList.remove('hidden');
+    });
+
     document.getElementById('submitApiBtn')?.addEventListener('click', () => {
         const key = document.getElementById('apiInput').value.trim();
         if (key) {
