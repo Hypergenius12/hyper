@@ -5,7 +5,7 @@
 // Configuration
 const CONFIG = {
     apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    model: 'z-ai/glm-5.2',
+    model: 'google/gemini-3.5-flash',
     maxTokens: 2000
 };
 
