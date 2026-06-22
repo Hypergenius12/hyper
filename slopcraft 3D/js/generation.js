@@ -246,6 +246,14 @@ function safeSetBlock(blocks, x, y, z, type, onlyAir = false) {
     }
 }
 
+function generateSugarcane(blocks, x, y, z, rng) {
+    // Generate 1 to 3 blocks high
+    const height = 1 + Math.floor(rng() * 3);
+    for (let i = 0; i < height; i++) {
+        safeSetBlock(blocks, x, y + i, z, BLOCKS.SUGARCANE, true);
+    }
+}
+
 function generateOreVein(blocks, wx, y, wz, oreType, minSize, maxSize, rng) {
     const size = minSize + Math.floor(rng() * (maxSize - minSize + 1));
     let currentX = wx;
@@ -379,8 +387,15 @@ export function generateChunkTerrain(cx, cz, params) {
                     type = (y === surfaceY) ? biome.surface : biome.dirt;
                     // Grass shouldn't survive underwater
                     const isAnyGrass = type === BLOCKS.GRASS || type === BLOCKS.SWAMP_GRASS || type === BLOCKS.SAVANNA_GRASS || type === BLOCKS.ALIEN_GRASS;
+                    const isDirt = type === BLOCKS.DIRT || type === BLOCKS.COARSE_DIRT || type === BLOCKS.PODZOL || type === BLOCKS.MYCELIUM;
+                    
                     if (y < params.seaLevel && isAnyGrass) {
                         type = (biome === BIOMES.PLAINS || biome === BIOMES.DESERT || biome === BIOMES.SWAMP) ? BLOCKS.SAND : BLOCKS.DIRT;
+                    }
+                    
+                    // Create beaches near water level (from sea level down a bit, and up 1 block)
+                    if (surfaceY <= params.seaLevel + 1 && y >= params.seaLevel - 2 && (isAnyGrass || isDirt)) {
+                        type = BLOCKS.SAND;
                     }
                 } else if (y <= params.seaLevel) {
                     type = biome === BIOMES.VOLCANIC ? BLOCKS.LAVA : (biome === BIOMES.SWAMP ? BLOCKS.SWAMP_WATER : BLOCKS.WATER);
@@ -408,6 +423,21 @@ export function generateChunkTerrain(cx, cz, params) {
                 // We'll trust getColumnInfo for height, assume valid if not water.
                 const r = floraRng();
                 
+                // Sugarcane logic
+                if (surfaceY === params.seaLevel + 1 && r < 0.1 && (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome === BIOMES.SWAMP || biome === BIOMES.DESERT)) {
+                    // It must be placed exactly near water, and surfaceY is 1 block above water. We know beaches are sand here.
+                    // We only spawn if the chunk column is adjacent to water (the chunk itself generated water next to it)
+                    // We can estimate by checking the neighbors' surfaceY
+                    const left = getColumnInfo(wx - 1, wz, params).surfaceY;
+                    const right = getColumnInfo(wx + 1, wz, params).surfaceY;
+                    const top = getColumnInfo(wx, wz - 1, params).surfaceY;
+                    const bottom = getColumnInfo(wx, wz + 1, params).surfaceY;
+                    if (left < surfaceY || right < surfaceY || top < surfaceY || bottom < surfaceY) {
+                        generateSugarcane(blocks, tx, surfaceY + 1, tz, floraRng);
+                        continue; // Skip other flora here
+                    }
+                }
+
                 if (biome.hasTrees && r < (biome.isDark ? 0.06 : 0.02)) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                 } else if (biome.hasMushrooms && r < 0.05) {

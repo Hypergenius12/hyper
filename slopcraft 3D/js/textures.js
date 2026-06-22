@@ -115,7 +115,8 @@ export const BLOCKS = {
     AUTUMN_PLANKS: 106,
     PALM_PLANKS: 107,
     PINE_PLANKS: 108,
-    CRIMSON_PLANKS: 109
+    CRIMSON_PLANKS: 109,
+    SUGARCANE: 110
 };
 
 // Block properties
@@ -229,7 +230,8 @@ const BLOCK_PROPS = {
     [BLOCKS.AUTUMN_PLANKS]: { name: 'Autumn Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.PALM_PLANKS]:   { name: 'Palm Planks',    health: 4, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.PINE_PLANKS]:   { name: 'Pine Planks',    health: 4, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.CRIMSON_PLANKS]:{ name: 'Crimson Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null }
+    [BLOCKS.CRIMSON_PLANKS]:{ name: 'Crimson Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.SUGARCANE]:     { name: 'Sugarcane',      health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.SUGARCANE }
 };
 
 export function getBlockProperties(type) {
@@ -1451,6 +1453,20 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillStyle = 'rgb(200, 200, 50)'; ctx.fillRect(5, 12, 6, 4); ctx.fillRect(3, 8, 4, 4); ctx.fillRect(9, 6, 4, 6);
             ctx.fillStyle = 'rgb(250, 250, 100)'; ctx.fillRect(3, 6, 2, 2); ctx.fillRect(9, 4, 2, 2); ctx.fillRect(11, 4, 2, 2);
             break;
+        case BLOCKS.SUGARCANE:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = 'rgb(90, 150, 60)';
+            ctx.fillRect(4, 0, 3, 16);
+            ctx.fillRect(9, 0, 3, 16);
+            ctx.fillStyle = 'rgb(120, 180, 80)';
+            ctx.fillRect(4, 0, 1, 16);
+            ctx.fillRect(9, 0, 1, 16);
+            ctx.fillStyle = 'rgb(60, 110, 40)';
+            for (let i = 2; i < 16; i += 5) {
+                ctx.fillRect(4, i, 3, 1);
+                ctx.fillRect(9, i+2, 3, 1);
+            }
+            break;
         default:
             fillBase(ctx, 255, 0, 255);
             break;
@@ -1897,6 +1913,66 @@ export function generateItemTexture(itemType, itemSubtype) {
                 "                ",
                 "                "
             ];
+        } else if (itemSubtype === 'sugar') {
+            shape = [
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "     OOOO       ",
+                "    OHHHOO      ",
+                "   OHHHHHHO     ",
+                "   OHCHCHCO     ",
+                "   OHC CHCO     ",
+                "    OHHHHO      ",
+                "     OOOO       ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            p = { c: '#fff', d: '#ddd', h: '#fff' };
+        } else if (itemSubtype === 'paper') {
+            shape = [
+                "                ",
+                "                ",
+                "   OOOOOOOO     ",
+                "  OHHHHHHHO     ",
+                "  OHCCCCCCO     ",
+                "  OHCDDDDDO     ",
+                "  OHCCCCCCO     ",
+                "  OHCDDDDDO     ",
+                "  OHCCCCCCO     ",
+                "  OHCDDDDDO     ",
+                "  OHCCCCCCO     ",
+                "  OHHHHHHHO     ",
+                "   OOOOOOOO     ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            p = { c: '#f5f5dc', d: '#e6e6fa', h: '#fff' };
+        } else if (itemSubtype === 'sugarcane') {
+            shape = [
+                "                ",
+                "      OOOO      ",
+                "     OHHHO      ",
+                "     OHCHO      ",
+                "     ODDDO      ",
+                "     OHHHO      ",
+                "     OHCHO      ",
+                "     ODDDO      ",
+                "     OHHHO      ",
+                "     OHCHO      ",
+                "     ODDDO      ",
+                "     OHHHO      ",
+                "     OHCHO      ",
+                "      OOOO      ",
+                "                ",
+                "                "
+            ];
+            p = { c: '#5a963c', d: '#3c6e28', h: '#78b450' };
         } else if (itemSubtype === 'flint_and_steel') {
             shape = [
                 "                ",

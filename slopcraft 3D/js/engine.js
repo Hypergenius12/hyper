@@ -377,10 +377,32 @@ export class Chunk {
                             const uvInfo = atlas.getUV(blockType, face.name);
 
                             // 4 vertices per face
+                            let dataValue = 0;
+                            if (props.isLiquid) {
+                                dataValue = this.data[(y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x];
+                            }
+                            
                             for (let i = 0; i < 4; i++) {
                                 const v = face.v[i];
+                                let py = y + v[1];
+                                
+                                // Lower liquid height for flowing water
+                                if (props.isLiquid && v[1] === 1) {
+                                    // If there's water directly above, it shouldn't be lowered
+                                    if (y < CHUNK_HEIGHT - 1 && getBlockOptimized(wx, y + 1, wz) !== blockType) {
+                                        const maxLevel = blockType === BLOCKS.LAVA ? 3 : 7;
+                                        const level = dataValue === 0 ? maxLevel : dataValue;
+                                        // Level 7 = almost full (subtract a bit), Level 1 = lowest
+                                        if (level < maxLevel) {
+                                            py -= (maxLevel - level) / maxLevel * 0.8 + 0.1;
+                                        } else {
+                                            py -= 0.1; // source blocks are slightly lowered
+                                        }
+                                    }
+                                }
+                                
                                 _positions[posCount++] = x + v[0];
-                                _positions[posCount++] = y + v[1];
+                                _positions[posCount++] = py;
                                 _positions[posCount++] = z + v[2];
                                 
                                 _normals[posCount - 3] = face.dir[0];
@@ -666,6 +688,24 @@ export class World {
         }
         else if (type === window.BLOCKS.CACTUS) {
             if (blockBelow !== window.BLOCKS.SAND && blockBelow !== window.BLOCKS.CACTUS && blockBelow !== window.BLOCKS.RED_SAND) needsBreak = true;
+        }
+        else if (type === window.BLOCKS.SUGARCANE) {
+            if (blockBelow === window.BLOCKS.SUGARCANE) {
+                needsBreak = false;
+            } else if ([window.BLOCKS.SAND, window.BLOCKS.DIRT, window.BLOCKS.GRASS, window.BLOCKS.PODZOL, window.BLOCKS.MYCELIUM, window.BLOCKS.COARSE_DIRT].includes(blockBelow)) {
+                // Must be adjacent to water horizontally
+                const neighbors = [
+                    this.getBlock(x + 1, y - 1, z),
+                    this.getBlock(x - 1, y - 1, z),
+                    this.getBlock(x, y - 1, z + 1),
+                    this.getBlock(x, y - 1, z - 1)
+                ];
+                if (!neighbors.includes(window.BLOCKS.WATER) && !neighbors.includes(window.BLOCKS.SWAMP_WATER)) {
+                    needsBreak = true;
+                }
+            } else {
+                needsBreak = true;
+            }
         }
         else if (type === window.BLOCKS.TORCH) {
             // Needs ANY solid adjacent block
@@ -1033,7 +1073,24 @@ export class World {
                 const index = ry * 256 + rz * 16 + rx;
                 const block = chunk.blocks[index];
                 
-                if (block === window.BLOCKS.FIRE) {
+                if (block === window.BLOCKS.SUGARCANE) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    // Check if air is above
+                    if (wy < CHUNK_HEIGHT - 1 && this.getBlock(wx, wy + 1, wz) === window.BLOCKS.AIR) {
+                        // Find how many sugarcane blocks are below
+                        let height = 1;
+                        let checkY = wy - 1;
+                        while (checkY > 0 && this.getBlock(wx, checkY, wz) === window.BLOCKS.SUGARCANE) {
+                            height++;
+                            checkY--;
+                        }
+                        if (height < 3 && Math.random() < 0.2) { // Grow!
+                            this.setBlock(wx, wy + 1, wz, window.BLOCKS.SUGARCANE);
+                        }
+                    }
+                } else if (block === window.BLOCKS.FIRE) {
                     const wx = chunk.cx * 16 + rx;
                     const wy = ry;
                     const wz = chunk.cz * 16 + rz;
