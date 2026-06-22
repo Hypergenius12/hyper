@@ -88,6 +88,32 @@ function init() {
         }
     });
     
+    // UI Setup for Leaderboard Tabs
+    const tabGlobal = document.getElementById('tabGlobal');
+    const tabPersonal = document.getElementById('tabPersonal');
+    
+    if (tabGlobal) {
+        tabGlobal.addEventListener('click', () => {
+            currentTab = 'global';
+            tabGlobal.style.background = '#3498db';
+            tabGlobal.style.color = 'white';
+            tabPersonal.style.background = '#ecf0f1';
+            tabPersonal.style.color = '#333';
+            renderMenuLeaderboard();
+        });
+    }
+
+    if (tabPersonal) {
+        tabPersonal.addEventListener('click', () => {
+            currentTab = 'personal';
+            tabPersonal.style.background = '#3498db';
+            tabPersonal.style.color = 'white';
+            tabGlobal.style.background = '#ecf0f1';
+            tabGlobal.style.color = '#333';
+            renderMenuLeaderboard();
+        });
+    }
+
     // Start game loop in background to let bots move
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
@@ -109,24 +135,7 @@ function containsSwear(name) {
     return SWEAR_WORDS.some(swear => lowerName.includes(swear));
 }
 
-// UI Setup for Leaderboard Tabs
-document.getElementById('tabGlobal').addEventListener('click', () => {
-    currentTab = 'global';
-    document.getElementById('tabGlobal').style.background = '#3498db';
-    document.getElementById('tabGlobal').style.color = 'white';
-    document.getElementById('tabPersonal').style.background = '#ecf0f1';
-    document.getElementById('tabPersonal').style.color = '#333';
-    renderMenuLeaderboard();
-});
-
-document.getElementById('tabPersonal').addEventListener('click', () => {
-    currentTab = 'personal';
-    document.getElementById('tabPersonal').style.background = '#3498db';
-    document.getElementById('tabPersonal').style.color = 'white';
-    document.getElementById('tabGlobal').style.background = '#ecf0f1';
-    document.getElementById('tabGlobal').style.color = '#333';
-    renderMenuLeaderboard();
-});
+// UI Setup for Leaderboard Tabs will be attached in init()
 
 async function fetchGlobalLeaderboard() {
     try {
