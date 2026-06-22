@@ -7,6 +7,18 @@ class Game {
         this.nextId = 1;
         this.players = new Map(); // id -> score info
         
+        // Pre-allocated arrays for performance (avoids GC lag)
+        this.cellsArray = [];
+        this.ejectedArray = [];
+        this.staticsArray = [];
+        this.queryResult = [];
+        this.grid = []; // Will be populated with arrays once
+        this.gridSize = 500;
+        this.gridCols = Math.ceil(Config.MAP_WIDTH / this.gridSize);
+        for (let i = 0; i < this.gridCols * this.gridCols; i++) {
+            this.grid.push([]);
+        }
+        
         this.init();
     }
 
@@ -303,9 +315,11 @@ class Game {
     }
 
     buildGrid() {
-        this.gridSize = 500;
-        this.gridCols = Math.ceil(Config.MAP_WIDTH / this.gridSize);
-        this.grid = new Array(this.gridCols * this.gridCols);
+        // Clear existing grid bins without reallocating arrays
+        const numBins = this.gridCols * this.gridCols;
+        for (let i = 0; i < numBins; i++) {
+            this.grid[i].length = 0;
+        }
         
         for (let i = 0; i < this.entities.length; i++) {
             const e = this.entities[i];
@@ -315,14 +329,12 @@ class Game {
             const gy = Math.max(0, Math.min(this.gridCols - 1, Math.floor(e.y / this.gridSize)));
             const idx = gy * this.gridCols + gx;
             
-            if (!this.grid[idx]) this.grid[idx] = [];
             this.grid[idx].push(e);
         }
     }
 
     queryGrid(x, y, radius) {
-        const result = [];
-        if (!this.grid) return result;
+        this.queryResult.length = 0; // Clear previous results without reallocating
         
         const minGx = Math.max(0, Math.floor((x - radius) / this.gridSize));
         const maxGx = Math.min(this.gridCols - 1, Math.floor((x + radius) / this.gridSize));
@@ -332,31 +344,29 @@ class Game {
         for (let gy = minGy; gy <= maxGy; gy++) {
             for (let gx = minGx; gx <= maxGx; gx++) {
                 const gridCell = this.grid[gy * this.gridCols + gx];
-                if (gridCell) {
-                    for (let i = 0; i < gridCell.length; i++) {
-                        result.push(gridCell[i]);
-                    }
+                for (let i = 0; i < gridCell.length; i++) {
+                    this.queryResult.push(gridCell[i]);
                 }
             }
         }
-        return result;
+        return this.queryResult;
     }
 
     checkCollisions() {
-        const cells = [];
-        const ejected = [];
-        const statics = [];
+        this.cellsArray.length = 0;
+        this.ejectedArray.length = 0;
+        this.staticsArray.length = 0;
         
         for (let i = 0; i < this.entities.length; i++) {
             const e = this.entities[i];
             if (e.killedBy) continue;
-            if (e.type === 'cell') cells.push(e);
-            else if (e.type === 'ejected') ejected.push(e);
-            else if (e.type === 'virus' || e.type === 'mothercell') statics.push(e);
+            if (e.type === 'cell') this.cellsArray.push(e);
+            else if (e.type === 'ejected') this.ejectedArray.push(e);
+            else if (e.type === 'virus' || e.type === 'mothercell') this.staticsArray.push(e);
         }
         
-        for (let i = 0; i < cells.length; i++) {
-            const cell = cells[i];
+        for (let i = 0; i < this.cellsArray.length; i++) {
+            const cell = this.cellsArray[i];
             if (cell.killedBy) continue;
             
             const searchRadius = Math.max(cell.radius * 2, 200);
@@ -469,12 +479,12 @@ class Game {
         }
         
         // Virus and Mothercell eating ejected mass (fix for bug where viruses didn't eat mass)
-        for (let i = 0; i < ejected.length; i++) {
-            const mass = ejected[i];
+        for (let i = 0; i < this.ejectedArray.length; i++) {
+            const mass = this.ejectedArray[i];
             if (mass.killedBy) continue;
             
-            for (let j = 0; j < statics.length; j++) {
-                const stat = statics[j];
+            for (let j = 0; j < this.staticsArray.length; j++) {
+                const stat = this.staticsArray[j];
                 if (stat.killedBy) continue;
                 
                 const rSum = mass.radius + stat.radius;

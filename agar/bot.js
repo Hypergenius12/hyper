@@ -9,6 +9,7 @@ class BotAI {
         this.tickCount = 0;
         this.targetX = MathUtils.randomRange(0, Config.MAP_WIDTH);
         this.targetY = MathUtils.randomRange(0, Config.MAP_HEIGHT);
+        this.personality = Math.random() < 0.5 ? 'aggro' : 'timid';
     }
 
     update() {
@@ -19,14 +20,13 @@ class BotAI {
             return;
         }
 
-        const myCells = this.game.entities.filter(e => e.type === 'cell' && e.ownerId === this.id);
-        // AI Constants
-        const visionRadius = this.isBoss ? Config.BOT_VISION_RADIUS * 2.5 : Config.BOT_VISION_RADIUS;
-        const visionRadiusSq = visionRadius * visionRadius;
+        if (this.isBoss) this.personality = 'boss';
+
+        const myCells = this.game.cellsArray.filter(e => e.ownerId === this.id);
+        if (myCells.length === 0) return; // Dead
 
         let myMass = 0;
         let cx = 0, cy = 0;
-        if (myCells.length === 0) return; // Dead
         for (let cell of myCells) {
             myMass += cell.mass;
             cx += cell.x * cell.mass;
@@ -35,94 +35,124 @@ class BotAI {
         cx /= myMass;
         cy /= myMass;
 
-        // Potential field vectors
-        let vectorX = 0;
-        let vectorY = 0;
-        
-        let canSplit = myCells.length < 16 && myMass > Config.MIN_SPLIT_MASS * 2;
-        let splitTarget = null;
-        let splitDistSq = Infinity;
+        // Reduce vision radius slightly for performance and realistic reaction times
+        let visionRadius = this.personality === 'boss' ? 2000 : 1200;
+        if (this.personality === 'timid') visionRadius = 1500; // Timid bots look further out to run away early
 
         const nearbyEntities = this.game.queryGrid(cx, cy, visionRadius);
         
-        // Evaluate surroundings
-        for (let entity of nearbyEntities) {
-            if (entity.ownerId === this.id) continue;
+        let bestFood = null;
+        let bestFoodDist = Infinity;
+        
+        let bestPrey = null;
+        let bestPreyScore = -Infinity; // Combine distance and mass
+        
+        let worstThreat = null;
+        let worstThreatDist = Infinity;
+
+        // Evaluate surroundings once
+        for (let i = 0; i < nearbyEntities.length; i++) {
+            let entity = nearbyEntities[i];
+            if (entity.ownerId === this.id || entity.killedBy) continue;
             
             let dx = entity.x - cx;
             let dy = entity.y - cy;
             
+            // Fast AABB check
             if (Math.abs(dx) > visionRadius || Math.abs(dy) > visionRadius) continue;
             
             let distSq = dx * dx + dy * dy;
-            if (distSq > visionRadiusSq) continue;
+            if (distSq > visionRadius * visionRadius) continue;
             
-            let dist = Math.sqrt(distSq);
-            if (dist === 0) continue;
-            
-            dx = dx / dist;
-            dy = dy / dist;
-            
-            // Influence based on distance (closer = stronger)
-            let influence = 1 - (dist / visionRadius);
-            
-            let weight = 0;
-
+            // Analyze entity type
             if (entity.type === 'food' || entity.type === 'ejected') {
-                weight = this.isBoss ? 20 * influence : 10 * influence; // Bosses are hungrier for food too
-                vectorX += dx * weight;
-                vectorY += dy * weight;
+                if (distSq < bestFoodDist) {
+                    bestFoodDist = distSq;
+                    bestFood = entity;
+                }
             } else if (entity.type === 'virus' || entity.type === 'mothercell') {
                 if (myMass > entity.mass * 1.15) {
-                    // Threat! Strong negative weight
-                    vectorX -= dx * influence * 50;
-                    vectorY -= dy * influence * 50;
+                    // Virus is a threat if we are bigger than it (it will pop us)
+                    if (distSq < worstThreatDist) {
+                        worstThreatDist = distSq;
+                        worstThreat = entity;
+                    }
                 }
             } else if (entity.type === 'cell') {
-                let isPlayer = !entity.isBot;
-                let multiplier = isPlayer ? 0.5 : 1; // Prioritize bots slightly over players
-
                 if (entity.mass > myMass * 1.15) {
                     // Threat cell
-                    vectorX -= dx * influence * 100 * multiplier;
-                    vectorY -= dy * influence * 100 * multiplier;
+                    if (distSq < worstThreatDist) {
+                        worstThreatDist = distSq;
+                        worstThreat = entity;
+                    }
                 } else if (myMass > entity.mass * 1.15) {
                     // Prey cell
-                    let preyWeight = this.isBoss && isPlayer ? 30 : 10; // Bosses heavily target players
-                    vectorX += dx * influence * preyWeight * multiplier;
-                    vectorY += dy * influence * preyWeight * multiplier;
-                    
-                    if (myMass > entity.mass * 2.5 && distSq < splitDistSq) {
-                        splitDistSq = distSq;
-                        splitTarget = entity;
+                    let score = entity.mass / Math.sqrt(distSq); // Higher mass and lower distance = better score
+                    if (score > bestPreyScore) {
+                        bestPreyScore = score;
+                        bestPrey = entity;
                     }
                 }
             }
         }
 
-        // Avoid walls heavily
-        const wallInfluence = 50;
-        if (cx < 500) vectorX += (1 - cx / 500) * wallInfluence;
-        if (cx > Config.MAP_WIDTH - 500) vectorX -= (1 - (Config.MAP_WIDTH - cx) / 500) * wallInfluence;
-        if (cy < 500) vectorY += (1 - cy / 500) * wallInfluence;
-        if (cy > Config.MAP_HEIGHT - 500) vectorY -= (1 - (Config.MAP_HEIGHT - cy) / 500) * wallInfluence;
+        let isRunning = false;
 
-        // Normalize vector
-        let length = Math.sqrt(vectorX * vectorX + vectorY * vectorY);
-        
-        if (length > 0) {
-            this.targetX = cx + (vectorX / length) * 500;
-            this.targetY = cy + (vectorY / length) * 500;
-        } else {
-            // Wander
-            if (Math.random() < 0.1) {
-                this.targetX = cx + MathUtils.randomRange(-500, 500);
-                this.targetY = cy + MathUtils.randomRange(-500, 500);
+        // 1. Threat Avoidance (Highest Priority)
+        if (worstThreat) {
+            let threatDist = Math.sqrt(worstThreatDist);
+            // Panic threshold depends on personality
+            let panicDist = this.personality === 'timid' ? 1200 : (this.personality === 'boss' ? 500 : 800);
+            
+            if (threatDist < panicDist) {
+                // Run directly away from the threat
+                let dx = cx - worstThreat.x;
+                let dy = cy - worstThreat.y;
+                
+                // If perfectly overlapping, pick a random direction
+                if (dx === 0 && dy === 0) { dx = 1; dy = 1; }
+                
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                dx /= dist;
+                dy /= dist;
+                
+                this.targetX = cx + dx * 1000;
+                this.targetY = cy + dy * 1000;
+                isRunning = true;
             }
         }
-        
-        if (splitTarget && Math.random() < 0.05) {
-            this.game.splitPlayer(this.id);
+
+        // 2. Hunting Prey
+        if (!isRunning && bestPrey && this.personality !== 'timid') {
+            this.targetX = bestPrey.x;
+            this.targetY = bestPrey.y;
+            
+            // Check if we should split to kill
+            let dist = Math.sqrt(bestPreyScore > 0 ? (bestPrey.mass / bestPreyScore) * (bestPrey.mass / bestPreyScore) : 1000); // Inverse score to dist approximation
+            if (myMass > bestPrey.mass * 2.5 && dist < 600 && Math.random() < 0.1) {
+                this.game.splitPlayer(this.id);
+            }
+            isRunning = true; // Not running away, but we have a target
+        }
+
+        // 3. Foraging Food
+        if (!isRunning && bestFood) {
+            this.targetX = bestFood.x;
+            this.targetY = bestFood.y;
+            isRunning = true;
+        }
+
+        // 4. Wall Avoidance overrides everything if too close
+        const wallMargin = 100;
+        if (cx < wallMargin) this.targetX = cx + 500;
+        else if (cx > Config.MAP_WIDTH - wallMargin) this.targetX = cx - 500;
+        if (cy < wallMargin) this.targetY = cy + 500;
+        else if (cy > Config.MAP_HEIGHT - wallMargin) this.targetY = cy - 500;
+
+        // 5. Wander if nothing to do
+        if (!isRunning && Math.random() < 0.1) {
+            this.targetX = cx + MathUtils.randomRange(-500, 500);
+            this.targetY = cy + MathUtils.randomRange(-500, 500);
         }
 
         // Keep target in bounds
@@ -133,10 +163,10 @@ class BotAI {
     }
 
     applyTarget() {
-        const myCells = this.game.entities.filter(e => e.type === 'cell' && e.ownerId === this.id);
-        for (let cell of myCells) {
-            cell.targetX = this.targetX;
-            cell.targetY = this.targetY;
+        const myCells = this.game.cellsArray.filter(e => e.ownerId === this.id);
+        for (let i = 0; i < myCells.length; i++) {
+            myCells[i].targetX = this.targetX;
+            myCells[i].targetY = this.targetY;
         }
     }
 }
