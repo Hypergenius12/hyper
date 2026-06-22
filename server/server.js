@@ -68,15 +68,12 @@ wss.on('connection', (ws) => {
 });
 
 // Game Loop: 60 FPS
-const TICK_RATE = 1000 / 60;
-let lastTime = Date.now();
+// Tweak config for free server limits
+Config.MAX_BOTS = 40;
+Config.MAX_FOOD = 2500;
 
 setInterval(() => {
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    
-    game.update(dt);
+    game.update(66);
     
     const leaderboard = game.getLeaderboard();
     
@@ -102,8 +99,8 @@ setInterval(() => {
             camY = sumY / totalMass;
         }
 
-        // View Culling: Only send entities within 3000 units of the player
-        const VIEW_RADIUS = 3000; 
+        // View Culling: Only send entities within 1500 units of the player
+        const VIEW_RADIUS = 1500; 
         const visibleEntities = [];
         
         for (let i = 0; i < game.entities.length; i++) {
@@ -137,4 +134,4 @@ setInterval(() => {
             alive: alive
         }));
     }
-}, TICK_RATE);
+}, 66);

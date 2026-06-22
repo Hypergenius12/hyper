@@ -73,16 +73,12 @@ wss.on('connection', (ws) => {
     });
 });
 
-// Game Loop: 60 FPS
-const TICK_RATE = 1000 / 60;
-let lastTime = Date.now();
+// Tweak config for free server limits on big map
+Config.MAX_BOTS = 60;
+Config.MAX_FOOD = 4000;
 
 setInterval(() => {
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    
-    game.update(dt);
+    game.update(66);
     
     const leaderboard = game.getLeaderboard();
     
@@ -90,7 +86,7 @@ setInterval(() => {
     for (const [ws, playerId] of clients.entries()) {
         if (ws.readyState !== WebSocket.OPEN) continue;
         
-        const myCells = game.cellsArray.filter(e => e.ownerId === playerId && e.type === 'cell');
+        const myCells = game.entities.filter(e => e.ownerId === playerId && e.type === 'cell');
         let camX = Config.MAP_WIDTH / 2;
         let camY = Config.MAP_HEIGHT / 2;
         let alive = false;
@@ -107,7 +103,7 @@ setInterval(() => {
             camY = sumY / totalMass;
         }
 
-        const VIEW_RADIUS = 4000; // slightly bigger view for big map?
+        const VIEW_RADIUS = 1500; // reduced to prevent lag
         const visibleEntities = [];
         
         for (let i = 0; i < game.entities.length; i++) {
@@ -138,4 +134,4 @@ setInterval(() => {
             alive: alive
         }));
     }
-}, TICK_RATE);
+}, 66);
