@@ -1015,6 +1015,65 @@ export class World {
             if (this.tickTimer >= 0.2) { // tick every 200ms
                 this.tickTimer = 0;
                 this.tickFluids();
+                this.tickRandomBlocks();
+            }
+        }
+    }
+
+    tickRandomBlocks() {
+        // Pick 3 random blocks per active chunk
+        for (const chunk of this.chunks.values()) {
+            if (!chunk.blocks || chunk.blocks[0] === undefined) continue;
+            
+            for (let i = 0; i < 3; i++) {
+                const rx = Math.floor(Math.random() * 16);
+                const ry = Math.floor(Math.random() * window.CHUNK_HEIGHT);
+                const rz = Math.floor(Math.random() * 16);
+                
+                const index = ry * 256 + rz * 16 + rx;
+                const block = chunk.blocks[index];
+                
+                if (block === window.BLOCKS.FIRE) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    
+                    const dirs = [
+                        [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]
+                    ];
+                    dirs.sort(() => Math.random() - 0.5); // shuffle
+                    
+                    let spread = false;
+                    for (const [dx, dy, dz] of dirs) {
+                        const nx = wx + dx, ny = wy + dy, nz = wz + dz;
+                        const nb = this.getBlock(nx, ny, nz);
+                        
+                        // Is it flammable?
+                        if (nb === window.BLOCKS.WOOD || nb === window.BLOCKS.LEAVES || nb === window.BLOCKS.PLANKS || 
+                            nb === window.BLOCKS.ACACIA_WOOD || nb === window.BLOCKS.ACACIA_LEAVES || nb === window.BLOCKS.ACACIA_PLANKS ||
+                            nb === window.BLOCKS.CHERRY_WOOD || nb === window.BLOCKS.CHERRY_LEAVES || nb === window.BLOCKS.CHERRY_PLANKS ||
+                            nb === window.BLOCKS.AUTUMN_WOOD || nb === window.BLOCKS.AUTUMN_LEAVES || nb === window.BLOCKS.AUTUMN_PLANKS ||
+                            nb === window.BLOCKS.PALM_WOOD || nb === window.BLOCKS.PALM_LEAVES || nb === window.BLOCKS.PALM_PLANKS ||
+                            nb === window.BLOCKS.PINE_WOOD || nb === window.BLOCKS.PINE_LEAVES || nb === window.BLOCKS.PINE_PLANKS ||
+                            nb === window.BLOCKS.WOOL || nb === window.BLOCKS.TALL_GRASS || nb === window.BLOCKS.DEAD_BUSH) {
+                            
+                            if (Math.random() < 0.1) { // 10% chance to spread per direction
+                                if (Math.random() < 0.3) {
+                                    this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                                } else {
+                                    this.setBlock(nx, ny, nz, window.BLOCKS.AIR); // burn it up
+                                }
+                                spread = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Fire dies out
+                    if (Math.random() < (spread ? 0.05 : 0.2)) {
+                        this.setBlock(wx, wy, wz, window.BLOCKS.AIR);
+                    }
+                }
             }
         }
     }

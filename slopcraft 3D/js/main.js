@@ -3,7 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS } from './textures.js';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js';
 import { generatePlanetParams, generateChunkTerrain, generateNetherChunk } from './generation.js';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js';
 import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js';
@@ -662,10 +662,14 @@ class Game {
                 this.heldItemMesh.position.set(0.4, -0.1, -0.8);
                 this.heldItemMesh.rotation.x = Math.PI / 4;
             } else {
-                this.heldItemMesh = new THREE.Mesh(
-                    new THREE.PlaneGeometry(0.3, 0.3),
-                    new THREE.MeshBasicMaterial({ color: 0xffaa00, side: THREE.DoubleSide })
-                );
+                const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype);
+                const tex = new THREE.CanvasTexture(iconCanvas);
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                tex.colorSpace = THREE.SRGBColorSpace;
+
+                const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
+                this.heldItemMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), mat);
                 this.heldItemMesh.position.set(0.4, -0.2, -0.8);
             }
             this.heldItemMesh.userData.item = slot.item;
@@ -776,6 +780,14 @@ class Game {
                 if (hit.blockType === window.BLOCKS.OBSIDIAN) {
                     this.tryLightPortal(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                     this.audio.playHit();
+                } else if (hit.face) {
+                    const nx = hit.blockPos.x + hit.face.x;
+                    const ny = hit.blockPos.y + hit.face.y;
+                    const nz = hit.blockPos.z + hit.face.z;
+                    if (this.world.getBlock(nx, ny, nz) === window.BLOCKS.AIR) {
+                        this.world.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                        this.audio.playHit();
+                    }
                 }
                 this.input.mouse.rightClick = false;
                 return;
@@ -1255,71 +1267,68 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
     }
 
     tryLightPortal(startX, startY, startZ) {
-        // Find bottom-left corner of the portal inside
-        // A simple flood fill or pattern match.
-        // For our 4x5 portal frame, the inside is 2x3.
-        
         const frameBlocks = [window.BLOCKS.OBSIDIAN, window.BLOCKS.PORTAL_FRAME];
         
-        // Scan around the click to find a suitable 2x3 air/empty space surrounded by frame blocks
-        let foundPortal = false;
+        const dirs = [
+            [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]
+        ];
         
-        for (let xOffset = -3; xOffset <= 3; xOffset++) {
-            for (let yOffset = -4; yOffset <= 4; yOffset++) {
-                const px = startX + xOffset;
-                const py = startY + yOffset;
-                const pz = startZ;
-                
-                // Check if this could be the bottom-left inside block of the portal
-                let isValidFrame = true;
-                
-                // Check the 2x3 inside is empty
-                for (let ix = 0; ix < 2; ix++) {
-                    for (let iy = 0; iy < 3; iy++) {
-                        const b = this.world.getBlock(px + ix, py + iy, pz);
-                        if (b !== window.BLOCKS.AIR) {
-                            isValidFrame = false;
-                            break;
-                        }
-                    }
-                    if (!isValidFrame) break;
-                }
-                
-                if (!isValidFrame) continue;
-                
-                // Check the border around the 2x3 is all frame blocks
-                // Bottom: (px, py-1), (px+1, py-1)
-                // Top: (px, py+3), (px+1, py+3)
-                // Left: (px-1, py), (px-1, py+1), (px-1, py+2)
-                // Right: (px+2, py), (px+2, py+1), (px+2, py+2)
-                const borderOffsets = [
-                    [0, -1], [1, -1],   // Bottom
-                    [0, 3], [1, 3],     // Top
-                    [-1, 0], [-1, 1], [-1, 2], // Left
-                    [2, 0], [2, 1], [2, 2]     // Right
-                ];
-                
-                for (let o of borderOffsets) {
-                    const b = this.world.getBlock(px + o[0], py + o[1], pz);
-                    if (!frameBlocks.includes(b)) {
-                        isValidFrame = false;
-                        break;
-                    }
-                }
-                
-                if (isValidFrame) {
-                    // It's a valid portal frame!
-                    foundPortal = true;
-                    // Light it!
-                    for (let ix = 0; ix < 2; ix++) {
-                        for (let iy = 0; iy < 3; iy++) {
-                            this.world.setBlock(px + ix, py + iy, pz, window.BLOCKS.PORTAL);
-                        }
-                    }
-                    return;
-                }
+        for (const [dx, dy, dz] of dirs) {
+            const sx = startX + dx;
+            const sy = startY + dy;
+            const sz = startZ + dz;
+            
+            if (this.world.getBlock(sx, sy, sz) !== window.BLOCKS.AIR) continue;
+            
+            // Try Z-plane (fixed Z)
+            if (dz === 0) {
+                if (this._floodFillPortal(sx, sy, startZ, 'z', frameBlocks)) return;
+            }
+            // Try X-plane (fixed X)
+            if (dx === 0) {
+                if (this._floodFillPortal(startX, sy, sz, 'x', frameBlocks)) return;
             }
         }
+    }
+
+    _floodFillPortal(sx, sy, sz, plane, frameBlocks) {
+        const MAX_AREA = 441; // max 21x21 interior
+        const visited = new Set();
+        const queue = [{x: sx, y: sy, z: sz}];
+        const interior = [];
+        
+        while(queue.length > 0) {
+            if (interior.length > MAX_AREA) return false;
+            
+            const curr = queue.shift();
+            const key = `${curr.x},${curr.y},${curr.z}`;
+            if (visited.has(key)) continue;
+            visited.add(key);
+            
+            const b = this.world.getBlock(curr.x, curr.y, curr.z);
+            if (b === window.BLOCKS.AIR) {
+                interior.push(curr);
+                
+                queue.push({x: curr.x, y: curr.y + 1, z: curr.z});
+                queue.push({x: curr.x, y: curr.y - 1, z: curr.z});
+                if (plane === 'z') {
+                    queue.push({x: curr.x + 1, y: curr.y, z: curr.z});
+                    queue.push({x: curr.x - 1, y: curr.y, z: curr.z});
+                } else {
+                    queue.push({x: curr.x, y: curr.y, z: curr.z + 1});
+                    queue.push({x: curr.x, y: curr.y, z: curr.z - 1});
+                }
+            } else if (!frameBlocks.includes(b)) {
+                return false;
+            }
+        }
+        
+        if (interior.length < 6) return false; // Minimum inside is 2x3
+        
+        for (const p of interior) {
+            this.world.setBlock(p.x, p.y, p.z, window.BLOCKS.PORTAL);
+        }
+        return true;
     }
 }
 

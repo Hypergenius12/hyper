@@ -685,6 +685,8 @@ class UISystem {
             const temp = this.currentPlayer.inventory.armor[targetIndex];
             this.currentPlayer.inventory.armor[targetIndex] = this.currentPlayer.inventory.armor[srcIndex];
             this.currentPlayer.inventory.armor[srcIndex] = temp;
+        }
+
         const standardTypes = ['inventory', 'crafting', 'chest', 'furnace'];
         if (standardTypes.includes(srcType) && standardTypes.includes(targetType)) {
             if (targetType === 'furnace' && targetIndex === 2) {
@@ -1005,13 +1007,27 @@ class UISystem {
         // Torch: Shapeless 1 Coal + 1 Stick
         if (getCount('coal') === 1 && getCount('stick') === 1 && totalItems === 2) return block(B.TORCH, 'Torch', 4);
 
-        // Helper for matching either a specific material or ANY plank
+        // Tools (material + stick pattern: [mat, empty, stick, empty] )
         const matchesMat = (t, expected) => expected === B.PLANKS ? isPlank(t) : t === expected;
 
-        // Tools (material + stick pattern: [mat, empty, stick, empty] )
-        const toolRecipe = (matType, mineSpeed, damage, chopSpeed, toolName, toolSubType) => {
+        // Pickaxes: [mat, mat, stick, empty]
+        const pickaxeRecipe = (matType, mineSpeed, damage, chopSpeed, toolName) => {
+            if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && s[2] === 'stick' && !s[3])
+                return equip('pickaxe', { mineSpeed, damage, chopSpeed }, toolName, `${toolName}. Mine Speed: ${mineSpeed}x`);
+            return null;
+        };
+
+        // Swords: [mat, empty, stick, empty]
+        const swordRecipe = (matType, damage, toolName) => {
             if (matchesMat(s[0], matType) && !s[1] && s[2] === 'stick' && !s[3])
-                return equip(toolSubType, { mineSpeed, damage, chopSpeed }, toolName, `${toolName}. Mine Speed: ${mineSpeed}x`);
+                return equip('sword', { mineSpeed: 1.0, damage, chopSpeed: 1.0 }, toolName, `${toolName}. Damage: ${damage}`);
+            return null;
+        };
+
+        // Axes: [mat, mat, empty, stick]
+        const axeRecipe = (matType, chopSpeed, damage, toolName) => {
+            if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && !s[2] && s[3] === 'stick')
+                return equip('axe', { mineSpeed: 1.0, damage, chopSpeed }, toolName, `${toolName}. Chops fast. Speed: ${chopSpeed}x`);
             return null;
         };
 
@@ -1042,27 +1058,22 @@ class UISystem {
 
         // Pickaxes
         let r;
-        r = toolRecipe('iron_ingot', 3.0, 5, 1.5, 'Iron Pickaxe', 'pickaxe'); if (r) return r;
-        r = toolRecipe('diamond', 6.0, 8, 3.0, 'Diamond Pickaxe', 'pickaxe'); if (r) return r;
-        r = toolRecipe(B.COBBLESTONE, 2.0, 4, 1.2, 'Stone Pickaxe', 'pickaxe'); if (r) return r;
-        r = toolRecipe(B.PLANKS, 1.5, 3, 1.0, 'Wooden Pickaxe', 'pickaxe'); if (r) return r;
+        r = pickaxeRecipe('iron_ingot', 3.0, 5, 1.5, 'Iron Pickaxe'); if (r) return r;
+        r = pickaxeRecipe('diamond', 6.0, 8, 3.0, 'Diamond Pickaxe'); if (r) return r;
+        r = pickaxeRecipe(B.COBBLESTONE, 2.0, 4, 1.2, 'Stone Pickaxe'); if (r) return r;
+        r = pickaxeRecipe(B.PLANKS, 1.5, 3, 1.0, 'Wooden Pickaxe'); if (r) return r;
 
         // Swords [mat, empty, stick, empty]
-        r = toolRecipe('iron_ingot', 1.0, 8, 1.0, 'Iron Sword', 'sword'); if (r) return r;
-        r = toolRecipe('diamond', 1.0, 12, 1.0, 'Diamond Sword', 'sword'); if (r) return r;
-        r = toolRecipe(B.COBBLESTONE, 1.0, 5, 1.0, 'Stone Sword', 'sword'); if (r) return r;
-        r = toolRecipe(B.PLANKS, 1.0, 3, 1.0, 'Wooden Sword', 'sword'); if (r) return r;
+        r = swordRecipe('iron_ingot', 8, 'Iron Sword'); if (r) return r;
+        r = swordRecipe('diamond', 12, 'Diamond Sword'); if (r) return r;
+        r = swordRecipe(B.COBBLESTONE, 5, 'Stone Sword'); if (r) return r;
+        r = swordRecipe(B.PLANKS, 3, 'Wooden Sword'); if (r) return r;
 
         // Axes [mat, mat, empty, stick]
-        const axeRecipe = (matType, mineSpeed, name) => {
-            if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && !s[2] && s[3] === 'stick')
-                return equip('axe', { mineSpeed, damage: mineSpeed }, name, `Chops wood fast. Speed: ${mineSpeed}x`);
-            return null;
-        };
-        r = axeRecipe('iron_ingot', 3.0, 'Iron Axe'); if (r) return r;
-        r = axeRecipe('diamond', 5.0, 'Diamond Axe'); if (r) return r;
-        r = axeRecipe(B.COBBLESTONE, 2.0, 'Stone Axe'); if (r) return r;
-        r = axeRecipe(B.PLANKS, 1.5, 'Wooden Axe'); if (r) return r;
+        r = axeRecipe('iron_ingot', 3.0, 5, 'Iron Axe'); if (r) return r;
+        r = axeRecipe('diamond', 5.0, 7, 'Diamond Axe'); if (r) return r;
+        r = axeRecipe(B.COBBLESTONE, 2.0, 4, 'Stone Axe'); if (r) return r;
+        r = axeRecipe(B.PLANKS, 1.5, 3, 'Wooden Axe'); if (r) return r;
 
         // Armor — Iron
         r = armorRecipe2H('iron_ingot', 'Iron Helmet', 'head', 2); if (r) return r;
@@ -1113,9 +1124,9 @@ class UISystem {
         if (getCount(B.DIAMOND_BLOCK) === 1 && totalItems === 1) return mat('diamond', 'Diamond', 4);
 
         // Gold Tools
-        r = toolRecipe('gold_ingot', 2.5, 4, 2.5, 'Gold Pickaxe', 'pickaxe'); if (r) return r;
-        r = toolRecipe('gold_ingot', 1.0, 7, 1.0, 'Gold Sword', 'sword'); if (r) return r;
-        r = axeRecipe('gold_ingot', 2.5, 'Gold Axe'); if (r) return r;
+        r = pickaxeRecipe('gold_ingot', 2.5, 4, 2.5, 'Gold Pickaxe'); if (r) return r;
+        r = swordRecipe('gold_ingot', 7, 'Gold Sword'); if (r) return r;
+        r = axeRecipe('gold_ingot', 2.5, 4, 'Gold Axe'); if (r) return r;
 
         // Gold Armor
         r = armorRecipe2H('gold_ingot', 'Gold Helmet', 'head', 3); if (r) return r;

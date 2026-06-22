@@ -595,7 +595,7 @@ window.renderAllPrograms = function() {
                 { name: 'Paint', icon: 'Windows XP Icons/Paint.png', fn: "if(typeof initPaint==='function')initPaint(); openProgram('paint-window'); toggleStartMenu();" },
                 { name: 'Calculator', icon: 'Windows XP Icons/Calculator.png', fn: "openProgram('calc-window'); toggleStartMenu();" },
                 { name: 'Character Map', icon: 'Windows XP Icons/Charmap.png', fn: "openProgram('charmap-window'); toggleStartMenu();" },
-                { name: 'Sound Recorder', icon: 'Windows XP Icons/Volume Alt.png', fn: "openProgram('soundrecorder-window'); toggleStartMenu();" },
+                { name: 'Sound Recorder', icon: 'Windows XP Icons/Generic Audio.png', fn: "openProgram('soundrecorder-window'); toggleStartMenu();" },
                 { name: 'Command Prompt', icon: 'Windows XP Icons/Command Prompt.png', fn: "if(typeof initCmd==='function')initCmd(); openProgram('cmd-window'); toggleStartMenu();" },
                 { name: 'Clipboard Viewer', icon: 'Windows XP Icons/System Properties.png', fn: "openProgram('clipbook-window'); toggleStartMenu();" },
             ]
@@ -3448,7 +3448,7 @@ window.startMenuSearch = function(query, executeFirst) {
         { name: 'Paint', icon: 'Windows XP Icons/Paint.png', fn: "if(typeof initPaint==='function')initPaint(); openProgram('paint-window'); toggleStartMenu();" },
         { name: 'Calculator', icon: 'Windows XP Icons/Calculator.png', fn: "openProgram('calc-window'); toggleStartMenu();" },
         { name: 'Character Map', icon: 'Windows XP Icons/Charmap.png', fn: "openProgram('charmap-window'); toggleStartMenu();" },
-        { name: 'Sound Recorder', icon: 'Windows XP Icons/Volume Alt.png', fn: "openProgram('soundrecorder-window'); toggleStartMenu();" },
+        { name: 'Sound Recorder', icon: 'Windows XP Icons/Generic Audio.png', fn: "openProgram('soundrecorder-window'); toggleStartMenu();" },
         { name: 'Clipboard Viewer', icon: 'Windows XP Icons/System Properties.png', fn: "openProgram('clipbook-window'); toggleStartMenu();" },
         { name: 'Minesweeper', icon: 'Windows XP Icons/Minesweeper.png', fn: "openProgram('minesweeper-window'); toggleStartMenu();" },
         { name: 'Solitaire', icon: 'Windows XP Icons/Solitaire.png', fn: "openProgram('solitaire-window'); toggleStartMenu();" },

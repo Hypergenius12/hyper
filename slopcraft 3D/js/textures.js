@@ -1521,7 +1521,7 @@ export function createTextureAtlas() {
         generateBlockTexture(tmpCtx, entry.blockType, entry.face === 'all' ? 'side' : entry.face, rng);
         ctx.drawImage(tmp, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
 
-        if (entry.blockType === BLOCKS.WATER || entry.blockType === BLOCKS.LAVA || entry.blockType === BLOCKS.SWAMP_WATER) {
+        if (entry.blockType === BLOCKS.WATER || entry.blockType === BLOCKS.LAVA || entry.blockType === BLOCKS.SWAMP_WATER || entry.blockType === BLOCKS.FIRE) {
             const fCanvas = document.createElement('canvas');
             fCanvas.width = TEX_SIZE; fCanvas.height = TEX_SIZE;
             fCanvas.getContext('2d').drawImage(tmp, 0, 0);

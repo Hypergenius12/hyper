@@ -5,7 +5,7 @@
 // Configuration
 const CONFIG = {
     apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+    model: 'openrouter/owl-alpha',
     maxTokens: 2000
 };
 
@@ -312,9 +312,9 @@ let gameState = {
 
 // Text speed values (ms per character)
 const TEXT_SPEEDS = {
-    slow: 50,
-    normal: 25,
-    fast: 10,
+    slow: 15,
+    normal: 5,
+    fast: 1,
     instant: 0
 };
 
@@ -1572,6 +1572,27 @@ function addDiscoveredRoom(room) {
     if (!gameState.floors[floor]) {
         gameState.floors[floor] = {};
         updateFloorSelector();
+    }
+
+    const existingRoom = gameState.discoveredRooms[room.id];
+    if (existingRoom) {
+        // Merge objects to avoid losing previously discovered items
+        if (existingRoom.objects && room.objects) {
+            const combined = [...existingRoom.objects];
+            room.objects.forEach(obj => {
+                if (!combined.some(e => e.name === obj.name)) combined.push(obj);
+            });
+            room.objects = combined;
+        } else if (existingRoom.objects) {
+            room.objects = existingRoom.objects;
+        }
+        // Retain original coordinates to avoid layout shifting
+        room.x = existingRoom.x;
+        room.y = existingRoom.y;
+    } else if (Object.keys(gameState.discoveredRooms).length > 0) {
+        // Force auto-calculation for completely new rooms to prevent bad AI coordinate generation
+        delete room.x;
+        delete room.y;
     }
 
     // Auto-calculate coordinates if missing or 0,0 (unless it's the first room)
@@ -2903,6 +2924,13 @@ async function handleInput() {
             break; // Success, exit retry loop
         } catch (error) {
             console.error('Error:', error);
+            
+            // Do not retry on auth, parsing, or validation errors
+            if (error.message.includes('API key') || error.message.includes('OpenRouter Error') || error.message.includes('No JSON found') || error.message.includes('format invalid')) {
+                displayError(`SYSTEM ERROR: ${error.message}`);
+                break;
+            }
+
             retryCount++;
 
             if (retryCount > maxRetries) {

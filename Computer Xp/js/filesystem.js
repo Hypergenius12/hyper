@@ -132,7 +132,7 @@ const sysIcons = {
     wav: "Windows XP Icons/WMP Library.png",
     jpg: "Windows XP Icons/JPG.png",
     bmp: "Windows XP Icons/Bitmap.png",
-    soundrecorder: "Windows XP Icons/volume alt.png",
+    soundrecorder: "Windows XP Icons/Generic Audio.png",
     mydocs: "Windows XP Icons/My Documents.png",
     mymusic: "Windows XP Icons/My Music.png",
     mypictures: "Windows XP Icons/My Pictures.png",
