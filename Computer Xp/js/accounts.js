@@ -25,6 +25,10 @@ window.currentAccount = "Administrator";
 window.loadAccounts = function() {
     let saved = localStorage.getItem('xp_accounts');
     if(saved) {
+        // MIGRATION: Fix capitalizations that cause 404s on GitHub Pages
+        saved = saved.replace(/Admin Login Icon\.png/g, 'admin_login_icon.png');
+        saved = saved.replace(/Flower\.jpeg/g, 'flower.jpeg');
+        localStorage.setItem('xp_accounts', saved);
         try { 
             let accs = JSON.parse(saved); 
             return accs;

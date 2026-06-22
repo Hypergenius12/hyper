@@ -394,6 +394,14 @@ window.saveFileSystem = function saveFileSystem(key) {
 function loadFileSystem() {
     let saved = localStorage.getItem('xp_virtual_drive_v3');
     if (saved) {
+        // MIGRATION: Fix capitalizations that cause 404s on GitHub Pages
+        saved = saved.replace(/Tetris\.png/g, 'tetris.webp');
+        saved = saved.replace(/tetris\.png/g, 'tetris.webp');
+        saved = saved.replace(/Happy\.png/g, 'happy.png');
+        saved = saved.replace(/minesweeper icons\/happy\.png/gi, 'Minesweeper Icons/happy.png');
+        saved = saved.replace(/volume alt\.png/gi, 'Volume.png');
+        saved = saved.replace(/Volume Alt\.png/gi, 'Volume.png');
+        localStorage.setItem('xp_virtual_drive_v3', saved);
         try { fs = JSON.parse(saved); }
         catch (e) { console.error("Filesystem parse error."); }
     }
