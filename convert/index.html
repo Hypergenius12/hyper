@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omni-Dimensional Unit Converter - Infinite Edition</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <button class="theme-toggle" onclick="toggleTheme()">Toggle Dark Theme</button>
+
+    <div class="container">
+        <div class="header-row">
+            <h3>Omni-Dimensional Converter</h3>
+            <div id="apiStatus" class="api-status loading">● Fetching Live APIs...</div>
+        </div>
+        <span class="help-block">
+            A hyper-advanced physics engine capable of infinite cross-dimensional bridging. Converts standard units and complex real-world entities across 12 physical dimensions (Length, Mass, Time, Speed, Volume, Data, Energy, Area, Pressure, Pain, Price, and Temperature). <br><strong>If dimensions do not match, the engine translates the data through a grounded Human-Scale Energy Matrix so combinations stay mathematically sane and never fail.</strong>
+        </span>
+
+        <div class="row">
+            <div class="col" style="flex: 0.3;">
+                <label>Input Value</label>
+                <input type="number" id="omniValue" class="form-control" value="1" oninput="runOmniConversion()">
+            </div>
+            <div class="col">
+                <label>Entity / Unit A</label>
+                <select id="omniFrom" class="form-control" onchange="runOmniConversion()"></select>
+            </div>
+        </div>
+
+        <div class="swap-row">
+            <button class="swap-btn" onclick="swapUnits()" title="Swap Units">&#8645; Swap</button>
+        </div>
+
+        <div class="row">
+            <div class="col" style="flex: 0.3; text-align: center; font-size: 24px; font-weight: bold; color: #999;">
+                &rarr;
+            </div>
+            <div class="col">
+                <label>Entity / Unit B</label>
+                <select id="omniTo" class="form-control" onchange="runOmniConversion()"></select>
+            </div>
+        </div>
+
+        <div class="panel" id="omniResult">
+            Awaiting Input...
+        </div>
+
+        <div id="omniVisualizer" class="visualizer-container" style="display: none;">
+            <div class="visualizer-header">
+                <h4 id="visTitle">Visual Comparison</h4>
+                <div id="visControls" class="vis-controls"></div>
+            </div>
+            <div id="visGrid" class="visualizer-grid"></div>
+            <div id="visCaption" class="visualizer-caption"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
