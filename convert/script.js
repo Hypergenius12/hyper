@@ -385,7 +385,16 @@ function renderConversionResult(isNewConversion = false) {
     let inputVal = baseInputVal;
 
     // If converting from Time unit, auto increment input value
+    let shouldTickInput = false;
     if (fromObj.c === "u" && fromObj.d === 't') {
+        if (toObj.c === "u") {
+            shouldTickInput = true;
+        } else if (toObj.c === "e" && toObj.liveAge) {
+            shouldTickInput = true;
+        }
+    }
+
+    if (shouldTickInput) {
         inputVal = baseInputVal + (elapsedSeconds / fromObj.val);
         isTicking = true;
     }
