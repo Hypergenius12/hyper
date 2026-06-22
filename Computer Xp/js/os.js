@@ -4865,3 +4865,36 @@ window.triggerExcelSave = function() {
 
 
 
+
+// Internet Explorer History Management
+window.ieHistoryBack = [];
+window.ieHistoryForward = [];
+window.ieCurrentUrl = "https://www.windows93.net/c/programs/network/CatExplorer/skynet/index.html?lang=en";
+
+window.ieGoTo = function(url, isHistory) {
+    if(!isHistory && window.ieCurrentUrl && window.ieCurrentUrl !== url) {
+        window.ieHistoryBack.push(window.ieCurrentUrl);
+        window.ieHistoryForward = []; 
+    }
+    window.ieCurrentUrl = url;
+    let f = document.getElementById('ie-frame');
+    let a = document.getElementById('ie-address-bar');
+    if(f) f.src = url;
+    if(a) a.value = url;
+};
+
+window.ieGoBack = function() {
+    if(window.ieHistoryBack.length > 0) {
+        window.ieHistoryForward.push(window.ieCurrentUrl);
+        let url = window.ieHistoryBack.pop();
+        window.ieGoTo(url, true);
+    }
+};
+
+window.ieGoForward = function() {
+    if(window.ieHistoryForward.length > 0) {
+        window.ieHistoryBack.push(window.ieCurrentUrl);
+        let url = window.ieHistoryForward.pop();
+        window.ieGoTo(url, true);
+    }
+};

@@ -2258,17 +2258,17 @@ Includes new multi-instance and Programmer view support!', 'info')">
             </div>
         </div>
         <div class="explorer-toolbar" style="padding:2px 5px;">
-            <button onclick="var f=document.getElementById('ie-frame');if(f){try{f.contentWindow.history.back();}catch(e){}}"><img src="Windows XP Icons/Up.png" style="width:16px; transform:rotate(-90deg);"></button>
-            <button onclick="var f=document.getElementById('ie-frame');if(f){try{f.contentWindow.history.forward();}catch(e){}}"><img src="Windows XP Icons/Up.png" style="width:16px; transform:rotate(90deg);"></button>
+            <button onclick="if(typeof window.ieGoBack === 'function') window.ieGoBack();"><img src="Windows XP Icons/Up.png" style="width:16px; transform:rotate(-90deg);"></button>
+            <button onclick="if(typeof window.ieGoForward === 'function') window.ieGoForward();"><img src="Windows XP Icons/Up.png" style="width:16px; transform:rotate(90deg);"></button>
             <button onclick="var f=document.getElementById('ie-frame');if(f)f.src=f.src;"><img src="Windows XP Icons/Sync.png" style="width:16px; vertical-align:middle; margin-right:3px;"> Refresh</button>
             <button
-                onclick="var f=document.getElementById('ie-frame');if(f)f.src='https://www.windows93.net/c/programs/network/CatExplorer/skynet/index.html?lang=en';"><img src="Windows XP Icons/Start Menu Programs.png" style="width:16px;"></button>
+                onclick="if(typeof window.ieGoTo === 'function') window.ieGoTo('https://www.windows93.net/c/programs/network/CatExplorer/skynet/index.html?lang=en');"><img src="Windows XP Icons/Start Menu Programs.png" style="width:16px;"></button>
         </div>
         <div class="explorer-address" style="padding: 2px 5px;">
             Address <input type="text" id="ie-address-bar"
                 value="https://www.windows93.net/c/programs/network/CatExplorer/skynet/index.html?lang=en"
-                onkeypress="if(event.key==='Enter'){var f=document.getElementById('ie-frame');if(f)f.src=this.value;}"
-                style="flex:1;"><button onclick="var f=document.getElementById('ie-frame');var a=document.getElementById('ie-address-bar');if(f&&a)f.src=a.value;" class="go-btn" title="Go"><img src="Windows XP Icons/Go.png"></button>
+                onkeypress="if(event.key==='Enter'){if(typeof window.ieGoTo === 'function') window.ieGoTo(this.value);}"
+                style="flex:1;"><button onclick="var a=document.getElementById('ie-address-bar');if(a && typeof window.ieGoTo === 'function') window.ieGoTo(a.value);" class="go-btn" title="Go"><img src="Windows XP Icons/Go.png"></button>
         </div>
         <div class="content" style="padding:0; flex:1; background:#FFF; overflow:hidden;">
             <iframe id="ie-frame"
