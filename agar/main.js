@@ -114,6 +114,34 @@ function init() {
         });
     }
 
+    const submitScoreBtn = document.getElementById('submitScoreBtn');
+    if (submitScoreBtn) {
+        submitScoreBtn.addEventListener('click', async () => {
+            if (!window.lastDeathName) return;
+            submitScoreBtn.disabled = true;
+            submitScoreBtn.innerText = "Submitting...";
+            
+            await submitScoreToGlobal(window.lastDeathName, window.lastDeathScore);
+            savePersonalScore(window.lastDeathName, window.lastDeathScore);
+            
+            submitScoreBtn.disabled = false;
+            submitScoreBtn.innerText = "Submit to Global Leaderboard";
+            
+            document.getElementById('deathPopup').classList.add('hidden');
+            startMenu.classList.remove('hidden');
+        });
+    }
+
+    const skipScoreBtn = document.getElementById('skipScoreBtn');
+    if (skipScoreBtn) {
+        skipScoreBtn.addEventListener('click', () => {
+            if (!window.lastDeathName) return;
+            savePersonalScore(window.lastDeathName, window.lastDeathScore);
+            document.getElementById('deathPopup').classList.add('hidden');
+            startMenu.classList.remove('hidden');
+        });
+    }
+
     // Start game loop in background to let bots move
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
@@ -252,7 +280,7 @@ function updateUI() {
     
     if (!hasMyCells && startMenu.classList.contains('hidden') && document.getElementById('deathPopup').classList.contains('hidden')) {
         // Player died
-        handlePlayerDeath();
+        handlePlayerDeath(player.name, myHighScore);
         player = null;
         return;
     }
@@ -278,7 +306,7 @@ function updateUI() {
     }
 }
 
-async function handlePlayerDeath() {
+async function handlePlayerDeath(playerName, score) {
     const deathPopup = document.getElementById('deathPopup');
     startMenu.classList.add('hidden');
     leaderboard.classList.add('hidden');
@@ -287,12 +315,16 @@ async function handlePlayerDeath() {
     
     deathPopup.classList.remove('hidden');
     
-    document.getElementById('deathScoreDisplay').innerText = myHighScore;
+    document.getElementById('deathScoreDisplay').innerText = score;
+    
+    // Store variables immediately before any async await calls
+    window.lastDeathName = playerName;
+    window.lastDeathScore = score;
     
     // Calculate personal rank
     let personalRank = 1;
     for (let s of myPersonalScores) {
-        if (s.score > myHighScore) personalRank++;
+        if (s.score > score) personalRank++;
     }
     document.getElementById('personalPlacementDisplay').innerText = `#${personalRank}`;
     
@@ -311,36 +343,12 @@ async function handlePlayerDeath() {
     
     let globalRank = 1;
     for (let s of globalScores) {
-        if (s.score > myHighScore) globalRank++;
+        if (s.score > score) globalRank++;
     }
     document.getElementById('globalPlacementDisplay').innerText = `#${globalRank}`;
-    
-    window.lastDeathName = player.name;
-    window.lastDeathScore = myHighScore;
 }
 
-document.getElementById('submitScoreBtn').addEventListener('click', async () => {
-    if (!window.lastDeathName) return;
-    const btn = document.getElementById('submitScoreBtn');
-    btn.disabled = true;
-    btn.innerText = "Submitting...";
-    
-    await submitScoreToGlobal(window.lastDeathName, window.lastDeathScore);
-    savePersonalScore(window.lastDeathName, window.lastDeathScore);
-    
-    btn.disabled = false;
-    btn.innerText = "Submit to Global Leaderboard";
-    
-    document.getElementById('deathPopup').classList.add('hidden');
-    startMenu.classList.remove('hidden');
-});
-
-document.getElementById('skipScoreBtn').addEventListener('click', () => {
-    if (!window.lastDeathName) return;
-    savePersonalScore(window.lastDeathName, window.lastDeathScore);
-    document.getElementById('deathPopup').classList.add('hidden');
-    startMenu.classList.remove('hidden');
-});
+// Event listeners moved to init()
 
 function savePersonalScore(name, score) {
     myPersonalScores.push({ name: name, score: score });
