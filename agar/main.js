@@ -91,10 +91,93 @@ function init() {
     // Start game loop in background to let bots move
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
+    
+    // Fetch initial global leaderboard
+    fetchGlobalLeaderboard();
+}
+
+const GLOBAL_LB_API = "https://api.restful-api.dev/objects/ff8081819d82fab6019eefc8cc9f4964";
+let myHighScore = 0;
+let globalScores = [];
+
+const SWEAR_WORDS = ["fuck", "shit", "bitch", "asshole", "cunt", "nigger", "nigga", "fag", "dick", "pussy", "cock", "slut", "whore", "bastard"];
+
+function containsSwear(name) {
+    const lowerName = name.toLowerCase();
+    return SWEAR_WORDS.some(swear => lowerName.includes(swear));
+}
+
+async function fetchGlobalLeaderboard() {
+    try {
+        const response = await fetch(GLOBAL_LB_API);
+        const data = await response.json();
+        if (data && data.data && data.data.scores) {
+            globalScores = data.data.scores;
+            globalScores.sort((a, b) => b.score - a.score);
+            renderGlobalLeaderboard();
+        }
+    } catch (e) {
+        console.error("Failed to fetch global leaderboard", e);
+    }
+}
+
+function renderGlobalLeaderboard() {
+    const list = document.getElementById('globalLeaderboardList');
+    if (!list) return;
+    list.innerHTML = '';
+    
+    if (globalScores.length === 0) {
+        list.innerHTML = '<li>No scores yet!</li>';
+        return;
+    }
+    
+    globalScores.slice(0, 10).forEach(entry => {
+        const li = document.createElement('li');
+        li.innerText = `${entry.name} - ${entry.score}`;
+        list.appendChild(li);
+    });
+}
+
+async function submitScoreToGlobal(name, score) {
+    if (score < 100) return; // Don't submit very low scores
+    
+    try {
+        const response = await fetch(GLOBAL_LB_API);
+        const data = await response.json();
+        let scores = [];
+        if (data && data.data && data.data.scores) {
+            scores = data.data.scores;
+        }
+        
+        scores.push({ name: name, score: score });
+        scores.sort((a, b) => b.score - a.score);
+        scores = scores.slice(0, 100); // Keep top 100
+        
+        await fetch(GLOBAL_LB_API, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: "hyper-agar-leaderboard",
+                data: { scores: scores }
+            })
+        });
+        
+        fetchGlobalLeaderboard();
+    } catch (e) {
+        console.error("Failed to submit score", e);
+    }
 }
 
 function startGame() {
-    const name = playerNameInput.value || "An unnamed cell";
+    let name = playerNameInput.value || "An unnamed cell";
+    
+    if (containsSwear(name)) {
+        alert("Please choose a different name without inappropriate words.");
+        return;
+    }
+    
     const colorInput = document.getElementById('playerColor');
     const selectedColor = colorInput ? colorInput.value : null;
     
@@ -102,6 +185,8 @@ function startGame() {
     if (player) {
         game.removePlayer(myId);
     }
+    
+    myHighScore = 0;
     
     // Spawn human player at massive 1500 mass!
     const { color } = game.addPlayer(myId, name, selectedColor, 1500);
@@ -128,17 +213,22 @@ function updateUI() {
         }
     }
     
+    const score = game.getPlayerScore(myId);
+    if (score > myHighScore) {
+        myHighScore = score;
+    }
+    
     if (!hasMyCells && startMenu.classList.contains('hidden')) {
         // Player died
         startMenu.classList.remove('hidden');
         leaderboard.classList.add('hidden');
         scoreBox.classList.add('hidden');
         spectateTip.classList.add('hidden');
+        submitScoreToGlobal(player.name, myHighScore);
         player = null;
         return;
     }
 
-    const score = game.getPlayerScore(myId);
     scoreDisplay.innerText = score;
 
     const lb = game.getLeaderboard();

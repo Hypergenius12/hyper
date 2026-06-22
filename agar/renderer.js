@@ -192,7 +192,7 @@ class Renderer {
 
     drawVirus(virus) {
         const renderRadius = virus.displayRadius !== undefined ? virus.displayRadius : virus.radius;
-        const spikes = Math.floor(renderRadius * 0.4) + 10;
+        const spikes = 30;
         const step = Math.PI * 2 / spikes;
         const outerRadius = renderRadius;
         const innerRadius = renderRadius * 0.85;
