@@ -99,6 +99,8 @@ function init() {
 const GLOBAL_LB_API = "https://api.restful-api.dev/objects/ff8081819d82fab6019eefc8cc9f4964";
 let myHighScore = 0;
 let globalScores = [];
+let myPersonalScores = JSON.parse(localStorage.getItem('hyper_agar_scores')) || [];
+let currentTab = 'global';
 
 const SWEAR_WORDS = ["fuck", "shit", "bitch", "asshole", "cunt", "nigger", "nigga", "fag", "dick", "pussy", "cock", "slut", "whore", "bastard"];
 
@@ -107,6 +109,25 @@ function containsSwear(name) {
     return SWEAR_WORDS.some(swear => lowerName.includes(swear));
 }
 
+// UI Setup for Leaderboard Tabs
+document.getElementById('tabGlobal').addEventListener('click', () => {
+    currentTab = 'global';
+    document.getElementById('tabGlobal').style.background = '#3498db';
+    document.getElementById('tabGlobal').style.color = 'white';
+    document.getElementById('tabPersonal').style.background = '#ecf0f1';
+    document.getElementById('tabPersonal').style.color = '#333';
+    renderMenuLeaderboard();
+});
+
+document.getElementById('tabPersonal').addEventListener('click', () => {
+    currentTab = 'personal';
+    document.getElementById('tabPersonal').style.background = '#3498db';
+    document.getElementById('tabPersonal').style.color = 'white';
+    document.getElementById('tabGlobal').style.background = '#ecf0f1';
+    document.getElementById('tabGlobal').style.color = '#333';
+    renderMenuLeaderboard();
+});
+
 async function fetchGlobalLeaderboard() {
     try {
         const response = await fetch(GLOBAL_LB_API);
@@ -114,24 +135,26 @@ async function fetchGlobalLeaderboard() {
         if (data && data.data && data.data.scores) {
             globalScores = data.data.scores;
             globalScores.sort((a, b) => b.score - a.score);
-            renderGlobalLeaderboard();
+            renderMenuLeaderboard();
         }
     } catch (e) {
         console.error("Failed to fetch global leaderboard", e);
     }
 }
 
-function renderGlobalLeaderboard() {
-    const list = document.getElementById('globalLeaderboardList');
+function renderMenuLeaderboard() {
+    const list = document.getElementById('menuLeaderboardList');
     if (!list) return;
     list.innerHTML = '';
     
-    if (globalScores.length === 0) {
+    const targetArray = currentTab === 'global' ? globalScores : myPersonalScores;
+    
+    if (targetArray.length === 0) {
         list.innerHTML = '<li>No scores yet!</li>';
         return;
     }
     
-    globalScores.slice(0, 10).forEach(entry => {
+    targetArray.slice(0, 10).forEach(entry => {
         const li = document.createElement('li');
         li.innerText = `${entry.name} - ${entry.score}`;
         list.appendChild(li);
@@ -218,13 +241,9 @@ function updateUI() {
         myHighScore = score;
     }
     
-    if (!hasMyCells && startMenu.classList.contains('hidden')) {
+    if (!hasMyCells && startMenu.classList.contains('hidden') && document.getElementById('deathPopup').classList.contains('hidden')) {
         // Player died
-        startMenu.classList.remove('hidden');
-        leaderboard.classList.add('hidden');
-        scoreBox.classList.add('hidden');
-        spectateTip.classList.add('hidden');
-        submitScoreToGlobal(player.name, myHighScore);
+        handlePlayerDeath();
         player = null;
         return;
     }
@@ -248,6 +267,78 @@ function updateUI() {
         item.appendChild(nameSpan);
         leaderboardList.appendChild(item);
     }
+}
+
+async function handlePlayerDeath() {
+    const deathPopup = document.getElementById('deathPopup');
+    startMenu.classList.add('hidden');
+    leaderboard.classList.add('hidden');
+    scoreBox.classList.add('hidden');
+    spectateTip.classList.add('hidden');
+    
+    deathPopup.classList.remove('hidden');
+    
+    document.getElementById('deathScoreDisplay').innerText = myHighScore;
+    
+    // Calculate personal rank
+    let personalRank = 1;
+    for (let s of myPersonalScores) {
+        if (s.score > myHighScore) personalRank++;
+    }
+    document.getElementById('personalPlacementDisplay').innerText = `#${personalRank}`;
+    
+    // Fetch latest global to calculate global rank accurately
+    document.getElementById('globalPlacementDisplay').innerText = "Loading...";
+    try {
+        const response = await fetch(GLOBAL_LB_API);
+        const data = await response.json();
+        if (data && data.data && data.data.scores) {
+            globalScores = data.data.scores;
+            globalScores.sort((a, b) => b.score - a.score);
+        }
+    } catch (e) {
+        console.error("Failed to fetch global leaderboard on death", e);
+    }
+    
+    let globalRank = 1;
+    for (let s of globalScores) {
+        if (s.score > myHighScore) globalRank++;
+    }
+    document.getElementById('globalPlacementDisplay').innerText = `#${globalRank}`;
+    
+    window.lastDeathName = player.name;
+    window.lastDeathScore = myHighScore;
+}
+
+document.getElementById('submitScoreBtn').addEventListener('click', async () => {
+    if (!window.lastDeathName) return;
+    const btn = document.getElementById('submitScoreBtn');
+    btn.disabled = true;
+    btn.innerText = "Submitting...";
+    
+    await submitScoreToGlobal(window.lastDeathName, window.lastDeathScore);
+    savePersonalScore(window.lastDeathName, window.lastDeathScore);
+    
+    btn.disabled = false;
+    btn.innerText = "Submit to Global Leaderboard";
+    
+    document.getElementById('deathPopup').classList.add('hidden');
+    startMenu.classList.remove('hidden');
+});
+
+document.getElementById('skipScoreBtn').addEventListener('click', () => {
+    if (!window.lastDeathName) return;
+    savePersonalScore(window.lastDeathName, window.lastDeathScore);
+    document.getElementById('deathPopup').classList.add('hidden');
+    startMenu.classList.remove('hidden');
+});
+
+function savePersonalScore(name, score) {
+    myPersonalScores.push({ name: name, score: score });
+    myPersonalScores.sort((a, b) => b.score - a.score);
+    myPersonalScores = myPersonalScores.slice(0, 100);
+    localStorage.setItem('hyper_agar_scores', JSON.stringify(myPersonalScores));
+    renderMenuLeaderboard();
 }
 
 function gameLoop(timestamp) {
