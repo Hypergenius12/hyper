@@ -1116,7 +1116,7 @@ class UISystem {
         if (getCount('diamond') === 4) return block(B.DIAMOND_BLOCK, 'Diamond Block', 1);
         
         // Tools/Misc
-        if (getCount('iron_ingot') === 1 && getCount(B.SAND) === 1 && totalItems === 2) return mat('flint_and_steel', 'Flint and Steel', 1);
+        if (getCount('iron_ingot') === 1 && getCount(B.SAND) === 1 && totalItems === 2) return equip('flint_and_steel', { damage: 0 }, 'Flint and Steel');
         
         // Reverse Storage
         if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 4);

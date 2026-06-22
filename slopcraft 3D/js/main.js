@@ -14,33 +14,29 @@ import { AudioManager } from './audio.js';
 function findSafeSpawn(params, isNether = false) {
     const centerBlocks = isNether ? generateNetherChunk(0, 0, params) : generateChunkTerrain(0, 0, params);
 
-    // Search spiral from center to find a solid block that isn't under liquid
     const searchRadius = Math.floor(CHUNK_SIZE / 2);
     for (let r = 0; r < searchRadius; r++) {
         for (let x = CHUNK_SIZE / 2 - r; x <= CHUNK_SIZE / 2 + r; x++) {
             for (let z = CHUNK_SIZE / 2 - r; z <= CHUNK_SIZE / 2 + r; z++) {
                 if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) continue;
 
-                for (let y = CHUNK_HEIGHT - 1; y > 0; y--) {
+                for (let y = CHUNK_HEIGHT - 3; y > 0; y--) {
                     const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                     const block = centerBlocks[idx];
 
-                    if (block !== BLOCKS.AIR) {
-                        // If the highest block is liquid, this column is unsafe
-                        if (block === BLOCKS.WATER || block === BLOCKS.SWAMP_WATER || block === BLOCKS.LAVA) {
-                            break; // Skip this column
+                    if (block !== BLOCKS.AIR && block !== BLOCKS.WATER && block !== BLOCKS.LAVA && block !== BLOCKS.SWAMP_WATER) {
+                        const idxUp1 = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                        const idxUp2 = ((y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                        if (centerBlocks[idxUp1] === BLOCKS.AIR && centerBlocks[idxUp2] === BLOCKS.AIR) {
+                            return { x: x, y: y + 2, z: z };
                         }
-
-                        // Otherwise, we found a solid block!
-                        return { x: x, y: y + 2, z: z };
                     }
                 }
             }
         }
     }
 
-    // Fallback if no safe block found in chunk 0,0
-    return { x: CHUNK_SIZE / 2, y: CHUNK_HEIGHT + 10, z: CHUNK_SIZE / 2 };
+    return { x: CHUNK_SIZE / 2, y: isNether ? 60 : CHUNK_HEIGHT + 10, z: CHUNK_SIZE / 2 };
 }
 
 class ChestVisual {
@@ -393,8 +389,8 @@ class Game {
 
                 if (isPortal) {
                     lootTable = [
-                        { item: new Item('material', 'obsidian', {}, 'Obsidian'), maxCount: 8, chance: 1.0 },
-                        { item: new Item('equipment', 'flint_and_steel', { damage: 0 }, 'Flint and Steel'), maxCount: 1, chance: 1.0 },
+                        { item: Item.blockItem(window.BLOCKS.OBSIDIAN, 'Obsidian'), maxCount: 8, chance: 1.0 },
+                        { item: Item.equipmentItem('flint_and_steel', { damage: 0 }, 'Flint and Steel'), maxCount: 1, chance: 1.0 },
                         { item: new Item('material', 'gold_ingot', {}, 'Gold Ingot'), maxCount: 5, chance: 0.6 },
                         { item: Item.equipmentItem('sword_gold', { damage: 6 }, 'Gold Sword'), maxCount: 1, chance: 0.3 }
                     ];
