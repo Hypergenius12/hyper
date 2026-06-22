@@ -968,9 +968,7 @@ export class World {
 
         // Process a few chunks per frame
         let buildsThisFrame = 0;
-        const buildStartTime = performance.now();
-        while (this.chunksToBuild.length > 0) {
-            if (buildsThisFrame > 0 && (performance.now() - buildStartTime) > 4) break;
+        while (this.chunksToBuild.length > 0 && buildsThisFrame < 2) {
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToBuild.length; i++) {
@@ -1029,7 +1027,7 @@ export class World {
             
             for (let i = 0; i < 3; i++) {
                 const rx = Math.floor(Math.random() * 16);
-                const ry = Math.floor(Math.random() * window.CHUNK_HEIGHT);
+                const ry = Math.floor(Math.random() * CHUNK_HEIGHT);
                 const rz = Math.floor(Math.random() * 16);
                 
                 const index = ry * 256 + rz * 16 + rx;

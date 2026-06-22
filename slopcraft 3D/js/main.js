@@ -290,6 +290,13 @@ class Game {
         this.engine.scene.add(this.engine.camera); // Needed for child objects to render
         this.heldItemMesh = null;
 
+        // Minimap Camera
+        const d = 40; // minimap view half-size in blocks
+        // Render true top-down view (far plane large enough to see ground)
+        this.minimapCamera = new THREE.OrthographicCamera(-d, d, d, -d, 1, 300);
+        this.minimapCamera.position.set(0, 250, 0);
+        this.minimapCamera.lookAt(0, 0, 0);
+
         this.input.requestPointerLock();
         this.isReady = true;
 
@@ -552,7 +559,6 @@ class Game {
             mmo.id = 'minimap-overlay';
             mmo.style.cssText = 'position: absolute; top: 20px; right: 20px; width: 200px; height: 200px; pointer-events: none; z-index: 100; font-family: Outfit, sans-serif; border: 4px solid black; box-shadow: 0 0 15px rgba(0,0,0,0.8);';
             mmo.innerHTML = `
-                <canvas id="minimap-canvas" width="200" height="200" style="position: absolute; top: 0; left: 0; image-rendering: pixelated;"></canvas>
                 <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); color: white; font-weight: bold; text-shadow: 1px 1px 2px #000; font-size: 14px;">N</div>
                 <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); color: white; font-weight: bold; text-shadow: 1px 1px 2px #000; font-size: 14px;">S</div>
                 <div style="position: absolute; top: 50%; left: 8px; transform: translateY(-50%); color: white; font-weight: bold; text-shadow: 1px 1px 2px #000; font-size: 14px;">W</div>
@@ -597,8 +603,15 @@ class Game {
         if (!slot && this.heldItemMesh) {
             this.viewModel.remove(this.heldItemMesh);
             this.heldItemMesh = null;
-        } else if (slot && (!this.heldItemMesh || this.heldItemMesh.userData.item !== slot.item)) {
-            if (this.heldItemMesh) this.viewModel.remove(this.heldItemMesh);
+        } else if (slot && (!this.heldItemMesh || !this.heldItemMesh.userData.item || this.heldItemMesh.userData.item.type !== slot.item.type || this.heldItemMesh.userData.item.subtype !== slot.item.subtype)) {
+            if (this.heldItemMesh) {
+                this.viewModel.remove(this.heldItemMesh);
+                if (this.heldItemMesh.geometry) this.heldItemMesh.geometry.dispose();
+                if (this.heldItemMesh.material) {
+                    if (this.heldItemMesh.material.map) this.heldItemMesh.material.map.dispose();
+                    this.heldItemMesh.material.dispose();
+                }
+            }
 
             if (slot.item.type === 'block') {
                 const blockProps = getBlockProperties(slot.item.subtype);
@@ -1084,62 +1097,33 @@ class Game {
 
         // 2. Minimap Render Pass
         const mmo = document.getElementById('minimap-overlay');
-        const minimapCanvas = document.getElementById('minimap-canvas');
-        if (minimapCanvas && !this.ui.isOpen) {
+        if (this.minimapCamera && !this.ui.isOpen) {
             if (mmo) mmo.style.display = 'block';
+            const mapSize = 200;
+            const padding = 20;
+            const rx = window.innerWidth - mapSize - padding;
+            const ry = window.innerHeight - mapSize - padding;
             
-            if (!this.lastMinimapUpdate || time - this.lastMinimapUpdate > 100) {
-                this.lastMinimapUpdate = time;
-                const ctx = minimapCanvas.getContext('2d');
-                ctx.clearRect(0, 0, 200, 200);
-                
-                const px = Math.floor(this.player.position.x);
-                const pz = Math.floor(this.player.position.z);
-                const radius = 30; // blocks radius
-                const blockSize = 200 / (radius * 2);
-                
-                // Color lookup cache
-                if (!this.blockColors) {
-                    this.blockColors = {};
-                    this.blockColors[window.BLOCKS.GRASS] = '#44aa44';
-                    this.blockColors[window.BLOCKS.DIRT] = '#775533';
-                    this.blockColors[window.BLOCKS.STONE] = '#888888';
-                    this.blockColors[window.BLOCKS.COBBLESTONE] = '#777777';
-                    this.blockColors[window.BLOCKS.SAND] = '#ddcc88';
-                    this.blockColors[window.BLOCKS.WOOD] = '#553311';
-                    this.blockColors[window.BLOCKS.LEAVES] = '#228822';
-                    this.blockColors[window.BLOCKS.WATER] = '#3366ff';
-                    this.blockColors[window.BLOCKS.LAVA] = '#ff5500';
-                    this.blockColors[window.BLOCKS.SNOW] = '#ffffff';
-                }
-                
-                for (let dx = -radius; dx <= radius; dx++) {
-                    for (let dz = -radius; dz <= radius; dz++) {
-                        const wx = px + dx;
-                        const wz = pz + dz;
-                        
-                        let topBlock = window.BLOCKS.AIR;
-                        for (let y = window.CHUNK_HEIGHT - 1; y >= 0; y--) {
-                            const b = this.world.getBlock(wx, y, wz);
-                            if (b !== window.BLOCKS.AIR && b !== window.BLOCKS.CLOUD) {
-                                topBlock = b;
-                                const color = this.blockColors[b] || '#aaaaaa';
-                                // Simple depth shading based on Y height
-                                const depth = Math.max(0, 30 - y) / 60;
-                                
-                                ctx.fillStyle = color;
-                                ctx.fillRect((dx + radius) * blockSize, (dz + radius) * blockSize, blockSize + 0.5, blockSize + 0.5);
-                                
-                                if (depth > 0) {
-                                    ctx.fillStyle = `rgba(0,0,0,${depth})`;
-                                    ctx.fillRect((dx + radius) * blockSize, (dz + radius) * blockSize, blockSize + 0.5, blockSize + 0.5);
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+            // Tilt the camera for a 2.5D map look but fixed height to avoid jump parallax
+            this.minimapCamera.position.set(this.player.position.x, 250, this.player.position.z + 40);
+            this.minimapCamera.lookAt(this.player.position.x, 0, this.player.position.z);
+            
+            this.engine.renderer.setViewport(rx, ry, mapSize, mapSize);
+            this.engine.renderer.setScissor(rx, ry, mapSize, mapSize);
+            this.engine.renderer.setScissorTest(true);
+            
+            // Clear color and depth so minimap has a clean background (sky color or black)
+            this.engine.renderer.clear(); 
+            
+            this.viewModel.visible = false; // Don't render hands in minimap
+            if (this.cloudSystem && this.cloudSystem.clouds) this.cloudSystem.clouds.visible = false; // Hide clouds
+            if (this.lighting && this.lighting.sunMesh) this.lighting.sunMesh.visible = false; // Hide sun
+            
+            // Optional: disable fog for minimap so we can see clearly
+            const oldFog = this.engine.scene.fog;
+            this.engine.scene.fog = null;
+            
+            this.engine.renderer.render(this.engine.scene, this.minimapCamera);
             
             // Update player indicator rotation
             const arrow = document.getElementById('minimap-player-arrow');
@@ -1147,6 +1131,14 @@ class Game {
                 const lookDir = this.player.getLookDirection();
                 const angle = Math.atan2(lookDir.x, -lookDir.z); 
                 arrow.style.transform = `rotate(${angle}rad)`;
+            }
+            
+            this.engine.scene.fog = oldFog;
+            this.viewModel.visible = true;
+            if (this.cloudSystem && this.cloudSystem.clouds) this.cloudSystem.clouds.visible = true; // Restore clouds
+            if (this.lighting && this.lighting.sunMesh) this.lighting.sunMesh.visible = true; // Restore sun
+            if (this.engine.scene.fog) {
+                this.engine.scene.fog.density = this.engine.scene.fog.baseDensity;
             }
         } else {
             if (mmo) mmo.style.display = 'none';
