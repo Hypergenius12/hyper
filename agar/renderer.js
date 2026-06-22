@@ -192,10 +192,10 @@ class Renderer {
 
     drawVirus(virus) {
         const renderRadius = virus.displayRadius !== undefined ? virus.displayRadius : virus.radius;
-        const spikes = 30;
+        const spikes = 80;
         const step = Math.PI * 2 / spikes;
         const outerRadius = renderRadius;
-        const innerRadius = renderRadius * 0.85;
+        const innerRadius = renderRadius * 0.9;
 
         this.ctx.save();
         this.ctx.translate(virus.x, virus.y);
