@@ -30,7 +30,7 @@ wss.on('connection', (ws) => {
             
             if (data.type === 'join') {
                 clients.set(ws, playerId);
-                const { color } = game.addPlayer(playerId, data.name || "Guest", data.color || null, 1500); // Massive spawn for fun
+                const { color } = game.addPlayer(playerId, data.name || "Guest", data.color || null, 400);
                 ws.send(JSON.stringify({
                     type: 'init',
                     id: playerId,
@@ -41,6 +41,9 @@ wss.on('connection', (ws) => {
             }
             
             else if (data.type === 'input') {
+                ws.camX = data.camX;
+                ws.camY = data.camY;
+                
                 const myCells = game.entities.filter(e => e.type === 'cell' && e.ownerId === playerId);
                 for (let cell of myCells) {
                     cell.targetX = data.camX;
@@ -97,6 +100,9 @@ setInterval(() => {
             }
             camX = sumX / totalMass;
             camY = sumY / totalMass;
+        } else if (ws.camX !== undefined) {
+            camX = ws.camX;
+            camY = ws.camY;
         }
 
         // View Culling: Only send entities within 1500 units of the player

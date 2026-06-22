@@ -36,8 +36,7 @@ wss.on('connection', (ws) => {
             
             if (data.type === 'join') {
                 clients.set(ws, playerId);
-                const { color } = game.addPlayer(playerId, data.name || "Guest", data.color || null, 1500); 
-                ws.send(JSON.stringify({
+                const { color } = game.addPlayer(playerId, data.name || "Guest", data.color || null, 400);            ws.send(JSON.stringify({
                     type: 'init',
                     id: playerId,
                     color: color,
@@ -47,6 +46,9 @@ wss.on('connection', (ws) => {
             }
             
             else if (data.type === 'input') {
+                ws.camX = data.camX;
+                ws.camY = data.camY;
+                
                 const myCells = game.entities.filter(e => e.type === 'cell' && e.ownerId === playerId);
                 for (let cell of myCells) {
                     cell.targetX = data.camX;
@@ -101,6 +103,9 @@ setInterval(() => {
             }
             camX = sumX / totalMass;
             camY = sumY / totalMass;
+        } else if (ws.camX !== undefined) {
+            camX = ws.camX;
+            camY = ws.camY;
         }
 
         const VIEW_RADIUS = 1500; // reduced to prevent lag

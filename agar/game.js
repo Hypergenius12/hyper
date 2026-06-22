@@ -91,7 +91,7 @@ class Game {
         let name = MathUtils.generateBotName();
         if (isBoss) name = "★ " + name + " ★";
         
-        const startMass = isBoss ? 2000 : Config.START_MASS;
+        const startMass = isBoss ? 800 : Config.START_MASS;
         const { color } = this.addPlayer(botId, name, null, startMass);
         
         const cell = this.entities[this.entities.length - 1];
