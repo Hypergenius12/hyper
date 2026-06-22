@@ -95,7 +95,7 @@ function init() {
     if (tabGlobal) {
         tabGlobal.addEventListener('click', () => {
             currentTab = 'global';
-            tabGlobal.style.background = '#3498db';
+            tabGlobal.style.background = '#2ecc71';
             tabGlobal.style.color = 'white';
             tabPersonal.style.background = '#ecf0f1';
             tabPersonal.style.color = '#333';
@@ -106,7 +106,7 @@ function init() {
     if (tabPersonal) {
         tabPersonal.addEventListener('click', () => {
             currentTab = 'personal';
-            tabPersonal.style.background = '#3498db';
+            tabPersonal.style.background = '#2ecc71';
             tabPersonal.style.color = 'white';
             tabGlobal.style.background = '#ecf0f1';
             tabGlobal.style.color = '#333';
