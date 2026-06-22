@@ -312,9 +312,9 @@ let gameState = {
 
 // Text speed values (ms per character)
 const TEXT_SPEEDS = {
-    slow: 15,
-    normal: 5,
-    fast: 1,
+    slow: 50,
+    normal: 25,
+    fast: 10,
     instant: 0
 };
 
