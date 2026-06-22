@@ -212,6 +212,111 @@
                 color: #a1a1aa;
             }
         }
+        /* Bug Report Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #a855f7;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .fs-message {
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        [data-fs-error] { color: #ef4444; }
+        [data-fs-success] { color: #22c55e; }
     </style>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-LCRDCCZRXM"></script>
@@ -228,6 +333,7 @@
 <canvas id="bg-canvas"></canvas>
 
 <div class="header-bar">
+    <button class="share-btn" onclick="openBugReportModal()" style="margin-right: 10px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">Report Bug</button>
     <button class="share-btn" onclick="shareSite()">Share Game</button>
 </div>
 
@@ -481,5 +587,48 @@
         });
     });
 </script>
+<!-- Bug Report Modal -->
+<div class="modal-overlay" id="bug-modal" onclick="closeBugReportModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2>Report a Bug</h2>
+            <button class="close-modal" onclick="closeBugReportModal()">&times;</button>
+        </div>
+        
+        <div data-fs-success class="fs-message" style="display:none; color: #22c55e;">Thank you! Your bug report has been submitted.</div>
+        <div data-fs-error class="fs-message" style="display:none; color: #ef4444;">There was an error submitting the form.</div>
+
+        <form id="bug-form">
+            <div class="form-group">
+                <label for="email">Email (Optional)</label>
+                <input type="email" id="email" name="email" data-fs-field />
+                <span data-fs-error="email" class="fs-message"></span>
+            </div>
+
+            <div class="form-group">
+                <label for="message">Describe the bug or error</label>
+                <textarea id="message" name="message" required data-fs-field></textarea>
+                <span data-fs-error="message" class="fs-message"></span>
+            </div>
+
+            <button type="submit" class="submit-btn" data-fs-submit-btn>Send Report</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openBugReportModal() {
+        document.getElementById('bug-modal').classList.add('active');
+    }
+    function closeBugReportModal(e) {
+        if (e && e.target !== document.getElementById('bug-modal')) return;
+        document.getElementById('bug-modal').classList.remove('active');
+    }
+
+    // Formspree init
+    window.formspree = window.formspree || function () { (formspree.q = formspree.q || []).push(arguments); };
+    formspree('initForm', { formElement: '#bug-form', formId: 'mnjkqkya' });
+</script>
+<script src="https://unpkg.com/@formspree/ajax@1" defer></script>
 </body>
 </html>
