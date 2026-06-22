@@ -9,9 +9,6 @@ let player;
 let lastTime = 0;
 let animationId;
 let myId = "player_1"; // Static for single player
-let socket = null;
-let isMultiplayer = false;
-
 // UI Elements
 const startMenu = document.getElementById('startMenu');
 const playBtn = document.getElementById('playBtn');
@@ -66,20 +63,12 @@ function init() {
             return;
         }
         
-        if (!player && !isMultiplayer) return; // Allow input in multiplayer even if local player object isn't fully synced
+        if (!player) return;
         
         if (e.code === 'Space') {
-            if (isMultiplayer && socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'split' }));
-            } else if (player) {
-                game.splitPlayer(myId);
-            }
+            game.splitPlayer(myId);
         } else if (e.code === 'KeyW') {
-            if (isMultiplayer && socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'eject' }));
-            } else if (player) {
-                game.ejectMass(myId);
-            }
+            game.ejectMass(myId);
         }
     });
 
@@ -250,84 +239,16 @@ function startGame() {
     
     const colorInput = document.getElementById('playerColor');
     const selectedColor = colorInput ? colorInput.value : null;
-    const serverSelect = document.getElementById('serverSelect');
-    const serverUrl = serverSelect ? serverSelect.value : 'local';
-    
     // Clear previous
-    if (player && !isMultiplayer) {
+    if (player) {
         game.removePlayer(myId);
-    }
-    if (socket) {
-        socket.close();
-        socket = null;
     }
     
     myHighScore = 0;
     
-    if (serverUrl === 'local') {
-        isMultiplayer = false;
-        // Spawn human player at massive 1500 mass!
-        const { color } = game.addPlayer(myId, name, selectedColor, 1500);
-        player = new Player(game, myId, name, color);
-    } else {
-        // Connect to Multiplayer Server
-        isMultiplayer = true;
-        player = null; // We don't use local Player logic for movement, we send inputs
-        
-        socket = new WebSocket(serverUrl);
-        
-        socket.onopen = () => {
-            socket.send(JSON.stringify({
-                type: 'join',
-                name: name,
-                color: selectedColor
-            }));
-        };
-        
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'init') {
-                myId = data.id;
-            } else if (data.type === 'update') {
-                game.entities = data.entities;
-                
-                // Update local UI state
-                if (!data.alive && startMenu.classList.contains('hidden') && document.getElementById('deathPopup').classList.contains('hidden')) {
-                    handlePlayerDeath(name, data.score || 0);
-                    if (socket) socket.close();
-                    return;
-                }
-                
-                if (data.alive) {
-                    if (data.score > myHighScore) myHighScore = data.score;
-                    scoreDisplay.innerText = data.score;
-                }
-                
-                // Quick and dirty leaderboard render
-                if (data.leaderboard && Math.random() < 0.2) {
-                    leaderboardList.innerHTML = '';
-                    for (let i = 0; i < data.leaderboard.length; i++) {
-                        const item = document.createElement('div');
-                        item.className = 'leaderboard-item';
-                        const nameSpan = document.createElement('span');
-                        nameSpan.innerText = `${i + 1}. ${data.leaderboard[i].name || 'An unnamed cell'} - ${data.leaderboard[i].score}`;
-                        if (data.leaderboard[i].id === myId) {
-                            nameSpan.style.color = '#FFAAAA';
-                            nameSpan.style.fontWeight = 'bold';
-                        }
-                        item.appendChild(nameSpan);
-                        leaderboardList.appendChild(item);
-                    }
-                }
-            }
-        };
-        
-        socket.onerror = (e) => {
-            console.error("Socket error", e);
-            alert("Could not connect to server!");
-            startMenu.classList.remove('hidden');
-        };
-    }
+    // Spawn human player at 400 mass
+    const { color } = game.addPlayer(myId, name, selectedColor, 400);
+    player = new Player(game, myId, name, color);
     
     startMenu.classList.add('hidden');
     leaderboard.classList.remove('hidden');
@@ -441,28 +362,10 @@ function gameLoop(timestamp) {
     const dt = timestamp - lastTime;
     lastTime = timestamp;
 
-    if (!isMultiplayer) {
-        if (player) {
-            player.updateTarget(renderer.cameraX, renderer.cameraY, renderer.zoom, canvas.width, canvas.height);
-        }
-        game.update(dt);
-    } else {
-        // Send inputs to server
-        if (socket && socket.readyState === WebSocket.OPEN && startMenu.classList.contains('hidden') && document.getElementById('deathPopup').classList.contains('hidden')) {
-            // Need to calculate worldX, worldY
-            const worldX = (globalMouseX - canvas.width / 2) / renderer.zoom + renderer.cameraX;
-            const worldY = (globalMouseY - canvas.height / 2) / renderer.zoom + renderer.cameraY;
-            
-            socket.send(JSON.stringify({
-                type: 'input',
-                camX: worldX,
-                camY: worldY,
-                zoom: renderer.zoom,
-                width: canvas.width,
-                height: canvas.height
-            }));
-        }
+    if (player) {
+        player.updateTarget(renderer.cameraX, renderer.cameraY, renderer.zoom, canvas.width, canvas.height);
     }
+    game.update(dt);
     
     // Determine if we have cells alive to focus camera (in multiplayer we check entity array)
     let hasMyCells = false;
