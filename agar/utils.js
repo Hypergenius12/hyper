@@ -57,3 +57,5 @@ const MathUtils = {
         return finalName;
     }
 };
+
+if (typeof module !== 'undefined') module.exports = { MathUtils };

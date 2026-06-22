@@ -192,10 +192,17 @@ class Renderer {
 
     drawVirus(virus) {
         const renderRadius = virus.displayRadius !== undefined ? virus.displayRadius : virus.radius;
-        const spikes = 30;
+        let spikes = 30;
+        let innerRatio = 0.9;
+        
+        if (virus.type === 'mothercell') {
+            spikes = 45;
+            innerRatio = 0.96; // Lower spike depth ratio for brown viruses
+        }
+        
         const step = Math.PI * 2 / spikes;
         const outerRadius = renderRadius;
-        const innerRadius = renderRadius * 0.9;
+        const innerRadius = renderRadius * innerRatio;
 
         this.ctx.save();
         this.ctx.translate(virus.x, virus.y);

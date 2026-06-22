@@ -36,3 +36,5 @@ const Config = {
     BOT_VISION_RADIUS: 1500,
     BOT_UPDATE_INTERVAL: 5 // ticks between thinking
 };
+
+if (typeof module !== 'undefined') module.exports = Config;

@@ -549,3 +549,5 @@ class Game {
         this.entities.push(newVirus);
     }
 }
+
+if (typeof module !== 'undefined') module.exports = Game;

@@ -129,3 +129,5 @@ class Cell extends Entity {
         this.timeToMerge = Math.floor(seconds * 60); // Assuming 60 fps
     }
 }
+
+if (typeof module !== 'undefined') module.exports = { Entity, Food, Virus, MotherCell, EjectedMass, Cell };

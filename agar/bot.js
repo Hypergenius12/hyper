@@ -170,3 +170,5 @@ class BotAI {
         }
     }
 }
+
+if (typeof module !== 'undefined') module.exports = BotAI;
