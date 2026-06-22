@@ -384,20 +384,8 @@ function renderConversionResult(isNewConversion = false) {
     let isTicking = false;
     let inputVal = baseInputVal;
 
-    // If converting from Time unit, auto increment input value
-    let shouldTickInput = false;
-    if (fromObj.c === "u" && fromObj.d === 't') {
-        if (toObj.c === "u") {
-            shouldTickInput = true;
-        } else if (toObj.c === "e" && toObj.liveAge) {
-            shouldTickInput = true;
-        }
-    }
-
-    if (shouldTickInput) {
-        inputVal = baseInputVal + (elapsedSeconds / fromObj.val);
-        isTicking = true;
-    }
+    // User inputs are mathematically static. We do not tick the input value itself.
+    
 
     let resultHTML = "";
 
@@ -449,7 +437,7 @@ function renderConversionResult(isNewConversion = false) {
         if (fromObj.d === toObj.d) {
             let baseVal = getBaseValue(fromObj, fromObj.d, inputVal);
             let calculated = fromBaseValue(toObj, baseVal);
-            resultHTML = `<b>${formatVal(inputVal, isTicking)} ${fromKey}</b> <br>equals<br> <b style="font-size: 32px;">${formatVal(calculated, isTicking)} ${toKey}</b>`;
+            resultHTML = `<b>${formatVal(inputVal, false)} ${fromKey}</b> <br>equals<br> <b style="font-size: 32px;">${formatVal(calculated, isTicking)} ${toKey}</b>`;
             renderedRatioForVis = calculated;
         } else {
             let baseFrom = getBaseValue(fromObj, fromObj.d, inputVal);
@@ -457,7 +445,7 @@ function renderConversionResult(isNewConversion = false) {
             let targetBaseVal = bridgeRules[toObj.d].fromJoules(energyJoules);
             let finalVal = fromBaseValue(toObj, targetBaseVal);
 
-            resultHTML = `<b>${formatVal(inputVal, isTicking)} ${fromKey}</b> <br>equals<br> <b style="font-size: 32px;">${formatVal(finalVal, isTicking)} ${toKey}</b>
+            resultHTML = `<b>${formatVal(inputVal, false)} ${fromKey}</b> <br>equals<br> <b style="font-size: 32px;">${formatVal(finalVal, isTicking)} ${toKey}</b>
             <br><span class="warning-text">THEORETICAL BRIDGE ACTIVE: Cross-Dimensional Translation.</span>
             <span class="bridge-text">
             <b>Logic Reasoning:</b><br>
@@ -492,7 +480,7 @@ function renderConversionResult(isNewConversion = false) {
         } else {
             let baseFrom = getBaseValue(fromObj, targetDimension, inputVal);
             let calculated = baseFrom / entityBaseVal;
-            resultHTML = `<b>${formatVal(inputVal, isTicking)} ${fromKey}</b> <br>equals<br> <b style="font-size: 32px;">${formatVal(calculated, isTicking)} ${toKey}s</b><br><span class="bridge-text">(Comparing your input to the standard ${getDimName(targetDimension)} of ${toKey}.)</span>`;
+            resultHTML = `<b>${formatVal(inputVal, false)} ${fromKey}</b> <br>equals<br> <b style="font-size: 32px;">${formatVal(calculated, isTicking)} ${toKey}s</b><br><span class="bridge-text">(Comparing your input to the standard ${getDimName(targetDimension)} of ${toKey}.)</span>`;
             renderedRatioForVis = calculated;
         }
     }
