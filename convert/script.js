@@ -182,6 +182,13 @@ const omniDB = {
     "The Flash (Barry Allen)": { c: "e", l: 1.8, m: 80, s: 299792458, v: 75, t: 2.5e9, data: 1e9, e: 3.5e18, a: 2, p: 101325, pain: 0.1, price: 0, temp: 310, cat: "Fictional / Sci-Fi Entities" }
 };
 
+// Flag biological/cosmic entities as live-aging
+for (let key in omniDB) {
+    if (omniDB[key].cat === "Biological & Living" || omniDB[key].cat === "Cosmic, Geographic & Environmental") {
+        omniDB[key].liveAge = true;
+    }
+}
+
 /* ==========================================================================
    HUMAN-SCALE UNIVERSAL MATRIX WITH REASONING
    ========================================================================== */
@@ -411,7 +418,7 @@ function renderConversionResult(isNewConversion = false) {
             return (val + (obj.offset || 0)) * obj.val;
         } else {
             let eVal = obj[dim] || 0;
-            if (dim === 't') eVal += elapsedSeconds; // Ticking age of entity!
+            if (dim === 't' && obj.liveAge) eVal += elapsedSeconds; // Ticking age of entity!
             return eVal * val;
         }
     }
@@ -451,11 +458,10 @@ function renderConversionResult(isNewConversion = false) {
             renderedRatioForVis = finalVal;
         }
     }
-    // SCENARIO 2: ENTITY to UNIT
     else if (fromObj.c === "e" && toObj.c === "u") {
         let targetDimension = toObj.d;
         let entityBaseVal = getBaseValue(fromObj, targetDimension, 1);
-        if (targetDimension === 't') isTicking = true;
+        if (targetDimension === 't' && fromObj.liveAge) isTicking = true;
 
         if (targetDimension === 's' && entityBaseVal <= 1e-10) {
             resultHTML = `<b>${inputVal} ${fromKey}</b> <br>equals<br> <b style="font-size: 32px;">0 ${toKey}</b><br><span class="warning-text">Note: ${fromKey} is stationary relative to the Earth's surface. Its speed is 0.</span>`;
@@ -466,11 +472,10 @@ function renderConversionResult(isNewConversion = false) {
             renderedRatioForVis = calculated;
         }
     }
-    // SCENARIO 3: UNIT to ENTITY
     else if (fromObj.c === "u" && toObj.c === "e") {
         let targetDimension = fromObj.d;
         let entityBaseVal = getBaseValue(toObj, targetDimension, 1);
-        if (targetDimension === 't') isTicking = true;
+        if (targetDimension === 't' && toObj.liveAge) isTicking = true;
 
         if (entityBaseVal <= 1e-10) {
             resultHTML = `<span class="warning-text">Error: Cannot divide by zero.</span><br><span class="bridge-text">The entity <b>"${toKey}"</b> lacks a meaningful measurement for <b>${getDimName(targetDimension)}</b>, making comparison impossible.</span>`;
@@ -497,7 +502,7 @@ function renderConversionResult(isNewConversion = false) {
                 let toVal = getBaseValue(toObj, dim, 1);
 
                 if (toVal > 1e-10) {
-                    if (dim === 't') isTicking = true;
+                    if (dim === 't' && (fromObj.liveAge || toObj.liveAge)) isTicking = true;
                     let calculated = (inputVal * fromVal) / toVal;
                     availableVisDims.push({ dim: dim, ratio: calculated, name: getDimName(dim) });
                     resultHTML += `<li><strong>${getDimName(dim)}:</strong> Equivalent to ${formatVal(calculated, dim==='t')} ${toKey}s.</li>`;
