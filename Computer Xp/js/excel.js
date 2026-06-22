@@ -320,11 +320,15 @@
         refreshGrid();
     };
 
+    window.getExcelData = function() {
+        return data;
+    };
+
     window.excelNew = function() {
         data = {};
         initGrid();
         currentFileName = "Book1";
-        document.querySelector('#excel-window .title-bar span').innerText = 'Microsoft Excel - Book1';
+        document.querySelector('#excel-window .title-bar span').innerHTML = '<img src="Windows XP Icons/Excel.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> Microsoft Excel - Book1';
     };
 
     window.excelSave = function() {
@@ -337,10 +341,11 @@
                 if(dir) {
                     dir[name] = { type: 'file', extension: 'xls', content: JSON.stringify(data), icon: 'excel' };
                     currentFileName = name.replace('.xls', '');
-                    document.querySelector('#excel-window .title-bar span').innerText = 'Microsoft Excel - ' + name;
+                    document.querySelector('#excel-window .title-bar span').innerHTML = '<img src="Windows XP Icons/Excel.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> Microsoft Excel - ' + name;
                     if(typeof window.saveFileSystem === 'function') window.saveFileSystem();
                     if(typeof window.renderDesktop === 'function') window.renderDesktop();
                     if(typeof window.showBalloon === 'function') window.showBalloon('Excel', 'Saved ' + name);
+                    if(typeof window.markAppSaved === 'function') window.markAppSaved('excel-window', JSON.stringify(data));
                 }
             }, ['.xls']);
         }
@@ -358,7 +363,7 @@
                         try {
                             data = JSON.parse(item.content);
                             currentFileName = name.replace('.xls', '');
-                            document.querySelector('#excel-window .title-bar span').innerText = 'Microsoft Excel - ' + name;
+                            document.querySelector('#excel-window .title-bar span').innerHTML = '<img src="Windows XP Icons/Excel.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> Microsoft Excel - ' + name;
                             refreshGrid();
                         } catch(e) {
                             if(typeof window.xpDialog === 'function') window.xpDialog('Excel', 'Could not parse file.', 'error');
@@ -375,7 +380,7 @@
         try {
             data = JSON.parse(item.content);
             currentFileName = filename.replace('.xls', '');
-            document.querySelector('#excel-window .title-bar span').innerText = 'Microsoft Excel - ' + filename;
+            document.querySelector('#excel-window .title-bar span').innerHTML = '<img src="Windows XP Icons/Excel.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> Microsoft Excel - ' + filename;
             refreshGrid();
         } catch(e) {}
     };

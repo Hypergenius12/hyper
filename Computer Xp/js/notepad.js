@@ -98,12 +98,8 @@ window.triggerNotepadSaveAs = function() {
                 let pathEl = getActiveNotepadElement('filepath');
                 if(pathEl) pathEl.value = info.path;
                 if(titleEl && activeWin) {
-                    titleEl.innerHTML = '<span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/Notepad.png" class="sys-icon-small"> ' + name + ' - Notepad</span>' +
-                    '<div class="window-controls">' +
-                        '<div class="win-btn" onclick="minimizeWindow(\'' + activeWin.id + '\')"><img src="Windows XP Icons/Minimize.png" alt="-" style="width:14px;height:12px;display:block;"></div>' +
-                        '<div class="win-btn" onclick="maximizeWindow(\'' + activeWin.id + '\')"><img src="Windows XP Icons/Maximize.png" alt="[]" style="width:14px;height:12px;display:block;"></div>' +
-                        '<div class="win-btn" onclick="requestCloseWindow(\'' + activeWin.id + '\')"><img src="Windows XP Icons/Exit.png" alt="X" style="width:14px;height:12px;display:block;"></div>' +
-                    '</div>';
+                    let span = titleEl.querySelector('span');
+                    if(span) span.innerHTML = '<img src="Windows XP Icons/Notepad.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> ' + name + ' - Notepad';
                 }
                 
                 if(typeof window.saveFileSystem === 'function') window.saveFileSystem();

@@ -300,12 +300,7 @@ window.triggerPaintSaveAs = function() {
                 let dataUrl = window.paintCanvas.toDataURL();
                 dir[name] = { type: 'file', extension: name.split('.').pop(), content: dataUrl, icon: 'paint' };
                 paintCurrentFile = name;
-                document.getElementById('paint-window-title').innerHTML = '<span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/Paint.png" class="sys-icon-small"> ' + name + ' - Paint</span>' +
-                '<div class="window-controls">' +
-                    '<div class="win-btn" onclick="minimizeWindow(\'paint-window\')"><img src="Windows XP Icons/Minimize.png" alt="-" style="width:14px;height:12px;display:block;"></div>' +
-                    '<div class="win-btn" onclick="maximizeWindow(\'paint-window\')"><img src="Windows XP Icons/Maximize.png" alt="[]" style="width:14px;height:12px;display:block;"></div>' +
-                    '<div class="win-btn" onclick="closeWindow(\'paint-window\')"><img src="Windows XP Icons/Exit.png" alt="X" style="width:14px;height:12px;display:block;"></div>' +
-                '</div>';
+                document.querySelector('#paint-window-title span').innerHTML = '<img src="Windows XP Icons/Paint.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> ' + name + ' - Paint';
                 
                 if(typeof window.saveFileSystem === 'function') window.saveFileSystem();
                 if(typeof window.renderDesktop === 'function') window.renderDesktop();

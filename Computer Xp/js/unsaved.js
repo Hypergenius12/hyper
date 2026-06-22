@@ -30,10 +30,10 @@ window.getAppCurrentState = function(id) {
         return pc ? pc.toDataURL() : "";
     }
     if (id === 'excel-window') {
-        let inputs = document.querySelectorAll('#excel-grid td input');
-        let data = [];
-        inputs.forEach(inp => data.push(inp.value));
-        return JSON.stringify(data);
+        if (typeof window.getExcelData === 'function') {
+            return JSON.stringify(window.getExcelData());
+        }
+        return "{}";
     }
     return null;
 };
@@ -76,8 +76,7 @@ window.checkUnsavedChanges = function(id, callback) {
                 }
             }
             if (id === 'excel-window') {
-                let emptyData = new Array(26 * 50).fill("");
-                savedState = JSON.stringify(emptyData);
+                savedState = "{}";
             }
             if (id === 'frontpage-window') {
                 savedState = "<html>\n<head>\n<title>Untitled Normal Page</title>\n</head>\n<body>\n<h1>Welcome to Microsoft FrontPage</h1><p>Edit your webpage here.</p>\n</body>\n</html>";

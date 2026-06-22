@@ -4788,12 +4788,8 @@ window.openWordpadFile = function(name, content, currentDir) {
         if(ed) ed.innerHTML = content || "";
         let titleEl = document.getElementById('wordpad-window-title');
         if(titleEl) {
-            titleEl.innerHTML = '<span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/Wordpad.png" class="sys-icon-small"> ' + name + ' - WordPad</span>' +
-            '<div class="window-controls">' +
-                '<div class="win-btn" onclick="minimizeWindow(\'wordpad-window\')"><img src="Windows XP Icons/Minimize.png" alt="-" style="width:14px;height:12px;display:block;"></div>' +
-                '<div class="win-btn" onclick="maximizeWindow(\'wordpad-window\')"><img src="Windows XP Icons/Maximize.png" alt="[]" style="width:14px;height:12px;display:block;"></div>' +
-                '<div class="win-btn" onclick="requestCloseWindow(\'wordpad-window\')"><img src="Windows XP Icons/Exit.png" alt="X" style="width:14px;height:12px;display:block;"></div>' +
-            '</div>';
+            let span = titleEl.querySelector('span');
+            if (span) span.innerHTML = '<img src="Windows XP Icons/Wordpad.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> ' + name + ' - WordPad';
         }
         if (typeof window.markAppSaved === 'function') window.markAppSaved('wordpad-window', content || "");
     }, 50);
@@ -4818,12 +4814,8 @@ window.triggerWordpadSaveAs = function() {
                 dir[name] = { type: 'file', extension: name.split('.').pop(), content: content, icon: 'wordpad' };
                 
                 if(titleEl) {
-                    titleEl.innerHTML = '<span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/Wordpad.png" class="sys-icon-small"> ' + name + ' - WordPad</span>' +
-                    '<div class="window-controls">' +
-                        '<div class="win-btn" onclick="minimizeWindow(\'wordpad-window\')"><img src="Windows XP Icons/Minimize.png" alt="-" style="width:14px;height:12px;display:block;"></div>' +
-                        '<div class="win-btn" onclick="maximizeWindow(\'wordpad-window\')"><img src="Windows XP Icons/Maximize.png" alt="[]" style="width:14px;height:12px;display:block;"></div>' +
-                        '<div class="win-btn" onclick="requestCloseWindow(\'wordpad-window\')"><img src="Windows XP Icons/Exit.png" alt="X" style="width:14px;height:12px;display:block;"></div>' +
-                    '</div>';
+                    let span = titleEl.querySelector('span');
+                    if (span) span.innerHTML = '<img src="Windows XP Icons/Wordpad.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> ' + name + ' - WordPad';
                 }
                 
                 if(typeof window.saveFileSystem === 'function') window.saveFileSystem();
@@ -4844,67 +4836,29 @@ window.triggerWordpadSave = function() {
 window.openExcelFile = function(name, content, currentDir) {
     window.openProgram('excel-window');
     setTimeout(() => {
-        let inputs = document.querySelectorAll('#excel-grid td input');
         try {
-            let data = JSON.parse(content);
-            if (Array.isArray(data)) {
-                for(let i=0; i<data.length && i<inputs.length; i++) {
-                    inputs[i].value = data[i] || "";
+            let parsed = JSON.parse(content);
+            if (Array.isArray(parsed)) {
+                let migrated = {};
+                for(let i=0; i<parsed.length; i++) {
+                    if (parsed[i] !== "") {
+                        let col = String.fromCharCode(65 + (i % 26));
+                        let row = Math.floor(i / 26) + 1;
+                        migrated[col + row] = { v: parsed[i], f: { bold: false, italic: false, underline: false, color: '#000000', align: 'left', bg: '#ffffff' } };
+                    }
                 }
+                content = JSON.stringify(migrated);
             }
         } catch(e) {}
-        
-        let titleEl = document.querySelector('#excel-window .title-bar');
-        if(titleEl) {
-            titleEl.innerHTML = '<span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/Excel.png" class="sys-icon-small"> Microsoft Excel - ' + name + '</span>' +
-            '<div class="window-controls">' +
-                '<div class="win-btn" onclick="minimizeWindow(\'excel-window\')"><img src="Windows XP Icons/Minimize.png" alt="-" style="width:14px;height:12px;display:block;"></div>' +
-                '<div class="win-btn" onclick="maximizeWindow(\'excel-window\')"><img src="Windows XP Icons/Maximize.png" alt="[]" style="width:14px;height:12px;display:block;"></div>' +
-                '<div class="win-btn" onclick="requestCloseWindow(\'excel-window\')"><img src="Windows XP Icons/Exit.png" alt="X" style="width:14px;height:12px;display:block;"></div>' +
-            '</div>';
+        if (typeof window.excelOpenDirect === 'function') {
+            window.excelOpenDirect(name, { content: content });
         }
-        if (typeof window.markAppSaved === 'function') window.markAppSaved('excel-window', content || JSON.stringify(new Array(26*50).fill("")));
-    }, 50);
+    }, 100);
 };
 
 window.triggerExcelSave = function() {
-    if(typeof window.openFileDialog === 'function') {
-        let titleEl = document.querySelector('#excel-window .title-bar');
-        let currentName = "Book1";
-        if(titleEl && titleEl.innerText) {
-            let text = titleEl.innerText.replace('Microsoft Excel - ', '').trim();
-            if(text && text !== 'Book1') currentName = text;
-        }
-        window.openFileDialog('save', currentName, (info) => {
-            let name = info.name || info.filename;
-            if(!name) return;
-            if(!name.toLowerCase().endsWith('.xls') && !name.toLowerCase().endsWith('.csv')) name += '.xls';
-            
-            let dir = window.resolvePath(info.path);
-            if(dir) {
-                let inputs = document.querySelectorAll('#excel-grid td input');
-                let data = [];
-                inputs.forEach(inp => data.push(inp.value));
-                let content = JSON.stringify(data);
-                
-                dir[name] = { type: 'file', extension: name.split('.').pop(), content: content, icon: 'excel' };
-                
-                if(titleEl) {
-                    titleEl.innerHTML = '<span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/Excel.png" class="sys-icon-small"> Microsoft Excel - ' + name + '</span>' +
-                    '<div class="window-controls">' +
-                        '<div class="win-btn" onclick="minimizeWindow(\'excel-window\')"><img src="Windows XP Icons/Minimize.png" alt="-" style="width:14px;height:12px;display:block;"></div>' +
-                        '<div class="win-btn" onclick="maximizeWindow(\'excel-window\')"><img src="Windows XP Icons/Maximize.png" alt="[]" style="width:14px;height:12px;display:block;"></div>' +
-                        '<div class="win-btn" onclick="requestCloseWindow(\'excel-window\')"><img src="Windows XP Icons/Exit.png" alt="X" style="width:14px;height:12px;display:block;"></div>' +
-                    '</div>';
-                }
-                
-                if(typeof window.saveFileSystem === 'function') window.saveFileSystem();
-                if(typeof window.renderDesktop === 'function') window.renderDesktop();
-                if(typeof window.showBalloon === 'function') window.showBalloon('Excel', 'Saved ' + name);
-                
-                if (typeof window.markAppSaved === 'function') window.markAppSaved('excel-window', content);
-            }
-        }, ['.xls', '.csv']);
+    if (typeof window.excelSave === 'function') {
+        window.excelSave();
     }
 };
 

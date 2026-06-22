@@ -232,12 +232,8 @@ window.triggerFpOpen = function() {
                     let codeArea = document.getElementById('fp-code-area');
                     codeArea.value = item.content;
                     fpCurrentFile = name;
-                    document.getElementById('frontpage-window-title').innerHTML = `<span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/Internet Explorer 6.png" class="sys-icon-small"> Microsoft FrontPage - ${info.path}\\${name}</span>
-        <div class="window-controls">
-            <div class="win-btn" onclick="minimizeWindow('frontpage-window')">_</div>
-            <div class="win-btn" onclick="maximizeWindow('frontpage-window')">□</div>
-            <div class="win-btn" onclick="closeWindow('frontpage-window')">X</div>
-        </div>`;
+                    let span = document.querySelector('#frontpage-window-title span');
+                    if (span) span.innerHTML = `<img src="Windows XP Icons/Internet Explorer 6.png" class="sys-icon-small" onerror="this.style.display='none'"> Microsoft FrontPage - ${info.path}\\${name}`;
                     
                     if(fpActiveTab === 'design' || fpActiveTab === 'split') {
                         syncFpDesign();
@@ -325,12 +321,8 @@ window.openFrontpageFile = function(name, content, currentDir) {
     
     let titleEl = document.getElementById('frontpage-window-title');
     if (titleEl) {
-        titleEl.innerHTML = '<span style="display:flex; align-items:center; gap:5px;"><img src="Windows XP Icons/Internet Explorer 6.png" class="sys-icon-small"> Microsoft FrontPage - ' + currentDir + '\\' + name + '</span>' +
-        '<div class="window-controls">' +
-            '<div class="win-btn" onclick="minimizeWindow(\'frontpage-window\')">_</div>' +
-            '<div class="win-btn" onclick="maximizeWindow(\'frontpage-window\')">&#x25A1;</div>' +
-            '<div class="win-btn" onclick="closeWindow(\'frontpage-window\')">X</div>' +
-        '</div>';
+        let span = titleEl.querySelector('span');
+        if (span) span.innerHTML = '<img src="Windows XP Icons/Internet Explorer 6.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> Microsoft FrontPage - ' + currentDir + '\\' + name;
     }
     
     if(fpActiveTab === 'design' || fpActiveTab === 'split') {
