@@ -1140,8 +1140,8 @@ class UISystem {
             return block(B.MOSSY_COBBLESTONE, 'Mossy Cobble', 1);
 
         // Farming/Misc
-        if (getBlockCount(B.SUGARCANE) === 1 && totalItems === 1) return mat('sugar', 'Sugar', 1);
-        if (getBlockCount(B.SUGARCANE) === 3 && totalItems === 3) return mat('paper', 'Paper', 3);
+        if (getCount(B.SUGARCANE) === 1 && totalItems === 1) return mat('sugar', 'Sugar', 1);
+        if (getCount(B.SUGARCANE) === 3 && totalItems === 3) return mat('paper', 'Paper', 3);
         if (getCount('paper') === 3 && getCount('leather') === 1 && totalItems === 4) return mat('book', 'Book', 1); // Note: Need a leather item if not present, but paper is standard.
 
         return null;

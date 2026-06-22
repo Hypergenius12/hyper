@@ -270,6 +270,51 @@ export class Chunk {
             return BLOCKS.AIR;
         };
 
+        const getDataOptimized = (wx, wy, wz) => {
+            if (wy < 0 || wy >= CHUNK_HEIGHT) return 0;
+            const dcx = Math.floor(wx / CHUNK_SIZE) - this.cx;
+            const dcz = Math.floor(wz / CHUNK_SIZE) - this.cz;
+            if (dcx >= -1 && dcx <= 1 && dcz >= -1 && dcz <= 1) {
+                const c = neighborChunks[dcx + 1][dcz + 1];
+                if (c && c.data) {
+                    const lx = wx - (this.cx + dcx) * CHUNK_SIZE;
+                    const lz = wz - (this.cz + dcz) * CHUNK_SIZE;
+                    return c.data[(wy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx];
+                }
+            }
+            return 0;
+        };
+
+        const getFluidCornerHeight = (cx, cy, cz, blockType, maxLevel) => {
+            let sumLevel = 0;
+            let count = 0;
+            for (let dx = -1; dx <= 0; dx++) {
+                for (let dz = -1; dz <= 0; dz++) {
+                    const nx = cx + dx;
+                    const nz = cz + dz;
+                    const b = getBlockOptimized(nx, cy, nz);
+                    if (b === blockType) {
+                        // If there is fluid directly above, this corner is full height
+                        if (cy < CHUNK_HEIGHT - 1 && getBlockOptimized(nx, cy + 1, nz) === blockType) {
+                            return 1.0;
+                        }
+                        const bData = getDataOptimized(nx, cy, nz);
+                        const level = bData === 0 ? maxLevel : bData;
+                        sumLevel += level;
+                        count++;
+                    } else {
+                        // If there is fluid above an adjacent solid block, it's falling, so pull this corner up
+                        if (cy < CHUNK_HEIGHT - 1 && getBlockOptimized(nx, cy + 1, nz) === blockType) {
+                            return 1.0;
+                        }
+                    }
+                }
+            }
+            if (count === 0) return 0.8;
+            const avgLevel = sumLevel / count;
+            return (avgLevel / maxLevel) * 0.8 + 0.1;
+        };
+
         let posCount = 0;
         let uvCount = 0;
         let colorCount = 0;
@@ -388,17 +433,9 @@ export class Chunk {
                                 
                                 // Lower liquid height for flowing water
                                 if (props.isLiquid && v[1] === 1) {
-                                    // If there's water directly above, it shouldn't be lowered
-                                    if (y < CHUNK_HEIGHT - 1 && getBlockOptimized(wx, y + 1, wz) !== blockType) {
-                                        const maxLevel = blockType === BLOCKS.LAVA ? 3 : 7;
-                                        const level = dataValue === 0 ? maxLevel : dataValue;
-                                        // Level 7 = almost full (subtract a bit), Level 1 = lowest
-                                        if (level < maxLevel) {
-                                            py -= (maxLevel - level) / maxLevel * 0.8 + 0.1;
-                                        } else {
-                                            py -= 0.1; // source blocks are slightly lowered
-                                        }
-                                    }
+                                    const maxLevel = blockType === BLOCKS.LAVA ? 3 : 7;
+                                    const h = getFluidCornerHeight(wx + v[0], y, wz + v[2], blockType, maxLevel);
+                                    py = y + h;
                                 }
                                 
                                 _positions[posCount++] = x + v[0];
