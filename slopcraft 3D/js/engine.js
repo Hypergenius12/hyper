@@ -968,7 +968,9 @@ export class World {
 
         // Process a few chunks per frame
         let buildsThisFrame = 0;
-        while (this.chunksToBuild.length > 0 && buildsThisFrame < 2) {
+        const buildStartTime = performance.now();
+        while (this.chunksToBuild.length > 0) {
+            if (buildsThisFrame > 0 && (performance.now() - buildStartTime) > 4) break;
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToBuild.length; i++) {
