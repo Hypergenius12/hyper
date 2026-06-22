@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive US History Timeline - Elite Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-default">
+
+    <div class="parallax-bg layer-2" id="parallax-2"></div>
+    <div class="parallax-bg layer-1" id="parallax-1"></div>
+
+    <div class="header">
+        <div class="header-left">
+            <p>Drag to explore • Scroll/Buttons to zoom • Click cards for details</p>
+        </div>
+        <div class="header-right search-container">
+            
+            <div class="otd-container">
+                <input type="text" id="otd-input" class="search-box" placeholder="MM-DD (e.g. 07-04)" maxlength="5" style="width: 140px;">
+                <button id="btn-on-this-day" class="special-btn blue-glass" title="Find all events on this month and day">
+                    <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+                    Go
+                </button>
+            </div>
+            
+            <button id="btn-sprint-game" class="special-btn red-glass" title="Race against the clock to find 5 events">
+                <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                Time Sprint
+            </button>
+
+            <input type="text" id="search-input" class="search-box" placeholder="Search events, years, people...">
+            <select id="category-filter" class="filter-box">
+                <option value="all">All Categories</option>
+                <option value="exploration">Exploration</option>
+                <option value="conflict">Conflict</option>
+                <option value="politics">Politics</option>
+                <option value="innovation">Innovation</option>
+                <option value="society">Society</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="era-explorer" class="era-explorer">
+        <div class="era-title">ERA EXPLORER</div>
+        <div class="era-desc">Visit centuries & win sprints to unlock settings!</div>
+        <div id="era-badges" class="era-badges">
+            <span class="era-badge" id="badge-1400">1400s</span>
+            <span class="era-badge" id="badge-1500">1500s</span>
+            <span class="era-badge" id="badge-1600">1600s</span>
+            <span class="era-badge" id="badge-1700">1700s</span>
+            <span class="era-badge" id="badge-1800">1800s</span>
+            <span class="era-badge" id="badge-1900">1900s</span>
+            <span class="era-badge" id="badge-2000">2000s</span>
+        </div>
+    </div>
+
+    <div id="game-hud" class="game-hud">
+        <div class="hud-content">
+            <div class="hud-label">CHRONOLOGICAL SPRINT</div>
+            <div class="hud-sub">Find the event below on the timeline! (<span id="sprint-progress">0</span>/5)</div>
+            <div id="target-task" class="target-task">Loading...</div>
+            <div class="hud-stats">
+                <span>Time Remaining: <b id="game-timer" style="color: #ff4757; font-size: 22px;">100</b>s</span>
+            </div>
+            <button id="quit-game" class="quit-btn">Surrender</button>
+        </div>
+    </div>
+
+    <div class="timeline-wrapper" id="timeline-wrapper">
+        <div class="timeline-track" id="timeline-track">
+            <div class="timeline-line" id="timeline-line">
+                <div id="axis-container" class="axis-container"></div>
+            </div>
+            </div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" id="btn-zoom-out" title="Zoom Out">
+            <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+            Out
+        </button>
+        <button class="control-btn" id="btn-reset" title="Reset View">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" opacity="0"/><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            Reset
+        </button>
+        <button class="control-btn" id="btn-zoom-in" title="Zoom In">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            In
+        </button>
+        <div style="width: 1px; height: 20px; background: var(--glass-border); margin: 0 5px;"></div>
+        <button class="control-btn" id="btn-settings" title="Settings & Themes">
+            <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+            Themes
+        </button>
+    </div>
+
+    <div class="minimap-wrapper" id="minimap-wrapper">
+        <canvas id="minimap-canvas"></canvas>
+        <div id="minimap-indicator"></div>
+    </div>
+
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">&times;</button>
+            <div class="modal-full">
+                <div class="modal-category" id="modal-category">Category</div>
+                <div class="modal-year" id="modal-year">Date</div>
+                <div class="modal-title" id="modal-title">Event Title</div>
+                <div class="modal-desc" id="modal-desc">Event Description goes here.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settings-overlay">
+        <div class="modal-content" style="max-width: 450px; text-align: center;">
+            <button class="modal-close" id="settings-close">&times;</button>
+            <h2 style="margin-top: 0; color: var(--text-main);">Timeline Settings</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Unlock new themes by exploring centuries and winning Time Sprints.</p>
+            
+            <div style="text-align: left; margin-bottom: 20px;">
+                <label style="font-size: 14px; font-weight: 600; color: var(--text-main);">Select Theme:</label>
+                <select id="theme-selector" class="filter-box" style="width: 100%; margin-top: 8px; font-size: 14px; padding: 12px; background: var(--glass-card-bg);">
+                    <option value="theme-default">1. Liquid Glass (Default)</option>
+                    <option value="theme-golden" disabled>2. Golden Era (Requires: 1 Century)</option>
+                    <option value="theme-obsidian" disabled>3. Obsidian Dark (Requires: 2 Centuries)</option>
+                    <option value="theme-ruby" disabled>4. Crimson Core (Requires: 3 Centuries)</option>
+                    <option value="theme-emerald" disabled>5. Emerald Dream (Requires: 4 Centuries)</option>
+                    <option value="theme-sapphire" disabled>6. Sapphire Deep (Requires: 5 Centuries)</option>
+                    <option value="theme-amethyst" disabled>7. Amethyst Void (Requires: 6 Centuries)</option>
+                    <option value="theme-neon" disabled>8. Cyber Neon (Requires: 7 Centuries)</option>
+                    <option value="theme-sunset" disabled>9. Sunset Horizon (Requires: 1 Sprint Win)</option>
+                    <option value="theme-hacker" disabled>10. Terminal Mode (Requires: 3 Sprint Wins)</option>
+                </select>
+            </div>
+            
+            <div style="font-size: 12px; color: var(--text-muted); background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 15px; border-radius: 8px;">
+                <b>Your Stats:</b><br>
+                Centuries Visited: <span id="stat-centuries">0</span>/7<br>
+                Sprints Won: <span id="stat-sprints">0</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="events.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
