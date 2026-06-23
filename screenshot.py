@@ -7,8 +7,7 @@ async def take_screenshots():
         page = await browser.new_page()
         
         urls = [
-            ("http://localhost:7000/Cyber/index.html", "screenshot_cyber.png"),
-            ("http://localhost:7000/trillion/index.html", "screenshot_trillion.png")
+            ("http://localhost:8000/waveform%20editor/index.html", "screenshot_waveform.png")
         ]
         
         for url, filename in urls:

@@ -34,7 +34,8 @@ const PROJECT_NAMES = {
     'timeline': 'Interactive US History Timeline',
     'convert': 'Omni-Dimensional Converter',
     'paths': 'Text Adventure Editor',
-    'paths.html': 'Text Adventure Editor'
+    'paths.html': 'Text Adventure Editor',
+    'waveform editor': 'Waveform Editor'
 };
 
 function getDisplayProjectName(rawName) {
