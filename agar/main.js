@@ -13,6 +13,13 @@ let myId = "player_1"; // Static for single player
 const startMenu = document.getElementById('startMenu');
 const playBtn = document.getElementById('playBtn');
 const playerNameInput = document.getElementById('playerNameInput');
+const playerColorInput = document.getElementById('playerColor');
+
+// Autofill from global system
+const globalUsername = localStorage.getItem('hyper_username');
+if (globalUsername) {
+    playerNameInput.value = globalUsername;
+}
 const overlays = document.getElementById('overlays');
 const scoreDisplay = document.getElementById('scoreDisplay');
 const leaderboardList = document.getElementById('leaderboardList');
@@ -403,7 +410,7 @@ function gameLoop(timestamp) {
     renderer.draw();
     
     // Throttle local UI updates
-    if (!isMultiplayer && Math.random() < 0.2) {
+    if (Math.random() < 0.2) {
         updateUI();
     }
 
