@@ -23,6 +23,24 @@ function getProjectName() {
     return decodeURIComponent(parts[parts.length - 2]) || 'Home';
 }
 
+const PROJECT_NAMES = {
+    'Computer Xp': 'Windows XP',
+    'slopcraft 3D': 'Slopcraft 3D',
+    'style': 'OS Style Showcase',
+    'cmd': 'The Elias Thorne Mystery',
+    'agar': 'Agar',
+    'Cyber': 'Exodus Adventure',
+    'trillion': 'Spend Elon\'s Money',
+    'timeline': 'Interactive US History Timeline',
+    'convert': 'Omni-Dimensional Converter',
+    'paths': 'Text Adventure Editor',
+    'paths.html': 'Text Adventure Editor'
+};
+
+function getDisplayProjectName(rawName) {
+    return PROJECT_NAMES[rawName] || rawName;
+}
+
 function setCookie(name, value, days) {
     let expires = "";
     if (days) {
@@ -197,9 +215,9 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
             let tabsHtml = `<div style="display: flex; gap: 0; overflow-x: auto; margin-bottom: 1rem; border-bottom: 2px solid #333; scrollbar-width: none; font-family: monospace; text-transform: uppercase;">`;
             pList.forEach(p => {
                 let isActive = p === activeProj;
-                tabsHtml += `<button onclick="window.loadSubProject('${p.replace(/'/g, "\\'")}')" style="white-space: nowrap; padding: 0.5rem 1rem; border: none; border-right: 1px solid #333; background: ${isActive ? '#fff' : 'transparent'}; color: ${isActive ? '#000' : 'var(--text-color)'}; cursor: pointer; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${p}</button>`;
+                tabsHtml += `<button onclick="window.loadSubProject('${p.replace(/'/g, "\\'")}')" style="white-space: nowrap; padding: 0.5rem 1rem; border: none; border-right: 1px solid #333; background: ${isActive ? '#fff' : 'transparent'}; color: ${isActive ? '#000' : 'var(--text-color)'}; cursor: pointer; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${getDisplayProjectName(p)}</button>`;
             });
-            tabsHtml += `</div><div id="sub-lb-content"><div style="text-align:center; opacity:0.5; font-family: monospace;">LOADING ${activeProj}...</div></div>`;
+            tabsHtml += `</div><div id="sub-lb-content"><div style="text-align:center; opacity:0.5; font-family: monospace;">LOADING ${getDisplayProjectName(activeProj)}...</div></div>`;
             
             lbContent.innerHTML = tabsHtml;
 
