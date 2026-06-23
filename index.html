@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>hypergenius 12 - Projects</title>
     <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-color: #f4f4f5;
@@ -25,7 +28,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Space Grotesk', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
@@ -622,18 +625,14 @@
     window.formspree = window.formspree || function () { (formspree.q = formspree.q || []).push(arguments); };
     formspree('initForm', { formElement: '#bug-form', formId: 'mnjkqkya' });
 
-    // Close when success message appears
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((m) => {
-            if (m.target.style.display !== 'none') {
-                document.getElementById('bug-form').style.display = 'none';
-                setTimeout(() => {
-                    closeBugReportModal();
-                }, 1000);
-            }
-        });
+    // Close automatically after hitting send
+    document.getElementById('bug-form').addEventListener('submit', function() {
+        setTimeout(() => {
+            document.getElementById('bug-form').style.display = 'none';
+            document.querySelector('[data-fs-success]').style.display = 'block';
+            setTimeout(closeBugReportModal, 1200);
+        }, 500);
     });
-    observer.observe(document.querySelector('[data-fs-success]'), { attributes: true, attributeFilter: ['style'] });
 </script>
 <script src="https://unpkg.com/@formspree/ajax@1" defer></script>
 </body>
