@@ -153,16 +153,17 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
 
             lbContent.innerHTML = '';
             users.forEach((u, index) => {
-                let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `<span style="opacity:0.5; font-size: 0.9rem;">#${index+1}</span>`;
+                let medal = index === 0 ? '[1]' : index === 1 ? '[2]' : index === 2 ? '[3]' : `[${index+1}]`;
                 let isMe = u.username === username;
-                let bg = isMe ? 'rgba(59, 130, 246, 0.2)' : (index < 3 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255,255,255,0.02)');
-                let border = isMe ? '1px solid #3b82f6' : (index < 3 ? '1px solid rgba(59, 130, 246, 0.2)' : '1px solid transparent');
+                let bg = isMe ? '#22c55e' : 'transparent';
+                let color = isMe ? '#000' : 'inherit';
+                let border = '1px solid #333';
                 
                 lbContent.innerHTML += `
-                    <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; border: ${border}; border-radius: 6px; align-items: center; margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
                         <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
-                        <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe || index < 3 ? 'bold': 'normal'}">${u.username} ${isMe ? '<span style="color:#3b82f6; font-size: 0.8rem; margin-left: 4px;">(You)</span>' : ''}</span>
-                        <span style="opacity: 0.8; font-family: monospace;">${formatTime(u.totalTime)}</span>
+                        <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${u.username} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
+                        <span style="font-family: monospace;">${formatTime(u.totalTime)}</span>
                     </div>
                 `;
             });
@@ -193,12 +194,12 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
 
             let activeProj = subProject || pList[0];
 
-            let tabsHtml = `<div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); scrollbar-width: none;">`;
+            let tabsHtml = `<div style="display: flex; gap: 0; overflow-x: auto; margin-bottom: 1rem; border-bottom: 2px solid #333; scrollbar-width: none; font-family: monospace; text-transform: uppercase;">`;
             pList.forEach(p => {
                 let isActive = p === activeProj;
-                tabsHtml += `<button onclick="window.loadSubProject('${p.replace(/'/g, "\\'")}')" style="white-space: nowrap; padding: 0.4rem 0.8rem; border-radius: 20px; border: 1px solid ${isActive ? '#3b82f6' : 'rgba(255,255,255,0.2)'}; background: ${isActive ? '#3b82f6' : 'transparent'}; color: ${isActive ? 'white' : 'var(--text-color)'}; cursor: pointer; font-family: inherit; transition: all 0.2s;">${p}</button>`;
+                tabsHtml += `<button onclick="window.loadSubProject('${p.replace(/'/g, "\\'")}')" style="white-space: nowrap; padding: 0.5rem 1rem; border: none; border-right: 1px solid #333; background: ${isActive ? '#fff' : 'transparent'}; color: ${isActive ? '#000' : 'var(--text-color)'}; cursor: pointer; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${p}</button>`;
             });
-            tabsHtml += `</div><div id="sub-lb-content"><div style="text-align:center;opacity:0.5;">Loading top 100 for ${activeProj}...</div></div>`;
+            tabsHtml += `</div><div id="sub-lb-content"><div style="text-align:center; opacity:0.5; font-family: monospace;">LOADING ${activeProj}...</div></div>`;
             
             lbContent.innerHTML = tabsHtml;
 
@@ -211,17 +212,18 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                 let subContent = document.getElementById('sub-lb-content');
                 subContent.innerHTML = '';
                 pUsers.forEach((u, index) => {
-                    let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `<span style="opacity:0.5; font-size: 0.9rem;">#${index+1}</span>`;
+                    let medal = index === 0 ? '[1]' : index === 1 ? '[2]' : index === 2 ? '[3]' : `[${index+1}]`;
                     let isMe = u.username === username;
-                    let bg = isMe ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.02)';
-                    let border = isMe ? '1px solid #3b82f6' : '1px solid transparent';
+                    let bg = isMe ? '#22c55e' : 'transparent';
+                    let color = isMe ? '#000' : 'inherit';
+                    let border = '1px solid #333';
                     let timeVal = u.projects[activeProj];
                     
                     subContent.innerHTML += `
-                        <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; border: ${border}; border-radius: 6px; align-items: center; margin-bottom: 4px;">
+                        <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
                             <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
-                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${u.username} ${isMe ? '<span style="color:#3b82f6; font-size: 0.8rem; margin-left: 4px;">(You)</span>' : ''}</span>
-                            <span style="opacity: 0.8; font-family: monospace;">${formatTime(timeVal)}</span>
+                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${u.username} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
+                            <span style="font-family: monospace;">${formatTime(timeVal)}</span>
                         </div>
                     `;
                 });
@@ -249,17 +251,24 @@ if (isHome) {
     const tabProjects = document.getElementById('tab-projects');
 
     if (tabOverall) {
+        tabOverall.style.borderRadius = '0';
+        tabOverall.style.fontFamily = 'monospace';
+        tabOverall.style.textTransform = 'uppercase';
+        tabProjects.style.borderRadius = '0';
+        tabProjects.style.fontFamily = 'monospace';
+        tabProjects.style.textTransform = 'uppercase';
+
         tabOverall.addEventListener('click', () => {
-            tabOverall.style.background = '#3b82f6'; tabOverall.style.color = 'white'; tabOverall.style.border = 'none';
-            tabProjects.style.background = 'transparent'; tabProjects.style.color = 'var(--text-color)'; tabProjects.style.border = '1px solid var(--border-color)';
+            tabOverall.style.background = '#fff'; tabOverall.style.color = '#000'; tabOverall.style.border = '1px solid #fff';
+            tabProjects.style.background = 'transparent'; tabProjects.style.color = 'var(--text-color)'; tabProjects.style.border = '1px solid #333';
             loadLeaderboard('overall');
         });
         tabProjects.addEventListener('click', () => {
-            tabProjects.style.background = '#3b82f6'; tabProjects.style.color = 'white'; tabProjects.style.border = 'none';
-            tabOverall.style.background = 'transparent'; tabOverall.style.color = 'var(--text-color)'; tabOverall.style.border = '1px solid var(--border-color)';
+            tabProjects.style.background = '#fff'; tabProjects.style.color = '#000'; tabProjects.style.border = '1px solid #fff';
+            tabOverall.style.background = 'transparent'; tabOverall.style.color = 'var(--text-color)'; tabOverall.style.border = '1px solid #333';
             loadLeaderboard('projects');
         });
         
-        loadLeaderboard('overall');
+        tabOverall.click(); // trigger initial styling
     }
 }
