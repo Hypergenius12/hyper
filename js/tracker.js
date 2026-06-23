@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js';
-import { collection, doc, getDoc, setDoc, updateDoc, increment, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, doc, getDoc, setDoc, updateDoc, increment, query, orderBy, limit, getDocs, getCountFromServer, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // --- Helpers ---
 function formatTime(seconds) {
@@ -134,72 +134,157 @@ if (username) {
     }, 15000);
 }
 
+// --- Floating Rank UI ---
+async function renderFloatingRank() {
+    if (!username) return;
+
+    let rankDiv = document.getElementById('hyper-floating-rank');
+    if (!rankDiv) {
+        rankDiv = document.createElement('div');
+        rankDiv.id = 'hyper-floating-rank';
+        rankDiv.style.cssText = 'position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; color: white; font-family: sans-serif; font-size: 14px; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease;';
+        document.body.appendChild(rankDiv);
+    }
+
+    try {
+        const userRef = doc(db, 'users', username);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) return;
+        const userData = userSnap.data();
+
+        let rankTitle = isHome ? "Global Rank" : `${projectName} Rank`;
+        let userTime = isHome ? (userData.totalTime || 0) : ((userData.projects || {})[projectName] || 0);
+
+        let q;
+        if (isHome) {
+            q = query(collection(db, 'users'), where("totalTime", ">", userTime));
+        } else {
+            q = query(collection(db, 'users'), where(`projects.${projectName}`, ">", userTime));
+        }
+
+        const snapshot = await getCountFromServer(q);
+        const rank = snapshot.data().count + 1;
+
+        rankDiv.innerHTML = `<span style="opacity:0.7">${rankTitle}</span> <strong style="color: #3b82f6;">#${rank}</strong> <span style="opacity:0.5; margin-left:4px; font-family: monospace;">${formatTime(userTime)}</span>`;
+    } catch (err) {
+        console.error("Rank fetch error", err);
+    }
+}
+
+// Update floating rank periodically
+if (username) {
+    setTimeout(renderFloatingRank, 1000);
+    setInterval(renderFloatingRank, 25000);
+}
+
 // --- Leaderboard Rendering ---
-async function loadLeaderboard(mode = 'overall') {
+let cachedUsers = null;
+
+async function loadLeaderboard(mode = 'overall', subProject = null) {
     const lbContent = document.getElementById('lb-content');
     if (!lbContent) return;
 
     lbContent.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 2rem;">Loading data...</div>';
     try {
-        let q;
         if (mode === 'overall') {
-            q = query(collection(db, 'users'), orderBy('totalTime', 'desc'), limit(15));
-        } else {
-            // Fetch top 50 users to find project leaders
-            q = query(collection(db, 'users'), orderBy('totalTime', 'desc'), limit(50));
-        }
+            const q = query(collection(db, 'users'), orderBy('totalTime', 'desc'), limit(200));
+            const querySnapshot = await getDocs(q);
+            let users = [];
+            querySnapshot.forEach(d => users.push(d.data()));
+            cachedUsers = users;
 
-        const querySnapshot = await getDocs(q);
-        let users = [];
-        querySnapshot.forEach(d => {
-            users.push(d.data());
-        });
-
-        if (mode === 'projects') {
-            // Group top times by project
-            let projectTops = {};
-            users.forEach(u => {
-                if (u.projects) {
-                    for (let p in u.projects) {
-                        if (!projectTops[p] || u.projects[p] > projectTops[p].time) {
-                            projectTops[p] = { name: u.username, time: u.projects[p] };
-                        }
-                    }
-                }
-            });
-            
-            lbContent.innerHTML = '';
-            for (let p in projectTops) {
-                if (p === 'Home') continue;
-                lbContent.innerHTML += `
-                    <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-                        <span style="font-weight: bold;">${p}</span>
-                        <span><span style="color: #3b82f6; font-weight: bold;">${projectTops[p].name}</span> <span style="opacity:0.8; margin-left:8px; font-family: monospace;">${formatTime(projectTops[p].time)}</span></span>
-                    </div>
-                `;
-            }
-            if (lbContent.innerHTML === '') lbContent.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 2rem;">No project data yet.</div>';
-            
-        } else {
             lbContent.innerHTML = '';
             users.forEach((u, index) => {
-                let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `<span style="opacity:0.5">#${index+1}</span>`;
+                let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `<span style="opacity:0.5; font-size: 0.9rem;">#${index+1}</span>`;
+                let isMe = u.username === username;
+                let bg = isMe ? 'rgba(59, 130, 246, 0.2)' : (index < 3 ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255,255,255,0.02)');
+                let border = isMe ? '1px solid #3b82f6' : (index < 3 ? '1px solid rgba(59, 130, 246, 0.2)' : '1px solid transparent');
+                
                 lbContent.innerHTML += `
-                    <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${index < 3 ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.05)'}; border: 1px solid ${index < 3 ? 'rgba(59, 130, 246, 0.3)' : 'transparent'}; border-radius: 6px; align-items: center;">
-                        <span style="font-weight: bold; width: 40px;">${medal}</span>
-                        <span style="flex-grow: 1; margin-left: 10px; font-weight: ${index < 3 ? 'bold': 'normal'}">${u.username}</span>
+                    <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; border: ${border}; border-radius: 6px; align-items: center; margin-bottom: 4px;">
+                        <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
+                        <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe || index < 3 ? 'bold': 'normal'}">${u.username} ${isMe ? '<span style="color:#3b82f6; font-size: 0.8rem; margin-left: 4px;">(You)</span>' : ''}</span>
                         <span style="opacity: 0.8; font-family: monospace;">${formatTime(u.totalTime)}</span>
                     </div>
                 `;
             });
             if (users.length === 0) lbContent.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 2rem;">No users yet.</div>';
+
+        } else if (mode === 'projects') {
+            if (!cachedUsers) {
+                const q = query(collection(db, 'users'), orderBy('totalTime', 'desc'), limit(200));
+                const snap = await getDocs(q);
+                cachedUsers = [];
+                snap.forEach(d => cachedUsers.push(d.data()));
+            }
+
+            let projectNames = new Set();
+            cachedUsers.forEach(u => {
+                if (u.projects) {
+                    Object.keys(u.projects).forEach(p => {
+                        if (p !== 'Home') projectNames.add(p);
+                    });
+                }
+            });
+            let pList = Array.from(projectNames).sort();
+
+            if (pList.length === 0) {
+                lbContent.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 2rem;">No project data yet. Play a game first!</div>';
+                return;
+            }
+
+            let activeProj = subProject || pList[0];
+
+            let tabsHtml = `<div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); scrollbar-width: none;">`;
+            pList.forEach(p => {
+                let isActive = p === activeProj;
+                tabsHtml += `<button onclick="window.loadSubProject('${p.replace(/'/g, "\\'")}')" style="white-space: nowrap; padding: 0.4rem 0.8rem; border-radius: 20px; border: 1px solid ${isActive ? '#3b82f6' : 'rgba(255,255,255,0.2)'}; background: ${isActive ? '#3b82f6' : 'transparent'}; color: ${isActive ? 'white' : 'var(--text-color)'}; cursor: pointer; font-family: inherit; transition: all 0.2s;">${p}</button>`;
+            });
+            tabsHtml += `</div><div id="sub-lb-content"><div style="text-align:center;opacity:0.5;">Loading top 100 for ${activeProj}...</div></div>`;
+            
+            lbContent.innerHTML = tabsHtml;
+
+            try {
+                const qp = query(collection(db, 'users'), orderBy(`projects.${activeProj}`, 'desc'), limit(100));
+                const snapP = await getDocs(qp);
+                let pUsers = [];
+                snapP.forEach(d => pUsers.push(d.data()));
+
+                let subContent = document.getElementById('sub-lb-content');
+                subContent.innerHTML = '';
+                pUsers.forEach((u, index) => {
+                    let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `<span style="opacity:0.5; font-size: 0.9rem;">#${index+1}</span>`;
+                    let isMe = u.username === username;
+                    let bg = isMe ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.02)';
+                    let border = isMe ? '1px solid #3b82f6' : '1px solid transparent';
+                    let timeVal = u.projects[activeProj];
+                    
+                    subContent.innerHTML += `
+                        <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; border: ${border}; border-radius: 6px; align-items: center; margin-bottom: 4px;">
+                            <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
+                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${u.username} ${isMe ? '<span style="color:#3b82f6; font-size: 0.8rem; margin-left: 4px;">(You)</span>' : ''}</span>
+                            <span style="opacity: 0.8; font-family: monospace;">${formatTime(timeVal)}</span>
+                        </div>
+                    `;
+                });
+                if (pUsers.length === 0) subContent.innerHTML = '<div style="text-align:center; opacity:0.5;">No data for this project.</div>';
+
+            } catch(e) {
+                document.getElementById('sub-lb-content').innerHTML = `<div style="text-align:center; color:#ef4444; padding: 1rem;">Firestore requires an automatic index for this project. Check your console.</div>`;
+                console.error(e);
+            }
         }
 
     } catch (e) {
-        lbContent.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Error loading leaderboard. Ensure Firestore is set up correctly in Test Mode.</div>';
+        lbContent.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Error loading leaderboard.</div>';
         console.error(e);
     }
 }
+
+// Global exposure for the onclick handler
+window.loadSubProject = function(p) {
+    loadLeaderboard('projects', p);
+};
 
 if (isHome) {
     const tabOverall = document.getElementById('tab-overall');
