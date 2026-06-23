@@ -136,7 +136,7 @@ if (username) {
 
 // --- Floating Rank UI ---
 async function renderFloatingRank() {
-    if (!username) return;
+    if (!username || !isHome) return;
 
     let rankDiv = document.getElementById('hyper-floating-rank');
     if (!rankDiv) {
