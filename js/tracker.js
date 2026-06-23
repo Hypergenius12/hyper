@@ -212,10 +212,10 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
 
             let activeProj = subProject || pList[0];
 
-            let tabsHtml = `<div style="display: flex; gap: 0; overflow-x: auto; margin-bottom: 1rem; border-bottom: 2px solid #333; scrollbar-width: none; font-family: monospace; text-transform: uppercase;">`;
+            let tabsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #333; font-family: monospace; text-transform: uppercase;">`;
             pList.forEach(p => {
                 let isActive = p === activeProj;
-                tabsHtml += `<button onclick="window.loadSubProject('${p.replace(/'/g, "\\'")}')" style="white-space: nowrap; padding: 0.5rem 1rem; border: none; border-right: 1px solid #333; background: ${isActive ? '#fff' : 'transparent'}; color: ${isActive ? '#000' : 'var(--text-color)'}; cursor: pointer; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${getDisplayProjectName(p)}</button>`;
+                tabsHtml += `<button onclick="window.loadSubProject('${p.replace(/'/g, "\\'")}')" style="white-space: nowrap; padding: 0.5rem 1rem; border: 1px solid ${isActive ? '#fff' : '#333'}; background: ${isActive ? '#fff' : 'transparent'}; color: ${isActive ? '#000' : 'var(--text-color)'}; cursor: pointer; font-family: monospace; font-weight: bold; letter-spacing: 1px;">${getDisplayProjectName(p)}</button>`;
             });
             tabsHtml += `</div><div id="sub-lb-content"><div style="text-align:center; opacity:0.5; font-family: monospace;">LOADING ${getDisplayProjectName(activeProj)}...</div></div>`;
             
