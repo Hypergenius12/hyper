@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Sound Designer</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- LameJS for MP3 export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-panel">
+            <div class="logo">
+                <i class="fa-solid fa-wave-square"></i> Nexus Sound Designer v8
+            </div>
+            <div class="global-controls">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                    Theme:
+                    <input type="color" id="theme-color-picker" value="#00c3ff" style="border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; padding: 0; background: transparent;">
+                </label>
+                <button class="btn" id="btn-tutorial"><i class="fa-solid fa-circle-question"></i> Tutorial</button>
+                <button class="btn primary" id="btn-play"><i class="fa-solid fa-play"></i> Play</button>
+                <button class="btn" id="btn-stop"><i class="fa-solid fa-stop"></i> Stop</button>
+                <button class="btn" id="btn-add-track"><i class="fa-solid fa-plus"></i> Add Layer</button>
+                <button class="btn" id="btn-reset-global" style="color: var(--danger);"><i class="fa-solid fa-rotate-right"></i> Reset Settings</button>
+                <button class="btn" id="btn-import"><i class="fa-solid fa-file-import"></i> Import</button>
+                <input type="file" id="import-file" accept="audio/*" style="display: none;">
+                <button class="btn" id="btn-save-preset"><i class="fa-solid fa-save"></i> Save Preset</button>
+                <button class="btn" id="btn-load-preset"><i class="fa-solid fa-folder-open"></i> Load Preset</button>
+            </div>
+            <div class="export-controls">
+                <button class="btn" id="btn-export-wav">Export WAV</button>
+                <button class="btn primary" id="btn-export-mp3">Export MP3</button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="workspace">
+            <!-- Left Panel: Layers / Tracks -->
+            <section class="tracks-panel glass-panel">
+                <div class="panel-header">
+                    <h2>Layers</h2>
+                    <button id="btn-add-track-side" class="btn small"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div id="tracks-container" class="tracks-list">
+                    <!-- Tracks will be injected here via JS -->
+                </div>
+            </section>
+
+            <!-- Center Panel: Master Visualizer & Selected Track Editor -->
+            <section class="center-panel">
+                <div class="visualizer-container glass-panel" style="position: relative;">
+                    <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 0.5rem;">
+                        <button id="btn-visualizer-settings" class="btn small" title="Settings"><i class="fa-solid fa-gear"></i></button>
+                        <button id="btn-toggle-visualizer" class="btn small"><i class="fa-solid fa-chart-bar"></i> Toggle View</button>
+                    </div>
+                    
+                    <!-- Visualizer Settings Panel (Hidden by default) -->
+                    <div id="visualizer-settings-panel" class="glass-panel" style="display: none; position: absolute; top: 45px; right: 10px; z-index: 20; padding: 1.2rem; flex-direction: column; gap: 1rem; min-width: 220px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Vis Settings</h4>
+                            <button id="btn-close-vis-settings" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem;"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        
+                        <label style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                            <div style="display: flex; justify-content: space-between;"><span>Motion Blur</span><span id="vis-blur-val" style="color: var(--accent);">0%</span></div>
+                            <input type="range" class="control-input" id="vis-blur" min="0" max="95" value="0">
+                        </label>
+                        
+                        <label style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                            <div style="display: flex; justify-content: space-between;"><span>Smoothing</span><span id="vis-smooth-val" style="color: var(--accent);">80%</span></div>
+                            <input type="range" class="control-input" id="vis-smooth" min="0" max="99" value="80">
+                        </label>
+                        
+                        <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="vis-freeze" style="accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer;"> 
+                            <span style="user-select: none;">Freeze Visualizer</span>
+                        </label>
+                        
+                        <label style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                            <span>Color Theme</span>
+                            <select id="vis-color-mode" class="control-input" style="width: 100%;">
+                                <option value="accent">Accent Color</option>
+                                <option value="rainbow">Rainbow</option>
+                            </select>
+                        </label>
+                    </div>
+                    
+                    <canvas id="master-visualizer"></canvas>
+                </div>
+                <div class="editor-container glass-panel" id="editor-container">
+                    <div class="empty-state" id="editor-empty-state">
+                        <i class="fa-solid fa-sliders"></i>
+                        <p>Select a layer to edit</p>
+                    </div>
+                    <!-- Editor content injected here -->
+                </div>
+                <div class="keyboard-guide glass-panel" style="padding: 1rem; margin-top: 1rem; border-radius: var(--radius-lg); display: flex; justify-content: space-between; align-items: center;">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;"><i class="fa-solid fa-keyboard"></i> <strong>Keyboard:</strong> A,W,S,E,D,F,T,G,Y,H,U,J,K (C4 to C5).</p>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+                            Sequencer BPM:
+                            <input type="range" id="arp-bpm" min="60" max="240" value="120" style="width: 80px;">
+                            <span id="arp-bpm-val">120</span>
+                        </label>
+                        <button class="btn small" id="btn-toggle-sequencer" title="Toggle Step Sequencer"><i class="fa-solid fa-table-cells"></i> Sequencer</button>
+                    </div>
+                </div>
+                
+                <!-- Sequencer Panel -->
+                <div id="sequencer-panel-container" style="display: none; transition: max-height 0.3s ease-in-out;">
+                    <div class="sequencer-panel glass-panel" style="margin-top: 1rem; padding: 1rem; border-radius: var(--radius-lg);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;"><i class="fa-solid fa-table-cells"></i> Step Sequencer</h4>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn small" id="btn-seq-play"><i class="fa-solid fa-play"></i></button>
+                                <button class="btn small" id="btn-seq-clear"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div id="sequencer-grid" style="display: grid; grid-template-columns: auto repeat(16, 1fr); gap: 2px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px; overflow-x: auto;">
+                            <!-- Generated via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Waveform Drawer tool -->
+            <section class="tools-panel glass-panel">
+                <div class="panel-header">
+                    <h2>Wave Editor</h2>
+                </div>
+                <div class="drawer-container">
+                    <canvas id="drawer-canvas" width="300" height="200"></canvas>
+                    <div class="drawer-controls">
+                        <button id="btn-drawer-clear" class="btn small">Clear</button>
+                        <button id="btn-drawer-apply" class="btn small primary">Apply</button>
+                        <button id="btn-drawer-smooth" class="btn small">Smooth</button>
+                        <button id="btn-drawer-invert" class="btn small">Invert</button>
+                        <button id="btn-drawer-noise" class="btn small">Noise</button>
+                        <button id="btn-drawer-normalize" class="btn small">Normalize</button>
+                        <select id="drawer-harmonics">
+                            <option value="16">16 Harmonics (Lo-Fi)</option>
+                            <option value="32">32 Harmonics</option>
+                            <option value="64" selected>64 Harmonics (Standard)</option>
+                            <option value="128">128 Harmonics</option>
+                            <option value="256">256 Harmonics (Hi-Fi)</option>
+                        </select>
+                    </div>
+                    <div class="preset-waves">
+                        <button class="btn icon-btn" data-wave="sine" title="Sine"><i class="fa-solid fa-wave-square"></i></button>
+                        <button class="btn icon-btn" data-wave="square" title="Square"><i class="fa-solid fa-square"></i></button>
+                        <button class="btn icon-btn" data-wave="sawtooth" title="Sawtooth"><i class="fa-solid fa-caret-up"></i></button>
+                        <button class="btn icon-btn" data-wave="triangle" title="Triangle"><i class="fa-solid fa-play fa-rotate-270"></i></button>
+                        <button id="btn-drawer-mic" class="btn icon-btn" style="color: var(--danger);" title="Record Voice to Waveform"><i class="fa-solid fa-microphone"></i></button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals & Overlays -->
+    <div id="loading-overlay" class="overlay hidden">
+        <div class="spinner"></div>
+        <p id="loading-text">Exporting...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/audio-engine.js?v=7"></script>
+    <script src="js/visualizer.js?v=7"></script>
+    <script src="js/cables.js?v=7"></script>
+    <script src="js/track.js?v=7"></script>
+    <script src="js/wave-drawer.js?v=7"></script>
+    <script src="js/export.js?v=7"></script>
+    <script src="js/tutorial.js?v=7"></script>
+    <script src="js/app.js?v=7"></script>
+</body>
+</html>
