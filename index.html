@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>hypergenius 12 - Projects</title>
-    <link rel="icon" type="image/png" href="pixelsheep.png">
+    <link rel="icon" type="image/png" href="favicon.png">
     <style>
         :root {
             --bg-color: #f4f4f5;
@@ -336,7 +336,7 @@
 <div class="header-bar">
     <img src="purple.gif" alt="Logo" style="height: 80px; margin-right: auto;">
     <button class="share-btn" onclick="openBugReportModal()" style="margin-right: 10px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">Report Bug</button>
-    <button class="share-btn" onclick="shareSite()">Share Game</button>
+    <button class="share-btn" onclick="shareSite()">Share</button>
 </div>
 
 <div class="container">
@@ -437,7 +437,8 @@
 </div>
 
 <footer class="footer">
-    &copy; 2026 hypergenius 12. All rights reserved.
+    &copy; 2026 hypergenius 12. All rights reserved.<br>
+    <span style="opacity: 0.5; font-size: 0.8rem;">v1.2.5</span>
 </footer>
 
 <!-- Three.js for WebGL Parallax Background -->
@@ -591,29 +592,15 @@
 </script>
 <!-- Bug Report Modal -->
 <div class="modal-overlay" id="bug-modal" onclick="closeBugReportModal(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <h2>Report a Bug</h2>
-            <button class="close-modal" onclick="closeBugReportModal()">&times;</button>
-        </div>
+    <div class="modal-content" style="padding: 1.5rem; border-radius: 12px; max-width: 320px; position: relative;" onclick="event.stopPropagation()">
+        <button class="close-modal" onclick="closeBugReportModal()" style="position: absolute; top: 10px; right: 15px; font-size: 1.5rem;">&times;</button>
         
-        <div data-fs-success class="fs-message" style="display:none; color: #22c55e;">Thank you! Your bug report has been submitted.</div>
-        <div data-fs-error class="fs-message" style="display:none; color: #ef4444;">There was an error submitting the form.</div>
+        <div data-fs-success class="fs-message" style="display:none; color: #22c55e; padding: 1rem 0; font-weight: bold;">Sent! Thanks.</div>
+        <div data-fs-error class="fs-message" style="display:none; color: #ef4444; padding: 1rem 0;">Error sending.</div>
 
-        <form id="bug-form">
-            <div class="form-group">
-                <label for="email">Email (Optional)</label>
-                <input type="email" id="email" name="email" data-fs-field />
-                <span data-fs-error="email" class="fs-message"></span>
-            </div>
-
-            <div class="form-group">
-                <label for="message">Describe the bug or error</label>
-                <textarea id="message" name="message" required data-fs-field></textarea>
-                <span data-fs-error="message" class="fs-message"></span>
-            </div>
-
-            <button type="submit" class="submit-btn" data-fs-submit-btn>Send Report</button>
+        <form id="bug-form" style="margin-top: 1rem;">
+            <textarea id="message" name="message" required data-fs-field placeholder="Describe the bug or error..." style="width: 100%; box-sizing: border-box; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: inherit; resize: none; height: 100px; margin-bottom: 0.5rem; outline: none;"></textarea>
+            <button type="submit" class="submit-btn" data-fs-submit-btn style="padding: 0.6rem; background: #3b82f6;">Send</button>
         </form>
     </div>
 </div>
@@ -621,6 +608,10 @@
 <script>
     function openBugReportModal() {
         document.getElementById('bug-modal').classList.add('active');
+        document.getElementById('message').value = '';
+        document.getElementById('bug-form').style.display = 'block';
+        document.querySelector('[data-fs-success]').style.display = 'none';
+        setTimeout(() => document.getElementById('message').focus(), 100);
     }
     function closeBugReportModal(e) {
         if (e && e.target !== document.getElementById('bug-modal')) return;
@@ -630,6 +621,19 @@
     // Formspree init
     window.formspree = window.formspree || function () { (formspree.q = formspree.q || []).push(arguments); };
     formspree('initForm', { formElement: '#bug-form', formId: 'mnjkqkya' });
+
+    // Close when success message appears
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((m) => {
+            if (m.target.style.display !== 'none') {
+                document.getElementById('bug-form').style.display = 'none';
+                setTimeout(() => {
+                    closeBugReportModal();
+                }, 1000);
+            }
+        });
+    });
+    observer.observe(document.querySelector('[data-fs-success]'), { attributes: true, attributeFilter: ['style'] });
 </script>
 <script src="https://unpkg.com/@formspree/ajax@1" defer></script>
 </body>
