@@ -30,7 +30,7 @@ window.initXpTour = function() {
     if (!window.RufflePlayer.newest) {
         content.innerHTML = '<div style="color:white; text-align:center; padding-top:100px; font-family:Tahoma; font-size:14px;">Loading Windows XP Tour...</div>';
         var script = document.createElement('script');
-        script.src = 'https://unpkg.com/@ruffle-rs/ruffle@0.1.0/ruffle.js';
+        script.src = 'https://unpkg.com/@ruffle-rs/ruffle@0.3.0/ruffle.js';
         script.onload = function() {
             console.log('[XP Tour] Ruffle script loaded');
             setTimeout(function() { startTour(content, swfUrl, swfBase); }, 500);
