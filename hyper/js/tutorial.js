@@ -138,7 +138,7 @@ class Tutorial {
             }
         }
 
-        this.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        this.activeElement.scrollIntoView({ behavior: 'auto', block: 'center' });
         this.activeElement.classList.add('tutorial-highlight');
         
         setTimeout(() => {
