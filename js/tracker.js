@@ -23,16 +23,47 @@ function getProjectName() {
     return decodeURIComponent(parts[parts.length - 2]) || 'Home';
 }
 
+function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+        let date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+
+function getCookie(name) {
+    let nameEQ = name + "=";
+    let ca = document.cookie.split(';');
+    for(let i=0;i < ca.length;i++) {
+        let c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
+
 const isHome = getProjectName() === 'Home';
 const projectName = getProjectName();
 
 // --- Username System ---
-let username = localStorage.getItem('hyper_username');
+let username = localStorage.getItem('hyper_username') || getCookie('hyper_username');
+
+if (username) {
+    // Sync cookie and localstorage so it's super resilient
+    localStorage.setItem('hyper_username', username);
+    setCookie('hyper_username', username, 3650); // 10 years
+}
 
 if (isHome) {
     const modal = document.getElementById('username-modal');
     const form = document.getElementById('username-form');
     const errorMsg = document.getElementById('username-error');
+
+    // Remove the "Skip for now" button so they are forced to pick one
+    const skipBtn = document.querySelector('#username-modal button[type="button"]');
+    if (skipBtn) skipBtn.remove();
 
     if (!username) {
         // Show modal on first visit
@@ -48,26 +79,39 @@ if (isHome) {
             const btn = document.getElementById('username-submit');
             btn.innerText = 'Checking...';
             btn.disabled = true;
+            errorMsg.style.display = 'none';
 
-            const userRef = doc(db, 'users', input.toLowerCase());
-            const userSnap = await getDoc(userRef);
+            try {
+                const userRef = doc(db, 'users', input.toLowerCase());
+                const userSnap = await getDoc(userRef);
 
-            if (userSnap.exists()) {
+                if (userSnap.exists()) {
+                    errorMsg.innerText = 'That name is taken!';
+                    errorMsg.style.display = 'block';
+                    btn.innerText = 'Claim Name';
+                    btn.disabled = false;
+                } else {
+                    // Register
+                    await setDoc(userRef, {
+                        username: input,
+                        totalTime: 0,
+                        projects: {}
+                    });
+                    
+                    // Make it super persistent
+                    localStorage.setItem('hyper_username', input.toLowerCase());
+                    setCookie('hyper_username', input.toLowerCase(), 3650);
+                    username = input.toLowerCase();
+                    
+                    modal.classList.remove('active');
+                    loadLeaderboard('overall'); // refresh leaderboard
+                }
+            } catch (err) {
+                console.error("Firebase Auth/DB Error:", err);
+                errorMsg.innerText = 'Database error. Did you enable Firestore Test Mode?';
                 errorMsg.style.display = 'block';
                 btn.innerText = 'Claim Name';
                 btn.disabled = false;
-            } else {
-                // Register
-                await setDoc(userRef, {
-                    username: input,
-                    totalTime: 0,
-                    projects: {}
-                });
-                localStorage.setItem('hyper_username', input.toLowerCase());
-                localStorage.setItem('hyper_display_name', input);
-                username = input.toLowerCase();
-                modal.classList.remove('active');
-                loadLeaderboard('overall'); // refresh leaderboard
             }
         });
     }
