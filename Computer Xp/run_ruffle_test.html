@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div id="xptour-content" style="width: 640px; height: 480px;"></div>
+<script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+<script>
+window.onload = function() {
+    let content = document.getElementById('xptour-content');
+    window.RufflePlayer = window.RufflePlayer || {};
+    window.RufflePlayer.config = { "splashScreen": false };
+    const ruffle = window.RufflePlayer.newest();
+    window.rufflePlayer = ruffle.createPlayer();
+    window.rufflePlayer.style.width = '100%';
+    window.rufflePlayer.style.height = '100%';
+    content.appendChild(window.rufflePlayer);
+    window.rufflePlayer.load({
+        url: "xp tour/A-tour.swf",
+        base: "xp tour/",
+        allowScriptAccess: true
+    });
+};
+</script>
+</body>
+</html>
