@@ -134,48 +134,6 @@ if (username) {
     }, 15000);
 }
 
-// --- Floating Rank UI ---
-async function renderFloatingRank() {
-    if (!username || !isHome) return;
-
-    let rankDiv = document.getElementById('hyper-floating-rank');
-    if (!rankDiv) {
-        rankDiv = document.createElement('div');
-        rankDiv.id = 'hyper-floating-rank';
-        rankDiv.style.cssText = 'position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; color: white; font-family: sans-serif; font-size: 14px; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease;';
-        document.body.appendChild(rankDiv);
-    }
-
-    try {
-        const userRef = doc(db, 'users', username);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) return;
-        const userData = userSnap.data();
-
-        let rankTitle = isHome ? "Global Rank" : `${projectName} Rank`;
-        let userTime = isHome ? (userData.totalTime || 0) : ((userData.projects || {})[projectName] || 0);
-
-        let q;
-        if (isHome) {
-            q = query(collection(db, 'users'), where("totalTime", ">", userTime));
-        } else {
-            q = query(collection(db, 'users'), where(`projects.${projectName}`, ">", userTime));
-        }
-
-        const snapshot = await getCountFromServer(q);
-        const rank = snapshot.data().count + 1;
-
-        rankDiv.innerHTML = `<span style="opacity:0.7">${rankTitle}</span> <strong style="color: #3b82f6;">#${rank}</strong> <span style="opacity:0.5; margin-left:4px; font-family: monospace;">${formatTime(userTime)}</span>`;
-    } catch (err) {
-        console.error("Rank fetch error", err);
-    }
-}
-
-// Update floating rank periodically
-if (username) {
-    setTimeout(renderFloatingRank, 1000);
-    setInterval(renderFloatingRank, 25000);
-}
 
 // --- Leaderboard Rendering ---
 let cachedUsers = null;
