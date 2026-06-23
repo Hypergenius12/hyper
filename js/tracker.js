@@ -154,7 +154,7 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
             lbContent.innerHTML = '';
             users.forEach((u, index) => {
                 let medal = index === 0 ? '[1]' : index === 1 ? '[2]' : index === 2 ? '[3]' : `[${index+1}]`;
-                let isMe = u.username === username;
+                let isMe = username && u.username.toLowerCase() === username.toLowerCase();
                 let bg = isMe ? '#22c55e' : 'transparent';
                 let color = isMe ? '#000' : 'inherit';
                 let border = '1px solid #333';
@@ -213,7 +213,7 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                 subContent.innerHTML = '';
                 pUsers.forEach((u, index) => {
                     let medal = index === 0 ? '[1]' : index === 1 ? '[2]' : index === 2 ? '[3]' : `[${index+1}]`;
-                    let isMe = u.username === username;
+                    let isMe = username && u.username.toLowerCase() === username.toLowerCase();
                     let bg = isMe ? '#22c55e' : 'transparent';
                     let color = isMe ? '#000' : 'inherit';
                     let border = '1px solid #333';
