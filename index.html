@@ -441,7 +441,7 @@
 
 <footer class="footer">
     &copy; 2026 hypergenius 12. All rights reserved.<br>
-    <span style="opacity: 0.5; font-size: 0.8rem;">v1.2.7</span>
+    <span style="opacity: 0.5; font-size: 0.8rem;">v1.2.8</span>
 </footer>
 
 <!-- Three.js for WebGL Parallax Background -->
@@ -463,10 +463,15 @@
     const geometry = new THREE.BufferGeometry();
     const particlesCount = 2000;
     const posArray = new Float32Array(particlesCount * 3);
+    const originalPosArray = new Float32Array(particlesCount * 3);
+    const velocities = new Float32Array(particlesCount * 3);
 
     for(let i = 0; i < particlesCount * 3; i++) {
         // distribute particles around space
-        posArray[i] = (Math.random() - 0.5) * 15;
+        const val = (Math.random() - 0.5) * 15;
+        posArray[i] = val;
+        originalPosArray[i] = val;
+        velocities[i] = 0;
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
@@ -519,6 +524,20 @@
         
         const elapsedTime = clock.getElapsedTime();
 
+        // Spring physics for scatter
+        const positions = geometry.attributes.position.array;
+        let needsUpdate = false;
+        for(let i = 0; i < particlesCount * 3; i++) {
+            if (Math.abs(velocities[i]) > 0.0001 || Math.abs(positions[i] - originalPosArray[i]) > 0.0001) {
+                const force = (originalPosArray[i] - positions[i]) * 0.05;
+                velocities[i] += force;
+                velocities[i] *= 0.85; // friction
+                positions[i] += velocities[i];
+                needsUpdate = true;
+            }
+        }
+        if (needsUpdate) geometry.attributes.position.needsUpdate = true;
+
         // Base slow rotation
         particlesMesh.rotation.y = elapsedTime * 0.05;
         particlesMesh.rotation.x = elapsedTime * 0.02;
@@ -554,13 +573,51 @@
             });
         }
     }
+    // === UI Sound Effects ===
+    let audioCtx;
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function playPop(frequency = 400, duration = 0.05, vol = 0.1) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(frequency / 2, audioCtx.currentTime + duration);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    document.addEventListener('mousedown', (e) => {
+        initAudio(); // initialize on first click anywhere
+        // Scatter stars on bg click
+        if (e.target.tagName === 'CANVAS' || e.target.className === 'container') {
+            playPop(150, 0.3, 0.15); // deeper boom
+            for(let i = 0; i < particlesCount * 3; i++) {
+                velocities[i] = (Math.random() - 0.5) * 1.5;
+            }
+        }
+    });
+
     // === 3D Interactive Mouse Hover Cards ===
     window.addEventListener('load', () => {
         const cards = document.querySelectorAll('.project-card');
         
         cards.forEach(card => {
             card.addEventListener('mouseenter', () => {
+                initAudio();
+                playPop(600, 0.05, 0.05); // high pop
                 card.style.transition = 'none'; // Disable transition for instant mouse tracking
+            });
+            
+            card.addEventListener('mousedown', () => {
+                playPop(300, 0.1, 0.1); // low pop
             });
             
             card.addEventListener('mousemove', e => {
