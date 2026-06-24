@@ -196,11 +196,11 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                 snap.forEach(d => cachedUsers.push(d.data()));
             }
 
-            let projectNames = new Set();
+            let projectNames = new Set(Object.keys(PROJECT_NAMES).filter(k => k !== 'paths.html'));
             cachedUsers.forEach(u => {
                 if (u.projects) {
                     Object.keys(u.projects).forEach(p => {
-                        if (p !== 'Home') projectNames.add(p);
+                        if (p !== 'Home' && p !== 'paths.html') projectNames.add(p);
                     });
                 }
             });
