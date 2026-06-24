@@ -473,14 +473,24 @@
 
 <footer class="footer">
     &copy; 2026 hypergenius 12. All rights reserved.<br>
-    <span style="opacity: 0.5; font-size: 0.8rem;">v1.3.15</span>
+    <span style="opacity: 0.5; font-size: 0.8rem;">v1.3.16</span>
 </footer>
 
 <!-- Three.js for WebGL Parallax Background -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 <script>
-    // Set up WebGL 3D parallax scene
-    const canvas = document.getElementById('bg-canvas');
+    function isWebGLAvailable() {
+        try {
+            const testCanvas = document.createElement('canvas');
+            return !!(window.WebGLRenderingContext && (testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl')));
+        } catch (e) {
+            return false;
+        }
+    }
+
+    if (isWebGLAvailable()) {
+        // Set up WebGL 3D parallax scene
+        const canvas = document.getElementById('bg-canvas');
     const scene = new THREE.Scene();
     
     // Check if dark mode to set background and particle colors
@@ -604,6 +614,10 @@
             }
         }
     });
+    } else {
+        // Fallback for browsers without WebGL
+        document.getElementById('bg-canvas').style.display = 'none';
+    }
 
     // === 3D Interactive Mouse Hover Cards ===
     window.addEventListener('load', () => {
