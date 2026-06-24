@@ -96,10 +96,10 @@
             background-color: #3b82f6;
             color: white;
             border: none;
-            padding: 0.6rem 1.2rem;
+            padding: 0.4rem 1rem;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             cursor: pointer;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             transition: background-color 0.2s;
@@ -348,8 +348,11 @@
 
 <div class="header-bar">
     <img src="purple.gif" alt="Timmy the Sheep" title="Timmy the Sheep" style="height: 100px; margin-right: auto;">
-    <button class="share-btn" onclick="openBugReportModal()" style="margin-right: 10px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">Report Bug</button>
-    <button class="share-btn" onclick="shareSite(this)">Share</button>
+    <div style="position: absolute; top: 20px; right: 20px; z-index: 20; display: flex;">
+        <button class="share-btn" onclick="openBugReportModal()" style="margin-right: 10px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">Report Bug</button>
+        <button class="share-btn" onclick="openFeedbackModal()" style="margin-right: 10px; background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #22c55e;">Submit Feedback</button>
+        <button class="share-btn" onclick="shareSite(this)">Share</button>
+    </div>
 </div>
 
 <div class="container">
@@ -473,7 +476,7 @@
 
 <footer class="footer">
     &copy; 2026 hypergenius 12. All rights reserved.<br>
-    <span style="opacity: 0.5; font-size: 0.8rem;">v1.3.17</span>
+    <span style="opacity: 0.5; font-size: 0.8rem;">v1.3.18</span>
 </footer>
 
 <!-- Three.js for WebGL Parallax Background -->
@@ -673,12 +676,27 @@
     </div>
 </div>
 
+<!-- Feedback Modal -->
+<div class="modal-overlay" id="feedback-modal" onclick="closeFeedbackModal(event)">
+    <div class="modal-content" style="padding: 1.5rem; border-radius: 12px; max-width: 320px; position: relative;" onclick="event.stopPropagation()">
+        <button class="close-modal" onclick="closeFeedbackModal()" style="position: absolute; top: 10px; right: 15px; font-size: 1.5rem;">&times;</button>
+        
+        <div data-fs-success class="fs-message" id="feedback-success" style="display:none; color: #22c55e; padding: 1rem 0; font-weight: bold;">Feedback sent! Thanks.</div>
+        <div data-fs-error class="fs-message" id="feedback-error" style="display:none; color: #ef4444; padding: 1rem 0;">Error sending.</div>
+
+        <form id="feedback-form" style="margin-top: 1rem;">
+            <textarea id="feedback-message" name="message" required data-fs-field placeholder="What's your feedback?..." style="width: 100%; box-sizing: border-box; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: inherit; resize: none; height: 100px; margin-bottom: 0.5rem; outline: none;"></textarea>
+            <button type="submit" class="submit-btn" data-fs-submit-btn style="padding: 0.6rem; background: #22c55e; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">Send</button>
+        </form>
+    </div>
+</div>
+
 <script>
     function openBugReportModal() {
         document.getElementById('bug-modal').classList.add('active');
         document.getElementById('message').value = '';
         document.getElementById('bug-form').style.display = 'block';
-        document.querySelector('[data-fs-success]').style.display = 'none';
+        document.querySelector('#bug-modal [data-fs-success]').style.display = 'none';
         setTimeout(() => document.getElementById('message').focus(), 100);
     }
     function closeBugReportModal(e) {
@@ -686,16 +704,37 @@
         document.getElementById('bug-modal').classList.remove('active');
     }
 
+    function openFeedbackModal() {
+        document.getElementById('feedback-modal').classList.add('active');
+        document.getElementById('feedback-message').value = '';
+        document.getElementById('feedback-form').style.display = 'block';
+        document.getElementById('feedback-success').style.display = 'none';
+        setTimeout(() => document.getElementById('feedback-message').focus(), 100);
+    }
+    function closeFeedbackModal(e) {
+        if (e && e.target !== document.getElementById('feedback-modal')) return;
+        document.getElementById('feedback-modal').classList.remove('active');
+    }
+
     // Formspree init
     window.formspree = window.formspree || function () { (formspree.q = formspree.q || []).push(arguments); };
     formspree('initForm', { formElement: '#bug-form', formId: 'mnjkqkya' });
+    formspree('initForm', { formElement: '#feedback-form', formId: 'mqevarja' });
 
     // Close automatically after hitting send
     document.getElementById('bug-form').addEventListener('submit', function() {
         setTimeout(() => {
             document.getElementById('bug-form').style.display = 'none';
-            document.querySelector('[data-fs-success]').style.display = 'block';
+            document.querySelector('#bug-modal [data-fs-success]').style.display = 'block';
             setTimeout(closeBugReportModal, 1200);
+        }, 500);
+    });
+
+    document.getElementById('feedback-form').addEventListener('submit', function() {
+        setTimeout(() => {
+            document.getElementById('feedback-form').style.display = 'none';
+            document.getElementById('feedback-success').style.display = 'block';
+            setTimeout(closeFeedbackModal, 1200);
         }, 500);
     });
 </script>
