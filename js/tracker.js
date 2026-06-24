@@ -19,6 +19,7 @@ function getProjectName() {
     let path = window.location.pathname;
     if (path.endsWith('/')) path += 'index.html';
     const parts = path.split('/');
+    if (path.includes('paths.html')) return 'paths.html';
     if (parts.length <= 2 || (parts.length === 3 && parts[1] === '')) return 'Home';
     return decodeURIComponent(parts[parts.length - 2]) || 'Home';
 }
@@ -196,11 +197,11 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                 snap.forEach(d => cachedUsers.push(d.data()));
             }
 
-            let projectNames = new Set(Object.keys(PROJECT_NAMES).filter(k => k !== 'paths.html'));
+            let projectNames = new Set(Object.keys(PROJECT_NAMES).filter(k => k !== 'paths'));
             cachedUsers.forEach(u => {
                 if (u.projects) {
                     Object.keys(u.projects).forEach(p => {
-                        if (p !== 'Home' && p !== 'paths.html') projectNames.add(p);
+                        if (p !== 'Home' && p !== 'paths') projectNames.add(p);
                     });
                 }
             });
