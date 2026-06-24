@@ -7,14 +7,14 @@ async def take_screenshots():
         page = await browser.new_page()
         
         urls = [
-            ("http://localhost:8000/waveform%20editor/index.html", "screenshot_waveform.png")
+            ("http://localhost:8000/index.html", "screenshot_main.png")
         ]
         
         for url, filename in urls:
             try:
                 print(f"Loading {url}...")
-                await page.goto(url, wait_until="networkidle", timeout=15000)
-                await asyncio.sleep(2)  # extra wait for rendering
+                await page.goto(url, wait_until="load", timeout=15000)
+                await asyncio.sleep(3)  # wait for three.js and things to load
                 await page.screenshot(path=filename)
                 print(f"Saved {filename}")
             except Exception as e:
