@@ -1,7 +1,22 @@
 import { db } from './firebase-config.js';
 import { collection, doc, getDoc, setDoc, updateDoc, increment, query, orderBy, limit, getDocs, getCountFromServer, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// --- Helpers ---
+function sanitizeHTML(str) {
+    var temp = document.createElement('div');
+    temp.textContent = str;
+    return temp.innerHTML;
+}
+
+function censorName(str) {
+    const badWords = ['fuck', 'pussy', 'piss', 'shit', 'bitch', 'asshole', 'cunt', 'dick', 'cock', 'slut', 'whore', 'nigger', 'nigga', 'fag', 'faggot'];
+    let censored = str;
+    badWords.forEach(word => {
+        const regex = new RegExp(word, 'gi');
+        censored = censored.replace(regex, match => '*'.repeat(match.length));
+    });
+    return censored;
+}
+
 function formatTime(seconds) {
     if (!seconds) return "0s";
     const d = Math.floor(seconds / (3600*24));
@@ -92,9 +107,9 @@ if (isHome) {
     const form = document.getElementById('username-form');
     const errorMsg = document.getElementById('username-error');
 
-    // Remove the "Skip for now" button so they are forced to pick one
+    // Change "Skip for now" text to "Later" in case the HTML has it as Skip for now
     const skipBtn = document.querySelector('#username-modal button[type="button"]');
-    if (skipBtn) skipBtn.remove();
+    if (skipBtn) skipBtn.innerText = 'Later';
 
     if (!username) {
         // Show modal on first visit
@@ -183,8 +198,12 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
             cachedUsers = users;
 
             lbContent.innerHTML = '';
-            users.forEach((u, index) => {
-                let medal = index === 0 ? '[1]' : index === 1 ? '[2]' : index === 2 ? '[3]' : `[${index+1}]`;
+            let rank = 1;
+            users.forEach((u) => {
+                // Spoofing Protection: Ignore users with > 365 days of playtime
+                if (u.totalTime > 31536000) return;
+                
+                let medal = rank === 1 ? '[1]' : rank === 2 ? '[2]' : rank === 3 ? '[3]' : `[${rank}]`;
                 let isMe = username && u.username.toLowerCase() === username.toLowerCase();
                 let bg = isMe ? '#22c55e' : 'transparent';
                 let color = isMe ? '#000' : 'inherit';
@@ -193,10 +212,11 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                 lbContent.innerHTML += `
                     <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
                         <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
-                        <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${u.username} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
+                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${sanitizeHTML(censorName(u.username))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
                         <span style="font-family: monospace;">${formatTime(u.totalTime)}</span>
                     </div>
                 `;
+                rank++;
             });
             if (users.length === 0) lbContent.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 2rem;">No users yet.</div>';
 
@@ -248,21 +268,25 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
 
                 let subContent = document.getElementById('sub-lb-content');
                 subContent.innerHTML = '';
-                pUsers.forEach((u, index) => {
-                    let medal = index === 0 ? '[1]' : index === 1 ? '[2]' : index === 2 ? '[3]' : `[${index+1}]`;
+                let rank = 1;
+                pUsers.forEach((u) => {
+                    let timeVal = u.projects[activeProj];
+                    if (!timeVal || timeVal > 31536000) return; // Spoofing protection
+
+                    let medal = rank === 1 ? '[1]' : rank === 2 ? '[2]' : rank === 3 ? '[3]' : `[${rank}]`;
                     let isMe = username && u.username.toLowerCase() === username.toLowerCase();
                     let bg = isMe ? '#22c55e' : 'transparent';
                     let color = isMe ? '#000' : 'inherit';
                     let border = '1px solid #333';
-                    let timeVal = u.projects[activeProj];
                     
                     subContent.innerHTML += `
                         <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
                             <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
-                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${u.username} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
+                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${sanitizeHTML(censorName(u.username))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
                             <span style="font-family: monospace;">${formatTime(timeVal)}</span>
                         </div>
                     `;
+                    rank++;
                 });
                 if (pUsers.length === 0) subContent.innerHTML = '<div style="text-align:center; opacity:0.5;">No data for this project.</div>';
 

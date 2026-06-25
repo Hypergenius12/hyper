@@ -348,12 +348,21 @@
 
 <div class="header-bar">
     <img src="purple.gif" alt="Timmy the Sheep" title="Timmy the Sheep" style="height: 100px; margin-right: auto;">
-    <div style="position: absolute; top: 20px; right: 20px; z-index: 20; display: flex;">
+    <div style="position: absolute; top: 20px; right: 20px; z-index: 20; display: flex; align-items: center;">
+        <button class="share-btn" onclick="addBookmark()" style="margin-right: 10px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); color: #a855f7; padding: 0.2rem 0.5rem; font-size: 0.75rem;">Bookmark</button>
         <button class="share-btn" onclick="openBugReportModal()" style="margin-right: 10px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">Report Bug</button>
         <button class="share-btn" onclick="openFeedbackModal()" style="margin-right: 10px; background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #22c55e;">Submit Feedback</button>
         <button class="share-btn" onclick="shareSite(this)">Share</button>
     </div>
 </div>
+
+<script>
+    function addBookmark() {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 || navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+        const shortcut = isMac ? 'Cmd + D' : 'Ctrl + D';
+        alert(`To bookmark this page, please press ${shortcut} on your keyboard!`);
+    }
+</script>
 
 <div class="container">
     <h1>hypergenius 12</h1>
@@ -476,7 +485,7 @@
 
 <footer class="footer">
     &copy; 2026 hypergenius 12. All rights reserved.<br>
-    <span style="opacity: 0.5; font-size: 0.8rem;">v1.3.21</span>
+    <span style="opacity: 0.5; font-size: 0.8rem;">v1.3.25</span>
 </footer>
 
 <!-- Three.js for WebGL Parallax Background -->
@@ -496,9 +505,8 @@
         const canvas = document.getElementById('bg-canvas');
     const scene = new THREE.Scene();
     
-    // Check if dark mode to set background and particle colors
-    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    scene.background = new THREE.Color(isDark ? 0x09090b : 0xf4f4f5);
+    // Always use dark mode for the 3D scene to match the site's CSS
+    scene.background = new THREE.Color(0x09090b);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
@@ -523,7 +531,7 @@
     
     const material = new THREE.PointsMaterial({
         size: 0.02,
-        color: isDark ? 0xa1a1aa : 0x71717a,
+        color: 0xa1a1aa,
         transparent: true,
         opacity: 0.8
     });
@@ -670,7 +678,7 @@
         <div data-fs-error class="fs-message" style="display:none; color: #ef4444; padding: 1rem 0;">Error sending.</div>
 
         <form id="bug-form" style="margin-top: 1rem;">
-            <textarea id="message" name="message" required data-fs-field placeholder="Describe the bug or error..." style="width: 100%; box-sizing: border-box; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: inherit; resize: none; height: 100px; margin-bottom: 0.5rem; outline: none;"></textarea>
+            <textarea id="message" name="message" required data-fs-field placeholder="Describe the bug or error..." style="width: 100%; box-sizing: border-box; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: inherit; resize: vertical; min-height: 100px; max-height: 300px; margin-bottom: 0.5rem; outline: none;"></textarea>
             <button type="submit" class="submit-btn" data-fs-submit-btn style="padding: 0.6rem; background: #3b82f6;">Send</button>
         </form>
     </div>
@@ -685,7 +693,7 @@
         <div data-fs-error class="fs-message" id="feedback-error" style="display:none; color: #ef4444; padding: 1rem 0;">Error sending.</div>
 
         <form id="feedback-form" style="margin-top: 1rem;">
-            <textarea id="feedback-message" name="message" required data-fs-field placeholder="What's your feedback?..." style="width: 100%; box-sizing: border-box; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: inherit; resize: none; height: 100px; margin-bottom: 0.5rem; outline: none;"></textarea>
+            <textarea id="feedback-message" name="message" required data-fs-field placeholder="What's your feedback?..." style="width: 100%; box-sizing: border-box; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: inherit; resize: vertical; min-height: 100px; max-height: 300px; margin-bottom: 0.5rem; outline: none;"></textarea>
             <button type="submit" class="submit-btn" data-fs-submit-btn style="padding: 0.6rem; background: #22c55e; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">Send</button>
         </form>
     </div>
@@ -752,7 +760,7 @@
             
             <button type="submit" id="username-submit" style="width: 100%; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: inherit;">Claim Name</button>
             
-            <button type="button" onclick="document.getElementById('username-modal').classList.remove('active')" style="width: 100%; padding: 0.5rem; background: transparent; color: var(--text-color); border: none; font-size: 0.8rem; margin-top: 0.5rem; cursor: pointer; opacity: 0.5;">Skip for now</button>
+            <button type="button" onclick="document.getElementById('username-modal').classList.remove('active')" style="width: 100%; padding: 0.5rem; background: transparent; color: var(--text-color); border: none; font-size: 0.8rem; margin-top: 0.5rem; cursor: pointer; opacity: 0.5;">Later</button>
         </form>
     </div>
 </div>
