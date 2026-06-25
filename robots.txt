@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hypergenius12.github.io/hyper/sitemap.xml
