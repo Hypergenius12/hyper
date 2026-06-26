@@ -3852,6 +3852,19 @@ window.excelNew = function() {
     window.openNewAppInstance('excel-window', 'Microsoft Excel', 'Windows XP Icons/Graph View.png');
 };
 
+// ===== NOTEPAD WORD WRAP =====
+window.toggleWordWrap = function() {
+    var ta = document.getElementById('notepad-textarea');
+    if (!ta) return;
+    if (ta.style.whiteSpace === 'nowrap' || ta.style.whiteSpace === '') {
+        ta.style.whiteSpace = 'pre-wrap';
+        ta.style.overflowX = 'hidden';
+    } else {
+        ta.style.whiteSpace = 'nowrap';
+        ta.style.overflowX = 'auto';
+    }
+};
+
 // ===== NOTEPAD FONT DIALOG =====
 window.openNotepadFontDialog = function() {
     // Close existing if open
