@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>The Backrooms — Level 0</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div id="overlay">
+  <h1>The Backrooms</h1>
+  <div class="sub">LEVEL 0 &mdash; THE LOBBY</div>
+  <div class="cgrid">
+    <span class="k">W A S D</span><span>move</span>
+    <span class="k">Mouse</span><span>look</span>
+    <span class="k">Shift</span><span>sprint</span>
+    <span class="k">ESC</span><span>pause</span>
+  </div>
+  <button class="enter-btn" id="startBtn">ENTER THE BACKROOMS</button>
+  <p class="lore">
+    If you're not careful and you noclip out of reality in the wrong areas,
+    you'll end up in the Backrooms &mdash; where it smells of old moist carpet,
+    the mono-yellow walls stretch endlessly, and the fluorescent lights hum forever.
+    God save you if you hear something wandering around nearby,
+    because it sure as hell has heard you.
+  </p>
+</div>
+
+<div id="deathScreen" class="overlay-ui">
+  <h1 class="blood">YOU DIED</h1>
+  <p>The Backrooms claimed another.</p>
+  <button class="enter-btn" id="respawnBtn">TRY AGAIN</button>
+</div>
+
+<div id="flashOverlay"></div>
+<div id="jumpscareStatic"></div>
+
+<div id="pause">
+  <div class="pcard">
+    <h2>PAUSED</h2>
+    <h3>DISPLAY</h3>
+    <div class="srow"><span class="sl">Field of View</span>
+      <input type="range" id="sFov" min="60" max="110" value="82">
+      <span class="sv" id="vFov">82&deg;</span></div>
+    <div class="srow"><span class="sl">Fog Distance</span>
+      <input type="range" id="sFog" min="8" max="55" value="30">
+      <span class="sv" id="vFog">30m</span></div>
+    <h3>CONTROLS</h3>
+    <div class="srow"><span class="sl">Mouse Sensitivity</span>
+      <input type="range" id="sSens" min="1" max="20" value="5">
+      <span class="sv" id="vSens">5</span></div>
+    <h3>AUDIO</h3>
+    <div class="srow"><span class="sl">Master Volume</span>
+      <input type="range" id="sVol" min="0" max="100" value="85">
+      <span class="sv" id="vVol">85</span></div>
+    <h3>EFFECTS</h3>
+    <div class="trow"><span>Film Grain</span>
+      <label class="tog"><input type="checkbox" id="tGrain" checked><div class="tog-track"></div></label></div>
+    <div class="trow"><span>Vignette</span>
+      <label class="tog"><input type="checkbox" id="tVig" checked><div class="tog-track"></div></label></div>
+    <div class="trow"><span>Head Bobbing</span>
+      <label class="tog"><input type="checkbox" id="tBob" checked><div class="tog-track"></div></label></div>
+    <div class="pbtns">
+      <button class="pbtn pri" id="resumeBtn">RESUME</button>
+      <button class="pbtn" id="menuBtn">MAIN MENU</button>
+    </div>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="xhair"></div>
+  <div id="hud-tr">LEVEL 0</div>
+  <div id="hud-bl"><div>X <span id="cx">0.0</span></div><div>Z <span id="cz">0.0</span></div></div>
+</div>
+<div id="warn"></div>
+<div id="vignette"></div>
+<canvas id="grain" width="320" height="180"></canvas>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js"}}</script>
+<script type="module" src="main.js"></script>
+
+<!-- Tracker Scripts -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../js/tracker.js"></script>
+</body>
+</html>
