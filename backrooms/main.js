@@ -285,9 +285,6 @@ const {map: floorMap, rough: floorRough} = mkFloorTextures();
 const matW=new THREE.MeshLambertMaterial({map:realWallTex,side:THREE.DoubleSide});
 const matF=new THREE.MeshStandardMaterial({map:floorMap, roughnessMap:floorRough, metalness:0.2, color:0xffffff});
 const matC=new THREE.MeshLambertMaterial({map:mkCeil()});
-const matWHWall=new THREE.MeshLambertMaterial({color:0x040405, side:THREE.DoubleSide});
-const matWHFloor=new THREE.MeshStandardMaterial({color:0x060608, roughness: 0.9, metalness: 0.1});
-const matWHCeil=new THREE.MeshLambertMaterial({color:0x020202});
 const boxMat=new THREE.MeshLambertMaterial({map:mkCardboard()});
 const pipeMat=new THREE.MeshLambertMaterial({color:0x707058});
 const housingMat=new THREE.MeshLambertMaterial({color:0x555544});
@@ -295,12 +292,74 @@ const trimMat=new THREE.MeshLambertMaterial({color:0x090703});
 const cabinetMat=new THREE.MeshStandardMaterial({color:0x6a6c6e, roughness:0.35, metalness:0.75});
 const ventMat=new THREE.MeshLambertMaterial({color:0x050505});
 // Level -1 warehouse props
-const whPipeMat=new THREE.MeshStandardMaterial({color:0x2a2a2e, roughness:0.4, metalness:0.8});
-const whShelfMat=new THREE.MeshStandardMaterial({color:0x1a1a1e, roughness:0.5, metalness:0.7});
-const whCrateMat=new THREE.MeshLambertMaterial({color:0x0e0e10});
-const whPendantMat=new THREE.MeshStandardMaterial({color:0x1a1a20, roughness:0.3, metalness:0.9});
-const whPuddleMat=new THREE.MeshStandardMaterial({color:0x030308, roughness:0.05, metalness:0.9, transparent:true, opacity:0.6});
-const whPillarMat=new THREE.MeshStandardMaterial({color:0x0c0c0e, roughness:0.85, metalness:0.1});
+const whPipeMat=new THREE.MeshStandardMaterial({color:0x555555, roughness:0.4, metalness:0.8});
+const whShelfMat=new THREE.MeshStandardMaterial({color:0x444444, roughness:0.5, metalness:0.7});
+const whCrateMat=new THREE.MeshLambertMaterial({color:0x333333});
+const whPendantMat=new THREE.MeshStandardMaterial({color:0x333333, roughness:0.3, metalness:0.9});
+const whPuddleMat=new THREE.MeshStandardMaterial({color:0x080810, roughness:0.02, metalness:0.95, transparent:true, opacity:0.5});
+const whPillarMat=new THREE.MeshStandardMaterial({color:0x444444, roughness:0.85, metalness:0.1});
+
+// Procedural warehouse textures
+function mkWarehouseFloorTex(){
+  const S=512,cv=document.createElement('canvas');cv.width=cv.height=S;
+  const c=cv.getContext('2d');
+  c.fillStyle='#3a3a3e';c.fillRect(0,0,S,S);
+  // Concrete grain
+  for(let i=0;i<S*S*.4;i++){
+    const x=Math.random()*S,y=Math.random()*S;
+    const v=(Math.random()-.5)*16;
+    c.fillStyle=`rgba(${58+v|0},${58+v|0},${62+v|0},.2)`;
+    c.fillRect(x,y,1+Math.random()*2,1+Math.random()*2);
+  }
+  // Cracks
+  for(let i=0;i<8;i++){
+    c.strokeStyle=`rgba(20,20,22,${.12+Math.random()*.15})`;
+    c.lineWidth=.5+Math.random()*1.5;
+    c.beginPath();
+    let x=Math.random()*S,y=Math.random()*S;
+    c.moveTo(x,y);
+    for(let j=0;j<10;j++){x+=Math.random()*50-25;y+=Math.random()*50-25;c.lineTo(x,y);}
+    c.stroke();
+  }
+  // Oil stains
+  for(let i=0;i<6;i++){
+    const x=Math.random()*S,y=Math.random()*S,r=12+Math.random()*35;
+    const g=c.createRadialGradient(x,y,0,x,y,r);
+    g.addColorStop(0,'rgba(15,15,18,.22)');g.addColorStop(1,'rgba(15,15,18,0)');
+    c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+  }
+  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(4,4);return t;
+}
+function mkWarehouseWallTex(){
+  const S=512,cv=document.createElement('canvas');cv.width=cv.height=S;
+  const c=cv.getContext('2d');
+  c.fillStyle='#5a5a62';c.fillRect(0,0,S,S);
+  // Cinderblock pattern
+  const bw=64,bh=32;
+  for(let y=0;y<S;y+=bh){
+    const off=(Math.floor(y/bh)%2)*bw/2;
+    for(let x=-bw;x<S+bw;x+=bw){
+      c.strokeStyle='rgba(35,35,40,.35)';c.lineWidth=2;
+      c.strokeRect(x+off,y,bw,bh);
+      const v=(Math.random()-.5)*10;
+      c.fillStyle=`rgba(${90+v|0},${90+v|0},${96+v|0},.15)`;
+      c.fillRect(x+off+2,y+2,bw-4,bh-4);
+    }
+  }
+  // Water stains dripping down
+  for(let i=0;i<4;i++){
+    const x=Math.random()*S;
+    const g=c.createLinearGradient(x,0,x,S);
+    g.addColorStop(0,'rgba(30,35,40,.25)');g.addColorStop(.4,'rgba(30,35,40,.1)');g.addColorStop(1,'rgba(30,35,40,0)');
+    c.fillStyle=g;c.fillRect(x-8,0,16+Math.random()*12,S);
+  }
+  const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3,3);return t;
+}
+const whFloorTex=mkWarehouseFloorTex();
+const whWallTex=mkWarehouseWallTex();
+const matWHWall=new THREE.MeshStandardMaterial({map:whWallTex, side:THREE.DoubleSide, roughness:0.9, metalness:0.05});
+const matWHFloor=new THREE.MeshStandardMaterial({map:whFloorTex, roughness: 0.92, metalness: 0.05});
+const matWHCeil=new THREE.MeshLambertMaterial({color:0x2a2a30});
 
 /* ═══════ PRNG ═══════ */
 class PRNG {
@@ -327,35 +386,58 @@ function generateChunkData(cx, cz) {
   const m = Array(CSZ).fill(0).map(() => Array(CSZ).fill(false));
 
   if (currentLevel === -1) {
-    // Warehouse: huge open rooms with thick concrete pillars
-    // Start by filling most of the chunk as open space
+    // Warehouse: corridors + open rooms + pillars (not just one big open space)
+    // Start all open
     for (let r = 0; r < CSZ; r++) {
       for (let c = 0; c < CSZ; c++) m[r][c] = true;
     }
-    // Add thick concrete pillars in a grid pattern
-    for (let r = 3; r < CSZ-2; r += 5) {
-      for (let c = 3; c < CSZ-2; c += 5) {
-        if (prng.next() < 0.7) {
+    // Add walls creating corridor structure — long wall segments with gaps
+    for (let i = 0; i < 6; i++) {
+      const horiz = prng.next() > 0.5;
+      const pos = 2 + Math.floor(prng.next() * (CSZ - 4));
+      const len = 6 + Math.floor(prng.next() * 10);
+      const start = Math.floor(prng.next() * (CSZ - len));
+      const gapPos = start + 2 + Math.floor(prng.next() * (len - 4)); // doorway gap
+      const gapSize = 1 + Math.floor(prng.next() * 2);
+      for (let j = start; j < Math.min(start + len, CSZ); j++) {
+        if (j >= gapPos && j < gapPos + gapSize) continue; // leave doorway
+        if (horiz) { if(pos < CSZ) m[pos][j] = false; }
+        else { if(j < CSZ) m[j][pos] = false; }
+      }
+    }
+    // Add thick concrete pillars in a grid
+    for (let r = 4; r < CSZ-3; r += 4) {
+      for (let c = 4; c < CSZ-3; c += 4) {
+        if (prng.next() < 0.6) {
           m[r][c] = false;
-          // Some pillars are 2x2 for thick support columns
-          if (prng.next() < 0.4 && r+1 < CSZ && c+1 < CSZ) {
-            m[r+1][c] = false;
-            m[r][c+1] = false;
-            m[r+1][c+1] = false;
+          if (prng.next() < 0.3 && r+1 < CSZ && c+1 < CSZ) {
+            m[r+1][c] = false; m[r][c+1] = false; m[r+1][c+1] = false;
           }
         }
       }
     }
-    // Cut some random walls/barriers to break up the open space
-    for (let i = 0; i < 3; i++) {
-      const horiz = prng.next() > 0.5;
-      const pos = 2 + Math.floor(prng.next() * (CSZ - 4));
-      const len = 3 + Math.floor(prng.next() * 6);
-      const start = Math.floor(prng.next() * (CSZ - len));
-      for (let j = start; j < Math.min(start + len, CSZ); j++) {
-        if (horiz) { if(pos < CSZ) m[pos][j] = false; }
-        else { if(j < CSZ) m[j][pos] = false; }
+    // Add some enclosed storage rooms
+    for (let i = 0; i < 2; i++) {
+      const rx = 3 + Math.floor(prng.next() * (CSZ - 10));
+      const ry = 3 + Math.floor(prng.next() * (CSZ - 10));
+      const rw = 4 + Math.floor(prng.next() * 3);
+      const rh = 4 + Math.floor(prng.next() * 3);
+      // Build walls of the room
+      for (let j = rx; j < Math.min(rx+rw, CSZ); j++) {
+        if(ry < CSZ) m[ry][j] = false;
+        if(ry+rh-1 < CSZ) m[ry+rh-1][j] = false;
       }
+      for (let j = ry; j < Math.min(ry+rh, CSZ); j++) {
+        if(rx < CSZ) m[j][rx] = false;
+        if(rx+rw-1 < CSZ) m[j][rx+rw-1] = false;
+      }
+      // Doorway
+      const doorSide = Math.floor(prng.next() * 4);
+      const doorOff = 1 + Math.floor(prng.next() * 2);
+      if(doorSide===0 && ry<CSZ && rx+doorOff<CSZ) m[ry][rx+doorOff]=true;
+      else if(doorSide===1 && ry+rh-1<CSZ && rx+doorOff<CSZ) m[ry+rh-1][rx+doorOff]=true;
+      else if(doorSide===2 && rx<CSZ && ry+doorOff<CSZ) m[ry+doorOff][rx]=true;
+      else if(rx+rw-1<CSZ && ry+doorOff<CSZ) m[ry+doorOff][rx+rw-1]=true;
     }
     // Ensure borders connect to adjacent chunks
     for (let i = 0; i < CSZ; i++) {
@@ -507,43 +589,40 @@ function buildChunk(cx, cz) {
 
   /* — Props & Lights — */
   if (currentLevel === -1) {
-    // WAREHOUSE LIGHTS: sparse hanging industrial pendants
-    for(let row=2;row<CSZ;row+=5){
-      for(let col=2;col<CSZ;col+=5){
-        if(!m[row][col] || prng.next() < 0.35) continue;
+    // WAREHOUSE LIGHTS: hanging industrial pendants
+    for(let row=1;row<CSZ;row+=3){
+      for(let col=1;col<CSZ;col+=3){
+        if(!m[row][col] || prng.next() < 0.15) continue;
         const wx = offsetX + col*CELL+CELL/2;
         const wz = offsetZ + row*CELL+CELL/2;
-        const dead = prng.next() < 0.3; // 30% dead lights — very dark
+        const dead = prng.next() < 0.15;
         const swaying = !dead && prng.next() < 0.2;
-        // Hanging chain/wire
-        const chainLen = 1.5 + prng.next() * 2.5;
+        const chainLen = 2.0 + prng.next() * 2.0;
         const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,chainLen,4), whPipeMat);
         chain.position.set(wx, WH - chainLen/2, wz);
         chunkGroup.add(chain);
-        // Pendant shade (cone)
         const shade = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.25, 8, 1, true), whPendantMat);
         shade.position.set(wx, WH - chainLen - 0.12, wz);
-        shade.rotation.x = Math.PI; // flip upside down
+        shade.rotation.x = Math.PI;
         chunkGroup.add(shade);
-        // Bulb
-        const bulbColor = dead ? 0x020204 : 0x8899bb;
-        const eMat = new THREE.MeshStandardMaterial({color:bulbColor, emissive:bulbColor, emissiveIntensity:dead?0.02:0.85, roughness:0.3});
-        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), eMat);
+        const bulbColor = dead ? 0x020204 : 0x99aacc;
+        const eMat = new THREE.MeshStandardMaterial({color:bulbColor, emissive:bulbColor, emissiveIntensity:dead?0.02:0.9, roughness:0.3});
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), eMat);
         bulb.position.set(wx, WH - chainLen - 0.08, wz);
         chunkGroup.add(bulb);
         if(!dead){
           chunkFixtures.push({
             pos: new THREE.Vector3(wx, WH - chainLen - 0.1, wz),
             eMat: eMat,
-            base: .4+prng.next()*.3,
+            base: 35+prng.next()*25, // Moderate candela — visible but not blinding
             wSpd: 0.8+prng.next()*1.5,
             wPha: prng.next()*Math.PI*2,
-            wAmp: .12,
-            doFlick: prng.next()<.35, // more flickering in warehouse
+            wAmp: 4, // Gentle flicker, not janky
+            doFlick: prng.next()<.25,
             flickOn: false,
             flickCD: 2+prng.next()*6,
             flickDur: 0,
-            intensity: 0.9,
+            intensity: 40,
             swaying: swaying,
             swayParent: shade,
             swayBulb: bulb,
@@ -602,15 +681,33 @@ function buildChunk(cx, cz) {
       pipe.position.set(offsetX + pLen/2, WH - 0.3 - prng.next()*0.5, wz);
       chunkGroup.add(pipe);
     }
-    // Floor puddles (reflective dark patches)
-    for(let i=0; i<4; i++) {
+    // Floor puddles — single organic blob shapes (no overlapping transparent planes)
+    for(let i=0; i<6; i++) {
       const row = Math.floor(prng.next()*CSZ), col = Math.floor(prng.next()*CSZ);
       if(!m[row][col]) continue;
-      const wx = offsetX + col*CELL+CELL/2;
-      const wz = offsetZ + row*CELL+CELL/2;
-      const puddle = new THREE.Mesh(new THREE.CircleGeometry(0.8+prng.next()*1.2, 12), whPuddleMat);
-      puddle.rotation.x = -Math.PI/2;
-      puddle.position.set(wx + (prng.next()-.5)*2, 0.005, wz + (prng.next()-.5)*2);
+      const wx = offsetX + col*CELL+CELL/2 + (prng.next()-.5)*2;
+      const wz = offsetZ + row*CELL+CELL/2 + (prng.next()-.5)*2;
+      // Build single organic shape with perturbed vertices
+      const segs = 16;
+      const baseR = 0.6 + prng.next()*0.8;
+      const verts = [0, 0.004, 0]; // center vertex
+      const indices = [];
+      for(let s=0; s<segs; s++){
+        const angle = (s/segs)*Math.PI*2;
+        const r = baseR * (0.5 + prng.next()*0.7); // irregular radius
+        verts.push(Math.cos(angle)*r, 0.004, Math.sin(angle)*r);
+      }
+      for(let s=0; s<segs; s++){
+        indices.push(0, s+1, (s%segs)+1+1 > segs ? 1 : s+2);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      const puddle = new THREE.Mesh(geo, whPuddleMat);
+      puddle.position.set(wx, 0, wz);
+      puddle.scale.set(1+prng.next()*0.8, 1, 0.6+prng.next()*0.8);
+      puddle.rotation.y = prng.next()*Math.PI*2;
       chunkGroup.add(puddle);
     }
   } else {
@@ -731,16 +828,21 @@ function updateChunks(playerX, playerZ) {
 }
 
 /* ═══════ AMBIENT & LIGHT POOL ═══════ */
-scene.add(new THREE.AmbientLight(0xd4aa18,.30));
+scene.add(new THREE.AmbientLight(0xd4aa18,0.12));
 scene.add(new THREE.HemisphereLight(0xd4a010,0x5a4800,.20));
 
 const lightPool = [];
-for(let i=0; i<16; i++) {
+for(let i=0; i<24; i++) { // 24 lights for better warehouse coverage
   const pl = new THREE.PointLight(0xd4aa28, 0, 14, 1.7);
   pl._baseColor = new THREE.Color(0xd4aa28);
   scene.add(pl);
   lightPool.push(pl);
 }
+// Player flashlight for warehouse — follows the camera
+const playerLight = new THREE.SpotLight(0x8899aa, 0, 0, Math.PI/5, 0.6, 2.0); // decay=2 for physically correct falloff
+playerLight.visible = false;
+scene.add(playerLight);
+scene.add(playerLight.target);
 
 /* ═══════ ENTITY / MONSTER ═══════ */
 class Entity{
@@ -927,8 +1029,26 @@ addEventListener('keyup',e=>{keys[e.code]=false;});
 /* ═══════ LEVEL LOGIC ═══════ */
 function loadLevel(lvl) {
   if (lvl === -1) {
-    flashOverlay.style.opacity = '1';
-    setTimeout(() => { flashOverlay.style.opacity = '0'; }, 2000);
+    // Static glitch transition
+    const staticEl = document.getElementById('flashOverlay');
+    staticEl.style.background = 'black';
+    staticEl.style.opacity = '1';
+    // Rapid static flicker
+    let flickCount = 0;
+    const flickInterval = setInterval(() => {
+      staticEl.style.background = flickCount % 2 === 0 
+        ? `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence baseFrequency="${0.5+Math.random()*0.5}" numOctaves="4" seed="${Math.random()*999|0}"/></filter><rect width="100%" height="100%" filter="url(%23n)"/></svg>') center/cover`
+        : 'black';
+      flickCount++;
+      if (flickCount > 20) {
+        clearInterval(flickInterval);
+        staticEl.style.background = 'black';
+        setTimeout(() => { 
+          staticEl.style.opacity = '0'; 
+          setTimeout(() => { staticEl.style.background = 'white'; }, 1000);
+        }, 500);
+      }
+    }, 80);
   }
   currentLevel = lvl;
   levelTime = 0;
@@ -946,27 +1066,31 @@ function loadLevel(lvl) {
     scene.fog.density = 0.046; // Reset fog density
     scene.background.setHex(0x0a0800);
     scene.children.forEach(c => {
-      if(c instanceof THREE.AmbientLight) c.color.setHex(0xd4aa18);
-      if(c instanceof THREE.HemisphereLight) { c.color.setHex(0xd4a010); c.groundColor.setHex(0x5a4800); }
+      if(c instanceof THREE.AmbientLight) { c.color.setHex(0xd4aa18); c.intensity = 0.12; }
+      if(c instanceof THREE.HemisphereLight) { c.color.setHex(0xd4a010); c.groundColor.setHex(0x5a4800); c.intensity = 0.20; }
     });
     // Reset light pool colors to warm yellow
-    lightPool.forEach(pl => pl.color.setHex(0xd4aa28));
+    lightPool.forEach(pl => { pl.color.setHex(0xd4aa28); pl.distance = 14; pl.decay = 1.7; });
     entity.speed = 1.8;
     entity.chaseSpeed = 4.6;
     WH = 2.72;
+    playerLight.visible = false;
   } else if (lvl === -1) {
-    scene.fog.color.setHex(0x010108);
-    scene.fog.density = 0.04;
-    scene.background.setHex(0x010108);
+    scene.fog.color.setHex(0x020210);
+    scene.fog.density = 0.012;
+    scene.background.setHex(0x020210);
     scene.children.forEach(c => {
-      if(c instanceof THREE.AmbientLight) c.color.setHex(0x0a0e18);
-      if(c instanceof THREE.HemisphereLight) { c.color.setHex(0x0a1020); c.groundColor.setHex(0x020205); }
+      if(c instanceof THREE.AmbientLight) { c.color.setHex(0x445566); c.intensity = 0.4; }
+      if(c instanceof THREE.HemisphereLight) { c.color.setHex(0x556677); c.groundColor.setHex(0x1a1a22); c.intensity = 0.35; }
     });
-    // Switch light pool to cold blue-white
-    lightPool.forEach(pl => pl.color.setHex(0x6688aa));
-    entity.speed = 2.5;
-    entity.chaseSpeed = 5.2;
+    // Switch light pool to cold blue-white — physically correct: distance=0 means infinite range with inverse square
+    lightPool.forEach(pl => { pl.color.setHex(0x8899bb); pl.distance = 0; pl.decay = 2; });
+    entity.speed = 1.6;
+    entity.chaseSpeed = 3.8;
     WH = 8.0; // Tall warehouse ceiling
+    // Enable player flashlight
+    playerLight.visible = true;
+    playerLight.intensity = 15; // Lower intensity since decay=2 handles falloff better without blowing out near objects
   }
   
   // Update entity visuals for the new level
@@ -1008,6 +1132,7 @@ const _fwd=new THREE.Vector3(),_rgt=new THREE.Vector3(),_mv=new THREE.Vector3();
 
 // Initial chunk update
 updateChunks(camera.position.x, camera.position.z);
+loadLevel(0);
 
 (function tick(){
   requestAnimationFrame(tick);
@@ -1052,6 +1177,12 @@ updateChunks(camera.position.x, camera.position.z);
   else{bobA=THREE.MathUtils.lerp(bobA,0,dt*8);}
   camera.position.y=1.64+Math.sin(bobT*Math.PI*2)*.036*bobA;
   camera.quaternion.setFromEuler(new THREE.Euler(pitch,yaw,0,'YXZ'));
+  // Update player flashlight to follow camera
+  if(playerLight.visible){
+    playerLight.position.copy(camera.position);
+    const lightDir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+    playerLight.target.position.copy(camera.position).add(lightDir.multiplyScalar(5));
+  }
 
   // Fixture flicker logic (update all fixtures)
   for(let i=0;i<globalFixtures.length;i++){
@@ -1083,7 +1214,7 @@ updateChunks(camera.position.x, camera.position.z);
   
   for(let i=0; i<lightPool.length; i++) {
     const pl = lightPool[i];
-    if (i < globalFixtures.length && globalFixtures[i].distSq < 900) { // Within 30m
+    if (i < globalFixtures.length && globalFixtures[i].distSq < 2500) { // Within 50m
       const f = globalFixtures[i];
       pl.position.copy(f.pos);
       pl.intensity = f.intensity;
@@ -1093,7 +1224,40 @@ updateChunks(camera.position.x, camera.position.z);
   }
 
   // Entity
-  entity.update(dt,time,camera.position);
+  const entDist = entity.update(dt,time,camera.position);
+  
+  // DEATH CHECK — jumpscare when entity catches player
+  if(entDist < 1.5 && gameState === 'playing'){
+    gameState = 'dead';
+    document.exitPointerLock();
+    // Screech sound
+    if(sfx.on){
+      const osc=sfx.ctx.createOscillator(),g=sfx.ctx.createGain();
+      osc.type='sawtooth';
+      const now=sfx.ctx.currentTime;
+      osc.frequency.setValueAtTime(800,now);
+      osc.frequency.exponentialRampToValueAtTime(200,now+0.8);
+      g.gain.setValueAtTime(.35,now);
+      g.gain.exponentialRampToValueAtTime(.001,now+1.2);
+      osc.connect(g);g.connect(sfx.master);osc.start();osc.stop(now+1.2);
+      // Static burst
+      const nSrc=sfx.ctx.createBufferSource();nSrc.buffer=sfx._noise(.6);
+      const ng=sfx.ctx.createGain();ng.gain.setValueAtTime(.3,now);ng.gain.exponentialRampToValueAtTime(.001,now+.6);
+      nSrc.connect(ng);ng.connect(sfx.master);nSrc.start();
+    }
+    // Snap camera to look at entity (jumpscare)
+    const ex = entity.pos.x - camera.position.x;
+    const ez = entity.pos.y - camera.position.z;
+    yaw = Math.atan2(-ex, -ez);
+    pitch = 0;
+    camera.quaternion.setFromEuler(new THREE.Euler(pitch,yaw,0,'YXZ'));
+    // Glitch static overlay
+    document.body.classList.add('is-dead');
+    // Show death screen after brief delay
+    setTimeout(() => {
+      document.getElementById('deathScreen').style.display = 'flex';
+    }, 1200);
+  }
 
   sfx.step(dt,moving,sprint);
   tickGrain();
