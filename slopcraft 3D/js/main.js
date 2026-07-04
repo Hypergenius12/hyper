@@ -39,7 +39,7 @@ function findSafeSpawn(params, isNether = false) {
                                     const idxUp1 = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                     const idxUp2 = ((y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                     if (centerBlocks[idxUp1] === BLOCKS.AIR && centerBlocks[idxUp2] === BLOCKS.AIR) {
-                                        return { x: cx * CHUNK_SIZE + x, y: y + 2, z: cz * CHUNK_SIZE + z };
+                                        return { x: cx * CHUNK_SIZE + x, y: y + 1, z: cz * CHUNK_SIZE + z };
                                     } else if (!isNether) {
                                         break; // Overworld: if the top block isn't safe, reject column. Don't look underground.
                                     }
