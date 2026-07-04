@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DVD Logo Simulator</title>
+  <link rel="icon" type="image/svg+xml" href="dvd.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="vhs-overlay"></div>
+  <div id="vhs-text">PLAY ►</div>
+
+  <div id="global-leaderboard">
+    🌎 GLOBAL CORNER HITS: <span id="global-hits-val">0</span>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <div id="corner-flash">
+    <h1 class="glitch" data-text="CORNER HIT!">CORNER HIT!</h1>
+  </div>
+
+  <button id="btn-restore-panel" class="btn primary floating-menu-btn" style="display: none;">[ MENU ]</button>
+
+  <aside id="ui-panel">
+    <div class="panel-header">
+      <h2>DVD.EXE</h2>
+      <button id="toggle-panel" aria-label="Toggle Panel">[X]</button>
+    </div>
+    
+    <div class="panel-content">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">WALL HITS</span>
+          <span class="stat-value" id="stat-wall">0</span>
+        </div>
+        <div class="stat-card corner-card">
+          <span class="stat-label">CORNER HITS</span>
+          <span class="stat-value highlight" id="stat-corner">0</span>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <h3>LOGOS</h3>
+        <div class="spawn-row">
+          <input type="number" id="spawn-amount" value="1" min="1" max="1000">
+          <button id="btn-add" class="btn primary">SPAWN</button>
+        </div>
+        <div class="btn-group">
+          <button id="btn-remove" class="btn secondary">REMOVE</button>
+          <button id="btn-clear" class="btn danger">CLEAR ALL</button>
+        </div>
+        <p class="helper-text">ACTIVE: <span id="logo-count">1</span></p>
+      </div>
+
+      <div class="controls-section">
+        <h3>AUDIO ENGINE</h3>
+        <div class="select-group">
+          <label for="audio-scale">SCALE</label>
+          <select id="audio-scale" class="custom-select">
+            <option value="pentatonic">PENTATONIC (ZEN)</option>
+            <option value="minor">MINOR (DARK)</option>
+            <option value="lydian">LYDIAN (DREAMY)</option>
+            <option value="wholetone">WHOLE TONE (ALIEN)</option>
+            <option value="blues">BLUES (FUNK)</option>
+            <option value="chromatic">CHROMATIC (CHAOS)</option>
+          </select>
+        </div>
+        <div class="select-group">
+          <label for="audio-synth">WAVEFORM</label>
+          <select id="audio-synth" class="custom-select">
+            <option value="sine">SINE (SMOOTH)</option>
+            <option value="triangle">TRIANGLE (WARM)</option>
+            <option value="square">SQUARE (RETRO)</option>
+            <option value="sawtooth">SAWTOOTH (HARSH)</option>
+          </select>
+        </div>
+        <div class="select-group">
+          <label for="audio-style">NOTE STYLE</label>
+          <select id="audio-style" class="custom-select">
+            <option value="pad">PAD (LONG / AMBIENT)</option>
+            <option value="pluck">PLUCK (SHORT / PERCUSSIVE)</option>
+          </select>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <label for="filter-slider">BRIGHTNESS</label>
+            <span id="filter-val">100%</span>
+          </div>
+          <input type="range" id="filter-slider" min="100" max="8000" step="100" value="8000">
+        </div>
+
+        <label class="toggle-row">
+          <span>ECHO DELAY FX</span>
+          <input type="checkbox" id="echo-toggle" checked>
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <div class="controls-section">
+        <h3>PHYSICS</h3>
+        <div class="slider-group">
+          <div class="slider-header">
+            <label for="speed-slider">SPEED</label>
+            <span id="speed-val">1.0x</span>
+          </div>
+          <input type="range" id="speed-slider" min="0.1" max="5" step="0.1" value="1">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <label for="size-slider">SCALE</label>
+            <span id="size-val">1.0x</span>
+          </div>
+          <input type="range" id="size-slider" min="0.2" max="3" step="0.1" value="1">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <label for="repel-slider">REPEL RADIUS</label>
+            <span id="repel-val">150</span>
+          </div>
+          <input type="range" id="repel-slider" min="50" max="500" step="10" value="150">
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <h3>MODIFIERS</h3>
+        <label class="toggle-row">
+          <span>REPEL CURSOR</span>
+          <input type="checkbox" id="repel-toggle">
+          <div class="toggle-track"></div>
+        </label>
+        <label class="toggle-row">
+          <span>CHAOS MODE</span>
+          <input type="checkbox" id="chaos-toggle">
+          <div class="toggle-track"></div>
+        </label>
+        <label class="toggle-row">
+          <span>DISCO MODE</span>
+          <input type="checkbox" id="disco-toggle">
+          <div class="toggle-track"></div>
+        </label>
+        <label class="toggle-row">
+          <span>TRAIL FX</span>
+          <input type="checkbox" id="trail-toggle" checked>
+          <div class="toggle-track"></div>
+        </label>
+        <label class="toggle-row">
+          <span>AUDIO ENGINE</span>
+          <input type="checkbox" id="sfx-toggle" checked>
+          <div class="toggle-track"></div>
+        </label>
+        <label class="toggle-row">
+          <span>CORNER FLASH</span>
+          <input type="checkbox" id="flash-toggle" checked>
+          <div class="toggle-track"></div>
+        </label>
+        <label class="toggle-row">
+          <span style="color: var(--accent);">VHS FILTER</span>
+          <input type="checkbox" id="vhs-toggle">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+
+      <div class="controls-section actions">
+        <button id="btn-reset" class="btn">RESET SETTINGS</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Firebase Integration -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    window.firebaseModules = { initializeApp, getDatabase, ref, onValue, runTransaction };
+  </script>
+
+  <script src="main.js" type="module"></script>
+</body>
+</html>
