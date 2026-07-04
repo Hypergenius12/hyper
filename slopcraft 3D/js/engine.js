@@ -1038,6 +1038,16 @@ export class World {
         }
     }
 
+    isFlammable(block) {
+        return block === window.BLOCKS.WOOD || block === window.BLOCKS.LEAVES || block === window.BLOCKS.PLANKS || 
+               block === window.BLOCKS.ACACIA_WOOD || block === window.BLOCKS.ACACIA_LEAVES || block === window.BLOCKS.ACACIA_PLANKS ||
+               block === window.BLOCKS.CHERRY_WOOD || block === window.BLOCKS.CHERRY_LEAVES || block === window.BLOCKS.CHERRY_PLANKS ||
+               block === window.BLOCKS.AUTUMN_WOOD || block === window.BLOCKS.AUTUMN_LEAVES || block === window.BLOCKS.AUTUMN_PLANKS ||
+               block === window.BLOCKS.PALM_WOOD || block === window.BLOCKS.PALM_LEAVES || block === window.BLOCKS.PALM_PLANKS ||
+               block === window.BLOCKS.PINE_WOOD || block === window.BLOCKS.PINE_LEAVES || block === window.BLOCKS.PINE_PLANKS ||
+               block === window.BLOCKS.WOOL || block === window.BLOCKS.TALL_GRASS || block === window.BLOCKS.DEAD_BUSH;
+    }
+
     tickRandomBlocks() {
         // Pick 3 random blocks per active chunk
         for (const chunk of this.chunks.values()) {
@@ -1084,13 +1094,7 @@ export class World {
                         const nb = this.getBlock(nx, ny, nz);
                         
                         // Is it flammable?
-                        if (nb === window.BLOCKS.WOOD || nb === window.BLOCKS.LEAVES || nb === window.BLOCKS.PLANKS || 
-                            nb === window.BLOCKS.ACACIA_WOOD || nb === window.BLOCKS.ACACIA_LEAVES || nb === window.BLOCKS.ACACIA_PLANKS ||
-                            nb === window.BLOCKS.CHERRY_WOOD || nb === window.BLOCKS.CHERRY_LEAVES || nb === window.BLOCKS.CHERRY_PLANKS ||
-                            nb === window.BLOCKS.AUTUMN_WOOD || nb === window.BLOCKS.AUTUMN_LEAVES || nb === window.BLOCKS.AUTUMN_PLANKS ||
-                            nb === window.BLOCKS.PALM_WOOD || nb === window.BLOCKS.PALM_LEAVES || nb === window.BLOCKS.PALM_PLANKS ||
-                            nb === window.BLOCKS.PINE_WOOD || nb === window.BLOCKS.PINE_LEAVES || nb === window.BLOCKS.PINE_PLANKS ||
-                            nb === window.BLOCKS.WOOL || nb === window.BLOCKS.TALL_GRASS || nb === window.BLOCKS.DEAD_BUSH) {
+                        if (this.isFlammable(nb)) {
                             
                             if (Math.random() < 0.1) { // 10% chance to spread per direction
                                 if (Math.random() < 0.3) {
@@ -1107,6 +1111,30 @@ export class World {
                     // Fire dies out
                     if (Math.random() < (spread ? 0.05 : 0.2)) {
                         this.setBlock(wx, wy, wz, window.BLOCKS.AIR);
+                    }
+                } else if (block === window.BLOCKS.LAVA) {
+                    if (Math.random() < 0.1) {
+                        const wx = chunk.cx * 16 + rx;
+                        const wy = ry;
+                        const wz = chunk.cz * 16 + rz;
+                        
+                        const dx = Math.floor(Math.random() * 3) - 1;
+                        const dy = Math.floor(Math.random() * 3) - 1;
+                        const dz = Math.floor(Math.random() * 3) - 1;
+                        
+                        if (dx !== 0 || dy !== 0 || dz !== 0) {
+                            const nx = wx + dx, ny = wy + dy, nz = wz + dz;
+                            if (this.getBlock(nx, ny, nz) === window.BLOCKS.AIR) {
+                                const adjBlocks = [
+                                    this.getBlock(nx+1, ny, nz), this.getBlock(nx-1, ny, nz),
+                                    this.getBlock(nx, ny+1, nz), this.getBlock(nx, ny-1, nz),
+                                    this.getBlock(nx, ny, nz+1), this.getBlock(nx, ny, nz-1)
+                                ];
+                                if (adjBlocks.some(b => this.isFlammable(b))) {
+                                    this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                                }
+                            }
+                        }
                     }
                 }
             }

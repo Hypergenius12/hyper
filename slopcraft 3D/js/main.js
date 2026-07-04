@@ -12,23 +12,32 @@ import { AudioManager } from './audio.js';
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, isNether = false) {
-    const centerBlocks = isNether ? generateNetherChunk(0, 0, params) : generateChunkTerrain(0, 0, params);
+    const searchRadiusChunks = 10;
+    for (let cr = 0; cr <= searchRadiusChunks; cr++) {
+        for (let cx = -cr; cx <= cr; cx++) {
+            for (let cz = -cr; cz <= cr; cz++) {
+                if (Math.max(Math.abs(cx), Math.abs(cz)) !== cr) continue;
+                
+                const centerBlocks = isNether ? generateNetherChunk(cx, cz, params) : generateChunkTerrain(cx, cz, params);
 
-    const searchRadius = Math.floor(CHUNK_SIZE / 2);
-    for (let r = 0; r < searchRadius; r++) {
-        for (let x = CHUNK_SIZE / 2 - r; x <= CHUNK_SIZE / 2 + r; x++) {
-            for (let z = CHUNK_SIZE / 2 - r; z <= CHUNK_SIZE / 2 + r; z++) {
-                if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) continue;
+                const searchRadius = Math.floor(CHUNK_SIZE / 2);
+                for (let r = 0; r < searchRadius; r++) {
+                    for (let x = CHUNK_SIZE / 2 - r; x <= CHUNK_SIZE / 2 + r; x++) {
+                        for (let z = CHUNK_SIZE / 2 - r; z <= CHUNK_SIZE / 2 + r; z++) {
+                            if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) continue;
 
-                for (let y = CHUNK_HEIGHT - 3; y > 0; y--) {
-                    const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
-                    const block = centerBlocks[idx];
+                            for (let y = CHUNK_HEIGHT - 3; y > 0; y--) {
+                                const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                                const block = centerBlocks[idx];
 
-                    if (block !== BLOCKS.AIR && block !== BLOCKS.WATER && block !== BLOCKS.LAVA && block !== BLOCKS.SWAMP_WATER) {
-                        const idxUp1 = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
-                        const idxUp2 = ((y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
-                        if (centerBlocks[idxUp1] === BLOCKS.AIR && centerBlocks[idxUp2] === BLOCKS.AIR) {
-                            return { x: x, y: y + 2, z: z };
+                                if (block !== BLOCKS.AIR && block !== BLOCKS.WATER && block !== BLOCKS.LAVA && block !== BLOCKS.SWAMP_WATER) {
+                                    const idxUp1 = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                                    const idxUp2 = ((y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                                    if (centerBlocks[idxUp1] === BLOCKS.AIR && centerBlocks[idxUp2] === BLOCKS.AIR) {
+                                        return { x: cx * CHUNK_SIZE + x, y: y + 2, z: cz * CHUNK_SIZE + z };
+                                    }
+                                }
+                            }
                         }
                     }
                 }

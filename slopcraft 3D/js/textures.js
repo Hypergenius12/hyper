@@ -1759,6 +1759,47 @@ export function generateItemTexture(itemType, itemSubtype) {
                 "                ",
                 "                "
             ];
+        } else if (itemSubtype === 'flint_and_steel') {
+            shape = [
+                "                ",
+                "       OOOOO    ",
+                "      OHHCCD    ",
+                "     OHD  CD    ",
+                "    OHD   CD    ",
+                "   OHD    CD    ",
+                "   OD    CD     ",
+                "        CCO     ",
+                "  OO   CCO      ",
+                " OGBO CCO       ",
+                " OGBBCOO        ",
+                "  OGBBO         ",
+                "   OOO          ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            // Override palette colors manually for flint and steel
+            ctx.fillStyle = '#666'; // For steel C
+            ctx.fillStyle = '#444'; // For steel D
+            ctx.fillStyle = '#333'; // For flint G
+            ctx.fillStyle = '#222'; // For flint B
+            // Just use the parser with a custom palette override
+            const fsPalette = { c: '#999', d: '#555', h: '#ccc', g: '#333', b: '#222' };
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            for (let y = 0; y < 16; y++) {
+                for (let x = 0; x < 16; x++) {
+                    const char = shape[y][x];
+                    if (char === 'C') ctx.fillStyle = fsPalette.c;
+                    else if (char === 'D') ctx.fillStyle = fsPalette.d;
+                    else if (char === 'H') ctx.fillStyle = fsPalette.h;
+                    else if (char === 'G') ctx.fillStyle = fsPalette.g;
+                    else if (char === 'B') ctx.fillStyle = fsPalette.b;
+                    else if (char === 'O') ctx.fillStyle = '#000000';
+                    else continue;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+            return canvas;
         } else if (itemSubtype.includes('pickaxe')) {
             shape = [
                 "      OOOOOO    ",
@@ -1973,47 +2014,6 @@ export function generateItemTexture(itemType, itemSubtype) {
                 "                "
             ];
             p = { c: '#5a963c', d: '#3c6e28', h: '#78b450' };
-        } else if (itemSubtype === 'flint_and_steel') {
-            shape = [
-                "                ",
-                "       OOOOO    ",
-                "      OHHCCD    ",
-                "     OHD  CD    ",
-                "    OHD   CD    ",
-                "   OHD    CD    ",
-                "   OD    CD     ",
-                "        CCO     ",
-                "  OO   CCO      ",
-                " OGBO CCO       ",
-                " OGBBCOO        ",
-                "  OGBBO         ",
-                "   OOO          ",
-                "                ",
-                "                ",
-                "                "
-            ];
-            // Override palette colors manually for flint and steel
-            ctx.fillStyle = '#666'; // For steel C
-            ctx.fillStyle = '#444'; // For steel D
-            ctx.fillStyle = '#333'; // For flint G
-            ctx.fillStyle = '#222'; // For flint B
-            // Just use the parser with a custom palette override
-            const fsPalette = { c: '#999', d: '#555', h: '#ccc', g: '#333', b: '#222' };
-            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            for (let y = 0; y < 16; y++) {
-                for (let x = 0; x < 16; x++) {
-                    const char = shape[y][x];
-                    if (char === 'C') ctx.fillStyle = fsPalette.c;
-                    else if (char === 'D') ctx.fillStyle = fsPalette.d;
-                    else if (char === 'H') ctx.fillStyle = fsPalette.h;
-                    else if (char === 'G') ctx.fillStyle = fsPalette.g;
-                    else if (char === 'B') ctx.fillStyle = fsPalette.b;
-                    else if (char === 'O') ctx.fillStyle = '#000000';
-                    else continue;
-                    ctx.fillRect(x, y, 1, 1);
-                }
-            }
-            return canvas;
         } else if (itemSubtype === 'stick') {
             shape = [
                 "            OO  ",
