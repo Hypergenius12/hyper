@@ -14,10 +14,6 @@
   <div id="vhs-overlay"></div>
   <div id="vhs-text">PLAY ►</div>
 
-  <div id="global-leaderboard">
-    🌎 GLOBAL CORNER HITS: <span id="global-hits-val">0</span>
-  </div>
-
   <canvas id="canvas"></canvas>
 
   <div id="corner-flash">
@@ -173,13 +169,6 @@
       </div>
     </div>
   </aside>
-
-  <!-- Firebase Integration -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-    window.firebaseModules = { initializeApp, getDatabase, ref, onValue, runTransaction };
-  </script>
 
   <script src="main.js" type="module"></script>
 </body>

@@ -41,47 +41,6 @@ const tglFlash = document.getElementById('flash-toggle');
 const tglVhs = document.getElementById('vhs-toggle');
 
 // =======================
-// FIREBASE LEADERBOARD
-// =======================
-const firebaseConfig = {
-  // TODO: PASTE YOUR FIREBASE CONFIG HERE
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-
-let dbRef = null;
-let runFbTransaction = null;
-const globalHitsEl = document.getElementById('global-hits-val');
-
-setTimeout(() => {
-  if (window.firebaseModules && firebaseConfig.apiKey !== "YOUR_API_KEY") {
-    try {
-      const app = window.firebaseModules.initializeApp(firebaseConfig);
-      const db = window.firebaseModules.getDatabase(app);
-      dbRef = window.firebaseModules.ref(db, 'globalCornerHits');
-      runFbTransaction = window.firebaseModules.runTransaction;
-      
-      // Listen for live updates
-      window.firebaseModules.onValue(dbRef, (snapshot) => {
-        const val = snapshot.val();
-        if (val !== null) globalHitsEl.textContent = val;
-      });
-    } catch(e) {
-      console.error("Firebase Initialization Error", e);
-      globalHitsEl.textContent = "ERR";
-    }
-  } else {
-    // Reminder for user to set up Firebase
-    globalHitsEl.textContent = "0 (SETUP FIREBASE)";
-  }
-}, 1000); // delay to ensure module scripts load
-
-// =======================
 // AUDIO ENGINE (ADVANCED)
 // =======================
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -367,12 +326,6 @@ class DVDLogo {
 
 function triggerCornerHit() {
   playCornerHit();
-  
-  if (dbRef && runFbTransaction) {
-    runFbTransaction(dbRef, (currentValue) => {
-      return (currentValue || 0) + 1;
-    });
-  }
   
   if (flashEnabled) {
     cornerFlash.classList.add('active');
