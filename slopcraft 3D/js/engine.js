@@ -1124,15 +1124,8 @@ export class World {
                         
                         if (dx !== 0 || dy !== 0 || dz !== 0) {
                             const nx = wx + dx, ny = wy + dy, nz = wz + dz;
-                            if (this.getBlock(nx, ny, nz) === window.BLOCKS.AIR) {
-                                const adjBlocks = [
-                                    this.getBlock(nx+1, ny, nz), this.getBlock(nx-1, ny, nz),
-                                    this.getBlock(nx, ny+1, nz), this.getBlock(nx, ny-1, nz),
-                                    this.getBlock(nx, ny, nz+1), this.getBlock(nx, ny, nz-1)
-                                ];
-                                if (adjBlocks.some(b => this.isFlammable(b))) {
-                                    this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
-                                }
+                            if (this.isFlammable(this.getBlock(nx, ny, nz))) {
+                                this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
                             }
                         }
                     }

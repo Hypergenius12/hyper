@@ -26,15 +26,22 @@ function findSafeSpawn(params, isNether = false) {
                         for (let z = CHUNK_SIZE / 2 - r; z <= CHUNK_SIZE / 2 + r; z++) {
                             if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) continue;
 
-                            for (let y = CHUNK_HEIGHT - 3; y > 0; y--) {
+                            const startY = isNether ? 100 : CHUNK_HEIGHT - 3;
+                            for (let y = startY; y > 0; y--) {
                                 const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                 const block = centerBlocks[idx];
+
+                                if (!isNether && (block === BLOCKS.WATER || block === BLOCKS.SWAMP_WATER || block === BLOCKS.LAVA)) {
+                                    break; // Reject columns that are ocean or lava lakes from the top
+                                }
 
                                 if (block !== BLOCKS.AIR && block !== BLOCKS.WATER && block !== BLOCKS.LAVA && block !== BLOCKS.SWAMP_WATER) {
                                     const idxUp1 = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                     const idxUp2 = ((y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                     if (centerBlocks[idxUp1] === BLOCKS.AIR && centerBlocks[idxUp2] === BLOCKS.AIR) {
                                         return { x: cx * CHUNK_SIZE + x, y: y + 2, z: cz * CHUNK_SIZE + z };
+                                    } else if (!isNether) {
+                                        break; // Overworld: if the top block isn't safe, reject column. Don't look underground.
                                     }
                                 }
                             }
