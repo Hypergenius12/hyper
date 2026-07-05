@@ -59,7 +59,7 @@ export class PlanetParams {
         this.caveScale = 15 + rng() * 15; // Tighter noise to make them more distinct
         this.caveThreshold = 0.25 + rng() * 0.1; // Lowered significantly to create massive sprawling caves
 
-        this.dungeonFrequency = 0.005 + rng() * 0.015; // Make dungeons less common
+        this.dungeonFrequency = 0.08 + rng() * 0.04; // Dungeons are rare but findable
 
         this.noise2D = createNoise2D(this.seed);
         this.noise3D = createNoise3D(this.seed);
@@ -104,8 +104,9 @@ export function getBiomeParams(wx, wz, params) {
         else if (contNoise < 0.15) biome = BIOMES.DEEP_OCEAN;
         else biome = BIOMES.PLAINS; // Default ocean biome type
     } else if (isCoast) {
-        if (temp < 0.3) biome = BIOMES.TUNDRA;
-        else biome = BIOMES.DESERT; // Beach
+        if (temp < 0.35) biome = BIOMES.TUNDRA;
+        else if (temp > 0.65) biome = BIOMES.DESERT; // Beach
+        else biome = BIOMES.PLAINS; // Moderate coast
     } else if (isMountain) {
         if (temp > 0.7 && moist < 0.4) {
             biome = BIOMES.BADLANDS;
@@ -378,7 +379,7 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                     
                     // Create beaches near water level (from sea level down a bit, and up 1 block)
-                    if (surfaceY <= params.seaLevel + 1 && y >= params.seaLevel - 2 && (isAnyGrass || isDirt)) {
+                    if (y <= params.seaLevel + 1 && y >= params.seaLevel - 2 && y >= surfaceY - 3 && (isAnyGrass || isDirt)) {
                         type = BLOCKS.SAND;
                     }
                 } else if (y <= params.seaLevel) {
@@ -724,7 +725,7 @@ function carveGlobalDungeons(blocks, cx, cz, params) {
             // Determine if a dungeon starts at chunk (sx, sz)
             const seedStr = params.seed + "_" + sx + "_" + sz;
             const startRng = seededRandom(hashSeed(seedStr));
-            if (startRng() < params.dungeonFrequency * 0.005) { // reduced frequency since they are huge
+            if (startRng() < params.dungeonFrequency * 0.02) { // increased frequency for better discoverability
                 const themeIndex = Math.floor(startRng() * DUNGEON_THEMES.length);
                 const theme = DUNGEON_THEMES[themeIndex];
                 const rooms = generateDungeonStructure(startRng, sx * CHUNK_SIZE + 8, 15, sz * CHUNK_SIZE + 8);
@@ -741,6 +742,7 @@ function carveGlobalDungeons(blocks, cx, cz, params) {
 
 function generateDungeonStructure(rng, startX, startY, startZ) {
     const rooms = [];
+    const doors = [];
     
     // Add a huge entrance shaft piercing the surface to make it discoverable
     rooms.push({ x: startX, y: startY, z: startZ, w: 7, h: 180, d: 7, type: 'entrance' });
@@ -800,11 +802,18 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
                 // Add door at the entrance of the corridor
                 const dx = current.x + (dir===0 ? Math.floor(current.w/2) : (dir===1 ? -Math.floor(current.w/2) : 0));
                 const dz = current.z + (dir===2 ? Math.floor(current.d/2) : (dir===3 ? -Math.floor(current.d/2) : 0));
-                rooms.push({ x: dx, y: current.y, z: dz, w: dir <= 1 ? 1 : 3, h: 3, d: dir > 1 ? 1 : 3, type: 'door' });
+                doors.push({ x: dx, y: current.y, z: dz, w: dir <= 1 ? 1 : 3, h: 3, d: dir > 1 ? 1 : 3, type: 'door' });
+                
+                // Add door at the exit of the corridor
+                const nextW = 7 + Math.floor(rng()*4); // Recompute next room bounds approximately for the door
+                const nextD = 7 + Math.floor(rng()*4);
+                const dx2 = nx + (dir===0 ? -Math.floor(nextW/2) : (dir===1 ? Math.floor(nextW/2) : 0));
+                const dz2 = nz + (dir===2 ? -Math.floor(nextD/2) : (dir===3 ? Math.floor(nextD/2) : 0));
+                doors.push({ x: dx2, y: current.y, z: dz2, w: dir <= 1 ? 1 : 3, h: 3, d: dir > 1 ? 1 : 3, type: 'door' });
             }
         }
     }
-    return rooms;
+    return rooms.concat(doors);
 }
 
 function carveRoomInChunk(blocks, cx, cz, room) {
@@ -837,8 +846,12 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                 
                 if (room.type === 'door') {
                     if (wy >= minY && wy < minY + 3) {
-                        if (wx === room.x && wz === room.z && wy < minY + 1) {
-                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
+                        if (wx === room.x && wz === room.z && wy < minY + 2) {
+                            if (wy === minY) {
+                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
+                            } else {
+                                safeSetBlock(blocks, lx, wy, lz, 0); // AIR above door
+                            }
                         } else {
                             safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
                         }

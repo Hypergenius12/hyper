@@ -3,6 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { BLOCKS, generateItemTexture } from './textures.js';
+import { Spell, SPELL_TYPES } from './magic.js';
 
 export class LightingSystem {
     constructor(scene) {
@@ -465,7 +466,7 @@ class UISystem {
         }
     }
 
-    renderGrid(container, slotsData, offsetIndex, player, type) {
+    renderGrid(container, slotsData, offsetIndex, player, type, forceUpdate = false) {
         if (!container) return;
         if (container.children.length !== slotsData.length) {
             container.innerHTML = '';
@@ -497,7 +498,7 @@ class UISystem {
                 el.style.opacity = '1.0';
             }
 
-            this.renderSlotItem(el, slot);
+            this.renderSlotItem(el, slot, forceUpdate);
         }
     }
 
@@ -518,9 +519,9 @@ class UISystem {
         this.renderGrid(this.elements.wandSlotsGrid, slotsData, 0, this.currentPlayer, 'wand');
     }
 
-    renderSlotItem(el, slot) {
+    renderSlotItem(el, slot, forceUpdate) {
         const cacheKey = slot ? `${slot.item.id}_${slot.count}` : 'empty';
-        if (el._cacheKey === cacheKey) return;
+        if (!forceUpdate && el._cacheKey === cacheKey) return;
         el._cacheKey = cacheKey;
         if (slot && slot.item) {
             let inner = '';
@@ -776,8 +777,8 @@ class UISystem {
 
         const standardTypes = ['inventory', 'crafting', 'chest', 'furnace', 'wand'];
         if (standardTypes.includes(srcType) && standardTypes.includes(targetType)) {
-            if (targetType === 'furnace' && targetIndex === 2) {
-                // Cannot drop into output
+            if ((targetType === 'furnace' && targetIndex === 2) || targetType === 'crafting_output') {
+                // Cannot drop into output slots
                 this.cancelDrag();
                 return;
             }
@@ -786,7 +787,10 @@ class UISystem {
                 if (lType === 'inventory') return inv[idx];
                 if (lType === 'crafting') return this.craftingSlots[idx];
                 if (lType === 'chest') return this.chestInventory[idx];
-                if (lType === 'furnace') return idx === 0 ? this.furnaceData.input : (idx === 1 ? this.furnaceData.fuel : this.furnaceData.output);
+                if (lType === 'furnace') {
+                    if (!this.furnaceData) return null;
+                    return idx === 0 ? this.furnaceData.input : (idx === 1 ? this.furnaceData.fuel : this.furnaceData.output);
+                }
                 if (lType === 'wand') {
                     const w = inv[this.currentPlayer.selectedSlot];
                     if (!w || w.item.type !== 'wand') return null;
@@ -806,6 +810,7 @@ class UISystem {
                 else if (lType === 'crafting') this.craftingSlots[idx] = val;
                 else if (lType === 'chest') this.chestInventory[idx] = val;
                 else if (lType === 'furnace') {
+                    if (!this.furnaceData) return;
                     if (idx === 0) this.furnaceData.input = val;
                     else if (idx === 1) this.furnaceData.fuel = val;
                     else if (idx === 2) this.furnaceData.output = val;
@@ -884,10 +889,11 @@ class UISystem {
         this.dragState.isSplit = false;
         this.elements.dragIcon.classList.add('hidden');
 
-        this._updateInventory();
-        this._updateCraftingSlots();
+        this._updateInventory(true);
+        this._updateCraftingSlots(true);
         this._updateArmorSlots();
         this._updateFurnaceSlots();
+        this._updateChestSlots();
     }
 
     // --- Tooltips ---
@@ -899,6 +905,7 @@ class UISystem {
         else if (type === 'crafting_output') slot = this._matchRecipe();
         else if (type === 'armor') slot = this.currentPlayer.inventory.armor[index];
         else if (type === 'furnace') {
+            if (!this.furnaceData) return;
             if (index === 0) slot = this.furnaceData.input;
             else if (index === 1) slot = this.furnaceData.fuel;
             else if (index === 2) slot = this.furnaceData.output;
@@ -916,8 +923,15 @@ class UISystem {
             if (slot.item.type === 'spell') {
                 const sp = slot.item.data.spell || slot.item; // handle both wrapped and unwrapped spell obj
                 html += `<span style="color:#aaa;">Element: ${sp.element || 'Arcane'}</span><br/>`;
-                html += `Damage: ${sp.baseDamage || 0}<br/>`;
-                html += `Mana: ${sp.baseManaCost || 0}<br/>`;
+                html += `<span style="color:#ff8844;">Damage: ${sp.baseDamage || 0}</span><br/>`;
+                html += `<span style="color:#4488ff;">Mana: ${sp.baseManaCost || 0}</span><br/>`;
+                if (sp.description) html += `<span style="color:#ccc; font-style:italic;">${sp.description}</span><br/>`;
+                if (sp.modifiers && sp.modifiers.length > 0) {
+                    html += `<span style="color:#ffcc00;">Modifiers:</span><br/>`;
+                    for (const m of sp.modifiers) {
+                        html += `<span style="color:#ddaa00;">- ${m.name || m.type}</span><br/>`;
+                    }
+                }
             } else if (slot.item.type === 'wand') {
                 const w = slot.item.data.wand;
                 html += `<span style="color:#aaa;">Spell Slots: ${w.maxSlots}</span>`;
@@ -933,6 +947,12 @@ class UISystem {
                 if (ed.speedMult) html += `<span style="color:#44ff88;">Speed: ${ed.speedMult}x</span><br/>`;
                 if (ed.flying) html += `<span style="color:#88ffff;">🕊 Can fly</span><br/>`;
                 if (slot.item.description) html += `<span style="color:#aaa;">${slot.item.description}</span>`;
+            } else if (slot.item.type === 'modifier') {
+                const mod = slot.item.data.mod || slot.item;
+                html += `<span style="color:#ffcc00;">Modifier</span><br/>`;
+                if (mod.config && mod.config.description) html += `<span style="color:#ccc; font-style:italic;">${mod.config.description}</span><br/>`;
+                else if (mod.description) html += `<span style="color:#ccc; font-style:italic;">${mod.description}</span><br/>`;
+                if (mod.rarity) html += `<span style="color:#aaa;">Rarity: ${mod.rarity}</span>`;
             }
             this.elements.tooltip.innerHTML = html;
             this.elements.tooltip.classList.remove('hidden');
@@ -968,7 +988,7 @@ class UISystem {
                 
                 // If switching to 2x2, drop items in hidden slots
                 if (i >= 4 && this.craftingSlots[i]) {
-                    this.currentPlayer.inventory.addItem(this.craftingSlots[i].type, this.craftingSlots[i].count, this.craftingSlots[i].name, this.craftingSlots[i].data);
+                    this.currentPlayer.inventory.addItem(this.craftingSlots[i].item, this.craftingSlots[i].count);
                     this.craftingSlots[i] = null;
                 }
             }
@@ -1036,13 +1056,19 @@ class UISystem {
         }
     }
 
-    _updateInventory() {
+    _updateChestSlots(forceUpdate = false) {
+        if (this.chestPos && this.chestInventory) {
+            this.renderGrid(this.elements.chestGrid, this.chestInventory, 0, this.currentPlayer, 'chest', forceUpdate);
+        }
+    }
+
+    _updateInventory(forceUpdate = false) {
         if (!this.currentPlayer) return;
         const p = this.currentPlayer;
-        this.renderGrid(this.elements.mainHotbar, p.inventory.slots.slice(0, 9), 0, p, 'inventory');
+        this.renderGrid(this.elements.mainHotbar, p.inventory.slots.slice(0, 9), 0, p, 'inventory', forceUpdate);
         if (this.isOpen) {
-            this.renderGrid(this.elements.mainGrid, p.inventory.slots.slice(9, 36), 9, p, 'inventory');
-            this.renderGrid(this.elements.invHotbar, p.inventory.slots.slice(0, 9), 0, p, 'inventory');
+            this.renderGrid(this.elements.mainGrid, p.inventory.slots.slice(9, 36), 9, p, 'inventory', forceUpdate);
+            this.renderGrid(this.elements.invHotbar, p.inventory.slots.slice(0, 9), 0, p, 'inventory', forceUpdate);
         }
     }
 
@@ -1056,13 +1082,14 @@ class UISystem {
         });
     }
 
-    _updateCraftingSlots() {
+    _updateCraftingSlots(forceUpdate = false) {
         const grid = this.elements.craftingGrid;
         if (!grid) return;
         const count = this.is3x3Crafting ? 9 : 4;
         for (let i = 0; i < count; i++) {
-            this.renderSlotItem(grid.children[i], this.craftingSlots[i]);
+            this.renderSlotItem(grid.children[i], this.craftingSlots[i], forceUpdate);
         }
+        this._updateCraftingOutput();
     }
 
     _updateCraftingOutput() {
@@ -1101,6 +1128,35 @@ class UISystem {
     }
 
     _matchRecipe() {
+        const activeSlots = this.craftingSlots.filter(s => s && s.item);
+        const spells = activeSlots.filter(s => s.item.type === 'spell');
+        const modifiers = activeSlots.filter(s => s.item.type === 'modifier');
+        if (spells.length === 1 && modifiers.length >= 1 && spells.length + modifiers.length === activeSlots.length) {
+            const baseSpellItem = spells[0].item;
+            const baseSpell = baseSpellItem.data && baseSpellItem.data.spell ? baseSpellItem.data.spell : baseSpellItem;
+            
+            const newSpell = Object.assign(Object.create(Object.getPrototypeOf(baseSpell)), baseSpell);
+            newSpell.modifiers = baseSpell.modifiers ? [...baseSpell.modifiers] : [];
+            newSpell.id = 'magic_' + Math.random();
+            
+            for (const modSlot of modifiers) {
+                const mod = modSlot.item;
+                const modData = mod.data && mod.data.mod ? mod.data.mod : mod;
+                if (modData.config && !modData.config.stackable && newSpell.modifiers.some(m => m.type === modData.type)) return null;
+                if (typeof newSpell.addModifier === 'function') newSpell.addModifier(modData);
+                else newSpell.modifiers.push(modData);
+            }
+            
+            const newItem = Object.assign({}, baseSpellItem);
+            newItem.id = newSpell.id;
+            if (baseSpellItem.data && baseSpellItem.data.spell) {
+                newItem.data = Object.assign({}, baseSpellItem.data, { spell: newSpell });
+            } else {
+                Object.assign(newItem, newSpell);
+            }
+            return { item: newItem, count: 1 };
+        }
+
         // Build a 2x2 pattern from crafting slots [tl, tr, bl, br]
         const s = this.craftingSlots.map(s => this._getSlotType(s));
         const [tl, tr, bl, br] = s;
@@ -1200,6 +1256,27 @@ class UISystem {
             return null;
         };
 
+        // Spell Recipe: mana crystal center, 4 mats in cross
+        const spellRecipe = (matType, spellId) => {
+            if (s[4] !== 'mana_crystal') return null;
+            if (!s[0] && matchesMat(s[1], matType) && !s[2] &&
+                matchesMat(s[3], matType) && matchesMat(s[5], matType) &&
+                !s[6] && matchesMat(s[7], matType) && !s[8]) {
+                const sp = SPELL_TYPES[spellId];
+                if (!sp) return null;
+                const spellInst = new Spell(spellId);
+                return { 
+                    item: { 
+                        type: 'spell', subtype: spellId, name: sp.name, 
+                        stackable: false, maxStack: 1, id: `spell_${spellId}_${Date.now()}`, 
+                        data: { spell: spellInst }, description: sp.description 
+                    }, 
+                    count: 1 
+                };
+            }
+            return null;
+        };
+
         if (!this.is3x3Crafting) {
             // ONLY 2x2 recipes
             if (woodType !== undefined && totalItems === 1) return block(woodToPlankMap[woodType].block, woodToPlankMap[woodType].name, 4);
@@ -1265,6 +1342,20 @@ class UISystem {
             r = armorRecipeFull('gold_ingot', 'Gold Chestplate', 'chest', 7); if (r) return r;
             r = armorRecipeLegs('gold_ingot', 'Gold Leggings', 'legs', 4); if (r) return r;
             r = armorRecipeBoots('gold_ingot', 'Gold Boots', 'boots', 3); if (r) return r;
+
+            r = spellRecipe(B.SNOW, 'ICE'); if (r) return r;
+            r = spellRecipe('coal', 'FIRE'); if (r) return r;
+            r = spellRecipe('gold_ingot', 'THUNDER'); if (r) return r;
+            r = spellRecipe(B.STONE, 'EARTH'); if (r) return r;
+            r = spellRecipe('gold_nugget', 'THUNDER'); if (r) return r; // Alternative
+            r = spellRecipe(B.OBSIDIAN, 'DARK'); if (r) return r;
+            r = spellRecipe('sugar', 'WIND'); if (r) return r;
+            r = spellRecipe(B.LEAVES, 'POISON'); if (r) return r;
+            r = spellRecipe(B.SAND, 'WATER'); if (r) return r;
+            r = spellRecipe(B.ALIEN_STONE, 'VOID'); if (r) return r;
+            r = spellRecipe(B.GLASS, 'LIGHT'); if (r) return r;
+            r = spellRecipe('water_bucket', 'FROST'); if (r) return r; // Or similar
+            r = spellRecipe(B.PLANKS, 'BUILDER'); if (r) return r;
 
             if (getCount(B.SAND) === 8 && totalItems === 8) return block(B.GLASS, 'Glass', 8);
             if (getCount(B.COBBLESTONE) === 8 && totalItems === 8) return block(B.FURNACE, 'Furnace', 1);

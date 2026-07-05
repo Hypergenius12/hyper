@@ -7,7 +7,7 @@ import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateI
 import { generatePlanetParams, generateChunkTerrain, generateNetherChunk } from './generation.js';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js';
 import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js';
-import { ProjectileManager, SpellProjectile } from './magic.js';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js';
 import { AudioManager } from './audio.js';
 
 // Helper: find safe spawn location
@@ -165,6 +165,7 @@ class Game {
         this.planetParams = generatePlanetParams(rawSeed);
         this.world = new World(this.engine.scene, this.atlas);
         this.world.planetParams = this.planetParams;
+        this.world.setCamera(this.engine.camera);
 
         // Chest Management
         this.chestInventories = new Map();
@@ -411,14 +412,16 @@ class Game {
                         { item: Item.equipmentItem('sword_gold', { damage: 6 }, 'Gold Sword'), maxCount: 1, chance: 0.3 }
                     ];
                 } else if (y < 40) {
-                    // Check if this is a dungeon chest based on depth
+                    // Dungeon loot - spells, modifiers, and rare gear
                     lootTable = [
+                        { factory: () => Item.spellItem(generateRandomSpell()), maxCount: 1, chance: 0.7 },
+                        { factory: () => Item.modifierItem(generateRandomModifier()), maxCount: 1, chance: 0.5 },
+                        { factory: () => Item.wandItem(generateRandomWand()), maxCount: 1, chance: 0.2 },
                         { item: new Item('material', 'iron_ingot', {}, 'Iron Ingot'), maxCount: 8, chance: 0.6 },
                         { item: new Item('material', 'gold_ingot', {}, 'Gold Ingot'), maxCount: 4, chance: 0.4 },
                         { item: new Item('material', 'diamond', {}, 'Diamond'), maxCount: 2, chance: 0.2 },
-                        { item: new Item('material', 'mana_crystal', {}, 'Mana Crystal'), maxCount: 4, chance: 0.3 },
+                        { item: new Item('material', 'mana_crystal', {}, 'Mana Crystal'), maxCount: 6, chance: 0.5 },
                         { item: Item.equipmentItem('sword_iron', { damage: 8 }, 'Iron Sword'), maxCount: 1, chance: 0.2 },
-                        { item: Item.equipmentItem('chestplate_iron', { protection: 4 }, 'Iron Chestplate'), maxCount: 1, chance: 0.15 }
                     ];
                 } else {
                     lootTable = [
@@ -426,8 +429,8 @@ class Game {
                         { item: new Item('material', 'cobblestone', {}, 'Cobblestone'), maxCount: 32, chance: 0.8 },
                         { item: new Item('material', 'coal', {}, 'Coal'), maxCount: 12, chance: 0.5 },
                         { item: Item.equipmentItem('pickaxe_stone', { mineSpeed: 1.5, damage: 3 }, 'Stone Pickaxe'), maxCount: 1, chance: 0.3 },
-                        { item: new Item('spell', 'fire', { spell: { element: 'fire', type: 'projectile', cost: 10, modifiers: [] } }, 'Fire Spell'), maxCount: 1, chance: 0.4 },
-                        { item: new Item('spell', 'ice', { spell: { element: 'ice', type: 'projectile', cost: 10, modifiers: [] } }, 'Ice Spell'), maxCount: 1, chance: 0.4 }
+                        { factory: () => Item.spellItem(generateRandomSpell()), maxCount: 1, chance: 0.2 },
+                        { factory: () => Item.modifierItem(generateRandomModifier()), maxCount: 1, chance: 0.2 }
                     ];
                 }
 
@@ -439,7 +442,12 @@ class Game {
                         const entry = lootTable[Math.floor(rng() * lootTable.length)];
                         if (rng() < entry.chance) {
                             const count = 1 + Math.floor(rng() * entry.maxCount);
-                            const itemClone = Object.assign(Object.create(Object.getPrototypeOf(entry.item)), entry.item);
+                            let itemClone;
+                            if (entry.factory) {
+                                itemClone = entry.factory();
+                            } else {
+                                itemClone = Object.assign(Object.create(Object.getPrototypeOf(entry.item)), entry.item);
+                            }
                             itemClone.stackable = entry.maxCount > 1;
                             inv[slotIdx] = { item: itemClone, count: count };
                         }
@@ -738,8 +746,7 @@ class Game {
             this.viewModel.rotation.x += (-0.5 - this.viewModel.rotation.x) * 0.2; // swing animation (lerp)
 
             if (slot && slot.item.type === 'wand') {
-                const wandIndex = this.player.activeSpellIndex || 0;
-                const castInfo = slot.item.data.wand.cast(wandIndex, this.player);
+                const castInfo = slot.item.data.wand.castCombined(this.player);
                 if (castInfo) {
                     if (castInfo.stats.element === 'HEAL') {
                         this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.abs(castInfo.stats.damage));
@@ -1090,6 +1097,11 @@ class Game {
             visual.update(dt);
         }
 
+        this._updateFurnaces(dt);
+        if (this.ui.furnacePos) {
+            this.ui._updateFurnaceSlots();
+        }
+
 
 
         const _tempVec3 = new THREE.Vector3();
@@ -1106,8 +1118,31 @@ class Game {
                 hitPos.copy(eHit.mob.position);
                 if (proj.stats.element === 'ICE') {
                     eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
-                    eHit.mob.freezeTimer = 3.0; // 3 seconds freeze
-                } else if (proj.stats.element !== 'FIRE') {
+                    eHit.mob.freeze(3.0); // 3 seconds freeze
+                } else if (proj.stats.element === 'THUNDER') {
+                    eHit.mob.takeDamage(proj.stats.damage * 1.5, _tempVec3);
+                } else if (proj.stats.element === 'DARK') {
+                    eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
+                    this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.abs(proj.stats.damage) * 0.5);
+                } else if (proj.stats.element === 'VAMPIRIC') {
+                    eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
+                    this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.abs(proj.stats.damage));
+                } else if (proj.stats.element === 'WIND') {
+                    const windKnock = _tempVec3.clone().multiplyScalar(3);
+                    eHit.mob.takeDamage(proj.stats.damage, windKnock);
+                } else if (proj.stats.element === 'WATER') {
+                    const waterKnock = _tempVec3.clone().multiplyScalar(4);
+                    eHit.mob.takeDamage(proj.stats.damage, waterKnock);
+                    eHit.mob.burnTimer = 0; // Extinguish
+                } else if (proj.stats.element === 'POISON') {
+                    eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
+                    eHit.mob.poisonTimer = 5.0; // 5 sec poison
+                } else if (proj.stats.element === 'FIRE') {
+                    eHit.mob.burnTimer = 5.0; // Fireburst ignites directly hit mobs
+                } else if (proj.stats.element === 'MAGMA') {
+                    eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
+                    eHit.mob.burnTimer = 8.0; 
+                } else {
                     // Normal hit
                     eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
                 }
@@ -1131,18 +1166,188 @@ class Game {
             }
 
             if (hitFound) {
-                if (proj.stats.element === 'FIRE') {
+                if (proj.spell && proj.spell.type === 'METEOR') {
+                    this.meteorSystem.startShower();
+                }
+
+                const bx = Math.floor(hitPos.x);
+                const by = Math.floor(hitPos.y);
+                const bz = Math.floor(hitPos.z);
+                
+                if (proj.stats.element === 'WATER') {
+                    this.particles.emit(hitPos, 'explosion', 20, 0x3399FF);
+                    for(let x = bx - 1; x <= bx + 1; x++) {
+                        for(let y = by - 1; y <= by + 1; y++) {
+                            for(let z = bz - 1; z <= bz + 1; z++) {
+                                const b = this.world.getBlock(x,y,z);
+                                if (b === BLOCKS.FIRE) this.world.setBlock(x,y,z, BLOCKS.AIR);
+                                else if (b === BLOCKS.LAVA) this.world.setBlock(x,y,z, BLOCKS.OBSIDIAN);
+                            }
+                        }
+                    }
+                } else if (proj.stats.element === 'LAVA') {
+                    this.particles.emit(hitPos, 'explosion', 20, 0xFF6600);
+                    if (!eHit.hit) {
+                        const tgtY = this.world.getBlock(bx, by, bz) === BLOCKS.AIR ? by : by + 1;
+                        if (this.world.getBlock(bx, tgtY, bz) === BLOCKS.AIR) this.world.setBlock(bx, tgtY, bz, BLOCKS.LAVA);
+                    }
+                } else if (proj.stats.element === 'BUILDER') {
+                    this.particles.emit(hitPos, 'explosion', 10, 0xAAAAAA);
+                    if (!eHit.hit) {
+                        // Place block just before hit position
+                        const placePos = hitPos.clone().sub(proj.velocity.clone().normalize().multiplyScalar(0.6));
+                        const px = Math.floor(placePos.x), py = Math.floor(placePos.y), pz = Math.floor(placePos.z);
+                        if (this.world.getBlock(px, py, pz) === BLOCKS.AIR) {
+                            this.world.setBlock(px, py, pz, BLOCKS.STONE_BRICKS);
+                        }
+                    }
+                } else if (proj.stats.element === 'FROST') {
+                    this.particles.emit(hitPos, 'explosion', 40, 0xBBFFFF);
+                    for (const mob of this.entityManager.mobs) {
+                        if (mob.position.distanceTo(hitPos) < 5.0) {
+                            mob.freeze(5.0);
+                        }
+                    }
+                } else if (proj.stats.element === 'VOID') {
+                    this.particles.emit(hitPos, 'explosion', 40, 0x220033);
+                    for(let x = bx - 2; x <= bx + 2; x++) {
+                        for(let y = by - 2; y <= by + 2; y++) {
+                            for(let z = bz - 2; z <= bz + 2; z++) {
+                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 2.5) {
+                                    if (this.world.getBlock(x,y,z) !== BLOCKS.BEDROCK) {
+                                        this.world.setBlock(x,y,z, BLOCKS.AIR);
+                                        this.particles.emit(new THREE.Vector3(x+0.5, y+0.5, z+0.5), 'blockBreak', 2, 0x220033);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (proj.stats.element === 'STEAM') {
+                    this.particles.emit(hitPos, 'explosion', 40, 0xDDDDDD);
+                    for (const mob of this.entityManager.mobs) {
+                        if (mob.position.distanceTo(hitPos) < 4.0) {
+                            const knockbackDir = mob.position.clone().sub(hitPos).normalize();
+                            mob.takeDamage(proj.stats.damage, knockbackDir.multiplyScalar(2));
+                            mob.burnTimer = 0; // Steam extinguishes
+                        }
+                    }
+                } else if (proj.stats.element === 'STORM') {
+                    this.particles.emit(hitPos, 'explosion', 30, 0x44DDFF);
+                    for (const mob of this.entityManager.mobs) {
+                        if (mob.position.distanceTo(hitPos) < 6.0) {
+                            const knockbackDir = mob.position.clone().sub(hitPos).normalize();
+                            mob.takeDamage(proj.stats.damage, knockbackDir);
+                            this.particles.emit(mob.position, 'explosion', 10, 0xFFFF00); // Zap
+                        }
+                    }
+                } else if (proj.stats.element === 'FIRE' || proj.stats.element === 'MAGMA') {
                     // Explode! AOE damage
                     for (const mob of this.entityManager.mobs) {
                         if (mob.position.distanceTo(hitPos) < 4.0) {
                             const knockbackDir = mob.position.clone().sub(hitPos).normalize();
                             mob.takeDamage(proj.stats.damage, knockbackDir);
-                            if (proj.stats.effects && proj.stats.effects.includes('burn')) {
-                                mob.burnTimer = 5.0;
-                            }
+                            mob.burnTimer = 5.0; // Ignite AOE
                         }
                     }
                     this.particles.emit(hitPos, 'explosion', 30, 0xffaa00);
+                    // Ignite blocks
+                    if (!eHit.hit || !eHit.mob) {
+                        const bx = Math.floor(hitPos.x);
+                        const by = Math.floor(hitPos.y);
+                        const bz = Math.floor(hitPos.z);
+                        if (this.world.getBlock(bx, by + 1, bz) === BLOCKS.AIR) {
+                            this.world.setBlock(bx, by + 1, bz, BLOCKS.FIRE);
+                        } else if (this.world.getBlock(bx, by, bz) === BLOCKS.AIR) {
+                            this.world.setBlock(bx, by, bz, proj.stats.element === 'MAGMA' ? BLOCKS.LAVA : BLOCKS.FIRE);
+                        }
+                    }
+                } else if (proj.stats.element === 'EARTH') {
+                    for (const mob of this.entityManager.mobs) {
+                        if (mob.position.distanceTo(hitPos) < 3.0) {
+                            const knockbackDir = mob.position.clone().sub(hitPos).normalize();
+                            mob.takeDamage(proj.stats.damage * 0.7, knockbackDir);
+                        }
+                    }
+                    this.particles.emit(hitPos, 'explosion', 20, 0x8B4513);
+                    // Destroy weak blocks
+                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
+                    const weakBlocks = [BLOCKS.DIRT, BLOCKS.GRASS, BLOCKS.SAND, BLOCKS.RED_SAND, BLOCKS.LEAVES, BLOCKS.ACACIA_LEAVES, BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.ACACIA_WOOD, BLOCKS.GLASS, BLOCKS.TALL_GRASS, BLOCKS.ALIEN_TALL_GRASS, BLOCKS.RED_FLOWER, BLOCKS.BLUE_FLOWER, BLOCKS.YELLOW_FLOWER, BLOCKS.DEAD_BUSH, BLOCKS.VINES];
+                    for(let x = bx - 1; x <= bx + 1; x++) {
+                        for(let y = by - 1; y <= by + 1; y++) {
+                            for(let z = bz - 1; z <= bz + 1; z++) {
+                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 2.0) {
+                                    const b = this.world.getBlock(x, y, z);
+                                    if (weakBlocks.includes(b)) {
+                                        this.world.setBlock(x, y, z, BLOCKS.AIR);
+                                        this.particles.emit(new THREE.Vector3(x+0.5, y+0.5, z+0.5), 'blockBreak', 5, 0x8B4513);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (proj.stats.element === 'ICE') {
+                    this.particles.emit(hitPos, 'magic', 15, proj.color);
+                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
+                    for(let x = bx - 1; x <= bx + 1; x++) {
+                        for(let y = by - 1; y <= by + 1; y++) {
+                            for(let z = bz - 1; z <= bz + 1; z++) {
+                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 2.0) {
+                                    const b = this.world.getBlock(x, y, z);
+                                    if (b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER) this.world.setBlock(x, y, z, BLOCKS.ICE);
+                                    else if (b === BLOCKS.GRASS) this.world.setBlock(x, y, z, BLOCKS.SNOW);
+                                    else if (b === BLOCKS.FIRE) this.world.setBlock(x, y, z, BLOCKS.AIR);
+                                    else if (b === BLOCKS.LAVA) this.world.setBlock(x, y, z, BLOCKS.STONE);
+                                }
+                            }
+                        }
+                    }
+                } else if (proj.stats.element === 'DARK') {
+                    this.particles.emit(hitPos, 'magic', 15, proj.color);
+                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
+                    for(let x = bx - 1; x <= bx + 1; x++) {
+                        for(let y = by - 1; y <= by + 1; y++) {
+                            for(let z = bz - 1; z <= bz + 1; z++) {
+                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 2.0) {
+                                    const b = this.world.getBlock(x, y, z);
+                                    if (b === BLOCKS.GRASS || b === BLOCKS.ALIEN_GRASS || b === BLOCKS.SWAMP_GRASS) this.world.setBlock(x, y, z, BLOCKS.DIRT);
+                                    else if (b === BLOCKS.LEAVES || b === BLOCKS.ACACIA_LEAVES || b === BLOCKS.RED_FLOWER || b === BLOCKS.BLUE_FLOWER || b === BLOCKS.YELLOW_FLOWER) this.world.setBlock(x, y, z, BLOCKS.AIR);
+                                    else if (b === BLOCKS.TALL_GRASS) this.world.setBlock(x, y, z, BLOCKS.DEAD_BUSH);
+                                }
+                            }
+                        }
+                    }
+                } else if (proj.stats.element === 'THUNDER') {
+                    this.particles.emit(hitPos, 'magic', 15, proj.color);
+                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
+                    for(let x = bx - 1; x <= bx + 1; x++) {
+                        for(let y = by - 1; y <= by + 1; y++) {
+                            for(let z = bz - 1; z <= bz + 1; z++) {
+                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 1.5) {
+                                    const b = this.world.getBlock(x, y, z);
+                                    if (b === BLOCKS.SAND || b === BLOCKS.RED_SAND) this.world.setBlock(x, y, z, BLOCKS.GLASS);
+                                    else if (b === BLOCKS.AIR && this.world.getBlock(x, y - 1, z) !== BLOCKS.AIR) {
+                                        if (Math.random() < 0.3) this.world.setBlock(x, y, z, BLOCKS.FIRE);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (proj.stats.element === 'WIND') {
+                    this.particles.emit(hitPos, 'magic', 15, proj.color);
+                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
+                    const vegetation = [BLOCKS.TALL_GRASS, BLOCKS.ALIEN_TALL_GRASS, BLOCKS.RED_FLOWER, BLOCKS.BLUE_FLOWER, BLOCKS.YELLOW_FLOWER, BLOCKS.DEAD_BUSH, BLOCKS.VINES];
+                    for(let x = bx - 1; x <= bx + 1; x++) {
+                        for(let y = by - 1; y <= by + 1; y++) {
+                            for(let z = bz - 1; z <= bz + 1; z++) {
+                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 2.5) {
+                                    if (vegetation.includes(this.world.getBlock(x, y, z))) {
+                                        this.world.setBlock(x, y, z, BLOCKS.AIR);
+                                        this.particles.emit(new THREE.Vector3(x+0.5, y+0.5, z+0.5), 'blockBreak', 5, 0x88cc88);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 } else {
                     this.particles.emit(hitPos, 'magic', 15, proj.color);
                 }
@@ -1194,6 +1399,10 @@ class Game {
             // Optional: disable fog for minimap so we can see clearly
             const oldFog = this.engine.scene.fog;
             this.engine.scene.fog = null;
+            
+            for (const chunk of this.world.chunks.values()) {
+                if (chunk.mesh) chunk.mesh.visible = true;
+            }
             
             this.engine.renderer.render(this.engine.scene, this.minimapCamera);
             

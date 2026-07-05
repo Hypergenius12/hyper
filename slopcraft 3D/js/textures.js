@@ -1782,7 +1782,11 @@ export function generateItemTexture(itemType, itemSubtype) {
         'spell_fire': { c: '#ff3d00', d: '#dd2c00', h: '#ff9e80' },
         'spell_ice': { c: '#00b0ff', d: '#0091ea', h: '#80d8ff' },
         'spell_nature': { c: '#00e676', d: '#00c853', h: '#b9f6ca' },
-        'spell_basic': { c: '#e0e0e0', d: '#9e9e9e', h: '#ffffff' }
+        'spell_basic': { c: '#e0e0e0', d: '#9e9e9e', h: '#ffffff' },
+        'spell_earth': { c: '#8B4513', d: '#5D2906', h: '#C4A882' },
+        'spell_thunder': { c: '#FFD700', d: '#CC8800', h: '#FFFF88' },
+        'spell_dark': { c: '#6600CC', d: '#440088', h: '#AA66FF' },
+        'spell_wind': { c: '#66CC99', d: '#339966', h: '#CCFFEE' }
     };
 
     // Helper to determine material tier from subtype
@@ -2144,6 +2148,10 @@ export function generateItemTexture(itemType, itemSubtype) {
         if (itemSubtype === 'FIRE') sc = 'spell_fire';
         if (itemSubtype === 'ICE') sc = 'spell_ice';
         if (itemSubtype === 'HEAL') sc = 'spell_nature';
+        if (itemSubtype === 'EARTH') sc = 'spell_earth';
+        if (itemSubtype === 'THUNDER') sc = 'spell_thunder';
+        if (itemSubtype === 'DARK') sc = 'spell_dark';
+        if (itemSubtype === 'WIND') sc = 'spell_wind';
         p = palettes[sc];
         shape = [
             "                ",
@@ -2221,6 +2229,10 @@ export function generateSpellTexture(element) {
     if (element === 'FIRE') { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(255,64,0,0)'; }
     else if (element === 'ICE') { colorInner = 'rgba(200,255,255,1)'; colorOuter = 'rgba(0,128,255,0)'; }
     else if (element === 'HEAL') { colorInner = 'rgba(200,255,200,1)'; colorOuter = 'rgba(64,255,64,0)'; }
+    else if (element === 'EARTH') { colorInner = 'rgba(200,160,100,1)'; colorOuter = 'rgba(139,69,19,0)'; }
+    else if (element === 'THUNDER') { colorInner = 'rgba(255,255,200,1)'; colorOuter = 'rgba(255,255,0,0)'; }
+    else if (element === 'DARK') { colorInner = 'rgba(180,100,255,1)'; colorOuter = 'rgba(102,0,204,0)'; }
+    else if (element === 'WIND') { colorInner = 'rgba(200,255,220,1)'; colorOuter = 'rgba(153,255,204,0)'; }
     else { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(128,0,255,0)'; } // Arcane/Default
     
     const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);
@@ -2237,6 +2249,120 @@ export function generateSpellTexture(element) {
         const d = Math.random() * 10;
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.fillRect(cx + Math.cos(a)*d, cy + Math.sin(a)*d, 1, 1);
+    }
+    
+    return canvas;
+}
+
+export function generateMobTexture(mobType) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    
+    // Base colors
+    let baseColor = '#cccccc';
+    let noiseRange = 20;
+    
+    if (mobType === 'COW') { baseColor = '#e0e0e0'; noiseRange = 10; }
+    else if (mobType === 'PIG') { baseColor = '#ffbbcc'; noiseRange = 15; }
+    else if (mobType === 'ZOMBIE') { baseColor = '#338844'; noiseRange = 20; }
+    else if (mobType === 'SKELETON') { baseColor = '#dddddd'; noiseRange = 10; }
+    else if (mobType === 'SHEEP') { baseColor = '#eeeeee'; noiseRange = 30; }
+    else if (mobType === 'SLIME') { baseColor = '#44ff44'; noiseRange = 10; }
+    else if (mobType === 'SPIDER') { baseColor = '#221111'; noiseRange = 15; }
+    else if (mobType === 'BAT') { baseColor = '#332222'; noiseRange = 10; }
+    else if (mobType === 'BIRD') { baseColor = '#4477dd'; noiseRange = 20; }
+    else if (mobType === 'GOBLIN') { baseColor = '#66aa22'; noiseRange = 20; }
+    else if (mobType === 'CHICKEN') { baseColor = '#ffffff'; noiseRange = 5; }
+    else if (mobType === 'LIZARD') { baseColor = '#22aa44'; noiseRange = 30; }
+    else if (mobType === 'COD') { baseColor = '#bbbb99'; noiseRange = 20; }
+    else if (mobType === 'BASS') { baseColor = '#446633'; noiseRange = 20; }
+    else if (mobType === 'TROPICAL_FISH') { baseColor = '#ff8800'; noiseRange = 10; }
+    else if (mobType === 'TURTLE') { baseColor = '#115511'; noiseRange = 25; }
+    
+    // Fill base noise
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, 32, 32);
+    
+    // Parse hex
+    const r = parseInt(baseColor.slice(1,3), 16);
+    const g = parseInt(baseColor.slice(3,5), 16);
+    const b = parseInt(baseColor.slice(5,7), 16);
+    
+    for (let x = 0; x < 32; x++) {
+        for (let y = 0; y < 32; y++) {
+            const nv = (Math.random() - 0.5) * noiseRange;
+            ctx.fillStyle = `rgb(${Math.min(255, Math.max(0, r + nv))},${Math.min(255, Math.max(0, g + nv))},${Math.min(255, Math.max(0, b + nv))})`;
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+    
+    // Custom Details
+    if (mobType === 'COW') {
+        ctx.fillStyle = '#222222';
+        for(let i=0; i<15; i++) {
+            const sx = Math.floor(Math.random()*28);
+            const sy = Math.floor(Math.random()*28);
+            const w = 2 + Math.floor(Math.random()*4);
+            const h = 2 + Math.floor(Math.random()*4);
+            ctx.fillRect(sx, sy, w, h);
+        }
+        // Face/eyes
+        ctx.fillStyle = '#000'; ctx.fillRect(6, 6, 2, 2); ctx.fillRect(24, 6, 2, 2);
+        ctx.fillStyle = '#ffccdd'; ctx.fillRect(10, 20, 12, 6);
+    }
+    else if (mobType === 'PIG') {
+        ctx.fillStyle = '#dd88aa';
+        for(let i=0; i<30; i++) ctx.fillRect(Math.floor(Math.random()*32), Math.floor(Math.random()*32), 1, 1);
+        // Face
+        ctx.fillStyle = '#000'; ctx.fillRect(8, 10, 2, 2); ctx.fillRect(22, 10, 2, 2);
+        ctx.fillStyle = '#cc6688'; ctx.fillRect(12, 16, 8, 6); // Snout
+    }
+    else if (mobType === 'ZOMBIE') {
+        ctx.fillStyle = '#000'; ctx.fillRect(8, 8, 4, 4); ctx.fillRect(20, 8, 4, 4);
+        ctx.fillStyle = '#114422'; ctx.fillRect(12, 20, 8, 2); // Mouth
+    }
+    else if (mobType === 'SKELETON') {
+        ctx.fillStyle = '#000'; ctx.fillRect(8, 8, 6, 6); ctx.fillRect(18, 8, 6, 6);
+        ctx.fillRect(14, 16, 4, 4); // Nose
+        for(let i=0; i<4; i++) ctx.fillRect(12 + i*2, 22, 1, 4); // Teeth
+    }
+    else if (mobType === 'SHEEP') {
+        ctx.fillStyle = '#eebb99'; ctx.fillRect(8, 8, 16, 16); // Face
+        ctx.fillStyle = '#000'; ctx.fillRect(10, 12, 2, 2); ctx.fillRect(20, 12, 2, 2);
+        ctx.fillStyle = '#ff88aa'; ctx.fillRect(14, 20, 4, 2); // Nose
+    }
+    else if (mobType === 'SLIME') {
+        ctx.fillStyle = 'rgba(0,100,0,0.4)';
+        for(let i=0; i<40; i++) ctx.fillRect(Math.floor(Math.random()*32), Math.floor(Math.random()*32), 2, 2);
+        ctx.fillStyle = '#000'; ctx.fillRect(6, 10, 4, 4); ctx.fillRect(22, 10, 4, 4); // Eyes
+        ctx.fillRect(14, 16, 4, 2); // Mouth
+    }
+    else if (mobType === 'SPIDER') {
+        ctx.fillStyle = '#ff0000'; // 8 red eyes
+        ctx.fillRect(10, 14, 2, 2); ctx.fillRect(14, 12, 2, 2);
+        ctx.fillRect(18, 12, 2, 2); ctx.fillRect(22, 14, 2, 2);
+    }
+    else if (mobType === 'CHICKEN') {
+        ctx.fillStyle = '#000'; ctx.fillRect(4, 12, 2, 2); ctx.fillRect(26, 12, 2, 2);
+        ctx.fillStyle = '#ffcc00'; ctx.fillRect(14, 14, 4, 4); // Beak
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(14, 18, 4, 6); // Wattle
+    }
+    else if (mobType === 'LIZARD') {
+        ctx.fillStyle = '#000'; ctx.fillRect(8, 8, 2, 2); ctx.fillRect(22, 8, 2, 2);
+        ctx.fillStyle = '#ffff00'; ctx.fillRect(8, 8, 1, 1); ctx.fillRect(22, 8, 1, 1);
+        ctx.fillStyle = '#115522'; 
+        for(let i=0; i<20; i++) ctx.fillRect(Math.floor(Math.random()*32), Math.floor(Math.random()*32), 2, 1); // Scales
+    }
+    else if (mobType === 'GOBLIN') {
+        ctx.fillStyle = '#000'; ctx.fillRect(6, 10, 4, 2); ctx.fillRect(22, 10, 4, 2);
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(8, 10, 1, 1); ctx.fillRect(24, 10, 1, 1);
+        ctx.fillStyle = '#448811'; ctx.fillRect(14, 14, 4, 6); // Big nose
+    }
+    else if (mobType === 'TROPICAL_FISH') {
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(16, 0, 4, 32); // Stripe
+        ctx.fillStyle = '#000'; ctx.fillRect(6, 12, 2, 2);
     }
     
     return canvas;

@@ -550,6 +550,8 @@ export class World {
         this.atlas = atlas;
         this.chunks = new Map();
         this.renderDistance = 8;
+        this.frustum = new THREE.Frustum();
+        this.projScreenMatrix = new THREE.Matrix4();
         
         // Initialize shared materials to drastically reduce GC and WebGL overhead
         const matOpaque = new THREE.MeshLambertMaterial({
@@ -608,6 +610,10 @@ export class World {
             this.scene.fog.density = 1.0 / (blocks * 0.75);
             this.scene.fog.baseDensity = this.scene.fog.density;
         }
+    }
+
+    setCamera(camera) {
+        this.camera = camera;
     }
 
     getChunkKey(cx, cz) {
@@ -1034,6 +1040,22 @@ export class World {
                     this.scene.add(mesh);
                 }
                 buildsThisFrame++;
+            }
+        }
+
+        // Frustum culling
+        if (this.camera) {
+            this.projScreenMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+            this.frustum.setFromProjectionMatrix(this.projScreenMatrix);
+            const _box = new THREE.Box3();
+            for (const chunk of this.chunks.values()) {
+                if (chunk.mesh) {
+                    const cx = chunk.cx * 16;
+                    const cz = chunk.cz * 16;
+                    _box.min.set(cx, 0, cz);
+                    _box.max.set(cx + 16, 128, cz + 16);
+                    chunk.mesh.visible = this.frustum.intersectsBox(_box);
+                }
             }
         }
 
