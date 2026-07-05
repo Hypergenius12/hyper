@@ -967,12 +967,26 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         case BLOCKS.VINES:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            ctx.fillStyle = 'rgba(40, 90, 30, 0.9)';
-            for (let i = 0; i < 6; i++) {
-                const x = (rng() * TEX_SIZE) | 0;
-                const h = 8 + (rng() * 8) | 0;
-                ctx.fillRect(x, 0, 2, h);
-            }
+            // Vine 1 (left)
+            ctx.fillStyle = '#2d6a25'; // Darker green
+            ctx.fillRect(2, 0, 1, 4); ctx.fillRect(2, 4, 2, 1);
+            ctx.fillRect(3, 5, 1, 3); ctx.fillRect(3, 8, 2, 1);
+            ctx.fillRect(4, 9, 1, 4); ctx.fillRect(4, 13, 2, 1);
+            ctx.fillRect(5, 14, 1, 2);
+            // Vine 2 (middle)
+            ctx.fillStyle = '#3ca02d'; // Mid green
+            ctx.fillRect(8, 0, 2, 2); ctx.fillRect(7, 2, 1, 3);
+            ctx.fillRect(6, 5, 1, 2); ctx.fillRect(7, 7, 2, 2);
+            ctx.fillRect(8, 9, 1, 3);
+            // Vine 3 (right)
+            ctx.fillStyle = '#1f4c19'; // Very dark green
+            ctx.fillRect(12, 0, 1, 6); ctx.fillRect(13, 6, 1, 2);
+            ctx.fillRect(12, 8, 1, 3); ctx.fillRect(11, 11, 1, 4);
+            // Additional leaves/details
+            ctx.fillStyle = '#4cc736'; // Light green highlight
+            ctx.fillRect(1, 2, 1, 1); ctx.fillRect(4, 6, 1, 1);
+            ctx.fillRect(9, 1, 1, 1); ctx.fillRect(5, 4, 1, 1);
+            ctx.fillRect(14, 7, 1, 1); ctx.fillRect(10, 10, 1, 1);
             break;
         case BLOCKS.TALL_GRASS:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
@@ -1786,7 +1800,8 @@ export function generateItemTexture(itemType, itemSubtype) {
         'spell_earth': { c: '#8B4513', d: '#5D2906', h: '#C4A882' },
         'spell_thunder': { c: '#FFD700', d: '#CC8800', h: '#FFFF88' },
         'spell_dark': { c: '#6600CC', d: '#440088', h: '#AA66FF' },
-        'spell_wind': { c: '#66CC99', d: '#339966', h: '#CCFFEE' }
+        'spell_wind': { c: '#66CC99', d: '#339966', h: '#CCFFEE' },
+        'spell_poison': { c: '#33cc33', d: '#1f7a1f', h: '#80ff80' }
     };
 
     // Helper to determine material tier from subtype
@@ -2192,6 +2207,7 @@ export function generateItemTexture(itemType, itemSubtype) {
         if (itemSubtype === 'THUNDER') sc = 'spell_thunder';
         if (itemSubtype === 'DARK') sc = 'spell_dark';
         if (itemSubtype === 'WIND') sc = 'spell_wind';
+        if (itemSubtype === 'POISON') sc = 'spell_poison';
         p = palettes[sc];
         shape = [
             "                ",
@@ -2273,6 +2289,7 @@ export function generateSpellTexture(element) {
     else if (element === 'THUNDER') { colorInner = 'rgba(255,255,200,1)'; colorOuter = 'rgba(255,255,0,0)'; }
     else if (element === 'DARK') { colorInner = 'rgba(180,100,255,1)'; colorOuter = 'rgba(102,0,204,0)'; }
     else if (element === 'WIND') { colorInner = 'rgba(200,255,220,1)'; colorOuter = 'rgba(153,255,204,0)'; }
+    else if (element === 'POISON') { colorInner = 'rgba(150,255,150,1)'; colorOuter = 'rgba(51,204,51,0)'; }
     else { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(128,0,255,0)'; } // Arcane/Default
     
     const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);
