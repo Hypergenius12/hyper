@@ -187,12 +187,14 @@ export class Player {
         if (moveDir.lengthSq() > 0) moveDir.normalize();
 
         const blockIn = world.getBlock(this.position.x, this.position.y + 0.1, this.position.z);
-        const inWater = blockIn === BLOCKS.WATER || blockIn === BLOCKS.SWAMP_WATER;
+        const blockProps = getBlockProperties(blockIn);
+        const inWater = blockProps && blockProps.isLiquid && blockIn !== BLOCKS.LAVA;
         const inLava = blockIn === BLOCKS.LAVA;
+        const inFire = blockIn === BLOCKS.FIRE;
         const onLadder = blockIn === BLOCKS.LADDER;
 
-        if (inLava && Math.random() < dt * 4) {
-            this.takeDamage(5);
+        if ((inLava || inFire) && Math.random() < dt * 4) {
+            this.takeDamage(inLava ? 5 : 2); // Fire hurts less than lava
             const d = document.getElementById('damage-flash');
             if(d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
         }
@@ -1814,11 +1816,14 @@ export class Mob {
         this.age += dt;
         
         let inWater = false;
+        const currentBlock = world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y), Math.floor(this.position.z));
+        
         if (this.config.waterOnly) {
-            // Need BLOCKS from some scope, but wait, BLOCKS is not imported here.
-            // Actually, we can check if the block is liquid using getBlockProperties
-            const currentBlock = world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y), Math.floor(this.position.z));
-            inWater = currentBlock === 2 || currentBlock === 16; // WATER=2, SWAMP_WATER=16
+            inWater = getBlockProperties(currentBlock).isLiquid;
+        }
+
+        if (currentBlock === BLOCKS.FIRE || currentBlock === BLOCKS.LAVA) {
+            this.burnTimer = 2.0;
         }
 
         if (!this.flying) {

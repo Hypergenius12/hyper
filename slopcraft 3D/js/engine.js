@@ -1043,6 +1043,62 @@ export class World {
             }
         }
 
+        // Random Block Ticks (Fire Spread)
+        for (const key of chunksToKeep) {
+            const chunk = this.chunks.get(key);
+            if (!chunk || !chunk.blocks) continue;
+
+            // Tick 3 random blocks per chunk
+            for (let i = 0; i < 3; i++) {
+                const rx = Math.floor(Math.random() * CHUNK_SIZE);
+                const ry = Math.floor(Math.random() * CHUNK_HEIGHT);
+                const rz = Math.floor(Math.random() * CHUNK_SIZE);
+                const idx = (rx * CHUNK_HEIGHT * CHUNK_SIZE) + (ry * CHUNK_SIZE) + rz;
+                
+                const type = chunk.blocks[idx];
+                const props = getBlockProperties(type);
+                
+                if (type === BLOCKS.FIRE) {
+                    const wx = chunk.cx * CHUNK_SIZE + rx;
+                    const wz = chunk.cz * CHUNK_SIZE + rz;
+                    // Try to spread to adjacent flammable blocks
+                    const neighbors = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+                    for (const [dx, dy, dz] of neighbors) {
+                        if (Math.random() < 0.2) {
+                            const nx = wx + dx, ny = ry + dy, nz = wz + dz;
+                            if (ny >= 0 && ny < CHUNK_HEIGHT) {
+                                const tBlock = this.getBlock(nx, ny, nz);
+                                const tProps = getBlockProperties(tBlock);
+                                if (tProps && tProps.flammable) {
+                                    this.setBlock(nx, ny, nz, BLOCKS.FIRE);
+                                }
+                            }
+                        }
+                    }
+                    // Fire burns out
+                    if (Math.random() < 0.15) {
+                        this.setBlock(wx, ry, wz, BLOCKS.AIR);
+                    }
+                } else if (props && props.flammable) {
+                    // Check if adjacent to lava
+                    const wx = chunk.cx * CHUNK_SIZE + rx;
+                    const wz = chunk.cz * CHUNK_SIZE + rz;
+                    const neighbors = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+                    for (const [dx, dy, dz] of neighbors) {
+                        const nx = wx + dx, ny = ry + dy, nz = wz + dz;
+                        if (ny >= 0 && ny < CHUNK_HEIGHT) {
+                            if (this.getBlock(nx, ny, nz) === BLOCKS.LAVA) {
+                                if (Math.random() < 0.1) {
+                                    this.setBlock(wx, ry, wz, BLOCKS.FIRE);
+                                }
+                                break; // only catch fire once per tick
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Frustum culling
         if (this.camera) {
             this.projScreenMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
