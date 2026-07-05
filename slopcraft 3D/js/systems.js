@@ -646,6 +646,13 @@ class UISystem {
             this._updateArmorSlots();
             this._updateFurnaceSlots();
             
+            if (type === 'wand') {
+                if (window.game && window.game.heldItemMesh) {
+                    window.game.viewModel.remove(window.game.heldItemMesh);
+                    window.game.heldItemMesh = null;
+                }
+            }
+            
             const el = e.currentTarget;
             const rect = el.getBoundingClientRect();
             this.dragState.offsetX = e.clientX - rect.left - rect.width/2;
@@ -1052,7 +1059,8 @@ class UISystem {
     _updateCraftingSlots() {
         const grid = this.elements.craftingGrid;
         if (!grid) return;
-        for (let i = 0; i < 4; i++) {
+        const count = this.is3x3Crafting ? 9 : 4;
+        for (let i = 0; i < count; i++) {
             this.renderSlotItem(grid.children[i], this.craftingSlots[i]);
         }
     }
@@ -1118,7 +1126,6 @@ class UISystem {
         const block = (type, name, count = 1) => ({ item: { type: 'block', subtype: type, name, stackable: true, maxStack: 64, id: `block_${type}`, data: {}, description: '' }, count });
 
         // --- Recipes ---
-        // Planks: Shapeless 1 Wood => 4 planks
         const woodToPlankMap = {
             [B.WOOD]: { block: B.PLANKS, name: 'Planks' },
             [B.ACACIA_WOOD]: { block: B.ACACIA_PLANKS, name: 'Acacia Planks' },
@@ -1129,19 +1136,8 @@ class UISystem {
             [B.CRIMSON_STEM]: { block: B.CRIMSON_PLANKS, name: 'Crimson Planks' }
         };
         const woodType = s.find(x => x !== null && woodToPlankMap[x]);
-        if (woodType !== undefined && totalItems === 1) {
-            return block(woodToPlankMap[woodType].block, woodToPlankMap[woodType].name, 4);
-        }
-
-        // Sticks: Shapeless 2 Planks
         const isPlank = (t) => [B.PLANKS, B.ACACIA_PLANKS, B.CHERRY_PLANKS, B.AUTUMN_PLANKS, B.PALM_PLANKS, B.PINE_PLANKS, B.CRIMSON_PLANKS].includes(t);
         const countAnyPlank = s.filter(x => x !== null && isPlank(x)).length;
-        if (countAnyPlank === 2 && totalItems === 2) return mat('stick', 'Stick', 4);
-
-        // Torch: Shapeless 1 Coal + 1 Stick
-        if (getCount('coal') === 1 && getCount('stick') === 1 && totalItems === 2) return block(B.TORCH, 'Torch', 4);
-
-        // Tools (material + stick pattern: 3x3 shaped)
         const matchesMat = (t, expected) => expected === B.PLANKS ? isPlank(t) : t === expected;
 
         // Pickaxes: 3 top mat, 2 stick middle
@@ -1204,97 +1200,86 @@ class UISystem {
             return null;
         };
 
-        // Pickaxes
-        let r;
-        r = pickaxeRecipe('iron_ingot', 3.0, 5, 1.5, 'Iron Pickaxe'); if (r) return r;
-        r = pickaxeRecipe('diamond', 6.0, 8, 3.0, 'Diamond Pickaxe'); if (r) return r;
-        r = pickaxeRecipe(B.COBBLESTONE, 2.0, 4, 1.2, 'Stone Pickaxe'); if (r) return r;
-        r = pickaxeRecipe(B.PLANKS, 1.5, 3, 1.0, 'Wooden Pickaxe'); if (r) return r;
+        if (!this.is3x3Crafting) {
+            // ONLY 2x2 recipes
+            if (woodType !== undefined && totalItems === 1) return block(woodToPlankMap[woodType].block, woodToPlankMap[woodType].name, 4);
+            if (countAnyPlank === 2 && totalItems === 2) return mat('stick', 'Stick', 4);
+            if (getCount('coal') === 1 && getCount('stick') === 1 && totalItems === 2) return block(B.TORCH, 'Torch', 4);
+            
+            if (s[0] === 'stick' && s[1] === 'iron_ingot' && !s[2] && !s[3]) return equip('wand_basic', {}, 'Basic Wand', 'Channels raw magic.');
+            if (s[0] === 'wand_basic' && s[1] === 'coal' && !s[2] && !s[3]) return equip('wand_fire', { element: 'FIRE' }, 'Fire Wand', 'Shoots fireballs.');
+            if (s[0] === 'wand_basic' && s[1] === B.SNOW && !s[2] && !s[3]) return equip('wand_ice', { element: 'ICE' }, 'Ice Wand', 'Shoots ice blasts.');
+            if (s[0] === 'wand_basic' && (s[1] === B.LEAVES || s[1] === B.CHERRY_LEAVES || s[1] === B.AUTUMN_LEAVES) && !s[2] && !s[3]) return equip('wand_nature', { element: 'HEAL' }, 'Nature Wand', 'Heals the wielder.');
 
-        // Swords [mat, empty, stick, empty]
-        r = swordRecipe('iron_ingot', 8, 'Iron Sword'); if (r) return r;
-        r = swordRecipe('diamond', 12, 'Diamond Sword'); if (r) return r;
-        r = swordRecipe(B.COBBLESTONE, 5, 'Stone Sword'); if (r) return r;
-        r = swordRecipe(B.PLANKS, 3, 'Wooden Sword'); if (r) return r;
+            if (getCount(B.STONE) === 4) return block(B.STONE_BRICKS, 'Stone Bricks', 4);
+            if (getCount(B.CLAY) === 4) return block(B.BRICKS, 'Bricks', 4);
+            if (countAnyPlank === 4 && totalItems === 4) return block(B.CRAFTING_TABLE, 'Crafting Table', 1);
+            if (getCount('iron_ingot') === 1 && getCount(B.SAND) === 1 && totalItems === 2) return equip('flint_and_steel', { damage: 0 }, 'Flint and Steel', 'Lights fires.');
+            if (getCount(B.COBBLESTONE) === 1 && (getCount(B.LEAVES) === 1 || getCount(B.CHERRY_LEAVES) === 1 || getCount(B.AUTUMN_LEAVES) === 1) && totalItems === 2) return block(B.MOSSY_COBBLESTONE, 'Mossy Cobble', 1);
+            
+            if (getCount(B.SUGARCANE) === 1 && totalItems === 1) return mat('sugar', 'Sugar', 1);
+            if (getCount(B.SUGARCANE) === 3 && totalItems === 3) return mat('paper', 'Paper', 3);
+            if (getCount('paper') === 3 && getCount('leather') === 1 && totalItems === 4) return mat('book', 'Book', 1);
+            if (getCount(B.SANDSTONE) === 4) return block(B.SANDSTONE, 'Smooth Sandstone', 4);
 
-        // Axes [mat, mat, empty, stick]
-        r = axeRecipe('iron_ingot', 3.0, 5, 'Iron Axe'); if (r) return r;
-        r = axeRecipe('diamond', 5.0, 7, 'Diamond Axe'); if (r) return r;
-        r = axeRecipe(B.COBBLESTONE, 2.0, 4, 'Stone Axe'); if (r) return r;
-        r = axeRecipe(B.PLANKS, 1.5, 3, 'Wooden Axe'); if (r) return r;
+            // Reverse Storage is 1 item -> 9 items. Can be done in 2x2 grid.
+            if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
+            if (getCount(B.GOLD_BLOCK) === 1 && totalItems === 1) return mat('gold_ingot', 'Gold Ingot', 9);
+            if (getCount(B.DIAMOND_BLOCK) === 1 && totalItems === 1) return mat('diamond', 'Diamond', 9);
 
-        // Armor — Iron
-        r = armorRecipe2H('iron_ingot', 'Iron Helmet', 'head', 2); if (r) return r;
-        r = armorRecipeFull('iron_ingot', 'Iron Chestplate', 'chest', 5); if (r) return r;
-        r = armorRecipeLegs('iron_ingot', 'Iron Leggings', 'legs', 3); if (r) return r;
-        r = armorRecipeBoots('iron_ingot', 'Iron Boots', 'boots', 2); if (r) return r;
+            return null;
+        }
 
-        // Armor — Diamond
-        r = armorRecipe2H('diamond', 'Diamond Helmet', 'head', 5); if (r) return r;
-        r = armorRecipeFull('diamond', 'Diamond Chestplate', 'chest', 10); if (r) return r;
-        r = armorRecipeLegs('diamond', 'Diamond Leggings', 'legs', 7); if (r) return r;
-        r = armorRecipeBoots('diamond', 'Diamond Boots', 'boots', 5); if (r) return r;
+        if (this.is3x3Crafting) {
+            // ONLY 3x3 recipes
+            let r;
+            r = pickaxeRecipe('iron_ingot', 3.0, 5, 1.5, 'Iron Pickaxe'); if (r) return r;
+            r = pickaxeRecipe('diamond', 6.0, 8, 3.0, 'Diamond Pickaxe'); if (r) return r;
+            r = pickaxeRecipe(B.COBBLESTONE, 2.0, 4, 1.2, 'Stone Pickaxe'); if (r) return r;
+            r = pickaxeRecipe(B.PLANKS, 1.5, 3, 1.0, 'Wooden Pickaxe'); if (r) return r;
+            r = pickaxeRecipe('gold_ingot', 2.5, 4, 2.5, 'Gold Pickaxe'); if (r) return r;
 
-        // Wands: [stick, iron_ingot, empty, empty] => Basic Wand
-        if (s[0] === 'stick' && s[1] === 'iron_ingot' && !s[2] && !s[3])
-            return equip('wand_basic', {}, 'Basic Wand', 'Channels raw magic.');
-        // Fire Wand: [wand_basic, coal, empty, empty]
-        if (s[0] === 'wand_basic' && s[1] === 'coal' && !s[2] && !s[3])
-            return equip('wand_fire', { element: 'FIRE' }, 'Fire Wand', 'Shoots fireballs.');
-        // Ice Wand: [wand_basic, snow, empty, empty]
-        if (s[0] === 'wand_basic' && s[1] === B.SNOW && !s[2] && !s[3])
-            return equip('wand_ice', { element: 'ICE' }, 'Ice Wand', 'Shoots ice blasts.');
-        // Nature Wand: [wand_basic, leaves, empty, empty]
-        if (s[0] === 'wand_basic' && (s[1] === B.LEAVES || s[1] === B.CHERRY_LEAVES || s[1] === B.AUTUMN_LEAVES) && !s[2] && !s[3])
-            return equip('wand_nature', { element: 'HEAL' }, 'Nature Wand', 'Heals the wielder.');
+            r = swordRecipe('iron_ingot', 8, 'Iron Sword'); if (r) return r;
+            r = swordRecipe('diamond', 12, 'Diamond Sword'); if (r) return r;
+            r = swordRecipe(B.COBBLESTONE, 5, 'Stone Sword'); if (r) return r;
+            r = swordRecipe(B.PLANKS, 3, 'Wooden Sword'); if (r) return r;
+            r = swordRecipe('gold_ingot', 7, 'Gold Sword'); if (r) return r;
 
-        // --- NEW RECIPES ---
-        // Building Blocks
-        if (getCount(B.STONE) === 4) return block(B.STONE_BRICKS, 'Stone Bricks', 4);
-        if (getCount(B.CLAY) === 4) return block(B.BRICKS, 'Bricks', 4);
-        if (getCount(B.SAND) === 8 && totalItems === 8) return block(B.GLASS, 'Glass', 8);
-        if (getCount(B.COBBLESTONE) === 8 && totalItems === 8) return block(B.FURNACE, 'Furnace', 1);
-        if (countAnyPlank === 8 && totalItems === 8) return block(B.CHEST_BLOCK, 'Chest', 1);
-        if (countAnyPlank === 4 && totalItems === 4) return block(B.CRAFTING_TABLE, 'Crafting Table', 1);
-        if (countAnyPlank === 6 && totalItems === 6) return block(B.BOOKSHELF, 'Bookshelf', 1); // Not quite standard but close enough
-        if (getCount('stick') === 7 && totalItems === 7) return block(B.LADDER, 'Ladder', 3);
+            r = axeRecipe('iron_ingot', 3.0, 5, 'Iron Axe'); if (r) return r;
+            r = axeRecipe('diamond', 5.0, 7, 'Diamond Axe'); if (r) return r;
+            r = axeRecipe(B.COBBLESTONE, 2.0, 4, 'Stone Axe'); if (r) return r;
+            r = axeRecipe(B.PLANKS, 1.5, 3, 'Wooden Axe'); if (r) return r;
+            r = axeRecipe('gold_ingot', 2.5, 4, 'Gold Axe'); if (r) return r;
 
-        // Storage Blocks
-        if (getCount('iron_ingot') === 9 && totalItems === 9) return block(B.IRON_BLOCK, 'Iron Block', 1);
-        if (getCount('gold_ingot') === 9 && totalItems === 9) return block(B.GOLD_BLOCK, 'Gold Block', 1);
-        if (getCount('diamond') === 9 && totalItems === 9) return block(B.DIAMOND_BLOCK, 'Diamond Block', 1);
-        
-        // TNT
-        if (getCount(B.SAND) === 4 && getCount('coal') === 5 && totalItems === 9) return block(B.TNT, 'TNT', 1);
-        
-        // Tools/Misc
-        if (getCount('iron_ingot') === 1 && getCount(B.SAND) === 1 && totalItems === 2) return equip('flint_and_steel', { damage: 0 }, 'Flint and Steel', 'Lights fires.');
-        
-        // Reverse Storage
-        if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
-        if (getCount(B.GOLD_BLOCK) === 1 && totalItems === 1) return mat('gold_ingot', 'Gold Ingot', 9);
-        if (getCount(B.DIAMOND_BLOCK) === 1 && totalItems === 1) return mat('diamond', 'Diamond', 9);
+            r = armorRecipe2H('iron_ingot', 'Iron Helmet', 'head', 2); if (r) return r;
+            r = armorRecipeFull('iron_ingot', 'Iron Chestplate', 'chest', 5); if (r) return r;
+            r = armorRecipeLegs('iron_ingot', 'Iron Leggings', 'legs', 3); if (r) return r;
+            r = armorRecipeBoots('iron_ingot', 'Iron Boots', 'boots', 2); if (r) return r;
 
-        // Gold Tools
-        r = pickaxeRecipe('gold_ingot', 2.5, 4, 2.5, 'Gold Pickaxe'); if (r) return r;
-        r = swordRecipe('gold_ingot', 7, 'Gold Sword'); if (r) return r;
-        r = axeRecipe('gold_ingot', 2.5, 4, 'Gold Axe'); if (r) return r;
+            r = armorRecipe2H('diamond', 'Diamond Helmet', 'head', 5); if (r) return r;
+            r = armorRecipeFull('diamond', 'Diamond Chestplate', 'chest', 10); if (r) return r;
+            r = armorRecipeLegs('diamond', 'Diamond Leggings', 'legs', 7); if (r) return r;
+            r = armorRecipeBoots('diamond', 'Diamond Boots', 'boots', 5); if (r) return r;
 
-        // Gold Armor
-        r = armorRecipe2H('gold_ingot', 'Gold Helmet', 'head', 3); if (r) return r;
-        r = armorRecipeFull('gold_ingot', 'Gold Chestplate', 'chest', 7); if (r) return r;
-        r = armorRecipeLegs('gold_ingot', 'Gold Leggings', 'legs', 4); if (r) return r;
-        r = armorRecipeBoots('gold_ingot', 'Gold Boots', 'boots', 3); if (r) return r;
+            r = armorRecipe2H('gold_ingot', 'Gold Helmet', 'head', 3); if (r) return r;
+            r = armorRecipeFull('gold_ingot', 'Gold Chestplate', 'chest', 7); if (r) return r;
+            r = armorRecipeLegs('gold_ingot', 'Gold Leggings', 'legs', 4); if (r) return r;
+            r = armorRecipeBoots('gold_ingot', 'Gold Boots', 'boots', 3); if (r) return r;
 
-        // Decorative
-        if (getCount(B.SANDSTONE) === 4) return block(B.SANDSTONE, 'Smooth Sandstone', 4);
-        if (getCount(B.COBBLESTONE) === 1 && (getCount(B.LEAVES) === 1 || getCount(B.CHERRY_LEAVES) === 1 || getCount(B.AUTUMN_LEAVES) === 1) && totalItems === 2) 
-            return block(B.MOSSY_COBBLESTONE, 'Mossy Cobble', 1);
+            if (getCount(B.SAND) === 8 && totalItems === 8) return block(B.GLASS, 'Glass', 8);
+            if (getCount(B.COBBLESTONE) === 8 && totalItems === 8) return block(B.FURNACE, 'Furnace', 1);
+            if (countAnyPlank === 8 && totalItems === 8) return block(B.CHEST_BLOCK, 'Chest', 1);
+            if (countAnyPlank === 6 && totalItems === 6) return block(B.BOOKSHELF, 'Bookshelf', 1);
+            if (getCount('stick') === 7 && totalItems === 7) return block(B.LADDER, 'Ladder', 3);
 
-        // Farming/Misc
-        if (getCount(B.SUGARCANE) === 1 && totalItems === 1) return mat('sugar', 'Sugar', 1);
-        if (getCount(B.SUGARCANE) === 3 && totalItems === 3) return mat('paper', 'Paper', 3);
-        if (getCount('paper') === 3 && getCount('leather') === 1 && totalItems === 4) return mat('book', 'Book', 1); // Note: Need a leather item if not present, but paper is standard.
+            if (getCount('iron_ingot') === 9 && totalItems === 9) return block(B.IRON_BLOCK, 'Iron Block', 1);
+            if (getCount('gold_ingot') === 9 && totalItems === 9) return block(B.GOLD_BLOCK, 'Gold Block', 1);
+            if (getCount('diamond') === 9 && totalItems === 9) return block(B.DIAMOND_BLOCK, 'Diamond Block', 1);
+            
+            if (getCount(B.SAND) === 4 && getCount('coal') === 5 && totalItems === 9) return block(B.TNT, 'TNT', 1);
+
+            return null;
+        }
 
         return null;
     }
@@ -1343,7 +1328,7 @@ class UISystem {
         ];
 
         let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
-        recipes.filter(r => this.is3x3Crafting || !r.needs3x3).forEach(r => {
+        recipes.filter(r => this.is3x3Crafting ? r.needs3x3 : !r.needs3x3).forEach(r => {
             html += `<li style="margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
                 <div style="color: #fff; font-weight: bold; font-size: 1rem; margin-bottom: 4px;">${r.result}</div>
                 <div style="color: #88aaff; font-size: 0.85rem;">Requires: ${r.ingredients}</div>

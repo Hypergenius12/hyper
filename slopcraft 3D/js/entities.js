@@ -276,9 +276,13 @@ export class Player {
         }
 
         // Update wand cooldowns
-        const activeItem = this.inventory.slots[this.selectedSlot];
-        if (activeItem && activeItem.item.type === 'wand') {
-            activeItem.item.data.wand.updateCooldowns(dt);
+        for (let i = 0; i < this.inventory.slots.length; i++) {
+            const slot = this.inventory.slots[i];
+            if (slot && slot.item && slot.item.type === 'wand' && slot.item.data && slot.item.data.wand) {
+                if (typeof slot.item.data.wand.updateCooldowns === 'function') {
+                    slot.item.data.wand.updateCooldowns(dt);
+                }
+            }
         }
     }
 

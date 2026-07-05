@@ -1466,6 +1466,7 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
 // Start game on load
 window.onload = () => {
     const game = new Game();
+    window.game = game;
     const startBtn = document.getElementById('btn-new-game');
     if (startBtn) {
         startBtn.onclick = () => {

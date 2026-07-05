@@ -146,7 +146,7 @@ export class SpellProjectile {
             const canvas = generateSpellTexture(this.element);
             const tex = new THREE.CanvasTexture(canvas);
             tex.colorSpace = THREE.SRGBColorSpace;
-            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending });
+            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
             this.mesh = new THREE.Sprite(mat);
             this.mesh.scale.set(0.6, 0.6, 1);
             
