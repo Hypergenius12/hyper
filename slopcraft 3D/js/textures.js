@@ -2123,6 +2123,46 @@ export function generateItemTexture(itemType, itemSubtype) {
                 "                ",
                 "                "
             ];
+        } else if (itemSubtype === 'bucket') {
+            shape = [
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "   HHHHHHHHHH   ",
+                "  HCHCHCHCHCHC  ",
+                "  CDCDCDCDCDCD  ",
+                "  HCHCHCHCHCHC  ",
+                "   CDCDCDCDCD   ",
+                "   HCHCHCHCHC   ",
+                "    CDCDCDCD    ",
+                "    HCHCHCHC    ",
+                "     CDCDCD     ",
+                "     HCHCHC     ",
+                "      DDDD      ",
+                "                "
+            ];
+            p = palettes['bucket'];
+        } else if (itemSubtype === 'water_bucket') {
+            shape = [
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "   HHHHHHHHHH   ",
+                "  HLWLWLWLWLWC  ",
+                "  CWWLWLWLWLWD  ",
+                "  HLWLWLWLWLWC  ",
+                "   CWWLWLWLWD   ",
+                "   HLWLWLWLWC   ",
+                "    CWWLWLWD    ",
+                "    HLWLWLWC    ",
+                "     CWWLWD     ",
+                "     HLWLWC     ",
+                "      DDDD      ",
+                "                "
+            ];
+            p = palettes['water_bucket'];
         }
     } else if (itemType === 'wand') {
         shape = [
@@ -2280,6 +2320,8 @@ export function generateMobTexture(mobType) {
     else if (mobType === 'BASS') { baseColor = '#446633'; noiseRange = 20; }
     else if (mobType === 'TROPICAL_FISH') { baseColor = '#ff8800'; noiseRange = 10; }
     else if (mobType === 'TURTLE') { baseColor = '#115511'; noiseRange = 25; }
+    else if (mobType === 'PIRANHA') { baseColor = '#883333'; noiseRange = 15; }
+    else if (mobType === 'SHARK') { baseColor = '#8899aa'; noiseRange = 10; }
     
     // Fill base noise
     ctx.fillStyle = baseColor;
@@ -2363,6 +2405,15 @@ export function generateMobTexture(mobType) {
     else if (mobType === 'TROPICAL_FISH') {
         ctx.fillStyle = '#ffffff'; ctx.fillRect(16, 0, 4, 32); // Stripe
         ctx.fillStyle = '#000'; ctx.fillRect(6, 12, 2, 2);
+    }
+    else if (mobType === 'PIRANHA') {
+        ctx.fillStyle = '#000'; ctx.fillRect(6, 12, 2, 2);
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(7, 13, 1, 1); // Red eye
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(4, 20, 6, 2); // Teeth
+    }
+    else if (mobType === 'SHARK') {
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 16, 32, 16); // White underbelly
+        ctx.fillStyle = '#000'; ctx.fillRect(6, 10, 2, 2); // Eye
     }
     
     return canvas;

@@ -1383,6 +1383,208 @@ export const MOB_TYPES = {
             if (rw) rw.rotation.z = -Math.sin(age * flapSpeed) * flapAmt;
             mesh.position.y += Math.sin(age * 4) * 0.005;
         }
+    },
+    COW: {
+        name: 'Cow', health: 15, damage: 0, speed: 1.5, hostile: false, color: 0xe0e0e0,
+        size: 0.8, xpDrop: 2, lootChance: 0.2,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = createBodyPart(new THREE.BoxGeometry(0.8, 0.6, 1.2), 'COW');
+            body.position.y = 0.5; group.add(body);
+            const head = createBodyPart(new THREE.BoxGeometry(0.5, 0.5, 0.5), 'COW');
+            head.position.set(0, 0.8, 0.7); group.add(head);
+            return group;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            if (mob.health < mob.maxHealth) {
+                const fleeDir = mob.position.clone().sub(playerPos).normalize();
+                fleeDir.y = 0;
+                mob.velocity.x = fleeDir.x * mob.speed * 1.5;
+                mob.velocity.z = fleeDir.z * mob.speed * 1.5;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z);
+            } else {
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    if (Math.random() < 0.3) {
+                        mob.wanderTimer = 2 + Math.random() * 4;
+                        const angle = Math.random() * Math.PI * 2;
+                        mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                    } else {
+                        mob.wanderTimer = 4 + Math.random() * 5;
+                        mob.wanderDir.set(0, 0, 0);
+                    }
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.3;
+                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.3;
+                if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+            }
+        }
+    },
+    PIG: {
+        name: 'Pig', health: 10, damage: 0, speed: 2.0, hostile: false, color: 0xffbbcc,
+        size: 0.6, xpDrop: 2, lootChance: 0.2,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = createBodyPart(new THREE.BoxGeometry(0.6, 0.5, 0.8), 'PIG');
+            body.position.y = 0.35; group.add(body);
+            const head = createBodyPart(new THREE.BoxGeometry(0.4, 0.4, 0.4), 'PIG');
+            head.position.set(0, 0.5, 0.5); group.add(head);
+            return group;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            if (mob.health < mob.maxHealth) {
+                const fleeDir = mob.position.clone().sub(playerPos).normalize();
+                fleeDir.y = 0;
+                mob.velocity.x = fleeDir.x * mob.speed * 3.0;
+                mob.velocity.z = fleeDir.z * mob.speed * 3.0;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z);
+            } else {
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    if (Math.random() < 0.7) {
+                        mob.wanderTimer = 0.5 + Math.random() * 1.5;
+                        const angle = Math.random() * Math.PI * 2;
+                        mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                    } else {
+                        mob.wanderTimer = 1 + Math.random() * 2;
+                        mob.wanderDir.set(0, 0, 0);
+                    }
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.8;
+                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.8;
+                if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+            }
+        }
+    },
+    CHICKEN: {
+        name: 'Chicken', health: 4, damage: 0, speed: 2.5, hostile: false, color: 0xffffff,
+        size: 0.3, xpDrop: 1, lootChance: 0.1,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = createBodyPart(new THREE.BoxGeometry(0.3, 0.3, 0.4), 'CHICKEN');
+            body.position.y = 0.2; group.add(body);
+            return group;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            if (mob.velocity.y < -2) mob.velocity.y = -2;
+            mob.wanderTimer -= dt;
+            if (mob.wanderTimer <= 0) {
+                mob.wanderTimer = 0.5 + Math.random() * 1.5;
+                const angle = Math.random() * Math.PI * 2;
+                mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+            }
+            const mult = mob.health < mob.maxHealth ? 3.0 : 1.0;
+            mob.velocity.x = mob.wanderDir.x * mob.speed * mult;
+            mob.velocity.z = mob.wanderDir.z * mob.speed * mult;
+            if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+        }
+    },
+    LIZARD: {
+        name: 'Lizard', health: 6, damage: 0, speed: 6.0, hostile: false, color: 0x22aa44,
+        size: 0.2, xpDrop: 2, lootChance: 0.1,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = createBodyPart(new THREE.BoxGeometry(0.2, 0.1, 0.4), 'LIZARD');
+            body.position.y = 0.05; group.add(body);
+            return group;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            mob.wanderTimer -= dt;
+            if (mob.wanderTimer <= 0) {
+                if (Math.random() < 0.4) {
+                    mob.wanderTimer = 0.2 + Math.random() * 0.5;
+                    const angle = Math.random() * Math.PI * 2;
+                    mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                } else {
+                    mob.wanderTimer = 2 + Math.random() * 5;
+                    mob.wanderDir.set(0, 0, 0);
+                }
+            }
+            mob.velocity.x = mob.wanderDir.x * mob.speed;
+            mob.velocity.z = mob.wanderDir.z * mob.speed;
+            if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+        }
+    },
+    PIRANHA: {
+        name: 'Piranha', health: 8, damage: 3, speed: 4.5, hostile: true, color: 0x883333,
+        size: 0.3, xpDrop: 2, lootChance: 0.1, waterOnly: true,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = createBodyPart(new THREE.BoxGeometry(0.1, 0.2, 0.3), 'PIRANHA');
+            body.position.y = 0.15; group.add(body);
+            return group;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            const dist = mob.position.distanceTo(playerPos);
+            if (dist < 15) {
+                const dir = playerPos.clone().sub(mob.position).normalize();
+                mob.velocity.x = dir.x * mob.speed;
+                mob.velocity.z = dir.z * mob.speed;
+                mob.velocity.y += (dir.y * mob.speed - mob.velocity.y) * dt * 5;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+                if (dist < 1.5 && mob.attackCooldown <= 0) {
+                    mob.attackCooldown = 1.0;
+                    mob.didAttack = true;
+                }
+            } else {
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    mob.wanderTimer = 1 + Math.random() * 2;
+                    const angle = Math.random() * Math.PI * 2;
+                    mob.wanderDir.set(Math.cos(angle), (Math.random()-0.5)*0.5, Math.sin(angle));
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.5;
+                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.5;
+                mob.velocity.y += (mob.wanderDir.y * mob.speed - mob.velocity.y) * dt;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+            }
+        }
+    },
+    SHARK: {
+        name: 'Shark', health: 30, damage: 8, speed: 3.5, hostile: true, color: 0x8899aa,
+        size: 0.8, xpDrop: 5, lootChance: 0.3, waterOnly: true,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = createBodyPart(new THREE.BoxGeometry(0.3, 0.4, 0.9), 'SHARK');
+            body.position.y = 0.2; group.add(body);
+            return group;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3(1,0,0);
+            const dist = mob.position.distanceTo(playerPos);
+            if (dist < 20) {
+                const dir = playerPos.clone().sub(mob.position).normalize();
+                mob.velocity.x = dir.x * mob.speed * 1.5;
+                mob.velocity.z = dir.z * mob.speed * 1.5;
+                mob.velocity.y += (dir.y * mob.speed - mob.velocity.y) * dt * 5;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+                if (dist < 2.0 && mob.attackCooldown <= 0) {
+                    mob.attackCooldown = 1.5;
+                    mob.didAttack = true;
+                }
+            } else {
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    mob.wanderTimer = 5 + Math.random() * 5;
+                    const angle = Math.random() * Math.PI * 2;
+                    mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed;
+                mob.velocity.z = mob.wanderDir.z * mob.speed;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+            }
+        }
     }
 };
 
@@ -1397,12 +1599,18 @@ const MOB_SPAWN_WEIGHTS = [
     { type: 'BAT', weight: 5 },
     { type: 'WISP', weight: 5 },
     { type: 'BIRD', weight: 15 },
-    { type: 'TROPICAL_FISH', weight: 25 }, // High spawn rate for aquatic life
-    { type: 'COD', weight: 20 },
-    { type: 'SALMON', weight: 20 },
-    { type: 'BASS', weight: 15 },
-    { type: 'PUFFERFISH', weight: 10 },
-    { type: 'TURTLE', weight: 10 },
+    { type: 'COW', weight: 20 },
+    { type: 'PIG', weight: 20 },
+    { type: 'CHICKEN', weight: 20 },
+    { type: 'LIZARD', weight: 15 },
+    { type: 'TROPICAL_FISH', weight: 15 },
+    { type: 'COD', weight: 15 },
+    { type: 'SALMON', weight: 15 },
+    { type: 'BASS', weight: 10 },
+    { type: 'PUFFERFISH', weight: 5 },
+    { type: 'TURTLE', weight: 5 },
+    { type: 'PIRANHA', weight: 10 },
+    { type: 'SHARK', weight: 5 },
 ];
 const TOTAL_MOB_WEIGHT = MOB_SPAWN_WEIGHTS.reduce((s, e) => s + e.weight, 0);
 
@@ -1681,9 +1889,17 @@ export class Mob {
             }
         }
 
-        // Simple AI
-        const dist = this.position.distanceTo(playerPos);
+        // AI Delegation
         this.isMoving = false;
+        if (this.config.updateAI) {
+            this.config.updateAI(this, dt, world, playerPos);
+            // Deduce moving state from velocity (ignore small Y adjustments like floating/bobbing)
+            if (Math.abs(this.velocity.x) > 0.1 || Math.abs(this.velocity.z) > 0.1) {
+                this.isMoving = true;
+            }
+        } else {
+            // Simple Generic AI
+            const dist = this.position.distanceTo(playerPos);
         
         if (!this.wanderTimer) this.wanderTimer = 0;
         if (!this.wanderDir) this.wanderDir = new THREE.Vector3(0, 0, 0);
@@ -1772,7 +1988,7 @@ export class Mob {
                 this.velocity.z *= 0.8;
                 if (this.flying || this.config.waterOnly) this.velocity.y *= 0.9;
             }
-        }
+        } // End of else Generic AI
 
         if (this.attackCooldown > 0) this.attackCooldown -= dt;
 

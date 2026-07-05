@@ -1343,6 +1343,14 @@ class UISystem {
             r = armorRecipeLegs('gold_ingot', 'Gold Leggings', 'legs', 4); if (r) return r;
             r = armorRecipeBoots('gold_ingot', 'Gold Boots', 'boots', 3); if (r) return r;
 
+            if (!s[0] && !s[1] && !s[2] && 
+                s[3] === 'iron_ingot' && !s[4] && s[5] === 'iron_ingot' && 
+                !s[6] && s[7] === 'iron_ingot' && !s[8]) return mat('bucket', 'Bucket', 1);
+
+            if (!s[0] && s[1] === B.SNOW && !s[2] && 
+                s[3] === 'iron_ingot' && !s[4] && s[5] === 'iron_ingot' && 
+                !s[6] && s[7] === 'iron_ingot' && !s[8]) return mat('water_bucket', 'Water Bucket', 1);
+
             r = spellRecipe(B.SNOW, 'ICE'); if (r) return r;
             r = spellRecipe('coal', 'FIRE'); if (r) return r;
             r = spellRecipe('gold_ingot', 'THUNDER'); if (r) return r;
@@ -1387,58 +1395,140 @@ class UISystem {
 
     _populateRecipeBook() {
         const list = document.getElementById('recipe-list');
+    showRecipeBook() {
+        const list = document.getElementById('recipe-list');
         if (!list) return;
-        // Hardcoded list of recipes for display
+        const B = (typeof BLOCKS !== 'undefined') ? BLOCKS : window.BLOCKS;
+        if (!B) return;
+
+        const mat = (id) => ({ type: 'material', subtype: id });
+        const blk = (id) => ({ type: 'block', subtype: id });
+        const eqp = (id) => ({ type: 'equipment', subtype: id });
+        const spl = (id) => ({ type: 'spell', subtype: id });
+        const wnd = (id) => ({ type: 'wand', subtype: id });
+        const _ = null;
+
+        // Structured recipes for visual grid
         const recipes = [
-            { result: "Planks (4)", ingredients: "1 Wood (Shapeless)", needs3x3: false },
-            { result: "Stick (4)", ingredients: "2 Planks (Shapeless)", needs3x3: false },
-            { result: "Crafting Table", ingredients: "4 Planks (2x2 Grid)", needs3x3: false },
-            { result: "Torch (4)", ingredients: "1 Coal, 1 Stick (Shapeless)", needs3x3: false },
-            { result: "Sword (Wood/Stone/Iron/Gold/Diamond)", ingredients: "2 Material (Vertical), 1 Stick (Bottom)", needs3x3: true },
-            { result: "Pickaxe (Wood/Stone/Iron/Gold/Diamond)", ingredients: "3 Material (Top row), 2 Stick (Middle)", needs3x3: true },
-            { result: "Axe (Wood/Stone/Iron/Gold/Diamond)", ingredients: "3 Material (Corner), 2 Stick", needs3x3: true },
-            { result: "Helmet (Iron/Gold/Diamond)", ingredients: "5 Material (Top arch)", needs3x3: true },
-            { result: "Chestplate (Iron/Gold/Diamond)", ingredients: "8 Material (Full Grid)", needs3x3: true },
-            { result: "Leggings (Iron/Gold/Diamond)", ingredients: "7 Material (U-shape)", needs3x3: true },
-            { result: "Boots (Iron/Gold/Diamond)", ingredients: "4 Material (Sides)", needs3x3: true },
-            { result: "Basic Wand", ingredients: "1 Stick, 1 Iron Ingot", needs3x3: false },
-            { result: "Fire Wand", ingredients: "1 Basic Wand, 1 Coal", needs3x3: false },
-            { result: "Ice Wand", ingredients: "1 Basic Wand, 1 Snow", needs3x3: false },
-            { result: "Nature Wand", ingredients: "1 Basic Wand, 1 Leaves", needs3x3: false },
-            { result: "Stone Bricks (4)", ingredients: "4 Stone", needs3x3: false },
-            { result: "Bricks (4)", ingredients: "4 Clay", needs3x3: false },
-            { result: "Glass (8)", ingredients: "8 Sand (Ring)", needs3x3: true },
-            { result: "Furnace", ingredients: "8 Cobblestone (Ring)", needs3x3: true },
-            { result: "Chest", ingredients: "8 Planks (Ring)", needs3x3: true },
-            { result: "Bookshelf", ingredients: "6 Planks (Top & Bottom)", needs3x3: true },
-            { result: "Ladder (3)", ingredients: "7 Sticks (H-shape)", needs3x3: true },
-            { result: "Iron/Gold/Diamond Block", ingredients: "9 Iron/Gold/Diamond", needs3x3: true },
-            { result: "TNT", ingredients: "5 Coal, 4 Sand", needs3x3: true },
-            { result: "Flint and Steel", ingredients: "1 Iron Ingot, 1 Sand", needs3x3: false },
-            { result: "Mossy Cobble", ingredients: "1 Cobblestone, 1 Leaves", needs3x3: false },
-            { result: "Ice Spell", ingredients: "1 Mana Crystal, 4 Snow (Cross)", needs3x3: true },
-            { result: "Fire Spell", ingredients: "1 Mana Crystal, 4 Coal (Cross)", needs3x3: true },
-            { result: "Thunder Spell", ingredients: "1 Mana Crystal, 4 Gold Ingot (Cross)", needs3x3: true },
-            { result: "Earth Spell", ingredients: "1 Mana Crystal, 4 Stone (Cross)", needs3x3: true },
-            { result: "Dark Spell", ingredients: "1 Mana Crystal, 4 Obsidian (Cross)", needs3x3: true },
-            { result: "Wind Spell", ingredients: "1 Mana Crystal, 4 Sugar (Cross)", needs3x3: true },
-            { result: "Poison Spell", ingredients: "1 Mana Crystal, 4 Leaves (Cross)", needs3x3: true },
-            { result: "Water Spell", ingredients: "1 Mana Crystal, 4 Sand (Cross)", needs3x3: true },
-            { result: "Void Spell", ingredients: "1 Mana Crystal, 4 Alien Stone (Cross)", needs3x3: true },
-            { result: "Light Spell", ingredients: "1 Mana Crystal, 4 Glass (Cross)", needs3x3: true },
-            { result: "Frost Spell", ingredients: "1 Mana Crystal, 4 Water Bucket (Cross)", needs3x3: true },
-            { result: "Builder Spell", ingredients: "1 Mana Crystal, 4 Planks (Cross)", needs3x3: true }
+            { name: "Planks (4)", desc: "Basic building block.", grid: [[_,_,_],[_,blk(B.WOOD),_],[_,_,_]], out: blk(B.PLANKS), outCount: 4, needs3x3: false },
+            { name: "Stick (4)", desc: "Used for tools.", grid: [[_,_,_],[_,blk(B.PLANKS),_],[_,blk(B.PLANKS),_]], out: mat('stick'), outCount: 4, needs3x3: false },
+            { name: "Crafting Table", desc: "Unlocks 3x3 crafting.", grid: [[_,_,_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.CRAFTING_TABLE), outCount: 1, needs3x3: false },
+            { name: "Torch (4)", desc: "Lights up the dark.", grid: [[_,_,_],[_,mat('coal'),_],[_,mat('stick'),_]], out: blk(B.TORCH), outCount: 4, needs3x3: false },
+            { name: "Iron Sword", desc: "Deals moderate damage.", grid: [[_,mat('iron_ingot'),_],[_,mat('iron_ingot'),_],[_,mat('stick'),_]], out: eqp('sword_iron'), outCount: 1, needs3x3: true },
+            { name: "Iron Pickaxe", desc: "Mines ores.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('pickaxe_iron'), outCount: 1, needs3x3: true },
+            { name: "Iron Axe", desc: "Chops wood quickly.", grid: [[mat('iron_ingot'),mat('iron_ingot'),_],[mat('iron_ingot'),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_iron'), outCount: 1, needs3x3: true },
+            { name: "Iron Helmet", desc: "Basic protection.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),_,mat('iron_ingot')],[_,_,_]], out: eqp('helmet_iron'), outCount: 1, needs3x3: true },
+            { name: "Iron Chestplate", desc: "Solid defense.", grid: [[mat('iron_ingot'),_,mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')]], out: eqp('chest_iron'), outCount: 1, needs3x3: true },
+            { name: "Basic Wand", desc: "Casts spells.", grid: [[_,_,mat('iron_ingot')],[_,mat('stick'),_],[mat('stick'),_,_]], out: wnd('wand_basic'), outCount: 1, needs3x3: false },
+            { name: "Fire Wand", desc: "Empowers fire magic.", grid: [[_,_,mat('coal')],[_,wnd('wand_basic'),_],[_,_,_]], out: wnd('wand_fire'), outCount: 1, needs3x3: false },
+            { name: "Ice Wand", desc: "Empowers ice magic.", grid: [[_,_,blk(B.SNOW)],[_,wnd('wand_basic'),_],[_,_,_]], out: wnd('wand_ice'), outCount: 1, needs3x3: false },
+            { name: "Furnace", desc: "Smelts ores.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),_,blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)]], out: blk(B.FURNACE), outCount: 1, needs3x3: true },
+            { name: "Chest", desc: "Stores items.", grid: [[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[blk(B.PLANKS),_,blk(B.PLANKS)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.CHEST), outCount: 1, needs3x3: true },
+            { name: "Flint and Steel", desc: "Ignites TNT.", grid: [[_,_,_],[mat('iron_ingot'),_,_],[_,blk(B.SAND),_]], out: eqp('flint_and_steel'), outCount: 1, needs3x3: false },
+            { name: "Bucket", desc: "Holds liquids.", grid: [[_,_,_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('bucket'), outCount: 1, needs3x3: true },
+            { name: "Water Bucket", desc: "Crafted from snow.", grid: [[_,blk(B.SNOW),_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('water_bucket'), outCount: 1, needs3x3: true },
+            { name: "Fire Spell", desc: "Crafted magic.", grid: [[_,mat('coal'),_],[mat('coal'),mat('mana_crystal'),mat('coal')],[_,mat('coal'),_]], out: spl('FIRE'), outCount: 1, needs3x3: true },
+            { name: "Ice Spell", desc: "Crafted magic.", grid: [[_,blk(B.SNOW),_],[blk(B.SNOW),mat('mana_crystal'),blk(B.SNOW)],[_,blk(B.SNOW),_]], out: spl('ICE'), outCount: 1, needs3x3: true },
+            { name: "Thunder Spell", desc: "Crafted magic.", grid: [[_,mat('gold_ingot'),_],[mat('gold_ingot'),mat('mana_crystal'),mat('gold_ingot')],[_,mat('gold_ingot'),_]], out: spl('THUNDER'), outCount: 1, needs3x3: true },
+            { name: "Earth Spell", desc: "Crafted magic.", grid: [[_,blk(B.STONE),_],[blk(B.STONE),mat('mana_crystal'),blk(B.STONE)],[_,blk(B.STONE),_]], out: spl('EARTH'), outCount: 1, needs3x3: true },
+            { name: "Dark Spell", desc: "Crafted magic.", grid: [[_,blk(B.OBSIDIAN),_],[blk(B.OBSIDIAN),mat('mana_crystal'),blk(B.OBSIDIAN)],[_,blk(B.OBSIDIAN),_]], out: spl('DARK'), outCount: 1, needs3x3: true },
+            { name: "Wind Spell", desc: "Crafted magic.", grid: [[_,mat('sugar'),_],[mat('sugar'),mat('mana_crystal'),mat('sugar')],[_,mat('sugar'),_]], out: spl('WIND'), outCount: 1, needs3x3: true },
+            { name: "Poison Spell", desc: "Crafted magic.", grid: [[_,blk(B.LEAVES),_],[blk(B.LEAVES),mat('mana_crystal'),blk(B.LEAVES)],[_,blk(B.LEAVES),_]], out: spl('POISON'), outCount: 1, needs3x3: true }
         ];
 
         let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
-        recipes.filter(r => this.is3x3Crafting ? r.needs3x3 : !r.needs3x3).forEach(r => {
-            html += `<li style="margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
-                <div style="color: #fff; font-weight: bold; font-size: 1rem; margin-bottom: 4px;">${r.result}</div>
-                <div style="color: #88aaff; font-size: 0.85rem;">Requires: ${r.ingredients}</div>
+        recipes.filter(r => this.is3x3Crafting ? true : !r.needs3x3).forEach((r, idx) => {
+            html += `<li class="recipe-item" data-idx="${idx}" style="margin-bottom: 8px; cursor: pointer; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); transition: background 0.2s;">
+                <div style="color: #fff; font-weight: bold; font-size: 1rem; margin-bottom: 2px;">${r.name}</div>
             </li>`;
         });
         html += '</ul>';
         list.innerHTML = html;
+
+        // Add hover styles dynamically via JS (since we don't have CSS classes for it)
+        const items = list.querySelectorAll('.recipe-item');
+        items.forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = 'rgba(255,255,255,0.1)');
+            item.addEventListener('mouseleave', () => {
+                if (!item.classList.contains('selected')) item.style.background = 'transparent';
+            });
+            
+            item.addEventListener('click', () => {
+                items.forEach(i => { i.classList.remove('selected'); i.style.background = 'transparent'; i.style.borderColor = 'rgba(255,255,255,0.1)'; });
+                item.classList.add('selected');
+                item.style.background = 'rgba(100, 150, 255, 0.2)';
+                item.style.borderColor = 'rgba(100, 150, 255, 0.8)';
+                
+                const idx = item.getAttribute('data-idx');
+                this.showRecipeDetails(recipes[idx]);
+            });
+        });
+
+        // Select first automatically
+        if (items.length > 0) items[0].click();
+    }
+
+    showRecipeDetails(recipe) {
+        document.getElementById('recipe-viewer-title').innerText = recipe.name;
+        document.getElementById('recipe-viewer-desc').innerText = recipe.desc;
+        
+        const gridContainer = document.getElementById('recipe-viewer-grid');
+        gridContainer.innerHTML = '';
+        
+        // Helper to generate the exact HTML element for a given recipe item definition
+        const createSlotEl = (def) => {
+            const el = document.createElement('div');
+            el.className = 'inv-slot';
+            el.style.width = '40px';
+            el.style.height = '40px';
+            el.style.border = '2px solid rgba(150,150,150,0.5)';
+            if (!def) return el;
+            
+            let dataURL = null;
+            if (def.type === 'block') {
+                const iconCanvas = this.atlas.getBlockIcon(def.subtype);
+                dataURL = iconCanvas.toDataURL();
+            } else {
+                const iconCanvas = this.atlas.generateItemTexture(def.type, def.subtype);
+                dataURL = iconCanvas.toDataURL();
+            }
+            
+            const img = document.createElement('img');
+            img.src = dataURL;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain';
+            el.appendChild(img);
+            return el;
+        };
+
+        // Render 3x3
+        for (let y = 0; y < 3; y++) {
+            for (let x = 0; x < 3; x++) {
+                gridContainer.appendChild(createSlotEl(recipe.grid[y][x]));
+            }
+        }
+
+        // Render Output
+        const outContainer = document.getElementById('recipe-viewer-output');
+        outContainer.innerHTML = '';
+        outContainer.style.border = '2px solid #fff';
+        const outEl = createSlotEl(recipe.out);
+        if (recipe.outCount > 1) {
+            const num = document.createElement('div');
+            num.className = 'slot-count';
+            num.innerText = recipe.outCount;
+            num.style.position = 'absolute';
+            num.style.bottom = '2px';
+            num.style.right = '4px';
+            num.style.fontSize = '12px';
+            num.style.fontWeight = 'bold';
+            num.style.textShadow = '1px 1px 0 #000';
+            outEl.appendChild(num);
+        }
+        // Steal the image out of the slotEl we created, or just append the whole slotEl
+        outContainer.appendChild(outEl.children[0]);
+        if (recipe.outCount > 1) outContainer.appendChild(outEl.children[1]);
     }
 }
 
