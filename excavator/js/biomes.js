@@ -1,7 +1,7 @@
 export const BIOMES = [
   {
     name: "The Surface Web",
-    depthStart: 0, depthEnd: 200,
+    depthStart: 0, depthEnd: 100,
     blockColors: [0xffffff, 0xf0f0f0, 0xdfdfdf, 0xcfcfcf],
     emissiveColor: 0x00aaff, emissiveIntensity: 0.1,
     ambientColor: 0xffffff, ambientIntensity: 0.8,
@@ -12,6 +12,20 @@ export const BIOMES = [
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.1, shakeOnMine: false,
     description: "The bright and shiny surface of the modern internet. Mostly cat pictures.",
     particleStyle: "dust", blockStyle: "solid"
+  },
+  {
+    name: "The Ad-Tech Crust",
+    depthStart: 100, depthEnd: 200,
+    blockColors: [0xffd700, 0xffaa00, 0xff4500, 0xffcc00],
+    emissiveColor: 0xff4500, emissiveIntensity: 0.5,
+    ambientColor: 0x555555, ambientIntensity: 1.0,
+    fogColor: 0xaa5500, fogNear: 15, fogFar: 120,
+    bgColor: [0.3, 0.15, 0.0],
+    blockHardness: 1, bandwidthDrop: 1,
+    bloomStrength: 0.6, bloomRadius: 0.5, bloomThreshold: 0.6,
+    chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.3, shakeOnMine: false,
+    description: "A thick layer of trackers, cookies, and intrusive pop-up advertisements.",
+    particleStyle: "sparks", blockStyle: "stripes"
   },
   {
     name: "TikTok Trenches",
