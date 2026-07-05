@@ -16,8 +16,8 @@ export class Item {
         this.data = data;
         this.name = name || 'Item';
         this.description = desc || '';
-        this.stackable = type === 'block';
-        this.maxStack = type === 'block' ? 64 : 1;
+        this.stackable = type === 'block' || type === 'material' || type === 'food';
+        this.maxStack = this.stackable ? 64 : 1;
         this.id = `item_${itemIdCounter++}`;
     }
 
@@ -26,6 +26,8 @@ export class Item {
     static spellItem(spell) { return new Item('spell', spell.type, { spell }, spell.name); }
     static modifierItem(mod) { return new Item('modifier', mod.type, { mod }, mod.name, mod.rarity); }
     static equipmentItem(subType, equipData, name, desc) { return new Item('equipment', subType, { equipData }, name, desc); }
+    static materialItem(subType, name, desc) { return new Item('material', subType, {}, name, desc); }
+    static foodItem(subType, healAmount, name, desc) { return new Item('food', subType, { heal: healAmount }, name, desc); }
 }
 
 export class Inventory {
@@ -2236,10 +2238,10 @@ export class EntityManager {
                             }
                             
                             if (isReef) {
-                                const reefAquatic = ['CLOWNFISH', 'BLUE_TANG', 'TROPICAL_FISH', 'PUFFERFISH'];
+                                const reefAquatic = ['TROPICAL_FISH', 'PUFFERFISH', 'PIRANHA', 'SHARK'];
                                 type = reefAquatic[Math.floor(Math.random() * reefAquatic.length)];
                             } else {
-                                const aquatic = ['SALMON', 'SALMON', 'TROPICAL_FISH', 'TURTLE'];
+                                const aquatic = ['SALMON', 'COD', 'BASS', 'TURTLE'];
                                 type = aquatic[Math.floor(Math.random() * aquatic.length)];
                             }
                         } else {
@@ -2303,10 +2305,33 @@ export class EntityManager {
             }
             
             if (mob.justDied) {
-                // Drop spell or modifier
                 if (mob.type === 'SHEEP') {
                     this.spawnItem(Item.blockItem(BLOCKS.WOOL, 'Wool'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
-                } else if (Math.random() < (mob.config.lootChance || 0.3)) {
+                } else if (mob.type === 'COW') {
+                    this.spawnItem(Item.foodItem('raw_beef', 15, 'Raw Beef', 'Heals some health.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                } else if (mob.type === 'PIG') {
+                    this.spawnItem(Item.foodItem('raw_porkchop', 15, 'Raw Porkchop', 'Heals some health.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                } else if (mob.type === 'CHICKEN') {
+                    this.spawnItem(Item.foodItem('raw_chicken', 10, 'Raw Chicken', 'Heals a little health.'), 1, mob.position.clone());
+                    if (Math.random() < 0.5) this.spawnItem(Item.materialItem('feather', 'Feather', 'Used for crafting.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                } else if (mob.type === 'LIZARD') {
+                    if (Math.random() < 0.5) this.spawnItem(Item.materialItem('lizard_tail', 'Lizard Tail', 'A strange alchemy ingredient.'), 1, mob.position.clone());
+                } else if (['COD', 'SALMON', 'BASS', 'TROPICAL_FISH', 'PUFFERFISH', 'PIRANHA'].includes(mob.type)) {
+                    this.spawnItem(Item.foodItem('raw_fish', 10, 'Raw Fish', 'Heals some health.'), 1, mob.position.clone());
+                } else if (mob.type === 'TURTLE') {
+                    if (Math.random() < 0.3) this.spawnItem(Item.materialItem('turtle_scute', 'Turtle Scute', 'Tough material.'), 1, mob.position.clone());
+                } else if (mob.type === 'SHARK') {
+                    this.spawnItem(Item.foodItem('raw_fish', 10, 'Raw Fish', 'Heals some health.'), 2 + Math.floor(Math.random() * 3), mob.position.clone());
+                    if (Math.random() < 0.5) this.spawnItem(Item.materialItem('shark_tooth', 'Shark Tooth', 'Sharp!'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                } else if (mob.type === 'LAVASLIME') {
+                    this.spawnItem(Item.materialItem('lavaslime_ball', 'Lavaslime Ball', 'Hot and sticky.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                } else if (mob.type === 'PIGLIN_BRUISER') {
+                    this.spawnItem(Item.materialItem('nether_scrap', 'Nether Scrap', 'Tough nether metal.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                    if (Math.random() < 0.2) this.spawnItem(Item.materialItem('gold_ingot', 'Gold Ingot', 'Shiny.'), 1, mob.position.clone());
+                }
+                
+                // Generic drop logic (Spells/Modifiers)
+                if (Math.random() < (mob.config.lootChance || 0.3)) {
                     if (Math.random() < 0.7) {
                         this.spawnItem(Item.spellItem(generateRandomSpell()), 1, mob.position.clone());
                     } else {

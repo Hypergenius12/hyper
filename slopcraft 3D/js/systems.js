@@ -310,7 +310,7 @@ class UISystem {
         if (btnRecipeBook && modalRecipeBook && btnCloseRecipes) {
             btnRecipeBook.onclick = () => {
                 modalRecipeBook.classList.remove('hidden');
-                this._populateRecipeBook();
+                this.showRecipeBook();
             };
             btnCloseRecipes.onclick = () => modalRecipeBook.classList.add('hidden');
         }
@@ -1413,6 +1413,7 @@ class UISystem {
             { name: "Crafting Table", desc: "Unlocks 3x3 crafting.", grid: [[_,_,_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.CRAFTING_TABLE), outCount: 1, needs3x3: false },
             { name: "Torch (4)", desc: "Lights up the dark.", grid: [[_,_,_],[_,mat('coal'),_],[_,mat('stick'),_]], out: blk(B.TORCH), outCount: 4, needs3x3: false },
             { name: "Iron Sword", desc: "Deals moderate damage.", grid: [[_,mat('iron_ingot'),_],[_,mat('iron_ingot'),_],[_,mat('stick'),_]], out: eqp('sword_iron'), outCount: 1, needs3x3: true },
+            { name: "Shark Sword", desc: "High damage weapon.", grid: [[_,mat('shark_tooth'),_],[_,mat('shark_tooth'),_],[_,mat('stick'),_]], out: eqp('sword_shark'), outCount: 1, needs3x3: true },
             { name: "Iron Pickaxe", desc: "Mines ores.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('pickaxe_iron'), outCount: 1, needs3x3: true },
             { name: "Iron Axe", desc: "Chops wood quickly.", grid: [[mat('iron_ingot'),mat('iron_ingot'),_],[mat('iron_ingot'),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_iron'), outCount: 1, needs3x3: true },
             { name: "Iron Helmet", desc: "Basic protection.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),_,mat('iron_ingot')],[_,_,_]], out: eqp('helmet_iron'), outCount: 1, needs3x3: true },

@@ -1801,7 +1801,24 @@ export function generateItemTexture(itemType, itemSubtype) {
         'spell_thunder': { c: '#FFD700', d: '#CC8800', h: '#FFFF88' },
         'spell_dark': { c: '#6600CC', d: '#440088', h: '#AA66FF' },
         'spell_wind': { c: '#66CC99', d: '#339966', h: '#CCFFEE' },
-        'spell_poison': { c: '#33cc33', d: '#1f7a1f', h: '#80ff80' }
+        'spell_poison': { c: '#33cc33', d: '#1f7a1f', h: '#80ff80' },
+        'spell_frost': { c: '#BBFFFF', d: '#55AAAA', h: '#E0FFFF' },
+        'spell_light': { c: '#FFFFFF', d: '#DDDDDD', h: '#FFFFFF' },
+        'spell_void': { c: '#220033', d: '#110011', h: '#440066' },
+        'raw_porkchop': { c: '#ffaeb9', d: '#cd8c95', h: '#ffc0cb' },
+        'cooked_porkchop': { c: '#8b4513', d: '#5c2e00', h: '#a0522d' },
+        'raw_beef': { c: '#cd3333', d: '#8b2323', h: '#ee3b3b' },
+        'cooked_beef': { c: '#5c2e00', d: '#3e1f00', h: '#8b4513' },
+        'raw_chicken': { c: '#ffe4e1', d: '#cdb7b5', h: '#fff0f5' },
+        'cooked_chicken': { c: '#cd853f', d: '#8b5a2b', h: '#d2b48c' },
+        'raw_fish': { c: '#98c4d6', d: '#609cb5', h: '#bfe3f2' },
+        'cooked_fish': { c: '#d2b48c', d: '#a08560', h: '#e6ccab' },
+        'lizard_tail': { c: '#3cb371', d: '#2e8b57', h: '#48d1cc' },
+        'turtle_scute': { c: '#228b22', d: '#006400', h: '#32cd32' },
+        'shark_tooth': { c: '#ffffff', d: '#d3d3d3', h: '#f5f5f5' },
+        'lavaslime_ball': { c: '#ff4500', d: '#8b0000', h: '#ff6347' },
+        'nether_scrap': { c: '#4b0082', d: '#2a0052', h: '#6a0dad' },
+        'feather': { c: '#f8f8ff', d: '#dcdcdc', h: '#ffffff' }
     };
 
     // Helper to determine material tier from subtype
@@ -1816,7 +1833,8 @@ export function generateItemTexture(itemType, itemSubtype) {
     let p = palettes[matName] || palettes['iron_ingot'];
     
     // Override palette for specific material items
-    if (itemType === 'material') {
+    // Override palette for specific material items
+    if (itemType === 'material' || itemType === 'food') {
         p = palettes[itemSubtype] || p;
     } else if (itemType === 'wand') {
         p = palettes[itemSubtype] || palettes['wand_basic'];
@@ -2198,6 +2216,26 @@ export function generateItemTexture(itemType, itemSubtype) {
             "                ",
             "                "
         ];
+    } else if (itemType === 'food') {
+        p = palettes[itemSubtype] || palettes['raw_porkchop'];
+        shape = [
+            "                ",
+            "                ",
+            "     OOOOO      ",
+            "   OOCHHDOO     ",
+            "  OCHHHHCDOO    ",
+            "  OHHHHHCCDOO   ",
+            "  OHHHHCCCCDO   ",
+            "  OHHHCCCCCDO   ",
+            "   OHCCCCCDO    ",
+            "    ODDDDOO     ",
+            "      OOO       ",
+            "                ",
+            "                ",
+            "                ",
+            "                ",
+            "                "
+        ];
     } else if (itemType === 'spell') {
         let sc = 'spell_basic';
         if (itemSubtype === 'FIRE') sc = 'spell_fire';
@@ -2208,6 +2246,9 @@ export function generateItemTexture(itemType, itemSubtype) {
         if (itemSubtype === 'DARK') sc = 'spell_dark';
         if (itemSubtype === 'WIND') sc = 'spell_wind';
         if (itemSubtype === 'POISON') sc = 'spell_poison';
+        if (itemSubtype === 'FROST') sc = 'spell_frost';
+        if (itemSubtype === 'LIGHT') sc = 'spell_light';
+        if (itemSubtype === 'VOID') sc = 'spell_void';
         p = palettes[sc];
         shape = [
             "                ",
@@ -2290,6 +2331,9 @@ export function generateSpellTexture(element) {
     else if (element === 'DARK') { colorInner = 'rgba(180,100,255,1)'; colorOuter = 'rgba(102,0,204,0)'; }
     else if (element === 'WIND') { colorInner = 'rgba(200,255,220,1)'; colorOuter = 'rgba(153,255,204,0)'; }
     else if (element === 'POISON') { colorInner = 'rgba(150,255,150,1)'; colorOuter = 'rgba(51,204,51,0)'; }
+    else if (element === 'FROST') { colorInner = 'rgba(220,255,255,1)'; colorOuter = 'rgba(100,200,200,0)'; }
+    else if (element === 'LIGHT') { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(255,255,220,0)'; }
+    else if (element === 'VOID') { colorInner = 'rgba(50,0,80,1)'; colorOuter = 'rgba(30,0,50,0)'; }
     else { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(128,0,255,0)'; } // Arcane/Default
     
     const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);
@@ -2339,6 +2383,8 @@ export function generateMobTexture(mobType) {
     else if (mobType === 'TURTLE') { baseColor = '#115511'; noiseRange = 25; }
     else if (mobType === 'PIRANHA') { baseColor = '#883333'; noiseRange = 15; }
     else if (mobType === 'SHARK') { baseColor = '#8899aa'; noiseRange = 10; }
+    else if (mobType === 'LAVASLIME') { baseColor = '#ff5500'; noiseRange = 25; }
+    else if (mobType === 'PIGLIN_BRUISER') { baseColor = '#ffa07a'; noiseRange = 20; }
     
     // Fill base noise
     ctx.fillStyle = baseColor;
@@ -2431,6 +2477,18 @@ export function generateMobTexture(mobType) {
     else if (mobType === 'SHARK') {
         ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 16, 32, 16); // White underbelly
         ctx.fillStyle = '#000'; ctx.fillRect(6, 10, 2, 2); // Eye
+    }
+    else if (mobType === 'LAVASLIME') {
+        ctx.fillStyle = 'rgba(255,50,0,0.6)';
+        for(let i=0; i<40; i++) ctx.fillRect(Math.floor(Math.random()*32), Math.floor(Math.random()*32), 2, 2);
+        ctx.fillStyle = '#ffff00'; ctx.fillRect(6, 10, 4, 4); ctx.fillRect(22, 10, 4, 4); // Glowing Eyes
+        ctx.fillStyle = '#aa0000'; ctx.fillRect(14, 16, 4, 2); // Mouth
+    }
+    else if (mobType === 'PIGLIN_BRUISER') {
+        ctx.fillStyle = '#000'; ctx.fillRect(8, 10, 2, 2); ctx.fillRect(22, 10, 2, 2); // Eyes
+        ctx.fillStyle = '#ffcccc'; ctx.fillRect(12, 16, 8, 6); // Snout
+        ctx.fillStyle = '#000'; ctx.fillRect(14, 18, 1, 2); ctx.fillRect(17, 18, 1, 2); // Nostrils
+        ctx.fillStyle = '#333333'; ctx.fillRect(0, 20, 32, 12); // Armor
     }
     
     return canvas;

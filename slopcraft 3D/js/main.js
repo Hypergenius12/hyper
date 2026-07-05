@@ -495,6 +495,12 @@ class Game {
             if (type === 'block' && subtype === window.BLOCKS.COBBLESTONE) {
                 return { type: 'block', subtype: window.BLOCKS.STONE, name: 'Stone', stackable: true, maxStack: 64, id: `block_${window.BLOCKS.STONE}` };
             }
+            if (type === 'food') {
+                if (subtype === 'raw_beef') return { type: 'food', subtype: 'cooked_beef', name: 'Cooked Beef', stackable: true, maxStack: 64, data: { heal: 30 }, id: `food_cooked_beef` };
+                if (subtype === 'raw_porkchop') return { type: 'food', subtype: 'cooked_porkchop', name: 'Cooked Porkchop', stackable: true, maxStack: 64, data: { heal: 30 }, id: `food_cooked_porkchop` };
+                if (subtype === 'raw_chicken') return { type: 'food', subtype: 'cooked_chicken', name: 'Cooked Chicken', stackable: true, maxStack: 64, data: { heal: 25 }, id: `food_cooked_chicken` };
+                if (subtype === 'raw_fish') return { type: 'food', subtype: 'cooked_fish', name: 'Cooked Fish', stackable: true, maxStack: 64, data: { heal: 25 }, id: `food_cooked_fish` };
+            }
             return null;
         };
 
@@ -940,6 +946,16 @@ class Game {
                         this.player.inventory.slots[this.player.selectedSlot] = null;
                     }
                 }
+            } else if (slot && slot.item.type === 'food') {
+                if (this.player.health < this.player.maxHealth) {
+                    this.player.health = Math.min(this.player.maxHealth, this.player.health + (slot.item.data.heal || 10));
+                    this.audio.playHit();
+                    this.particles.emit(this.player.position, 'explosion', 10, 0x33cc33);
+                    slot.count--;
+                    if (slot.count <= 0) {
+                        this.player.inventory.slots[this.player.selectedSlot] = null;
+                    }
+                }
             }
             this.input.mouse.rightClick = false; // single action
         }
@@ -1379,8 +1395,11 @@ class Game {
             const ry = window.innerHeight - mapSize - padding;
             
             // Tilt the camera for a 2.5D map look but fixed height to avoid jump parallax
-            this.minimapCamera.position.set(this.player.position.x, 250, this.player.position.z + 40);
-            this.minimapCamera.lookAt(this.player.position.x, 0, this.player.position.z);
+            const isNether = this.currentDimension === 'nether' || (this.engine.planetParams && this.engine.planetParams.theme === 'nether');
+            const camY = isNether ? this.player.position.y + 40 : 250;
+            const lookY = isNether ? camY - 250 : 0;
+            this.minimapCamera.position.set(this.player.position.x, camY, this.player.position.z + 40);
+            this.minimapCamera.lookAt(this.player.position.x, lookY, this.player.position.z);
             
             this.engine.renderer.setViewport(rx, ry, mapSize, mapSize);
             this.engine.renderer.setScissor(rx, ry, mapSize, mapSize);
