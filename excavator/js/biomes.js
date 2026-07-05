@@ -25,7 +25,7 @@ export const BIOMES = [
     bloomStrength: 0.6, bloomRadius: 0.5, bloomThreshold: 0.6,
     chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.3, shakeOnMine: false,
     description: "A thick layer of trackers, cookies, and intrusive pop-up advertisements.",
-    particleStyle: "sparks", blockStyle: "stripes"
+    particleStyle: "sparks", blockStyle: "x-mark"
   },
   {
     name: "TikTok Trenches",
@@ -67,7 +67,7 @@ export const BIOMES = [
     bloomStrength: 0.5, bloomRadius: 0.8, bloomThreshold: 0.3,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.0, shakeOnMine: false,
     description: "Ethereal blocks containing everyone's forgotten backups.",
-    particleStyle: "smoke", blockStyle: "stripes"
+    particleStyle: "smoke", blockStyle: "rounded"
   },
   {
     name: "Web 2.0 Bedrock",
@@ -193,7 +193,7 @@ export const BIOMES = [
     bloomStrength: 0.2, bloomRadius: 0.3, bloomThreshold: 0.8,
     chromaticAberration: 0.01, scanlines: true, vignetteIntensity: 0.6, shakeOnMine: false,
     description: "Echoing with the screeching sounds of 56k modems connecting.",
-    particleStyle: "dust", blockStyle: "solid"
+    particleStyle: "dust", blockStyle: "stripes"
   },
   {
     name: "Browser War Trenches",
@@ -277,7 +277,7 @@ export const BIOMES = [
     bloomStrength: 0.8, bloomRadius: 0.5, bloomThreshold: 0.5,
     chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "Dark caverns pinging with old text messages and bot commands.",
-    particleStyle: "sparks", blockStyle: "solid"
+    particleStyle: "sparks", blockStyle: "dots"
   },
   {
     name: "ARPANET Mantle",
@@ -361,7 +361,7 @@ export const BIOMES = [
     bloomStrength: 0.0, bloomRadius: 0.0, bloomThreshold: 1.0,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.3, shakeOnMine: false,
     description: "Fragile paper blocks with precise rectangular holes.",
-    particleStyle: "dust", blockStyle: "solid"
+    particleStyle: "dust", blockStyle: "stripes"
   },
   {
     name: "Magnetic Tape Veins",

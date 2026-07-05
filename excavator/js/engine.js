@@ -633,20 +633,51 @@ export class Engine {
           ctx.fillStyle = 'rgba(255,255,255,0.4)';
           ctx.fillRect(x + block.seed*bs*0.5, y + block.seed*bs*0.5, bs*0.3, bs*0.1);
           ctx.fillRect(x + (1-block.seed)*bs*0.5, y + (1-block.seed)*bs*0.5, bs*0.1, bs*0.3);
+        } else if (block.style === 'rounded') {
+          ctx.beginPath();
+          ctx.roundRect(x, y, bs - 1, bs - 1, bs * 0.3);
+          ctx.fill();
+        } else if (block.style === 'x-mark') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + bs*0.2, y + bs*0.2); ctx.lineTo(x + bs*0.8, y + bs*0.8);
+          ctx.moveTo(x + bs*0.8, y + bs*0.2); ctx.lineTo(x + bs*0.2, y + bs*0.8);
+          ctx.stroke();
+        } else if (block.style === 'circle') {
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.45, 0, Math.PI*2);
+          ctx.fill();
+        } else if (block.style === 'checkerboard') {
+          ctx.fillRect(x, y, bs/2, bs/2);
+          ctx.fillRect(x + bs/2, y + bs/2, bs/2 - 1, bs/2 - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x + bs/2, y, bs/2 - 1, bs/2);
+          ctx.fillRect(x, y + bs/2, bs/2, bs/2 - 1);
+        } else if (block.style === 'diamond') {
+          ctx.beginPath();
+          ctx.moveTo(x + bs/2, y + 2);
+          ctx.lineTo(x + bs - 2, y + bs/2);
+          ctx.lineTo(x + bs/2, y + bs - 2);
+          ctx.lineTo(x + 2, y + bs/2);
+          ctx.fill();
         } else {
           // 'solid'
           ctx.fillRect(x, y, bs - 1, bs - 1);
         }
 
         // Bevel: lighter top-left edges
-        ctx.fillStyle = 'rgba(255,255,255,0.06)';
-        ctx.fillRect(x, y, bs - 1, 1);
-        ctx.fillRect(x, y, 1, bs - 1);
+        if (block.style !== 'circle' && block.style !== 'diamond') {
+          ctx.fillStyle = 'rgba(255,255,255,0.06)';
+          ctx.fillRect(x, y, bs - 1, 1);
+          ctx.fillRect(x, y, 1, bs - 1);
 
-        // Bevel: darker bottom-right edges
-        ctx.fillStyle = 'rgba(0,0,0,0.12)';
-        ctx.fillRect(x, y + bs - 2, bs - 1, 1);
-        ctx.fillRect(x + bs - 2, y, 1, bs - 1);
+          // Bevel: darker bottom-right edges
+          ctx.fillStyle = 'rgba(0,0,0,0.12)';
+          ctx.fillRect(x, y + bs - 2, bs - 1, 1);
+          ctx.fillRect(x + bs - 2, y, 1, bs - 1);
+        }
 
         // Unreachable blocks are darker (depth illusion)
         if (!reachable) {
