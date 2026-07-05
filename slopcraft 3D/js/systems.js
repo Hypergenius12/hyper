@@ -1415,7 +1415,19 @@ class UISystem {
             { result: "Iron/Gold/Diamond Block", ingredients: "9 Iron/Gold/Diamond", needs3x3: true },
             { result: "TNT", ingredients: "5 Coal, 4 Sand", needs3x3: true },
             { result: "Flint and Steel", ingredients: "1 Iron Ingot, 1 Sand", needs3x3: false },
-            { result: "Mossy Cobble", ingredients: "1 Cobblestone, 1 Leaves", needs3x3: false }
+            { result: "Mossy Cobble", ingredients: "1 Cobblestone, 1 Leaves", needs3x3: false },
+            { result: "Ice Spell", ingredients: "1 Mana Crystal, 4 Snow (Cross)", needs3x3: true },
+            { result: "Fire Spell", ingredients: "1 Mana Crystal, 4 Coal (Cross)", needs3x3: true },
+            { result: "Thunder Spell", ingredients: "1 Mana Crystal, 4 Gold Ingot (Cross)", needs3x3: true },
+            { result: "Earth Spell", ingredients: "1 Mana Crystal, 4 Stone (Cross)", needs3x3: true },
+            { result: "Dark Spell", ingredients: "1 Mana Crystal, 4 Obsidian (Cross)", needs3x3: true },
+            { result: "Wind Spell", ingredients: "1 Mana Crystal, 4 Sugar (Cross)", needs3x3: true },
+            { result: "Poison Spell", ingredients: "1 Mana Crystal, 4 Leaves (Cross)", needs3x3: true },
+            { result: "Water Spell", ingredients: "1 Mana Crystal, 4 Sand (Cross)", needs3x3: true },
+            { result: "Void Spell", ingredients: "1 Mana Crystal, 4 Alien Stone (Cross)", needs3x3: true },
+            { result: "Light Spell", ingredients: "1 Mana Crystal, 4 Glass (Cross)", needs3x3: true },
+            { result: "Frost Spell", ingredients: "1 Mana Crystal, 4 Water Bucket (Cross)", needs3x3: true },
+            { result: "Builder Spell", ingredients: "1 Mana Crystal, 4 Planks (Cross)", needs3x3: true }
         ];
 
         let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
