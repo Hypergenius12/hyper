@@ -1988,6 +1988,7 @@ export class Mob {
                 this.velocity.z *= 0.8;
                 if (this.flying || this.config.waterOnly) this.velocity.y *= 0.9;
             }
+        } // End of else Wander
         } // End of else Generic AI
 
         if (this.attackCooldown > 0) this.attackCooldown -= dt;
