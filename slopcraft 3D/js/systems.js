@@ -1393,8 +1393,6 @@ class UISystem {
         }
     }
 
-    _populateRecipeBook() {
-        const list = document.getElementById('recipe-list');
     showRecipeBook() {
         const list = document.getElementById('recipe-list');
         if (!list) return;
