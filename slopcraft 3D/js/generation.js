@@ -96,7 +96,7 @@ export function getBiomeParams(wx, wz, params) {
     const isFlat = erosionNoise > 0.65;
 
     let biome = BIOMES.PLAINS;
-    let isTerraced = false;
+    let terraceWeight = 0;
 
     if (isOcean) {
         if (temp > 0.7 && moist > 0.5) biome = BIOMES.CORAL_REEF;
@@ -108,9 +108,12 @@ export function getBiomeParams(wx, wz, params) {
         else if (temp > 0.65) biome = BIOMES.DESERT; // Beach
         else biome = BIOMES.PLAINS; // Moderate coast
     } else if (isMountain) {
+        let tw = Math.max(0, Math.min(1, (temp - 0.6) / 0.1));
+        let mw = Math.max(0, Math.min(1, (0.5 - moist) / 0.1));
+        terraceWeight = Math.max(terraceWeight, tw * mw);
+        
         if (temp > 0.7 && moist < 0.4) {
             biome = BIOMES.BADLANDS;
-            isTerraced = true;
         }
         else if (temp < 0.3) biome = BIOMES.ICE_SPIKES;
         else if (temp > 0.6) biome = BIOMES.VOLCANIC;
@@ -119,9 +122,10 @@ export function getBiomeParams(wx, wz, params) {
         // Inland, moderate to flat
         if (temp > 0.6) {
             if (moist < 0.3) {
+                let ww = Math.max(0, Math.min(1, (weirdness - 0.7) / 0.1));
+                terraceWeight = Math.max(terraceWeight, ww);
                 biome = weirdness > 0.8 ? BIOMES.BADLANDS : BIOMES.DESERT;
                 if (biome === BIOMES.DESERT && temp < 0.7 && moist > 0.25) biome = BIOMES.OASIS;
-                if (biome === BIOMES.BADLANDS) isTerraced = true;
             } else if (moist > 0.6) {
                 if (weirdness > 0.7) biome = BIOMES.JUNGLE;
                 else biome = BIOMES.SWAMP;
@@ -151,13 +155,13 @@ export function getBiomeParams(wx, wz, params) {
         }
     }
 
-    return { biome, isTerraced, contNoise, erosionNoise, weirdness };
+    return { biome, terraceWeight, contNoise, erosionNoise, weirdness };
 }
 
 function getColumnInfo(wx, wz, params) {
     const colRng = seededRandom(params.seed + wx * 3141 + wz);
     
-    const { biome, isTerraced, contNoise, erosionNoise, weirdness } = getBiomeParams(wx, wz, params);
+    const { biome, terraceWeight, contNoise, erosionNoise, weirdness } = getBiomeParams(wx, wz, params);
     
     // 1. Continentalness Base
     let baseElevation = 60;
@@ -209,10 +213,11 @@ function getColumnInfo(wx, wz, params) {
     let elevation = baseElevation + terrainOffset;
     
     // Apply terracing (e.g. for Badlands)
-    if (isTerraced) {
+    if (terraceWeight > 0) {
         const terraceStep = 6;
         const terracedElevation = Math.floor(elevation / terraceStep) * terraceStep;
-        elevation = elevation * 0.2 + terracedElevation * 0.8;
+        const targetTerraced = elevation * 0.2 + terracedElevation * 0.8;
+        elevation = elevation * (1.0 - terraceWeight) + targetTerraced * terraceWeight;
     }
 
     let surfaceY = Math.floor(elevation);
