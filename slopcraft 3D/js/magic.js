@@ -183,6 +183,8 @@ export class Wand {
         else if (isVampiric) element = 'VAMPIRIC';
         else element = elements.includes('FIRE') ? 'FIRE' : (elements.includes('ICE') ? 'ICE' : (elements.includes('HEAL') ? 'HEAL' : dominantSpell.element));
 
+        totalMana = Math.min(100, totalMana);
+
         const combinedStats = {
             damage: totalDamage,
             manaCost: totalMana,
