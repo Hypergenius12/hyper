@@ -34,6 +34,27 @@ export class LightingSystem {
         this.sunMesh = new THREE.Mesh(sunGeo, sunMat);
         this.scene.add(this.sunMesh);
 
+        // Moon Light
+        this.moonLight = new THREE.DirectionalLight(0xaaccff, 0.4);
+        this.moonLight.castShadow = true;
+        this.moonLight.shadow.mapSize.width = 1024;
+        this.moonLight.shadow.mapSize.height = 1024;
+        this.moonLight.shadow.camera.near = 0.5;
+        this.moonLight.shadow.camera.far = 200;
+        this.moonLight.shadow.camera.left = -d;
+        this.moonLight.shadow.camera.right = d;
+        this.moonLight.shadow.camera.top = d;
+        this.moonLight.shadow.camera.bottom = -d;
+        this.moonLight.shadow.bias = -0.001;
+        this.moonLight.shadow.normalBias = 0.05;
+        this.scene.add(this.moonLight);
+
+        // Moon Mesh
+        const moonGeo = new THREE.SphereGeometry(2.5, 16, 16);
+        const moonMat = new THREE.MeshBasicMaterial({ color: 0xccddff });
+        this.moonMesh = new THREE.Mesh(moonGeo, moonMat);
+        this.scene.add(this.moonMesh);
+
         // SkyDome Shader
         const skyGeo = new THREE.SphereGeometry(400, 32, 15);
         this.skyMat = new THREE.ShaderMaterial({
@@ -73,18 +94,18 @@ export class LightingSystem {
         // 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 1.0 = midnight
         const states = [
             // Midnight - slightly brighter so you can see without torches
-            { t: 0.0, amb: new THREE.Color(0x555566), bg: new THREE.Color(0x101018), top: new THREE.Color(0x0a0a14), sun: 0.0, hemi: 0.6 },
-            { t: 0.2, amb: new THREE.Color(0x555566), bg: new THREE.Color(0x101018), top: new THREE.Color(0x0a0a14), sun: 0.0, hemi: 0.6 },
+            { t: 0.0, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 },
+            { t: 0.2, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 },
             // Sunrise - pink/orange horizon, light blue top
-            { t: 0.25, amb: new THREE.Color(0x8a6b52), bg: new THREE.Color(0xffa65a), top: new THREE.Color(0x82a6ff), sun: 0.8, hemi: 0.8 },
+            { t: 0.25, amb: new THREE.Color(0x8a6b52), bg: new THREE.Color(0xffa65a), top: new THREE.Color(0x82a6ff), sun: 0.8, moon: 0.2, hemi: 0.8 },
             // Day - bright Minecraft blue, high ambient light for soft shadows
-            { t: 0.3, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 1.5, hemi: 1.2 },
-            { t: 0.7, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 1.5, hemi: 1.2 },
+            { t: 0.3, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 1.5, moon: 0.0, hemi: 1.2 },
+            { t: 0.7, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 1.5, moon: 0.0, hemi: 1.2 },
             // Sunset - orange/red horizon
-            { t: 0.75, amb: new THREE.Color(0x8a5050), bg: new THREE.Color(0xff5a5a), top: new THREE.Color(0x5a82f2), sun: 0.8, hemi: 0.8 },
+            { t: 0.75, amb: new THREE.Color(0x8a5050), bg: new THREE.Color(0xff5a5a), top: new THREE.Color(0x5a82f2), sun: 0.8, moon: 0.2, hemi: 0.8 },
             // Night
-            { t: 0.8, amb: new THREE.Color(0x555566), bg: new THREE.Color(0x101018), top: new THREE.Color(0x0a0a14), sun: 0.0, hemi: 0.6 },
-            { t: 1.0, amb: new THREE.Color(0x555566), bg: new THREE.Color(0x101018), top: new THREE.Color(0x0a0a14), sun: 0.0, hemi: 0.6 }
+            { t: 0.8, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 },
+            { t: 1.0, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 }
         ];
 
         for (let i = 0; i < states.length - 1; i++) {
@@ -94,8 +115,9 @@ export class LightingSystem {
                 const bg = states[i].bg.clone().lerp(states[i+1].bg, fraction);
                 const top = states[i].top.clone().lerp(states[i+1].top, fraction);
                 const sun = states[i].sun + (states[i+1].sun - states[i].sun) * fraction;
+                const moon = (states[i].moon !== undefined) ? states[i].moon + (states[i+1].moon - states[i].moon) * fraction : 0.0;
                 const hemi = states[i].hemi + (states[i+1].hemi - states[i].hemi) * fraction;
-                return { amb, bg, top, sun, hemi };
+                return { amb, bg, top, sun, moon, hemi };
             }
         }
         return states[0]; // fallback
@@ -106,6 +128,7 @@ export class LightingSystem {
         if (this.timeOfDay > 1) this.timeOfDay -= 1;
 
         const angle = (this.timeOfDay - 0.5) * Math.PI * 2;
+        const moonAngle = angle + Math.PI;
         
         // Sun position
         const sunDist = 80;
@@ -118,11 +141,22 @@ export class LightingSystem {
         this.sunLight.target.updateMatrixWorld();
         this.sunMesh.position.copy(this.sunLight.position);
 
+        // Moon position
+        this.moonLight.position.set(
+            cameraPos.x + Math.sin(moonAngle) * sunDist,
+            cameraPos.y + Math.cos(moonAngle) * sunDist,
+            cameraPos.z
+        );
+        this.moonLight.target.position.copy(cameraPos);
+        this.moonLight.target.updateMatrixWorld();
+        this.moonMesh.position.copy(this.moonLight.position);
+
         this.skyDome.position.copy(cameraPos);
 
         // Smooth color interpolation
         const state = this._getLightState(this.timeOfDay);
         this.sunLight.intensity = state.sun;
+        this.moonLight.intensity = state.moon;
 
         this.hemiLight.color.copy(state.top);
         this.hemiLight.groundColor.copy(state.amb);
@@ -816,6 +850,13 @@ class UISystem {
                 } else {
                     setListSlot(srcType, srcIndex, targetSlot);
                     setListSlot(targetType, targetIndex, itemData);
+                }
+            }
+            
+            if (srcType === 'wand' || targetType === 'wand') {
+                if (window.game && window.game.heldItemMesh) {
+                    window.game.viewModel.remove(window.game.heldItemMesh);
+                    window.game.heldItemMesh = null;
                 }
             }
 

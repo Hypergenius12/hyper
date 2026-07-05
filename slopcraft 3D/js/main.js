@@ -1186,7 +1186,10 @@ class Game {
             
             this.viewModel.visible = false; // Don't render hands in minimap
             if (this.cloudSystem && this.cloudSystem.clouds) this.cloudSystem.clouds.visible = false; // Hide clouds
-            if (this.lighting && this.lighting.sunMesh) this.lighting.sunMesh.visible = false; // Hide sun
+            if (this.lighting && this.lighting.sunMesh) {
+                this.lighting.sunMesh.visible = false;
+                if (this.lighting.moonMesh) this.lighting.moonMesh.visible = false;
+            } // Hide sun and moon
             
             // Optional: disable fog for minimap so we can see clearly
             const oldFog = this.engine.scene.fog;
@@ -1205,7 +1208,10 @@ class Game {
             this.engine.scene.fog = oldFog;
             this.viewModel.visible = true;
             if (this.cloudSystem && this.cloudSystem.clouds) this.cloudSystem.clouds.visible = true; // Restore clouds
-            if (this.lighting && this.lighting.sunMesh) this.lighting.sunMesh.visible = true; // Restore sun
+            if (this.lighting && this.lighting.sunMesh) {
+                this.lighting.sunMesh.visible = true;
+                if (this.lighting.moonMesh) this.lighting.moonMesh.visible = true;
+            } // Restore sun and moon
             if (this.engine.scene.fog) {
                 this.engine.scene.fog.density = this.engine.scene.fog.baseDensity;
             }
