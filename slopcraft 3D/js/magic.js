@@ -21,9 +21,9 @@ export const SPELL_TYPES = {
     POISON: { name: 'Toxic Spit', baseDamage: 5, baseManaCost: 15, baseCooldown: 0, projectileSpeed: 10, projectileCount: 1, element: 'POISON', color: 0x33CC33, description: 'Fires a venomous blob that poisons enemies.' },
     WATER: { name: 'Aqua Jet', baseDamage: 0, baseManaCost: 10, baseCooldown: 0, projectileSpeed: 18, projectileCount: 1, element: 'WATER', color: 0x3399FF, description: 'High knockback. Extinguishes fire and turns lava to obsidian.' },
     LAVA: { name: 'Magma Bomb', baseDamage: 40, baseManaCost: 40, baseCooldown: 0, projectileSpeed: 8, projectileCount: 1, element: 'LAVA', color: 0xFF6600, description: 'Heavy projectile that spawns lava on impact.' },
-    VOID: { name: 'Void Sphere', baseDamage: 150, baseManaCost: 80, baseCooldown: 0, projectileSpeed: 5, projectileCount: 1, element: 'VOID', color: 0x220033, description: 'Slow moving orb that destroys blocks on impact.' },
-    LIGHT: { name: 'Sunbeam', baseDamage: 20, baseManaCost: 20, baseCooldown: 0, projectileSpeed: 80, projectileCount: 1, element: 'LIGHT', color: 0xFFFFFF, description: 'Extremely fast beam that pierces targets.' },
-    FROST: { name: 'Frost Nova', baseDamage: 0, baseManaCost: 30, baseCooldown: 0, projectileSpeed: 15, projectileCount: 1, element: 'FROST', color: 0xBBFFFF, description: 'Freezes all nearby entities on impact.' },
+    VOID: { name: 'Void Sphere', baseDamage: 150, baseManaCost: 80, baseCooldown: 0, projectileSpeed: 5, projectileCount: 1, element: 'VOID', color: 0x8800CC, description: 'Slow moving orb that destroys blocks on impact.' },
+    LIGHT: { name: 'Sunbeam', baseDamage: 20, baseManaCost: 20, baseCooldown: 0, projectileSpeed: 80, projectileCount: 1, element: 'LIGHT', color: 0xFFFF88, description: 'Extremely fast beam that pierces targets.' },
+    FROST: { name: 'Frost Nova', baseDamage: 0, baseManaCost: 30, baseCooldown: 0, projectileSpeed: 15, projectileCount: 1, element: 'FROST', color: 0x00FFFF, description: 'Freezes all nearby entities on impact.' },
     BUILDER: { name: 'Stone Wall', baseDamage: 0, baseManaCost: 20, baseCooldown: 0, projectileSpeed: 25, projectileCount: 1, element: 'BUILDER', color: 0xAAAAAA, description: 'Instantly builds a stone wall where it hits.' }
 };
 
@@ -219,9 +219,9 @@ export class SpellProjectile {
         if (this.element === 'POISON') this.color = 0x33CC33;
         if (this.element === 'WATER') this.color = 0x3399FF;
         if (this.element === 'LAVA') this.color = 0xFF6600;
-        if (this.element === 'VOID') this.color = 0x220033;
-        if (this.element === 'LIGHT') this.color = 0xFFFFFF;
-        if (this.element === 'FROST') this.color = 0xBBFFFF;
+        if (this.element === 'VOID') this.color = 0x8800CC;
+        if (this.element === 'LIGHT') this.color = 0xFFFF88;
+        if (this.element === 'FROST') this.color = 0x00FFFF;
         if (this.element === 'BUILDER') this.color = 0xAAAAAA;
         if (this.element === 'STEAM') this.color = 0xDDDDDD;
         if (this.element === 'MAGMA') this.color = 0xCC2200;

@@ -1802,9 +1802,9 @@ export function generateItemTexture(itemType, itemSubtype) {
         'spell_dark': { c: '#6600CC', d: '#440088', h: '#AA66FF' },
         'spell_wind': { c: '#66CC99', d: '#339966', h: '#CCFFEE' },
         'spell_poison': { c: '#33cc33', d: '#1f7a1f', h: '#80ff80' },
-        'spell_frost': { c: '#BBFFFF', d: '#55AAAA', h: '#E0FFFF' },
-        'spell_light': { c: '#FFFFFF', d: '#DDDDDD', h: '#FFFFFF' },
-        'spell_void': { c: '#220033', d: '#110011', h: '#440066' },
+        'spell_frost': { c: '#00FFFF', d: '#008888', h: '#88FFFF' },
+        'spell_light': { c: '#FFFFAA', d: '#CCCC55', h: '#FFFFFF' },
+        'spell_void': { c: '#8800CC', d: '#440066', h: '#CC66FF' },
         'spell_lava': { c: '#CC3300', d: '#991100', h: '#FF6600' },
         'spell_builder': { c: '#AAAAAA', d: '#777777', h: '#CCCCCC' }
         'raw_porkchop': { c: '#ffaeb9', d: '#cd8c95', h: '#ffc0cb' },
@@ -2335,9 +2335,9 @@ export function generateSpellTexture(element) {
     else if (element === 'DARK') { colorInner = 'rgba(180,100,255,1)'; colorOuter = 'rgba(102,0,204,0)'; }
     else if (element === 'WIND') { colorInner = 'rgba(200,255,220,1)'; colorOuter = 'rgba(153,255,204,0)'; }
     else if (element === 'POISON') { colorInner = 'rgba(150,255,150,1)'; colorOuter = 'rgba(51,204,51,0)'; }
-    else if (element === 'FROST') { colorInner = 'rgba(220,255,255,1)'; colorOuter = 'rgba(100,200,200,0)'; }
-    else if (element === 'LIGHT') { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(255,255,220,0)'; }
-    else if (element === 'VOID') { colorInner = 'rgba(50,0,80,1)'; colorOuter = 'rgba(30,0,50,0)'; }
+    else if (element === 'FROST') { colorInner = 'rgba(150,255,255,1)'; colorOuter = 'rgba(0,255,255,0)'; }
+    else if (element === 'LIGHT') { colorInner = 'rgba(255,255,150,1)'; colorOuter = 'rgba(255,200,0,0)'; }
+    else if (element === 'VOID') { colorInner = 'rgba(150,0,200,1)'; colorOuter = 'rgba(80,0,150,0)'; }
     else if (element === 'LAVA') { colorInner = 'rgba(255,100,0,1)'; colorOuter = 'rgba(200,40,0,0)'; }
     else if (element === 'BUILDER') { colorInner = 'rgba(200,200,200,1)'; colorOuter = 'rgba(100,100,100,0)'; }
     else { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(128,0,255,0)'; } // Arcane/Default
