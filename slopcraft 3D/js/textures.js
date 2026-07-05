@@ -1805,6 +1805,8 @@ export function generateItemTexture(itemType, itemSubtype) {
         'spell_frost': { c: '#BBFFFF', d: '#55AAAA', h: '#E0FFFF' },
         'spell_light': { c: '#FFFFFF', d: '#DDDDDD', h: '#FFFFFF' },
         'spell_void': { c: '#220033', d: '#110011', h: '#440066' },
+        'spell_lava': { c: '#CC3300', d: '#991100', h: '#FF6600' },
+        'spell_builder': { c: '#AAAAAA', d: '#777777', h: '#CCCCCC' }
         'raw_porkchop': { c: '#ffaeb9', d: '#cd8c95', h: '#ffc0cb' },
         'cooked_porkchop': { c: '#8b4513', d: '#5c2e00', h: '#a0522d' },
         'raw_beef': { c: '#cd3333', d: '#8b2323', h: '#ee3b3b' },
@@ -2249,6 +2251,8 @@ export function generateItemTexture(itemType, itemSubtype) {
         if (itemSubtype === 'FROST') sc = 'spell_frost';
         if (itemSubtype === 'LIGHT') sc = 'spell_light';
         if (itemSubtype === 'VOID') sc = 'spell_void';
+        if (itemSubtype === 'LAVA') sc = 'spell_lava';
+        if (itemSubtype === 'BUILDER') sc = 'spell_builder';
         p = palettes[sc];
         shape = [
             "                ",
@@ -2334,6 +2338,8 @@ export function generateSpellTexture(element) {
     else if (element === 'FROST') { colorInner = 'rgba(220,255,255,1)'; colorOuter = 'rgba(100,200,200,0)'; }
     else if (element === 'LIGHT') { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(255,255,220,0)'; }
     else if (element === 'VOID') { colorInner = 'rgba(50,0,80,1)'; colorOuter = 'rgba(30,0,50,0)'; }
+    else if (element === 'LAVA') { colorInner = 'rgba(255,100,0,1)'; colorOuter = 'rgba(200,40,0,0)'; }
+    else if (element === 'BUILDER') { colorInner = 'rgba(200,200,200,1)'; colorOuter = 'rgba(100,100,100,0)'; }
     else { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(128,0,255,0)'; } // Arcane/Default
     
     const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);

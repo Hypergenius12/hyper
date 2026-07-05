@@ -745,74 +745,98 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
     const doors = [];
     
     // Add a huge entrance shaft piercing the surface to make it discoverable
-    rooms.push({ x: startX, y: startY, z: startZ, w: 7, h: 180, d: 7, type: 'entrance' });
+    rooms.push({ x: startX, y: startY, z: startZ, w: 7, h: 180, d: 7, type: 'entrance', shape: 'square' });
     
-    // Start normal dungeon generation
-    const queue = [{ x: startX, y: startY, z: startZ, w: 11, h: 6, d: 11, depth: 0, bossChance: 0.01 }];
-    const maxRooms = 25;
+    const GRID_SIZE = 5;
+    const CELL_SIZE = 16;
     
-    while (queue.length > 0 && rooms.length < maxRooms) {
-        const current = queue.shift();
-        let isBoss = false;
-        
-        if (rooms.length >= 5) {
-            if (rng() < current.bossChance) {
-                isBoss = true;
-            }
-            current.bossChance += 0.02; // Increase boss chance
+    const grid = [];
+    for (let x=0; x<GRID_SIZE; x++) {
+        grid[x] = [];
+        for (let z=0; z<GRID_SIZE; z++) {
+            grid[x][z] = { visited: false, connections: [], type: 'normal', shape: 'square' };
         }
+    }
+    
+    // Randomized DFS for spanning tree
+    const stack = [{x: 2, z: 2}];
+    grid[2][2].visited = true;
+    grid[2][2].type = 'start';
+    
+    let bossPlaced = false;
+    
+    while(stack.length > 0) {
+        const curr = stack[stack.length - 1];
         
-        if (isBoss) {
-            current.w = 15;
-            current.h = 8;
-            current.d = 15;
-            current.type = 'boss';
+        // Find unvisited neighbors
+        const neighbors = [];
+        if (curr.x > 0 && !grid[curr.x-1][curr.z].visited) neighbors.push({x: curr.x-1, z: curr.z});
+        if (curr.x < GRID_SIZE-1 && !grid[curr.x+1][curr.z].visited) neighbors.push({x: curr.x+1, z: curr.z});
+        if (curr.z > 0 && !grid[curr.x][curr.z-1].visited) neighbors.push({x: curr.x, z: curr.z-1});
+        if (curr.z < GRID_SIZE-1 && !grid[curr.x][curr.z+1].visited) neighbors.push({x: curr.x, z: curr.z+1});
+        
+        if (neighbors.length > 0) {
+            const next = neighbors[Math.floor(rng() * neighbors.length)];
+            
+            // Randomly stop branching to leave some empty space
+            if (rng() < 0.15 && stack.length > 1) {
+                stack.pop();
+            } else {
+                grid[curr.x][curr.z].connections.push(next);
+                grid[next.x][next.z].connections.push(curr);
+                
+                grid[next.x][next.z].visited = true;
+                stack.push(next);
+            }
         } else {
-            current.type = 'normal';
-        }
-        
-        rooms.push(current);
-        if (isBoss) continue; // Boss room is a dead end
-        
-        // Branch out
-        const numBranches = 1 + Math.floor(rng() * 3); // 1 to 3 branches
-        for (let i = 0; i < numBranches; i++) {
-            const dir = Math.floor(rng() * 4);
-            let nx = current.x, nz = current.z;
-            const branchLen = 10 + Math.floor(rng() * 10);
-            
-            if (dir === 0) nx += branchLen;
-            else if (dir === 1) nx -= branchLen;
-            else if (dir === 2) nz += branchLen;
-            else if (dir === 3) nz -= branchLen;
-            
-            // Check overlap
-            let overlap = false;
-            for (const r of rooms) {
-                if (Math.abs(r.x - nx) < 12 && Math.abs(r.z - nz) < 12) { overlap = true; break; }
-            }
-            if (!overlap) {
-                queue.push({ x: nx, y: current.y + (Math.floor(rng()*3)-1)*2, z: nz, w: 7 + Math.floor(rng()*4), h: 5, d: 7 + Math.floor(rng()*4), depth: current.depth + 1, bossChance: current.bossChance });
-                
-                // Add corridor room connecting them
-                const mx = Math.floor((current.x + nx) / 2);
-                const mz = Math.floor((current.z + nz) / 2);
-                rooms.push({ x: mx, y: current.y, z: mz, w: dir <= 1 ? branchLen : 3, h: 4, d: dir > 1 ? branchLen : 3, type: 'corridor' });
-                
-                // Add door at the entrance of the corridor
-                const dx = current.x + (dir===0 ? Math.floor(current.w/2) : (dir===1 ? -Math.floor(current.w/2) : 0));
-                const dz = current.z + (dir===2 ? Math.floor(current.d/2) : (dir===3 ? -Math.floor(current.d/2) : 0));
-                doors.push({ x: dx, y: current.y, z: dz, w: dir <= 1 ? 1 : 3, h: 3, d: dir > 1 ? 1 : 3, type: 'door' });
-                
-                // Add door at the exit of the corridor
-                const nextW = 7 + Math.floor(rng()*4); // Recompute next room bounds approximately for the door
-                const nextD = 7 + Math.floor(rng()*4);
-                const dx2 = nx + (dir===0 ? -Math.floor(nextW/2) : (dir===1 ? Math.floor(nextW/2) : 0));
-                const dz2 = nz + (dir===2 ? -Math.floor(nextD/2) : (dir===3 ? Math.floor(nextD/2) : 0));
-                doors.push({ x: dx2, y: current.y, z: dz2, w: dir <= 1 ? 1 : 3, h: 3, d: dir > 1 ? 1 : 3, type: 'door' });
+            const node = stack.pop();
+            if (!bossPlaced && grid[node.x][node.z].connections.length === 1 && (node.x !== 2 || node.z !== 2)) {
+                grid[node.x][node.z].type = 'boss';
+                bossPlaced = true;
             }
         }
     }
+    
+    const shapes = ['square', 'circle', 'cross'];
+    
+    for (let gx=0; gx<GRID_SIZE; gx++) {
+        for (let gz=0; gz<GRID_SIZE; gz++) {
+            const cell = grid[gx][gz];
+            if (!cell.visited) continue;
+            
+            cell.shape = shapes[Math.floor(rng() * shapes.length)];
+            if (cell.type === 'boss') cell.shape = 'square';
+            
+            const rx = startX + (gx - 2) * CELL_SIZE;
+            const rz = startZ + (gz - 2) * CELL_SIZE;
+            
+            rooms.push({
+                x: rx, y: startY, z: rz,
+                w: cell.type === 'boss' ? 15 : 13,
+                h: cell.type === 'boss' ? 8 : 6,
+                d: cell.type === 'boss' ? 15 : 13,
+                type: cell.type,
+                shape: cell.shape
+            });
+            
+            for (const conn of cell.connections) {
+                if (conn.x > gx) { 
+                    // right corridor
+                    rooms.push({ x: rx + CELL_SIZE/2, y: startY, z: rz, w: CELL_SIZE - 10, h: 4, d: 3, type: 'corridor', shape: 'square' });
+                    // place doors
+                    doors.push({ x: rx + 6, y: startY, z: rz, type: 'door', orient: 'x' });
+                    doors.push({ x: rx + CELL_SIZE - 6, y: startY, z: rz, type: 'door', orient: 'x' });
+                }
+                if (conn.z > gz) { 
+                    // down corridor
+                    rooms.push({ x: rx, y: startY, z: rz + CELL_SIZE/2, w: 3, h: 4, d: CELL_SIZE - 10, type: 'corridor', shape: 'square' });
+                    doors.push({ x: rx, y: startY, z: rz + 6, type: 'door', orient: 'z' });
+                    doors.push({ x: rx, y: startY, z: rz + CELL_SIZE - 6, type: 'door', orient: 'z' });
+                }
+            }
+        }
+    }
+    
     return rooms.concat(doors);
 }
 
@@ -847,19 +871,54 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                 if (room.type === 'door') {
                     if (wy >= minY && wy < minY + 3) {
                         if (wx === room.x && wz === room.z && wy < minY + 2) {
-                            if (wy === minY) {
-                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
-                            } else {
-                                safeSetBlock(blocks, lx, wy, lz, 0); // AIR above door
-                            }
-                        } else {
-                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
+                        } else if (wy < minY + 3 && ((room.orient === 'x' && wz >= room.z - 1 && wz <= room.z + 1 && wx === room.x) || (room.orient === 'z' && wx >= room.x - 1 && wx <= room.x + 1 && wz === room.z))) {
+                            if (wx !== room.x || wz !== room.z) safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
+                            else if (wy === minY + 2) safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS); // Top of door frame
                         }
                     }
                     continue;
                 }
 
-                const isWall = (wx === minX || wx === maxX || wz === minZ || wz === maxZ || wy === minY || wy === Math.min(maxY, CHUNK_HEIGHT - 1));
+                let inside = false;
+                let isWall = false;
+                
+                const dx = Math.abs(wx - room.x);
+                const dz = Math.abs(wz - room.z);
+                const rw = room.w / 2;
+                const rd = room.d / 2;
+
+                if (room.shape === 'circle') {
+                    const distSq = dx*dx + dz*dz;
+                    if (distSq <= rw*rd) {
+                        inside = true;
+                        if (distSq >= (rw-1)*(rd-1)) isWall = true;
+                    }
+                } else if (room.shape === 'cross') {
+                    const coreW = rw; const coreD = rd;
+                    const armW = rw * 0.4; const armD = rd * 0.4;
+                    const inCore = (dx <= coreW && dz <= armD);
+                    const inArm = (dz <= coreD && dx <= armW);
+                    
+                    if (inCore || inArm) {
+                        inside = true;
+                        const inCoreInner = (dx <= coreW - 1 && dz <= armD - 1);
+                        const inArmInner = (dz <= coreD - 1 && dx <= armW - 1);
+                        if (!inCoreInner && !inArmInner) isWall = true;
+                    }
+                } else {
+                    // square
+                    if (dx <= rw && dz <= rd) {
+                        inside = true;
+                        if (dx >= rw - 0.5 || dz >= rd - 0.5) isWall = true;
+                    }
+                }
+                
+                if (wy === minY || wy === Math.min(maxY, CHUNK_HEIGHT - 1)) {
+                    if (inside) isWall = true;
+                }
+                
+                if (!inside) continue;
                 
                 if (isWall) {
                     if (room.type === 'boss') safeSetBlock(blocks, lx, wy, lz, BLOCKS.PORTAL_FRAME);
@@ -872,30 +931,18 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                     }
                 } else {
                     if (room.type === 'entrance' && wy <= minY + 2) {
-                        // Put water at the bottom of the entrance shaft to prevent fatal falls
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.WATER);
                     } else {
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
                     }
                     
                     // Boss Spawner
-                    if (room.type === 'boss' && wy === minY + 1 && wx === Math.floor((minX+maxX)/2) && wz === Math.floor((minZ+maxZ)/2)) {
+                    if (room.type === 'boss' && wy === minY + 1 && wx === Math.floor(room.x) && wz === Math.floor(room.z)) {
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.BOSS_SPAWNER);
                     }
                     
-                    // Add glowstone lighting occasionally
-                    if (room.type === 'boss' && wy === maxY - 1 && (wx === minX+2 || wx === maxX-2) && (wz === minZ+2 || wz === maxZ-2)) {
-                        safeSetBlock(blocks, lx, wy, lz, ((lx + wy + lz) % 2 === 0) ? BLOCKS.GLOWSTONE : BLOCKS.PORTAL_FRAME);
-                    } else if (room.type === 'normal' && wy === Math.min(maxY, CHUNK_HEIGHT - 1) && wx === Math.floor((minX+maxX)/2) && wz === Math.floor((minZ+maxZ)/2)) {
-                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.GLOWSTONE);
-                    }
-                    
-                    // Chests
-                    if (room.type === 'boss' && wy === minY + 1 && (wx === minX+2 || wx === maxX-2) && (wz === minZ+2 || wz === maxZ-2)) {
-                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.CHEST_BLOCK);
-                    }
-                    if (room.type === 'normal' && wy === minY + 1 && wx === minX+2 && wz === minZ+2) {
-                        // 30% chance for a chest in a normal room corner
+                    // Chests (center for simplicity in organic rooms)
+                    if (room.type === 'normal' && wy === minY + 1 && wx === Math.floor(room.x) && wz === Math.floor(room.z)) {
                         const chestRng = Math.random();
                         if (chestRng < 0.3) {
                             safeSetBlock(blocks, lx, wy, lz, BLOCKS.CHEST_BLOCK);

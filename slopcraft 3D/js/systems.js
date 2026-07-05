@@ -349,14 +349,6 @@ class UISystem {
                 this.onFurnaceClose = null;
                 this.elements.furnacePanel.classList.add('hidden');
             }
-            
-            // Close dungeon menu if open
-            if (this.onDungeonMenuClose) {
-                this.onDungeonMenuClose();
-                this.onDungeonMenuClose = null;
-                const p = document.getElementById('dungeon-menu-panel');
-                if (p) p.classList.add('hidden');
-            }
         }
     }
 
@@ -408,22 +400,6 @@ class UISystem {
         this.elements.furnacePanel.classList.remove('hidden');
     }
 
-    toggleDungeonMenu(onClose) {
-        if (!this.isOpen) {
-            this.toggle();
-        }
-        
-        // Ensure other panels are hidden
-        this.elements.craftingPanel.classList.add('hidden');
-        this.elements.chestPanel.classList.add('hidden');
-        if(this.elements.furnacePanel) this.elements.furnacePanel.classList.add('hidden');
-        if(this.elements.wandConfigPanel) this.elements.wandConfigPanel.classList.add('hidden');
-
-        const panel = document.getElementById('dungeon-menu-panel');
-        if (panel) panel.classList.remove('hidden');
-        
-        this.onDungeonMenuClose = onClose;
-    }
 
     updateHUD(player, fps, atlas) {
         if (!player) return;

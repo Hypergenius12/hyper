@@ -177,6 +177,17 @@ class Game {
         this.world.onChestGenerated = (x, y, z) => this._addChest(x, y, z, true);
         this.world.onChestPlaced = (x, y, z) => this._addChest(x, y, z, false);
         this.world.onFurnacePlaced = (x, y, z) => this._addFurnace(x, y, z);
+        
+        this.doors = new Map(); // key -> { mesh, isOpen, baseRotationY }
+        this.world.onDoorGenerated = (x, y, z) => this._addDoor(x, y, z);
+        this.world.isDoorOpen = (x, y, z) => {
+            const key1 = `${x},${y},${z}`;
+            const key2 = `${x},${y-1},${z}`; // check bottom block too
+            let d = this.doors.get(key1);
+            if (!d) d = this.doors.get(key2);
+            return d ? d.isOpen : false;
+        };
+
         this.world.onChestRemoved = (x, y, z) => {
             const key = `${x},${y},${z}`;
             if (this.chestVisuals.has(key)) {
@@ -472,6 +483,42 @@ class Game {
                 isSmelting: false
             });
         }
+    }
+
+    _addDoor(x, y, z) {
+        // Since a door is 2 blocks high, generating a mesh on the top block and bottom block would duplicate it.
+        // We only generate the mesh for the bottom block. We assume y is bottom if y-1 is not a door.
+        if (this.world.getBlock(x, y - 1, z) === window.BLOCKS.DUNGEON_DOOR) return;
+
+        const key = `${x},${y},${z}`;
+        if (this.doors.has(key)) {
+            // Update position if needed (shouldn't be needed for static doors)
+            return;
+        }
+
+        // Create door mesh (2 blocks high)
+        const doorGeom = new THREE.BoxGeometry(1, 2, 0.125);
+        
+        // Build material from texture atlas (DUNGEON_DOOR is 76)
+        const uv = this.atlas.getUV(window.BLOCKS.DUNGEON_DOOR);
+        const tex = this.atlas.texture.clone();
+        tex.needsUpdate = true;
+        // Adjust UVs for 1x2 if we want, but keeping it simple using full texture repeated
+        tex.repeat.set(1, 2);
+        
+        const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.5 });
+        const mesh = new THREE.Mesh(doorGeom, mat);
+        
+        // Pivot point should be on the edge, not center
+        mesh.geometry.translate(0.5, 1.0, 0); 
+        
+        // Place mesh at block origin
+        mesh.position.set(x - 0.5, y - 0.5, z);
+        mesh.rotation.y = 0; // Default facing
+        
+        this.engine.scene.add(mesh);
+        
+        this.doors.set(key, { mesh, isOpen: false, baseRotationY: 0, x, y, z });
     }
 
     _updateFurnaces(dt) {
@@ -906,13 +953,20 @@ class Game {
             }
             if (hit.hit && hit.blockType === window.BLOCKS.DUNGEON_DOOR) {
                 this.audio.playClick();
-                if (this.ui.toggleDungeonMenu) {
-                    this.ui.toggleDungeonMenu(() => {
-                        this.input.requestPointerLock();
-                    });
-                    document.exitPointerLock();
-                    this.input.mouse.rightClick = false;
+                
+                const key = `${hit.blockPos.x},${hit.blockPos.y},${hit.blockPos.z}`;
+                const keyLower = `${hit.blockPos.x},${hit.blockPos.y - 1},${hit.blockPos.z}`;
+                
+                let door = this.doors.get(key);
+                if (!door) door = this.doors.get(keyLower);
+                
+                if (door) {
+                    door.isOpen = !door.isOpen;
+                    const targetRotation = door.isOpen ? Math.PI / 2 : 0;
+                    door.mesh.rotation.y = door.baseRotationY + targetRotation;
                 }
+                
+                this.input.mouse.rightClick = false;
                 return;
             }
 
