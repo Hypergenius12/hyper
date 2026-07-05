@@ -674,10 +674,48 @@ class Game {
                 }
 
             } else if (slot.item.type === 'wand') {
-                this.heldItemMesh = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8),
-                    new THREE.MeshLambertMaterial({ color: 0x6b4f2c })
+                this.heldItemMesh = new THREE.Group();
+                // Wooden staff handle
+                const staff = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.015, 0.025, 0.6, 6),
+                    new THREE.MeshLambertMaterial({ color: 0x5c4033 })
                 );
+                staff.position.y = -0.1;
+                this.heldItemMesh.add(staff);
+                
+                // Gem top
+                let activeColor = 0x88ccff; // Default cyan/arcane
+                if (slot.item.data && slot.item.data.wand) {
+                    let r = 0, g = 0, b = 0, count = 0;
+                    for (const spellItem of slot.item.data.wand.spellSlots) {
+                        if (spellItem) {
+                            let s = spellItem;
+                            if (spellItem.type === 'spell' && spellItem.data && spellItem.data.spell) s = spellItem.data.spell;
+                            else if (spellItem.item && spellItem.item.type === 'spell') s = spellItem.item.data.spell;
+                            if (s.color) {
+                                r += (s.color >> 16) & 255;
+                                g += (s.color >> 8) & 255;
+                                b += s.color & 255;
+                                count++;
+                            }
+                        }
+                    }
+                    if (count > 0) {
+                        activeColor = (Math.floor(r / count) << 16) | (Math.floor(g / count) << 8) | Math.floor(b / count);
+                    }
+                }
+                const gem = new THREE.Mesh(
+                    new THREE.OctahedronGeometry(0.06, 0),
+                    new THREE.MeshBasicMaterial({ color: activeColor })
+                );
+                gem.position.y = 0.25;
+                this.heldItemMesh.add(gem);
+                
+                // Glow point light
+                const gemLight = new THREE.PointLight(activeColor, 0.8, 2);
+                gemLight.position.y = 0.25;
+                this.heldItemMesh.add(gemLight);
+
                 this.heldItemMesh.position.set(0.4, -0.1, -0.8);
                 this.heldItemMesh.rotation.x = Math.PI / 4;
             } else {
@@ -799,6 +837,9 @@ class Game {
                 if (hit.blockType === window.BLOCKS.OBSIDIAN) {
                     this.tryLightPortal(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                     this.audio.playHit();
+                } else if (hit.blockType === window.BLOCKS.TNT) {
+                    this.igniteTNT(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    this.audio.playHit(); // Play fizz sound ideally
                 } else if (hit.face) {
                     const nx = hit.blockPos.x + hit.face.x;
                     const ny = hit.blockPos.y + hit.face.y;
@@ -824,6 +865,15 @@ class Game {
                     if (visual) visual.isOpen = false;
                     this.input.requestPointerLock();
                 });
+                document.exitPointerLock();
+                this.input.mouse.rightClick = false;
+                return;
+            }
+
+            if (hit.hit && hit.blockType === window.BLOCKS.CRAFTING_TABLE) {
+                // Open Crafting Table
+                this.audio.playClick();
+                this.ui.toggleCraftingTable();
                 document.exitPointerLock();
                 this.input.mouse.rightClick = false;
                 return;
@@ -1056,10 +1106,13 @@ class Game {
                 hitPos.copy(eHit.mob.position);
                 if (proj.stats.element === 'ICE') {
                     eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
-                    eHit.mob.freeze(3.0); // 3 seconds freeze
+                    eHit.mob.freezeTimer = 3.0; // 3 seconds freeze
                 } else if (proj.stats.element !== 'FIRE') {
                     // Normal hit
                     eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
+                }
+                if (proj.stats.effects && proj.stats.effects.includes('burn')) {
+                    eHit.mob.burnTimer = 5.0; // 5 seconds of burning
                 }
             }
 
@@ -1084,16 +1137,20 @@ class Game {
                         if (mob.position.distanceTo(hitPos) < 4.0) {
                             const knockbackDir = mob.position.clone().sub(hitPos).normalize();
                             mob.takeDamage(proj.stats.damage, knockbackDir);
+                            if (proj.stats.effects && proj.stats.effects.includes('burn')) {
+                                mob.burnTimer = 5.0;
+                            }
                         }
                     }
                     this.particles.emit(hitPos, 'explosion', 30, 0xffaa00);
                 } else {
-                    this.particles.emit(hitPos, 'magic_burst', 15, proj.color);
+                    this.particles.emit(hitPos, 'magic', 15, proj.color);
                 }
+                this.audio.playHit();
                 return true;
             }
             return false;
-        });
+        }, this.entityManager.mobs);
 
         // Render
         if (this.atlas && this.atlas.updateAnimatedTextures) {
@@ -1283,6 +1340,55 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
             }, 1500);
 
         }, 1500);
+    }
+
+    igniteTNT(x, y, z) {
+        // Replace TNT with air
+        this.world.setBlock(x, y, z, window.BLOCKS.AIR);
+        // Spawn some smoke to show it's lit
+        this.particles.emit({x: x + 0.5, y: y + 1, z: z + 0.5}, 'smoke', 5, 0xaaaaaa);
+        
+        // Wait 2 seconds then explode
+        setTimeout(() => {
+            this.explodeTNT(x, y, z);
+        }, 2000);
+    }
+
+    explodeTNT(x, y, z) {
+        const radius = 3;
+        for (let ix = x - radius; ix <= x + radius; ix++) {
+            for (let iy = y - radius; iy <= y + radius; iy++) {
+                for (let iz = z - radius; iz <= z + radius; iz++) {
+                    const distSq = (ix - x) ** 2 + (iy - y) ** 2 + (iz - z) ** 2;
+                    if (distSq <= radius ** 2) {
+                        const block = this.world.getBlock(ix, iy, iz);
+                        if (block !== window.BLOCKS.AIR && block !== window.BLOCKS.BEDROCK && block !== window.BLOCKS.WATER) {
+                            this.world.setBlock(ix, iy, iz, window.BLOCKS.AIR);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Damage nearby entities
+        for (const [id, entity] of this.entities.entries()) {
+            const dist = entity.mesh.position.distanceTo(new THREE.Vector3(x, y, z));
+            if (dist < radius + 2) {
+                // Damage falls off over distance, max 40 damage
+                const dmg = Math.floor(40 * (1 - dist / (radius + 2)));
+                this.damageEntity(entity, dmg);
+            }
+        }
+        // Also damage player
+        const pDist = this.player.camera.position.distanceTo(new THREE.Vector3(x, y, z));
+        if (pDist < radius + 2) {
+            const dmg = Math.floor(40 * (1 - pDist / (radius + 2)));
+            this.player.takeDamage(dmg);
+        }
+
+        // Effects
+        this.particles.emit(new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5), 'explosion', 50, 0xffaa00);
+        this.audio.playHit(); // Ideally an explosion sound
     }
 
     tryLightPortal(startX, startY, startZ) {

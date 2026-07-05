@@ -62,7 +62,16 @@ export class InputManager {
 
     requestPointerLock() {
         if (!this.isLocked && this.canvas) {
-            this.canvas.requestPointerLock();
+            try {
+                const promise = this.canvas.requestPointerLock();
+                if (promise) {
+                    promise.catch(e => {
+                        console.warn('Pointer lock prevented:', e);
+                    });
+                }
+            } catch (e) {
+                console.warn('Pointer lock prevented:', e);
+            }
         }
     }
 
@@ -1049,11 +1058,11 @@ export class World {
     }
 
     tickRandomBlocks() {
-        // Pick 3 random blocks per active chunk
+        // Pick 96 random blocks per active chunk (approx 3 per subchunk like Minecraft)
         for (const chunk of this.chunks.values()) {
             if (!chunk.blocks || chunk.blocks[0] === undefined) continue;
             
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 96; i++) {
                 const rx = Math.floor(Math.random() * 16);
                 const ry = Math.floor(Math.random() * CHUNK_HEIGHT);
                 const rz = Math.floor(Math.random() * 16);
@@ -1095,7 +1104,6 @@ export class World {
                         
                         // Is it flammable?
                         if (this.isFlammable(nb)) {
-                            
                             if (Math.random() < 0.1) { // 10% chance to spread per direction
                                 if (Math.random() < 0.3) {
                                     this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
@@ -1113,20 +1121,20 @@ export class World {
                         this.setBlock(wx, wy, wz, window.BLOCKS.AIR);
                     }
                 } else if (block === window.BLOCKS.LAVA) {
-                    if (Math.random() < 0.1) {
-                        const wx = chunk.cx * 16 + rx;
-                        const wy = ry;
-                        const wz = chunk.cz * 16 + rz;
-                        
-                        const dx = Math.floor(Math.random() * 3) - 1;
-                        const dy = Math.floor(Math.random() * 3) - 1;
-                        const dz = Math.floor(Math.random() * 3) - 1;
-                        
-                        if (dx !== 0 || dy !== 0 || dz !== 0) {
-                            const nx = wx + dx, ny = wy + dy, nz = wz + dz;
-                            if (this.isFlammable(this.getBlock(nx, ny, nz))) {
-                                this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
-                            }
+                    // Lava has a chance to light nearby flammable blocks on fire
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    
+                    const dx = Math.floor(Math.random() * 3) - 1;
+                    const dy = Math.floor(Math.random() * 3) - 1;
+                    const dz = Math.floor(Math.random() * 3) - 1;
+                    
+                    if (dx !== 0 || dy !== 0 || dz !== 0) {
+                        const nx = wx + dx, ny = wy + dy, nz = wz + dz;
+                        // Replace flammable blocks with fire directly to simulate catching fire
+                        if (this.isFlammable(this.getBlock(nx, ny, nz))) {
+                            this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
                         }
                     }
                 }

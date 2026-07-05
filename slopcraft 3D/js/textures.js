@@ -116,7 +116,10 @@ export const BLOCKS = {
     PALM_PLANKS: 107,
     PINE_PLANKS: 108,
     CRIMSON_PLANKS: 109,
-    SUGARCANE: 110
+    SUGARCANE: 110,
+    FIRE: 111,
+    TNT: 112,
+    CRAFTING_TABLE: 113
 };
 
 // Block properties
@@ -136,6 +139,7 @@ const BLOCK_PROPS = {
     [BLOCKS.CRYSTAL_ORE]:   { name: 'Crystal Ore',    health: 10, transparent: false, emissive: 0.3, solid: true, drops: null },
     [BLOCKS.MANA_ORE]:      { name: 'Mana Ore',       health: 10, transparent: false, emissive: 0.5, solid: true, drops: null },
     [BLOCKS.OBSIDIAN]:      { name: 'Obsidian',       health: 15, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.CRAFTING_TABLE]:{ name: 'Crafting Table', health: 4, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.GLOWSTONE]:     { name: 'Glowstone',      health: 4, transparent: false, emissive: 1.0, solid: true, drops: null },
     [BLOCKS.DUNGEON_BRICK]: { name: 'Dungeon Brick',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DUNGEON_FLOOR]: { name: 'Dungeon Floor',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
@@ -231,7 +235,9 @@ const BLOCK_PROPS = {
     [BLOCKS.PALM_PLANKS]:   { name: 'Palm Planks',    health: 4, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.PINE_PLANKS]:   { name: 'Pine Planks',    health: 4, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.CRIMSON_PLANKS]:{ name: 'Crimson Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.SUGARCANE]:     { name: 'Sugarcane',      health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.SUGARCANE }
+    [BLOCKS.SUGARCANE]:     { name: 'Sugarcane',      health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.SUGARCANE },
+    [BLOCKS.FIRE]:          { name: 'Fire',           health: 0, transparent: true,  emissive: 1.0, solid: false, isCross: true, drops: null },
+    [BLOCKS.TNT]:           { name: 'TNT',            health: 1, transparent: false, emissive: 0, solid: true, drops: null }
 };
 
 export function getBlockProperties(type) {
@@ -1467,6 +1473,86 @@ function generateBlockTexture(ctx, blockType, face, rng) {
                 ctx.fillRect(9, i+2, 3, 1);
             }
             break;
+        case BLOCKS.FIRE:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE); // Transparent base
+            // Draw flame pixel art
+            ctx.fillStyle = 'rgb(255, 100, 0)';
+            ctx.fillRect(4, 6, 8, 10);
+            ctx.fillStyle = 'rgb(255, 200, 0)';
+            ctx.fillRect(6, 10, 4, 6);
+            ctx.fillStyle = 'rgb(255, 255, 0)';
+            ctx.fillRect(7, 12, 2, 4);
+            // Some scattered fire pixels
+            addPixels(ctx, rng, 'rgb(255, 150, 0)', 10);
+            addPixels(ctx, rng, 'rgb(255, 50, 0)', 5);
+            break;
+
+        case BLOCKS.TNT:
+            if (face === 'top' || face === 'bottom') {
+                // Red and white pattern
+                fillBase(ctx, 220, 50, 50); // Red base
+                ctx.fillStyle = 'rgb(220, 220, 220)';
+                // Draw 4 white lines going across
+                ctx.fillRect(2, 0, 2, 16);
+                ctx.fillRect(6, 0, 2, 16);
+                ctx.fillRect(10, 0, 2, 16);
+                ctx.fillRect(14, 0, 2, 16);
+            } else {
+                // Side pattern with TNT text
+                fillBase(ctx, 220, 50, 50); // Red base
+                // Draw white band in the middle
+                ctx.fillStyle = 'rgb(220, 220, 220)';
+                ctx.fillRect(0, 5, 16, 6);
+                // Draw TNT text in black
+                ctx.fillStyle = 'rgb(0, 0, 0)';
+                // T
+                ctx.fillRect(1, 6, 3, 1);
+                ctx.fillRect(2, 7, 1, 3);
+                // N
+                ctx.fillRect(6, 6, 1, 4);
+                ctx.fillRect(7, 7, 1, 1);
+                ctx.fillRect(8, 8, 1, 1);
+                ctx.fillRect(9, 6, 1, 4);
+                // T
+                ctx.fillRect(12, 6, 3, 1);
+                ctx.fillRect(13, 7, 1, 3);
+            }
+            break;
+            
+        case BLOCKS.CRAFTING_TABLE:
+            if (face === 'top' || face === 'bottom') {
+                // 3x3 grid pattern on top
+                fillBase(ctx, 160, 100, 50); // Wooden base
+                ctx.fillStyle = 'rgba(100, 50, 20, 0.8)';
+                // Vertical lines
+                ctx.fillRect(5, 0, 1, 16);
+                ctx.fillRect(10, 0, 1, 16);
+                // Horizontal lines
+                ctx.fillRect(0, 5, 16, 1);
+                ctx.fillRect(0, 10, 16, 1);
+            } else {
+                // Sides: Wood with some tool outlines
+                fillBase(ctx, 140, 80, 40);
+                addStripes(ctx, rng, 'rgb(120, 60, 30)', 'y', 3);
+                // A dark horizontal band for the workbench edge
+                ctx.fillStyle = 'rgba(80, 40, 10, 0.7)';
+                ctx.fillRect(0, 0, 16, 4);
+                // Draw a simple saw or hammer shape
+                ctx.fillStyle = 'rgb(180, 180, 180)';
+                if (face === 'front' || face === 'back') {
+                    // Hammer
+                    ctx.fillRect(10, 5, 4, 3);
+                    ctx.fillStyle = 'rgb(100, 50, 20)';
+                    ctx.fillRect(11, 8, 2, 6);
+                } else {
+                    // Saw
+                    ctx.fillRect(4, 8, 8, 4);
+                    ctx.fillStyle = 'rgb(100, 50, 20)';
+                    ctx.fillRect(12, 6, 2, 4);
+                }
+            }
+            break;
+
         default:
             fillBase(ctx, 255, 0, 255);
             break;
@@ -1475,7 +1561,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
 function hasFaceVariants(blockType) {
     return [
         BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD,
-        BLOCKS.BOOKSHELF, BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM
+        BLOCKS.BOOKSHELF, BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE
     ].includes(blockType);
 }
 
@@ -2077,6 +2163,35 @@ export function generateItemTexture(itemType, itemSubtype) {
             "                ",
             "                "
         ];
+    } else if (itemType === 'modifier') {
+        p = palettes['spell_basic']; // Fallback
+        if (itemSubtype === 'DAMAGE_UP') p = { c: '#ff5555', d: '#aa0000', h: '#ffaaaa' };
+        else if (itemSubtype === 'SPEED_UP') p = { c: '#55ffff', d: '#00aaaa', h: '#aaffff' };
+        else if (itemSubtype === 'MANA_EFF') p = { c: '#ff55ff', d: '#aa00aa', h: '#ffaaff' };
+        else if (itemSubtype === 'PIERCE') p = { c: '#55ff55', d: '#00aa00', h: '#aaffaa' };
+        else if (itemSubtype === 'HOMING') p = { c: '#ffff55', d: '#aaaa00', h: '#ffffaa' };
+        else if (itemSubtype === 'BURN') p = palettes['spell_fire'];
+        else if (itemSubtype === 'MULTIPLY') p = palettes['spell_ice'];
+        else if (itemSubtype === 'CAST_TWO') p = { c: '#ffaa00', d: '#aa5500', h: '#ffff00' };
+
+        shape = [
+            "                ",
+            "       OO       ",
+            "      OHHO      ",
+            "     OHCCHO     ",
+            "    OHCCCCHO    ",
+            "   OHCCCCCCHO   ",
+            "  OHCCCCCCCCHO  ",
+            " OHCCCCCCCCCCHO ",
+            " OHCDDDDDDDDCHO ",
+            "  OHDDDDDDDDHO  ",
+            "   OHDDDDDDHO   ",
+            "    OHDDDDHO    ",
+            "     OHDCHO     ",
+            "      OHHO      ",
+            "       OO       ",
+            "                "
+        ];
     }
 
     if (shape.length > 0) {
@@ -2090,5 +2205,39 @@ export function generateItemTexture(itemType, itemSubtype) {
         ctx.fillRect(12, 4, 2, 10);
     }
 
+    return canvas;
+}
+
+export function generateSpellTexture(element) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    
+    // Create a radial gradient for a glowing orb
+    const cx = 16, cy = 16, r = 16;
+    let colorInner, colorOuter;
+    
+    if (element === 'FIRE') { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(255,64,0,0)'; }
+    else if (element === 'ICE') { colorInner = 'rgba(200,255,255,1)'; colorOuter = 'rgba(0,128,255,0)'; }
+    else if (element === 'HEAL') { colorInner = 'rgba(200,255,200,1)'; colorOuter = 'rgba(64,255,64,0)'; }
+    else { colorInner = 'rgba(255,255,255,1)'; colorOuter = 'rgba(128,0,255,0)'; } // Arcane/Default
+    
+    const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, r);
+    grad.addColorStop(0, colorInner);
+    grad.addColorStop(0.3, colorOuter.replace(',0)', ',0.8)'));
+    grad.addColorStop(1, colorOuter);
+    
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 32, 32);
+    
+    // Add some random spark pixels for detail
+    for (let i = 0; i < 20; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = Math.random() * 10;
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.fillRect(cx + Math.cos(a)*d, cy + Math.sin(a)*d, 1, 1);
+    }
+    
     return canvas;
 }

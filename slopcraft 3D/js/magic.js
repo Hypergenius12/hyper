@@ -2,6 +2,7 @@
 // magic.js — Spells, Modifiers, Wands, Projectiles
 // ============================================
 import * as THREE from 'three';
+import { generateSpellTexture } from './textures.js';
 
 let MAGIC_ID_COUNTER = 0;
 function getUniqueId() { return `magic_${MAGIC_ID_COUNTER++}`; }
@@ -77,7 +78,7 @@ export class Spell {
             manaCost: this.baseManaCost * stats.manaMult,
             cooldown: this.baseCooldown, // simple for now
             speed: this.baseProjSpeed * stats.speedMult,
-            count: Math.floor(this.baseProjCount * stats.projCountMult),
+            count: Math.floor(this.baseProjCount * stats.projCountMult) * (stats.castTwo ? 2 : 1),
             pierce: stats.pierce, homing: stats.homing,
             effects: stats.statusEffects, castTwo: stats.castTwo,
             element: this.element
@@ -142,9 +143,12 @@ export class SpellProjectile {
 
     getMesh() {
         if (!this.mesh) {
-            const geo = new THREE.SphereGeometry(0.2, 8, 8);
-            const mat = new THREE.MeshBasicMaterial({ color: this.color });
-            this.mesh = new THREE.Mesh(geo, mat);
+            const canvas = generateSpellTexture(this.element);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, blending: THREE.AdditiveBlending });
+            this.mesh = new THREE.Sprite(mat);
+            this.mesh.scale.set(0.6, 0.6, 1);
             
             const light = new THREE.PointLight(this.color, 1, 5);
             this.mesh.add(light);
@@ -153,12 +157,30 @@ export class SpellProjectile {
         return this.mesh;
     }
 
-    update(dt) {
+    update(dt, entities) {
         this.age += dt;
         if (this.age >= this.maxAge) {
             this.alive = false;
             return;
         }
+
+        if (this.stats.homing && entities && entities.length > 0) {
+            let closestDist = Infinity;
+            let closestMob = null;
+            for (let mob of entities) {
+                if (!mob.alive) continue;
+                const d = this.position.distanceTo(mob.position);
+                if (d < 15 && d < closestDist) {
+                    closestDist = d;
+                    closestMob = mob;
+                }
+            }
+            if (closestMob) {
+                const dirToMob = closestMob.position.clone().add(new THREE.Vector3(0, closestMob.size/2, 0)).sub(this.position).normalize();
+                this.velocity.lerp(dirToMob.multiplyScalar(this.stats.speed), dt * 4);
+            }
+        }
+
         this.position.add(this.velocity.clone().multiplyScalar(dt));
         if (this.mesh) this.mesh.position.copy(this.position);
     }
@@ -183,10 +205,10 @@ export class ProjectileManager {
         this.scene.add(proj.getMesh());
     }
 
-    update(dt, checkHit) {
+    update(dt, checkHit, entities) {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
-            p.update(dt);
+            p.update(dt, entities);
             
             if (!p.alive) {
                 p.dispose();
@@ -196,10 +218,10 @@ export class ProjectileManager {
 
             const hitResult = checkHit(p);
             if (hitResult) {
-                // Apply damage/effects to hitResult.entity
-                p.alive = false;
-                p.dispose();
-                this.projectiles.splice(i, 1);
+                // Apply damage/effects to hitResult.entity is handled in callback
+                if (!p.stats.pierce) {
+                    p.alive = false;
+                }
             }
         }
     }

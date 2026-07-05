@@ -9,7 +9,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 if __name__ == "__main__":
-    PORT = 8080
+    PORT = 8060
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
         print(f"Serving at port {PORT} with no caching")
         httpd.serve_forever()

@@ -1303,7 +1303,7 @@ export class ItemEntity {
                 const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
                 this.mesh = new THREE.Sprite(mat);
                 this.mesh.scale.set(0.4, 0.4, 0.4);
-            } else if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'wand' || this.item.type === 'spell') {
+            } else if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'wand' || this.item.type === 'spell' || this.item.type === 'modifier') {
                 let cvs;
                 if (this.item.type === 'material' || this.item.type === 'equipment') {
                     cvs = generateItemTexture(this.item.type, this.item.subtype);
@@ -1311,6 +1311,8 @@ export class ItemEntity {
                     cvs = generateItemTexture('wand', this.item.subtype || 'wand_basic');
                 } else if (this.item.type === 'spell') {
                     cvs = generateItemTexture('spell', this.item.data.spell.element || 'spell_basic');
+                } else if (this.item.type === 'modifier') {
+                    cvs = generateItemTexture('modifier', this.item.subtype);
                 }
                 const tex = new THREE.CanvasTexture(cvs);
                 tex.magFilter = THREE.NearestFilter;
@@ -1399,6 +1401,8 @@ export class Mob {
         this.attackCooldown = 0;
         this.tintTimer = 0;
         this.freezeTimer = 0;
+        this.burnTimer = 0;
+        this.burnTickTimer = 0;
         this.originalSpeed = config.speed;
         
         // Health bar
@@ -1482,6 +1486,19 @@ export class Mob {
             this.speed = this.originalSpeed * 0.3;
             if (this.freezeTimer <= 0) {
                 this.speed = this.originalSpeed;
+            }
+        }
+        
+        if (this.burnTimer > 0) {
+            this.burnTimer -= dt;
+            this.burnTickTimer -= dt;
+            if (this.burnTickTimer <= 0) {
+                this.health -= 2;
+                this.burnTickTimer = 1.0;
+                this._updateHealthBar();
+                if (this.health <= 0) {
+                    this.alive = false;
+                }
             }
         }
 
