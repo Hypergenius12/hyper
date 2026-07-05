@@ -16,6 +16,7 @@ export const UPGRADES = [
   { id: 'sqlInjection', tag: 'SQL', name: 'SQL INJECTION', desc: 'Deals damage to the entire new layer upon dropping down.', baseCost: 700, costScale: 2.3, maxLevel: 30, effect: lv => `${lv * 3} DMG AoE` },
   { id: 'ramSweep', tag: 'SWP', name: 'RAM SWEEP', desc: 'Lower the threshold needed to collapse a layer.', baseCost: 1200, costScale: 2.2, maxLevel: 15, effect: lv => `${90 - (lv * 4)}% clear req` },
   { id: 'zeroDay', tag: '0DAY', name: 'ZERO-DAY', desc: 'Small chance on click to collapse the entire layer.', baseCost: 2000, costScale: 2.4, maxLevel: 10, effect: lv => `${lv}% chance` },
+  { id: 'holdToClick', tag: 'AUTO', name: 'HOLD TO CLICK', desc: 'Hold down the mouse to rapidly mine blocks automatically.', baseCost: 250, costScale: 1.0, maxLevel: 1, effect: lv => 'UNLOCKED' },
 ];
 
 function upgradeCost(u, lv) {

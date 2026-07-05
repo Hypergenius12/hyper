@@ -777,7 +777,7 @@ export class Engine {
     this.time += delta;
 
     // Hold-to-mine
-    if (this.mouseDown && this.hoveredRow >= 0) {
+    if (this.isMouseDown && this.hoveredRow >= 0 && this.gameState.upgrades.holdToClick > 0) {
       this.mineTimer += delta;
       if (this.mineTimer >= 0.08) {
         this.mineTimer = 0;
