@@ -178,8 +178,8 @@ export class GameEngine {
         this._renderer.setSize(window.innerWidth, window.innerHeight);
         this._renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-        // Shadows
-        this._renderer.shadowMap.enabled = true;
+        // Shadows disabled for performance. Voxel terrain uses AO and sky colors instead.
+        this._renderer.shadowMap.enabled = false;
         this._renderer.shadowMap.type = THREE.PCFShadowMap;
 
         // Color management

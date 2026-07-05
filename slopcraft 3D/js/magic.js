@@ -4,6 +4,9 @@
 import * as THREE from 'three';
 import { generateSpellTexture } from './textures.js';
 
+const _tempVecProj1 = new THREE.Vector3();
+const _tempVecProj2 = new THREE.Vector3();
+
 let MAGIC_ID_COUNTER = 0;
 function getUniqueId() { return `magic_${MAGIC_ID_COUNTER++}`; }
 
@@ -259,7 +262,8 @@ export class SpellProjectile {
                 const geo = new THREE.CylinderGeometry(0.02, 0.02, 3.0);
                 const mat = new THREE.MeshBasicMaterial({ color: this.color });
                 this.mesh = new THREE.Mesh(geo, mat);
-                this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), this.velocity.clone().normalize());
+                _tempVecProj1.set(0, 1, 0);
+                this.mesh.quaternion.setFromUnitVectors(_tempVecProj1, _tempVecProj2.copy(this.velocity).normalize());
             } else {
                 const canvas = generateSpellTexture(this.element);
                 const tex = new THREE.CanvasTexture(canvas);
@@ -294,19 +298,22 @@ export class SpellProjectile {
                 }
             }
             if (closestMob) {
-                const dirToMob = closestMob.position.clone().add(new THREE.Vector3(0, closestMob.size/2, 0)).sub(this.position).normalize();
-                this.velocity.lerp(dirToMob.multiplyScalar(this.stats.speed), dt * 4);
+                _tempVecProj1.copy(closestMob.position);
+                _tempVecProj1.y += closestMob.size/2;
+                const dirToMob = _tempVecProj1.sub(this.position).normalize();
+                this.velocity.lerp(_tempVecProj2.copy(dirToMob).multiplyScalar(this.stats.speed), dt * 4);
             }
         }
 
-        this.position.add(this.velocity.clone().multiplyScalar(dt));
+        this.position.addScaledVector(this.velocity, dt);
         if (this.mesh) {
             this.mesh.position.copy(this.position);
             if (this.element === 'EARTH') {
                 this.mesh.rotation.x += dt * 5;
                 this.mesh.rotation.z += dt * 5;
             } else if (this.element === 'THUNDER') {
-                this.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), this.velocity.clone().normalize());
+                _tempVecProj1.set(0, 1, 0);
+                this.mesh.quaternion.setFromUnitVectors(_tempVecProj1, _tempVecProj2.copy(this.velocity).normalize());
             } else if (this.element === 'WIND') {
                 this.mesh.rotation.x += dt * 10;
                 this.mesh.rotation.y += dt * 10;

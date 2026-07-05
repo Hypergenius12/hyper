@@ -1806,7 +1806,7 @@ export function generateItemTexture(itemType, itemSubtype) {
         'spell_light': { c: '#FFFFAA', d: '#CCCC55', h: '#FFFFFF' },
         'spell_void': { c: '#8800CC', d: '#440066', h: '#CC66FF' },
         'spell_lava': { c: '#CC3300', d: '#991100', h: '#FF6600' },
-        'spell_builder': { c: '#AAAAAA', d: '#777777', h: '#CCCCCC' }
+        'spell_builder': { c: '#AAAAAA', d: '#777777', h: '#CCCCCC' },
         'raw_porkchop': { c: '#ffaeb9', d: '#cd8c95', h: '#ffc0cb' },
         'cooked_porkchop': { c: '#8b4513', d: '#5c2e00', h: '#a0522d' },
         'raw_beef': { c: '#cd3333', d: '#8b2323', h: '#ee3b3b' },

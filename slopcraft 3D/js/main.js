@@ -136,6 +136,8 @@ class Game {
         this.lastFpsTime = performance.now();
         this.breakTimer = 0;
         this.isPaused = false;
+        
+        this._boundLoop = this.loop.bind(this);
 
         // UI start is handled in window.onload
     }
@@ -382,6 +384,7 @@ class Game {
             }
         });
 
+        this._boundLoop = this.loop.bind(this);
         this.loop();
     }
 
@@ -1016,7 +1019,7 @@ class Game {
     }
 
     loop() {
-        requestAnimationFrame(() => this.loop());
+        requestAnimationFrame(this._boundLoop);
 
         if (!this.isReady) return;
 
@@ -1175,6 +1178,7 @@ class Game {
 
 
         const _tempVec3 = new THREE.Vector3();
+        const _tempVec4 = new THREE.Vector3();
         
         this.projectileManager.update(dt, (proj) => {
             let hitFound = false;
@@ -1198,10 +1202,10 @@ class Game {
                     eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
                     this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.abs(proj.stats.damage));
                 } else if (proj.stats.element === 'WIND') {
-                    const windKnock = _tempVec3.clone().multiplyScalar(3);
+                    const windKnock = _tempVec4.copy(_tempVec3).multiplyScalar(3);
                     eHit.mob.takeDamage(proj.stats.damage, windKnock);
                 } else if (proj.stats.element === 'WATER') {
-                    const waterKnock = _tempVec3.clone().multiplyScalar(4);
+                    const waterKnock = _tempVec4.copy(_tempVec3).multiplyScalar(4);
                     eHit.mob.takeDamage(proj.stats.damage, waterKnock);
                     eHit.mob.burnTimer = 0; // Extinguish
                 } else if (proj.stats.element === 'POISON') {

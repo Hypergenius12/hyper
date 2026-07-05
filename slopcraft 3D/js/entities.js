@@ -5,6 +5,17 @@ import * as THREE from 'three';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
 import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture } from './textures.js';
 
+// Pre-allocated buffers for GC-free math
+const _tempMin = new THREE.Vector3();
+const _tempMax = new THREE.Vector3();
+const _tempBox = new THREE.Box3();
+const _tempRay = new THREE.Ray();
+const _tempHit = new THREE.Vector3();
+const _tempMoveDir = new THREE.Vector3();
+const _tempVec1 = new THREE.Vector3();
+const _tempVec2 = new THREE.Vector3();
+const _tempVec3 = new THREE.Vector3();
+
 // ============================================
 // Inventory & Items
 // ============================================
@@ -120,8 +131,8 @@ export class Player {
         this.rotation.pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, this.rotation.pitch));
 
         // Direction vectors
-        const forward = new THREE.Vector3(-Math.sin(this.rotation.yaw), 0, -Math.cos(this.rotation.yaw)).normalize();
-        const right = new THREE.Vector3(Math.cos(this.rotation.yaw), 0, -Math.sin(this.rotation.yaw)).normalize();
+        const forward = _tempVec1.set(-Math.sin(this.rotation.yaw), 0, -Math.cos(this.rotation.yaw)).normalize();
+        const right = _tempVec2.set(Math.cos(this.rotation.yaw), 0, -Math.sin(this.rotation.yaw)).normalize();
         // Equipment Effects
         let speedMult = 1.0;
         let flying = false;
@@ -179,7 +190,7 @@ export class Player {
 
         // Movement input
         const speed = (keys.sprint && !shouldCrouch ? 9.5 : 6.0) * speedMult;
-        let moveDir = new THREE.Vector3(0,0,0);
+        let moveDir = _tempMoveDir.set(0,0,0);
         
         if (keys.forward) moveDir.add(forward);
         if (keys.backward) moveDir.sub(forward);
@@ -1403,7 +1414,7 @@ export const MOB_TYPES = {
             if (!mob.wanderTimer) mob.wanderTimer = 0;
             if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
             if (mob.health < mob.maxHealth) {
-                const fleeDir = mob.position.clone().sub(playerPos).normalize();
+                const fleeDir = _tempVec3.subVectors(mob.position, playerPos).normalize();
                 fleeDir.y = 0;
                 mob.velocity.x = fleeDir.x * mob.speed * 1.5;
                 mob.velocity.z = fleeDir.z * mob.speed * 1.5;
@@ -1441,7 +1452,7 @@ export const MOB_TYPES = {
             if (!mob.wanderTimer) mob.wanderTimer = 0;
             if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
             if (mob.health < mob.maxHealth) {
-                const fleeDir = mob.position.clone().sub(playerPos).normalize();
+                const fleeDir = _tempVec3.subVectors(mob.position, playerPos).normalize();
                 fleeDir.y = 0;
                 mob.velocity.x = fleeDir.x * mob.speed * 3.0;
                 mob.velocity.z = fleeDir.z * mob.speed * 3.0;
@@ -1912,7 +1923,7 @@ export class Mob {
         if (!this.wanderDir) this.wanderDir = new THREE.Vector3(0, 0, 0);
         
         if (this.hostile && dist < 20) {
-            const dir = playerPos.clone().sub(this.position);
+            const dir = _tempVec3.subVectors(playerPos, this.position);
             if (!this.flying) dir.y = 0;
             if (dir.length() > 0) dir.normalize();
             
@@ -2055,8 +2066,9 @@ export class Mob {
         }
 
         if (dir) {
-            this.velocity.add(dir.clone().multiplyScalar(5));
+            this.velocity.add(_tempVec3.copy(dir).multiplyScalar(5));
             this.velocity.y += 3;
+            this.mesh.rotation.y = Math.atan2(dir.x, dir.z);
         }
         if (this.health <= 0 && this.alive) {
             this.alive = false;
@@ -2384,14 +2396,13 @@ export class EntityManager {
             if (!mob.alive) continue;
             
             // Mob AABB
-            const min = mob.position.clone().sub(new THREE.Vector3(mob.size/2, 0, mob.size/2));
-            const max = mob.position.clone().add(new THREE.Vector3(mob.size/2, mob.size, mob.size/2));
-            const box = new THREE.Box3(min, max);
-            const ray = new THREE.Ray(origin, direction);
+            _tempMin.set(mob.position.x - mob.size/2, mob.position.y, mob.position.z - mob.size/2);
+            _tempMax.set(mob.position.x + mob.size/2, mob.position.y + mob.size, mob.position.z + mob.size/2);
+            _tempBox.set(_tempMin, _tempMax);
+            _tempRay.set(origin, direction);
             
-            const hitPoint = new THREE.Vector3();
-            if (ray.intersectBox(box, hitPoint)) {
-                const dist = origin.distanceTo(hitPoint);
+            if (_tempRay.intersectBox(_tempBox, _tempHit)) {
+                const dist = origin.distanceTo(_tempHit);
                 if (dist < closestDist) {
                     closestDist = dist;
                     closestMob = mob;

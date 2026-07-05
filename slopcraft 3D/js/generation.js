@@ -224,7 +224,7 @@ function getColumnInfo(wx, wz, params) {
     if (surfaceY < 1) surfaceY = 1;
     if (surfaceY >= CHUNK_HEIGHT - 1) surfaceY = CHUNK_HEIGHT - 2;
 
-    return { biome, surfaceY, colRng, bData: { isTerraced } };
+    return { biome, surfaceY, colRng, bData: { isTerraced: terraceWeight > 0.5 } };
 }
 
 function safeSetBlock(blocks, x, y, z, type, onlyAir = false) {

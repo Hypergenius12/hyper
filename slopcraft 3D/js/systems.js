@@ -15,18 +15,7 @@ export class LightingSystem {
         this.scene.add(this.hemiLight);
 
         this.sunLight = new THREE.DirectionalLight(0xffffdd, 1.2);
-        this.sunLight.castShadow = true;
-        this.sunLight.shadow.mapSize.width = 1024;
-        this.sunLight.shadow.mapSize.height = 1024;
-        this.sunLight.shadow.camera.near = 0.5;
-        this.sunLight.shadow.camera.far = 200;
-        const d = 80;
-        this.sunLight.shadow.camera.left = -d;
-        this.sunLight.shadow.camera.right = d;
-        this.sunLight.shadow.camera.top = d;
-        this.sunLight.shadow.camera.bottom = -d;
-        this.sunLight.shadow.bias = -0.001; // fix shadow acne
-        this.sunLight.shadow.normalBias = 0.05; // fix shadow blinds
+        this.sunLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.sunLight);
 
         // Sun Mesh
@@ -37,17 +26,7 @@ export class LightingSystem {
 
         // Moon Light
         this.moonLight = new THREE.DirectionalLight(0xaaccff, 0.4);
-        this.moonLight.castShadow = true;
-        this.moonLight.shadow.mapSize.width = 1024;
-        this.moonLight.shadow.mapSize.height = 1024;
-        this.moonLight.shadow.camera.near = 0.5;
-        this.moonLight.shadow.camera.far = 200;
-        this.moonLight.shadow.camera.left = -d;
-        this.moonLight.shadow.camera.right = d;
-        this.moonLight.shadow.camera.top = d;
-        this.moonLight.shadow.camera.bottom = -d;
-        this.moonLight.shadow.bias = -0.001;
-        this.moonLight.shadow.normalBias = 0.05;
+        this.moonLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.moonLight);
 
         // Moon Mesh
