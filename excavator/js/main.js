@@ -78,7 +78,7 @@ document.getElementById('loading-screen').addEventListener('click', () => {
       const newShards = (engine.gameState.prestigeShards || 0) + shardsEarned;
       const s = {
         depth: 0,
-        bandwidth: 400,
+        bandwidth: 600,
         totalMined: 0,
         currentBiomeIndex: 0,
         prestigeShards: newShards,
@@ -183,7 +183,7 @@ function loadGame() {
     if (!raw) return;
     const s = JSON.parse(raw);
     engine.gameState.depth = s.depth || 0;
-    engine.gameState.bandwidth = s.bandwidth !== undefined ? s.bandwidth : 400;
+    engine.gameState.bandwidth = s.bandwidth !== undefined ? s.bandwidth : 600;
     engine.gameState.totalMined = s.totalMined || 0;
     engine.gameState.currentBiomeIndex = s.currentBiomeIndex || 0;
     engine.gameState.prestigeShards = s.prestigeShards || 0;

@@ -93,7 +93,7 @@ export class Engine {
   constructor() {
     this.gameState = {
       depth: 0,
-      bandwidth: 400,
+      bandwidth: 600,
       totalMined: 0,
       currentBiomeIndex: 0,
       prestigeShards: 0,
