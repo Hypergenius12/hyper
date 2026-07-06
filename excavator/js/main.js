@@ -3,9 +3,9 @@
 // Entry point, game loop, save/load
 // ============================================================
 
-import { Engine } from './engine.js?v=15';
-import { UI } from './ui.js?v=15';
-import { BIOMES, getBiomeAtDepth } from './biomes.js?v=15';
+import { Engine } from './engine.js?v=16';
+import { UI } from './ui.js?v=16';
+import { BIOMES, getBiomeAtDepth } from './biomes.js?v=16';
 
 const engine = new Engine();
 const ui = new UI();
