@@ -99,10 +99,11 @@ document.getElementById('loading-screen').addEventListener('click', () => {
     }
     if (confirm("Format the Drive? You will gain " + shardsEarned + " Quantum Shards, but lose all depth and upgrades!")) {
       const newShards = (engine.gameState.prestigeShards || 0) + shardsEarned;
+      const prestigeMulti = 1 + newShards * 0.50;
       const s = {
         depth: 0,
         maxDepth: engine.gameState.maxDepth, // preserve max depth on format
-        bandwidth: 600,
+        bandwidth: Math.floor(600 * prestigeMulti),
         totalMined: 0,
         currentBiomeIndex: 0,
         prestigeShards: newShards,
@@ -209,7 +210,8 @@ function loadGame() {
     const s = JSON.parse(raw);
     engine.gameState.depth = s.depth || 0;
     engine.gameState.maxDepth = s.maxDepth || Math.max(s.depth || 0, 0);
-    engine.gameState.bandwidth = s.bandwidth !== undefined ? s.bandwidth : 600;
+    const prestigeMulti = 1 + (s.prestigeShards || 0) * 0.50;
+    engine.gameState.bandwidth = s.bandwidth !== undefined ? s.bandwidth : Math.floor(600 * prestigeMulti);
     engine.gameState.totalMined = s.totalMined || 0;
     engine.gameState.currentBiomeIndex = s.currentBiomeIndex || 0;
     engine.gameState.prestigeShards = s.prestigeShards || 0;
