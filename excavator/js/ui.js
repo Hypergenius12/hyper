@@ -4,8 +4,8 @@
 // ============================================================
 
 export const UPGRADES = [
-  { id: 'miningPower', tag: 'DMG', name: 'PROCESSOR CORE', desc: 'Increases click mining power.', baseCost: 10, costScale: 1.25, maxLevel: 200, effect: lv => `+${lv} click power` },
-  { id: 'autoMiner', tag: 'BOT', name: 'BOTNET DRONE', desc: 'Drones that mine blocks passively.', baseCost: 350, costScale: 1.35, maxLevel: 100, effect: lv => `${lv} drone${lv!==1?'s':''}` },
+  { id: 'miningPower', tag: 'DMG', name: 'PROCESSOR CORE', desc: 'Increases click mining power.', baseCost: 10, costScale: 1.25, maxLevel: 500, effect: lv => `+${lv} click power` },
+  { id: 'autoMiner', tag: 'BOT', name: 'BOTNET DRONE', desc: 'Drones that mine blocks passively.', baseCost: 350, costScale: 1.35, maxLevel: 150, effect: lv => `${lv} drone${lv!==1?'s':''}` },
   { id: 'autoSpeed', tag: 'SPD', name: 'CPU THREADS', desc: 'Increases Botnet Drone attack speed.', baseCost: 600, costScale: 1.35, maxLevel: 80, effect: lv => `+${lv * 10}% speed` },
 
   { id: 'bandwidthMulti', tag: 'BW', name: 'BANDWIDTH AMP', desc: 'Multiply bandwidth earned per block.', baseCost: 150, costScale: 1.75, maxLevel: 100, effect: lv => { const v = Math.pow(1.5, lv); return v >= 1000 ? `${(v/1000).toFixed(1)}k x earn` : `${v.toFixed(1)}x earn`; } },
