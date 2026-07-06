@@ -10,7 +10,7 @@ export const UPGRADES = [
   { id: 'autoMiner', tag: 'BOT', name: 'BOTNET DRONE', desc: 'Drones that mine blocks passively.', baseCost: 350, costScale: 2.1, maxLevel: 30, effect: lv => `${lv} drone${lv!==1?'s':''}` },
   { id: 'autoSpeed', tag: 'SPD', name: 'CPU THREADS', desc: 'Increases Botnet Drone attack speed.', baseCost: 600, costScale: 2.1, maxLevel: 25, effect: lv => `+${lv * 10}% speed` },
 
-  { id: 'bandwidthMulti', tag: 'BW', name: 'BANDWIDTH AMP', desc: 'Multiply bandwidth earned per block.', baseCost: 150, costScale: 2.0, maxLevel: 50, effect: lv => `${(1 + lv * 0.5).toFixed(1)}x earn` },
+  { id: 'bandwidthMulti', tag: 'BW', name: 'BANDWIDTH AMP', desc: 'Multiply bandwidth earned per block.', baseCost: 150, costScale: 1.5, maxLevel: 50, effect: lv => `${(1 + lv * 0.5).toFixed(1)}x earn` },
   { id: 'cryptoHijack', tag: 'BTC', name: 'CRYPTO HIJACK', desc: 'Chance to mine a block worth 10x bandwidth.', baseCost: 600, costScale: 2.2, maxLevel: 20, effect: lv => `${lv * 3}% chance` },
   
   { id: 'sqlInjection', tag: 'SQL', name: 'SQL INJECTION', desc: 'Deals damage to the entire new layer upon dropping down.', baseCost: 700, costScale: 2.3, maxLevel: 30, effect: lv => `${lv * 3} DMG AoE` },
