@@ -137,7 +137,7 @@ export class Engine {
     this.cacheDmgPool = 0;
     this.autoMineTimer = 0;
     this.mineTimer = 0;
-    this.nextMineTarget = 0.25 + Math.random() * 0.08;
+    this.nextMineTarget = 0.166 + Math.random() * 0.034;
 
     // Particles
     this.particles = [];
@@ -828,7 +828,7 @@ export class Engine {
       this.mineTimer += delta;
       if (this.mineTimer >= this.nextMineTarget) {
         this.mineTimer = 0;
-        this.nextMineTarget = 0.25 + Math.random() * 0.08;
+        this.nextMineTarget = 0.166 + Math.random() * 0.034;
         this._tryMine();
       }
     }
