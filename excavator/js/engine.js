@@ -549,34 +549,10 @@ export class Engine {
   }
 
   _playMineSound() {
-    if (!this.audioCtx) return;
-    try {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
-      const now = this.audioCtx.currentTime;
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(300 + Math.random() * 400, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
-      gain.gain.setValueAtTime(0.25, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.start(now);
-      osc.stop(now + 0.12);
-    } catch (e) { /* silent */ }
+    this.playSFX('mine');
   }
 
   _playHitSound() {
-    if (!this.audioCtx) return;
-    try {
-      const now = this.audioCtx.currentTime;
-      const bufLen = Math.floor(this.audioCtx.sampleRate * 0.04);
-      const buf = this.audioCtx.createBuffer(1, bufLen, this.audioCtx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / bufLen);
-      const src = this.audioCtx.createBufferSource();
-      src.buffer = buf;
-      const gain = this.audioCtx.createGain();
     this.playSFX('crit');
   }
 
