@@ -477,7 +477,7 @@ export class Engine {
       let earned = Math.max(1, Math.round(biome.bandwidthDrop * depthScale * multi * prestigeMulti));
       
       const hijackLv = this.gameState.upgrades.cryptoHijack || 0;
-      if (hijackLv > 0 && Math.random() < (hijackLv * 0.03)) {
+      if (hijackLv > 0 && Math.random() < (hijackLv * 0.015)) {
         earned *= 10;
         this._spawnParticles(col, row, '#ffaa00', 15);
       }

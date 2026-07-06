@@ -9,7 +9,7 @@ export const UPGRADES = [
   { id: 'autoSpeed', tag: 'SPD', name: 'CPU THREADS', desc: 'Increases Botnet Drone attack speed.', baseCost: 600, costScale: 1.35, maxLevel: 80, effect: lv => `+${lv * 10}% speed` },
 
   { id: 'bandwidthMulti', tag: 'BW', name: 'BANDWIDTH AMP', desc: 'Multiply bandwidth earned per block.', baseCost: 150, costScale: 1.75, maxLevel: 100, effect: lv => { const v = Math.pow(1.5, lv); return v >= 1000 ? `${(v/1000).toFixed(1)}k x earn` : `${v.toFixed(1)}x earn`; } },
-  { id: 'cryptoHijack', tag: 'BTC', name: 'CRYPTO HIJACK', desc: 'Chance to mine a block worth 10x bandwidth.', baseCost: 600, costScale: 1.5, maxLevel: 60, effect: lv => `${lv * 3}% chance` },
+  { id: 'cryptoHijack', tag: 'BTC', name: 'CRYPTO HIJACK', desc: 'Chance to mine a block worth 10x bandwidth.', baseCost: 600, costScale: 1.5, maxLevel: 60, effect: lv => `${(lv * 1.5).toFixed(1)}% chance` },
   
   { id: 'sqlInjection', tag: 'SQL', name: 'SQL INJECTION', desc: 'Deals damage to the entire new layer upon dropping down.', baseCost: 700, costScale: 1.45, maxLevel: 100, effect: lv => `${lv * 3} DMG AoE` },
   { id: 'ramSweep', tag: 'SWP', name: 'RAM SWEEP', desc: 'Lower the threshold needed to collapse a layer.', baseCost: 1200, costScale: 1.5, maxLevel: 30, effect: lv => `${90 - (lv * 2)}% clear req` },
