@@ -210,7 +210,7 @@ export class UI {
     let totalHeight = 0;
     biomes.forEach(b => {
       const isDiscovered = b.depthStart <= maxDepth;
-      const rRange = Math.min(b.depthEnd, 15000) - b.depthStart; // Cap end at 15000m for scale logic
+      const rRange = (b.depthEnd === 99999 ? 12000 : b.depthEnd) - b.depthStart;
       totalHeight += rRange;
     });
 
@@ -237,7 +237,7 @@ export class UI {
       
       // Ruler segment
       const seg = document.createElement('div');
-      const rRange = Math.min(b.depthEnd, 15000) - b.depthStart;
+      const rRange = (b.depthEnd === 99999 ? 12000 : b.depthEnd) - b.depthStart;
       const pct = (rRange / totalHeight) * 100;
       seg.style.height = `${pct}%`;
       seg.style.width = '100%';
