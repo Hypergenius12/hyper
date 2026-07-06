@@ -11,7 +11,7 @@ export const BIOMES = [
     bloomStrength: 0.2, bloomRadius: 0.5, bloomThreshold: 0.8,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.1, shakeOnMine: false,
     description: "The bright and shiny surface of the modern internet. Mostly cat pictures.",
-    particleStyle: "dust", blockStyle: "solid"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "inset-2"
   },
   {
     name: "The SaaS Layer",
@@ -25,7 +25,7 @@ export const BIOMES = [
     bloomStrength: 0.3, bloomRadius: 0.4, bloomThreshold: 0.7,
     chromaticAberration: 0.01, scanlines: false, vignetteIntensity: 0.15, shakeOnMine: false,
     description: "Enterprise software as a service. Highly profitable and bloated.",
-    particleStyle: "bubbles", blockStyle: "rounded"
+    particleStyle: "bubbles", pixelate: 0.0, invert: 1.0, grain: 0.0, hueShift: 0.0, blockStyle: "dots"
   },
   {
     name: "The Ad-Tech Crust",
@@ -39,7 +39,7 @@ export const BIOMES = [
     bloomStrength: 0.6, bloomRadius: 0.5, bloomThreshold: 0.6,
     chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.3, shakeOnMine: false,
     description: "A thick layer of trackers, cookies, and intrusive pop-up advertisements.",
-    particleStyle: "sparks", blockStyle: "x-mark"
+    particleStyle: "sparks", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 3.14, blockStyle: "grid-11"
   },
   {
     name: "TikTok Trenches",
@@ -53,7 +53,7 @@ export const BIOMES = [
     bloomStrength: 1.2, bloomRadius: 0.6, bloomThreshold: 0.5,
     chromaticAberration: 0.05, scanlines: true, vignetteIntensity: 0.3, shakeOnMine: false,
     description: "Short-form content buried deep in addictive algorithms.",
-    particleStyle: "sparks", blockStyle: "wireframe"
+    particleStyle: "sparks", pixelate: 0.0, invert: 1.0, grain: 0.0, hueShift: 1.5, blockStyle: "inset-5"
   },
   {
     name: "The Streaming Rapids",
@@ -67,7 +67,7 @@ export const BIOMES = [
     bloomStrength: 0.8, bloomRadius: 0.4, bloomThreshold: 0.6,
     chromaticAberration: 0.01, scanlines: false, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "Torrents of HD video flowing endlessly into the void.",
-    particleStyle: "matrix", blockStyle: "dots"
+    particleStyle: "matrix", pixelate: 6.0, invert: 0.0, grain: 0.5, hueShift: 3.14, blockStyle: "inset-3"
   },
   {
     name: "Cloud Storage Strata",
@@ -81,7 +81,7 @@ export const BIOMES = [
     bloomStrength: 0.5, bloomRadius: 0.8, bloomThreshold: 0.3,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.0, shakeOnMine: false,
     description: "Ethereal blocks containing everyone's forgotten backups.",
-    particleStyle: "smoke", blockStyle: "rounded"
+    particleStyle: "smoke", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "circles-8"
   },
   {
     name: "Web 2.0 Bedrock",
@@ -95,7 +95,7 @@ export const BIOMES = [
     bloomStrength: 0.3, bloomRadius: 0.5, bloomThreshold: 0.7,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.2, shakeOnMine: false,
     description: "A layer of rounded corners, gradients, and early social media.",
-    particleStyle: "bubbles", blockStyle: "hollow"
+    particleStyle: "bubbles", pixelate: 0.0, invert: 1.0, grain: 0.5, hueShift: 0.0, blockStyle: "checkerboard"
   },
   {
     name: "The Flash Plains",
@@ -109,7 +109,7 @@ export const BIOMES = [
     bloomStrength: 1.0, bloomRadius: 0.3, bloomThreshold: 0.4,
     chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.4, shakeOnMine: false,
     description: "A graveyard of deprecated animations and unplayable web games.",
-    particleStyle: "sparks", blockStyle: "glitch"
+    particleStyle: "sparks", pixelate: 6.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "circles-6"
   },
   {
     name: "MySpace Mycelium",
@@ -123,7 +123,7 @@ export const BIOMES = [
     bloomStrength: 0.6, bloomRadius: 0.8, bloomThreshold: 0.5,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.6, shakeOnMine: false,
     description: "Glittering profiles and top 8 friends buried in the dirt.",
-    particleStyle: "sparks", blockStyle: "glitch"
+    particleStyle: "sparks", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "x-mark"
   },
   {
     name: "The Blogosphere Crust",
@@ -137,7 +137,7 @@ export const BIOMES = [
     bloomStrength: 0.2, bloomRadius: 0.3, bloomThreshold: 0.8,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "Petrified personal journals from a simpler time.",
-    particleStyle: "dust", blockStyle: "brackets"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.5, hueShift: 3.14, blockStyle: "grid-7"
   },
   {
     name: "Napster Nodes",
@@ -151,7 +151,7 @@ export const BIOMES = [
     bloomStrength: 1.1, bloomRadius: 0.7, bloomThreshold: 0.2,
     chromaticAberration: 0.03, scanlines: true, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "A decentralized web of pirated MP3s and viruses.",
-    particleStyle: "binary", blockStyle: "wireframe"
+    particleStyle: "binary", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "circles-1"
   },
   {
     name: "Dot Com Bubble Crust",
@@ -165,7 +165,7 @@ export const BIOMES = [
     bloomStrength: 0.5, bloomRadius: 0.4, bloomThreshold: 0.6,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.7, shakeOnMine: false,
     description: "Fossilized remains of million-dollar ideas with no business models.",
-    particleStyle: "dust", blockStyle: "dots"
+    particleStyle: "dust", pixelate: 6.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "vlines-8"
   },
   {
     name: "Y2K Fault Line",
@@ -179,7 +179,7 @@ export const BIOMES = [
     bloomStrength: 1.0, bloomRadius: 0.2, bloomThreshold: 0.5,
     chromaticAberration: 0.08, scanlines: true, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "A geological anomaly created by widespread panic over two missing digits.",
-    particleStyle: "glitch", blockStyle: "stripes"
+    particleStyle: "glitch", pixelate: 0.0, invert: 0.0, grain: 0.5, hueShift: 1.5, blockStyle: "rounded"
   },
   {
     name: "GeoCities Ruins",
@@ -193,7 +193,7 @@ export const BIOMES = [
     bloomStrength: 0.8, bloomRadius: 0.9, bloomThreshold: 0.4,
     chromaticAberration: 0.03, scanlines: false, vignetteIntensity: 0.7, shakeOnMine: false,
     description: "Under construction. Flashing text and hit counters everywhere.",
-    particleStyle: "glitch", blockStyle: "stripes"
+    particleStyle: "glitch", pixelate: 0.0, invert: 1.0, grain: 0.5, hueShift: 0.0, blockStyle: "vlines-11"
   },
   {
     name: "The Webring Tunnels",
@@ -207,7 +207,7 @@ export const BIOMES = [
     bloomStrength: 0.5, bloomRadius: 0.5, bloomThreshold: 0.6,
     chromaticAberration: 0.01, scanlines: false, vignetteIntensity: 0.6, shakeOnMine: false,
     description: "Click NEXT to dig deeper into the ring.",
-    particleStyle: "smoke", blockStyle: "triangle"
+    particleStyle: "smoke", pixelate: 3.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "hlines-11"
   },
   {
     name: "The Search Engine Wars",
@@ -221,7 +221,7 @@ export const BIOMES = [
     bloomStrength: 0.7, bloomRadius: 0.4, bloomThreshold: 0.5,
     chromaticAberration: 0.03, scanlines: false, vignetteIntensity: 0.4, shakeOnMine: false,
     description: "Remnants of Ask Jeeves and AltaVista battling for supremacy.",
-    particleStyle: "matrix", blockStyle: "glitch"
+    particleStyle: "matrix", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "stripes"
   },
   {
     name: "Dial-Up Canyons",
@@ -235,7 +235,7 @@ export const BIOMES = [
     bloomStrength: 0.2, bloomRadius: 0.3, bloomThreshold: 0.8,
     chromaticAberration: 0.01, scanlines: true, vignetteIntensity: 0.6, shakeOnMine: false,
     description: "Echoing with the screeching sounds of 56k modems connecting.",
-    particleStyle: "dust", blockStyle: "stripes"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 3.14, blockStyle: "circles-7"
   },
   {
     name: "Browser War Trenches",
@@ -249,7 +249,7 @@ export const BIOMES = [
     bloomStrength: 0.8, bloomRadius: 0.6, bloomThreshold: 0.4,
     chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "The scarred battlefield of Netscape Navigator and Internet Explorer.",
-    particleStyle: "sparks", blockStyle: "wireframe"
+    particleStyle: "sparks", pixelate: 0.0, invert: 1.0, grain: 0.2, hueShift: 1.5, blockStyle: "plus-4"
   },
   {
     name: "HTML 1.0 Crust",
@@ -263,7 +263,7 @@ export const BIOMES = [
     bloomStrength: 0.2, bloomRadius: 0.3, bloomThreshold: 0.8,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "Pure text and blue hyperlinks. Beautifully simple.",
-    particleStyle: "dust", blockStyle: "solid"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 1.5, blockStyle: "inset-1"
   },
   {
     name: "The Marquee Tag Fault",
@@ -277,7 +277,7 @@ export const BIOMES = [
     bloomStrength: 0.4, bloomRadius: 0.5, bloomThreshold: 0.6,
     chromaticAberration: 0.04, scanlines: true, vignetteIntensity: 0.8, shakeOnMine: true,
     description: "The ground itself is scrolling endlessly leftwards.",
-    particleStyle: "sparks", blockStyle: "crosshair"
+    particleStyle: "sparks", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 1.5, blockStyle: "circles-3"
   },
   {
     name: "AOL Disk Graveyard",
@@ -291,7 +291,7 @@ export const BIOMES = [
     bloomStrength: 0.5, bloomRadius: 0.4, bloomThreshold: 0.6,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.4, shakeOnMine: false,
     description: "Millions of free trial CDs compressed into solid rock.",
-    particleStyle: "smoke", blockStyle: "stripes"
+    particleStyle: "smoke", pixelate: 0.0, invert: 1.0, grain: 0.0, hueShift: 3.14, blockStyle: "vlines-6"
   },
   {
     name: "BBS Caves",
@@ -305,7 +305,7 @@ export const BIOMES = [
     bloomStrength: 1.0, bloomRadius: 0.3, bloomThreshold: 0.2,
     chromaticAberration: 0.05, scanlines: true, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "Bulletin Board Systems illuminated by the glow of ANSI art.",
-    particleStyle: "binary", blockStyle: "hollow"
+    particleStyle: "binary", pixelate: 3.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "grid-2"
   },
   {
     name: "The Usenet Underworld",
@@ -319,7 +319,7 @@ export const BIOMES = [
     bloomStrength: 0.1, bloomRadius: 0.2, bloomThreshold: 0.9,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.9, shakeOnMine: false,
     description: "Fossilized alt.* hierarchies and eternal September dust.",
-    particleStyle: "dust", blockStyle: "solid"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "plus-6"
   },
   {
     name: "Gopher Protocol Veins",
@@ -333,7 +333,7 @@ export const BIOMES = [
     bloomStrength: 0.3, bloomRadius: 0.4, bloomThreshold: 0.7,
     chromaticAberration: 0.0, scanlines: true, vignetteIntensity: 0.9, shakeOnMine: false,
     description: "Hierarchical menus carved into the stone.",
-    particleStyle: "smoke", blockStyle: "brackets"
+    particleStyle: "smoke", pixelate: 0.0, invert: 1.0, grain: 0.0, hueShift: 1.5, blockStyle: "vlines-9"
   },
   {
     name: "IRC Chatrooms",
@@ -347,7 +347,7 @@ export const BIOMES = [
     bloomStrength: 0.8, bloomRadius: 0.5, bloomThreshold: 0.5,
     chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "Dark caverns pinging with old text messages and bot commands.",
-    particleStyle: "sparks", blockStyle: "dots"
+    particleStyle: "sparks", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 3.14, blockStyle: "triangle"
   },
   {
     name: "ARPANET Mantle",
@@ -361,7 +361,7 @@ export const BIOMES = [
     bloomStrength: 0.2, bloomRadius: 0.2, bloomThreshold: 0.8,
     chromaticAberration: 0.0, scanlines: true, vignetteIntensity: 0.6, shakeOnMine: false,
     description: "The military-grade layer that started it all. Highly classified.",
-    particleStyle: "smoke", blockStyle: "wireframe"
+    particleStyle: "smoke", pixelate: 0.0, invert: 1.0, grain: 0.5, hueShift: 1.5, blockStyle: "plus-5"
   },
   {
     name: "TCP/IP Handshake Zone",
@@ -375,7 +375,7 @@ export const BIOMES = [
     bloomStrength: 0.4, bloomRadius: 0.4, bloomThreshold: 0.6,
     chromaticAberration: 0.01, scanlines: true, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "SYN... SYN-ACK... ACK. Handshake complete.",
-    particleStyle: "smoke", blockStyle: "wireframe"
+    particleStyle: "smoke", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "hlines-10"
   },
   {
     name: "The Ping Spikes",
@@ -389,7 +389,7 @@ export const BIOMES = [
     bloomStrength: 0.7, bloomRadius: 0.5, bloomThreshold: 0.5,
     chromaticAberration: 0.05, scanlines: true, vignetteIntensity: 0.8, shakeOnMine: true,
     description: "Connection unstable. High latency detected.",
-    particleStyle: "sparks", blockStyle: "triangle"
+    particleStyle: "sparks", pixelate: 3.0, invert: 0.0, grain: 0.0, hueShift: 1.5, blockStyle: "grid-8"
   },
   {
     name: "The Apple II Orchards",
@@ -403,7 +403,7 @@ export const BIOMES = [
     bloomStrength: 0.5, bloomRadius: 0.6, bloomThreshold: 0.5,
     chromaticAberration: 0.02, scanlines: true, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "Green monochrome text on black CRTs.",
-    particleStyle: "matrix", blockStyle: "hollow"
+    particleStyle: "matrix", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "vlines-2"
   },
   {
     name: "Commodore 64 Mantle",
@@ -417,7 +417,7 @@ export const BIOMES = [
     bloomStrength: 0.3, bloomRadius: 0.4, bloomThreshold: 0.7,
     chromaticAberration: 0.02, scanlines: true, vignetteIntensity: 0.7, shakeOnMine: false,
     description: "READY. 38911 BASIC BYTES FREE.",
-    particleStyle: "dust", blockStyle: "crosshair"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "circles-5"
   },
   {
     name: "UNIX Epoch Core",
@@ -431,7 +431,7 @@ export const BIOMES = [
     bloomStrength: 0.6, bloomRadius: 0.3, bloomThreshold: 0.6,
     chromaticAberration: 0.01, scanlines: false, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "The origin point of time itself. January 1, 1970.",
-    particleStyle: "snow", blockStyle: "glitch"
+    particleStyle: "snow", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "wireframe"
   },
   {
     name: "The Punch Card Strata",
@@ -445,7 +445,7 @@ export const BIOMES = [
     bloomStrength: 0.0, bloomRadius: 0.0, bloomThreshold: 1.0,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.3, shakeOnMine: false,
     description: "Fragile paper blocks with precise rectangular holes.",
-    particleStyle: "dust", blockStyle: "stripes"
+    particleStyle: "dust", pixelate: 6.0, invert: 0.0, grain: 0.0, hueShift: 1.5, blockStyle: "crosshair"
   },
   {
     name: "Magnetic Tape Veins",
@@ -459,7 +459,7 @@ export const BIOMES = [
     bloomStrength: 0.2, bloomRadius: 0.2, bloomThreshold: 0.8,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.6, shakeOnMine: false,
     description: "Spools of sequential data winding through the rock.",
-    particleStyle: "smoke", blockStyle: "wireframe"
+    particleStyle: "smoke", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 1.5, blockStyle: "plus-2"
   },
   {
     name: "Mainframe Magma",
@@ -473,7 +473,7 @@ export const BIOMES = [
     bloomStrength: 0.8, bloomRadius: 0.4, bloomThreshold: 0.3,
     chromaticAberration: 0.03, scanlines: false, vignetteIntensity: 0.8, shakeOnMine: true,
     description: "Boiling hot vacuum tubes and glowing red chassis.",
-    particleStyle: "fire", blockStyle: "dots"
+    particleStyle: "fire", pixelate: 0.0, invert: 0.0, grain: 0.5, hueShift: 1.5, blockStyle: "plus-7"
   },
   {
     name: "The FORTRAN Depths",
@@ -487,7 +487,7 @@ export const BIOMES = [
     bloomStrength: 0.4, bloomRadius: 0.5, bloomThreshold: 0.6,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.9, shakeOnMine: false,
     description: "Punched cards floating in the void.",
-    particleStyle: "dust", blockStyle: "brackets"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.5, hueShift: 3.14, blockStyle: "circles-2"
   },
   {
     name: "Vacuum Tube Vents",
@@ -501,7 +501,7 @@ export const BIOMES = [
     bloomStrength: 1.2, bloomRadius: 0.5, bloomThreshold: 0.4,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.4, shakeOnMine: false,
     description: "Fragile glass tubes glowing with immense, inefficient heat.",
-    particleStyle: "sparks", blockStyle: "stripes"
+    particleStyle: "sparks", pixelate: 6.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "glitch"
   },
   {
     name: "ENIAC Depths",
@@ -515,7 +515,7 @@ export const BIOMES = [
     bloomStrength: 0.4, bloomRadius: 0.3, bloomThreshold: 0.7,
     chromaticAberration: 0.01, scanlines: false, vignetteIntensity: 0.6, shakeOnMine: false,
     description: "A mess of patch cables and switches covering the walls.",
-    particleStyle: "dust", blockStyle: "hollow"
+    particleStyle: "dust", pixelate: 6.0, invert: 1.0, grain: 0.0, hueShift: 0.0, blockStyle: "plus-8"
   },
   {
     name: "Turing Abyss",
@@ -529,7 +529,7 @@ export const BIOMES = [
     bloomStrength: 0.1, bloomRadius: 0.1, bloomThreshold: 0.9,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "An infinitely long tape of ones and zeroes.",
-    particleStyle: "binary", blockStyle: "glitch"
+    particleStyle: "binary", pixelate: 3.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "hlines-8"
   },
   {
     name: "Babbage Engine Room",
@@ -543,7 +543,7 @@ export const BIOMES = [
     bloomStrength: 0.3, bloomRadius: 0.2, bloomThreshold: 0.7,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.7, shakeOnMine: false,
     description: "Mechanical gears and steam-powered computation engines.",
-    particleStyle: "smoke", blockStyle: "solid"
+    particleStyle: "smoke", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "vlines-4"
   },
   {
     name: "Antikythera Mechanism",
@@ -557,7 +557,7 @@ export const BIOMES = [
     bloomStrength: 0.2, bloomRadius: 0.3, bloomThreshold: 0.8,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.9, shakeOnMine: false,
     description: "Ancient bronze gears calculating the movements of the stars.",
-    particleStyle: "stars", blockStyle: "wireframe"
+    particleStyle: "stars", pixelate: 3.0, invert: 0.0, grain: 0.0, hueShift: 1.5, blockStyle: "hollow"
   },
   {
     name: "The Cryptomining Vein",
@@ -571,7 +571,7 @@ export const BIOMES = [
     bloomStrength: 0.7, bloomRadius: 0.6, bloomThreshold: 0.4,
     chromaticAberration: 0.01, scanlines: false, vignetteIntensity: 0.7, shakeOnMine: false,
     description: "The heat of ten thousand GPUs mining meaningless hashes.",
-    particleStyle: "stars", blockStyle: "wireframe"
+    particleStyle: "stars", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 3.14, blockStyle: "plus-1"
   },
   {
     name: "The NFT Graveyard",
@@ -585,7 +585,7 @@ export const BIOMES = [
     bloomStrength: 0.4, bloomRadius: 0.5, bloomThreshold: 0.6,
     chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "Worthless JPEGs fossilized forever.",
-    particleStyle: "smoke", blockStyle: "triangle"
+    particleStyle: "smoke", pixelate: 6.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "grid-3"
   },
   {
     name: "The Deep Web Caverns",
@@ -599,7 +599,7 @@ export const BIOMES = [
     bloomStrength: 0.6, bloomRadius: 0.4, bloomThreshold: 0.6,
     chromaticAberration: 0.01, scanlines: false, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "Unindexed, unsearchable, and completely off the grid.",
-    particleStyle: "dust", blockStyle: "stripes"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 1.5, blockStyle: "plus-3"
   },
   {
     name: "The Dark Web Obsidian",
@@ -613,7 +613,7 @@ export const BIOMES = [
     bloomStrength: 0.8, bloomRadius: 0.5, bloomThreshold: 0.5,
     chromaticAberration: 0.05, scanlines: true, vignetteIntensity: 1.0, shakeOnMine: false,
     description: "Encrypted, dangerous, and perfectly black.",
-    particleStyle: "smoke", blockStyle: "hollow"
+    particleStyle: "smoke", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "brackets"
   },
   {
     name: "The Silk Road Ruins",
@@ -627,7 +627,7 @@ export const BIOMES = [
     bloomStrength: 0.7, bloomRadius: 0.3, bloomThreshold: 0.6,
     chromaticAberration: 0.03, scanlines: false, vignetteIntensity: 0.7, shakeOnMine: false,
     description: "A collapsed digital marketplace of illicit goods.",
-    particleStyle: "dust", blockStyle: "glitch"
+    particleStyle: "dust", pixelate: 3.0, invert: 0.0, grain: 0.5, hueShift: 1.5, blockStyle: "hlines-4"
   },
   {
     name: "The Tor Nodes",
@@ -641,7 +641,7 @@ export const BIOMES = [
     bloomStrength: 0.8, bloomRadius: 0.4, bloomThreshold: 0.5,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.9, shakeOnMine: false,
     description: "Layers of routing obscuring the true path forward.",
-    particleStyle: "matrix", blockStyle: "solid"
+    particleStyle: "matrix", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "vlines-3"
   },
   {
     name: "The Botnet Swarm",
@@ -655,7 +655,7 @@ export const BIOMES = [
     bloomStrength: 0.5, bloomRadius: 0.3, bloomThreshold: 0.6,
     chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "Millions of compromised devices moving in unison.",
-    particleStyle: "matrix", blockStyle: "solid"
+    particleStyle: "matrix", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 3.14, blockStyle: "grid-5"
   },
   {
     name: "The IoT Fridge Crust",
@@ -669,7 +669,7 @@ export const BIOMES = [
     bloomStrength: 0.4, bloomRadius: 0.4, bloomThreshold: 0.7,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.7, shakeOnMine: false,
     description: "Smart fridges mining crypto and sending spam.",
-    particleStyle: "snow", blockStyle: "crosshair"
+    particleStyle: "snow", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "vlines-10"
   },
   {
     name: "The Spam Folder Silt",
@@ -683,7 +683,7 @@ export const BIOMES = [
     bloomStrength: 0.4, bloomRadius: 0.2, bloomThreshold: 0.7,
     chromaticAberration: 0.01, scanlines: false, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "A disgusting layer of phishing attempts and cheap pills.",
-    particleStyle: "bubbles", blockStyle: "dots"
+    particleStyle: "bubbles", pixelate: 0.0, invert: 1.0, grain: 0.0, hueShift: 3.14, blockStyle: "hlines-5"
   },
   {
     name: "The Malware Tundra",
@@ -697,7 +697,7 @@ export const BIOMES = [
     bloomStrength: 0.9, bloomRadius: 0.6, bloomThreshold: 0.4,
     chromaticAberration: 0.06, scanlines: false, vignetteIntensity: 0.4, shakeOnMine: false,
     description: "A frozen wasteland teeming with destructive logic.",
-    particleStyle: "snow", blockStyle: "stripes"
+    particleStyle: "snow", pixelate: 6.0, invert: 1.0, grain: 0.0, hueShift: 0.0, blockStyle: "inset-4"
   },
   {
     name: "The Ransomware Vault",
@@ -711,7 +711,7 @@ export const BIOMES = [
     bloomStrength: 1.2, bloomRadius: 0.3, bloomThreshold: 0.3,
     chromaticAberration: 0.03, scanlines: true, vignetteIntensity: 0.9, shakeOnMine: false,
     description: "Blocks locked behind unbreakable encryption keys.",
-    particleStyle: "binary", blockStyle: "hollow"
+    particleStyle: "binary", pixelate: 0.0, invert: 1.0, grain: 0.0, hueShift: 0.0, blockStyle: "vlines-5"
   },
   {
     name: "The DDoS Storm Zone",
@@ -725,7 +725,7 @@ export const BIOMES = [
     bloomStrength: 2.0, bloomRadius: 1.0, bloomThreshold: 0.1,
     chromaticAberration: 0.1, scanlines: true, vignetteIntensity: 0.2, shakeOnMine: false,
     description: "A violent tempest of artificial traffic overwhelming the senses.",
-    particleStyle: "dust", blockStyle: "glitch"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 1.5, blockStyle: "grid-6"
   },
   {
     name: "The Zero-Day Fissure",
@@ -739,7 +739,7 @@ export const BIOMES = [
     bloomStrength: 1.0, bloomRadius: 0.5, bloomThreshold: 0.5,
     chromaticAberration: 0.08, scanlines: false, vignetteIntensity: 0.6, shakeOnMine: false,
     description: "An unpatched vulnerability tearing through the simulation.",
-    particleStyle: "sparks", blockStyle: "solid"
+    particleStyle: "sparks", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "hlines-2"
   },
   {
     name: "The Kernel Panic Core",
@@ -753,7 +753,7 @@ export const BIOMES = [
     bloomStrength: 1.5, bloomRadius: 0.8, bloomThreshold: 0.2,
     chromaticAberration: 0.05, scanlines: true, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "The absolute breakdown of the operating system.",
-    particleStyle: "glitch", blockStyle: "wireframe"
+    particleStyle: "glitch", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "grid-4"
   },
   {
     name: "Blue Screen of Death Layer",
@@ -767,7 +767,7 @@ export const BIOMES = [
     bloomStrength: 0.5, bloomRadius: 0.3, bloomThreshold: 0.6,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.0, shakeOnMine: false,
     description: "A fatal exception has occurred at 0x00000000.",
-    particleStyle: "matrix", blockStyle: "dots"
+    particleStyle: "matrix", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "diamond"
   },
   {
     name: "The Memory Leak Marshes",
@@ -781,7 +781,7 @@ export const BIOMES = [
     bloomStrength: 0.8, bloomRadius: 0.7, bloomThreshold: 0.4,
     chromaticAberration: 0.02, scanlines: false, vignetteIntensity: 0.7, shakeOnMine: false,
     description: "A swamp of unallocated data slowly consuming everything.",
-    particleStyle: "bubbles", blockStyle: "stripes"
+    particleStyle: "bubbles", pixelate: 6.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "grid-10"
   },
   {
     name: "Segmentation Fault Trench",
@@ -795,7 +795,7 @@ export const BIOMES = [
     bloomStrength: 1.1, bloomRadius: 0.4, bloomThreshold: 0.3,
     chromaticAberration: 0.09, scanlines: true, vignetteIntensity: 0.9, shakeOnMine: false,
     description: "A jagged tear where memory was illegally accessed.",
-    particleStyle: "glitch", blockStyle: "hollow"
+    particleStyle: "glitch", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "circles-4"
   },
   {
     name: "The Stack Overflow Geyser",
@@ -809,7 +809,7 @@ export const BIOMES = [
     bloomStrength: 1.5, bloomRadius: 0.8, bloomThreshold: 0.2,
     chromaticAberration: 0.04, scanlines: false, vignetteIntensity: 0.5, shakeOnMine: false,
     description: "Endless recursion blasting into the sky.",
-    particleStyle: "fire", blockStyle: "glitch"
+    particleStyle: "fire", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "hlines-3"
   },
   {
     name: "The Null Pointer Void",
@@ -823,7 +823,7 @@ export const BIOMES = [
     bloomStrength: 0.0, bloomRadius: 0.0, bloomThreshold: 1.0,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 1.0, shakeOnMine: false,
     description: "A reference to nothingness. Total absence of data.",
-    particleStyle: "dust", blockStyle: "solid"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "vlines-7"
   },
   {
     name: "The Infinite Loop Vortex",
@@ -837,7 +837,7 @@ export const BIOMES = [
     bloomStrength: 1.2, bloomRadius: 0.5, bloomThreshold: 0.4,
     chromaticAberration: 0.1, scanlines: true, vignetteIntensity: 0.4, shakeOnMine: false,
     description: "A spinning drain from which no processor can escape.",
-    particleStyle: "sparks", blockStyle: "wireframe"
+    particleStyle: "sparks", pixelate: 0.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "grid-9"
   },
   {
     name: "The Bit Rot Wastes",
@@ -851,7 +851,7 @@ export const BIOMES = [
     bloomStrength: 0.5, bloomRadius: 0.3, bloomThreshold: 0.6,
     chromaticAberration: 0.03, scanlines: false, vignetteIntensity: 0.8, shakeOnMine: false,
     description: "Decaying data and flipped bits turning to cosmic dust.",
-    particleStyle: "dust", blockStyle: "dots"
+    particleStyle: "dust", pixelate: 6.0, invert: 1.0, grain: 0.5, hueShift: 3.14, blockStyle: "hlines-6"
   },
   {
     name: "The Singularity Horizon",
@@ -865,7 +865,7 @@ export const BIOMES = [
     bloomStrength: 2.0, bloomRadius: 1.0, bloomThreshold: 0.0,
     chromaticAberration: 0.05, scanlines: false, vignetteIntensity: 0.0, shakeOnMine: false,
     description: "The point where the machine overtakes the creator.",
-    particleStyle: "stars", blockStyle: "stripes"
+    particleStyle: "stars", pixelate: 6.0, invert: 0.0, grain: 0.0, hueShift: 0.0, blockStyle: "circle"
   }
 ];
 

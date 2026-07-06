@@ -48,10 +48,28 @@ uniform float u_vignette;
 uniform float u_scanlines;
 uniform float u_chroma;
 uniform float u_glow;
+uniform float u_pixelate;
+uniform float u_invert;
+uniform float u_grain;
+uniform float u_hue;
 varying vec2 v_uv;
+
+// Hue shift helper
+vec3 hueShift(vec3 color, float hue) {
+    const vec3 k = vec3(0.57735, 0.57735, 0.57735);
+    float cosAngle = cos(hue);
+    return vec3(color * cosAngle + cross(k, color) * sin(hue) + k * dot(k, color) * (1.0 - cosAngle));
+}
 
 void main() {
   vec2 uv = v_uv;
+
+  // Pixelate
+  if (u_pixelate > 0.0) {
+      float dx = u_pixelate / u_resolution.x;
+      float dy = u_pixelate / u_resolution.y;
+      uv = vec2(dx * floor(uv.x / dx), dy * floor(uv.y / dy));
+  }
 
   // Chromatic aberration
   vec2 dir = (uv - 0.5) * u_chroma;
@@ -84,6 +102,22 @@ void main() {
   float d = length(uv - 0.5) * 1.414;
   float vig = smoothstep(0.5, 1.1, d);
   color *= 1.0 - vig * u_vignette;
+
+  // Hue Shift
+  if (u_hue > 0.0) {
+      color = hueShift(color, u_hue);
+  }
+
+  // Invert
+  if (u_invert > 0.0) {
+      color = mix(color, 1.0 - color, u_invert);
+  }
+
+  // Film Grain
+  if (u_grain > 0.0) {
+      float noise = fract(sin(dot(uv, vec2(12.9898, 78.233)) + u_time) * 43758.5453);
+      color += (noise - 0.5) * u_grain;
+  }
 
   gl_FragColor = vec4(color, 1.0);
 }`;
@@ -161,6 +195,10 @@ export class Engine {
     this.shaderScanlines = 0;
     this.shaderChroma = 0;
     this.shaderGlow = 0.5;
+    this.shaderPixelate = 0;
+    this.shaderInvert = 0;
+    this.shaderGrain = 0;
+    this.shaderHue = 0;
 
     // Size
     this._resize();
@@ -247,6 +285,10 @@ export class Engine {
       scanlines: gl.getUniformLocation(this.program, 'u_scanlines'),
       chroma: gl.getUniformLocation(this.program, 'u_chroma'),
       glow: gl.getUniformLocation(this.program, 'u_glow'),
+      pixelate: gl.getUniformLocation(this.program, 'u_pixelate'),
+      invert: gl.getUniformLocation(this.program, 'u_invert'),
+      grain: gl.getUniformLocation(this.program, 'u_grain'),
+      hue: gl.getUniformLocation(this.program, 'u_hue'),
     };
   }
 
@@ -415,7 +457,7 @@ export class Engine {
       return;
     }
 
-    const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.25;
+    const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.50;
     const power = Math.max(1, Math.floor((1 + (this.gameState.upgrades.miningPower || 0)) * prestigeMulti));
     const critChance = (this.gameState.upgrades.critChance || 0) * 0.05;
     const isCrit = Math.random() < critChance;
@@ -444,7 +486,7 @@ export class Engine {
       const { biome } = getBiomeAtDepth(depth);
       const depthScale = Math.pow(1.00025, depth);
       const multi = Math.pow(1.5, this.gameState.upgrades.bandwidthMulti || 0);
-      const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.25;
+      const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.50;
       let earned = Math.max(1, Math.round(biome.bandwidthDrop * depthScale * multi * prestigeMulti));
       
       const hijackLv = this.gameState.upgrades.cryptoHijack || 0;
@@ -707,6 +749,557 @@ export class Engine {
           ctx.lineTo(x + bs*0.85, y + bs*0.85);
           ctx.lineTo(x + bs*0.15, y + bs*0.85);
           ctx.fill();
+        } else if (block.style === 'inset-1') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(x + bs*0.1, y + bs*0.1, bs*(1.0-0.2), bs*(1.0-0.2));
+        } else if (block.style === 'inset-2') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(x + bs*0.2, y + bs*0.2, bs*(1.0-0.4), bs*(1.0-0.4));
+        } else if (block.style === 'inset-3') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(x + bs*0.30000000000000004, y + bs*0.30000000000000004, bs*(1.0-0.6000000000000001), bs*(1.0-0.6000000000000001));
+        } else if (block.style === 'inset-4') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(x + bs*0.4, y + bs*0.4, bs*(1.0-0.8), bs*(1.0-0.8));
+        } else if (block.style === 'inset-5') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(x + bs*0.5, y + bs*0.5, bs*(1.0-1.0), bs*(1.0-1.0));
+        } else if (block.style === 'hlines-2') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.25);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.25);
+        } else if (block.style === 'hlines-3') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.16666666666666666);
+          ctx.fillRect(x, y + bs*0.3333333333333333, bs, bs*0.16666666666666666);
+          ctx.fillRect(x, y + bs*0.6666666666666666, bs, bs*0.16666666666666666);
+        } else if (block.style === 'hlines-4') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.125);
+          ctx.fillRect(x, y + bs*0.25, bs, bs*0.125);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.125);
+          ctx.fillRect(x, y + bs*0.75, bs, bs*0.125);
+        } else if (block.style === 'hlines-5') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.1);
+          ctx.fillRect(x, y + bs*0.2, bs, bs*0.1);
+          ctx.fillRect(x, y + bs*0.4, bs, bs*0.1);
+          ctx.fillRect(x, y + bs*0.6, bs, bs*0.1);
+          ctx.fillRect(x, y + bs*0.8, bs, bs*0.1);
+        } else if (block.style === 'hlines-6') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.08333333333333333);
+          ctx.fillRect(x, y + bs*0.16666666666666666, bs, bs*0.08333333333333333);
+          ctx.fillRect(x, y + bs*0.3333333333333333, bs, bs*0.08333333333333333);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.08333333333333333);
+          ctx.fillRect(x, y + bs*0.6666666666666666, bs, bs*0.08333333333333333);
+          ctx.fillRect(x, y + bs*0.8333333333333334, bs, bs*0.08333333333333333);
+        } else if (block.style === 'hlines-7') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.07142857142857142);
+          ctx.fillRect(x, y + bs*0.14285714285714285, bs, bs*0.07142857142857142);
+          ctx.fillRect(x, y + bs*0.2857142857142857, bs, bs*0.07142857142857142);
+          ctx.fillRect(x, y + bs*0.42857142857142855, bs, bs*0.07142857142857142);
+          ctx.fillRect(x, y + bs*0.5714285714285714, bs, bs*0.07142857142857142);
+          ctx.fillRect(x, y + bs*0.7142857142857143, bs, bs*0.07142857142857142);
+          ctx.fillRect(x, y + bs*0.8571428571428571, bs, bs*0.07142857142857142);
+        } else if (block.style === 'hlines-8') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.0625);
+          ctx.fillRect(x, y + bs*0.125, bs, bs*0.0625);
+          ctx.fillRect(x, y + bs*0.25, bs, bs*0.0625);
+          ctx.fillRect(x, y + bs*0.375, bs, bs*0.0625);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.0625);
+          ctx.fillRect(x, y + bs*0.625, bs, bs*0.0625);
+          ctx.fillRect(x, y + bs*0.75, bs, bs*0.0625);
+          ctx.fillRect(x, y + bs*0.875, bs, bs*0.0625);
+        } else if (block.style === 'hlines-9') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.05555555555555555);
+          ctx.fillRect(x, y + bs*0.1111111111111111, bs, bs*0.05555555555555555);
+          ctx.fillRect(x, y + bs*0.2222222222222222, bs, bs*0.05555555555555555);
+          ctx.fillRect(x, y + bs*0.3333333333333333, bs, bs*0.05555555555555555);
+          ctx.fillRect(x, y + bs*0.4444444444444444, bs, bs*0.05555555555555555);
+          ctx.fillRect(x, y + bs*0.5555555555555556, bs, bs*0.05555555555555555);
+          ctx.fillRect(x, y + bs*0.6666666666666666, bs, bs*0.05555555555555555);
+          ctx.fillRect(x, y + bs*0.7777777777777778, bs, bs*0.05555555555555555);
+          ctx.fillRect(x, y + bs*0.8888888888888888, bs, bs*0.05555555555555555);
+        } else if (block.style === 'hlines-10') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.05);
+          ctx.fillRect(x, y + bs*0.1, bs, bs*0.05);
+          ctx.fillRect(x, y + bs*0.2, bs, bs*0.05);
+          ctx.fillRect(x, y + bs*0.3, bs, bs*0.05);
+          ctx.fillRect(x, y + bs*0.4, bs, bs*0.05);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.05);
+          ctx.fillRect(x, y + bs*0.6, bs, bs*0.05);
+          ctx.fillRect(x, y + bs*0.7, bs, bs*0.05);
+          ctx.fillRect(x, y + bs*0.8, bs, bs*0.05);
+          ctx.fillRect(x, y + bs*0.9, bs, bs*0.05);
+        } else if (block.style === 'hlines-11') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.09090909090909091, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.18181818181818182, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.2727272727272727, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.36363636363636365, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.45454545454545453, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.5454545454545454, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.6363636363636364, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.7272727272727273, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.8181818181818182, bs, bs*0.045454545454545456);
+          ctx.fillRect(x, y + bs*0.9090909090909091, bs, bs*0.045454545454545456);
+        } else if (block.style === 'vlines-2') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.25, bs);
+          ctx.fillRect(x + bs*0.5, y, bs*0.25, bs);
+        } else if (block.style === 'vlines-3') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.16666666666666666, bs);
+          ctx.fillRect(x + bs*0.3333333333333333, y, bs*0.16666666666666666, bs);
+          ctx.fillRect(x + bs*0.6666666666666666, y, bs*0.16666666666666666, bs);
+        } else if (block.style === 'vlines-4') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.125, bs);
+          ctx.fillRect(x + bs*0.25, y, bs*0.125, bs);
+          ctx.fillRect(x + bs*0.5, y, bs*0.125, bs);
+          ctx.fillRect(x + bs*0.75, y, bs*0.125, bs);
+        } else if (block.style === 'vlines-5') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.1, bs);
+          ctx.fillRect(x + bs*0.2, y, bs*0.1, bs);
+          ctx.fillRect(x + bs*0.4, y, bs*0.1, bs);
+          ctx.fillRect(x + bs*0.6, y, bs*0.1, bs);
+          ctx.fillRect(x + bs*0.8, y, bs*0.1, bs);
+        } else if (block.style === 'vlines-6') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.08333333333333333, bs);
+          ctx.fillRect(x + bs*0.16666666666666666, y, bs*0.08333333333333333, bs);
+          ctx.fillRect(x + bs*0.3333333333333333, y, bs*0.08333333333333333, bs);
+          ctx.fillRect(x + bs*0.5, y, bs*0.08333333333333333, bs);
+          ctx.fillRect(x + bs*0.6666666666666666, y, bs*0.08333333333333333, bs);
+          ctx.fillRect(x + bs*0.8333333333333334, y, bs*0.08333333333333333, bs);
+        } else if (block.style === 'vlines-7') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.07142857142857142, bs);
+          ctx.fillRect(x + bs*0.14285714285714285, y, bs*0.07142857142857142, bs);
+          ctx.fillRect(x + bs*0.2857142857142857, y, bs*0.07142857142857142, bs);
+          ctx.fillRect(x + bs*0.42857142857142855, y, bs*0.07142857142857142, bs);
+          ctx.fillRect(x + bs*0.5714285714285714, y, bs*0.07142857142857142, bs);
+          ctx.fillRect(x + bs*0.7142857142857143, y, bs*0.07142857142857142, bs);
+          ctx.fillRect(x + bs*0.8571428571428571, y, bs*0.07142857142857142, bs);
+        } else if (block.style === 'vlines-8') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.0625, bs);
+          ctx.fillRect(x + bs*0.125, y, bs*0.0625, bs);
+          ctx.fillRect(x + bs*0.25, y, bs*0.0625, bs);
+          ctx.fillRect(x + bs*0.375, y, bs*0.0625, bs);
+          ctx.fillRect(x + bs*0.5, y, bs*0.0625, bs);
+          ctx.fillRect(x + bs*0.625, y, bs*0.0625, bs);
+          ctx.fillRect(x + bs*0.75, y, bs*0.0625, bs);
+          ctx.fillRect(x + bs*0.875, y, bs*0.0625, bs);
+        } else if (block.style === 'vlines-9') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.05555555555555555, bs);
+          ctx.fillRect(x + bs*0.1111111111111111, y, bs*0.05555555555555555, bs);
+          ctx.fillRect(x + bs*0.2222222222222222, y, bs*0.05555555555555555, bs);
+          ctx.fillRect(x + bs*0.3333333333333333, y, bs*0.05555555555555555, bs);
+          ctx.fillRect(x + bs*0.4444444444444444, y, bs*0.05555555555555555, bs);
+          ctx.fillRect(x + bs*0.5555555555555556, y, bs*0.05555555555555555, bs);
+          ctx.fillRect(x + bs*0.6666666666666666, y, bs*0.05555555555555555, bs);
+          ctx.fillRect(x + bs*0.7777777777777778, y, bs*0.05555555555555555, bs);
+          ctx.fillRect(x + bs*0.8888888888888888, y, bs*0.05555555555555555, bs);
+        } else if (block.style === 'vlines-10') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.05, bs);
+          ctx.fillRect(x + bs*0.1, y, bs*0.05, bs);
+          ctx.fillRect(x + bs*0.2, y, bs*0.05, bs);
+          ctx.fillRect(x + bs*0.3, y, bs*0.05, bs);
+          ctx.fillRect(x + bs*0.4, y, bs*0.05, bs);
+          ctx.fillRect(x + bs*0.5, y, bs*0.05, bs);
+          ctx.fillRect(x + bs*0.6, y, bs*0.05, bs);
+          ctx.fillRect(x + bs*0.7, y, bs*0.05, bs);
+          ctx.fillRect(x + bs*0.8, y, bs*0.05, bs);
+          ctx.fillRect(x + bs*0.9, y, bs*0.05, bs);
+        } else if (block.style === 'vlines-11') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(x + bs*0.0, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.09090909090909091, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.18181818181818182, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.2727272727272727, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.36363636363636365, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.45454545454545453, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.5454545454545454, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.6363636363636364, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.7272727272727273, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.8181818181818182, y, bs*0.045454545454545456, bs);
+          ctx.fillRect(x + bs*0.9090909090909091, y, bs*0.045454545454545456, bs);
+        } else if (block.style === 'grid-2') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.1);
+          ctx.fillRect(x + bs*0.0, y, bs*0.1, bs);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.1);
+          ctx.fillRect(x + bs*0.5, y, bs*0.1, bs);
+        } else if (block.style === 'grid-3') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.06666666666666667);
+          ctx.fillRect(x + bs*0.0, y, bs*0.06666666666666667, bs);
+          ctx.fillRect(x, y + bs*0.3333333333333333, bs, bs*0.06666666666666667);
+          ctx.fillRect(x + bs*0.3333333333333333, y, bs*0.06666666666666667, bs);
+          ctx.fillRect(x, y + bs*0.6666666666666666, bs, bs*0.06666666666666667);
+          ctx.fillRect(x + bs*0.6666666666666666, y, bs*0.06666666666666667, bs);
+        } else if (block.style === 'grid-4') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.05);
+          ctx.fillRect(x + bs*0.0, y, bs*0.05, bs);
+          ctx.fillRect(x, y + bs*0.25, bs, bs*0.05);
+          ctx.fillRect(x + bs*0.25, y, bs*0.05, bs);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.05);
+          ctx.fillRect(x + bs*0.5, y, bs*0.05, bs);
+          ctx.fillRect(x, y + bs*0.75, bs, bs*0.05);
+          ctx.fillRect(x + bs*0.75, y, bs*0.05, bs);
+        } else if (block.style === 'grid-5') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.04);
+          ctx.fillRect(x + bs*0.0, y, bs*0.04, bs);
+          ctx.fillRect(x, y + bs*0.2, bs, bs*0.04);
+          ctx.fillRect(x + bs*0.2, y, bs*0.04, bs);
+          ctx.fillRect(x, y + bs*0.4, bs, bs*0.04);
+          ctx.fillRect(x + bs*0.4, y, bs*0.04, bs);
+          ctx.fillRect(x, y + bs*0.6, bs, bs*0.04);
+          ctx.fillRect(x + bs*0.6, y, bs*0.04, bs);
+          ctx.fillRect(x, y + bs*0.8, bs, bs*0.04);
+          ctx.fillRect(x + bs*0.8, y, bs*0.04, bs);
+        } else if (block.style === 'grid-6') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.03333333333333333);
+          ctx.fillRect(x + bs*0.0, y, bs*0.03333333333333333, bs);
+          ctx.fillRect(x, y + bs*0.16666666666666666, bs, bs*0.03333333333333333);
+          ctx.fillRect(x + bs*0.16666666666666666, y, bs*0.03333333333333333, bs);
+          ctx.fillRect(x, y + bs*0.3333333333333333, bs, bs*0.03333333333333333);
+          ctx.fillRect(x + bs*0.3333333333333333, y, bs*0.03333333333333333, bs);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.03333333333333333);
+          ctx.fillRect(x + bs*0.5, y, bs*0.03333333333333333, bs);
+          ctx.fillRect(x, y + bs*0.6666666666666666, bs, bs*0.03333333333333333);
+          ctx.fillRect(x + bs*0.6666666666666666, y, bs*0.03333333333333333, bs);
+          ctx.fillRect(x, y + bs*0.8333333333333334, bs, bs*0.03333333333333333);
+          ctx.fillRect(x + bs*0.8333333333333334, y, bs*0.03333333333333333, bs);
+        } else if (block.style === 'grid-7') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.028571428571428574);
+          ctx.fillRect(x + bs*0.0, y, bs*0.028571428571428574, bs);
+          ctx.fillRect(x, y + bs*0.14285714285714285, bs, bs*0.028571428571428574);
+          ctx.fillRect(x + bs*0.14285714285714285, y, bs*0.028571428571428574, bs);
+          ctx.fillRect(x, y + bs*0.2857142857142857, bs, bs*0.028571428571428574);
+          ctx.fillRect(x + bs*0.2857142857142857, y, bs*0.028571428571428574, bs);
+          ctx.fillRect(x, y + bs*0.42857142857142855, bs, bs*0.028571428571428574);
+          ctx.fillRect(x + bs*0.42857142857142855, y, bs*0.028571428571428574, bs);
+          ctx.fillRect(x, y + bs*0.5714285714285714, bs, bs*0.028571428571428574);
+          ctx.fillRect(x + bs*0.5714285714285714, y, bs*0.028571428571428574, bs);
+          ctx.fillRect(x, y + bs*0.7142857142857143, bs, bs*0.028571428571428574);
+          ctx.fillRect(x + bs*0.7142857142857143, y, bs*0.028571428571428574, bs);
+          ctx.fillRect(x, y + bs*0.8571428571428571, bs, bs*0.028571428571428574);
+          ctx.fillRect(x + bs*0.8571428571428571, y, bs*0.028571428571428574, bs);
+        } else if (block.style === 'grid-8') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.025);
+          ctx.fillRect(x + bs*0.0, y, bs*0.025, bs);
+          ctx.fillRect(x, y + bs*0.125, bs, bs*0.025);
+          ctx.fillRect(x + bs*0.125, y, bs*0.025, bs);
+          ctx.fillRect(x, y + bs*0.25, bs, bs*0.025);
+          ctx.fillRect(x + bs*0.25, y, bs*0.025, bs);
+          ctx.fillRect(x, y + bs*0.375, bs, bs*0.025);
+          ctx.fillRect(x + bs*0.375, y, bs*0.025, bs);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.025);
+          ctx.fillRect(x + bs*0.5, y, bs*0.025, bs);
+          ctx.fillRect(x, y + bs*0.625, bs, bs*0.025);
+          ctx.fillRect(x + bs*0.625, y, bs*0.025, bs);
+          ctx.fillRect(x, y + bs*0.75, bs, bs*0.025);
+          ctx.fillRect(x + bs*0.75, y, bs*0.025, bs);
+          ctx.fillRect(x, y + bs*0.875, bs, bs*0.025);
+          ctx.fillRect(x + bs*0.875, y, bs*0.025, bs);
+        } else if (block.style === 'grid-9') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.022222222222222223);
+          ctx.fillRect(x + bs*0.0, y, bs*0.022222222222222223, bs);
+          ctx.fillRect(x, y + bs*0.1111111111111111, bs, bs*0.022222222222222223);
+          ctx.fillRect(x + bs*0.1111111111111111, y, bs*0.022222222222222223, bs);
+          ctx.fillRect(x, y + bs*0.2222222222222222, bs, bs*0.022222222222222223);
+          ctx.fillRect(x + bs*0.2222222222222222, y, bs*0.022222222222222223, bs);
+          ctx.fillRect(x, y + bs*0.3333333333333333, bs, bs*0.022222222222222223);
+          ctx.fillRect(x + bs*0.3333333333333333, y, bs*0.022222222222222223, bs);
+          ctx.fillRect(x, y + bs*0.4444444444444444, bs, bs*0.022222222222222223);
+          ctx.fillRect(x + bs*0.4444444444444444, y, bs*0.022222222222222223, bs);
+          ctx.fillRect(x, y + bs*0.5555555555555556, bs, bs*0.022222222222222223);
+          ctx.fillRect(x + bs*0.5555555555555556, y, bs*0.022222222222222223, bs);
+          ctx.fillRect(x, y + bs*0.6666666666666666, bs, bs*0.022222222222222223);
+          ctx.fillRect(x + bs*0.6666666666666666, y, bs*0.022222222222222223, bs);
+          ctx.fillRect(x, y + bs*0.7777777777777778, bs, bs*0.022222222222222223);
+          ctx.fillRect(x + bs*0.7777777777777778, y, bs*0.022222222222222223, bs);
+          ctx.fillRect(x, y + bs*0.8888888888888888, bs, bs*0.022222222222222223);
+          ctx.fillRect(x + bs*0.8888888888888888, y, bs*0.022222222222222223, bs);
+        } else if (block.style === 'grid-10') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.0, y, bs*0.02, bs);
+          ctx.fillRect(x, y + bs*0.1, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.1, y, bs*0.02, bs);
+          ctx.fillRect(x, y + bs*0.2, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.2, y, bs*0.02, bs);
+          ctx.fillRect(x, y + bs*0.3, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.3, y, bs*0.02, bs);
+          ctx.fillRect(x, y + bs*0.4, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.4, y, bs*0.02, bs);
+          ctx.fillRect(x, y + bs*0.5, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.5, y, bs*0.02, bs);
+          ctx.fillRect(x, y + bs*0.6, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.6, y, bs*0.02, bs);
+          ctx.fillRect(x, y + bs*0.7, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.7, y, bs*0.02, bs);
+          ctx.fillRect(x, y + bs*0.8, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.8, y, bs*0.02, bs);
+          ctx.fillRect(x, y + bs*0.9, bs, bs*0.02);
+          ctx.fillRect(x + bs*0.9, y, bs*0.02, bs);
+        } else if (block.style === 'grid-11') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x, y + bs*0.0, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.0, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.09090909090909091, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.09090909090909091, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.18181818181818182, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.18181818181818182, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.2727272727272727, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.2727272727272727, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.36363636363636365, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.36363636363636365, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.45454545454545453, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.45454545454545453, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.5454545454545454, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.5454545454545454, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.6363636363636364, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.6363636363636364, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.7272727272727273, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.7272727272727273, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.8181818181818182, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.8181818181818182, y, bs*0.018181818181818184, bs);
+          ctx.fillRect(x, y + bs*0.9090909090909091, bs, bs*0.018181818181818184);
+          ctx.fillRect(x + bs*0.9090909090909091, y, bs*0.018181818181818184, bs);
+        } else if (block.style === 'plus-1') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(x + bs*(0.5-0.05), y, bs*0.1, bs);
+          ctx.fillRect(x, y + bs*(0.5-0.05), bs, bs*0.1);
+        } else if (block.style === 'plus-2') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(x + bs*(0.5-0.1), y, bs*0.2, bs);
+          ctx.fillRect(x, y + bs*(0.5-0.1), bs, bs*0.2);
+        } else if (block.style === 'plus-3') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(x + bs*(0.5-0.15000000000000002), y, bs*0.30000000000000004, bs);
+          ctx.fillRect(x, y + bs*(0.5-0.15000000000000002), bs, bs*0.30000000000000004);
+        } else if (block.style === 'plus-4') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(x + bs*(0.5-0.2), y, bs*0.4, bs);
+          ctx.fillRect(x, y + bs*(0.5-0.2), bs, bs*0.4);
+        } else if (block.style === 'plus-5') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(x + bs*(0.5-0.25), y, bs*0.5, bs);
+          ctx.fillRect(x, y + bs*(0.5-0.25), bs, bs*0.5);
+        } else if (block.style === 'plus-6') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(x + bs*(0.5-0.30000000000000004), y, bs*0.6000000000000001, bs);
+          ctx.fillRect(x, y + bs*(0.5-0.30000000000000004), bs, bs*0.6000000000000001);
+        } else if (block.style === 'plus-7') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(x + bs*(0.5-0.35000000000000003), y, bs*0.7000000000000001, bs);
+          ctx.fillRect(x, y + bs*(0.5-0.35000000000000003), bs, bs*0.7000000000000001);
+        } else if (block.style === 'plus-8') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(x + bs*(0.5-0.4), y, bs*0.8, bs);
+          ctx.fillRect(x, y + bs*(0.5-0.4), bs, bs*0.8);
+        } else if (block.style === 'circles-1') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.4, 0, Math.PI*2);
+          ctx.stroke();
+        } else if (block.style === 'circles-2') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.2, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.4, 0, Math.PI*2);
+          ctx.stroke();
+        } else if (block.style === 'circles-3') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.13333333333333333, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.26666666666666666, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.4, 0, Math.PI*2);
+          ctx.stroke();
+        } else if (block.style === 'circles-4') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.1, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.2, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.30000000000000004, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.4, 0, Math.PI*2);
+          ctx.stroke();
+        } else if (block.style === 'circles-5') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.08, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.16, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.24, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.32, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.4, 0, Math.PI*2);
+          ctx.stroke();
+        } else if (block.style === 'circles-6') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.06666666666666667, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.13333333333333333, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.2, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.26666666666666666, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.3333333333333333, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.4, 0, Math.PI*2);
+          ctx.stroke();
+        } else if (block.style === 'circles-7') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.05714285714285715, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.1142857142857143, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.17142857142857143, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.2285714285714286, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.28571428571428575, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.34285714285714286, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.4, 0, Math.PI*2);
+          ctx.stroke();
+        } else if (block.style === 'circles-8') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.05, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.1, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.15000000000000002, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.2, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.25, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.30000000000000004, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.35000000000000003, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.4, 0, Math.PI*2);
+          ctx.stroke();
+
         } else {
           ctx.fillRect(x, y, bs - 1, bs - 1);
         }
@@ -821,16 +1414,25 @@ export class Engine {
     const gl = this.gl;
     const { biome } = getBiomeAtDepth(this.gameState.depth);
 
-    // Smooth shader transitions
-    const targetV = biome.vignetteIntensity;
-    const targetS = biome.scanlines ? 1.0 : 0.0;
-    const targetC = biome.chromaticAberration;
-    const targetG = biome.bloomStrength;
-    const speed = 0.03;
-    this.shaderVignette += (targetV - this.shaderVignette) * speed;
-    this.shaderScanlines += (targetS - this.shaderScanlines) * speed;
-    this.shaderChroma += (targetC - this.shaderChroma) * speed;
-    this.shaderGlow += (targetG - this.shaderGlow) * speed;
+    // Smoothlerp shader uniform targets
+    const vTarget = biome.vignetteIntensity || 0;
+    const sTarget = biome.scanlines ? 1.0 : 0.0;
+    const cTarget = biome.chromaticAberration || 0;
+    const gTarget = biome.bloomStrength || 0.0;
+    const pTarget = biome.pixelate || 0.0;
+    const iTarget = biome.invert || 0.0;
+    const grTarget = biome.grain || 0.0;
+    const hTarget = biome.hueShift || 0.0;
+
+    const lerpSpeed = 2.0 * dt;
+    this.shaderVignette += (vTarget - this.shaderVignette) * lerpSpeed;
+    this.shaderScanlines += (sTarget - this.shaderScanlines) * lerpSpeed;
+    this.shaderChroma += (cTarget - this.shaderChroma) * lerpSpeed;
+    this.shaderGlow += (gTarget - this.shaderGlow) * lerpSpeed;
+    this.shaderPixelate += (pTarget - this.shaderPixelate) * lerpSpeed;
+    this.shaderInvert += (iTarget - this.shaderInvert) * lerpSpeed;
+    this.shaderGrain += (grTarget - this.shaderGrain) * lerpSpeed;
+    this.shaderHue += (hTarget - this.shaderHue) * lerpSpeed;
 
     // Upload canvas to texture
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -841,10 +1443,14 @@ export class Engine {
     gl.uniform1i(this.uniforms.texture, 0);
     gl.uniform1f(this.uniforms.time, this.time);
     gl.uniform2f(this.uniforms.resolution, this.width, this.height);
-    gl.uniform1f(this.uniforms.vignette, this.shaderVignette);
-    gl.uniform1f(this.uniforms.scanlines, this.shaderScanlines);
-    gl.uniform1f(this.uniforms.chroma, this.shaderChroma);
-    gl.uniform1f(this.uniforms.glow, this.shaderGlow);
+      gl.uniform1f(this.uniforms.vignette, this.shaderVignette);
+      gl.uniform1f(this.uniforms.scanlines, this.shaderScanlines);
+      gl.uniform1f(this.uniforms.chroma, this.shaderChroma);
+      gl.uniform1f(this.uniforms.glow, this.shaderGlow);
+      gl.uniform1f(this.uniforms.pixelate, this.shaderPixelate);
+      gl.uniform1f(this.uniforms.invert, this.shaderInvert);
+      gl.uniform1f(this.uniforms.grain, this.shaderGrain);
+      gl.uniform1f(this.uniforms.hue, this.shaderHue);
 
     // Draw fullscreen quad
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -936,7 +1542,7 @@ export class Engine {
         
         // Drones attempt to mine alive blocks
         const baseDmg = 1 + (this.gameState.upgrades.miningPower || 0) * 0.1;
-        const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.25;
+        const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.50;
         const overclockChance = (this.gameState.upgrades.overclock || 0) * 0.025;
         const isOverclock = Math.random() < overclockChance;
         const dmg = Math.max(1, Math.floor(baseDmg * prestigeMulti * (isOverclock ? 3 : 1)));
