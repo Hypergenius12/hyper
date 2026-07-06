@@ -11,7 +11,7 @@ export const BIOMES = [
     bloomStrength: 0.2, bloomRadius: 0.5, bloomThreshold: 0.8,
     chromaticAberration: 0.0, scanlines: false, vignetteIntensity: 0.1, shakeOnMine: false,
     description: "The bright and shiny surface of the modern internet. Mostly cat pictures.",
-    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "triangle"
+    particleStyle: "dust", pixelate: 0.0, invert: 0.0, grain: 0.2, hueShift: 0.0, blockStyle: "solid"
   },
   {
     name: "The SaaS Layer",

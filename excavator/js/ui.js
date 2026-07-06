@@ -197,14 +197,16 @@ export class UI {
   }
 
   renderMap(maxDepth, biomes) {
-    const listEl = document.getElementById('map-list');
     const rulerEl = document.getElementById('map-scale-ruler');
     const depthEl = document.getElementById('map-max-depth');
     
     if (depthEl) depthEl.textContent = `${Math.floor(maxDepth)}m`;
-    
-    listEl.innerHTML = '';
     rulerEl.innerHTML = '';
+    
+    const hoverName = document.getElementById('map-hover-name');
+    const hoverDepth = document.getElementById('map-hover-depth');
+    const hoverDesc = document.getElementById('map-hover-desc');
+    const hoverPreview = document.getElementById('map-hover-preview');
     
     // Build ruler and list items
     let totalHeight = 0;
@@ -218,31 +220,31 @@ export class UI {
       const isDiscovered = b.depthStart <= maxDepth;
       const c = isDiscovered ? `#${b.blockColors[0].toString(16).padStart(6,'0')}` : '#333';
       
-      const item = document.createElement('div');
-      item.className = 'map-biome-item';
-      
       const title = isDiscovered ? b.name : '???';
       const desc = isDiscovered ? b.description : 'UNKNOWN STRATA';
       const rangeText = b.depthEnd === 99999 ? `${b.depthStart}m - ∞` : `${b.depthStart}m - ${b.depthEnd}m`;
       
-      item.innerHTML = `
-        <div class="map-biome-color-bar" style="background:${c}; box-shadow:0 0 10px ${c};"></div>
-        <div class="map-biome-info">
-          <div class="map-biome-name" style="color:${isDiscovered ? c : '#666'}">${title}</div>
-          <div class="map-biome-depth">${rangeText}</div>
-          <div class="map-biome-desc">${desc}</div>
-        </div>
-      `;
-      listEl.appendChild(item);
-      
       // Ruler segment
       const seg = document.createElement('div');
+      seg.className = 'map-ruler-seg';
       const rRange = (b.depthEnd === 99999 ? 12000 : b.depthEnd) - b.depthStart;
       const pct = (rRange / totalHeight) * 100;
       seg.style.height = `${pct}%`;
       seg.style.width = '100%';
       seg.style.background = isDiscovered ? c : 'rgba(255,255,255,0.05)';
       seg.style.borderBottom = '1px solid rgba(0,0,0,0.5)';
+      seg.style.cursor = 'pointer';
+      seg.style.transition = 'all 0.1s';
+      
+      seg.addEventListener('mouseenter', () => {
+        hoverName.textContent = title;
+        hoverName.style.color = isDiscovered ? c : '#666';
+        hoverDepth.textContent = rangeText;
+        hoverDesc.textContent = desc;
+        hoverPreview.style.background = c;
+        hoverPreview.style.boxShadow = isDiscovered ? `0 0 20px ${c}` : 'none';
+      });
+      
       rulerEl.appendChild(seg);
     });
   }
