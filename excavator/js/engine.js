@@ -136,6 +136,7 @@ export class Engine {
     // Upgrades state
     this.cacheDmgPool = 0;
     this.autoMineTimer = 0;
+    this.mineTimer = 0;
 
     // Particles
     this.particles = [];
