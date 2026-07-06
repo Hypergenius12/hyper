@@ -138,6 +138,7 @@ export class Engine {
     this.autoMineTimer = 0;
     this.mineTimer = 0;
     this.nextMineTarget = 0.166 + Math.random() * 0.034;
+    this.isCatchingUp = false;
 
     // Particles
     this.particles = [];
@@ -269,6 +270,7 @@ export class Engine {
   }
 
   playSFX(type) {
+    if (this.isCatchingUp) return;
     if (!this.audioCtx) return;
     const sfxToggle = document.getElementById('setting-sfx');
     if (sfxToggle && !sfxToggle.checked) return;
@@ -530,6 +532,7 @@ export class Engine {
 
   // ========== PARTICLES ==========
   _spawnParticles(col, row, color, count) {
+    if (this.isCatchingUp) return;
     const bs = this.blockSize;
     const cx = this.offsetX + col * bs + bs / 2;
     const cy = row * bs + bs / 2;
@@ -825,9 +828,64 @@ export class Engine {
 
   // ========== GAME LOOP ==========
   update(ts) {
-    const delta = Math.min((ts - this.lastTime) / 1000, 0.1);
+    const delta = (ts - this.lastTime) / 1000;
     this.lastTime = ts;
 
+    this.isCatchingUp = false;
+
+    if (delta > 1.0) {
+      this.isCatchingUp = true;
+      const step = 0.1;
+      const limit = Math.min(delta, 1800); // Max 30 mins catchup
+      let accumulated = 0;
+      while (accumulated < limit) {
+        this._updateLogic(step);
+        accumulated += step;
+      }
+      this.isCatchingUp = false;
+      const remainder = limit % step;
+      if (remainder > 0.001) {
+        this._updateLogic(remainder);
+      }
+    } else {
+      this._updateLogic(Math.min(delta, 0.1));
+    }
+
+    // Camera
+    const targetRow = this.activeRow - 1;
+    this.targetCameraY = Math.max(0, targetRow * this.blockSize - this.height * 0.25);
+    if (delta > 1.0) {
+      this.cameraY = this.targetCameraY;
+    } else {
+      this.cameraY += (this.targetCameraY - this.cameraY) * 0.05;
+    }
+
+    // Generate more rows if approaching bottom
+    const visibleBottom = Math.ceil((this.cameraY + this.height) / this.blockSize);
+    if (visibleBottom + GENERATE_BUFFER > this.generatedRows) {
+      this._generateRows(100);
+    }
+
+    // Update Particles
+    let aliveParticles = 0;
+    const pDelta = Math.min(delta, 0.1);
+    for (let i = 0; i < this.particles.length; i++) {
+      const p = this.particles[i];
+      p.x += p.vx * pDelta;
+      p.y += p.vy * pDelta;
+      p.life -= pDelta;
+      if (p.life > 0) {
+        this.particles[aliveParticles++] = p;
+      }
+    }
+    this.particles.length = aliveParticles;
+
+    // Render
+    this._render();
+    this._postProcess();
+  }
+
+  _updateLogic(delta) {
     // HARD SYNC DEPTH EVERY FRAME
     this.gameState.depth = Math.max(0, this.activeRow - SKY_ROWS);
     this.time += delta;
@@ -881,33 +939,5 @@ export class Engine {
         }
       }
     }
-
-    // Camera
-    const targetRow = this.activeRow - 1;
-    this.targetCameraY = Math.max(0, targetRow * this.blockSize - this.height * 0.25);
-    this.cameraY += (this.targetCameraY - this.cameraY) * 0.05;
-
-    // Generate more rows if approaching bottom
-    const visibleBottom = Math.ceil((this.cameraY + this.height) / this.blockSize);
-    if (visibleBottom + GENERATE_BUFFER > this.generatedRows) {
-      this._generateRows(100);
-    }
-
-    // Update Particles
-    let aliveParticles = 0;
-    for (let i = 0; i < this.particles.length; i++) {
-      const p = this.particles[i];
-      p.x += p.vx * delta;
-      p.y += p.vy * delta;
-      p.life -= delta;
-      if (p.life > 0) {
-        this.particles[aliveParticles++] = p;
-      }
-    }
-    this.particles.length = aliveParticles;
-
-    // Render
-    this._render();
-    this._postProcess();
   }
 }
