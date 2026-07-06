@@ -1404,8 +1404,8 @@ export class Engine {
     ctx.fillRect(this.offsetX + COLS * bs, 0, this.offsetX + 20, h);
   }
 
-  // ========== WEBGL POST-PROCESSING ==========
-  _postProcess() {
+  // ========== POST-PROCESSING (WEBGL) ==========
+  _postProcess(dt) {
     if (!this.useWebGL) {
       this.fallbackCtx.drawImage(this.offscreen, 0, 0);
       return;
@@ -1512,7 +1512,7 @@ export class Engine {
 
     // Render
     this._render();
-    this._postProcess();
+    this._postProcess(dt);
   }
 
   _updateLogic(delta) {
