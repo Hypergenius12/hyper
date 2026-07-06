@@ -137,6 +137,7 @@ export class Engine {
     this.cacheDmgPool = 0;
     this.autoMineTimer = 0;
     this.mineTimer = 0;
+    this.nextMineTarget = 0.25 + Math.random() * 0.08;
 
     // Particles
     this.particles = [];
@@ -825,8 +826,9 @@ export class Engine {
     // Hold-to-mine
     if (this.isMouseDown && this.hoveredRow >= 0 && this.gameState.upgrades.holdToClick > 0) {
       this.mineTimer += delta;
-      if (this.mineTimer >= 0.50) {
+      if (this.mineTimer >= this.nextMineTarget) {
         this.mineTimer = 0;
+        this.nextMineTarget = 0.25 + Math.random() * 0.08;
         this._tryMine();
       }
     }
