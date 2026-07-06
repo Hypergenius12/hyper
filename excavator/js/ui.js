@@ -206,7 +206,13 @@ export class UI {
     const hoverName = document.getElementById('map-hover-name');
     const hoverDepth = document.getElementById('map-hover-depth');
     const hoverDesc = document.getElementById('map-hover-desc');
-    const hoverPreview = document.getElementById('map-hover-preview');
+    const hoverCanvas = document.getElementById('map-hover-preview-canvas');
+    const statHard = document.getElementById('map-stat-hard');
+    const statBw = document.getElementById('map-stat-bw');
+    const statBg = document.getElementById('map-stat-bg');
+    const statStyle = document.getElementById('map-stat-style');
+    const statGlow = document.getElementById('map-stat-glow');
+    const statPart = document.getElementById('map-stat-part');
     
     // Build ruler and list items
     let totalHeight = 0;
@@ -241,8 +247,141 @@ export class UI {
         hoverName.style.color = isDiscovered ? c : '#666';
         hoverDepth.textContent = rangeText;
         hoverDesc.textContent = desc;
-        hoverPreview.style.background = c;
-        hoverPreview.style.boxShadow = isDiscovered ? `0 0 20px ${c}` : 'none';
+
+        const ctx = hoverCanvas.getContext('2d');
+        ctx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+
+        if (!isDiscovered) {
+          statHard.textContent = '???';
+          statBw.textContent = '???';
+          statBg.textContent = '???';
+          statStyle.textContent = '???';
+          statGlow.textContent = '???';
+          statPart.textContent = '???';
+          return;
+        }
+
+        statHard.textContent = b.blockHardness.toFixed(1);
+        statBw.textContent = b.bandwidthDrop.toFixed(1);
+        statBg.textContent = `RGB(${(b.bgColor[0]*255).toFixed()}, ${(b.bgColor[1]*255).toFixed()}, ${(b.bgColor[2]*255).toFixed()})`;
+        statStyle.textContent = b.blockStyle.toUpperCase();
+        statGlow.textContent = b.emissiveIntensity > 0 ? `YES (${b.emissiveIntensity})` : 'NO';
+        statPart.textContent = b.particleStyle.toUpperCase();
+
+        const bs = 40;
+        const x = 10;
+        const y = 10;
+        ctx.fillStyle = c;
+        const style = b.blockStyle;
+        
+        if (style === 'wireframe') {
+          ctx.strokeStyle = c;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 1, y + 1, bs - 3, bs - 3);
+        } else if (style === 'dots') {
+          ctx.beginPath();
+          ctx.arc(x + bs*0.3, y + bs*0.3, bs*0.15, 0, Math.PI*2);
+          ctx.arc(x + bs*0.7, y + bs*0.3, bs*0.15, 0, Math.PI*2);
+          ctx.arc(x + bs*0.3, y + bs*0.7, bs*0.15, 0, Math.PI*2);
+          ctx.arc(x + bs*0.7, y + bs*0.7, bs*0.15, 0, Math.PI*2);
+          ctx.fill();
+        } else if (style === 'stripes') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.beginPath();
+          ctx.moveTo(x, y + bs/2);
+          ctx.lineTo(x + bs/2, y);
+          ctx.lineTo(x + bs, y + bs/2);
+          ctx.lineTo(x + bs/2, y + bs);
+          ctx.fill();
+        } else if (style === 'hollow') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = '#050505';
+          ctx.fillRect(x + bs*0.2, y + bs*0.2, bs*0.6, bs*0.6);
+        } else if (style === 'glitch') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(255,255,255,0.4)';
+          ctx.fillRect(x + 0.3*bs, y + 0.3*bs, bs*0.3, bs*0.1);
+          ctx.fillRect(x + 0.7*bs, y + 0.7*bs, bs*0.1, bs*0.3);
+        } else if (style === 'rounded') {
+          ctx.beginPath();
+          ctx.roundRect(x, y, bs - 1, bs - 1, bs * 0.3);
+          ctx.fill();
+        } else if (style === 'x-mark') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + bs*0.2, y + bs*0.2); ctx.lineTo(x + bs*0.8, y + bs*0.8);
+          ctx.moveTo(x + bs*0.8, y + bs*0.2); ctx.lineTo(x + bs*0.2, y + bs*0.8);
+          ctx.stroke();
+        } else if (style === 'circle') {
+          ctx.beginPath();
+          ctx.arc(x + bs/2, y + bs/2, bs*0.45, 0, Math.PI*2);
+          ctx.fill();
+        } else if (style === 'checkerboard') {
+          ctx.fillRect(x, y, bs/2, bs/2);
+          ctx.fillRect(x + bs/2, y + bs/2, bs/2 - 1, bs/2 - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.fillRect(x + bs/2, y, bs/2 - 1, bs/2);
+          ctx.fillRect(x, y + bs/2, bs/2, bs/2 - 1);
+        } else if (style === 'diamond') {
+          ctx.beginPath();
+          ctx.moveTo(x + bs/2, y);
+          ctx.lineTo(x + bs - 1, y + bs/2);
+          ctx.lineTo(x + bs/2, y + bs - 1);
+          ctx.lineTo(x, y + bs/2);
+          ctx.fill();
+        } else if (style === 'crosshair') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(x + bs/2, y + bs*0.2); ctx.lineTo(x + bs/2, y + bs*0.8);
+          ctx.moveTo(x + bs*0.2, y + bs/2); ctx.lineTo(x + bs*0.8, y + bs/2);
+          ctx.stroke();
+        } else if (style === 'brackets') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + bs*0.3, y + bs*0.2); ctx.lineTo(x + bs*0.2, y + bs*0.2); ctx.lineTo(x + bs*0.2, y + bs*0.8); ctx.lineTo(x + bs*0.3, y + bs*0.8);
+          ctx.moveTo(x + bs*0.7, y + bs*0.2); ctx.lineTo(x + bs*0.8, y + bs*0.2); ctx.lineTo(x + bs*0.8, y + bs*0.8); ctx.lineTo(x + bs*0.7, y + bs*0.8);
+          ctx.stroke();
+        } else if (style === 'triangle') {
+          ctx.beginPath();
+          ctx.moveTo(x + bs/2, y + bs*0.15);
+          ctx.lineTo(x + bs*0.85, y + bs*0.85);
+          ctx.lineTo(x + bs*0.15, y + bs*0.85);
+          ctx.fill();
+        } else if (style && style.startsWith('inset-')) {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          const p = 0.1 * parseInt(style.split('-')[1]);
+          ctx.fillRect(x + bs*p, y + bs*p, bs*(1.0 - p*2), bs*(1.0 - p*2));
+        } else if (style && style.startsWith('hlines')) {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          const n = parseInt(style.split('-')[1]);
+          for(let i=0; i<n; i++) ctx.fillRect(x, y + bs*(i/n) + bs/(n*2), bs - 1, bs/(n*4));
+        } else if (style && style.startsWith('vlines')) {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          const n = parseInt(style.split('-')[1]);
+          for(let i=0; i<n; i++) ctx.fillRect(x + bs*(i/n) + bs/(n*2), y, bs/(n*4), bs - 1);
+        } else if (style && style.startsWith('grid')) {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+          const n = parseInt(style.split('-')[1]);
+          ctx.beginPath();
+          for(let i=1; i<n; i++) {
+            ctx.moveTo(x + bs*(i/n), y); ctx.lineTo(x + bs*(i/n), y + bs);
+            ctx.moveTo(x, y + bs*(i/n)); ctx.lineTo(x + bs, y + bs*(i/n));
+          }
+          ctx.stroke();
+        } else {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+        }
       });
       
       rulerEl.appendChild(seg);

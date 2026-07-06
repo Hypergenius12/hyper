@@ -114,7 +114,7 @@
 
   <!-- Map Overlay -->
   <div id="map-overlay" class="hidden">
-    <div id="map-panel" style="width: 800px; max-width: 95vw; max-height: 85vh; background: rgba(5,5,10,0.95); border: 1px solid rgba(0,136,255,0.5); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,136,255,0.2); backdrop-filter: blur(10px);">
+    <div id="map-panel" style="width: 800px; max-width: 95vw; height: 90vh; max-height: 95vh; background: rgba(5,5,10,0.95); border: 1px solid rgba(0,136,255,0.5); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,136,255,0.2); backdrop-filter: blur(10px);">
       <div class="shop-header" style="border-bottom: 1px solid rgba(0,136,255,0.3);">
         <h2 style="color: #08f; text-shadow: 0 0 8px rgba(0,136,255,0.5);">GEOLOGICAL RECORD</h2>
         <div class="shop-balance">
@@ -130,10 +130,18 @@
           <!-- Ruler segments injected via JS -->
         </div>
         <div id="map-info-panel" style="flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: radial-gradient(circle at center, rgba(0,136,255,0.05) 0%, transparent 70%);">
-          <div id="map-hover-preview" style="width: 60px; height: 60px; border-radius: 8px; margin-bottom: 20px; background: #333; box-shadow: 0 0 15px rgba(0,0,0,0.5);"></div>
+          <canvas id="map-hover-preview-canvas" width="60" height="60" style="border-radius: 8px; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.5); background: #333;"></canvas>
           <h3 id="map-hover-name" style="font-size: 2rem; color: #666; margin-bottom: 10px; font-family: var(--font-sans); letter-spacing: 2px;">HOVER OVER STRATA</h3>
-          <div id="map-hover-depth" style="font-size: 1.1rem; color: #aaa; margin-bottom: 25px; font-family: var(--font-mono); letter-spacing: 1px;">-</div>
-          <p id="map-hover-desc" style="font-size: 1.1rem; color: #ccc; max-width: 85%; line-height: 1.6;"></p>
+          <div id="map-hover-depth" style="font-size: 1.1rem; color: #aaa; margin-bottom: 15px; font-family: var(--font-mono); letter-spacing: 1px;">-</div>
+          <p id="map-hover-desc" style="font-size: 1.1rem; color: #ccc; max-width: 85%; line-height: 1.6; margin-bottom: 25px;"></p>
+          <div id="map-hover-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 80%; text-align: left; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); font-family: var(--font-mono); font-size: 0.95rem; color: #bbb;">
+            <div>HARDNESS: <span id="map-stat-hard" style="color: #fff;">-</span></div>
+            <div>BANDWIDTH: <span id="map-stat-bw" style="color: #fff;">-</span></div>
+            <div>BG COLOR: <span id="map-stat-bg" style="color: #fff;">-</span></div>
+            <div>STYLE: <span id="map-stat-style" style="color: #fff;">-</span></div>
+            <div>GLOW: <span id="map-stat-glow" style="color: #fff;">-</span></div>
+            <div>PARTICLES: <span id="map-stat-part" style="color: #fff;">-</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -152,10 +160,10 @@
 
   <audio id="bgm" src="creo.mp3" loop></audio>
 
-  <script type="module" src="js/biomes.js?v=22"></script>
-  <script type="module" src="js/ui.js?v=22"></script>
-  <script type="module" src="js/engine.js?v=22"></script>
-  <script type="module" src="js/main.js?v=22"></script>
+  <script type="module" src="js/biomes.js?v=23"></script>
+  <script type="module" src="js/ui.js?v=23"></script>
+  <script type="module" src="js/engine.js?v=23"></script>
+  <script type="module" src="js/main.js?v=23"></script>
   <!-- Firebase Config & Tracker -->
   <script type="module" src="../js/firebase-config.js"></script>
   <script type="module" src="../js/tracker.js"></script>
