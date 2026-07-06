@@ -366,6 +366,8 @@ export class Engine {
     for (let i = 0; i < count; i++) {
       const depth = this.generatedRows - SKY_ROWS;
       const { biome } = getBiomeAtDepth(depth);
+      const isFirewall = (depth >= biome.depthEnd - 3) && (depth < biome.depthEnd);
+      const baseHp = biome.blockHardness * (isFirewall ? 15 : 1);
       const row = [];
       for (let c = 0; c < COLS; c++) {
         const colorHex = biome.blockColors[Math.floor(Math.random() * biome.blockColors.length)];
@@ -377,10 +379,11 @@ export class Engine {
         row.push({
           alive: true,
           color: `rgb(${rv},${gv},${bv})`,
-          hp: biome.blockHardness,
-          maxHp: biome.blockHardness,
+          hp: baseHp,
+          maxHp: baseHp,
           seed: Math.random(),
-          style: biome.blockStyle || 'solid'
+          style: biome.blockStyle || 'solid',
+          isFirewall: isFirewall
         });
       }
       this.blocks.push(row);
