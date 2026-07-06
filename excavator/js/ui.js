@@ -6,17 +6,17 @@
 export const UPGRADES = [
   { id: 'miningPower', tag: 'DMG', name: 'PROCESSOR CORE', desc: 'Increases click mining power.', baseCost: 10, costScale: 1.22, maxLevel: 500, effect: lv => `+${lv} click power` },
   { id: 'autoMiner', tag: 'BOT', name: 'BOTNET DRONE', desc: 'Drones that mine blocks passively.', baseCost: 350, costScale: 1.35, maxLevel: 150, effect: lv => `${lv} drone${lv!==1?'s':''}` },
-  { id: 'autoSpeed', tag: 'SPD', name: 'CPU THREADS', desc: 'Increases Botnet Drone attack speed.', baseCost: 600, costScale: 1.35, maxLevel: 80, effect: lv => `+${lv * 10}% speed` },
+  { id: 'autoSpeed', tag: 'SPD', name: 'CPU THREADS', desc: 'Increases Botnet Drone attack speed.', baseCost: 600, costScale: 1.35, maxLevel: 160, effect: lv => `+${lv * 10}% speed` },
 
-  { id: 'bandwidthMulti', tag: 'BW', name: 'BANDWIDTH AMP', desc: 'Multiply bandwidth earned per block.', baseCost: 150, costScale: 1.75, maxLevel: 100, effect: lv => { const v = Math.pow(1.5, lv); return v >= 1000 ? `${(v/1000).toFixed(1)}k x earn` : `${v.toFixed(1)}x earn`; } },
+  { id: 'bandwidthMulti', tag: 'BW', name: 'BANDWIDTH AMP', desc: 'Multiply bandwidth earned per block.', baseCost: 150, costScale: 1.55, maxLevel: 200, effect: lv => { const v = Math.pow(1.5, lv); return v >= 1000 ? `${(v/1000).toFixed(1)}k x earn` : `${v.toFixed(1)}x earn`; } },
   { id: 'cryptoHijack', tag: 'BTC', name: 'CRYPTO HIJACK', desc: 'Chance to mine a block worth 10x bandwidth.', baseCost: 600, costScale: 1.5, maxLevel: 60, effect: lv => `${(lv * 1.5).toFixed(1)}% chance` },
   
-  { id: 'sqlInjection', tag: 'SQL', name: 'SQL INJECTION', desc: 'Deals damage to the entire new layer upon dropping down.', baseCost: 700, costScale: 1.45, maxLevel: 100, effect: lv => `${lv * 3} DMG AoE` },
-  { id: 'ramSweep', tag: 'SWP', name: 'RAM SWEEP', desc: 'Lower the threshold needed to collapse a layer.', baseCost: 1200, costScale: 1.5, maxLevel: 30, effect: lv => `${90 - (lv * 2)}% clear req` },
-  { id: 'zeroDay', tag: '0DAY', name: 'ZERO-DAY', desc: 'Small chance on click to collapse the entire layer.', baseCost: 2000, costScale: 1.6, maxLevel: 20, effect: lv => `${lv}% chance` },
+  { id: 'sqlInjection', tag: 'SQL', name: 'SQL INJECTION', desc: 'Deals damage to the entire new layer upon dropping down.', baseCost: 700, costScale: 1.45, maxLevel: 200, effect: lv => `${lv * 3} DMG AoE` },
+  { id: 'ramSweep', tag: 'SWP', name: 'RAM SWEEP', desc: 'Lower the threshold needed to collapse a layer.', baseCost: 1200, costScale: 1.5, maxLevel: 40, effect: lv => `${90 - (lv * 2)}% clear req` },
+  { id: 'zeroDay', tag: '0DAY', name: 'ZERO-DAY', desc: 'Small chance on click to collapse the entire layer.', baseCost: 2000, costScale: 1.6, maxLevel: 40, effect: lv => `${lv}% chance` },
   { id: 'holdToClick', tag: 'AUTO', name: 'HOLD TO CLICK', desc: 'Hold down the mouse to rapidly mine blocks automatically.', baseCost: 300, costScale: 1.0, maxLevel: 1, effect: lv => 'UNLOCKED' },
   { id: 'overclock', tag: 'CLK', name: 'OVERCLOCK', desc: 'Botnet Drones have a chance to deal 3x damage.', baseCost: 800, costScale: 1.4, maxLevel: 40, effect: lv => `${(lv * 2.5).toFixed(1)}% chance` },
-  { id: 'firewallBypass', tag: 'BYP', name: 'FIREWALL BYPASS', desc: 'Reduce the extra HP of Firewall blocks.', baseCost: 1500, costScale: 1.5, maxLevel: 20, effect: lv => `-${lv}x HP multiplier` },
+  { id: 'firewallBypass', tag: 'BYP', name: 'FIREWALL BYPASS', desc: 'Reduce the extra HP of Firewall blocks.', baseCost: 1500, costScale: 1.5, maxLevel: 40, effect: lv => `-${lv}x HP multiplier` },
 ];
 
 function upgradeCost(u, lv) {
