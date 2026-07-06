@@ -3,7 +3,7 @@
 // Canvas2D rendering + WebGL post-processing shaders
 // ============================================================
 
-import { BIOMES, getBiomeAtDepth } from './biomes.js';
+import { BIOMES, getBiomeAtDepth } from './biomes.js?v=12';
 
 // ========== CONSTANTS ==========
 const COLS = 24;
@@ -93,6 +93,7 @@ export class Engine {
   constructor() {
     this.gameState = {
       depth: 0,
+      maxDepth: 0,
       bandwidth: 600,
       totalMined: 0,
       currentBiomeIndex: 0,
@@ -442,7 +443,7 @@ export class Engine {
       const depth = row - SKY_ROWS;
       const { biome } = getBiomeAtDepth(depth);
       const depthScale = Math.pow(1.00025, depth);
-      const multi = 1 + (this.gameState.upgrades.bandwidthMulti || 0) * 0.5;
+      const multi = Math.pow(1.5, this.gameState.upgrades.bandwidthMulti || 0);
       const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.25;
       let earned = Math.max(1, Math.round(biome.bandwidthDrop * depthScale * multi * prestigeMulti));
       
@@ -457,6 +458,7 @@ export class Engine {
 
       // Depth is strictly 1 block = 1 meter
       this.gameState.depth = Math.max(this.gameState.depth, this.activeRow - SKY_ROWS);
+      this.gameState.maxDepth = Math.max(this.gameState.maxDepth, this.gameState.depth);
 
       // Callback
       if (this.onBlockMined) {
@@ -682,6 +684,28 @@ export class Engine {
           ctx.lineTo(x + bs - 1, y + bs/2);
           ctx.lineTo(x + bs/2, y + bs - 1);
           ctx.lineTo(x, y + bs/2);
+          ctx.fill();
+        } else if (block.style === 'crosshair') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(x + bs/2, y + bs*0.2); ctx.lineTo(x + bs/2, y + bs*0.8);
+          ctx.moveTo(x + bs*0.2, y + bs/2); ctx.lineTo(x + bs*0.8, y + bs/2);
+          ctx.stroke();
+        } else if (block.style === 'brackets') {
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+          ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + bs*0.3, y + bs*0.2); ctx.lineTo(x + bs*0.2, y + bs*0.2); ctx.lineTo(x + bs*0.2, y + bs*0.8); ctx.lineTo(x + bs*0.3, y + bs*0.8);
+          ctx.moveTo(x + bs*0.7, y + bs*0.2); ctx.lineTo(x + bs*0.8, y + bs*0.2); ctx.lineTo(x + bs*0.8, y + bs*0.8); ctx.lineTo(x + bs*0.7, y + bs*0.8);
+          ctx.stroke();
+        } else if (block.style === 'triangle') {
+          ctx.beginPath();
+          ctx.moveTo(x + bs/2, y + bs*0.15);
+          ctx.lineTo(x + bs*0.85, y + bs*0.85);
+          ctx.lineTo(x + bs*0.15, y + bs*0.85);
           ctx.fill();
         } else {
           ctx.fillRect(x, y, bs - 1, bs - 1);

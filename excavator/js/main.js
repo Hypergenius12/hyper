@@ -3,9 +3,9 @@
 // Entry point, game loop, save/load
 // ============================================================
 
-import { Engine } from './engine.js?v=10';
-import { UI } from './ui.js?v=10';
-import { BIOMES, getBiomeAtDepth } from './biomes.js?v=10';
+import { Engine } from './engine.js?v=13';
+import { UI } from './ui.js?v=13';
+import { BIOMES, getBiomeAtDepth } from './biomes.js?v=12';
 
 const engine = new Engine();
 const ui = new UI();
@@ -58,6 +58,29 @@ document.getElementById('loading-screen').addEventListener('click', () => {
     }
   });
 
+  // Wire Map
+  const mapBtn = document.getElementById('map-btn');
+  const mapOverlay = document.getElementById('map-overlay');
+  const mapClose = document.getElementById('map-close');
+
+  mapBtn.addEventListener('click', () => {
+    mapOverlay.classList.remove('hidden');
+    ui.renderMap(engine.gameState.maxDepth, BIOMES);
+  });
+  mapClose.addEventListener('click', () => mapOverlay.classList.add('hidden'));
+
+  // Hotkeys
+  document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'm') {
+      if (mapOverlay.classList.contains('hidden')) {
+        mapOverlay.classList.remove('hidden');
+        ui.renderMap(engine.gameState.maxDepth, BIOMES);
+      } else {
+        mapOverlay.classList.add('hidden');
+      }
+    }
+  });
+
   // Init audio on gesture
   engine.initAudio();
 
@@ -78,6 +101,7 @@ document.getElementById('loading-screen').addEventListener('click', () => {
       const newShards = (engine.gameState.prestigeShards || 0) + shardsEarned;
       const s = {
         depth: 0,
+        maxDepth: engine.gameState.maxDepth, // preserve max depth on format
         bandwidth: 600,
         totalMined: 0,
         currentBiomeIndex: 0,
@@ -167,6 +191,7 @@ function saveGame() {
   try {
     const s = {
       depth: engine.gameState.depth,
+      maxDepth: engine.gameState.maxDepth,
       bandwidth: engine.gameState.bandwidth,
       totalMined: engine.gameState.totalMined,
       currentBiomeIndex: engine.gameState.currentBiomeIndex,
@@ -183,6 +208,7 @@ function loadGame() {
     if (!raw) return;
     const s = JSON.parse(raw);
     engine.gameState.depth = s.depth || 0;
+    engine.gameState.maxDepth = s.maxDepth || Math.max(s.depth || 0, 0);
     engine.gameState.bandwidth = s.bandwidth !== undefined ? s.bandwidth : 600;
     engine.gameState.totalMined = s.totalMined || 0;
     engine.gameState.currentBiomeIndex = s.currentBiomeIndex || 0;

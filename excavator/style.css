@@ -216,6 +216,51 @@ body {
 #shop-overlay.hidden {
   opacity: 0; pointer-events: none;
 }
+#map-overlay {
+  position: fixed; inset: 0;
+  z-index: 500;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.25s ease;
+}
+#map-overlay.hidden {
+  opacity: 0; pointer-events: none;
+}
+#map-panel::-webkit-scrollbar { width: 3px; }
+#map-panel::-webkit-scrollbar-thumb { background: #08f; }
+#map-list::-webkit-scrollbar { width: 3px; }
+#map-list::-webkit-scrollbar-thumb { background: #08f; }
+#map-btn:hover {
+  background: rgba(0,136,255,0.1) !important;
+  border-color: #08f !important;
+  box-shadow: 0 0 16px rgba(0,136,255,0.12) !important;
+  transform: translateY(-2px);
+}
+.map-biome-item {
+  display: flex; align-items: stretch;
+  background: rgba(20,20,30,0.8);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.map-biome-color-bar {
+  width: 12px;
+  flex-shrink: 0;
+}
+.map-biome-info {
+  padding: 12px 16px;
+  flex: 1;
+}
+.map-biome-name {
+  font-size: 1.1rem; font-weight: bold; margin-bottom: 4px;
+}
+.map-biome-depth {
+  font-size: 0.75rem; color: #aaa; letter-spacing: 1px; margin-bottom: 8px; font-family: var(--font-mono);
+}
+.map-biome-desc {
+  font-size: 0.85rem; color: #ccc; line-height: 1.4;
+}
 #shop-panel {
   width: 90%; max-width: 660px; max-height: 78vh;
   background: #0a0a12;
