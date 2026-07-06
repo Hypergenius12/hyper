@@ -164,6 +164,7 @@ function loadGame() {
       sqlInjection:0, critChance:0, particleBoost:0,
       depthBoost:0, cacheBoost:0, pierce:0, autoSpeed:0, 
       cryptoHijack:0, ramSweep:0, zeroDay:0,
+      overclock: 0, firewallBypass: 0
     };
     engine.gameState.upgrades = { ...defaults, ...(s.upgrades || {}) };
 

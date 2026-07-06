@@ -368,7 +368,9 @@ export class Engine {
       const { biome } = getBiomeAtDepth(depth);
       const isFirewall = (depth >= biome.depthEnd - 3) && (depth < biome.depthEnd);
       const depthScale = Math.pow(1.00025, depth);
-      const baseHp = Math.max(1, Math.round(biome.blockHardness * depthScale * (isFirewall ? 15 : 1)));
+      const bypassLevel = this.gameState.upgrades.firewallBypass || 0;
+      const fwMultiplier = Math.max(5, 15 - bypassLevel * 1);
+      const baseHp = Math.max(1, Math.round(biome.blockHardness * depthScale * (isFirewall ? fwMultiplier : 1)));
       const row = [];
       for (let c = 0; c < COLS; c++) {
         const colorHex = biome.blockColors[Math.floor(Math.random() * biome.blockColors.length)];
@@ -851,6 +853,12 @@ export class Engine {
         this.autoMineTimer -= interval;
         
         // Drones attempt to mine alive blocks
+        const baseDmg = 1 + (this.gameState.upgrades.miningPower || 0) * 0.1;
+        const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.25;
+        const overclockChance = (this.gameState.upgrades.overclock || 0) * 0.025;
+        const isOverclock = Math.random() < overclockChance;
+        const dmg = Math.max(1, Math.floor(baseDmg * prestigeMulti * (isOverclock ? 3 : 1)));
+
         let mined = 0;
         let attempts = 0;
         const maxAttempts = autoMiners * 3;
@@ -860,7 +868,10 @@ export class Engine {
           if (this.activeRow < this.blocks.length) {
             const b = this.blocks[this.activeRow][col];
             if (b.alive) {
-              b.hp -= 1;
+              b.hp -= dmg;
+              if (isOverclock) {
+                this._spawnParticles(col, this.activeRow, '#ffaa00', 3);
+              }
               if (b.hp <= 0) {
                 this._destroyBlock(this.activeRow, col, true);
               }
