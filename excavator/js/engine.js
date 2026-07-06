@@ -54,12 +54,7 @@ uniform float u_grain;
 uniform float u_hue;
 varying vec2 v_uv;
 
-// Hue shift helper
-vec3 hueShift(vec3 color, float hue) {
-    const vec3 k = vec3(0.57735, 0.57735, 0.57735);
-    float cosAngle = cos(hue);
-    return vec3(color * cosAngle + cross(k, color) * sin(hue) + k * dot(k, color) * (1.0 - cosAngle));
-}
+// Hue shift helper removed
 
 void main() {
   vec2 uv = v_uv;
@@ -103,15 +98,7 @@ void main() {
   float vig = smoothstep(0.5, 1.1, d);
   color *= 1.0 - vig * u_vignette;
 
-  // Hue Shift
-  if (u_hue > 0.0) {
-      color = hueShift(color, u_hue);
-  }
-
-  // Invert
-  if (u_invert > 0.0) {
-      color = mix(color, 1.0 - color, u_invert);
-  }
+  // Hue Shift and Invert removed
 
   // Film Grain
   if (u_grain > 0.0) {
