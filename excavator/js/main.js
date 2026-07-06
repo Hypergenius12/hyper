@@ -66,6 +66,44 @@ document.getElementById('loading-screen').addEventListener('click', () => {
   ui.hideLoading();
 
   // Reset button logic
+  document.getElementById('prestige-btn').addEventListener('click', () => {
+    const shardsEarned = Math.floor(engine.gameState.depth / 1000);
+    if (shardsEarned < 1) {
+      alert("You need to reach at least 1000m to Format the Drive!");
+      return;
+    }
+    if (confirm("Format the Drive? You will gain " + shardsEarned + " Quantum Shards, but lose all depth and upgrades!")) {
+      engine.gameState.prestigeShards += shardsEarned;
+      engine.gameState.depth = 0;
+      engine.gameState.bandwidth = 400;
+      engine.gameState.upgrades = {};
+      isResetting = true;
+      saveState();
+      location.reload();
+    }
+  });
+
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsModal = document.getElementById('settings-modal');
+  settingsBtn.addEventListener('click', () => {
+    settingsModal.style.display = settingsModal.style.display === 'none' ? 'block' : 'none';
+  });
+  
+  const bgm = document.getElementById('bgm');
+  const bgmToggle = document.getElementById('setting-bgm');
+  bgmToggle.addEventListener('change', () => {
+    if (bgmToggle.checked) bgm.play().catch(e => console.log("Audio play failed"));
+    else bgm.pause();
+  });
+  
+  // Try to start BGM on first interaction
+  document.body.addEventListener('click', () => {
+    if (bgmToggle.checked && bgm.paused) {
+      bgm.volume = 0.4;
+      bgm.play().catch(e => console.log("Audio play failed"));
+    }
+  }, { once: true });
+
   document.getElementById('reset-btn').addEventListener('click', () => {
     if (confirm("Are you sure you want to completely wipe your save? This cannot be undone.")) {
       isResetting = true;
@@ -97,6 +135,7 @@ function saveGame() {
       bandwidth: engine.gameState.bandwidth,
       totalMined: engine.gameState.totalMined,
       currentBiomeIndex: engine.gameState.currentBiomeIndex,
+      prestigeShards: engine.gameState.prestigeShards,
       upgrades: { ...engine.gameState.upgrades },
     };
     localStorage.setItem('dom-excavator-save', JSON.stringify(s));
@@ -112,6 +151,7 @@ function loadGame() {
     engine.gameState.bandwidth = s.bandwidth !== undefined ? s.bandwidth : 400;
     engine.gameState.totalMined = s.totalMined || 0;
     engine.gameState.currentBiomeIndex = s.currentBiomeIndex || 0;
+    engine.gameState.prestigeShards = s.prestigeShards || 0;
     const defaults = {
       miningPower:0, autoMiner:0, bandwidthMulti:0,
       sqlInjection:0, critChance:0, particleBoost:0,

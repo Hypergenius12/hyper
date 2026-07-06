@@ -143,6 +143,8 @@ export class UI {
 
   renderShop(gs) {
     this.els.shopBalance.textContent = fmtBW(gs.bandwidth);
+    const shardsEl = document.getElementById('prestige-shards');
+    if (shardsEl) shardsEl.textContent = gs.prestigeShards || 0;
 
     for (const item of this.shopItemCache) {
       const { u, el } = item;

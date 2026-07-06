@@ -96,6 +96,7 @@ export class Engine {
       bandwidth: 400,
       totalMined: 0,
       currentBiomeIndex: 0,
+      prestigeShards: 0,
       upgrades: {
         miningPower: 0,
         autoMiner: 0,
@@ -256,6 +257,54 @@ export class Engine {
     return shader;
   }
 
+  initAudio() {
+    if (this.audioCtx) return;
+    try {
+      this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      console.warn("Web Audio not supported");
+    }
+  }
+
+  playSFX(type) {
+    if (!this.audioCtx) return;
+    const sfxToggle = document.getElementById('setting-sfx');
+    if (sfxToggle && !sfxToggle.checked) return;
+
+    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+    const osc = this.audioCtx.createOscillator();
+    const gainNode = this.audioCtx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(this.audioCtx.destination);
+    const now = this.audioCtx.currentTime;
+    
+    if (type === 'mine') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150 + Math.random() * 50, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+      gainNode.gain.setValueAtTime(0.05, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } else if (type === 'crit') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300 + Math.random() * 100, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (type === 'collapse') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(100, now);
+      osc.frequency.linearRampToValueAtTime(20, now + 0.4);
+      gainNode.gain.setValueAtTime(0.2, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    }
+  }
+
   // ========== EVENTS ==========
   _setupEvents() {
     window.addEventListener('resize', () => this._resize());
@@ -355,7 +404,8 @@ export class Engine {
       return;
     }
 
-    const power = 1 + (this.gameState.upgrades.miningPower || 0);
+    const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.25;
+    const power = Math.max(1, Math.floor((1 + (this.gameState.upgrades.miningPower || 0)) * prestigeMulti));
     const critChance = (this.gameState.upgrades.critChance || 0) * 0.05;
     const isCrit = Math.random() < critChance;
 
@@ -366,7 +416,7 @@ export class Engine {
     if (block.hp <= 0) {
       this._destroyBlock(row, col);
     } else {
-      this._playHitSound();
+      this.playSFX('mine');
       this._spawnParticles(col, row, block.color, 2);
     }
   }
@@ -527,30 +577,11 @@ export class Engine {
       const src = this.audioCtx.createBufferSource();
       src.buffer = buf;
       const gain = this.audioCtx.createGain();
-      gain.gain.setValueAtTime(0.06, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-      src.connect(gain);
-      gain.connect(this.masterGain);
-      src.start(now);
-    } catch (e) { /* silent */ }
+    this.playSFX('crit');
   }
 
   _playCollapseSound() {
-    if (!this.audioCtx) return;
-    try {
-      const now = this.audioCtx.currentTime;
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(100, now);
-      osc.frequency.exponentialRampToValueAtTime(10, now + 0.35);
-      gain.gain.setValueAtTime(0.4, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.start(now);
-      osc.stop(now + 0.35);
-    } catch (e) { /* silent */ }
+    this.playSFX('collapse');
   }
 
   // ========== BIOME ==========
@@ -657,13 +688,20 @@ export class Engine {
           ctx.fillRect(x, y + bs/2, bs/2, bs/2 - 1);
         } else if (block.style === 'diamond') {
           ctx.beginPath();
-          ctx.moveTo(x + bs/2, y + 2);
-          ctx.lineTo(x + bs - 2, y + bs/2);
-          ctx.lineTo(x + bs/2, y + bs - 2);
-          ctx.lineTo(x + 2, y + bs/2);
+          ctx.moveTo(x + bs/2, y);
+          ctx.lineTo(x + bs - 1, y + bs/2);
+          ctx.lineTo(x + bs/2, y + bs - 1);
+          ctx.lineTo(x, y + bs/2);
           ctx.fill();
         } else {
-          // 'solid'
+          ctx.fillRect(x, y, bs - 1, bs - 1);
+        }
+
+        if (block.isFirewall) {
+          ctx.strokeStyle = '#ff3366';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x+1.5, y+1.5, bs-4, bs-4);
+          ctx.fillStyle = 'rgba(255, 51, 102, 0.15)';
           ctx.fillRect(x, y, bs - 1, bs - 1);
         }
 
