@@ -367,7 +367,8 @@ export class Engine {
       const depth = this.generatedRows - SKY_ROWS;
       const { biome } = getBiomeAtDepth(depth);
       const isFirewall = (depth >= biome.depthEnd - 3) && (depth < biome.depthEnd);
-      const baseHp = biome.blockHardness * (isFirewall ? 15 : 1);
+      const depthScale = Math.pow(1.00025, depth);
+      const baseHp = Math.max(1, Math.round(biome.blockHardness * depthScale * (isFirewall ? 15 : 1)));
       const row = [];
       for (let c = 0; c < COLS; c++) {
         const colorHex = biome.blockColors[Math.floor(Math.random() * biome.blockColors.length)];
@@ -434,9 +435,12 @@ export class Engine {
 
     if (awardPoints) {
       // Bandwidth
-      const { biome } = getBiomeAtDepth(row - SKY_ROWS);
+      const depth = row - SKY_ROWS;
+      const { biome } = getBiomeAtDepth(depth);
+      const depthScale = Math.pow(1.00025, depth);
       const multi = 1 + (this.gameState.upgrades.bandwidthMulti || 0) * 0.5;
-      let earned = biome.bandwidthDrop * multi;
+      const prestigeMulti = 1 + (this.gameState.prestigeShards || 0) * 0.25;
+      let earned = Math.max(1, Math.round(biome.bandwidthDrop * depthScale * multi * prestigeMulti));
       
       const hijackLv = this.gameState.upgrades.cryptoHijack || 0;
       if (hijackLv > 0 && Math.random() < (hijackLv * 0.03)) {
