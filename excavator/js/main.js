@@ -75,12 +75,17 @@ document.getElementById('loading-screen').addEventListener('click', () => {
       return;
     }
     if (confirm("Format the Drive? You will gain " + shardsEarned + " Quantum Shards, but lose all depth and upgrades!")) {
-      engine.gameState.prestigeShards += shardsEarned;
-      engine.gameState.depth = 0;
-      engine.gameState.bandwidth = 400;
-      engine.gameState.upgrades = {};
+      const newShards = (engine.gameState.prestigeShards || 0) + shardsEarned;
+      const s = {
+        depth: 0,
+        bandwidth: 400,
+        totalMined: 0,
+        currentBiomeIndex: 0,
+        prestigeShards: newShards,
+        upgrades: {}
+      };
       isResetting = true;
-      saveState();
+      localStorage.setItem('dom-excavator-save', JSON.stringify(s));
       location.reload();
     }
   });
