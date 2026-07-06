@@ -92,7 +92,12 @@
     <div id="shop-panel">
       <div class="shop-header">
         <h2>UPGRADE TERMINAL</h2>
-        <div class="shop-balance">
+        <div id="shop-multiplier-bar" style="display: flex; gap: 5px; margin-top: 10px; justify-content: center; width: 100%;">
+          <button class="shop-mult-btn active" data-mult="1" style="flex:1; padding:5px; background:#222; border:1px solid #555; color:#aaa; cursor:pointer;">x1</button>
+          <button class="shop-mult-btn" data-mult="10" style="flex:1; padding:5px; background:#222; border:1px solid #555; color:#aaa; cursor:pointer;">x10</button>
+          <button class="shop-mult-btn" data-mult="max" style="flex:1; padding:5px; background:#222; border:1px solid #555; color:#aaa; cursor:pointer;">MAX</button>
+        </div>
+        <div class="shop-balance" style="margin-top: 10px;">
           <span class="shop-balance-label">BANDWIDTH:</span>
           <span id="shop-balance-value">0 bits</span>
         </div>
@@ -160,10 +165,10 @@
 
   <audio id="bgm" src="creo.mp3" loop></audio>
 
-  <script type="module" src="js/biomes.js?v=24"></script>
-  <script type="module" src="js/ui.js?v=24"></script>
-  <script type="module" src="js/engine.js?v=24"></script>
-  <script type="module" src="js/main.js?v=24"></script>
+  <script type="module" src="js/biomes.js?v=25"></script>
+  <script type="module" src="js/ui.js?v=25"></script>
+  <script type="module" src="js/engine.js?v=25"></script>
+  <script type="module" src="js/main.js?v=25"></script>
   <!-- Firebase Config & Tracker -->
   <script type="module" src="../js/firebase-config.js"></script>
   <script type="module" src="../js/tracker.js"></script>

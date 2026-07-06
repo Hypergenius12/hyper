@@ -3,9 +3,9 @@
 // Entry point, game loop, save/load
 // ============================================================
 
-import { Engine } from './engine.js?v=24';
-import { UI } from './ui.js?v=24';
-import { BIOMES, getBiomeAtDepth } from './biomes.js?v=24';
+import { Engine } from './engine.js?v=25';
+import { UI } from './ui.js?v=25';
+import { BIOMES, getBiomeAtDepth } from './biomes.js?v=25';
 
 const engine = new Engine();
 const ui = new UI();
@@ -51,10 +51,10 @@ document.getElementById('loading-screen').addEventListener('click', () => {
   };
 
   // Wire shop
-  ui.onUpgrade((id, cost) => {
+  ui.onUpgrade((id, cost, levels = 1) => {
     if (engine.gameState.bandwidth >= cost) {
       engine.gameState.bandwidth -= cost;
-      engine.gameState.upgrades[id] = (engine.gameState.upgrades[id] || 0) + 1;
+      engine.gameState.upgrades[id] = (engine.gameState.upgrades[id] || 0) + levels;
     }
   });
 

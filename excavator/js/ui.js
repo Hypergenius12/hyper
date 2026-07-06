@@ -23,6 +23,31 @@ function upgradeCost(u, lv) {
   return Math.floor(u.baseCost * Math.pow(u.costScale, lv));
 }
 
+function calcMultiBuy(u, startLv, bandwidth, multiplierStr) {
+  const maxLevels = u.maxLevel - startLv;
+  if (maxLevels <= 0) return { count: 0, cost: Infinity };
+  
+  const targetCount = multiplierStr === 'max' ? maxLevels : Math.min(maxLevels, parseInt(multiplierStr));
+  let cost = 0;
+  let count = 0;
+  
+  for (let i = 0; i < targetCount; i++) {
+    const nextCost = upgradeCost(u, startLv + i);
+    if (multiplierStr === 'max') {
+      if (cost + nextCost > bandwidth) break;
+    }
+    cost += nextCost;
+    count++;
+  }
+  
+  if (multiplierStr !== 'max' && count < targetCount && bandwidth < cost) {
+    // Cannot afford the fixed amount
+    return { count: 0, cost: cost };
+  }
+  
+  return { count, cost };
+}
+
 function fmtBW(bits) {
   if (bits < 1000) return `${Math.floor(bits)} bits`;
   if (bits < 1e6) return `${(bits / 1e3).toFixed(1)} KB`;
@@ -62,6 +87,26 @@ export class UI {
     this._announceTimer = null;
     
     this.shopItemCache = [];
+    this.shopMultiplier = '1';
+    
+    // Bind multiplier buttons
+    const multBtns = document.querySelectorAll('.shop-mult-btn');
+    multBtns.forEach(b => {
+      b.addEventListener('click', () => {
+        multBtns.forEach(x => {
+          x.style.background = '#222';
+          x.style.color = '#aaa';
+          x.style.borderColor = '#555';
+        });
+        b.style.background = 'rgba(0,255,136,0.2)';
+        b.style.color = 'var(--accent)';
+        b.style.borderColor = 'var(--accent)';
+        this.shopMultiplier = b.dataset.mult;
+        // force re-render
+        if (this._lastGS) this.renderShop(this._lastGS);
+      });
+    });
+
     this._initShop();
     this._bind();
   }
@@ -84,8 +129,8 @@ export class UI {
       `;
 
       el.addEventListener('click', () => {
-        if (this._upgradeCb && el._currentCost !== undefined && el._currentCost !== Infinity) {
-          this._upgradeCb(u.id, el._currentCost);
+        if (this._upgradeCb && el._currentCost !== undefined && el._currentLevels > 0) {
+          this._upgradeCb(u.id, el._currentCost, el._currentLevels);
         }
       });
 
@@ -146,6 +191,7 @@ export class UI {
   }
 
   renderShop(gs) {
+    this._lastGS = gs;
     this.els.shopBalance.textContent = fmtBW(gs.bandwidth);
     const shardsEl = document.getElementById('prestige-shards');
     if (shardsEl) shardsEl.textContent = gs.prestigeShards || 0;
@@ -154,10 +200,12 @@ export class UI {
       const { u, el } = item;
       const lv = gs.upgrades[u.id] || 0;
       const maxed = lv >= u.maxLevel;
-      const cost = maxed ? Infinity : upgradeCost(u, lv);
-      const afford = gs.bandwidth >= cost;
+      
+      const { count, cost } = calcMultiBuy(u, lv, gs.bandwidth, this.shopMultiplier);
+      const afford = count > 0 && gs.bandwidth >= cost;
 
       el._currentCost = cost;
+      el._currentLevels = count;
       
       if (!afford && !maxed) {
         el.classList.add('locked');
@@ -169,9 +217,21 @@ export class UI {
       const efEl = document.getElementById(`shop-ef-${u.id}`);
       const costEl = document.getElementById(`shop-cost-${u.id}`);
       
-      if (lvEl) lvEl.textContent = `LV.${lv}/${u.maxLevel}`;
-      if (efEl) efEl.textContent = maxed ? u.effect(lv) : `Next: ${u.effect(lv + 1)}`;
-      if (costEl) costEl.textContent = maxed ? 'MAXED' : fmtBW(cost);
+      if (lvEl) {
+        if (count > 1) {
+          lvEl.textContent = `LV.${lv}/${u.maxLevel} (+${count})`;
+        } else {
+          lvEl.textContent = `LV.${lv}/${u.maxLevel}`;
+        }
+      }
+      
+      if (efEl) {
+        efEl.textContent = maxed ? u.effect(lv) : `Next: ${u.effect(lv + Math.max(1, count))}`;
+      }
+      
+      if (costEl) {
+        costEl.textContent = maxed ? 'MAXED' : fmtBW(cost);
+      }
     }
   }
 
