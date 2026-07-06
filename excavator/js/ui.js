@@ -4,7 +4,7 @@
 // ============================================================
 
 export const UPGRADES = [
-  { id: 'miningPower', tag: 'DMG', name: 'PROCESSOR CORE', desc: 'Increases click mining power.', baseCost: 10, costScale: 1.25, maxLevel: 500, effect: lv => `+${lv} click power` },
+  { id: 'miningPower', tag: 'DMG', name: 'PROCESSOR CORE', desc: 'Increases click mining power.', baseCost: 10, costScale: 1.22, maxLevel: 500, effect: lv => `+${lv} click power` },
   { id: 'autoMiner', tag: 'BOT', name: 'BOTNET DRONE', desc: 'Drones that mine blocks passively.', baseCost: 350, costScale: 1.35, maxLevel: 150, effect: lv => `${lv} drone${lv!==1?'s':''}` },
   { id: 'autoSpeed', tag: 'SPD', name: 'CPU THREADS', desc: 'Increases Botnet Drone attack speed.', baseCost: 600, costScale: 1.35, maxLevel: 80, effect: lv => `+${lv * 10}% speed` },
 
