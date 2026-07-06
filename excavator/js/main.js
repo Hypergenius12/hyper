@@ -9,6 +9,8 @@ import { BIOMES, getBiomeAtDepth } from './biomes.js?v=10';
 
 const engine = new Engine();
 const ui = new UI();
+window.engine = engine;
+window.ui = ui;
 
 let ready = false;
 let started = false;
