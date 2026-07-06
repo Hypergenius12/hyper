@@ -893,8 +893,8 @@ export class Engine {
     // Hold-to-mine
     if (this.isMouseDown && this.hoveredRow >= 0 && this.gameState.upgrades.holdToClick > 0) {
       this.mineTimer += delta;
-      if (this.mineTimer >= this.nextMineTarget) {
-        this.mineTimer = 0;
+      while (this.mineTimer >= this.nextMineTarget) {
+        this.mineTimer -= this.nextMineTarget;
         this.nextMineTarget = 0.166 + Math.random() * 0.034;
         this._tryMine();
       }
@@ -907,7 +907,7 @@ export class Engine {
       const interval = 0.35 / (1 + speedLv * 0.1);
       
       this.autoMineTimer += delta;
-      if (this.autoMineTimer >= interval) {
+      while (this.autoMineTimer >= interval) {
         this.autoMineTimer -= interval;
         
         // Drones attempt to mine alive blocks

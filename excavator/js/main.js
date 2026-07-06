@@ -119,6 +119,34 @@ document.getElementById('loading-screen').addEventListener('click', () => {
     }
   });
 
+  // Background tab execution support
+  let bgTimer = null;
+  let lastBgTick = 0;
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      lastBgTick = performance.now();
+      bgTimer = setInterval(() => {
+        const now = performance.now();
+        const dt = (now - lastBgTick) / 1000;
+        lastBgTick = now;
+        
+        engine.isCatchingUp = true;
+        engine._updateLogic(dt);
+        engine.isCatchingUp = false;
+        
+        // Save state in background
+        saveGame();
+      }, 1000);
+    } else {
+      if (bgTimer) {
+        clearInterval(bgTimer);
+        bgTimer = null;
+        engine.lastTime = performance.now();
+      }
+    }
+  });
+
   // Start loop
   function loop(ts) {
     requestAnimationFrame(loop);
