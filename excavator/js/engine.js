@@ -1512,7 +1512,7 @@ export class Engine {
 
     // Render
     this._render();
-    this._postProcess(dt);
+    this._postProcess(delta);
   }
 
   _updateLogic(delta) {
