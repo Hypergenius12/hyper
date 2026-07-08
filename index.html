@@ -347,7 +347,13 @@
 <canvas id="bg-canvas"></canvas>
 
 <div class="header-bar">
-    <img src="purple.gif" alt="Timmy the Sheep" title="Timmy the Sheep" style="height: 100px; margin-right: auto;">
+    <div style="display: flex; align-items: center; gap: 1rem; margin-right: auto;">
+        <img src="purple.gif" alt="Timmy the Sheep" title="Timmy the Sheep" style="height: 100px;">
+        <div id="profile-badge" style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 8px; backdrop-filter: blur(10px); display: none; flex-direction: column; gap: 4px; font-family: monospace; font-size: 0.9rem;">
+            <div id="profile-name" style="font-weight: bold; color: #a855f7;"></div>
+            <div id="profile-rank" style="opacity: 0.8;"></div>
+        </div>
+    </div>
     <div style="position: absolute; top: 20px; right: 20px; z-index: 20; display: flex; align-items: center;">
         <button class="share-btn" onclick="addBookmark()" style="margin-right: 10px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); color: #a855f7; padding: 0.2rem 0.5rem; font-size: 0.75rem;">Bookmark</button>
         <button class="share-btn" onclick="openBugReportModal()" style="margin-right: 10px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">Report Bug</button>
@@ -506,6 +512,10 @@
 
     <div id="lb-content" style="min-height: 200px; display: flex; flex-direction: column; gap: 0.5rem;">
         <div style="text-align: center; opacity: 0.5; padding: 2rem;">Connecting to global database...</div>
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <button id="tracking-toggle-btn" style="background: transparent; color: var(--text-color); border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.8rem; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">Toggle Time Tracking</button>
     </div>
 </div>
 

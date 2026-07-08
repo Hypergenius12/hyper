@@ -62,7 +62,8 @@ const PROJECT_NAMES = {
     'convert': 'Omni-Dimensional Converter',
     'paths': 'Text Adventure Editor',
     'paths.html': 'Text Adventure Editor',
-    'waveform editor': 'Waveform Editor'
+    'waveform editor': 'Waveform Editor',
+    'dvd': 'DVD Logo Simulator'
 };
 
 function getDisplayProjectName(rawName) {
@@ -95,12 +96,26 @@ const projectName = getProjectName();
 
 // --- Username System ---
 let username = localStorage.getItem('hyper_username') || getCookie('hyper_username');
+let isTemp = localStorage.getItem('hyper_is_temp') === 'true' || getCookie('hyper_is_temp') === 'true';
 
-if (username) {
+if (!username) {
+    username = `user_${Math.floor(Math.random() * 10000000)}`;
+    isTemp = true;
+    localStorage.setItem('hyper_username', username);
+    setCookie('hyper_username', username, 3650);
+    localStorage.setItem('hyper_is_temp', 'true');
+    setCookie('hyper_is_temp', 'true', 3650);
+} else {
     // Sync cookie and localstorage so it's super resilient
     localStorage.setItem('hyper_username', username);
-    setCookie('hyper_username', username, 3650); // 10 years
+    setCookie('hyper_username', username, 3650);
+    if (isTemp) {
+        localStorage.setItem('hyper_is_temp', 'true');
+        setCookie('hyper_is_temp', 'true', 3650);
+    }
 }
+
+let isOptedOut = localStorage.getItem('hyper_tracking_optout') === 'true';
 
 if (isHome) {
     const modal = document.getElementById('username-modal');
@@ -111,8 +126,8 @@ if (isHome) {
     const skipBtn = document.querySelector('#username-modal button[type="button"]');
     if (skipBtn) skipBtn.innerText = 'Later';
 
-    if (!username) {
-        // Show modal on first visit
+    if (isTemp && !isOptedOut) {
+        // Show modal if they are on a temp name and not opted out
         setTimeout(() => modal.classList.add('active'), 1500);
     }
 
@@ -137,17 +152,35 @@ if (isHome) {
                     btn.innerText = 'Claim Name';
                     btn.disabled = false;
                 } else {
+                    // Migrate data if they were a temp user
+                    let oldData = { totalTime: 0, projects: {} };
+                    if (isTemp && username) {
+                        try {
+                            const oldRef = doc(db, 'users', username);
+                            const oldSnap = await getDoc(oldRef);
+                            if (oldSnap.exists()) {
+                                oldData = oldSnap.data();
+                            }
+                        } catch (err) {
+                            console.error("Migration error:", err);
+                        }
+                    }
+
                     // Register
                     await setDoc(userRef, {
                         username: input,
-                        totalTime: 0,
-                        projects: {}
+                        totalTime: oldData.totalTime || 0,
+                        projects: oldData.projects || {}
                     });
                     
                     // Make it super persistent
                     localStorage.setItem('hyper_username', input.toLowerCase());
                     setCookie('hyper_username', input.toLowerCase(), 3650);
+                    localStorage.removeItem('hyper_is_temp');
+                    setCookie('hyper_is_temp', '', -1);
+                    
                     username = input.toLowerCase();
+                    isTemp = false;
                     
                     modal.classList.remove('active');
                     loadLeaderboard('overall'); // refresh leaderboard
@@ -167,15 +200,16 @@ if (isHome) {
 // Ping every 15 seconds
 if (username) {
     setInterval(async () => {
+        if (localStorage.getItem('hyper_tracking_optout') === 'true') return;
         const userRef = doc(db, 'users', username);
         try {
-            await updateDoc(userRef, {
+            await setDoc(userRef, {
+                username: username,
                 totalTime: increment(15),
                 [`projects.${projectName}`]: increment(15)
-            });
+            }, { merge: true });
         } catch (e) {
             console.error("Tracking error", e);
-            // If document was deleted, we might need to recreate, but ignore for now
         }
     }, 15000);
 }
@@ -203,16 +237,27 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                 // Spoofing Protection: Ignore users with > 365 days of playtime
                 if (u.totalTime > 31536000) return;
                 
+                // Hide users with < 15s of playtime
+                if (u.totalTime < 15) return;
+                
+                // Hide opted out users
+                if (u.optOut) return;
+                
                 let medal = rank === 1 ? '[1]' : rank === 2 ? '[2]' : rank === 3 ? '[3]' : `[${rank}]`;
                 let isMe = username && u.username.toLowerCase() === username.toLowerCase();
                 let bg = isMe ? '#22c55e' : 'transparent';
                 let color = isMe ? '#000' : 'inherit';
                 let border = '1px solid #333';
                 
+                let displayUsername = u.username;
+                if (displayUsername.startsWith('user_')) {
+                    displayUsername = 'User #' + displayUsername.substring(5);
+                }
+                
                 lbContent.innerHTML += `
                     <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
                         <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
-                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${sanitizeHTML(censorName(u.username))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
+                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${sanitizeHTML(censorName(displayUsername))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
                         <span style="font-family: monospace;">${formatTime(u.totalTime)}</span>
                     </div>
                 `;
@@ -272,6 +317,12 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                 pUsers.forEach((u) => {
                     let timeVal = u.projects[activeProj];
                     if (!timeVal || timeVal > 31536000) return; // Spoofing protection
+                    
+                    // Hide users with < 15s of playtime
+                    if (timeVal < 15) return;
+                    
+                    // Hide opted out users
+                    if (u.optOut) return;
 
                     let medal = rank === 1 ? '[1]' : rank === 2 ? '[2]' : rank === 3 ? '[3]' : `[${rank}]`;
                     let isMe = username && u.username.toLowerCase() === username.toLowerCase();
@@ -279,10 +330,15 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                     let color = isMe ? '#000' : 'inherit';
                     let border = '1px solid #333';
                     
+                    let displayUsername = u.username;
+                    if (displayUsername.startsWith('user_')) {
+                        displayUsername = 'User #' + displayUsername.substring(5);
+                    }
+                    
                     subContent.innerHTML += `
                         <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
                             <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
-                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${sanitizeHTML(censorName(u.username))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
+                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${sanitizeHTML(censorName(displayUsername))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
                             <span style="font-family: monospace;">${formatTime(timeVal)}</span>
                         </div>
                     `;
@@ -332,4 +388,78 @@ if (isHome) {
         
         tabOverall.click(); // trigger initial styling
     }
+
+    const toggleBtn = document.getElementById('tracking-toggle-btn');
+    if (toggleBtn) {
+        if (isOptedOut) {
+            toggleBtn.innerText = "Enable Time Tracking";
+            toggleBtn.style.color = "#ef4444";
+            toggleBtn.style.borderColor = "#ef4444";
+        }
+        toggleBtn.addEventListener('click', async () => {
+            isOptedOut = !isOptedOut;
+            localStorage.setItem('hyper_tracking_optout', isOptedOut ? 'true' : 'false');
+            if (isOptedOut) {
+                toggleBtn.innerText = "Enable Time Tracking";
+                toggleBtn.style.color = "#ef4444";
+                toggleBtn.style.borderColor = "#ef4444";
+            } else {
+                toggleBtn.innerText = "Disable Time Tracking";
+                toggleBtn.style.color = "var(--text-color)";
+                toggleBtn.style.borderColor = "var(--border-color)";
+            }
+            if (username) {
+                try {
+                    await setDoc(doc(db, 'users', username), { optOut: isOptedOut }, { merge: true });
+                } catch(e) {}
+            }
+            updateProfileBadge();
+            loadLeaderboard('overall');
+        });
+    }
+
+    async function updateProfileBadge() {
+        const badge = document.getElementById('profile-badge');
+        const nameEl = document.getElementById('profile-name');
+        const rankEl = document.getElementById('profile-rank');
+        if (!badge || !nameEl || !rankEl) return;
+        
+        badge.style.display = 'flex';
+        
+        if (isOptedOut) {
+            nameEl.innerText = "Tracking Disabled";
+            nameEl.style.color = "#71717a";
+            rankEl.innerText = "";
+            return;
+        }
+
+        let displayUsername = username;
+        if (displayUsername && displayUsername.startsWith('user_')) {
+            displayUsername = 'User #' + displayUsername.substring(5);
+        }
+        nameEl.innerText = displayUsername || "Unknown";
+        nameEl.style.color = "#a855f7";
+        rankEl.innerText = "Rank: Calculating...";
+
+        try {
+            const userRef = doc(db, 'users', username);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                let totalTime = userSnap.data().totalTime || 0;
+                const coll = collection(db, 'users');
+                const q = query(coll, where('totalTime', '>', totalTime));
+                const snapshot = await getCountFromServer(q);
+                let rank = snapshot.data().count + 1;
+                rankEl.innerText = `Global Rank: #${rank}`;
+            } else {
+                rankEl.innerText = `Global Rank: --`;
+            }
+        } catch (e) {
+            console.error("Rank calculation error:", e);
+            rankEl.innerText = `Global Rank: --`;
+        }
+    }
+    
+    // Call it initially
+    updateProfileBadge();
 }
