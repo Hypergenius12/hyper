@@ -103,6 +103,41 @@ class Cube3D {
         this.controls.autoRotateSpeed = 2.0;
     }
 
+    setCamera(type) {
+        let aspect = window.innerWidth / window.innerHeight;
+        let d = 4;
+        
+        if (type === 'orthographic' || type === 'isometric') {
+            if (!(this.camera instanceof THREE.OrthographicCamera)) {
+                let currentPos = this.camera.position.clone();
+                this.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 100);
+                this.camera.position.copy(currentPos);
+                this.controls.object = this.camera;
+            }
+        } else {
+            if (!(this.camera instanceof THREE.PerspectiveCamera)) {
+                let currentPos = this.camera.position.clone();
+                this.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 100);
+                this.camera.position.copy(currentPos);
+                this.controls.object = this.camera;
+            }
+        }
+        
+        if (type === 'isometric') {
+            this.camera.position.set(5, 5, 5);
+        }
+        
+        this.camera.lookAt(0,0,0);
+        this.controls.target.set(0,0,0);
+        this.camera.updateProjectionMatrix();
+        this.controls.update();
+    }
+
+    setStyle(type) {
+        this.stickerStyle = type;
+        this.initCube();
+    }
+
     initCube() {
         if (this.pieces.length > 0) {
             this.pieces.forEach(p => {
@@ -129,14 +164,27 @@ class Cube3D {
             [offset, -offset, -offset]  // 7: DBR
         ];
 
-        let geometry = new THREE.BoxGeometry(0.98, 0.98, 0.98);
+        let geoType = this.stickerStyle || 'block';
+        let geometry;
+        if (geoType === 'floating') {
+            geometry = new THREE.BoxGeometry(0.75, 0.75, 0.75);
+        } else {
+            geometry = new THREE.BoxGeometry(0.98, 0.98, 0.98);
+        }
 
         for (let i = 0; i < 8; i++) {
             let materials = this.getMaterials(i);
+            if (geoType === 'wireframe') {
+                materials.forEach(m => {
+                    m.transparent = true;
+                    m.opacity = 0.15;
+                });
+            }
             let mesh = new THREE.Mesh(geometry, materials);
             
             let geo = new THREE.EdgesGeometry(mesh.geometry);
-            let mat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 6 });
+            let edgeColor = geoType === 'wireframe' ? 0xaaaaaa : 0x000000;
+            let mat = new THREE.LineBasicMaterial({ color: edgeColor, linewidth: 2 });
             let wireframe = new THREE.LineSegments(geo, mat);
             mesh.add(wireframe);
 
@@ -376,7 +424,16 @@ class Cube3D {
     }
 
     onWindowResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        let aspect = window.innerWidth / window.innerHeight;
+        if (this.camera instanceof THREE.PerspectiveCamera) {
+            this.camera.aspect = aspect;
+        } else {
+            let d = 4;
+            this.camera.left = -d * aspect;
+            this.camera.right = d * aspect;
+            this.camera.top = d;
+            this.camera.bottom = -d;
+        }
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.controls.handleResize();
