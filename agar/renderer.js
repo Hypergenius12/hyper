@@ -257,52 +257,75 @@ class Renderer {
         const x = this.canvas.width - size - padding;
         const y = this.canvas.height - size - padding;
         
-        this.ctx.save();
-        // Background
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        this.ctx.fillRect(x, y, size, size);
-        
-        // Border
-        this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x, y, size, size);
-        
-        // Draw entities (only players/bots and mothercells to save performance)
-        const scaleX = size / Config.MAP_WIDTH;
-        const scaleY = size / Config.MAP_HEIGHT;
-        
-        for (let entity of this.game.entities) {
-            if (entity.type === 'cell') {
-                const mapX = x + entity.x * scaleX;
-                const mapY = y + entity.y * scaleY;
-                const mapRadius = Math.max(1.5, entity.radius * Math.max(scaleX, scaleY));
-                
-                this.ctx.beginPath();
-                this.ctx.arc(mapX, mapY, mapRadius, 0, 2 * Math.PI);
-                
-                // Highlight my player
-                if (typeof myId !== 'undefined' && entity.ownerId === myId) {
-                    this.ctx.fillStyle = '#ffffff'; // Make my cells white on minimap
-                    this.ctx.strokeStyle = '#000000';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.stroke();
-                } else {
-                    this.ctx.fillStyle = entity.color;
+        const now = Date.now();
+        if (!this.minimapCanvas || !this.lastMinimapUpdate || now - this.lastMinimapUpdate > 5000) {
+            this.lastMinimapUpdate = now;
+            
+            if (!this.minimapCanvas) {
+                this.minimapCanvas = document.createElement('canvas');
+                this.minimapCanvas.width = size;
+                this.minimapCanvas.height = size;
+                this.minimapCtx = this.minimapCanvas.getContext('2d');
+            }
+            
+            const mCtx = this.minimapCtx;
+            mCtx.clearRect(0, 0, size, size);
+            
+            // Background
+            mCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            mCtx.fillRect(0, 0, size, size);
+            
+            // Border
+            mCtx.strokeStyle = '#000';
+            mCtx.lineWidth = 2;
+            mCtx.strokeRect(0, 0, size, size);
+            
+            // Draw entities (only players/bots and mothercells to save performance)
+            const scaleX = size / Config.MAP_WIDTH;
+            const scaleY = size / Config.MAP_HEIGHT;
+            
+            for (let entity of this.game.entities) {
+                if (entity.type === 'cell') {
+                    const mapX = entity.x * scaleX;
+                    const mapY = entity.y * scaleY;
+                    const mapRadius = Math.max(1.5, entity.radius * Math.max(scaleX, scaleY));
+                    
+                    mCtx.beginPath();
+                    mCtx.arc(mapX, mapY, mapRadius, 0, 2 * Math.PI);
+                    
+                    // Highlight my player
+                    if (typeof myId !== 'undefined' && entity.ownerId === myId) {
+                        mCtx.fillStyle = '#ffffff'; // Make my cells white on minimap
+                        mCtx.strokeStyle = '#000000';
+                        mCtx.lineWidth = 1;
+                        mCtx.stroke();
+                    } else {
+                        mCtx.fillStyle = entity.color;
+                    }
+                    mCtx.fill();
+                } else if (entity.type === 'mothercell') {
+                    const mapX = entity.x * scaleX;
+                    const mapY = entity.y * scaleY;
+                    const mapRadius = Math.max(1, entity.radius * Math.max(scaleX, scaleY));
+                    
+                    mCtx.beginPath();
+                    mCtx.arc(mapX, mapY, mapRadius, 0, 2 * Math.PI);
+                    mCtx.fillStyle = '#8B4513';
+                    mCtx.fill();
                 }
-                this.ctx.fill();
-            } else if (entity.type === 'mothercell') {
-                const mapX = x + entity.x * scaleX;
-                const mapY = y + entity.y * scaleY;
-                const mapRadius = Math.max(1, entity.radius * Math.max(scaleX, scaleY));
-                
-                this.ctx.beginPath();
-                this.ctx.arc(mapX, mapY, mapRadius, 0, 2 * Math.PI);
-                this.ctx.fillStyle = '#8B4513';
-                this.ctx.fill();
             }
         }
         
+        this.ctx.save();
+        
+        // Draw the cached minimap
+        if (this.minimapCanvas) {
+            this.ctx.drawImage(this.minimapCanvas, x, y);
+        }
+        
         // Draw Viewport on Minimap
+        const scaleX = size / Config.MAP_WIDTH;
+        const scaleY = size / Config.MAP_HEIGHT;
         const viewWidth = this.canvas.width / this.zoom;
         const viewHeight = this.canvas.height / this.zoom;
         const viewX = this.cameraX - viewWidth / 2;
