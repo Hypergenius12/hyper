@@ -4,7 +4,7 @@
 
 const CONFIG = {
     apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    model: 'openrouter/owl-alpha',
+    model: 'poolside/laguna-xs-2.1:free',
     maxTokens: 2000
 };
 
