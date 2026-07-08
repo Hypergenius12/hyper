@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js';
-import { collection, doc, getDoc, setDoc, updateDoc, increment, query, orderBy, limit, getDocs, getCountFromServer, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { collection, doc, getDoc, setDoc, updateDoc, deleteDoc, increment, query, orderBy, limit, getDocs, getCountFromServer, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 function sanitizeHTML(str) {
     var temp = document.createElement('div');
@@ -160,6 +160,7 @@ if (isHome) {
                             const oldSnap = await getDoc(oldRef);
                             if (oldSnap.exists()) {
                                 oldData = oldSnap.data();
+                                await deleteDoc(oldRef);
                             }
                         } catch (err) {
                             console.error("Migration error:", err);
