@@ -4,7 +4,7 @@
 
 const CONFIG = {
     apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    model: 'meta-llama/llama-3-8b-instruct:free',
+    model: 'openrouter/owl-alpha',
     maxTokens: 2000
 };
 
