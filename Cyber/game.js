@@ -622,19 +622,20 @@ ${roomsList || 'none yet'}
         });
 
         if (!response.ok) {
-            if (response.status === 401 || response.status === 402 || response.status === 404) {
-                if (response.status === 401) localStorage.removeItem('openrouter_key');
-                document.getElementById('apiInput').value = localStorage.getItem('openrouter_key') || '';
-                document.getElementById('modelInput').value = userModel;
-                document.getElementById('apiModal').classList.remove('hidden');
-                throw new Error("API key was revoked, invalid, requires credits, or model is invalid.");
-            }
             let errorDetail = '';
             try {
                 const errorData = await response.json();
                 errorDetail = errorData.error?.message || JSON.stringify(errorData);
             } catch (e) {
                 errorDetail = response.statusText || 'Unknown error';
+            }
+
+            if (response.status === 401 || response.status === 402 || response.status === 404) {
+                if (response.status === 401) localStorage.removeItem('openrouter_key');
+                document.getElementById('apiInput').value = localStorage.getItem('openrouter_key') || '';
+                document.getElementById('modelInput').value = userModel;
+                document.getElementById('apiModal').classList.remove('hidden');
+                throw new Error(`OpenRouter Error (${response.status}): ${errorDetail || "Invalid key, no credits, or model not found."}`);
             }
             throw new Error(`API request failed (${response.status}): ${errorDetail}`);
         }
