@@ -29,11 +29,8 @@ class Cube3D {
         this.controls.noPan = true; // Prevents panning the cube off center
 
         // Lighting
-        let ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        let ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
         this.scene.add(ambientLight);
-        let dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        dirLight.position.set(5, 10, 7);
-        this.scene.add(dirLight);
 
         this.pieces = []; // length 8, stores the 3D meshes in logical index order
         this.isAnimating = false;
@@ -66,9 +63,8 @@ class Cube3D {
         if (idx === 6) { cols[3] = COLORS.D; cols[5] = COLORS.B; cols[1] = COLORS.L; } // DBL
         if (idx === 7) { cols[3] = COLORS.D; cols[0] = COLORS.R; cols[5] = COLORS.B; } // DBR
         
-        return cols.map(c => new THREE.MeshPhongMaterial({ 
+        return cols.map(c => new THREE.MeshBasicMaterial({ 
             color: c, 
-            shininess: 60,
             polygonOffset: true,
             polygonOffsetFactor: 1,
             polygonOffsetUnits: 1
@@ -78,6 +74,7 @@ class Cube3D {
     setSpeed(speedVal) {
         if (speedVal === 'slow') this.animSpeed = 16;
         else if (speedVal === 'fast') this.animSpeed = 4;
+        else if (speedVal === 'instant') this.animSpeed = 1;
         else this.animSpeed = 8;
     }
 
@@ -89,7 +86,16 @@ class Cube3D {
         } else {
             COLORS = { U: 0xffffff, D: 0xffd500, F: 0x009e60, B: 0x0051ba, R: 0xc41e3a, L: 0xff5800, X: 0x222222 };
         }
-        this.initCube(); // Rebuild with new colors
+        
+        if (this.pieces && this.pieces.length === 8) {
+            for (let i = 0; i < 8; i++) {
+                let mesh = this.pieces[i];
+                let originalIndex = mesh.userData.logicalIndex;
+                mesh.material = this.getMaterials(originalIndex);
+            }
+        } else {
+            this.initCube();
+        }
     }
 
     setAutoRotate(enabled) {

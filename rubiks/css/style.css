@@ -222,7 +222,33 @@ select:focus {
     text-transform: uppercase;
 }
 .settings-content select {
-    width: 130px;
-    padding: 6px;
+    width: 140px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: #ffffff;
+    border: 2px solid #000000;
+    padding: 8px 12px;
+    font-family: inherit;
     font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 0;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 #000000;
+    background-image: url('data:image/svg+xml;utf8,<svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 30px;
+    color: #000000;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.settings-content select:focus {
+    outline: none;
+    background-color: #f1f5f9;
+}
+
+.settings-content select:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px #000000;
 }
