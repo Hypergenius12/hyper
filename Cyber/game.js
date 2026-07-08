@@ -2,10 +2,9 @@
 // EXODUS - DEEP SPACE SURVIVAL ENGINE
 // ============================
 
-// Configuration
 const CONFIG = {
     apiEndpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    model: 'openrouter/owl-alpha',
+    model: 'meta-llama/llama-3-8b-instruct:free',
     maxTokens: 2000
 };
 
