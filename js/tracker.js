@@ -63,7 +63,8 @@ const PROJECT_NAMES = {
     'paths': 'Text Adventure Editor',
     'paths.html': 'Text Adventure Editor',
     'waveform editor': 'Waveform Editor',
-    'dvd': 'DVD Logo Simulator'
+    'dvd': 'DVD Logo Simulator',
+    'rubiks': '2x2 Rubik\'s Cube'
 };
 
 function getDisplayProjectName(rawName) {
