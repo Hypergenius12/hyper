@@ -278,10 +278,10 @@ async function fetchLivePrices() {
         }
 
         apiStatus.className = 'api-status live';
-        apiStatus.innerHTML = '● Live API Rates Sync Active';
+        apiStatus.innerHTML = '● Live';
     } catch (err) {
         apiStatus.className = 'api-status offline';
-        apiStatus.innerHTML = '● Local Offline Rates Active';
+        apiStatus.innerHTML = '● Offline';
     }
     runOmniConversion(); // Refresh with new prices
 }

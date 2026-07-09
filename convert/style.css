@@ -55,6 +55,8 @@ h3 {
     border: 1px solid #5e81ac;
     color: #8fbcbb;
     text-transform: uppercase;
+    width: 100px;
+    text-align: center;
 }
 .api-status.loading { background-color: rgba(235, 203, 139, 0.2); color: #ebcb8b; border-color: #ebcb8b; }
 .api-status.live { background-color: rgba(163, 190, 140, 0.2); color: #a3be8c; border-color: #a3be8c; }
