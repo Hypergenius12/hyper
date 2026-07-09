@@ -99,9 +99,9 @@ const omniDB = {
     "Bitcoin (BTC)": { c: "u", d: "price", val: 65000, cat: "Standard Units (Price)" },
 
     // Commodities & Valuables
-    "Gold (1 Troy Ounce)": { c: "e", l: 0.0117, m: 0.0311, s: 0, v: 1.61e-6, t: 3e15, data: 0, e: 0, a: 0.0008, p: 101325, pain: 0, price: 2300, temp: 293, cat: "Commodities & Valuables" },
-    "Silver (1 Troy Ounce)": { c: "e", l: 0.0143, m: 0.0311, s: 0, v: 2.96e-6, t: 3e15, data: 0, e: 0, a: 0.0012, p: 101325, pain: 0, price: 30, temp: 293, cat: "Commodities & Valuables" },
-    "Barrel of Oil (WTI)": { c: "e", l: 0.6, m: 136, s: 0, v: 0.159, t: 3e15, data: 0, e: 6e9, a: 1.5, p: 101325, pain: 0, price: 80, temp: 293, cat: "Commodities & Valuables" },
+    "Gold (1 Troy Ounce)": { c: "e", l: 0.0117, m: 0.0311, s: 0, v: 0.00161, t: 3e15, data: 0, e: 0, a: 0.0008, p: 101325, pain: 0, price: 2300, temp: 293, cat: "Commodities & Valuables" },
+    "Silver (1 Troy Ounce)": { c: "e", l: 0.0143, m: 0.0311, s: 0, v: 0.00296, t: 3e15, data: 0, e: 0, a: 0.0012, p: 101325, pain: 0, price: 30, temp: 293, cat: "Commodities & Valuables" },
+    "Barrel of Oil (WTI)": { c: "e", l: 0.6, m: 136, s: 0, v: 159, t: 3e15, data: 0, e: 6e9, a: 1.5, p: 101325, pain: 0, price: 80, temp: 293, cat: "Commodities & Valuables" },
 
     // Temperature (offset relative to Kelvin)
     "Kelvin (K)": { c: "u", d: "temp", val: 1, offset: 0, cat: "Standard Units (Temperature)" },
@@ -395,16 +395,26 @@ function renderConversionResult(isNewConversion = false) {
         if (num === 0) return "0";
         let strNum = num.toString();
         let cls = ticking ? "class='ticking'" : "";
-        if (strNum.includes('e') || strNum.length > 15) {
+        
+        if (ticking) {
+            // Keep a fixed number of decimals so the text doesn't jitter
             if (num > 1e12 || num < 1e-6) {
                 return `<span ${cls}>${num.toExponential(4)}</span>`;
             } else {
-                let fixed = num.toFixed(8);
-                return `<span ${cls}>${fixed.replace(/\.?0+$/, "")}</span>`;
+                return `<span ${cls}>${num.toFixed(6)}</span>`;
             }
+        } else {
+            if (strNum.includes('e') || strNum.length > 15) {
+                if (num > 1e12 || num < 1e-6) {
+                    return `<span ${cls}>${num.toExponential(4)}</span>`;
+                } else {
+                    let fixed = num.toFixed(8);
+                    return `<span ${cls}>${fixed.replace(/\.?0+$/, "")}</span>`;
+                }
+            }
+            let parsed = parseFloat(num.toPrecision(8));
+            return `<span ${cls}>${parsed.toString()}</span>`;
         }
-        let parsed = parseFloat(num.toPrecision(8));
-        return `<span ${cls}>${parsed.toString()}</span>`;
     }
 
     function getDimName(dimChar) {
