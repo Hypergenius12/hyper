@@ -97,9 +97,11 @@ const omniDB = {
     "British Pounds (GBP)": { c: "u", d: "price", val: 1.25, cat: "Standard Units (Price)" },
     "Japanese Yen (JPY)": { c: "u", d: "price", val: 0.007, cat: "Standard Units (Price)" },
     "Bitcoin (BTC)": { c: "u", d: "price", val: 65000, cat: "Standard Units (Price)" },
-    "Gold (1 Troy Ounce)": { c: "u", d: "price", val: 2300, cat: "Standard Units (Price)" },
-    "Silver (1 Troy Ounce)": { c: "u", d: "price", val: 30, cat: "Standard Units (Price)" },
-    "Barrel of Oil (WTI)": { c: "u", d: "price", val: 80, cat: "Standard Units (Price)" },
+
+    // Commodities & Valuables
+    "Gold (1 Troy Ounce)": { c: "e", l: 0.0117, m: 0.0311, s: 0, v: 1.61e-6, t: 3e15, data: 0, e: 0, a: 0.0008, p: 101325, pain: 0, price: 2300, temp: 293, cat: "Commodities & Valuables" },
+    "Silver (1 Troy Ounce)": { c: "e", l: 0.0143, m: 0.0311, s: 0, v: 2.96e-6, t: 3e15, data: 0, e: 0, a: 0.0012, p: 101325, pain: 0, price: 30, temp: 293, cat: "Commodities & Valuables" },
+    "Barrel of Oil (WTI)": { c: "e", l: 0.6, m: 136, s: 0, v: 0.159, t: 3e15, data: 0, e: 6e9, a: 1.5, p: 101325, pain: 0, price: 80, temp: 293, cat: "Commodities & Valuables" },
 
     // Temperature (offset relative to Kelvin)
     "Kelvin (K)": { c: "u", d: "temp", val: 1, offset: 0, cat: "Standard Units (Temperature)" },
@@ -475,7 +477,7 @@ function renderConversionResult(isNewConversion = false) {
         if (targetDimension === 't' && toObj.liveAge) isTicking = true;
 
         if (entityBaseVal <= 1e-10) {
-            resultHTML = `<span class="warning-text">Error: Cannot divide by zero.</span><br><span class="bridge-text">The entity <b>"${toKey}"</b> lacks a meaningful measurement for <b>${getDimName(targetDimension)}</b>, making comparison impossible.</span>`;
+            resultHTML = `<b>${formatVal(inputVal, false)} ${fromKey}</b> <br>equals<br> <b style="font-size: 32px;">0 ${toKey}s</b><br><span class="warning-text">Note: The entity "${toKey}" lacks a meaningful measurement for ${getDimName(targetDimension)}.</span>`;
             renderedRatioForVis = 0;
         } else {
             let baseFrom = getBaseValue(fromObj, targetDimension, inputVal);
