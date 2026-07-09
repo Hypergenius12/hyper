@@ -244,12 +244,11 @@ class Cube3D {
             }
             
             // Get normal in world space
-            let normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
-            let worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize().round();
+            let N = hit.face.normal.clone().applyMatrix3(new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld)).normalize().round();
 
             this.dragInfo = {
                 mesh: hit.object,
-                normal: worldNormal,
+                normal: N,
                 startX: event.clientX,
                 startY: event.clientY,
                 moveDetermined: false
@@ -337,7 +336,7 @@ class Cube3D {
                     else if (this.gridSize === 3) layer = 'E';
                     if (layer === 'U') standardMoveVec = new THREE.Vector3(0, -1, 0);
                     else if (layer === 'D') standardMoveVec = new THREE.Vector3(0, 1, 0);
-                    else if (layer === 'E') standardMoveVec = new THREE.Vector3(0, 1, 0);
+                    else if (layer === 'E') standardMoveVec = new THREE.Vector3(0, -1, 0); // E now follows U
                 } else if (Math.abs(A.z) === 1) {
                     if (P.z > thresh) layer = 'F';
                     else if (P.z < -thresh) layer = 'B';
@@ -438,7 +437,7 @@ class Cube3D {
                 axis = new THREE.Vector3(1, 0, 0); dir = 1;
                 activeIndices = this.pieces.map((p, i) => Math.abs(p.position.x) < eps ? i : -1).filter(i => i !== -1);
             } else if (baseMove === 'E') {
-                axis = new THREE.Vector3(0, 1, 0); dir = 1;
+                axis = new THREE.Vector3(0, 1, 0); dir = -1; // E now follows U (dir=-1) instead of D
                 activeIndices = this.pieces.map((p, i) => Math.abs(p.position.y) < eps ? i : -1).filter(i => i !== -1);
             } else if (baseMove === 'S') {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1;
