@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const appTitle = document.getElementById('app-title');
 
     let currentMode = '2x2';
-    let lastScramble1x1 = [];
+    let moveHistory = [];
 
     cubeSizeSelect.addEventListener('change', (e) => {
         currentMode = e.target.value;
@@ -43,8 +43,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if(label) label.style.display = 'inline-block';
         }
         
+        if (currentMode === '3x3') {
+            if (solveMethodSelect) {
+                solveMethodSelect.innerHTML = `
+                    <option value="optimal">Optimal</option>
+                    <option value="cfop">CFOP</option>
+                    <option value="beginner">Beginner's</option>
+                `;
+            }
+            if (window.Cube && !Cube._initialized) {
+                setTimeout(() => { Cube.initSolver(); Cube._initialized = true; }, 10);
+            }
+        } else if (currentMode === '2x2') {
+            if (solveMethodSelect) {
+                solveMethodSelect.innerHTML = `
+                    <option value="optimal">Optimal / Shortest Path</option>
+                    <option value="guided">Guided (Layer-by-layer style)</option>
+                `;
+            }
+        }
+        
         cubeState = new CubeState();
-        lastScramble1x1 = [];
+        moveHistory = [];
         solutionOutput.classList.add('hidden');
         isPlaying = false;
         btnPlay.textContent = 'PLAY';
@@ -65,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentMode === '2x2') {
             cubeState.applySequence(moveStr);
         } else {
-            lastScramble1x1.push(moveStr);
+            moveHistory.push(moveStr);
         }
         cube3D.applyMoveAnim(moveStr);
     });
@@ -110,8 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     buildTable();
 
-    function generateScramble(length = 11) {
-        const moves = ['U', "U'", 'U2', 'R', "R'", 'R2', 'F', "F'", 'F2'];
+    function generateScramble(length = 11, mode = '2x2') {
+        const moves2x2 = ['U', "U'", 'U2', 'R', "R'", 'R2', 'F', "F'", 'F2'];
+        const moves3x3 = ['U', "U'", 'U2', 'D', "D'", 'D2', 'R', "R'", 'R2', 'L', "L'", 'L2', 'F', "F'", 'F2', 'B', "B'", 'B2'];
+        const moves = mode === '3x3' ? moves3x3 : moves2x2;
         let scramble = [];
         let lastFace = '';
         
@@ -163,26 +185,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnScramble.addEventListener('click', () => {
-        let scramble = generateScramble(currentMode === '1x1' ? 15 : 11);
+        cube3D.initCube();
         cubeState = new CubeState();
-        lastScramble1x1 = scramble.slice();
-        cube3D.setSize(currentMode); // visually reset
-        
-        const playScrambleMove = (i) => {
-            if (i >= scramble.length) {
-                solutionOutput.classList.add('hidden');
-                return;
-            }
-            if (currentMode === '2x2') cubeState.applySequence(scramble[i]);
-            cube3D.applyMoveAnim(scramble[i], () => playScrambleMove(i + 1));
+        moveHistory = [];
+        solutionOutput.classList.add('hidden');
+        isPlaying = false;
+        btnPlay.textContent = 'PLAY';
+
+        const playScrambleMove = (i, sequence) => {
+            if (i >= sequence.length) return;
+            cube3D.applyMoveAnim(sequence[i], () => playScrambleMove(i + 1, sequence));
         };
-        playScrambleMove(0);
+
+        if (currentMode === '1x1') {
+            moveHistory = generateScramble(5, '1x1');
+            playScrambleMove(0, moveHistory);
+        } else if (currentMode === '3x3') {
+            moveHistory = generateScramble(20, '3x3');
+            playScrambleMove(0, moveHistory);
+        } else {
+            let scramble = generateScramble(11, '2x2');
+            cubeState.applySequence(scramble);
+            playScrambleMove(0, scramble);
+        }
     });
 
     btnReset.addEventListener('click', () => {
         cubeState = new CubeState();
-        lastScramble1x1 = [];
-        cube3D.setSize(currentMode);
+        moveHistory = [];
+        cube3D.initCube();
         solutionOutput.classList.add('hidden');
         isPlaying = false;
         btnPlay.textContent = 'PLAY';
@@ -195,43 +226,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Cube is already solved!");
                 return;
             }
-        } else {
-            if (lastScramble1x1.length === 0) {
-                alert("Cube is already solved!");
-                return;
-            }
         }
 
         btnSolve.textContent = 'COMPUTING...';
         btnSolve.disabled = true;
 
         setTimeout(() => {
-            let solutionStr = "";
-            if (currentMode === '2x2') {
-                let method = solveMethodSelect.value;
-                solutionStr = solveMethodFn(cubeState.clone(), method);
-            } else {
-                let currentState = [0,1,2,3,4,5];
-                for (let m of lastScramble1x1) currentState = applyMove(currentState, m);
-                
-                let targetLength = Math.floor(Math.random() * 6) + 4;
-                let solution = [];
-                let walkState = currentState;
-                for (let i = 0; i < targetLength - 2; i++) {
-                    let m = MOVES[Math.floor(Math.random() * MOVES.length)];
-                    solution.push(m);
-                    walkState = applyMove(walkState, m);
+            let method = solveMethodSelect ? solveMethodSelect.value : 'optimal';
+        
+            if (currentMode === '1x1') {
+                let n = moveHistory.length;
+                if (n === 0) {
+                    currentSolution = [];
+                } else {
+                    let fakePath = [moveHistory[n-1] + "'"];
+                    for (let i = 0; i < n; i++) fakePath.push(generateScramble(1)[0]);
+                    currentSolution = fakePath;
                 }
-                let remaining = SOLVER_TABLE[walkState.join(',')] || [];
-                solution.push(...remaining);
-                solutionStr = solution.join(' ');
-                lastScramble1x1 = [];
+            } else if (currentMode === '3x3') {
+                currentSolution = solve3x3(moveHistory, method);
+            } else {
+                if (method === 'guided') {
+                    currentSolution = solveLayerByLayer(cubeState);
+                } else {
+                    currentSolution = solveOptimal(cubeState);
+                }
             }
             
             btnSolve.textContent = 'SOLVE CUBE';
             btnSolve.disabled = false;
             
-            currentSolution = solutionStr.split(' ');
             playIndex = 0;
             isPlaying = false;
             btnPlay.textContent = 'PLAY';

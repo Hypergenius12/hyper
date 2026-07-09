@@ -58,22 +58,18 @@ class Cube3D {
         this.initCube();
     }
 
-    getMaterials(idx) {
+    getMaterials(x, y, z, maxCoord) {
         let cols = Array(6).fill(COLORS.X);
-        if (this.gridSize === 1) {
-            cols[0] = COLORS.R; cols[1] = COLORS.L; cols[2] = COLORS.U;
-            cols[3] = COLORS.D; cols[4] = COLORS.F; cols[5] = COLORS.B;
-        } else {
-            if (idx === 0) { cols[2] = COLORS.U; cols[0] = COLORS.R; cols[4] = COLORS.F; } // URF
-            if (idx === 1) { cols[2] = COLORS.U; cols[4] = COLORS.F; cols[1] = COLORS.L; } // UFL
-            if (idx === 2) { cols[2] = COLORS.U; cols[1] = COLORS.L; cols[5] = COLORS.B; } // ULB
-            if (idx === 3) { cols[2] = COLORS.U; cols[5] = COLORS.B; cols[0] = COLORS.R; } // UBR
-            if (idx === 4) { cols[3] = COLORS.D; cols[4] = COLORS.F; cols[0] = COLORS.R; } // DFR
-            if (idx === 5) { cols[3] = COLORS.D; cols[1] = COLORS.L; cols[4] = COLORS.F; } // DFL
-            if (idx === 6) { cols[3] = COLORS.D; cols[5] = COLORS.B; cols[1] = COLORS.L; } // DBL
-            if (idx === 7) { cols[3] = COLORS.D; cols[0] = COLORS.R; cols[5] = COLORS.B; } // DBR
-        }
+        let eps = 0.1;
         
+        // Right, Left, Top, Bottom, Front, Back
+        if (x > maxCoord - eps) cols[0] = COLORS.R;
+        if (x < -maxCoord + eps) cols[1] = COLORS.L;
+        if (y > maxCoord - eps) cols[2] = COLORS.U;
+        if (y < -maxCoord + eps) cols[3] = COLORS.D;
+        if (z > maxCoord - eps) cols[4] = COLORS.F;
+        if (z < -maxCoord + eps) cols[5] = COLORS.B;
+
         return cols.map(c => new THREE.MeshBasicMaterial({ 
             color: c, 
             polygonOffset: true,
@@ -98,11 +94,12 @@ class Cube3D {
             COLORS = { U: 0xffffff, D: 0xffd500, F: 0x009e60, B: 0x0051ba, R: 0xc41e3a, L: 0xff5800, X: 0x222222 };
         }
         
-        if (this.pieces && this.pieces.length === (this.gridSize === 1 ? 1 : 8)) {
+        if (this.pieces && this.pieces.length > 0) {
             for (let i = 0; i < this.pieces.length; i++) {
                 let mesh = this.pieces[i];
-                let originalIndex = mesh.userData.logicalIndex;
-                mesh.material = this.getMaterials(originalIndex);
+                let p = mesh.userData.startPos;
+                let maxC = this.gridSize === 1 ? 0 : (this.gridSize === 2 ? 0.51 : 1.02);
+                mesh.material = this.getMaterials(p[0], p[1], p[2], maxC);
             }
         } else {
             this.initCube();
@@ -164,9 +161,14 @@ class Cube3D {
         this.isAnimating = false;
 
         const offset = 0.51;
-        const positions = this.gridSize === 1 ? 
-            [ [0,0,0] ] :
-            [
+        let positions = [];
+        let maxC = 0;
+        
+        if (this.gridSize === 1) {
+            positions = [ [0,0,0] ];
+            maxC = 0;
+        } else if (this.gridSize === 2) {
+            positions = [
                 [offset, offset, offset],   // 0: URF
                 [-offset, offset, offset],  // 1: UFL
                 [-offset, offset, -offset], // 2: ULB
@@ -176,6 +178,18 @@ class Cube3D {
                 [-offset, -offset, -offset],// 6: DBL
                 [offset, -offset, -offset]  // 7: DBR
             ];
+            maxC = offset;
+        } else if (this.gridSize === 3) {
+            let step = 1.02;
+            for (let y = 1; y >= -1; y--) {
+                for (let z = 1; z >= -1; z--) {
+                    for (let x = 1; x >= -1; x--) {
+                        positions.push([x * step, y * step, z * step]);
+                    }
+                }
+            }
+            maxC = step;
+        }
 
         let geoType = this.stickerStyle || 'block';
         let geometry;
@@ -185,9 +199,9 @@ class Cube3D {
             geometry = geoType === 'floating' ? new THREE.BoxGeometry(0.75, 0.75, 0.75) : new THREE.BoxGeometry(0.98, 0.98, 0.98);
         }
 
-        let numPieces = this.gridSize === 1 ? 1 : 8;
-        for (let i = 0; i < numPieces; i++) {
-            let materials = this.getMaterials(i);
+        for (let i = 0; i < positions.length; i++) {
+            let p = positions[i];
+            let materials = this.getMaterials(p[0], p[1], p[2], maxC);
             if (geoType === 'wireframe') {
                 materials.forEach(m => {
                     m.transparent = true;
@@ -202,8 +216,8 @@ class Cube3D {
             let wireframe = new THREE.LineSegments(geo, mat);
             mesh.add(wireframe);
 
-            mesh.position.set(...positions[i]);
-            mesh.userData = { logicalIndex: i };
+            mesh.position.set(...p);
+            mesh.userData = { logicalIndex: i, startPos: p };
             this.scene.add(mesh);
             this.pieces.push(mesh);
         }
@@ -308,15 +322,19 @@ class Cube3D {
             } else {
                 let layer = null;
                 let standardMoveVec = null;
+                let thresh = this.gridSize === 3 ? 0.5 : 0;
                 
                 if (Math.abs(A.x) === 1) {
-                    layer = P.x > 0 ? 'R' : 'L';
+                    if (P.x > thresh) layer = 'R';
+                    else if (P.x < -thresh) layer = 'L';
                     standardMoveVec = layer === 'R' ? new THREE.Vector3(-1, 0, 0) : new THREE.Vector3(1, 0, 0);
                 } else if (Math.abs(A.y) === 1) {
-                    layer = P.y > 0 ? 'U' : 'D';
+                    if (P.y > thresh) layer = 'U';
+                    else if (P.y < -thresh) layer = 'D';
                     standardMoveVec = layer === 'U' ? new THREE.Vector3(0, -1, 0) : new THREE.Vector3(0, 1, 0);
                 } else if (Math.abs(A.z) === 1) {
-                    layer = P.z > 0 ? 'F' : 'B';
+                    if (P.z > thresh) layer = 'F';
+                    else if (P.z < -thresh) layer = 'B';
                     standardMoveVec = layer === 'F' ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 0, 1);
                 }
                 
@@ -372,9 +390,9 @@ class Cube3D {
             axis = map.axis;
             dir = map.dir;
             piecesToMove = [0];
-        } else {
+        } else if (this.gridSize === 2) {
             if (baseMove === 'U') {
-                axis = new THREE.Vector3(0, 1, 0); dir = -1; piecesToMove = [0, 3, 2, 1];
+                axis = new THREE.Vector3(0, 1, 0); dir = -1; piecesToMove = [0, 1, 2, 3];
             } else if (baseMove === 'D') {
                 axis = new THREE.Vector3(0, 1, 0); dir = 1; piecesToMove = [4, 7, 6, 5];
             } else if (baseMove === 'R') {
@@ -386,6 +404,31 @@ class Cube3D {
             } else if (baseMove === 'B') {
                 axis = new THREE.Vector3(0, 0, 1); dir = 1; piecesToMove = [3, 2, 6, 7];
             } else return;
+        } else if (this.gridSize === 3) {
+            let eps = 0.5;
+            let activeIndices = [];
+            
+            if (baseMove === 'U') {
+                axis = new THREE.Vector3(0, 1, 0); dir = -1;
+                activeIndices = this.pieces.map((p, i) => p.position.y > eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'D') {
+                axis = new THREE.Vector3(0, 1, 0); dir = 1;
+                activeIndices = this.pieces.map((p, i) => p.position.y < -eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'R') {
+                axis = new THREE.Vector3(1, 0, 0); dir = -1;
+                activeIndices = this.pieces.map((p, i) => p.position.x > eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'L') {
+                axis = new THREE.Vector3(1, 0, 0); dir = 1;
+                activeIndices = this.pieces.map((p, i) => p.position.x < -eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'F') {
+                axis = new THREE.Vector3(0, 0, 1); dir = -1;
+                activeIndices = this.pieces.map((p, i) => p.position.z > eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'B') {
+                axis = new THREE.Vector3(0, 0, 1); dir = 1;
+                activeIndices = this.pieces.map((p, i) => p.position.z < -eps ? i : -1).filter(i => i !== -1);
+            } else return;
+            
+            piecesToMove = activeIndices;
         }
 
         let targetAngle = angle * dir;
