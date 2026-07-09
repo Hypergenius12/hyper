@@ -46,9 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentMode === '3x3') {
             if (solveMethodSelect) {
                 solveMethodSelect.innerHTML = `
-                    <option value="optimal">Optimal</option>
                     <option value="cfop">CFOP</option>
-                    <option value="beginner">Beginner's</option>
+                    <option value="optimal">Optimal</option>
                 `;
             }
             if (window.Cube && !Cube._initialized) {
