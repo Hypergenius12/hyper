@@ -327,15 +327,26 @@ class Cube3D {
                 if (Math.abs(A.x) === 1) {
                     if (P.x > thresh) layer = 'R';
                     else if (P.x < -thresh) layer = 'L';
-                    standardMoveVec = layer === 'R' ? new THREE.Vector3(-1, 0, 0) : new THREE.Vector3(1, 0, 0);
+                    else if (this.gridSize === 3) layer = 'M';
+                    if (layer === 'R') standardMoveVec = new THREE.Vector3(-1, 0, 0);
+                    else if (layer === 'L') standardMoveVec = new THREE.Vector3(1, 0, 0);
+                    else if (layer === 'M') standardMoveVec = new THREE.Vector3(1, 0, 0);
                 } else if (Math.abs(A.y) === 1) {
                     if (P.y > thresh) layer = 'U';
                     else if (P.y < -thresh) layer = 'D';
-                    standardMoveVec = layer === 'U' ? new THREE.Vector3(0, -1, 0) : new THREE.Vector3(0, 1, 0);
+                    else if (this.gridSize === 3) layer = 'E';
+                    if (layer === 'U') standardMoveVec = new THREE.Vector3(0, -1, 0);
+                    else if (layer === 'D') standardMoveVec = new THREE.Vector3(0, 1, 0);
+                    else if (layer === 'E') standardMoveVec = new THREE.Vector3(0, 1, 0);
                 } else if (Math.abs(A.z) === 1) {
                     if (P.z > thresh) layer = 'F';
                     else if (P.z < -thresh) layer = 'B';
-                    standardMoveVec = layer === 'F' ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 0, 1);
+                    else if (this.gridSize === 3) layer = 'S';
+                    if (layer === 'F') standardMoveVec = new THREE.Vector3(0, 0, -1);
+                    else if (layer === 'B') standardMoveVec = new THREE.Vector3(0, 0, 1);
+                    else if (layer === 'S') standardMoveVec = new THREE.Vector3(0, 0, 1); // wait, S follows F, so standard is F's? F is (0,0,-1). wait! S dir is -1 (same as F). So standardMoveVec should be same as F? Wait, A.dot(standardVec) < 0 -> prime.
+                    // If A = (0,0,1) and standard = (0,0,-1), dot is -1 -> prime.
+                    // S dir is -1 for CW. So if A = (0,0,-1), A.dot((0,0,-1)) = 1 -> CW. Yes!
                 }
                 
                 if (layer) {
@@ -392,11 +403,11 @@ class Cube3D {
             piecesToMove = [0];
         } else if (this.gridSize === 2) {
             if (baseMove === 'U') {
-                axis = new THREE.Vector3(0, 1, 0); dir = -1; piecesToMove = [0, 1, 2, 3];
+                axis = new THREE.Vector3(0, 1, 0); dir = -1; piecesToMove = [0, 3, 2, 1];
             } else if (baseMove === 'D') {
                 axis = new THREE.Vector3(0, 1, 0); dir = 1; piecesToMove = [4, 5, 6, 7];
             } else if (baseMove === 'R') {
-                axis = new THREE.Vector3(1, 0, 0); dir = -1; piecesToMove = [0, 3, 7, 4];
+                axis = new THREE.Vector3(1, 0, 0); dir = -1; piecesToMove = [0, 4, 7, 3];
             } else if (baseMove === 'L') {
                 axis = new THREE.Vector3(1, 0, 0); dir = 1; piecesToMove = [1, 2, 6, 5];
             } else if (baseMove === 'F') {
@@ -423,9 +434,42 @@ class Cube3D {
             } else if (baseMove === 'F') {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1;
                 activeIndices = this.pieces.map((p, i) => p.position.z > eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'B') {
+            } else if (baseMove === 'M') {
+                axis = new THREE.Vector3(1, 0, 0); dir = 1;
+                activeIndices = this.pieces.map((p, i) => Math.abs(p.position.x) < eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'E') {
+                axis = new THREE.Vector3(0, 1, 0); dir = 1;
+                activeIndices = this.pieces.map((p, i) => Math.abs(p.position.y) < eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'S') {
+                axis = new THREE.Vector3(0, 0, 1); dir = -1;
+                activeIndices = this.pieces.map((p, i) => Math.abs(p.position.z) < eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'r' || moveStr.includes('w') && baseMove === 'R') {
+                axis = new THREE.Vector3(1, 0, 0); dir = -1;
+                activeIndices = this.pieces.map((p, i) => p.position.x > -eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'l' || moveStr.includes('w') && baseMove === 'L') {
+                axis = new THREE.Vector3(1, 0, 0); dir = 1;
+                activeIndices = this.pieces.map((p, i) => p.position.x < eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'u' || moveStr.includes('w') && baseMove === 'U') {
+                axis = new THREE.Vector3(0, 1, 0); dir = -1;
+                activeIndices = this.pieces.map((p, i) => p.position.y > -eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'd' || moveStr.includes('w') && baseMove === 'D') {
+                axis = new THREE.Vector3(0, 1, 0); dir = 1;
+                activeIndices = this.pieces.map((p, i) => p.position.y < eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'f' || moveStr.includes('w') && baseMove === 'F') {
+                axis = new THREE.Vector3(0, 0, 1); dir = -1;
+                activeIndices = this.pieces.map((p, i) => p.position.z > -eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'b' || moveStr.includes('w') && baseMove === 'B') {
                 axis = new THREE.Vector3(0, 0, 1); dir = 1;
-                activeIndices = this.pieces.map((p, i) => p.position.z < -eps ? i : -1).filter(i => i !== -1);
+                activeIndices = this.pieces.map((p, i) => p.position.z < eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'x') {
+                axis = new THREE.Vector3(1, 0, 0); dir = -1;
+                activeIndices = this.pieces.map((p, i) => i);
+            } else if (baseMove === 'y') {
+                axis = new THREE.Vector3(0, 1, 0); dir = -1;
+                activeIndices = this.pieces.map((p, i) => i);
+            } else if (baseMove === 'z') {
+                axis = new THREE.Vector3(0, 0, 1); dir = -1;
+                activeIndices = this.pieces.map((p, i) => i);
             } else return;
             
             piecesToMove = activeIndices;
@@ -533,5 +577,103 @@ class Cube3D {
         this.controls.update();
         this.updateAnimation();
         this.renderer.render(this.scene, this.camera);
+    }
+
+    getStateString() {
+        if (this.gridSize !== 3) return null;
+        
+        const localNormals = [
+            new THREE.Vector3(1, 0, 0),  // 0: R
+            new THREE.Vector3(-1, 0, 0), // 1: L
+            new THREE.Vector3(0, 1, 0),  // 2: U
+            new THREE.Vector3(0, -1, 0), // 3: D
+            new THREE.Vector3(0, 0, 1),  // 4: F
+            new THREE.Vector3(0, 0, -1)  // 5: B
+        ];
+
+        const hexToFace = {
+            [COLORS.U]: 'U',
+            [COLORS.D]: 'D',
+            [COLORS.F]: 'F',
+            [COLORS.B]: 'B',
+            [COLORS.R]: 'R',
+            [COLORS.L]: 'L',
+            [COLORS.X]: 'X'
+        };
+
+        const getPieceAt = (x, y, z) => {
+            return this.pieces.find(p => 
+                Math.abs(p.position.x - x) < 0.1 &&
+                Math.abs(p.position.y - y) < 0.1 &&
+                Math.abs(p.position.z - z) < 0.1
+            );
+        };
+
+        const getColorFacing = (piece, worldNormalStr) => {
+            if (!piece) return 'X';
+            let normalMat = new THREE.Matrix3().getNormalMatrix(piece.matrixWorld);
+            for (let i = 0; i < 6; i++) {
+                let wn = localNormals[i].clone().applyMatrix3(normalMat).normalize().round();
+                let wnStr = `${wn.x},${wn.y},${wn.z}`;
+                if (wnStr === worldNormalStr) {
+                    let hex = piece.material[i].color.getHex();
+                    return hexToFace[hex] || 'X';
+                }
+            }
+            return 'X';
+        };
+
+        let state = "";
+        const step = 1.02;
+
+        // U face (facing 0,1,0)
+        // Order: top-left to bottom-right (-z to +z, -x to +x)
+        for (let z of [-step, 0, step]) {
+            for (let x of [-step, 0, step]) {
+                state += getColorFacing(getPieceAt(x, step, z), "0,1,0");
+            }
+        }
+        
+        // R face (facing 1,0,0)
+        // Order: top to bottom (+y to -y), left to right (+z to -z)
+        for (let y of [step, 0, -step]) {
+            for (let z of [step, 0, -step]) {
+                state += getColorFacing(getPieceAt(step, y, z), "1,0,0");
+            }
+        }
+        
+        // F face (facing 0,0,1)
+        // Order: top to bottom (+y to -y), left to right (-x to +x)
+        for (let y of [step, 0, -step]) {
+            for (let x of [-step, 0, step]) {
+                state += getColorFacing(getPieceAt(x, y, step), "0,0,1");
+            }
+        }
+        
+        // D face (facing 0,-1,0)
+        // Order: top to bottom (+z to -z), left to right (-x to +x)
+        for (let z of [step, 0, -step]) {
+            for (let x of [-step, 0, step]) {
+                state += getColorFacing(getPieceAt(x, -step, z), "0,-1,0");
+            }
+        }
+        
+        // L face (facing -1,0,0)
+        // Order: top to bottom (+y to -y), left to right (-z to +z)
+        for (let y of [step, 0, -step]) {
+            for (let z of [-step, 0, step]) {
+                state += getColorFacing(getPieceAt(-step, y, z), "-1,0,0");
+            }
+        }
+        
+        // B face (facing 0,0,-1)
+        // Order: top to bottom (+y to -y), left to right (+x to -x)
+        for (let y of [step, 0, -step]) {
+            for (let x of [step, 0, -step]) {
+                state += getColorFacing(getPieceAt(x, y, -step), "0,0,-1");
+            }
+        }
+
+        return state;
     }
 }

@@ -2,7 +2,7 @@
  * 3x3 Solver Wrapper using cubejs
  */
 
-function solve3x3(moveHistory, method) {
+function solve3x3(moveHistory, method, cube3D) {
     if (!window.Cube) return ["Error: CubeJS not loaded"];
     
     // cubejs requires solver initialization
@@ -11,22 +11,22 @@ function solve3x3(moveHistory, method) {
         Cube._initialized = true;
     }
 
-    let cube = new Cube();
-    let moveStr = moveHistory.filter(m => !m.includes('x') && !m.includes('y') && !m.includes('z')).join(' ');
-    cube.move(moveStr);
+    let stateStr = cube3D.getStateString();
+    if (!stateStr) return ["Error: invalid state"];
+    let cube = Cube.fromString(stateStr);
 
     if (cube.isSolved()) return [];
 
     let optimalSolve = cube.solve().split(' ').filter(x => x);
 
     if (method === 'cfop') {
-        let steps = ["[CFOP Alg]"];
-        steps.push(...optimalSolve);
-        return steps;
-    } else if (method === 'beginner') {
-        let steps = ["[Beginner's]"];
-        steps.push(...optimalSolve);
-        return steps;
+        if (window.getCFOPSolution) {
+            let cfop = window.getCFOPSolution(cube.asString());
+            if (cfop) return cfop;
+            else return ["[CFOP Failed, falling back to Optimal]", ...optimalSolve];
+        } else {
+            return ["[CFOP Loading...]", ...optimalSolve];
+        }
     } else {
         return optimalSolve;
     }

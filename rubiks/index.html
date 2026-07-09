@@ -33,7 +33,7 @@
         <div class="solver-group">
             <label for="solve-method">Method:</label>
             <select id="solve-method">
-                <option value="guided">Guided (Layer by Layer + CLL)</option>
+                <option value="cfop">CFOP (Fridrich Method)</option>
                 <option value="optimal">Optimal (Shortest Path)</option>
             </select>
             <button id="btn-solve" class="primary-btn">Solve Cube</button>
@@ -101,6 +101,7 @@
     <script src="js/solver.js"></script>
     <script src="js/solver3x3.js"></script>
     <script src="js/cube3d.js"></script>
+    <script type="module" src="js/cfopSolver.js"></script>
     <script src="js/main.js"></script>
     <script type="module" src="../js/firebase-config.js"></script>
     <script type="module" src="../js/tracker.js"></script>

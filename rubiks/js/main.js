@@ -243,7 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentSolution = fakePath;
                 }
             } else if (currentMode === '3x3') {
-                currentSolution = solve3x3(moveHistory, method);
+                let method = document.getElementById('solve-method').value;
+                currentSolution = solve3x3(moveHistory, method, cube3D);
             } else {
                 if (method === 'guided') {
                     currentSolution = solveLayerByLayer(cubeState);
