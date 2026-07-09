@@ -37,7 +37,7 @@ class CubeState {
 
     applySequence(seq) {
         if (!seq) return;
-        const moves = seq.split(' ');
+        const moves = typeof seq === 'string' ? seq.split(' ') : seq;
         for (let m of moves) {
             if (m === '') continue;
             let moveObj = MOVES[m];

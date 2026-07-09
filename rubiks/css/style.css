@@ -135,6 +135,8 @@ select:focus {
     flex-wrap: wrap;
     gap: 6px;
     margin-bottom: 16px;
+    max-height: 250px;
+    overflow-y: auto;
 }
 
 .move-btn {

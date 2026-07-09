@@ -394,15 +394,15 @@ class Cube3D {
             if (baseMove === 'U') {
                 axis = new THREE.Vector3(0, 1, 0); dir = -1; piecesToMove = [0, 1, 2, 3];
             } else if (baseMove === 'D') {
-                axis = new THREE.Vector3(0, 1, 0); dir = 1; piecesToMove = [4, 7, 6, 5];
+                axis = new THREE.Vector3(0, 1, 0); dir = 1; piecesToMove = [4, 5, 6, 7];
             } else if (baseMove === 'R') {
                 axis = new THREE.Vector3(1, 0, 0); dir = -1; piecesToMove = [0, 3, 7, 4];
             } else if (baseMove === 'L') {
-                axis = new THREE.Vector3(1, 0, 0); dir = 1; piecesToMove = [1, 5, 6, 2];
+                axis = new THREE.Vector3(1, 0, 0); dir = 1; piecesToMove = [1, 2, 6, 5];
             } else if (baseMove === 'F') {
-                axis = new THREE.Vector3(0, 0, 1); dir = -1; piecesToMove = [0, 4, 5, 1];
+                axis = new THREE.Vector3(0, 0, 1); dir = -1; piecesToMove = [0, 1, 5, 4];
             } else if (baseMove === 'B') {
-                axis = new THREE.Vector3(0, 0, 1); dir = 1; piecesToMove = [3, 2, 6, 7];
+                axis = new THREE.Vector3(0, 0, 1); dir = 1; piecesToMove = [3, 7, 6, 2];
             } else return;
         } else if (this.gridSize === 3) {
             let eps = 0.5;
