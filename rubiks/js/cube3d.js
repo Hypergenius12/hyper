@@ -36,6 +36,7 @@ class Cube3D {
         this.isAnimating = false;
         this.animationQueue = [];
         this.animSpeed = 8;
+        this.gridSize = 2; // Default to 2x2
         this.initCube();
 
         // Raycasting for interactive turning
@@ -52,16 +53,26 @@ class Cube3D {
         requestAnimationFrame(this.animate);
     }
 
+    setSize(sizeStr) {
+        this.gridSize = parseInt(sizeStr.charAt(0));
+        this.initCube();
+    }
+
     getMaterials(idx) {
         let cols = Array(6).fill(COLORS.X);
-        if (idx === 0) { cols[2] = COLORS.U; cols[0] = COLORS.R; cols[4] = COLORS.F; } // URF
-        if (idx === 1) { cols[2] = COLORS.U; cols[4] = COLORS.F; cols[1] = COLORS.L; } // UFL
-        if (idx === 2) { cols[2] = COLORS.U; cols[1] = COLORS.L; cols[5] = COLORS.B; } // ULB
-        if (idx === 3) { cols[2] = COLORS.U; cols[5] = COLORS.B; cols[0] = COLORS.R; } // UBR
-        if (idx === 4) { cols[3] = COLORS.D; cols[4] = COLORS.F; cols[0] = COLORS.R; } // DFR
-        if (idx === 5) { cols[3] = COLORS.D; cols[1] = COLORS.L; cols[4] = COLORS.F; } // DFL
-        if (idx === 6) { cols[3] = COLORS.D; cols[5] = COLORS.B; cols[1] = COLORS.L; } // DBL
-        if (idx === 7) { cols[3] = COLORS.D; cols[0] = COLORS.R; cols[5] = COLORS.B; } // DBR
+        if (this.gridSize === 1) {
+            cols[0] = COLORS.R; cols[1] = COLORS.L; cols[2] = COLORS.U;
+            cols[3] = COLORS.D; cols[4] = COLORS.F; cols[5] = COLORS.B;
+        } else {
+            if (idx === 0) { cols[2] = COLORS.U; cols[0] = COLORS.R; cols[4] = COLORS.F; } // URF
+            if (idx === 1) { cols[2] = COLORS.U; cols[4] = COLORS.F; cols[1] = COLORS.L; } // UFL
+            if (idx === 2) { cols[2] = COLORS.U; cols[1] = COLORS.L; cols[5] = COLORS.B; } // ULB
+            if (idx === 3) { cols[2] = COLORS.U; cols[5] = COLORS.B; cols[0] = COLORS.R; } // UBR
+            if (idx === 4) { cols[3] = COLORS.D; cols[4] = COLORS.F; cols[0] = COLORS.R; } // DFR
+            if (idx === 5) { cols[3] = COLORS.D; cols[1] = COLORS.L; cols[4] = COLORS.F; } // DFL
+            if (idx === 6) { cols[3] = COLORS.D; cols[5] = COLORS.B; cols[1] = COLORS.L; } // DBL
+            if (idx === 7) { cols[3] = COLORS.D; cols[0] = COLORS.R; cols[5] = COLORS.B; } // DBR
+        }
         
         return cols.map(c => new THREE.MeshBasicMaterial({ 
             color: c, 
@@ -87,8 +98,8 @@ class Cube3D {
             COLORS = { U: 0xffffff, D: 0xffd500, F: 0x009e60, B: 0x0051ba, R: 0xc41e3a, L: 0xff5800, X: 0x222222 };
         }
         
-        if (this.pieces && this.pieces.length === 8) {
-            for (let i = 0; i < 8; i++) {
+        if (this.pieces && this.pieces.length === (this.gridSize === 1 ? 1 : 8)) {
+            for (let i = 0; i < this.pieces.length; i++) {
                 let mesh = this.pieces[i];
                 let originalIndex = mesh.userData.logicalIndex;
                 mesh.material = this.getMaterials(originalIndex);
@@ -153,26 +164,29 @@ class Cube3D {
         this.isAnimating = false;
 
         const offset = 0.51;
-        const positions = [
-            [offset, offset, offset],   // 0: URF
-            [-offset, offset, offset],  // 1: UFL
-            [-offset, offset, -offset], // 2: ULB
-            [offset, offset, -offset],  // 3: UBR
-            [offset, -offset, offset],  // 4: DFR
-            [-offset, -offset, offset], // 5: DFL
-            [-offset, -offset, -offset],// 6: DBL
-            [offset, -offset, -offset]  // 7: DBR
-        ];
+        const positions = this.gridSize === 1 ? 
+            [ [0,0,0] ] :
+            [
+                [offset, offset, offset],   // 0: URF
+                [-offset, offset, offset],  // 1: UFL
+                [-offset, offset, -offset], // 2: ULB
+                [offset, offset, -offset],  // 3: UBR
+                [offset, -offset, offset],  // 4: DFR
+                [-offset, -offset, offset], // 5: DFL
+                [-offset, -offset, -offset],// 6: DBL
+                [offset, -offset, -offset]  // 7: DBR
+            ];
 
         let geoType = this.stickerStyle || 'block';
         let geometry;
-        if (geoType === 'floating') {
-            geometry = new THREE.BoxGeometry(0.75, 0.75, 0.75);
+        if (this.gridSize === 1) {
+            geometry = geoType === 'floating' ? new THREE.BoxGeometry(1.5, 1.5, 1.5) : new THREE.BoxGeometry(1.96, 1.96, 1.96);
         } else {
-            geometry = new THREE.BoxGeometry(0.98, 0.98, 0.98);
+            geometry = geoType === 'floating' ? new THREE.BoxGeometry(0.75, 0.75, 0.75) : new THREE.BoxGeometry(0.98, 0.98, 0.98);
         }
 
-        for (let i = 0; i < 8; i++) {
+        let numPieces = this.gridSize === 1 ? 1 : 8;
+        for (let i = 0; i < numPieces; i++) {
             let materials = this.getMaterials(i);
             if (geoType === 'wireframe') {
                 materials.forEach(m => {
@@ -282,27 +296,38 @@ class Cube3D {
             // Rotation axis = Normal x Drag Direction
             let A = new THREE.Vector3().crossVectors(N, D).round();
             
-            let layer = null;
-            let standardMoveVec = null;
-            
-            if (Math.abs(A.x) === 1) {
-                layer = P.x > 0 ? 'R' : 'L';
-                standardMoveVec = layer === 'R' ? new THREE.Vector3(-1, 0, 0) : new THREE.Vector3(1, 0, 0);
-            } else if (Math.abs(A.y) === 1) {
-                layer = P.y > 0 ? 'U' : 'D';
-                standardMoveVec = layer === 'U' ? new THREE.Vector3(0, -1, 0) : new THREE.Vector3(0, 1, 0);
-            } else if (Math.abs(A.z) === 1) {
-                layer = P.z > 0 ? 'F' : 'B';
-                standardMoveVec = layer === 'F' ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 0, 1);
-            }
-            
-            if (layer) {
-                let moveStr = layer;
-                // If the desired axis matches the standard vector, it's a normal move. Else, it's Prime.
-                if (A.dot(standardMoveVec) < 0) {
-                    moveStr += "'";
+            if (this.gridSize === 1) {
+                let moveStr = '';
+                if (Math.abs(A.x) === 1) moveStr = A.x > 0 ? "x" : "x'";
+                else if (Math.abs(A.y) === 1) moveStr = A.y > 0 ? "y" : "y'";
+                else if (Math.abs(A.z) === 1) moveStr = A.z > 0 ? "z" : "z'";
+                
+                if (moveStr) {
+                    window.dispatchEvent(new CustomEvent('manualMove', { detail: moveStr }));
                 }
-                window.dispatchEvent(new CustomEvent('manualMove', { detail: moveStr }));
+            } else {
+                let layer = null;
+                let standardMoveVec = null;
+                
+                if (Math.abs(A.x) === 1) {
+                    layer = P.x > 0 ? 'R' : 'L';
+                    standardMoveVec = layer === 'R' ? new THREE.Vector3(-1, 0, 0) : new THREE.Vector3(1, 0, 0);
+                } else if (Math.abs(A.y) === 1) {
+                    layer = P.y > 0 ? 'U' : 'D';
+                    standardMoveVec = layer === 'U' ? new THREE.Vector3(0, -1, 0) : new THREE.Vector3(0, 1, 0);
+                } else if (Math.abs(A.z) === 1) {
+                    layer = P.z > 0 ? 'F' : 'B';
+                    standardMoveVec = layer === 'F' ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 0, 1);
+                }
+                
+                if (layer) {
+                    let moveStr = layer;
+                    // If the desired axis matches the standard vector, it's a normal move. Else, it's Prime.
+                    if (A.dot(standardMoveVec) < 0) {
+                        moveStr += "'";
+                    }
+                    window.dispatchEvent(new CustomEvent('manualMove', { detail: moveStr }));
+                }
             }
             
             this.dragInfo = null;
@@ -330,18 +355,41 @@ class Cube3D {
             angle = Math.PI;
         }
         
-        if (baseMove === 'U') {
-            axis = new THREE.Vector3(0, 1, 0); dir = -1; piecesToMove = [0, 1, 2, 3];
-        } else if (baseMove === 'D') {
-            axis = new THREE.Vector3(0, 1, 0); dir = 1; piecesToMove = [4, 5, 6, 7];
-        } else if (baseMove === 'R') {
-            axis = new THREE.Vector3(1, 0, 0); dir = -1; piecesToMove = [0, 3, 7, 4];
-        } else if (baseMove === 'L') {
-            axis = new THREE.Vector3(1, 0, 0); dir = 1; piecesToMove = [1, 5, 6, 2];
-        } else if (baseMove === 'F') {
-            axis = new THREE.Vector3(0, 0, 1); dir = -1; piecesToMove = [0, 4, 5, 1];
-        } else if (baseMove === 'B') {
-            axis = new THREE.Vector3(0, 0, 1); dir = 1; piecesToMove = [2, 6, 7, 3];
+        if (this.gridSize === 1) {
+            let axisMapping = {
+                'x': { axis: new THREE.Vector3(1, 0, 0), dir: -1 },
+                'y': { axis: new THREE.Vector3(0, 1, 0), dir: -1 },
+                'z': { axis: new THREE.Vector3(0, 0, 1), dir: -1 },
+                'R': { axis: new THREE.Vector3(1, 0, 0), dir: -1 },
+                'L': { axis: new THREE.Vector3(1, 0, 0), dir: 1 },
+                'U': { axis: new THREE.Vector3(0, 1, 0), dir: -1 },
+                'D': { axis: new THREE.Vector3(0, 1, 0), dir: 1 },
+                'F': { axis: new THREE.Vector3(0, 0, 1), dir: -1 },
+                'B': { axis: new THREE.Vector3(0, 0, 1), dir: 1 }
+            };
+            let map = axisMapping[baseMove];
+            if (!map) return;
+            axis = map.axis;
+            dir = map.dir;
+            piecesToMove = [0];
+        } else {
+            if (baseMove === 'U') {
+                axis = new THREE.Vector3(0, 1, 0); dir = -1; piecesToMove = [0, 1, 2, 3];
+            } else if (baseMove === 'D') {
+                axis = new THREE.Vector3(0, 1, 0); dir = 1; piecesToMove = [4, 5, 6, 7];
+            } else if (baseMove === 'R') {
+                axis = new THREE.Vector3(1, 0, 0); dir = -1; piecesToMove = [0, 3, 7, 4];
+            } else if (baseMove === 'L') {
+                axis = new THREE.Vector3(1, 0, 0); dir = 1; piecesToMove = [1, 5, 6, 2];
+            } else if (baseMove === 'F') {
+                axis = new THREE.Vector3(0, 0, 1); dir = -1; piecesToMove = [0, 4, 5, 1];
+            } else if (baseMove === 'B') {
+                axis = new THREE.Vector3(0, 0, 1); dir = 1; piecesToMove = [2, 6, 7, 3];
+            } else if (['x', 'y', 'z'].includes(baseMove)) {
+                // If 2x2 receives manual rotation moves for some reason, just rotate everything
+                axis = new THREE.Vector3(baseMove==='x'?1:0, baseMove==='y'?1:0, baseMove==='z'?1:0);
+                dir = -1; piecesToMove = [0,1,2,3,4,5,6,7];
+            } else return;
         }
 
         let targetAngle = angle * dir;
@@ -395,26 +443,28 @@ class Cube3D {
             });
             this.scene.remove(anim.group);
 
-            // Correct cyclic array mapping!
-            let newPieces = [...this.pieces];
-            let p = anim.piecesToMove;
-            let perm;
-            
-            if (anim.isPrime) {
-                // Shift left
-                perm = [p[1], p[2], p[3], p[0]];
-            } else if (anim.isDouble) {
-                // Shift 2
-                perm = [p[2], p[3], p[0], p[1]];
-            } else {
-                // Shift right
-                perm = [p[3], p[0], p[1], p[2]];
-            }
+            if (this.gridSize === 2) {
+                // Correct cyclic array mapping!
+                let newPieces = [...this.pieces];
+                let p = anim.piecesToMove;
+                let perm;
+                
+                if (anim.isPrime) {
+                    // Shift left
+                    perm = [p[1], p[2], p[3], p[0]];
+                } else if (anim.isDouble) {
+                    // Shift 2
+                    perm = [p[2], p[3], p[0], p[1]];
+                } else {
+                    // Shift right
+                    perm = [p[3], p[0], p[1], p[2]];
+                }
 
-            for (let i = 0; i < 4; i++) {
-                newPieces[p[i]] = this.pieces[perm[i]];
+                for (let i = 0; i < 4; i++) {
+                    newPieces[p[i]] = this.pieces[perm[i]];
+                }
+                this.pieces = newPieces;
             }
-            this.pieces = newPieces;
 
             this.animationQueue.shift();
             if (anim.callback) anim.callback();

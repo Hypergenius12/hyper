@@ -14,7 +14,15 @@
     <div id="canvas-container"></div>
     
     <div id="ui-panel">
-        <h1>2x2 Cube Solver</h1>
+        <h1 id="app-title">2x2 Cube Solver</h1>
+        
+        <div class="size-group">
+            <label for="cube-size">Cube Size:</label>
+            <select id="cube-size">
+                <option value="2x2" selected>2x2</option>
+                <option value="1x1">1x1</option>
+            </select>
+        </div>
         
         <div class="controls-group">
             <button id="btn-scramble">Scramble</button>
@@ -56,7 +64,6 @@
                         <select id="setting-camera">
                             <option value="perspective" selected>Perspective</option>
                             <option value="orthographic">Orthographic</option>
-                            <option value="isometric">Isometric (Snap)</option>
                         </select>
                     </label>
                     <label>
