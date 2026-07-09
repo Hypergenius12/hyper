@@ -185,29 +185,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnScramble.addEventListener('click', () => {
-        cube3D.initCube();
+        // Reset state but don't visually reset the cube - let the scramble animate naturally
         cubeState = new CubeState();
         moveHistory = [];
         solutionOutput.classList.add('hidden');
         isPlaying = false;
         btnPlay.textContent = 'PLAY';
 
-        const playScrambleMove = (i, sequence) => {
-            if (i >= sequence.length) return;
-            cube3D.applyMoveAnim(sequence[i], () => playScrambleMove(i + 1, sequence));
-        };
+        // Reset the cube visually first, then animate the scramble
+        cube3D.initCube();
 
-        if (currentMode === '1x1') {
-            moveHistory = generateScramble(5, '1x1');
-            playScrambleMove(0, moveHistory);
-        } else if (currentMode === '3x3') {
-            moveHistory = generateScramble(20, '3x3');
-            playScrambleMove(0, moveHistory);
-        } else {
-            let scramble = generateScramble(11, '2x2');
-            cubeState.applySequence(scramble);
-            playScrambleMove(0, scramble);
-        }
+        // Small delay to let initCube render before scramble starts
+        setTimeout(() => {
+            const playScrambleMove = (i, sequence) => {
+                if (i >= sequence.length) return;
+                cube3D.applyMoveAnim(sequence[i], () => playScrambleMove(i + 1, sequence));
+            };
+
+            if (currentMode === '1x1') {
+                moveHistory = generateScramble(5, '1x1');
+                playScrambleMove(0, moveHistory);
+            } else if (currentMode === '3x3') {
+                moveHistory = generateScramble(20, '3x3');
+                playScrambleMove(0, moveHistory);
+            } else {
+                let scramble = generateScramble(11, '2x2');
+                cubeState.applySequence(scramble.join(' '));
+                playScrambleMove(0, scramble);
+            }
+        }, 50);
     });
 
     btnReset.addEventListener('click', () => {

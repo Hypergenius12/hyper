@@ -489,14 +489,14 @@ class Cube3D {
                 let perm;
                 
                 if (anim.isPrime) {
-                    // Shift left
-                    perm = [p[1], p[2], p[3], p[0]];
+                    // CCW: Shift right (piece at end goes to start)
+                    perm = [p[3], p[0], p[1], p[2]];
                 } else if (anim.isDouble) {
-                    // Shift 2
+                    // 180: Swap pairs
                     perm = [p[2], p[3], p[0], p[1]];
                 } else {
-                    // Shift right
-                    perm = [p[3], p[0], p[1], p[2]];
+                    // CW: Shift left (piece at start goes to end)
+                    perm = [p[1], p[2], p[3], p[0]];
                 }
 
                 for (let i = 0; i < 4; i++) {
