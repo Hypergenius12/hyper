@@ -269,10 +269,10 @@ async function fetchLivePrices() {
             omniDB["Japanese Yen (JPY)"].val = 1 / data.rates.JPY;
         }
         
-        const btcRes = await fetch('https://api.coindesk.com/v1/bpi/currentprice.json');
+        const btcRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
         const btcData = await btcRes.json();
-        if (btcData && btcData.bpi && btcData.bpi.USD) {
-            omniDB["Bitcoin (BTC)"].val = btcData.bpi.USD.rate_float;
+        if (btcData && btcData.bitcoin && btcData.bitcoin.usd) {
+            omniDB["Bitcoin (BTC)"].val = btcData.bitcoin.usd;
         }
 
         apiStatus.className = 'api-status live';
