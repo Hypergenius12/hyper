@@ -180,7 +180,7 @@ class Cube3D {
         let geoType = this.stickerStyle || 'block';
         let geometry;
         if (this.gridSize === 1) {
-            geometry = geoType === 'floating' ? new THREE.BoxGeometry(1.5, 1.5, 1.5) : new THREE.BoxGeometry(1.96, 1.96, 1.96);
+            geometry = geoType === 'floating' ? new THREE.BoxGeometry(0.75, 0.75, 0.75) : new THREE.BoxGeometry(0.98, 0.98, 0.98);
         } else {
             geometry = geoType === 'floating' ? new THREE.BoxGeometry(0.75, 0.75, 0.75) : new THREE.BoxGeometry(0.98, 0.98, 0.98);
         }
@@ -298,9 +298,9 @@ class Cube3D {
             
             if (this.gridSize === 1) {
                 let moveStr = '';
-                if (Math.abs(A.x) === 1) moveStr = A.x > 0 ? "x" : "x'";
-                else if (Math.abs(A.y) === 1) moveStr = A.y > 0 ? "y" : "y'";
-                else if (Math.abs(A.z) === 1) moveStr = A.z > 0 ? "z" : "z'";
+                if (Math.abs(A.x) === 1) moveStr = A.x > 0 ? "x'" : "x";
+                else if (Math.abs(A.y) === 1) moveStr = A.y > 0 ? "y'" : "y";
+                else if (Math.abs(A.z) === 1) moveStr = A.z > 0 ? "z'" : "z";
                 
                 if (moveStr) {
                     window.dispatchEvent(new CustomEvent('manualMove', { detail: moveStr }));
@@ -374,9 +374,9 @@ class Cube3D {
             piecesToMove = [0];
         } else {
             if (baseMove === 'U') {
-                axis = new THREE.Vector3(0, 1, 0); dir = -1; piecesToMove = [0, 1, 2, 3];
+                axis = new THREE.Vector3(0, 1, 0); dir = -1; piecesToMove = [0, 3, 2, 1];
             } else if (baseMove === 'D') {
-                axis = new THREE.Vector3(0, 1, 0); dir = 1; piecesToMove = [4, 5, 6, 7];
+                axis = new THREE.Vector3(0, 1, 0); dir = 1; piecesToMove = [4, 7, 6, 5];
             } else if (baseMove === 'R') {
                 axis = new THREE.Vector3(1, 0, 0); dir = -1; piecesToMove = [0, 3, 7, 4];
             } else if (baseMove === 'L') {
@@ -384,11 +384,7 @@ class Cube3D {
             } else if (baseMove === 'F') {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1; piecesToMove = [0, 4, 5, 1];
             } else if (baseMove === 'B') {
-                axis = new THREE.Vector3(0, 0, 1); dir = 1; piecesToMove = [2, 6, 7, 3];
-            } else if (['x', 'y', 'z'].includes(baseMove)) {
-                // If 2x2 receives manual rotation moves for some reason, just rotate everything
-                axis = new THREE.Vector3(baseMove==='x'?1:0, baseMove==='y'?1:0, baseMove==='z'?1:0);
-                dir = -1; piecesToMove = [0,1,2,3,4,5,6,7];
+                axis = new THREE.Vector3(0, 0, 1); dir = 1; piecesToMove = [3, 2, 6, 7];
             } else return;
         }
 
