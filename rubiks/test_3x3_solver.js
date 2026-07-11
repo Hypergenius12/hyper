@@ -23,3 +23,14 @@ for (const history of [['R', 'U'], ['M', 'E', 'S'], ["R", 'U', "R'", "U'"]]) {
 
     console.log(`${history.join(' ')} -> ${solution.join(' ')}`);
 }
+
+for (const history of [['R', 'Ui', "F'", 'Li2'], ['Ri', 'D2', 'Bi', "U'"]]) {
+    const solution = context.solveByHistory(history);
+    const combined = context.simplifySequence([...history, ...solution]);
+
+    if (combined.length !== 0) {
+        throw new Error(`History solution did not reverse: ${history.join(' ')}`);
+    }
+
+    console.log(`${history.join(' ')} -> ${solution.join(' ')}`);
+}

@@ -17,21 +17,29 @@ function simplifySequence(sequence) {
     const result = [];
     const turns = { '': 1, '2': 2, "'": 3 };
 
+    const splitMove = move => {
+        const suffix = move.endsWith("'") || move.endsWith('2') ? move.slice(-1) : '';
+        return { key: suffix ? move.slice(0, -1) : move, suffix };
+    };
+
     for (const move of sequence) {
-        const base = move[0];
-        const suffix = move.slice(1);
+        const current = splitMove(move);
         const previous = result[result.length - 1];
 
-        if (previous && previous[0] === base) {
-            const total = (turns[previous.slice(1)] + turns[suffix]) % 4;
+        if (previous && splitMove(previous).key === current.key) {
+            const total = (turns[splitMove(previous).suffix] + turns[current.suffix]) % 4;
             result.pop();
-            if (total) result.push(base + (total === 1 ? '' : total === 2 ? '2' : "'"));
+            if (total) result.push(current.key + (total === 1 ? '' : total === 2 ? '2' : "'"));
         } else {
             result.push(move);
         }
     }
 
     return result;
+}
+
+function solveByHistory(moveHistory) {
+    return simplifySequence(moveHistory.slice().reverse().map(invertMove));
 }
 
 function solve3x3(moveHistory, method) {
@@ -55,9 +63,7 @@ function solve3x3(moveHistory, method) {
     if (cube.isSolved()) return [];
 
     const solverSolution = cube.solve().split(' ').filter(Boolean);
-    const reverseHistorySolution = simplifySequence(
-        moveHistory.map(toCubeJsMove).reverse().map(invertMove)
-    );
+    const reverseHistorySolution = solveByHistory(moveHistory.map(toCubeJsMove));
     const shortestFound = reverseHistorySolution.length <= solverSolution.length
         ? reverseHistorySolution
         : solverSolution;

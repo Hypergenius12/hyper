@@ -98,7 +98,7 @@ class Cube3D {
             for (let i = 0; i < this.pieces.length; i++) {
                 let mesh = this.pieces[i];
                 let p = mesh.userData.startPos;
-                let maxC = this.gridSize === 1 ? 0 : (this.gridSize === 2 ? 0.51 : 1.02);
+                let maxC = this.gridSize === 1 ? 0 : (this.gridSize === 2 ? 0.51 : ((this.gridSize - 1) / 2) * 1.02);
                 mesh.material = this.getMaterials(p[0], p[1], p[2], maxC);
             }
         } else {
@@ -146,6 +146,12 @@ class Cube3D {
         this.initCube();
     }
 
+    snapCoordinate(value) {
+        const step = 1.02;
+        const gridOffset = this.gridSize % 2 === 0 ? 0.5 : 0;
+        return (Math.round((value / step) - gridOffset) + gridOffset) * step;
+    }
+
     initCube() {
         if (this.pieces.length > 0) {
             this.pieces.forEach(p => {
@@ -179,16 +185,17 @@ class Cube3D {
                 [offset, -offset, -offset]  // 7: DBR
             ];
             maxC = offset;
-        } else if (this.gridSize === 3) {
-            let step = 1.02;
-            for (let y = 1; y >= -1; y--) {
-                for (let z = 1; z >= -1; z--) {
-                    for (let x = 1; x >= -1; x--) {
+        } else {
+            const step = 1.02;
+            const halfSize = (this.gridSize - 1) / 2;
+            for (let y = halfSize; y >= -halfSize; y--) {
+                for (let z = halfSize; z >= -halfSize; z--) {
+                    for (let x = halfSize; x >= -halfSize; x--) {
                         positions.push([x * step, y * step, z * step]);
                     }
                 }
             }
-            maxC = step;
+            maxC = halfSize * step;
         }
 
         let geoType = this.stickerStyle || 'block';
@@ -321,28 +328,41 @@ class Cube3D {
             } else {
                 let layer = null;
                 let standardMoveVec = null;
-                let thresh = this.gridSize === 3 ? 0.5 : 0;
+                const isOddCube = this.gridSize % 2 === 1;
+                const outerThreshold = this.gridSize === 2 ? 0 : (((this.gridSize - 1) / 2) - 0.5) * 1.02;
                 
                 if (Math.abs(A.x) === 1) {
-                    if (P.x > thresh) layer = 'R';
-                    else if (P.x < -thresh) layer = 'L';
-                    else if (this.gridSize === 3) layer = 'M';
+                    if (P.x > outerThreshold) layer = 'R';
+                    else if (P.x < -outerThreshold) layer = 'L';
+                    else if (P.x > 0 && this.gridSize > 3) layer = 'Ri';
+                    else if (P.x < 0 && this.gridSize > 3) layer = 'Li';
+                    else if (isOddCube) layer = 'M';
                     if (layer === 'R') standardMoveVec = new THREE.Vector3(-1, 0, 0);
                     else if (layer === 'L') standardMoveVec = new THREE.Vector3(1, 0, 0);
+                    else if (layer === 'Ri') standardMoveVec = new THREE.Vector3(-1, 0, 0);
+                    else if (layer === 'Li') standardMoveVec = new THREE.Vector3(1, 0, 0);
                     else if (layer === 'M') standardMoveVec = new THREE.Vector3(1, 0, 0);
                 } else if (Math.abs(A.y) === 1) {
-                    if (P.y > thresh) layer = 'U';
-                    else if (P.y < -thresh) layer = 'D';
-                    else if (this.gridSize === 3) layer = 'E';
+                    if (P.y > outerThreshold) layer = 'U';
+                    else if (P.y < -outerThreshold) layer = 'D';
+                    else if (P.y > 0 && this.gridSize > 3) layer = 'Ui';
+                    else if (P.y < 0 && this.gridSize > 3) layer = 'Di';
+                    else if (isOddCube) layer = 'E';
                     if (layer === 'U') standardMoveVec = new THREE.Vector3(0, -1, 0);
                     else if (layer === 'D') standardMoveVec = new THREE.Vector3(0, 1, 0);
+                    else if (layer === 'Ui') standardMoveVec = new THREE.Vector3(0, -1, 0);
+                    else if (layer === 'Di') standardMoveVec = new THREE.Vector3(0, 1, 0);
                     else if (layer === 'E') standardMoveVec = new THREE.Vector3(0, 1, 0);
                 } else if (Math.abs(A.z) === 1) {
-                    if (P.z > thresh) layer = 'F';
-                    else if (P.z < -thresh) layer = 'B';
-                    else if (this.gridSize === 3) layer = 'S';
+                    if (P.z > outerThreshold) layer = 'F';
+                    else if (P.z < -outerThreshold) layer = 'B';
+                    else if (P.z > 0 && this.gridSize > 3) layer = 'Fi';
+                    else if (P.z < 0 && this.gridSize > 3) layer = 'Bi';
+                    else if (isOddCube) layer = 'S';
                     if (layer === 'F') standardMoveVec = new THREE.Vector3(0, 0, -1);
                     else if (layer === 'B') standardMoveVec = new THREE.Vector3(0, 0, 1);
+                    else if (layer === 'Fi') standardMoveVec = new THREE.Vector3(0, 0, -1);
+                    else if (layer === 'Bi') standardMoveVec = new THREE.Vector3(0, 0, 1);
                     else if (layer === 'S') standardMoveVec = new THREE.Vector3(0, 0, -1);
                 }
                 
@@ -372,6 +392,7 @@ class Cube3D {
         let isPrime = false;
         let isDouble = false;
         let baseMove = moveStr[0];
+        let isInnerMove = moveStr.length > 1 && moveStr[1] === 'i';
         let angle = Math.PI / 2;
         if (moveStr.endsWith("'")) {
             isPrime = true;
@@ -418,55 +439,73 @@ class Cube3D {
                 if (callback) callback();
                 return;
             }
-        } else if (this.gridSize === 3) {
-            let eps = 0.5;
+        } else {
+            const maxCoordinate = ((this.gridSize - 1) / 2) * 1.02;
+            const outerThreshold = maxCoordinate - 0.1;
+            const wideThreshold = maxCoordinate - 1.12;
+            const innerCoordinate = maxCoordinate - 1.02;
+            const hasMiddleSlice = this.gridSize % 2 === 1;
             let activeIndices = [];
+            const select = predicate => this.pieces.map((p, i) => predicate(p) ? i : -1).filter(i => i !== -1);
+            const isWideMove = !isInnerMove && (/^[URFDLB]w/.test(moveStr) || /^[urfdlb]/.test(moveStr));
             
             if (baseMove === 'U') {
                 axis = new THREE.Vector3(0, 1, 0); dir = -1;
-                activeIndices = this.pieces.map((p, i) => p.position.y > eps ? i : -1).filter(i => i !== -1);
+                activeIndices = isInnerMove
+                    ? select(p => Math.abs(p.position.y - innerCoordinate) < 0.1)
+                    : select(p => p.position.y > (isWideMove ? wideThreshold : outerThreshold));
             } else if (baseMove === 'D') {
                 axis = new THREE.Vector3(0, 1, 0); dir = 1;
-                activeIndices = this.pieces.map((p, i) => p.position.y < -eps ? i : -1).filter(i => i !== -1);
+                activeIndices = isInnerMove
+                    ? select(p => Math.abs(p.position.y + innerCoordinate) < 0.1)
+                    : select(p => p.position.y < -(isWideMove ? wideThreshold : outerThreshold));
             } else if (baseMove === 'R') {
                 axis = new THREE.Vector3(1, 0, 0); dir = -1;
-                activeIndices = this.pieces.map((p, i) => p.position.x > eps ? i : -1).filter(i => i !== -1);
+                activeIndices = isInnerMove
+                    ? select(p => Math.abs(p.position.x - innerCoordinate) < 0.1)
+                    : select(p => p.position.x > (isWideMove ? wideThreshold : outerThreshold));
             } else if (baseMove === 'L') {
                 axis = new THREE.Vector3(1, 0, 0); dir = 1;
-                activeIndices = this.pieces.map((p, i) => p.position.x < -eps ? i : -1).filter(i => i !== -1);
+                activeIndices = isInnerMove
+                    ? select(p => Math.abs(p.position.x + innerCoordinate) < 0.1)
+                    : select(p => p.position.x < -(isWideMove ? wideThreshold : outerThreshold));
             } else if (baseMove === 'F') {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1;
-                activeIndices = this.pieces.map((p, i) => p.position.z > eps ? i : -1).filter(i => i !== -1);
+                activeIndices = isInnerMove
+                    ? select(p => Math.abs(p.position.z - innerCoordinate) < 0.1)
+                    : select(p => p.position.z > (isWideMove ? wideThreshold : outerThreshold));
             } else if (baseMove === 'B') {
                 axis = new THREE.Vector3(0, 0, 1); dir = 1;
-                activeIndices = this.pieces.map((p, i) => p.position.z < -eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'M') {
+                activeIndices = isInnerMove
+                    ? select(p => Math.abs(p.position.z + innerCoordinate) < 0.1)
+                    : select(p => p.position.z < -(isWideMove ? wideThreshold : outerThreshold));
+            } else if (baseMove === 'M' && hasMiddleSlice) {
                 axis = new THREE.Vector3(1, 0, 0); dir = 1;
-                activeIndices = this.pieces.map((p, i) => Math.abs(p.position.x) < eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'E') {
+                activeIndices = select(p => Math.abs(p.position.x) < 0.1);
+            } else if (baseMove === 'E' && hasMiddleSlice) {
                 axis = new THREE.Vector3(0, 1, 0); dir = 1;
-                activeIndices = this.pieces.map((p, i) => Math.abs(p.position.y) < eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'S') {
+                activeIndices = select(p => Math.abs(p.position.y) < 0.1);
+            } else if (baseMove === 'S' && hasMiddleSlice) {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1;
-                activeIndices = this.pieces.map((p, i) => Math.abs(p.position.z) < eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'r' || moveStr.includes('w') && baseMove === 'R') {
+                activeIndices = select(p => Math.abs(p.position.z) < 0.1);
+            } else if (baseMove === 'r') {
                 axis = new THREE.Vector3(1, 0, 0); dir = -1;
-                activeIndices = this.pieces.map((p, i) => p.position.x > -eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'l' || moveStr.includes('w') && baseMove === 'L') {
+                activeIndices = select(p => p.position.x > wideThreshold);
+            } else if (baseMove === 'l') {
                 axis = new THREE.Vector3(1, 0, 0); dir = 1;
-                activeIndices = this.pieces.map((p, i) => p.position.x < eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'u' || moveStr.includes('w') && baseMove === 'U') {
+                activeIndices = select(p => p.position.x < -wideThreshold);
+            } else if (baseMove === 'u') {
                 axis = new THREE.Vector3(0, 1, 0); dir = -1;
-                activeIndices = this.pieces.map((p, i) => p.position.y > -eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'd' || moveStr.includes('w') && baseMove === 'D') {
+                activeIndices = select(p => p.position.y > wideThreshold);
+            } else if (baseMove === 'd') {
                 axis = new THREE.Vector3(0, 1, 0); dir = 1;
-                activeIndices = this.pieces.map((p, i) => p.position.y < eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'f' || moveStr.includes('w') && baseMove === 'F') {
+                activeIndices = select(p => p.position.y < -wideThreshold);
+            } else if (baseMove === 'f') {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1;
-                activeIndices = this.pieces.map((p, i) => p.position.z > -eps ? i : -1).filter(i => i !== -1);
-            } else if (baseMove === 'b' || moveStr.includes('w') && baseMove === 'B') {
+                activeIndices = select(p => p.position.z > wideThreshold);
+            } else if (baseMove === 'b') {
                 axis = new THREE.Vector3(0, 0, 1); dir = 1;
-                activeIndices = this.pieces.map((p, i) => p.position.z < eps ? i : -1).filter(i => i !== -1);
+                activeIndices = select(p => p.position.z < -wideThreshold);
             } else if (baseMove === 'x') {
                 axis = new THREE.Vector3(1, 0, 0); dir = -1;
                 activeIndices = this.pieces.map((p, i) => i);
@@ -537,12 +576,11 @@ class Cube3D {
             this.scene.remove(anim.group);
 
             // Snap positions to grid to prevent floating-point drift
-            if (this.gridSize === 3) {
-                let step = 1.02;
+            if (this.gridSize >= 3) {
                 anim.activeMeshes.forEach(mesh => {
-                    mesh.position.x = Math.round(mesh.position.x / step) * step;
-                    mesh.position.y = Math.round(mesh.position.y / step) * step;
-                    mesh.position.z = Math.round(mesh.position.z / step) * step;
+                    mesh.position.x = this.snapCoordinate(mesh.position.x);
+                    mesh.position.y = this.snapCoordinate(mesh.position.y);
+                    mesh.position.z = this.snapCoordinate(mesh.position.z);
                 });
             } else if (this.gridSize === 2) {
                 // Correct cyclic array mapping!

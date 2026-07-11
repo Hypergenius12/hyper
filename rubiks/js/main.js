@@ -28,9 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentMode = '2x2';
     let moveHistory = [];
+    let isScrambling = false;
 
-    function record3x3Move(move) {
-        if (currentMode === '3x3') moveHistory.push(toCubeJsMove(move));
+    function recordTrackedMove(move) {
+        if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5') {
+            moveHistory.push(toCubeJsMove(move));
+        }
     }
 
     function invertNotation(move) {
@@ -70,11 +73,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     <option value="guided">Guided (Layer-by-layer style)</option>
                 `;
             }
+        } else if (currentMode === '4x4' || currentMode === '5x5') {
+            if (solveMethodSelect) {
+                solveMethodSelect.innerHTML = '<option value="optimal">Optimal</option>';
+            }
         }
         
         cubeState = new CubeState();
         moveHistory = [];
         solutionOutput.classList.add('hidden');
+        isScrambling = false;
+        btnScramble.disabled = false;
         isPlaying = false;
         btnPlay.textContent = 'PLAY';
     });
@@ -94,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentMode === '2x2') {
             cubeState.applySequence(moveStr);
         }
-        record3x3Move(moveStr);
+        recordTrackedMove(moveStr);
         cube3D.applyMoveAnim(moveStr);
     });
 
@@ -141,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function generateScramble(length = 11, mode = '2x2') {
         const moves2x2 = ['U', "U'", 'U2', 'R', "R'", 'R2', 'F', "F'", 'F2'];
         const moves3x3 = ['U', "U'", 'U2', 'D', "D'", 'D2', 'R', "R'", 'R2', 'L', "L'", 'L2', 'F', "F'", 'F2', 'B', "B'", 'B2'];
-        const moves = mode === '3x3' ? moves3x3 : moves2x2;
+        const moves = mode === '2x2' ? moves2x2 : moves3x3;
         let scramble = [];
         let lastFace = '';
         
@@ -186,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateHighlight();
         if (currentMode === '2x2') cubeState.applySequence(m);
-        record3x3Move(m);
+        recordTrackedMove(m);
         cube3D.applyMoveAnim(m, () => {
             playIndex++;
             playNextMove();
@@ -194,12 +203,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnScramble.addEventListener('click', () => {
+        if (isScrambling) return;
+        isScrambling = true;
+        btnScramble.disabled = true;
         solutionOutput.classList.add('hidden');
         isPlaying = false;
         btnPlay.textContent = 'PLAY';
 
         const playScrambleMove = (i, sequence) => {
-            if (i >= sequence.length) return;
+            if (i >= sequence.length) {
+                isScrambling = false;
+                btnScramble.disabled = false;
+                return;
+            }
             cube3D.applyMoveAnim(sequence[i], () => playScrambleMove(i + 1, sequence));
         };
 
@@ -207,9 +223,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let scramble = generateScramble(5, '1x1');
             moveHistory.push(...scramble);
             playScrambleMove(0, scramble);
-        } else if (currentMode === '3x3') {
-            let scramble = generateScramble(20, '3x3');
-            scramble.forEach(record3x3Move);
+        } else if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5') {
+            const length = currentMode === '3x3' ? 20 : currentMode === '4x4' ? 40 : 60;
+            let scramble = generateScramble(length, currentMode);
+            scramble.forEach(recordTrackedMove);
             playScrambleMove(0, scramble);
         } else {
             let scramble = generateScramble(11, '2x2');
@@ -223,6 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
         moveHistory = [];
         cube3D.initCube();
         solutionOutput.classList.add('hidden');
+        isScrambling = false;
+        btnScramble.disabled = false;
         isPlaying = false;
         btnPlay.textContent = 'PLAY';
     });
@@ -254,6 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (currentMode === '3x3') {
                 currentSolution = solve3x3(moveHistory, method);
+            } else if (currentMode === '4x4' || currentMode === '5x5') {
+                currentSolution = solveByHistory(moveHistory);
             } else {
                 if (method === 'guided') {
                     currentSolution = solveGuided(cubeState);
@@ -294,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.onclick = () => {
                         if (!isPlaying && !cube3D.isAnimating) {
                             if (currentMode === '2x2') cubeState.applySequence(m);
-                            record3x3Move(m);
+                            recordTrackedMove(m);
                             cube3D.applyMoveAnim(m);
                         }
                     };
@@ -336,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let m = currentSolution[playIndex];
             if (m.startsWith('[') || m === '|') { playIndex++; continue; }
             if (currentMode === '2x2') cubeState.applySequence(m);
-            record3x3Move(m);
+            recordTrackedMove(m);
             cube3D.applyMoveAnim(m, () => {
                 playIndex++;
                 updateHighlight();
@@ -357,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let inv = invertNotation(m);
             
             if (currentMode === '2x2') cubeState.applySequence(inv);
-            record3x3Move(inv);
+            recordTrackedMove(inv);
             cube3D.applyMoveAnim(inv, () => {
                 updateHighlight();
             });
