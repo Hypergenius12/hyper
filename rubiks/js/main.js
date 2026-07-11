@@ -29,6 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMode = '2x2';
     let moveHistory = [];
 
+    function record3x3Move(move) {
+        if (currentMode === '3x3') moveHistory.push(toCubeJsMove(move));
+    }
+
+    function invertNotation(move) {
+        if (move.endsWith("'")) return move.slice(0, -1);
+        if (move.endsWith('2')) return move;
+        return move + "'";
+    }
+
     cubeSizeSelect.addEventListener('change', (e) => {
         currentMode = e.target.value;
         appTitle.textContent = currentMode + ' Cube Solver';
@@ -46,8 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentMode === '3x3') {
             if (solveMethodSelect) {
                 solveMethodSelect.innerHTML = `
+                    <option value="optimal">Quick / Short Solution</option>
                     <option value="cfop">CFOP</option>
-                    <option value="optimal">Optimal</option>
                 `;
             }
             if (window.Cube && !Cube._initialized) {
@@ -83,9 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let moveStr = e.detail;
         if (currentMode === '2x2') {
             cubeState.applySequence(moveStr);
-        } else {
-            moveHistory.push(moveStr);
         }
+        record3x3Move(moveStr);
         cube3D.applyMoveAnim(moveStr);
     });
 
@@ -177,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateHighlight();
         if (currentMode === '2x2') cubeState.applySequence(m);
+        record3x3Move(m);
         cube3D.applyMoveAnim(m, () => {
             playIndex++;
             playNextMove();
@@ -199,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
             playScrambleMove(0, scramble);
         } else if (currentMode === '3x3') {
             let scramble = generateScramble(20, '3x3');
-            moveHistory.push(...scramble);
+            scramble.forEach(record3x3Move);
             playScrambleMove(0, scramble);
         } else {
             let scramble = generateScramble(11, '2x2');
@@ -230,30 +240,27 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSolve.disabled = true;
 
         setTimeout(() => {
+            try {
             let method = solveMethodSelect ? solveMethodSelect.value : 'optimal';
         
             if (currentMode === '1x1') {
                 let n = moveHistory.length;
-                if (n === 0) {
-                    currentSolution = [];
-                } else {
-                    let fakePath = [moveHistory[n-1] + "'"];
+            if (n === 0) {
+                currentSolution = [];
+            } else {
+                    let fakePath = [invertNotation(moveHistory[n - 1])];
                     for (let i = 0; i < n; i++) fakePath.push(generateScramble(1)[0]);
                     currentSolution = fakePath;
                 }
             } else if (currentMode === '3x3') {
-                let method = document.getElementById('solve-method').value;
-                currentSolution = solve3x3(moveHistory, method, cube3D);
+                currentSolution = solve3x3(moveHistory, method);
             } else {
                 if (method === 'guided') {
-                    currentSolution = solveLayerByLayer(cubeState);
+                    currentSolution = solveGuided(cubeState);
                 } else {
                     currentSolution = solveOptimal(cubeState);
                 }
             }
-            
-            btnSolve.textContent = 'SOLVE CUBE';
-            btnSolve.disabled = false;
             
             playIndex = 0;
             isPlaying = false;
@@ -287,6 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.onclick = () => {
                         if (!isPlaying && !cube3D.isAnimating) {
                             if (currentMode === '2x2') cubeState.applySequence(m);
+                            record3x3Move(m);
                             cube3D.applyMoveAnim(m);
                         }
                     };
@@ -297,6 +305,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             updateHighlight();
             solutionOutput.classList.remove('hidden');
+            } catch (error) {
+                console.error('Solve failed:', error);
+                alert('Unable to solve this cube state. Reset the cube and try again.');
+            } finally {
+                btnSolve.textContent = 'SOLVE CUBE';
+                btnSolve.disabled = false;
+            }
         }, 50);
     });
 
@@ -321,6 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let m = currentSolution[playIndex];
             if (m.startsWith('[') || m === '|') { playIndex++; continue; }
             if (currentMode === '2x2') cubeState.applySequence(m);
+            record3x3Move(m);
             cube3D.applyMoveAnim(m, () => {
                 playIndex++;
                 updateHighlight();
@@ -338,12 +354,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let m = currentSolution[playIndex];
             if (m.startsWith('[') || m === '|') { continue; }
             
-            let inv = m;
-            if (m.endsWith("'")) inv = m[0];
-            else if (m.endsWith("2")) inv = m;
-            else inv = m + "'";
+            let inv = invertNotation(m);
             
             if (currentMode === '2x2') cubeState.applySequence(inv);
+            record3x3Move(inv);
             cube3D.applyMoveAnim(inv, () => {
                 updateHighlight();
             });

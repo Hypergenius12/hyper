@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://hypergenius12.github.io/hyper/sitemap.xml
+Sitemap: https://hypergenius12.com/sitemap.xml

@@ -1,12 +1,13 @@
 const fs = require('fs');
+const vm = require('vm');
 
 // Mock DOM
 global.window = {};
 global.document = { addEventListener: () => {} };
 
 // Load code
-eval(fs.readFileSync('js/cubeState.js', 'utf8'));
-eval(fs.readFileSync('js/solver.js', 'utf8'));
+vm.runInThisContext(fs.readFileSync('js/cubeState.js', 'utf8'));
+vm.runInThisContext(fs.readFileSync('js/solver.js', 'utf8'));
 
 let c = new CubeState();
 c.applySequence("U R2 F' U' R");

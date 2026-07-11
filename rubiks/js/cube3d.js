@@ -336,16 +336,14 @@ class Cube3D {
                     else if (this.gridSize === 3) layer = 'E';
                     if (layer === 'U') standardMoveVec = new THREE.Vector3(0, -1, 0);
                     else if (layer === 'D') standardMoveVec = new THREE.Vector3(0, 1, 0);
-                    else if (layer === 'E') standardMoveVec = new THREE.Vector3(0, -1, 0); // E now follows U
+                    else if (layer === 'E') standardMoveVec = new THREE.Vector3(0, 1, 0);
                 } else if (Math.abs(A.z) === 1) {
                     if (P.z > thresh) layer = 'F';
                     else if (P.z < -thresh) layer = 'B';
                     else if (this.gridSize === 3) layer = 'S';
                     if (layer === 'F') standardMoveVec = new THREE.Vector3(0, 0, -1);
                     else if (layer === 'B') standardMoveVec = new THREE.Vector3(0, 0, 1);
-                    else if (layer === 'S') standardMoveVec = new THREE.Vector3(0, 0, 1); // wait, S follows F, so standard is F's? F is (0,0,-1). wait! S dir is -1 (same as F). So standardMoveVec should be same as F? Wait, A.dot(standardVec) < 0 -> prime.
-                    // If A = (0,0,1) and standard = (0,0,-1), dot is -1 -> prime.
-                    // S dir is -1 for CW. So if A = (0,0,-1), A.dot((0,0,-1)) = 1 -> CW. Yes!
+                    else if (layer === 'S') standardMoveVec = new THREE.Vector3(0, 0, -1);
                 }
                 
                 if (layer) {
@@ -396,7 +394,10 @@ class Cube3D {
                 'B': { axis: new THREE.Vector3(0, 0, 1), dir: 1 }
             };
             let map = axisMapping[baseMove];
-            if (!map) return;
+            if (!map) {
+                if (callback) callback();
+                return;
+            }
             axis = map.axis;
             dir = map.dir;
             piecesToMove = [0];
@@ -413,7 +414,10 @@ class Cube3D {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1; piecesToMove = [0, 1, 5, 4];
             } else if (baseMove === 'B') {
                 axis = new THREE.Vector3(0, 0, 1); dir = 1; piecesToMove = [3, 7, 6, 2];
-            } else return;
+            } else {
+                if (callback) callback();
+                return;
+            }
         } else if (this.gridSize === 3) {
             let eps = 0.5;
             let activeIndices = [];
@@ -433,11 +437,14 @@ class Cube3D {
             } else if (baseMove === 'F') {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1;
                 activeIndices = this.pieces.map((p, i) => p.position.z > eps ? i : -1).filter(i => i !== -1);
+            } else if (baseMove === 'B') {
+                axis = new THREE.Vector3(0, 0, 1); dir = 1;
+                activeIndices = this.pieces.map((p, i) => p.position.z < -eps ? i : -1).filter(i => i !== -1);
             } else if (baseMove === 'M') {
                 axis = new THREE.Vector3(1, 0, 0); dir = 1;
                 activeIndices = this.pieces.map((p, i) => Math.abs(p.position.x) < eps ? i : -1).filter(i => i !== -1);
             } else if (baseMove === 'E') {
-                axis = new THREE.Vector3(0, 1, 0); dir = -1; // E now follows U (dir=-1) instead of D
+                axis = new THREE.Vector3(0, 1, 0); dir = 1;
                 activeIndices = this.pieces.map((p, i) => Math.abs(p.position.y) < eps ? i : -1).filter(i => i !== -1);
             } else if (baseMove === 'S') {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1;
@@ -469,7 +476,11 @@ class Cube3D {
             } else if (baseMove === 'z') {
                 axis = new THREE.Vector3(0, 0, 1); dir = -1;
                 activeIndices = this.pieces.map((p, i) => i);
-            } else return;
+            } else {
+                // Unknown move - still call callback to not break chains
+                if (callback) callback();
+                return;
+            }
             
             piecesToMove = activeIndices;
         }
@@ -525,7 +536,15 @@ class Cube3D {
             });
             this.scene.remove(anim.group);
 
-            if (this.gridSize === 2) {
+            // Snap positions to grid to prevent floating-point drift
+            if (this.gridSize === 3) {
+                let step = 1.02;
+                anim.activeMeshes.forEach(mesh => {
+                    mesh.position.x = Math.round(mesh.position.x / step) * step;
+                    mesh.position.y = Math.round(mesh.position.y / step) * step;
+                    mesh.position.z = Math.round(mesh.position.z / step) * step;
+                });
+            } else if (this.gridSize === 2) {
                 // Correct cyclic array mapping!
                 let newPieces = [...this.pieces];
                 let p = anim.piecesToMove;

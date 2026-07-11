@@ -1,5 +1,6 @@
 const fs = require('fs');
-eval(fs.readFileSync('./js/cubeState.js', 'utf8'));
+const vm = require('vm');
+vm.runInThisContext(fs.readFileSync('./js/cubeState.js', 'utf8'));
 
 // Generate 24 solved states
 let yMove = new CubeState();

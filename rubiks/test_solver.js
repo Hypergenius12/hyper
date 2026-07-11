@@ -1,6 +1,7 @@
 const fs = require('fs');
-eval(fs.readFileSync('./js/cubeState.js', 'utf8'));
-eval(fs.readFileSync('./js/solver.js', 'utf8'));
+const vm = require('vm');
+vm.runInThisContext(fs.readFileSync('./js/cubeState.js', 'utf8'));
+vm.runInThisContext(fs.readFileSync('./js/solver.js', 'utf8'));
 
 function runTests() {
     let cube = new CubeState();
