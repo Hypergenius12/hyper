@@ -92,8 +92,8 @@ if (!movedCoordinates(6, 'Ri', 'x').every(value => Math.abs(value - 1.53) < 0.01
     throw new Error('6x6 Ri incorrectly selects the first inner layer');
 }
 
-if (!movedCoordinates(6, 'Ri2', 'x').every(value => Math.abs(value - 0.51) < 0.01)) {
-    throw new Error('6x6 Ri2 incorrectly selects the second inner layer');
+if (!movedCoordinates(6, 'R2i', 'x').every(value => Math.abs(value - 0.51) < 0.01)) {
+    throw new Error('6x6 R2i incorrectly selects the second inner layer');
 }
 
 if (countMovedPieces(5, 'M') !== 25) {
@@ -111,6 +111,21 @@ for (const value of [-1.53, -0.51, 0.51, 1.53]) {
 
 console.log('4x4: half-step coordinate snapping is stable');
 
+for (const [move, coordinate] of [['R', 4.59], ['Ri', 3.57], ['R2i', 2.55], ['R3i', 1.53], ['R4i', 0.51]]) {
+    const moved = movedCoordinates(10, move, 'x');
+    if (moved.length !== 100 || !moved.every(value => Math.abs(value - coordinate) < 0.01)) {
+        throw new Error(`10x10 layer selection failed for ${move}`);
+    }
+}
+
+const parsedSize = {
+    initCube() {},
+    fitCameraToCube() {}
+};
+global.Cube3DForTest.prototype.setSize.call(parsedSize, '10x10');
+if (parsedSize.gridSize !== 10) throw new Error('10x10 size parsing failed');
+console.log('10x10: all layers and two-digit size parsing are valid');
+
 function invert(move) {
     if (move.endsWith("'")) return move.slice(0, -1);
     if (move.endsWith('2')) return move;
@@ -126,7 +141,7 @@ function playSequence(cube, moves) {
 
 const sixBySix = buildCube(6);
 const originalPositions = sixBySix.pieces.map(piece => ({ ...piece.position }));
-const sixBySixMoves = ['R', 'Ri', 'Ri2', 'U', 'Ui2', "Fi'", 'D2', 'Li', 'B', 'Bi2'];
+const sixBySixMoves = ['R', 'Ri', 'R2i', 'U', 'U2i', "F2i'", 'D2', 'Li', 'B', 'B2i'];
 playSequence(sixBySix, sixBySixMoves);
 playSequence(sixBySix, sixBySixMoves.slice().reverse().map(invert));
 
@@ -138,3 +153,18 @@ sixBySix.pieces.forEach((piece, index) => {
 });
 
 console.log('6x6 animated scramble and inverse: valid');
+
+const tenByTen = buildCube(10);
+const tenByTenOriginal = tenByTen.pieces.map(piece => ({ ...piece.position }));
+const tenByTenMoves = ['R', 'Ri', 'R2i', 'R3i', 'R4i', 'U', 'Ui', 'U2i', 'U3i', 'U4i', 'F', 'Fi', 'F2i', 'F3i', 'F4i'];
+playSequence(tenByTen, tenByTenMoves);
+playSequence(tenByTen, tenByTenMoves.slice().reverse().map(invert));
+
+tenByTen.pieces.forEach((piece, index) => {
+    const original = tenByTenOriginal[index];
+    if (Math.abs(piece.position.x - original.x) > 0.01 || Math.abs(piece.position.y - original.y) > 0.01 || Math.abs(piece.position.z - original.z) > 0.01) {
+        throw new Error('10x10 renderer did not return to the solved lattice');
+    }
+});
+
+console.log('10x10 animated scramble and inverse: valid');

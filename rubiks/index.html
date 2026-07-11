@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Cube Solver</title>
-    <link rel="stylesheet" href="css/style.css?v=20260710-2">
+    <link rel="stylesheet" href="css/style.css?v=20260710-3">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <!-- Three.js and TrackballControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -12,7 +12,6 @@
 </head>
 <body>
     <div id="canvas-container"></div>
-    <div id="pyraminx-container" class="hidden"></div>
     
     <div id="ui-panel">
         <h1 id="app-title">Cube Solver</h1>
@@ -26,7 +25,7 @@
                 <option value="4x4">4x4</option>
                 <option value="5x5">5x5</option>
                 <option value="6x6">6x6</option>
-                <option value="pyraminx">Pyraminx</option>
+                <option value="10x10">10x10</option>
             </select>
         </div>
         
@@ -35,17 +34,6 @@
             <button id="btn-reset">Reset</button>
         </div>
 
-        <div id="pyraminx-controls" class="controls-group hidden">
-            <button data-pyraminx-move="U">U</button>
-            <button data-pyraminx-move="U'">U′</button>
-            <button data-pyraminx-move="L">L</button>
-            <button data-pyraminx-move="L'">L′</button>
-            <button data-pyraminx-move="R">R</button>
-            <button data-pyraminx-move="R'">R′</button>
-            <button data-pyraminx-move="B">B</button>
-            <button data-pyraminx-move="B'">B′</button>
-        </div>
-        
         <div class="solver-group">
             <label for="solve-method">Method:</label>
             <select id="solve-method">
@@ -109,7 +97,7 @@
         </div>
         
         <div class="manual-controls">
-            <p id="manual-help">Controls: Drag outside cube to rotate camera. Drag slices to turn them.</p>
+            <p>Controls: Drag outside cube to rotate camera. Drag slices to turn them.</p>
         </div>
     </div>
 
@@ -118,11 +106,10 @@
     <script src="js/solve.js?v=20260710-2"></script>
     <script src="js/cubeState.js?v=20260710-2"></script>
     <script src="js/solver.js?v=20260710-2"></script>
-    <script src="js/solver3x3.js?v=20260710-2"></script>
-    <script src="js/cube3d.js?v=20260710-2"></script>
-    <script src="js/pyraminx.js?v=20260710-2"></script>
+    <script src="js/solver3x3.js?v=20260710-3"></script>
+    <script src="js/cube3d.js?v=20260710-3"></script>
     <script type="module" src="js/cfopSolver.js"></script>
-    <script src="js/main.js?v=20260710-2"></script>
+    <script src="js/main.js?v=20260710-3"></script>
     <script type="module" src="../js/firebase-config.js"></script>
     <script type="module" src="../js/tracker.js"></script>
 </body>

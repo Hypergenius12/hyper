@@ -58,7 +58,7 @@ class Cube3D {
     }
 
     setSize(sizeStr) {
-        this.gridSize = parseInt(sizeStr.charAt(0));
+        this.gridSize = Number.parseInt(sizeStr, 10);
         this.initCube();
         this.fitCameraToCube();
     }
@@ -407,48 +407,48 @@ class Cube3D {
                     else if (P.x < -outerThreshold) layer = 'L';
                     else if (P.x > 0 && this.gridSize > 3) {
                         const depth = Math.round((maxCoordinate - Math.abs(P.x)) / 1.02);
-                        layer = `Ri${depth === 1 ? '' : depth}`;
+                        layer = depth === 1 ? 'Ri' : `R${depth}i`;
                     } else if (P.x < 0 && this.gridSize > 3) {
                         const depth = Math.round((maxCoordinate - Math.abs(P.x)) / 1.02);
-                        layer = `Li${depth === 1 ? '' : depth}`;
+                        layer = depth === 1 ? 'Li' : `L${depth}i`;
                     }
                     else if (isOddCube) layer = 'M';
                     if (layer === 'R') standardMoveVec = new THREE.Vector3(-1, 0, 0);
                     else if (layer === 'L') standardMoveVec = new THREE.Vector3(1, 0, 0);
-                    else if (layer && layer.startsWith('Ri')) standardMoveVec = new THREE.Vector3(-1, 0, 0);
-                    else if (layer && layer.startsWith('Li')) standardMoveVec = new THREE.Vector3(1, 0, 0);
+                    else if (layer && /^R(?:\d+)?i$/.test(layer)) standardMoveVec = new THREE.Vector3(-1, 0, 0);
+                    else if (layer && /^L(?:\d+)?i$/.test(layer)) standardMoveVec = new THREE.Vector3(1, 0, 0);
                     else if (layer === 'M') standardMoveVec = new THREE.Vector3(1, 0, 0);
                 } else if (Math.abs(A.y) === 1) {
                     if (P.y > outerThreshold) layer = 'U';
                     else if (P.y < -outerThreshold) layer = 'D';
                     else if (P.y > 0 && this.gridSize > 3) {
                         const depth = Math.round((maxCoordinate - Math.abs(P.y)) / 1.02);
-                        layer = `Ui${depth === 1 ? '' : depth}`;
+                        layer = depth === 1 ? 'Ui' : `U${depth}i`;
                     } else if (P.y < 0 && this.gridSize > 3) {
                         const depth = Math.round((maxCoordinate - Math.abs(P.y)) / 1.02);
-                        layer = `Di${depth === 1 ? '' : depth}`;
+                        layer = depth === 1 ? 'Di' : `D${depth}i`;
                     }
                     else if (isOddCube) layer = 'E';
                     if (layer === 'U') standardMoveVec = new THREE.Vector3(0, -1, 0);
                     else if (layer === 'D') standardMoveVec = new THREE.Vector3(0, 1, 0);
-                    else if (layer && layer.startsWith('Ui')) standardMoveVec = new THREE.Vector3(0, -1, 0);
-                    else if (layer && layer.startsWith('Di')) standardMoveVec = new THREE.Vector3(0, 1, 0);
+                    else if (layer && /^U(?:\d+)?i$/.test(layer)) standardMoveVec = new THREE.Vector3(0, -1, 0);
+                    else if (layer && /^D(?:\d+)?i$/.test(layer)) standardMoveVec = new THREE.Vector3(0, 1, 0);
                     else if (layer === 'E') standardMoveVec = new THREE.Vector3(0, 1, 0);
                 } else if (Math.abs(A.z) === 1) {
                     if (P.z > outerThreshold) layer = 'F';
                     else if (P.z < -outerThreshold) layer = 'B';
                     else if (P.z > 0 && this.gridSize > 3) {
                         const depth = Math.round((maxCoordinate - Math.abs(P.z)) / 1.02);
-                        layer = `Fi${depth === 1 ? '' : depth}`;
+                        layer = depth === 1 ? 'Fi' : `F${depth}i`;
                     } else if (P.z < 0 && this.gridSize > 3) {
                         const depth = Math.round((maxCoordinate - Math.abs(P.z)) / 1.02);
-                        layer = `Bi${depth === 1 ? '' : depth}`;
+                        layer = depth === 1 ? 'Bi' : `B${depth}i`;
                     }
                     else if (isOddCube) layer = 'S';
                     if (layer === 'F') standardMoveVec = new THREE.Vector3(0, 0, -1);
                     else if (layer === 'B') standardMoveVec = new THREE.Vector3(0, 0, 1);
-                    else if (layer && layer.startsWith('Fi')) standardMoveVec = new THREE.Vector3(0, 0, -1);
-                    else if (layer && layer.startsWith('Bi')) standardMoveVec = new THREE.Vector3(0, 0, 1);
+                    else if (layer && /^F(?:\d+)?i$/.test(layer)) standardMoveVec = new THREE.Vector3(0, 0, -1);
+                    else if (layer && /^B(?:\d+)?i$/.test(layer)) standardMoveVec = new THREE.Vector3(0, 0, 1);
                     else if (layer === 'S') standardMoveVec = new THREE.Vector3(0, 0, -1);
                 }
                 
@@ -478,7 +478,7 @@ class Cube3D {
         let isPrime = false;
         let isDouble = false;
         let baseMove = moveStr[0];
-        let isInnerMove = moveStr.length > 1 && moveStr[1] === 'i';
+        let isInnerMove = /^[URFDLB](?:\d+)?i(?:['2])?$/.test(moveStr);
         let angle = Math.PI / 2;
         if (moveStr.endsWith("'")) {
             isPrime = true;
@@ -529,7 +529,7 @@ class Cube3D {
             const maxCoordinate = ((this.gridSize - 1) / 2) * 1.02;
             const outerThreshold = maxCoordinate - 0.1;
             const wideThreshold = maxCoordinate - 1.12;
-            const innerMatch = /^[URFDLB]i(\d+)?/.exec(moveStr);
+            const innerMatch = /^[URFDLB](\d+)?i/.exec(moveStr);
             const innerDepth = innerMatch && innerMatch[1] ? Number.parseInt(innerMatch[1], 10) : 1;
             const innerCoordinate = maxCoordinate - (1.02 * innerDepth);
             const hasMiddleSlice = this.gridSize % 2 === 1;

@@ -30,7 +30,7 @@ for (const history of [['R', 'U'], ['M', 'E', 'S'], ["R", 'U', "R'", "U'"]]) {
     console.log(`${history.join(' ')} -> ${solution.join(' ')}`);
 }
 
-for (const history of [['R', 'Ui', "F'", 'Li2'], ['Ri', 'D2', 'Bi', "U'"]]) {
+for (const history of [['R', 'Ui', "F'", 'L2i'], ['Ri', 'D2', 'Bi', "U'"]]) {
     const solution = context.solveByHistory(history);
     const combined = context.simplifySequence([...history, ...solution]);
 
@@ -41,7 +41,7 @@ for (const history of [['R', 'Ui', "F'", 'Li2'], ['Ri', 'D2', 'Bi', "U'"]]) {
     console.log(`${history.join(' ')} -> ${solution.join(' ')}`);
 }
 
-const sixBySixHistory = ['R', 'Ri', 'Ri2', 'U2', 'Ui', 'Ui2', 'F', 'Fi2', 'D', "Li'", 'B2'];
+const sixBySixHistory = ['R', 'Ri', 'R2i', 'U2', 'Ui', 'U2i', 'F', 'F2i', 'D', "Li'", 'B2'];
 const sixBySixSolution = context.solveByHistory(sixBySixHistory);
 if (context.simplifySequence([...sixBySixHistory, ...sixBySixSolution]).length !== 0) {
     throw new Error('6x6 solution did not reverse every inner layer');

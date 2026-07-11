@@ -25,17 +25,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const cubeSizeSelect = document.getElementById('cube-size');
     const appTitle = document.getElementById('app-title');
-    const pyraminxContainer = document.getElementById('pyraminx-container');
-    const pyraminxControls = document.getElementById('pyraminx-controls');
-    const manualHelp = document.getElementById('manual-help');
-    const pyraminx = new Pyraminx(pyraminxContainer);
 
     let currentMode = '2x2';
     let moveHistory = [];
     let isScrambling = false;
 
     function recordTrackedMove(move) {
-        if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6') {
+        if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6' || currentMode === '10x10') {
             moveHistory.push(toCubeJsMove(move));
         }
     }
@@ -46,26 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return move + "'";
     }
 
-    function isPyraminxMode() {
-        return currentMode === 'pyraminx';
-    }
-
     cubeSizeSelect.addEventListener('change', (e) => {
         currentMode = e.target.value;
-        const pyraminxMode = isPyraminxMode();
-        appTitle.textContent = pyraminxMode ? 'Pyraminx Solver' : currentMode + ' Cube Solver';
-        document.getElementById('canvas-container').style.display = pyraminxMode ? 'none' : '';
-        pyraminxContainer.classList.toggle('hidden', !pyraminxMode);
-        pyraminxControls.classList.toggle('hidden', !pyraminxMode);
-        manualHelp.textContent = pyraminxMode
-            ? 'Controls: use the U, L, R, and B buttons to turn the Pyraminx.'
-            : 'Controls: Drag outside cube to rotate camera. Drag slices to turn them.';
-        if (pyraminxMode) {
-            cube3D.initCube();
-            pyraminx.reset();
-        } else {
-            cube3D.setSize(currentMode);
-        }
+        appTitle.textContent = currentMode + ' Cube Solver';
+        cube3D.setSize(currentMode);
         
         let label = document.querySelector('label[for="solve-method"]');
         if (currentMode === '1x1') {
@@ -93,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <option value="guided">Guided (Layer-by-layer style)</option>
                 `;
             }
-        } else if (currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6' || pyraminxMode) {
+        } else if (currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6' || currentMode === '10x10') {
             if (solveMethodSelect) {
                 solveMethodSelect.innerHTML = '<option value="optimal">Optimal</option>';
             }
@@ -125,16 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         recordTrackedMove(moveStr);
         cube3D.applyMoveAnim(moveStr);
-    });
-
-    document.querySelectorAll('[data-pyraminx-move]').forEach(button => {
-        button.addEventListener('click', () => {
-            if (isPyraminxMode() && !isScrambling && !isPlaying) {
-                const move = button.dataset.pyraminxMove;
-                moveHistory.push(move);
-                pyraminx.applyMove(move);
-            }
-        });
     });
 
     // Virtual cube logic for calculating random sequence solver (1x1 mode)
@@ -219,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let depth = 1; depth <= innerDepths; depth++) {
             for (const face of faces) {
-                const innerFace = `${face}i${depth === 1 ? '' : depth}`;
+                const innerFace = depth === 1 ? `${face}i` : `${face}${depth}i`;
                 layers.push(innerFace);
             }
         }
@@ -266,13 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         updateHighlight();
-        if (isPyraminxMode()) {
-            pyraminx.applyMove(m);
-            moveHistory.push(m);
-            playIndex++;
-            setTimeout(playNextMove, 140);
-            return;
-        }
         if (currentMode === '2x2') cubeState.applySequence(m);
         recordTrackedMove(m);
         cube3D.applyMoveAnim(m, () => {
@@ -298,25 +261,12 @@ document.addEventListener('DOMContentLoaded', () => {
             cube3D.applyMoveAnim(sequence[i], () => playScrambleMove(i + 1, sequence));
         };
 
-        if (isPyraminxMode()) {
-            const scramble = pyraminx.generateScramble(11);
-            moveHistory.push(...scramble);
-            const playPyraminxMove = index => {
-                if (index >= scramble.length) {
-                    isScrambling = false;
-                    btnScramble.disabled = false;
-                    return;
-                }
-                pyraminx.applyMove(scramble[index]);
-                setTimeout(() => playPyraminxMove(index + 1), 140);
-            };
-            playPyraminxMove(0);
-        } else if (currentMode === '1x1') {
+        if (currentMode === '1x1') {
             let scramble = generateScramble(5, '1x1');
             moveHistory.push(...scramble);
             playScrambleMove(0, scramble);
-        } else if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6') {
-            const length = currentMode === '3x3' ? 20 : currentMode === '4x4' ? 40 : currentMode === '5x5' ? 60 : 80;
+        } else if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6' || currentMode === '10x10') {
+            const length = currentMode === '3x3' ? 20 : currentMode === '4x4' ? 40 : currentMode === '5x5' ? 60 : currentMode === '6x6' ? 80 : 120;
             let scramble = generateScramble(length, currentMode);
             scramble.forEach(recordTrackedMove);
             playScrambleMove(0, scramble);
@@ -330,8 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnReset.addEventListener('click', () => {
         cubeState = new CubeState();
         moveHistory = [];
-        if (isPyraminxMode()) pyraminx.reset();
-        else cube3D.initCube();
+        cube3D.initCube();
         solutionOutput.classList.add('hidden');
         isScrambling = false;
         btnScramble.disabled = false;
@@ -355,9 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
             let method = solveMethodSelect ? solveMethodSelect.value : 'optimal';
         
-            if (isPyraminxMode()) {
-                currentSolution = solveByHistory(moveHistory);
-            } else if (currentMode === '1x1') {
+            if (currentMode === '1x1') {
                 let n = moveHistory.length;
             if (n === 0) {
                 currentSolution = [];
@@ -368,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (currentMode === '3x3') {
                 currentSolution = solve3x3(moveHistory, method);
-            } else if (currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6') {
+            } else if (currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6' || currentMode === '10x10') {
                 currentSolution = solveByHistory(moveHistory);
             } else {
                 if (method === 'guided') {
@@ -409,11 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.textContent = m;
                     btn.onclick = () => {
                         if (!isPlaying && !cube3D.isAnimating) {
-                            if (isPyraminxMode()) {
-                                pyraminx.applyMove(m);
-                                moveHistory.push(m);
-                                return;
-                            }
                             if (currentMode === '2x2') cubeState.applySequence(m);
                             recordTrackedMove(m);
                             cube3D.applyMoveAnim(m);
@@ -456,13 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
         while (playIndex < currentSolution.length) {
             let m = currentSolution[playIndex];
             if (m.startsWith('[') || m === '|') { playIndex++; continue; }
-            if (isPyraminxMode()) {
-                pyraminx.applyMove(m);
-                moveHistory.push(m);
-                playIndex++;
-                updateHighlight();
-                break;
-            }
             if (currentMode === '2x2') cubeState.applySequence(m);
             recordTrackedMove(m);
             cube3D.applyMoveAnim(m, () => {
@@ -483,13 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (m.startsWith('[') || m === '|') { continue; }
             
             let inv = invertNotation(m);
-
-            if (isPyraminxMode()) {
-                pyraminx.applyMove(inv);
-                moveHistory.push(inv);
-                updateHighlight();
-                break;
-            }
             
             if (currentMode === '2x2') cubeState.applySequence(inv);
             recordTrackedMove(inv);
