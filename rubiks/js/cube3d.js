@@ -294,10 +294,31 @@ class Cube3D {
             mesh.add(wireframe);
 
             mesh.position.set(...p);
-            mesh.userData = { logicalIndex: i, startPos: p };
+            mesh.userData = {
+                logicalIndex: i,
+                startPos: [...p],
+                startQuaternion: mesh.quaternion.clone()
+            };
             this.scene.add(mesh);
             this.pieces.push(mesh);
         }
+    }
+
+    isSolved() {
+        const epsilon = 0.1; // generous tolerance for floating point drift
+        return this.pieces.every(mesh => {
+            const home = mesh.userData && mesh.userData.startPos;
+            if (!home ||
+                Math.abs(mesh.position.x - home[0]) > epsilon ||
+                Math.abs(mesh.position.y - home[1]) > epsilon ||
+                Math.abs(mesh.position.z - home[2]) > epsilon) {
+                return false;
+            }
+
+            const startQuaternion = mesh.userData.startQuaternion;
+            return !startQuaternion || !mesh.quaternion || !mesh.quaternion.angleTo ||
+                mesh.quaternion.angleTo(startQuaternion) < epsilon;
+        });
     }
 
     onPointerDown(event) {

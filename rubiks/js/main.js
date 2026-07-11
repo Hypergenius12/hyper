@@ -29,6 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMode = '2x2';
     let moveHistory = [];
     let isScrambling = false;
+    // Incrementing this invalidates callbacks from an interrupted scramble.
+    // Without it, a reset or size change can be followed by old scramble moves
+    // applying to the fresh cube.
+    let scrambleRunId = 0;
 
     function recordTrackedMove(move) {
         if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6' || currentMode === '10x10') {
@@ -82,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cubeState = new CubeState();
         moveHistory = [];
         solutionOutput.classList.add('hidden');
+        scrambleRunId++;
         isScrambling = false;
         btnScramble.disabled = false;
         isPlaying = false;
@@ -247,12 +252,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnScramble.addEventListener('click', () => {
         if (isScrambling) return;
         isScrambling = true;
+        const runId = ++scrambleRunId;
         btnScramble.disabled = true;
         solutionOutput.classList.add('hidden');
         isPlaying = false;
         btnPlay.textContent = 'PLAY';
 
         const playScrambleMove = (i, sequence) => {
+            if (runId !== scrambleRunId) return;
             if (i >= sequence.length) {
                 isScrambling = false;
                 btnScramble.disabled = false;
@@ -280,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnReset.addEventListener('click', () => {
         cubeState = new CubeState();
         moveHistory = [];
+        scrambleRunId++;
         cube3D.initCube();
         solutionOutput.classList.add('hidden');
         isScrambling = false;
@@ -289,12 +297,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnSolve.addEventListener('click', () => {
+        if (isScrambling || cube3D.isAnimating) {
+            alert('Wait for the current turn or scramble to finish before solving.');
+            return;
+        }
+
         if (currentMode === '2x2') {
             let norm = getNormalized(cubeState);
             if (norm && norm.normalizedState.isSolved()) {
                 alert("Cube is already solved!");
                 return;
             }
+        }
+
+        if (['4x4', '5x5', '6x6', '10x10'].includes(currentMode) && moveHistory.length === 0) {
+            alert('No moves have been recorded. Reset the cube, then scramble or turn it before solving.');
+            return;
         }
 
         btnSolve.textContent = 'COMPUTING...';
@@ -316,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (currentMode === '3x3') {
                 currentSolution = solve3x3(moveHistory, method);
             } else if (currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6' || currentMode === '10x10') {
-                currentSolution = solveByHistory(moveHistory);
+                currentSolution = solveByHistory(moveHistory, () => cube3D.isSolved());
             } else {
                 if (method === 'guided') {
                     currentSolution = solveGuided(cubeState);
@@ -383,6 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnPlay.addEventListener('click', () => {
+        if (isScrambling || cube3D.isAnimating) return;
         if (playIndex >= currentSolution.length && isPlaying === false) {
             playIndex = 0;
         }
@@ -393,6 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnNext.addEventListener('click', () => {
+        if (isScrambling || cube3D.isAnimating) return;
         if (isPlaying) { isPlaying = false; btnPlay.textContent = 'PLAY'; }
         
         while (playIndex < currentSolution.length) {
@@ -410,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnPrev.addEventListener('click', () => {
         if (isPlaying) { isPlaying = false; btnPlay.textContent = 'PLAY'; }
-        if (cube3D.isAnimating) return; // Wait until done
+        if (isScrambling || cube3D.isAnimating) return; // Wait until done
         
         while (playIndex > 0) {
             playIndex--;

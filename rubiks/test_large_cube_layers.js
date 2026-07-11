@@ -168,3 +168,26 @@ tenByTen.pieces.forEach((piece, index) => {
 });
 
 console.log('10x10 animated scramble and inverse: valid');
+
+const solverSandbox = { console };
+vm.createContext(solverSandbox);
+vm.runInContext(fs.readFileSync('./js/solver3x3.js', 'utf8'), solverSandbox);
+
+const optimizedTenByTen = buildCube(10);
+const optimizedOriginal = optimizedTenByTen.pieces.map(piece => ({ ...piece.position }));
+const trackedMoves = ['R', 'L', "R'", 'U', 'D', "U'", 'R2i', 'L2i', "R2i'"];
+const optimizedSolution = solverSandbox.solveByHistory(trackedMoves, () => false);
+playSequence(optimizedTenByTen, trackedMoves);
+playSequence(optimizedTenByTen, optimizedSolution);
+
+if (optimizedSolution.length >= trackedMoves.length) {
+    throw new Error('10x10 optimizer did not shorten the tracked solution');
+}
+optimizedTenByTen.pieces.forEach((piece, index) => {
+    const original = optimizedOriginal[index];
+    if (Math.abs(piece.position.x - original.x) > 0.01 || Math.abs(piece.position.y - original.y) > 0.01 || Math.abs(piece.position.z - original.z) > 0.01) {
+        throw new Error('10x10 optimized solution did not restore the solved lattice');
+    }
+});
+
+console.log(`10x10 optimized replay (${trackedMoves.length} -> ${optimizedSolution.length}): valid`);

@@ -47,3 +47,22 @@ if (context.simplifySequence([...sixBySixHistory, ...sixBySixSolution]).length !
     throw new Error('6x6 solution did not reverse every inner layer');
 }
 console.log(`6x6 replay -> ${sixBySixSolution.join(' ')}`);
+
+const fiveByFiveHistory = ['R', "R'", 'Ui', "Ui'", 'M', "M'"];
+const fiveByFiveSolution = context.solveByHistory(fiveByFiveHistory);
+if (fiveByFiveSolution.length !== fiveByFiveHistory.length || fiveByFiveSolution.length === 0) {
+    throw new Error('5x5 solver returned a false zero-move hand solution');
+}
+console.log('5x5 compact solver fallback: valid');
+
+const tenByTenHistory = ['R', 'L', "R'", 'U', 'D', "U'", 'R2i', 'L2i', "R2i'"];
+const tenByTenSolution = context.solveByHistory(tenByTenHistory);
+if (tenByTenSolution.length >= tenByTenHistory.length ||
+    context.simplifySequence([...tenByTenHistory, ...tenByTenSolution]).length !== 0) {
+    throw new Error('10x10 compact solver did not reduce commuting layer turns');
+}
+console.log(`10x10 compact reduction -> ${tenByTenSolution.join(' ')}`);
+
+if (context.solveByHistory(fiveByFiveHistory, () => true).length !== 0) {
+    throw new Error('Solved renderer was not allowed to return a zero-move solution');
+}
