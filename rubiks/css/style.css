@@ -20,6 +20,31 @@ body {
     z-index: 1;
 }
 
+#pyraminx-container {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+}
+
+#pyraminx-container.hidden,
+#pyraminx-controls.hidden {
+    display: none;
+}
+
+#pyraminx-container svg {
+    width: min(70vw, 620px);
+    max-height: 78vh;
+}
+
+.pyraminx-face polygon {
+    stroke: #18181b;
+    stroke-width: 3;
+    stroke-linejoin: round;
+}
+
 #ui-panel {
     position: absolute;
     top: 20px;
@@ -82,6 +107,14 @@ button:active {
 
 .controls-group {
     flex-direction: row;
+}
+
+#pyraminx-controls {
+    flex-wrap: wrap;
+}
+
+#pyraminx-controls button {
+    flex: 1 0 20%;
 }
 
 .controls-group button {
