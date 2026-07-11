@@ -8,6 +8,12 @@ context.window = context;
 vm.runInNewContext(fs.readFileSync('./js/solve.js', 'utf8'), context);
 vm.runInNewContext(fs.readFileSync('./js/solver3x3.js', 'utf8'), context);
 
+for (const [wideMove, expected] of [['Rw', 'r'], ['dw', 'd'], ["Fw'", "f'"]]) {
+    if (context.toCubeJsMove(wideMove) !== expected) {
+        throw new Error(`Wide move conversion failed for ${wideMove}`);
+    }
+}
+
 for (const history of [['R', 'U'], ['M', 'E', 'S'], ["R", 'U', "R'", "U'"]]) {
     const solution = context.solve3x3(history, 'optimal');
     const verificationCube = new Cube().move(history.join(' '));

@@ -32,16 +32,8 @@ window.getCFOPSolution = function(cubejsStr) {
         // Convert 'prime' to "'"
         steps = steps.map(m => m.replace('prime', "'"));
         
-        // Also uppercase the single letter lowercases which are wide moves
-        steps = steps.map(m => {
-            if (m.length === 1 || (m.length === 2 && (m.endsWith("'") || m.endsWith("2")))) {
-                if (m[0] === m[0].toLowerCase()) {
-                    return m[0] + "w" + (m[1] || "");
-                }
-            }
-            return m;
-        });
-        
+        // cubejs and the renderer both use lowercase letters for wide moves
+        // (r, d, f, etc.), so keep the solver's notation unchanged.
         return steps;
     } catch(e) {
         console.error("CFOP Solver error:", e);

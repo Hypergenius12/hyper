@@ -46,7 +46,7 @@ function movedCoordinates(size, move, axis) {
     return cube.animationQueue[0].activeMeshes.map(piece => piece.position[axis]);
 }
 
-for (const [size, faceMove, innerMove] of [[4, 'R', 'Ri'], [5, 'U', 'Ui']]) {
+for (const [size, faceMove, innerMove] of [[4, 'R', 'Ri'], [5, 'U', 'Ui'], [6, 'R', 'Ri']]) {
     const faceCount = countMovedPieces(size, faceMove);
     const innerCount = countMovedPieces(size, innerMove);
     const expected = size * size;
@@ -64,6 +64,14 @@ if (!movedCoordinates(4, 'Ri', 'x').every(value => Math.abs(value - 0.51) < 0.01
 
 if (!movedCoordinates(5, 'Ui', 'y').every(value => Math.abs(value - 1.02) < 0.01)) {
     throw new Error('5x5 Ui incorrectly includes the outer layer');
+}
+
+if (!movedCoordinates(6, 'Ri', 'x').every(value => Math.abs(value - 1.53) < 0.01)) {
+    throw new Error('6x6 Ri incorrectly selects the first inner layer');
+}
+
+if (!movedCoordinates(6, 'Ri2', 'x').every(value => Math.abs(value - 0.51) < 0.01)) {
+    throw new Error('6x6 Ri2 incorrectly selects the second inner layer');
 }
 
 if (countMovedPieces(5, 'M') !== 25) {

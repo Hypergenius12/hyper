@@ -3,7 +3,7 @@
  */
 
 function toCubeJsMove(move) {
-    const wideMove = /^([URFDLB])w([2']?)$/.exec(move);
+    const wideMove = /^([URFDLB])w([2']?)$/i.exec(move);
     return wideMove ? wideMove[1].toLowerCase() + wideMove[2] : move;
 }
 

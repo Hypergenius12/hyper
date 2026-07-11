@@ -56,6 +56,16 @@ class Cube3D {
     setSize(sizeStr) {
         this.gridSize = parseInt(sizeStr.charAt(0));
         this.initCube();
+        this.fitCameraToCube();
+    }
+
+    fitCameraToCube() {
+        const distance = Math.max(4, this.gridSize * 1.5);
+        this.camera.position.set(distance, distance, distance * 1.5);
+        this.camera.lookAt(0, 0, 0);
+        this.controls.target.set(0, 0, 0);
+        this.camera.updateProjectionMatrix();
+        this.controls.update();
     }
 
     getMaterials(x, y, z, maxCoord) {
@@ -329,13 +339,19 @@ class Cube3D {
                 let layer = null;
                 let standardMoveVec = null;
                 const isOddCube = this.gridSize % 2 === 1;
+                const maxCoordinate = ((this.gridSize - 1) / 2) * 1.02;
                 const outerThreshold = this.gridSize === 2 ? 0 : (((this.gridSize - 1) / 2) - 0.5) * 1.02;
                 
                 if (Math.abs(A.x) === 1) {
                     if (P.x > outerThreshold) layer = 'R';
                     else if (P.x < -outerThreshold) layer = 'L';
-                    else if (P.x > 0 && this.gridSize > 3) layer = 'Ri';
-                    else if (P.x < 0 && this.gridSize > 3) layer = 'Li';
+                    else if (P.x > 0 && this.gridSize > 3) {
+                        const depth = Math.round((maxCoordinate - Math.abs(P.x)) / 1.02);
+                        layer = `Ri${depth === 1 ? '' : depth}`;
+                    } else if (P.x < 0 && this.gridSize > 3) {
+                        const depth = Math.round((maxCoordinate - Math.abs(P.x)) / 1.02);
+                        layer = `Li${depth === 1 ? '' : depth}`;
+                    }
                     else if (isOddCube) layer = 'M';
                     if (layer === 'R') standardMoveVec = new THREE.Vector3(-1, 0, 0);
                     else if (layer === 'L') standardMoveVec = new THREE.Vector3(1, 0, 0);
@@ -345,8 +361,13 @@ class Cube3D {
                 } else if (Math.abs(A.y) === 1) {
                     if (P.y > outerThreshold) layer = 'U';
                     else if (P.y < -outerThreshold) layer = 'D';
-                    else if (P.y > 0 && this.gridSize > 3) layer = 'Ui';
-                    else if (P.y < 0 && this.gridSize > 3) layer = 'Di';
+                    else if (P.y > 0 && this.gridSize > 3) {
+                        const depth = Math.round((maxCoordinate - Math.abs(P.y)) / 1.02);
+                        layer = `Ui${depth === 1 ? '' : depth}`;
+                    } else if (P.y < 0 && this.gridSize > 3) {
+                        const depth = Math.round((maxCoordinate - Math.abs(P.y)) / 1.02);
+                        layer = `Di${depth === 1 ? '' : depth}`;
+                    }
                     else if (isOddCube) layer = 'E';
                     if (layer === 'U') standardMoveVec = new THREE.Vector3(0, -1, 0);
                     else if (layer === 'D') standardMoveVec = new THREE.Vector3(0, 1, 0);
@@ -356,8 +377,13 @@ class Cube3D {
                 } else if (Math.abs(A.z) === 1) {
                     if (P.z > outerThreshold) layer = 'F';
                     else if (P.z < -outerThreshold) layer = 'B';
-                    else if (P.z > 0 && this.gridSize > 3) layer = 'Fi';
-                    else if (P.z < 0 && this.gridSize > 3) layer = 'Bi';
+                    else if (P.z > 0 && this.gridSize > 3) {
+                        const depth = Math.round((maxCoordinate - Math.abs(P.z)) / 1.02);
+                        layer = `Fi${depth === 1 ? '' : depth}`;
+                    } else if (P.z < 0 && this.gridSize > 3) {
+                        const depth = Math.round((maxCoordinate - Math.abs(P.z)) / 1.02);
+                        layer = `Bi${depth === 1 ? '' : depth}`;
+                    }
                     else if (isOddCube) layer = 'S';
                     if (layer === 'F') standardMoveVec = new THREE.Vector3(0, 0, -1);
                     else if (layer === 'B') standardMoveVec = new THREE.Vector3(0, 0, 1);
@@ -443,7 +469,9 @@ class Cube3D {
             const maxCoordinate = ((this.gridSize - 1) / 2) * 1.02;
             const outerThreshold = maxCoordinate - 0.1;
             const wideThreshold = maxCoordinate - 1.12;
-            const innerCoordinate = maxCoordinate - 1.02;
+            const innerMatch = /^[URFDLB]i(\d+)?/.exec(moveStr);
+            const innerDepth = innerMatch && innerMatch[1] ? Number.parseInt(innerMatch[1], 10) : 1;
+            const innerCoordinate = maxCoordinate - (1.02 * innerDepth);
             const hasMiddleSlice = this.gridSize % 2 === 1;
             let activeIndices = [];
             const select = predicate => this.pieces.map((p, i) => predicate(p) ? i : -1).filter(i => i !== -1);

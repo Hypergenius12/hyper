@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isScrambling = false;
 
     function recordTrackedMove(move) {
-        if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5') {
+        if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6') {
             moveHistory.push(toCubeJsMove(move));
         }
     }
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <option value="guided">Guided (Layer-by-layer style)</option>
                 `;
             }
-        } else if (currentMode === '4x4' || currentMode === '5x5') {
+        } else if (currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6') {
             if (solveMethodSelect) {
                 solveMethodSelect.innerHTML = '<option value="optimal">Optimal</option>';
             }
@@ -150,17 +150,59 @@ document.addEventListener('DOMContentLoaded', () => {
     function generateScramble(length = 11, mode = '2x2') {
         const moves2x2 = ['U', "U'", 'U2', 'R', "R'", 'R2', 'F', "F'", 'F2'];
         const moves3x3 = ['U', "U'", 'U2', 'D', "D'", 'D2', 'R', "R'", 'R2', 'L', "L'", 'L2', 'F', "F'", 'F2', 'B', "B'", 'B2'];
-        const moves = mode === '2x2' ? moves2x2 : moves3x3;
-        let scramble = [];
+        const size = Number.parseInt(mode, 10);
+        const moves = size >= 4 ? getLargeCubeMoves(size) : (mode === '2x2' ? moves2x2 : moves3x3);
+        let scramble = size >= 4
+            ? shuffle(getLargeCubeLayers(size)).map(layer => randomTurn(layer))
+            : [];
         let lastFace = '';
+
+        if (scramble.length > 0) lastFace = scramble[scramble.length - 1][0];
         
-        for (let i = 0; i < length; i++) {
+        for (let i = scramble.length; i < length; i++) {
             let availableMoves = moves.filter(m => m[0] !== lastFace);
             let randomMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
             scramble.push(randomMove);
             lastFace = randomMove[0];
         }
         return scramble;
+    }
+
+    function randomTurn(layer) {
+        const suffixes = ['', "'", '2'];
+        return layer + suffixes[Math.floor(Math.random() * suffixes.length)];
+    }
+
+    function shuffle(items) {
+        const shuffled = [...items];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    function getLargeCubeLayers(size) {
+        const faces = ['U', 'D', 'R', 'L', 'F', 'B'];
+        const layers = [...faces];
+        const innerDepths = Math.floor((size - 2) / 2);
+
+        for (let depth = 1; depth <= innerDepths; depth++) {
+            for (const face of faces) {
+                const innerFace = `${face}i${depth === 1 ? '' : depth}`;
+                layers.push(innerFace);
+            }
+        }
+
+        if (size % 2 === 1) {
+            layers.push('M', 'E', 'S');
+        }
+
+        return layers;
+    }
+
+    function getLargeCubeMoves(size) {
+        return getLargeCubeLayers(size).flatMap(layer => [layer, `${layer}'`, `${layer}2`]);
     }
 
     function updateHighlight() {
@@ -223,8 +265,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let scramble = generateScramble(5, '1x1');
             moveHistory.push(...scramble);
             playScrambleMove(0, scramble);
-        } else if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5') {
-            const length = currentMode === '3x3' ? 20 : currentMode === '4x4' ? 40 : 60;
+        } else if (currentMode === '3x3' || currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6') {
+            const length = currentMode === '3x3' ? 20 : currentMode === '4x4' ? 40 : currentMode === '5x5' ? 60 : 80;
             let scramble = generateScramble(length, currentMode);
             scramble.forEach(recordTrackedMove);
             playScrambleMove(0, scramble);
@@ -273,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (currentMode === '3x3') {
                 currentSolution = solve3x3(moveHistory, method);
-            } else if (currentMode === '4x4' || currentMode === '5x5') {
+            } else if (currentMode === '4x4' || currentMode === '5x5' || currentMode === '6x6') {
                 currentSolution = solveByHistory(moveHistory);
             } else {
                 if (method === 'guided') {
