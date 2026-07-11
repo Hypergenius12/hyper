@@ -31,8 +31,12 @@ class Cube3D {
         // Lighting
         let ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
         this.scene.add(ambientLight);
+        let keyLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        keyLight.position.set(5, 7, 8);
+        this.scene.add(keyLight);
 
         this.pieces = []; // length 8, stores the 3D meshes in logical index order
+        this.glossTextureCache = new Map();
         this.isAnimating = false;
         this.animationQueue = [];
         this.animSpeed = 8;
@@ -80,12 +84,62 @@ class Cube3D {
         if (z > maxCoord - eps) cols[4] = COLORS.F;
         if (z < -maxCoord + eps) cols[5] = COLORS.B;
 
-        return cols.map(c => new THREE.MeshBasicMaterial({ 
-            color: c, 
-            polygonOffset: true,
-            polygonOffsetFactor: 1,
-            polygonOffsetUnits: 1
-        }));
+        return cols.map(c => {
+            const options = {
+                color: c,
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
+            };
+
+            if (this.stickerStyle === 'glossy') {
+                return new THREE.MeshPhongMaterial({
+                    ...options,
+                    color: 0xffffff,
+                    map: this.getGlossTexture(c),
+                    shininess: 120,
+                    specular: 0xffffff
+                });
+            }
+
+            return new THREE.MeshBasicMaterial(options);
+        });
+    }
+
+    getGlossTexture(color) {
+        if (this.glossTextureCache.has(color)) return this.glossTextureCache.get(color);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 128;
+        const context = canvas.getContext('2d');
+        const hex = `#${color.toString(16).padStart(6, '0')}`;
+
+        const base = context.createLinearGradient(0, 0, 128, 128);
+        base.addColorStop(0, '#ffffff');
+        base.addColorStop(0.16, hex);
+        base.addColorStop(0.68, hex);
+        base.addColorStop(1, '#111111');
+        context.fillStyle = base;
+        context.fillRect(0, 0, 128, 128);
+
+        const highlight = context.createLinearGradient(0, 0, 0, 58);
+        highlight.addColorStop(0, 'rgba(255, 255, 255, 0.72)');
+        highlight.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
+        highlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        context.save();
+        context.translate(16, -12);
+        context.rotate(-0.28);
+        context.fillStyle = highlight;
+        context.fillRect(0, 0, 112, 58);
+        context.restore();
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.magFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.needsUpdate = true;
+        this.glossTextureCache.set(color, texture);
+        return texture;
     }
 
     setSpeed(speedVal) {
@@ -96,10 +150,15 @@ class Cube3D {
     }
 
     setColors(scheme) {
+        this.glossTextureCache.clear();
         if (scheme === 'pastel') {
             COLORS = { U: 0xffffff, D: 0xfdfd96, F: 0x77dd77, B: 0x84b6f4, R: 0xff6961, L: 0xffb347, X: 0x222222 };
         } else if (scheme === 'neon') {
             COLORS = { U: 0xffffff, D: 0xccff00, F: 0x39ff14, B: 0x04d9ff, R: 0xff003f, L: 0xff7300, X: 0x111111 };
+        } else if (scheme === 'ocean') {
+            COLORS = { U: 0xeafcff, D: 0x00a6a6, F: 0x0077b6, B: 0x023e8a, R: 0x48cae4, L: 0x90e0ef, X: 0x102a43 };
+        } else if (scheme === 'sunset') {
+            COLORS = { U: 0xfff1d6, D: 0xffd166, F: 0x06d6a0, B: 0x118ab2, R: 0xef476f, L: 0xf78c6b, X: 0x2b193d };
         } else {
             COLORS = { U: 0xffffff, D: 0xffd500, F: 0x009e60, B: 0x0051ba, R: 0xc41e3a, L: 0xff5800, X: 0x222222 };
         }
@@ -213,7 +272,8 @@ class Cube3D {
         if (this.gridSize === 1) {
             geometry = geoType === 'floating' ? new THREE.BoxGeometry(0.75, 0.75, 0.75) : new THREE.BoxGeometry(0.98, 0.98, 0.98);
         } else {
-            geometry = geoType === 'floating' ? new THREE.BoxGeometry(0.75, 0.75, 0.75) : new THREE.BoxGeometry(0.98, 0.98, 0.98);
+            const cubeletSize = geoType === 'floating' ? 0.75 : geoType === 'glossy' ? 0.92 : 0.98;
+            geometry = new THREE.BoxGeometry(cubeletSize, cubeletSize, cubeletSize);
         }
 
         for (let i = 0; i < positions.length; i++) {
@@ -228,7 +288,7 @@ class Cube3D {
             let mesh = new THREE.Mesh(geometry, materials);
             
             let geo = new THREE.EdgesGeometry(mesh.geometry);
-            let edgeColor = geoType === 'wireframe' ? 0xaaaaaa : 0x000000;
+            let edgeColor = geoType === 'wireframe' ? 0xaaaaaa : geoType === 'glossy' ? 0x2b2b2b : 0x000000;
             let mat = new THREE.LineBasicMaterial({ color: edgeColor, linewidth: 2 });
             let wireframe = new THREE.LineSegments(geo, mat);
             mesh.add(wireframe);
@@ -355,8 +415,8 @@ class Cube3D {
                     else if (isOddCube) layer = 'M';
                     if (layer === 'R') standardMoveVec = new THREE.Vector3(-1, 0, 0);
                     else if (layer === 'L') standardMoveVec = new THREE.Vector3(1, 0, 0);
-                    else if (layer === 'Ri') standardMoveVec = new THREE.Vector3(-1, 0, 0);
-                    else if (layer === 'Li') standardMoveVec = new THREE.Vector3(1, 0, 0);
+                    else if (layer && layer.startsWith('Ri')) standardMoveVec = new THREE.Vector3(-1, 0, 0);
+                    else if (layer && layer.startsWith('Li')) standardMoveVec = new THREE.Vector3(1, 0, 0);
                     else if (layer === 'M') standardMoveVec = new THREE.Vector3(1, 0, 0);
                 } else if (Math.abs(A.y) === 1) {
                     if (P.y > outerThreshold) layer = 'U';
@@ -371,8 +431,8 @@ class Cube3D {
                     else if (isOddCube) layer = 'E';
                     if (layer === 'U') standardMoveVec = new THREE.Vector3(0, -1, 0);
                     else if (layer === 'D') standardMoveVec = new THREE.Vector3(0, 1, 0);
-                    else if (layer === 'Ui') standardMoveVec = new THREE.Vector3(0, -1, 0);
-                    else if (layer === 'Di') standardMoveVec = new THREE.Vector3(0, 1, 0);
+                    else if (layer && layer.startsWith('Ui')) standardMoveVec = new THREE.Vector3(0, -1, 0);
+                    else if (layer && layer.startsWith('Di')) standardMoveVec = new THREE.Vector3(0, 1, 0);
                     else if (layer === 'E') standardMoveVec = new THREE.Vector3(0, 1, 0);
                 } else if (Math.abs(A.z) === 1) {
                     if (P.z > outerThreshold) layer = 'F';
@@ -387,8 +447,8 @@ class Cube3D {
                     else if (isOddCube) layer = 'S';
                     if (layer === 'F') standardMoveVec = new THREE.Vector3(0, 0, -1);
                     else if (layer === 'B') standardMoveVec = new THREE.Vector3(0, 0, 1);
-                    else if (layer === 'Fi') standardMoveVec = new THREE.Vector3(0, 0, -1);
-                    else if (layer === 'Bi') standardMoveVec = new THREE.Vector3(0, 0, 1);
+                    else if (layer && layer.startsWith('Fi')) standardMoveVec = new THREE.Vector3(0, 0, -1);
+                    else if (layer && layer.startsWith('Bi')) standardMoveVec = new THREE.Vector3(0, 0, 1);
                     else if (layer === 'S') standardMoveVec = new THREE.Vector3(0, 0, -1);
                 }
                 
