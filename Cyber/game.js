@@ -570,9 +570,9 @@ CREW LOGS & ITEMS:
 - You should occasionally prompt the player to read terminals or datapads they find to uncover the ship's story.
 
 ASCII ART (diagram field):
-- When providing ASCII art for an item's "diagram" field, make sure it is a coherent, recognizable representation of the object.
-- DO NOT use abstract shapes or random characters. Use clear outlines (e.g. a literal gun shape, a recognizable keycard, a medkit with a cross).
-- Keep it under 10 lines and 30 characters wide.
+- LEAVE THE DIAGRAM FIELD BLANK ("") for standard items like weapons, medkits, tools, keys, and datapads. The game engine will automatically insert high-quality pixel art for these.
+- ONLY provide ASCII art for highly unique, strange, or alien items.
+- If you MUST provide ASCII art, ensure it is a coherent, recognizable representation of the object (under 10 lines and 30 characters wide). No abstract shapes.
 
 COMBAT & HAZARDS:
 - The ship is dangerous. Environmental hazards (radiation, fires, decompression) and rogue security bots/leaking chemicals can cause damage.
@@ -1300,15 +1300,29 @@ function renderInventory() {
 function showItemDetails(item) {
     elements.itemName.textContent = item.name.toUpperCase();
     
+    let hardcodedDiagram = generateDefaultDiagram(item.name, item.state);
     if (item.isLog || item.name.toLowerCase().includes('log') || item.name.toLowerCase().includes('datapad') || item.name.toLowerCase().includes('journal') || item.name.toLowerCase().includes('note')) {
-        elements.itemDiagram.textContent = item.diagram || generateDefaultDiagram('datapad');
+        hardcodedDiagram = generateDefaultDiagram('datapad');
+    }
+    
+    const fallbackBox = `
+         ┌────────────────┐
+         │                │
+         │   [UNKNOWN]    │
+         │                │
+         └────────────────┘`;
+         
+    const finalDiagram = hardcodedDiagram || item.diagram || fallbackBox;
+    
+    if (item.isLog || item.name.toLowerCase().includes('log') || item.name.toLowerCase().includes('datapad') || item.name.toLowerCase().includes('journal') || item.name.toLowerCase().includes('note')) {
+        elements.itemDiagram.textContent = finalDiagram;
         elements.itemDiagram.style.color = 'var(--text-bright)';
         elements.itemDescription.style.whiteSpace = 'pre-wrap';
         elements.itemDescription.style.fontFamily = "'VT323', monospace";
         elements.itemDescription.style.fontSize = '1.2rem';
         elements.itemDescription.textContent = "==== EXODUS DATALOG ====\n\n" + (item.description || '[DATA CORRUPTED]');
     } else {
-        elements.itemDiagram.textContent = item.diagram || generateDefaultDiagram(item.name, item.state);
+        elements.itemDiagram.textContent = finalDiagram;
         elements.itemDiagram.style.color = '';
         elements.itemDescription.style.whiteSpace = 'normal';
         elements.itemDescription.style.fontFamily = '';
@@ -1554,14 +1568,7 @@ function generateDefaultDiagram(itemName, state = 'normal') {
                │
               ═╧═`;
     } else {
-        diagram = `
-        ┌─────────────────────┐
-        │                     │
-        │    [ ITEM ]         │
-        │                     │
-        │   ${name.substring(0, 15).padEnd(15)}    │
-        │                     │
-        └─────────────────────┘`;
+        return null;
     }
 
     if (state === 'damaged' || state === 'broken') {
