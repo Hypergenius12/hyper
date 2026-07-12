@@ -127,47 +127,105 @@ function playNoise(ctx, duration, volume) {
     noise.start();
 }
 
-let ambientInterval = null;
+let ambientNodes = [];
+
 function playAmbientHum(ctx) {
-    if (ambientInterval) return;
+    if (ambientNodes.length > 0) return; // Already playing
 
-    const playHum = () => {
-        if (audioSettings.masterVolume === 0 || audioSettings.ambientVolume === 0) return;
-        const volume = audioSettings.masterVolume * audioSettings.ambientVolume * 0.1;
-        
-        let freq = 60;
-        let humType = 'sine';
-        let variance = 10;
-        
-        const room = (typeof gameState !== 'undefined' && gameState.currentRoom) ? gameState.currentRoom.toLowerCase() : '';
-        
-        if (room.includes('reactor') || room.includes('engine') || room.includes('power')) {
-            freq = 40;
-            humType = 'square';
-            variance = 20;
-        } else if (room.includes('medical') || room.includes('cryo') || room.includes('lab')) {
-            freq = 120;
-            humType = 'sine';
-            variance = 5;
-        } else if (room.includes('bridge') || room.includes('comms') || room.includes('nav')) {
-            freq = 150;
-            humType = 'triangle';
-            variance = 30;
-        } else if (room.includes('storage') || room.includes('cargo') || room.includes('maintenance')) {
-            freq = 50;
-            humType = 'sawtooth';
-            variance = 15;
-        }
+    if (audioSettings.masterVolume === 0 || audioSettings.ambientVolume === 0) return;
+    const volume = audioSettings.masterVolume * audioSettings.ambientVolume * 0.15;
+    
+    let baseFreq = 50;
+    let humType = 'sine';
+    
+    const room = (typeof gameState !== 'undefined' && gameState.currentRoom) ? gameState.currentRoom.toLowerCase() : '';
+    
+    if (room.includes('reactor') || room.includes('engine') || room.includes('power')) {
+        baseFreq = 40;
+        humType = 'sawtooth';
+    } else if (room.includes('medical') || room.includes('cryo') || room.includes('lab')) {
+        baseFreq = 80;
+        humType = 'sine';
+    } else if (room.includes('bridge') || room.includes('comms') || room.includes('nav')) {
+        baseFreq = 60;
+        humType = 'triangle';
+    } else if (room.includes('storage') || room.includes('cargo') || room.includes('maintenance')) {
+        baseFreq = 45;
+        humType = 'square';
+    }
 
-        playTone(ctx, freq + Math.random() * variance, 2, humType, volume);
-    };
+    // Main Drone Oscillator
+    const osc1 = ctx.createOscillator();
+    osc1.type = humType;
+    osc1.frequency.value = baseFreq;
 
-    playHum();
-    ambientInterval = setInterval(playHum, 2000);
+    // Secondary detuned oscillator for thickness
+    const osc2 = ctx.createOscillator();
+    osc2.type = humType;
+    osc2.frequency.value = baseFreq * 1.01;
+
+    // Lowpass filter to muffle harsh harmonics
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = baseFreq * 3;
+
+    // Gain node for overall volume
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = volume;
+
+    // LFO to slowly modulate volume (creates a throbbing/breathing effect)
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.2; // 1 cycle every 5 seconds
+    
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = volume * 0.3; // Modulation depth
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(gainNode.gain);
+
+    // Connections
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    // Start all
+    osc1.start();
+    osc2.start();
+    lfo.start();
+
+    // Store for stopping later
+    ambientNodes = [osc1, osc2, lfo, filter, lfoGain, gainNode];
 }
 
 function stopAmbient() {
-    if (ambientInterval) {
+    if (ambientNodes && ambientNodes.length > 0) {
+        const nodesToStop = ambientNodes; // Capture current nodes
+        ambientNodes = []; // Clear global so a new one can start immediately
+        
+        const gainNode = nodesToStop[5]; // The final gain node
+        try {
+            const ctx = gainNode.context;
+            // Quick fade out to prevent clicking
+            gainNode.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
+            
+            setTimeout(() => {
+                nodesToStop.forEach(node => {
+                    try {
+                        if (node.stop) node.stop();
+                        node.disconnect();
+                    } catch(e) {}
+                });
+            }, 200);
+        } catch (e) {
+            nodesToStop.forEach(node => {
+                try { if (node.stop) node.stop(); node.disconnect(); } catch(e) {}
+            });
+        }
+    }
+    
+    if (typeof ambientInterval !== 'undefined' && ambientInterval) {
         clearInterval(ambientInterval);
         ambientInterval = null;
     }
