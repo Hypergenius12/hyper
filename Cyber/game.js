@@ -1344,7 +1344,9 @@ function showItemDetails(item) {
     
     const badStates = ['broken', 'damaged', 'snapped', 'destroyed', 'smashed', 'crushed', 'shattered', 'burnt', 'melted', 'corrupted', 'dead', 'empty'];
     if (item.state && badStates.some(s => item.state.toLowerCase().includes(s))) {
-        finalDiagram = finalDiagram.replace(/═/g, '~').replace(/─/g, '-').replace(/│/g, '|').replace(/╭/g, '+').replace(/╮/g, '+').replace(/╰/g, '+').replace(/╯/g, '+').replace(/┌/g, '+').replace(/┐/g, '+').replace(/└/g, '+').replace(/┘/g, '+');
+        if (finalDiagram === hardcodedDiagram || finalDiagram === fallbackBox) {
+            finalDiagram = finalDiagram.replace(/═/g, '~').replace(/─/g, '-').replace(/│/g, '|').replace(/╭/g, '+').replace(/╮/g, '+').replace(/╰/g, '+').replace(/╯/g, '+').replace(/┌/g, '+').replace(/┐/g, '+').replace(/└/g, '+').replace(/┘/g, '+');
+        }
     }
     
     if (item.isLog || item.name.toLowerCase().includes('log') || item.name.toLowerCase().includes('datapad') || item.name.toLowerCase().includes('journal') || item.name.toLowerCase().includes('note')) {
