@@ -1336,7 +1336,12 @@ function showItemDetails(item) {
          │                │
          └────────────────┘`;
          
-    const finalDiagram = hardcodedDiagram || item.diagram || fallbackBox;
+    let finalDiagram = hardcodedDiagram || item.diagram || fallbackBox;
+    
+    const badStates = ['broken', 'damaged', 'snapped', 'destroyed', 'smashed', 'crushed', 'shattered', 'burnt', 'melted', 'corrupted', 'dead', 'empty'];
+    if (item.state && badStates.some(s => item.state.toLowerCase().includes(s))) {
+        finalDiagram = finalDiagram.replace(/═/g, '~').replace(/─/g, '-').replace(/│/g, '|').replace(/╭/g, '+').replace(/╮/g, '+').replace(/╰/g, '+').replace(/╯/g, '+').replace(/┌/g, '+').replace(/┐/g, '+').replace(/└/g, '+').replace(/┘/g, '+');
+    }
     
     if (item.isLog || item.name.toLowerCase().includes('log') || item.name.toLowerCase().includes('datapad') || item.name.toLowerCase().includes('journal') || item.name.toLowerCase().includes('note')) {
         elements.itemDiagram.textContent = finalDiagram;
@@ -1593,10 +1598,6 @@ function generateDefaultDiagram(itemName, state = 'normal') {
               ═╧═`;
     } else {
         return null;
-    }
-
-    if (state === 'damaged' || state === 'broken') {
-        diagram = diagram.replace(/═/g, '~').replace(/─/g, '-').replace(/│/g, '|');
     }
 
     return diagram;
