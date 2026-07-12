@@ -134,7 +134,32 @@ function playAmbientHum(ctx) {
     const playHum = () => {
         if (audioSettings.masterVolume === 0 || audioSettings.ambientVolume === 0) return;
         const volume = audioSettings.masterVolume * audioSettings.ambientVolume * 0.1;
-        playTone(ctx, 60 + Math.random() * 10, 2, 'sine', volume);
+        
+        let freq = 60;
+        let humType = 'sine';
+        let variance = 10;
+        
+        const room = (typeof gameState !== 'undefined' && gameState.currentRoom) ? gameState.currentRoom.toLowerCase() : '';
+        
+        if (room.includes('reactor') || room.includes('engine') || room.includes('power')) {
+            freq = 40;
+            humType = 'square';
+            variance = 20;
+        } else if (room.includes('medical') || room.includes('cryo') || room.includes('lab')) {
+            freq = 120;
+            humType = 'sine';
+            variance = 5;
+        } else if (room.includes('bridge') || room.includes('comms') || room.includes('nav')) {
+            freq = 150;
+            humType = 'triangle';
+            variance = 30;
+        } else if (room.includes('storage') || room.includes('cargo') || room.includes('maintenance')) {
+            freq = 50;
+            humType = 'sawtooth';
+            variance = 15;
+        }
+
+        playTone(ctx, freq + Math.random() * variance, 2, humType, volume);
     };
 
     playHum();
@@ -403,7 +428,7 @@ RESPONSE FORMAT - You MUST respond with valid JSON in this exact structure:
     "isValidAction": true/false,
     "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
     "inventoryChanges": {
-        "add": [{"id": "unique_id", "name": "Item Name", "description": "Description", "state": "normal", "diagram": "ASCII art"}],
+        "add": [{"id": "unique_id", "name": "Item Name", "description": "Description (For logs, put FULL TEXT here)", "state": "normal", "isLog": true, "diagram": "ASCII art"}],
         "remove": ["item_id"],
         "update": [{"id": "item_id", "changes": {"description": "new desc", "state": "damaged"}}]
     },
@@ -479,6 +504,17 @@ GAME EVENTS:
   * "fixed_electrical" - When player fixes electrical systems
   * "fixed_water" - When player repairs water systems
   * "repaired_life_support" - When player repairs life support
+
+CREW LOGS & ITEMS:
+- You can create readable lore items ("logs", "datapads", "journals").
+- Add them to inventory using "inventoryChanges" with the property "isLog": true.
+- The "description" field MUST contain the FULL TEXT of the log, so the player can read it later in their inventory.
+- You should occasionally prompt the player to read terminals or datapads they find to uncover the ship's story.
+
+ASCII ART (diagram field):
+- When providing ASCII art for an item's "diagram" field, make sure it is a coherent, recognizable representation of the object.
+- DO NOT use abstract shapes or random characters. Use clear outlines (e.g. a literal gun shape, a recognizable keycard, a medkit with a cross).
+- Keep it under 10 lines and 30 characters wide.
 
 COMBAT & HAZARDS:
 - The ship is dangerous. Environmental hazards (radiation, fires, decompression) and rogue security bots/leaking chemicals can cause damage.
@@ -566,10 +602,13 @@ async function initGame() {
 
 // Send message to AI
 async function sendToAI(userMessage) {
-    gameState.conversationHistory.push({
-        role: 'user',
-        content: userMessage
-    });
+    const lastMsg = gameState.conversationHistory[gameState.conversationHistory.length - 1];
+    if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== userMessage) {
+        gameState.conversationHistory.push({
+            role: 'user',
+            content: userMessage
+        });
+    }
 
     if (gameState.conversationHistory.length > 20) {
         gameState.conversationHistory = gameState.conversationHistory.slice(-20);
@@ -695,6 +734,17 @@ ${roomsList || 'none yet'}
     }
 }
 
+async function processPuzzleResult(message) {
+    showLoading(true);
+    try {
+        const response = await sendToAI(message);
+        processAIResponse(response);
+    } catch (e) {
+        displayError("SYSTEM ERROR: Failed to process puzzle result.");
+    }
+    showLoading(false);
+}
+
 // Process AI Response
 function processAIResponse(response, isInitial = false) {
     // Increment command count
@@ -724,35 +774,32 @@ function processAIResponse(response, isInitial = false) {
     if (gameState.commandCount >= 50) unlockAchievement('fifty_commands');
     if (gameState.commandCount >= 100) unlockAchievement('hundred_commands');
 
-    // Handle puzzle triggers - only if it's an object with type
-    if (response.triggerPuzzle && typeof response.triggerPuzzle === 'object' && response.triggerPuzzle.type) {
+    if (response.triggerPuzzle) {
+        if (!gameState.puzzleCooldowns) gameState.puzzleCooldowns = {};
+        const room = gameState.currentRoom || 'unknown';
+        const now = Date.now();
+        if (gameState.puzzleCooldowns[room] && now - gameState.puzzleCooldowns[room] < 30000) {
+            const timeLeft = Math.ceil((30000 - (now - gameState.puzzleCooldowns[room])) / 1000);
+            displayError(`SYSTEM: Security lockout active in this area. Please wait ${timeLeft}s before attempting another bypass.`);
+            return;
+        }
+
+        const type = typeof response.triggerPuzzle === 'object' && response.triggerPuzzle.type ? response.triggerPuzzle.type : 'matching';
         setTimeout(() => {
-            startPuzzle(response.triggerPuzzle.type).then(success => {
-                gameState.puzzlesCompleted++;
+            startPuzzle(type).then(success => {
                 if (success) {
+                    gameState.puzzlesCompleted = (gameState.puzzlesCompleted || 0) + 1;
                     unlockAchievement('hacker');
                     if (gameState.puzzlesCompleted >= 5) {
                         unlockAchievement('puzzle_master');
                     }
-                    sendToAI("Puzzle completed successfully. Access granted.");
-                } else {
-                    sendToAI("Puzzle failed. Access denied.");
-                }
-            });
-        }, 1000);
-    } else if (response.triggerPuzzle === true) {
-        // Legacy support for boolean triggerPuzzle
-        setTimeout(() => {
-            startPuzzle('matching').then(success => {
-                gameState.puzzlesCompleted++;
-                if (success) {
-                    unlockAchievement('hacker');
-                    if (gameState.puzzlesCompleted >= 5) {
-                        unlockAchievement('puzzle_master');
+                    if (gameState.puzzlesCompleted >= 10) {
+                        unlockAchievement('ten_puzzles');
                     }
-                    sendToAI("Hacking successful. Access granted.");
+                    processPuzzleResult("Puzzle completed successfully. Access granted.");
                 } else {
-                    sendToAI("Hacking failed. Access denied.");
+                    gameState.puzzleCooldowns[room] = Date.now();
+                    processPuzzleResult("Puzzle failed. Security lockout triggered.");
                 }
             });
         }, 1000);
@@ -800,7 +847,13 @@ function processAIResponse(response, isInitial = false) {
     // Process room changes with achievements
     if (response.roomUpdate) {
         if (response.roomUpdate.currentRoom) {
-            gameState.currentRoom = response.roomUpdate.currentRoom;
+            if (gameState.currentRoom !== response.roomUpdate.currentRoom) {
+                gameState.currentRoom = response.roomUpdate.currentRoom;
+                if (audioContext) {
+                    stopAmbient();
+                    playAmbientHum(audioContext);
+                }
+            }
             // Check if reached bridge
             if (response.roomUpdate.currentRoom.toLowerCase().includes('bridge')) {
                 unlockAchievement('bridge_reached');
@@ -896,9 +949,7 @@ function processAIResponse(response, isInitial = false) {
                 case 'reached_bridge':
                     unlockAchievement('bridge_reached');
                     break;
-                case 'repaired_system':
-                    unlockAchievement('engineer');
-                    break;
+
                 case 'read_log':
                     unlockAchievement('log_reader');
                     break;
@@ -1069,6 +1120,11 @@ async function typewriterEffect(element, text) {
     element.innerHTML = formatted;
 }
 
+window.submitCommand = function(cmd) {
+    elements.gameInput.value = cmd;
+    handleInput();
+};
+
 function displayMessage(playerInput, narrative, isError = false, suggestions = []) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'game-message';
@@ -1092,12 +1148,14 @@ function displayMessage(playerInput, narrative, isError = false, suggestions = [
         suggestionsTitle.textContent = 'Suggested actions:';
         suggestionsDiv.appendChild(suggestionsTitle);
 
-        const suggestionsList = document.createElement('ul');
+        const suggestionsList = document.createElement('div');
         suggestionsList.className = 'suggestions-list';
         suggestions.forEach(suggestion => {
-            const li = document.createElement('li');
-            li.textContent = suggestion;
-            suggestionsList.appendChild(li);
+            const btn = document.createElement('button');
+            btn.className = 'suggestion-btn';
+            btn.textContent = suggestion;
+            btn.onclick = () => window.submitCommand(suggestion);
+            suggestionsList.appendChild(btn);
         });
         suggestionsDiv.appendChild(suggestionsList);
 
@@ -1183,11 +1241,25 @@ function renderInventory() {
 
 function showItemDetails(item) {
     elements.itemName.textContent = item.name.toUpperCase();
-    elements.itemDiagram.textContent = item.diagram || generateDefaultDiagram(item.name, item.state);
-    elements.itemDescription.textContent = item.description || 'Standard equipment.';
+    
+    if (item.isLog || item.name.toLowerCase().includes('log') || item.name.toLowerCase().includes('datapad') || item.name.toLowerCase().includes('journal') || item.name.toLowerCase().includes('note')) {
+        elements.itemDiagram.textContent = item.diagram || generateDefaultDiagram('datapad');
+        elements.itemDiagram.style.color = 'var(--text-bright)';
+        elements.itemDescription.style.whiteSpace = 'pre-wrap';
+        elements.itemDescription.style.fontFamily = "'VT323', monospace";
+        elements.itemDescription.style.fontSize = '1.2rem';
+        elements.itemDescription.textContent = "==== EXODUS DATALOG ====\n\n" + (item.description || '[DATA CORRUPTED]');
+    } else {
+        elements.itemDiagram.textContent = item.diagram || generateDefaultDiagram(item.name, item.state);
+        elements.itemDiagram.style.color = '';
+        elements.itemDescription.style.whiteSpace = 'normal';
+        elements.itemDescription.style.fontFamily = '';
+        elements.itemDescription.style.fontSize = '';
+        elements.itemDescription.textContent = item.description || 'Standard equipment.';
 
-    if (item.state && item.state !== 'normal') {
-        elements.itemDescription.textContent += ` [STATUS: ${item.state.toUpperCase()}]`;
+        if (item.state && item.state !== 'normal') {
+            elements.itemDescription.textContent += ` [STATUS: ${item.state.toUpperCase()}]`;
+        }
     }
 
     elements.itemModal.classList.remove('hidden');
@@ -1304,6 +1376,16 @@ function generateDefaultDiagram(itemName, state = 'normal') {
         ║ POWER CELL   ║
         ║ 500mAh       ║
         ╚══════════════╝`;
+    } else if (name.includes('datapad') || name.includes('log') || name.includes('journal') || name.includes('note')) {
+        diagram = `
+         ╔════════════════╗
+         ║ [DATA ARCHIVE] ║
+         ║ ────────────── ║
+         ║ ░░░░░░░░░░░░░░ ║
+         ║ ░░░░░░░░░░░░░░ ║
+         ║ ░░░░░░░░       ║
+         ║                ║
+         ╚════════════════╝`;
     } else if (name.includes('wire') || name.includes('cable')) {
         diagram = `
         ╭──┐        ╭──╮
@@ -1431,104 +1513,17 @@ function generateDefaultDiagram(itemName, state = 'normal') {
     return diagram;
 }
 
-// Achievement System
-function unlockAchievement(id) {
-    if (!ACHIEVEMENTS[id] || gameState.achievements[id]) return;
 
-    gameState.achievements[id] = {
-        unlockedAt: Date.now()
-    };
-
-    const achievement = ACHIEVEMENTS[id];
-    showAchievementToast(achievement);
-    playSound('success');
-    saveGameState();
-}
-
-function showAchievementToast(achievement) {
-    // Remove existing toast if any
-    const existingToast = document.querySelector('.achievement-toast');
-    if (existingToast) existingToast.remove();
-
-    const toast = document.createElement('div');
-    toast.className = 'achievement-toast';
-    toast.innerHTML = `
-        <div class="achievement-toast-icon">${achievement.icon || '🏆'}</div>
-        <div class="achievement-toast-content">
-            <div class="achievement-toast-title">ACHIEVEMENT UNLOCKED</div>
-            <div class="achievement-toast-name">${achievement.name}</div>
-            <div class="achievement-toast-desc">${achievement.description}</div>
-        </div>
-    `;
-
-    document.body.appendChild(toast);
-
-    // Animate in
-    setTimeout(() => toast.classList.add('show'), 100);
-
-    // Remove after 4 seconds
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 500);
-    }, 4000);
-}
-
-function getAchievementProgress() {
-    const total = Object.keys(ACHIEVEMENTS).length;
-    const unlocked = Object.keys(gameState.achievements).length;
-    return { unlocked, total, percentage: Math.round((unlocked / total) * 100) };
-}
-
-function renderAchievements() {
-    const container = document.getElementById('achievementsList');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    Object.entries(ACHIEVEMENTS).forEach(([id, achievement]) => {
-        const isUnlocked = !!gameState.achievements[id];
-        const item = document.createElement('div');
-        item.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
-
-        item.innerHTML = `
-            <div class="achievement-icon">${isUnlocked ? achievement.icon : '🔒'}</div>
-            <div class="achievement-info">
-                <div class="achievement-name">${isUnlocked ? achievement.name : '???'}</div>
-                <div class="achievement-desc">${isUnlocked ? achievement.description : 'Complete the objective to unlock'}</div>
-            </div>
-        `;
-
-        container.appendChild(item);
-    });
-
-    // Update progress bar
-    const progress = getAchievementProgress();
-    const progressBar = document.getElementById('achievementProgress');
-    const progressText = document.getElementById('achievementProgressText');
-    if (progressBar) progressBar.style.width = `${progress.percentage}%`;
-    if (progressText) progressText.textContent = `${progress.unlocked}/${progress.total}`;
-}
-
-function toggleAchievements() {
-    playSound('terminal');
-    const modal = document.getElementById('achievementsModal');
-    if (modal) {
-        if (modal.classList.contains('hidden')) {
-            renderAchievements();
-            modal.classList.remove('hidden');
-        } else {
-            modal.classList.add('hidden');
-        }
-    }
-}
 
 // Map Functions
 let mapOffset = { x: 0, y: 0 };
 let mapZoom = 1.0;
 let isDragging = false;
 let dragStart = { x: 0, y: 0 };
+let dragStartPos = { x: 0, y: 0 };
 let hoveredRoom = null;
 let roomRects = []; // Store room rectangles for click detection
+let mapViewFloor = null; // The floor currently being viewed on the map (null = current player floor)
 
 /**
  * Utility to check if a rectangle overlaps with any existing rooms on a floor
@@ -1724,12 +1719,14 @@ function updateFloorSelector() {
     if (floors.length > 1) {
         elements.floorSelector.classList.remove('hidden');
         elements.floorSelect.innerHTML = '';
+        
+        const targetFloor = mapViewFloor || gameState.currentFloor;
 
         floors.forEach(floor => {
             const option = document.createElement('option');
             option.value = floor;
             option.textContent = `Deck ${floor}`;
-            if (Number(floor) === gameState.currentFloor) {
+            if (Number(floor) === targetFloor) {
                 option.selected = true;
             }
             elements.floorSelect.appendChild(option);
@@ -1775,7 +1772,8 @@ function renderMap() {
         ctx.stroke();
     }
 
-    const currentFloorRooms = gameState.floors[gameState.currentFloor] || {};
+    const targetFloor = mapViewFloor || gameState.currentFloor;
+    const currentFloorRooms = gameState.floors[targetFloor] || {};
     const rooms = Object.values(currentFloorRooms);
 
     if (rooms.length === 0) {
@@ -2153,6 +2151,7 @@ function initMapControls() {
         if (e.target === canvas) {
             isDragging = true;
             dragStart = { x: e.clientX - mapOffset.x, y: e.clientY - mapOffset.y };
+            dragStartPos = { x: e.clientX, y: e.clientY };
         }
     });
 
@@ -2188,7 +2187,8 @@ function initMapControls() {
 
     // Click to show room detail
     canvas.addEventListener('click', (e) => {
-        if (!isDragging) {
+        // If we dragged more than 5 pixels, it's a drag, not a click
+        if (Math.abs(e.clientX - dragStartPos.x) + Math.abs(e.clientY - dragStartPos.y) < 5) {
             const room = getRoomAtPosition(e.clientX, e.clientY);
             if (room) {
                 showRoomDetail(room);
@@ -2673,6 +2673,12 @@ function startPatternPuzzle(resolve) {
     const targetPattern = [0, 1, 2, 5, 8]; // L shape
     let currentPattern = [];
     let isDrawing = false;
+    
+    const abortController = new AbortController();
+    const wrappedResolve = (success) => {
+        abortController.abort();
+        resolve(success);
+    };
 
     const cells = [];
     for (let i = 0; i < 9; i++) {
@@ -2681,34 +2687,56 @@ function startPatternPuzzle(resolve) {
         cell.dataset.index = i;
         cell.innerHTML = '◯';
 
-        cell.addEventListener('mousedown', () => {
+        const activateCell = () => {
             isDrawing = true;
             currentPattern = [i];
             cell.classList.add('active');
             cell.innerHTML = '●';
             playSound('keypress');
-        });
+        };
 
-        cell.addEventListener('mouseenter', () => {
+        const hoverCell = () => {
             if (isDrawing && !currentPattern.includes(i)) {
                 currentPattern.push(i);
                 cell.classList.add('active');
                 cell.innerHTML = '●';
                 playSound('keypress');
             }
-        });
+        };
+
+        cell.addEventListener('mousedown', activateCell, { signal: abortController.signal });
+        cell.addEventListener('touchstart', (e) => { e.preventDefault(); activateCell(); }, { signal: abortController.signal, passive: false });
+        
+        cell.addEventListener('mouseenter', hoverCell, { signal: abortController.signal });
 
         cells.push(cell);
         elements.puzzleGrid.appendChild(cell);
     }
+    
+    // For touchmove, we need to find the element under the finger
+    elements.puzzleGrid.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!isDrawing) return;
+        const touch = e.touches[0];
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (el && el.classList.contains('pattern-dot')) {
+            const idx = parseInt(el.dataset.index);
+            if (!currentPattern.includes(idx)) {
+                currentPattern.push(idx);
+                el.classList.add('active');
+                el.innerHTML = '●';
+                playSound('keypress');
+            }
+        }
+    }, { signal: abortController.signal, passive: false });
 
-    document.addEventListener('mouseup', function checkPattern() {
+    const checkPattern = () => {
         if (!isDrawing) return;
         isDrawing = false;
 
         if (currentPattern.length >= 4) {
             // Accept any pattern of 4+ dots
-            completePuzzle(resolve, true, "PATTERN ACCEPTED. ACCESS GRANTED.");
+            completePuzzle(wrappedResolve, true, "PATTERN ACCEPTED. ACCESS GRANTED.");
         } else {
             playSound('error');
             elements.puzzleStatus.textContent = "PATTERN TOO SHORT. TRY AGAIN.";
@@ -2718,9 +2746,12 @@ function startPatternPuzzle(resolve) {
             });
             currentPattern = [];
         }
-    }, { once: false });
+    };
 
-    startPuzzleTimer(30000, resolve, () => currentPattern.length >= 4);
+    document.addEventListener('mouseup', checkPattern, { signal: abortController.signal });
+    document.addEventListener('touchend', checkPattern, { signal: abortController.signal });
+
+    startPuzzleTimer(30000, wrappedResolve, () => currentPattern.length >= 4);
 }
 
 function startBinaryPuzzle(resolve) {
@@ -2831,16 +2862,27 @@ function saveGameState() {
 
 function loadGameState() {
     try {
+        let hasSavedGame = false;
         const saved = localStorage.getItem('exodusGameState');
         if (saved) {
             const parsed = JSON.parse(saved);
             gameState = { ...gameState, ...parsed };
-            return true;
+            hasSavedGame = true;
         }
+        const audioSaved = localStorage.getItem('exodusAudioSettings');
         if (audioSaved) {
             Object.assign(audioSettings, JSON.parse(audioSaved));
+            if (elements.masterVolume) {
+                elements.masterVolume.value = audioSettings.masterVolume;
+                elements.sfxVolume.value = audioSettings.sfxVolume;
+                elements.ambientVolume.value = audioSettings.ambientVolume;
+                elements.masterVolumeValue.textContent = Math.round(audioSettings.masterVolume * 100) + '%';
+                elements.sfxVolumeValue.textContent = Math.round(audioSettings.sfxVolume * 100) + '%';
+                elements.ambientVolumeValue.textContent = Math.round(audioSettings.ambientVolume * 100) + '%';
+            }
         }
         updateHealthUI();
+        return hasSavedGame;
     } catch (e) {
         console.warn('Load failed:', e);
     }
@@ -2993,7 +3035,7 @@ function initEventListeners() {
     elements.mapToggleBtn.addEventListener('click', toggleMap);
     elements.closeMapBtn.addEventListener('click', toggleMap);
     elements.floorSelect.addEventListener('change', (e) => {
-        gameState.currentFloor = Number(e.target.value);
+        mapViewFloor = Number(e.target.value);
         renderMap();
     });
 

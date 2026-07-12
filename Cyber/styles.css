@@ -285,16 +285,27 @@ body {
 }
 
 .suggestions-list {
-    list-style: none;
-    color: var(--text-dim);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.suggestions-list li {
-    margin-bottom: 5px;
+.suggestion-btn {
+    background: transparent;
+    border: 1px solid var(--text-dim);
+    color: var(--text-highlight);
+    padding: 6px 12px;
+    font-family: 'VT323', monospace;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.suggestions-list li::before {
-    content: '• ';
+.suggestion-btn:hover {
+    background: var(--text-highlight);
+    color: var(--bg-dark);
+    box-shadow: 0 0 8px var(--text-highlight);
 }
 
 /* Input Area */
