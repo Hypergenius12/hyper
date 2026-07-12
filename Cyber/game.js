@@ -1432,7 +1432,7 @@ function generateDefaultDiagram(itemName, state = 'normal') {
               ╭───╯        │
               │        ╭───╯
               ╰────────╯`;
-    } else if (name.includes('medkit') || name.includes('med kit') || name.includes('first aid')) {
+    } else if (name.includes('med') || name.includes('first aid') || name.includes('health') || name.includes('healing')) {
         diagram = `
         ┌──────────────────┐
         │ ╔══════════════╗ │
