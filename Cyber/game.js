@@ -156,7 +156,15 @@ function playAmbientHum(ctx) {
     // Filter to shape the noise based on the room
     const filter = ctx.createBiquadFilter();
     
-    if (room.includes('reactor') || room.includes('engine') || room.includes('power')) {
+    // Check if the AI dynamically generated ambiance for this room
+    const dynamicAmbiance = (gameState.discoveredRooms && gameState.discoveredRooms[gameState.currentRoom]) 
+                                ? gameState.discoveredRooms[gameState.currentRoom].ambientAudio : null;
+
+    if (dynamicAmbiance) {
+        filter.type = dynamicAmbiance.filterType || 'lowpass';
+        filter.frequency.value = dynamicAmbiance.frequency || 150;
+        if (filter.type === 'bandpass') filter.Q.value = 0.5;
+    } else if (room.includes('reactor') || room.includes('engine') || room.includes('power')) {
         filter.type = 'lowpass';
         filter.frequency.value = 80; // Deep, heavy rumble
     } else if (room.includes('medical') || room.includes('cryo') || room.includes('lab')) {
@@ -478,6 +486,7 @@ RESPONSE FORMAT - You MUST respond with valid JSON in this exact structure:
     "roomUpdate": {
         "currentRoom": "room_id",
         "currentFloor": 1,
+        "ambientAudio": { "filterType": "lowpass", "frequency": 200 },
         "discoveredRoom": {
             "id": "room_id",
             "name": "Room Name",
@@ -499,6 +508,7 @@ RESPONSE FORMAT - You MUST respond with valid JSON in this exact structure:
 
 IMPORTANT ROOM RULES:
 - ALWAYS include roomUpdate when the player moves to a new room or discovers a room
+- When moving to a newly discovered room, provide "ambientAudio" to procedurally generate the room's sound. filterType can be "lowpass" (muffled rumble), "bandpass" (airy hiss), or "highpass" (thin static). frequency can be 50-1000.
 - The "name" field MUST be a descriptive room name like "Main Corridor", "Medical Bay", "Bridge"
 - NEVER leave the room name as just the id - make it human readable
 - Each room MUST have proper connections - specify direction and what room it leads to
@@ -894,13 +904,11 @@ function processAIResponse(response, isInitial = false) {
 
     // Process room changes with achievements
     if (response.roomUpdate) {
+        let roomChanged = false;
         if (response.roomUpdate.currentRoom) {
             if (gameState.currentRoom !== response.roomUpdate.currentRoom) {
                 gameState.currentRoom = response.roomUpdate.currentRoom;
-                if (audioContext) {
-                    stopAmbient();
-                    playAmbientHum(audioContext);
-                }
+                roomChanged = true;
             }
             // Check if reached bridge
             if (response.roomUpdate.currentRoom.toLowerCase().includes('bridge')) {
@@ -912,6 +920,7 @@ function processAIResponse(response, isInitial = false) {
         }
         if (response.roomUpdate.discoveredRoom) {
             addDiscoveredRoom(response.roomUpdate.discoveredRoom);
+            
             // Check room count achievements
             const roomCount = Object.keys(gameState.discoveredRooms).length;
             if (roomCount >= 5) unlockAchievement('explorer');
@@ -957,7 +966,16 @@ function processAIResponse(response, isInitial = false) {
                 unlockAchievement('engine_room');
             }
         }
+        
+        if (response.roomUpdate.ambientAudio && gameState.currentRoom && gameState.discoveredRooms[gameState.currentRoom]) {
+            gameState.discoveredRooms[gameState.currentRoom].ambientAudio = response.roomUpdate.ambientAudio;
+        }
         updateLocationDisplay();
+        
+        if (roomChanged && audioContext) {
+            stopAmbient();
+            playAmbientHum(audioContext);
+        }
     }
 
     if (response.mapUnlocked) {
