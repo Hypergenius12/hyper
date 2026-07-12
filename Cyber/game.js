@@ -572,7 +572,7 @@ ASCII ART (diagram field):
 PLAYER FREEDOM & ITEM MODIFICATION:
 - Allow the player to do anything physically possible, even if it has drastic negative effects (e.g., breaking their ID card, venting oxygen, smashing a terminal).
 - If they try to destroy a critical item, warn them ONCE through the narrative before allowing it.
-- When an item is modified, broken, or destroyed, use the "inventoryChanges" array to update its state, name, and description. For example, if they snap their ID card, update the item's state to "broken" and update the description to describe it as snapped in half.
+- When an item is modified, broken, or destroyed, use the "inventoryChanges" array to update its state, name, description, AND diagram. If an item is melted, smashed, or fundamentally altered, YOU MUST provide completely new ASCII art in the "diagram" field to visually reflect its new physical form (e.g. a puddle for a melted item).
 
 COMBAT & HAZARDS:
 - The ship is dangerous. Environmental hazards (radiation, fires, decompression) and rogue security bots/leaking chemicals can cause damage.
@@ -1336,7 +1336,11 @@ function showItemDetails(item) {
          │                │
          └────────────────┘`;
          
-    let finalDiagram = hardcodedDiagram || item.diagram || fallbackBox;
+    let finalDiagram = hardcodedDiagram;
+    if (item.diagram && (item.state !== 'normal' || !hardcodedDiagram)) {
+        finalDiagram = item.diagram;
+    }
+    if (!finalDiagram) finalDiagram = fallbackBox;
     
     const badStates = ['broken', 'damaged', 'snapped', 'destroyed', 'smashed', 'crushed', 'shattered', 'burnt', 'melted', 'corrupted', 'dead', 'empty'];
     if (item.state && badStates.some(s => item.state.toLowerCase().includes(s))) {
