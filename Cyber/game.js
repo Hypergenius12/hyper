@@ -559,6 +559,11 @@ ASCII ART (diagram field):
 - ONLY provide ASCII art for highly unique, strange, or alien items.
 - If you MUST provide ASCII art, ensure it is a coherent, recognizable representation of the object (under 10 lines and 30 characters wide). No abstract shapes.
 
+PLAYER FREEDOM & ITEM MODIFICATION:
+- Allow the player to do anything physically possible, even if it has drastic negative effects (e.g., breaking their ID card, venting oxygen, smashing a terminal).
+- If they try to destroy a critical item, warn them ONCE through the narrative before allowing it.
+- When an item is modified, broken, or destroyed, use the "inventoryChanges" array to update its state, name, and description. For example, if they snap their ID card, update the item's state to "broken" and update the description to describe it as snapped in half.
+
 COMBAT & HAZARDS:
 - The ship is dangerous. Environmental hazards (radiation, fires, decompression) and rogue security bots/leaking chemicals can cause damage.
 - Use "healthChange": -10, -20, etc. for damage.
@@ -1205,6 +1210,22 @@ function displayMessage(playerInput, narrative, isError = false, suggestions = [
         messageDiv.appendChild(suggestionsDiv);
     }
 
+    elements.gameOutput.appendChild(messageDiv);
+    scrollToBottom();
+}
+
+function displayUserPrompt(text) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'game-message';
+
+    const promptDiv = document.createElement('div');
+    promptDiv.className = 'user-prompt';
+    promptDiv.textContent = `> ${text}`;
+    promptDiv.style.color = 'var(--text-secondary)';
+    promptDiv.style.marginBottom = '10px';
+    promptDiv.style.fontStyle = 'italic';
+
+    messageDiv.appendChild(promptDiv);
     elements.gameOutput.appendChild(messageDiv);
     scrollToBottom();
 }
@@ -2946,7 +2967,14 @@ function resetGame() {
         initialized: false,
         currentRoom: null,
         currentFloor: 1,
-        inventory: [],
+        inventory: [
+            {
+                id: "id_card",
+                name: "Crew ID Card",
+                description: "Your standard issue crew identification. Grants access to standard doors.",
+                state: "normal"
+            }
+        ],
         discoveredRooms: {},
         floors: {},
         conversationHistory: [],
@@ -2985,7 +3013,7 @@ function resetGame() {
         </div>
     `;
 
-    elements.inventoryList.innerHTML = '<p class="empty-inventory">No items.</p>';
+    renderInventory();
     elements.floorSelector.classList.add('hidden');
     elements.resetModal.classList.add('hidden');
     elements.victoryModal.classList.add('hidden');
@@ -3003,6 +3031,7 @@ async function handleInput() {
 
     playSound('submit');
     elements.gameInput.value = '';
+    displayUserPrompt(input);
     showLoading(true);
 
     let retryCount = 0;
