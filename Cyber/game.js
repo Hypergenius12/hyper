@@ -130,84 +130,69 @@ function playNoise(ctx, duration, volume) {
 let ambientNodes = [];
 
 function playAmbientHum(ctx) {
-    if (ambientNodes.length > 0) return; // Already playing
+    if (ambientNodes.length > 0) return;
 
     if (audioSettings.masterVolume === 0 || audioSettings.ambientVolume === 0) return;
-    const volume = audioSettings.masterVolume * audioSettings.ambientVolume * 0.15;
-    
-    let baseFreq = 50;
-    let humType = 'sine';
+    const volume = audioSettings.masterVolume * audioSettings.ambientVolume * 0.4;
     
     const room = (typeof gameState !== 'undefined' && gameState.currentRoom) ? gameState.currentRoom.toLowerCase() : '';
     
-    if (room.includes('reactor') || room.includes('engine') || room.includes('power')) {
-        baseFreq = 40;
-        humType = 'sawtooth';
-    } else if (room.includes('medical') || room.includes('cryo') || room.includes('lab')) {
-        baseFreq = 80;
-        humType = 'sine';
-    } else if (room.includes('bridge') || room.includes('comms') || room.includes('nav')) {
-        baseFreq = 60;
-        humType = 'triangle';
-    } else if (room.includes('storage') || room.includes('cargo') || room.includes('maintenance')) {
-        baseFreq = 45;
-        humType = 'square';
+    // Generate brown/pink noise buffer for a realistic rumble
+    const bufferSize = ctx.sampleRate * 2; 
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let lastOut = 0;
+    for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        data[i] = (lastOut + (0.02 * white)) / 1.02; // Brown noise approximation
+        lastOut = data[i];
+        data[i] *= 3.5; 
     }
 
-    // Main Drone Oscillator
-    const osc1 = ctx.createOscillator();
-    osc1.type = humType;
-    osc1.frequency.value = baseFreq;
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = buffer;
+    noiseSrc.loop = true;
 
-    // Secondary detuned oscillator for thickness
-    const osc2 = ctx.createOscillator();
-    osc2.type = humType;
-    osc2.frequency.value = baseFreq * 1.01;
-
-    // Lowpass filter to muffle harsh harmonics
+    // Filter to shape the noise based on the room
     const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = baseFreq * 3;
+    
+    if (room.includes('reactor') || room.includes('engine') || room.includes('power')) {
+        filter.type = 'lowpass';
+        filter.frequency.value = 80; // Deep, heavy rumble
+    } else if (room.includes('medical') || room.includes('cryo') || room.includes('lab')) {
+        filter.type = 'bandpass';
+        filter.frequency.value = 600; // Sterile, airy HVAC hiss
+        filter.Q.value = 0.5;
+    } else if (room.includes('bridge') || room.includes('comms') || room.includes('nav')) {
+        filter.type = 'lowpass';
+        filter.frequency.value = 300; // Medium drone
+    } else {
+        // Default / Storage
+        filter.type = 'lowpass';
+        filter.frequency.value = 150; // Distant hollow hum
+    }
 
-    // Gain node for overall volume
     const gainNode = ctx.createGain();
     gainNode.gain.value = volume;
 
-    // LFO to slowly modulate volume (creates a throbbing/breathing effect)
-    const lfo = ctx.createOscillator();
-    lfo.type = 'sine';
-    lfo.frequency.value = 0.2; // 1 cycle every 5 seconds
-    
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = volume * 0.3; // Modulation depth
-
-    lfo.connect(lfoGain);
-    lfoGain.connect(gainNode.gain);
-
-    // Connections
-    osc1.connect(filter);
-    osc2.connect(filter);
+    noiseSrc.connect(filter);
     filter.connect(gainNode);
     gainNode.connect(ctx.destination);
 
-    // Start all
-    osc1.start();
-    osc2.start();
-    lfo.start();
+    noiseSrc.start();
 
     // Store for stopping later
-    ambientNodes = [osc1, osc2, lfo, filter, lfoGain, gainNode];
+    ambientNodes = [noiseSrc, filter, gainNode];
 }
 
 function stopAmbient() {
     if (ambientNodes && ambientNodes.length > 0) {
-        const nodesToStop = ambientNodes; // Capture current nodes
-        ambientNodes = []; // Clear global so a new one can start immediately
+        const nodesToStop = ambientNodes;
+        ambientNodes = [];
         
-        const gainNode = nodesToStop[5]; // The final gain node
+        const gainNode = nodesToStop[2]; 
         try {
             const ctx = gainNode.context;
-            // Quick fade out to prevent clicking
             gainNode.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
             
             setTimeout(() => {
