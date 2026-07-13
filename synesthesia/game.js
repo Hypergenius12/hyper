@@ -870,7 +870,7 @@ function fallbackColorName(hex) {
 // AI INTEGRATION
 // ═══════════════════════════════════════════
 
-async function askAI(colorA, colorB, blendedHex) {
+async function askAI(colorA, colorB, blendedHex, exactName) {
     const apiKey = localStorage.getItem(CONFIG.keys.apiKey);
     const model = localStorage.getItem(CONFIG.keys.model) || CONFIG.defaultModel;
 
@@ -881,10 +881,13 @@ async function askAI(colorA, colorB, blendedHex) {
 "${colorA.name}" (${colorA.hex}) + "${colorB.name}" (${colorB.hex})
 
 The mathematical blend produced: ${blendedHex}
+The technical database name for this exact hex is: "${exactName || 'Unknown'}"
 
 Name this color. Give it a sophisticated, evocative name like a professional paint brand — 1 to 3 words. Not generic. Think: "Burnt Sienna", "Midnight Orchid", "Arctic Slate", "Molten Copper", "Velvet Dusk".
 
-CRITICAL: Be extremely sensitive to subtle differences in the hex value. Even a slight shift in hue, saturation, or lightness MUST result in a completely unique and different name. Do NOT reuse common names. Give every subtle variation its own distinct identity.
+CRITICAL INSTRUCTIONS:
+1. Be extremely sensitive to subtle differences in the hex value. Even a slight shift in hue, saturation, or lightness MUST result in a completely unique and different name. Do NOT reuse common names. Give every subtle variation its own distinct identity.
+2. You can incorporate the technical database name into your evocative name if it makes sense (e.g. if technical name is 'Stratos', you could output 'Midnight Stratos' or just 'Stratos').
 
 You may adjust the hex slightly if a nearby shade better fits your name.
 
@@ -936,6 +939,16 @@ Respond with ONLY a JSON object, no other text:
 
 function getMergeKey(a, b) { return [a.id, b.id].sort().join('+'); }
 
+function colorDistance(hex1, hex2) {
+    const r1 = parseInt(hex1.slice(1, 3), 16);
+    const g1 = parseInt(hex1.slice(3, 5), 16);
+    const b1 = parseInt(hex1.slice(5, 7), 16);
+    const r2 = parseInt(hex2.slice(1, 3), 16);
+    const g2 = parseInt(hex2.slice(3, 5), 16);
+    const b2 = parseInt(hex2.slice(5, 7), 16);
+    return Math.sqrt((r1-r2)**2 + (g1-g2)**2 + (b1-b2)**2);
+}
+
 async function performMerge() {
     const [a, b] = state.slots;
     if (!a || !b || state.merging) return;
@@ -950,25 +963,61 @@ async function performMerge() {
     const blendedHex = blendColors(a.hex, b.hex);
 
     try {
+        let exactName = null;
+        try {
+            const colorRes = await fetch(`https://www.thecolorapi.com/id?hex=${blendedHex.substring(1)}`);
+            if (colorRes.ok) {
+                const colorData = await colorRes.json();
+                exactName = colorData.name.value;
+            }
+        } catch(e) {}
+
         let result;
         if (state.cache[cacheKey]) {
             result = state.cache[cacheKey];
         } else {
-            try { result = await askAI(a, b, blendedHex); }
+            try { result = await askAI(a, b, blendedHex, exactName); }
             catch (aiErr) {
                 console.warn('AI failed, using fallback:', aiErr.message);
-                result = { name: fallbackColorName(blendedHex), hex: blendedHex };
+                result = { name: exactName || fallbackColorName(blendedHex), hex: blendedHex };
             }
             state.cache[cacheKey] = result;
         }
 
-        const existingIdx = state.colors.findIndex(c => c.name.toLowerCase() === result.name.toLowerCase());
+        // Distance matching to ensure similar hexes don't incorrectly collapse due to AI naming collisions
+        let closestIdx = -1;
+        let minDistance = Infinity;
+        for (let i = 0; i < state.colors.length; i++) {
+            const d = colorDistance(state.colors[i].hex, result.hex);
+            if (d < minDistance) {
+                minDistance = d;
+                closestIdx = i;
+            }
+        }
+
         let isNew = false, colorObj;
 
-        if (existingIdx === -1) {
+        // Threshold of 15 means it must be extremely mathematically close to an existing color (max is 441)
+        if (minDistance < 15 && closestIdx !== -1) {
+            colorObj = state.colors[closestIdx];
+            state.streak = 0;
+            playExisting();
+        } else {
+            // New color discovered! Make sure the name doesn't clash with an existing color.
+            let finalName = result.name;
+            let numeral = 2;
+            const toRoman = (num) => {
+                const roman = ["", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
+                return roman[num - 1] || num.toString();
+            };
+            while (state.colors.some(c => c.name.toLowerCase() === finalName.toLowerCase())) {
+                finalName = `${result.name} ${toRoman(numeral)}`;
+                numeral++;
+            }
+
             colorObj = {
-                id: result.name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,''),
-                name: result.name, hex: result.hex, isBase: false,
+                id: finalName.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,''),
+                name: finalName, hex: result.hex, isBase: false,
                 parents: [a.name, b.name]
             };
             state.colors.push(colorObj);
@@ -979,10 +1028,6 @@ async function performMerge() {
 
             playDiscovery();
             checkAchievements();
-        } else {
-            colorObj = state.colors[existingIdx];
-            state.streak = 0;
-            playExisting();
         }
 
         // Add to recent mixes
