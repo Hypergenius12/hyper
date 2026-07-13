@@ -120,7 +120,7 @@ window.addEventListener('DOMContentLoaded', () => {
     renderPalette();
     renderRecent();
     updateCounter();
-    updateStreak();
+    updateCounter();
     updateSoundBtn();
 
     document.addEventListener('mousemove', e => {
@@ -725,7 +725,7 @@ function resetGame() {
     state.recentColors = ['#a78bfa', '#60a5fa', '#f472b6'];
     saveGame();
     renderPalette(); renderRecent(); renderSlots();
-    hideResult(); updateCounter(); updateStreak();
+    hideResult(); updateCounter();
     closeSettings();
     showToast('Progress reset');
 }
@@ -1055,7 +1055,7 @@ async function performMerge() {
         renderPalette();
         renderRecent();
         updateCounter();
-        updateStreak();
+        updateCounter();
 
     } catch (err) {
         console.error('Merge failed:', err);
@@ -1353,18 +1353,7 @@ function updatePaletteSelection() {
     });
 }
 
-function updateCounter() { $('color-count').textContent = state.colors.length; }
-
-function updateStreak() {
-    const pill = $('streak-pill');
-    const count = $('streak-count');
-    if (state.streak > 1) {
-        pill.classList.remove('hidden');
-        count.textContent = state.streak;
-    } else {
-        pill.classList.add('hidden');
-    }
-}
+function updateCounter() { $('color-count').textContent = state.discoveredCount; }
 
 // ═══════════════════════════════════════════
 // UTILITIES
