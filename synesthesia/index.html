@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synesthesia — Infinite Color Mixer</title>
+    <meta name="description" content="An AI-powered infinite color mixing game. Merge colors to discover millions of unique shades.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ═══ API Key Modal ═══ -->
+    <div id="api-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-prism"></div>
+            <h2>Synesthesia</h2>
+            <p class="modal-sub">Infinite color mixing, powered by AI.</p>
+            <div class="input-group">
+                <label for="api-key-input">OpenRouter API Key</label>
+                <input type="password" id="api-key-input" placeholder="sk-or-v1-..." autocomplete="off">
+            </div>
+            <button id="api-submit-btn" class="btn-primary" onclick="submitApiKey()">
+                <span>Begin Mixing</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener" class="api-link">Get a free API key →</a>
+        </div>
+    </div>
+
+    <!-- ═══ Main Game ═══ -->
+    <div id="game" class="game-container hidden">
+
+        <!-- Header -->
+        <header class="game-header">
+            <div class="logo">
+                <span class="logo-prism">✦</span>
+                <span class="logo-text">SYNESTHESIA</span>
+            </div>
+            <div class="discovery-counter">
+                <span id="color-count">5</span>
+                <span class="counter-label">colors</span>
+            </div>
+            <button id="settings-btn" class="icon-btn" onclick="openSettings()" title="Settings">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+        </header>
+
+        <!-- Merge Station -->
+        <section class="merge-station">
+            <div class="merge-slots">
+                <div id="slot-1" class="merge-slot empty" onclick="clearSlot(0)">
+                    <div class="slot-swatch"></div>
+                    <span class="slot-name">pick a color</span>
+                </div>
+
+                <div class="merge-plus">
+                    <span>+</span>
+                </div>
+
+                <div id="slot-2" class="merge-slot empty" onclick="clearSlot(1)">
+                    <div class="slot-swatch"></div>
+                    <span class="slot-name">pick a color</span>
+                </div>
+            </div>
+
+            <div id="merge-btn-wrap" class="merge-btn-wrap hidden">
+                <button id="merge-btn" class="btn-merge" onclick="performMerge()">
+                    <span class="btn-merge-text">Mix</span>
+                </button>
+            </div>
+
+            <div id="merge-loading" class="merge-loading hidden">
+                <div class="spinner"></div>
+                <span>Mixing...</span>
+            </div>
+
+            <div id="merge-result" class="merge-result hidden">
+                <div class="result-line"></div>
+                <div id="result-swatch" class="result-swatch"></div>
+                <div id="result-name" class="result-name"></div>
+                <div id="result-hex" class="result-hex"></div>
+                <span id="result-badge" class="result-badge hidden">✦ New Discovery</span>
+            </div>
+        </section>
+
+        <!-- Palette -->
+        <section class="palette-section">
+            <div class="palette-header">
+                <h2>Your Palette</h2>
+                <input type="text" id="palette-search" class="palette-search" placeholder="Search colors..." oninput="renderPalette()">
+            </div>
+            <div id="palette-grid" class="palette-grid"></div>
+        </section>
+    </div>
+
+    <!-- ═══ Settings Modal ═══ -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-card settings-card">
+            <h2>Settings</h2>
+            <div class="input-group">
+                <label for="settings-api-key">API Key</label>
+                <input type="password" id="settings-api-key" placeholder="sk-or-v1-...">
+            </div>
+            <div class="input-group">
+                <label for="settings-model">Model</label>
+                <select id="settings-model">
+                    <option value="poolside/laguna-xs-2.1:free">Laguna XS (Free — Default)</option>
+                    <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeSettings()">Cancel</button>
+                <button class="btn-primary" onclick="saveSettings()">Save</button>
+            </div>
+            <hr class="settings-divider">
+            <button class="btn-danger" onclick="resetGame()">Reset All Progress</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
