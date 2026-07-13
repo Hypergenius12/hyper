@@ -894,8 +894,11 @@ You may adjust the hex slightly if a nearby shade better fits your name.
 Respond with ONLY a JSON object, no other text:
 {"name":"YourColorName","hex":"#XXXXXX"}`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
     const response = await fetch(CONFIG.apiEndpoint, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
@@ -912,6 +915,7 @@ Respond with ONLY a JSON object, no other text:
             temperature: CONFIG.temperature
         })
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
         if (response.status === 401) { localStorage.removeItem(CONFIG.keys.apiKey); $('api-modal').classList.remove('hidden'); }
@@ -965,7 +969,10 @@ async function performMerge() {
     try {
         let exactName = null;
         try {
-            const colorRes = await fetch(`https://www.thecolorapi.com/id?hex=${blendedHex.substring(1)}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const colorRes = await fetch(`https://www.thecolorapi.com/id?hex=${blendedHex.substring(1)}`, { signal: controller.signal });
+            clearTimeout(timeoutId);
             if (colorRes.ok) {
                 const colorData = await colorRes.json();
                 exactName = colorData.name.value;
