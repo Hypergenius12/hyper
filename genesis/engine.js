@@ -21,7 +21,7 @@ const CONFIG = {
     temperature: 0.4,
     keys: {
         apiKey: 'genesis_api_key',
-        model: 'genesis_model',
+        model: 'genesis_model_v2',
         saves: 'genesis_saves',
     },
 };
@@ -33,6 +33,8 @@ const world = {
     spriteTextures: {},         // id → PIXI.Texture (not serialized)
     clickHandlers: [],          // [{ fn, source }]
     keyHandlers: {},            // key → [{ fn, source }]
+    updateHandlers: [],         // [{ fn, source }]
+    collisionHandlers: [],      // [{ filterA, filterB, fn, source }]
     environment: {
         gravity: { x: 0, y: 1 },
         skyTop: '#4a90d9',
@@ -114,12 +116,12 @@ function drawSky() {
     // Draw a massive sky rectangle
     const left = CONFIG.worldMinX - 5000;
     const width = (CONFIG.worldMaxX - CONFIG.worldMinX) + 10000;
-    skyGraphics.beginFill(0x87CEEB);
+    skyGraphics.beginFill(PIXI.utils.string2hex(world.environment.skyTop || '#87CEEB'));
     skyGraphics.drawRect(left, -10000, width, CONFIG.groundY + 10000);
     skyGraphics.endFill();
 
     // Lighter horizon band
-    skyGraphics.beginFill(0xB8DFF0, 0.5);
+    skyGraphics.beginFill(PIXI.utils.string2hex(world.environment.skyBottom || '#B8DFF0'), 0.5);
     skyGraphics.drawRect(left, CONFIG.groundY - 200, width, 200);
     skyGraphics.endFill();
 }
@@ -131,12 +133,12 @@ function drawGround() {
     const width = (CONFIG.worldMaxX - CONFIG.worldMinX) + 10000;
 
     // Grass surface
-    groundGraphics.beginFill(0x4a7c3f);
+    groundGraphics.beginFill(PIXI.utils.string2hex(world.environment.groundColor || '#4a7c3f'));
     groundGraphics.drawRect(left, CONFIG.groundY, width, 12);
     groundGraphics.endFill();
 
     // Topsoil
-    groundGraphics.beginFill(0x6B4423);
+    groundGraphics.beginFill(PIXI.utils.string2hex(world.environment.groundDirtColor || '#6B4423'));
     groundGraphics.drawRect(left, CONFIG.groundY + 12, width, 60);
     groundGraphics.endFill();
 
@@ -268,9 +270,9 @@ function handleWorldClick(wx, wy, event) {
         }
     }
 
-    if (hitEntity) {
+    if (hitEntity && event.shiftKey) {
         selectEntity(hitEntity);
-    } else {
+    } else if (!hitEntity) {
         deselectEntity();
     }
 
@@ -305,11 +307,21 @@ function initPhysics() {
 }
 
 function onCollision(event) {
-    // Could trigger behaviors — placeholder for now
     for (const pair of event.pairs) {
         const a = findEntityByBody(pair.bodyA);
         const b = findEntityByBody(pair.bodyB);
-        // Behaviors can be expanded here
+        if (!a || !b) continue;
+
+        for (const handler of world.collisionHandlers) {
+            const match1 = (handler.filterA === '*' || handler.filterA === a.type) && (handler.filterB === '*' || handler.filterB === b.type);
+            const match2 = (handler.filterA === '*' || handler.filterA === b.type) && (handler.filterB === '*' || handler.filterB === a.type);
+            
+            if (match1) {
+                try { handler.fn(a, b, event); } catch (err) { console.error('Collision handler error:', err); }
+            } else if (match2) {
+                try { handler.fn(b, a, event); } catch (err) { console.error('Collision handler error:', err); }
+            }
+        }
     }
 }
 
@@ -318,7 +330,7 @@ function findEntityByBody(body) {
 }
 
 function physicsStep(delta) {
-    Matter.Engine.update(mEngine, delta);
+    Matter.Engine.update(mEngine, Math.min(delta, 16.666));
 }
 
 function syncPhysicsToRenderer() {
@@ -331,35 +343,33 @@ function syncPhysicsToRenderer() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// SPRITE FACTORY
+
 // ══════════════════════════════════════════════════════════════
-
-function defineSprite(id, width, height, drawFnOrString) {
-    // Accept function or string
-    let drawCode, drawFn;
-    if (typeof drawFnOrString === 'function') {
-        drawCode = drawFnOrString.toString();
-        drawFn = drawFnOrString;
-    } else {
-        drawCode = drawFnOrString;
-        drawFn = new Function('return ' + drawCode)();
+// ASSET GENERATION
+// ══════════════════════════════════════════════════════════════
+async function generateImageTexture(prompt, width, height) {
+    try {
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + ", transparent background, 2d game asset png, isolated, high quality, masterpiece")}?nologo=true`;
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = url;
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+        });
+        return PIXI.Texture.from(img);
+    } catch (err) {
+        throw new Error("Image gen failed: " + err.message);
     }
+}
 
-    // Store definition for serialization
-    world.spriteDefinitions[id] = { width, height, drawCode };
-
-    // Render to offscreen canvas
+function generateCanvasTexture(width, height, drawFn) {
     const canvas = document.createElement('canvas');
-    canvas.width = width * 2;   // 2x for retina
+    canvas.width = width * 2;
     canvas.height = height * 2;
     const ctx = canvas.getContext('2d');
     ctx.scale(2, 2);
-
-    try {
-        drawFn(ctx, width, height);
-    } catch (err) {
-        console.error(`Sprite draw error [${id}]:`, err);
-        // Fallback: draw a colored rectangle
+    try { drawFn(ctx, width, height); } catch (err) {
         ctx.fillStyle = '#f43f5e';
         ctx.fillRect(0, 0, width, height);
         ctx.fillStyle = '#fff';
@@ -367,9 +377,50 @@ function defineSprite(id, width, height, drawFnOrString) {
         ctx.textAlign = 'center';
         ctx.fillText('ERR', width / 2, height / 2 + 4);
     }
+    return PIXI.Texture.from(canvas);
+}
 
-    const texture = PIXI.Texture.from(canvas);
+// SPRITE FACTORY
+// ══════════════════════════════════════════════════════════════
+
+function defineSprite(id, width, height, drawFnOrString, imagePrompt) {
+    let drawCode, drawFn;
+    
+    // Check if drawFnOrString is actually the imagePrompt (user skipped drawCode)
+    if (typeof drawFnOrString === 'string' && !imagePrompt && !drawFnOrString.includes('ctx')) {
+        imagePrompt = drawFnOrString;
+        drawFnOrString = null;
+    }
+
+    if (typeof drawFnOrString === 'function') {
+        drawCode = drawFnOrString.toString();
+        drawFn = drawFnOrString;
+    } else {
+        drawCode = drawFnOrString || '() => {}';
+        try { drawFn = new Function('return ' + drawCode)(); } catch(e) { drawFn = () => {}; }
+    }
+
+    world.spriteDefinitions[id] = { width, height, drawCode, imagePrompt };
+
+    const texture = generateCanvasTexture(width, height, drawFn);
+    if (world.spriteTextures[id]) world.spriteTextures[id].destroy(true); // Prevent VRAM leak
     world.spriteTextures[id] = texture;
+
+    if (imagePrompt) {
+        generateImageTexture(imagePrompt, width, height).then(newTexture => {
+            if (world.spriteTextures[id]) world.spriteTextures[id].destroy(true);
+            world.spriteTextures[id] = newTexture;
+            for (const e of world.entities) {
+                if (e.spriteId === id && e.pixiSprite) {
+                    e.pixiSprite.texture = newTexture;
+                }
+            }
+        }).catch(err => {
+            console.error('Image gen failed:', err);
+            showToast('Image gen failed: ' + err.message, 'error');
+        });
+    }
+
     return texture;
 }
 
@@ -379,7 +430,7 @@ function getOrCreateTexture(spriteId) {
     const def = world.spriteDefinitions[spriteId];
     if (!def) return null;
 
-    return defineSprite(spriteId, def.width, def.height, def.drawCode);
+    return defineSprite(spriteId, def.width, def.height, def.drawCode, def.imagePrompt);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -394,9 +445,23 @@ function spawnEntity(spriteId, options = {}) {
     }
 
     const def = world.spriteDefinitions[spriteId];
-    const id = `${spriteId}_${++world.entityCounter}`;
+    const id = options.id || `${spriteId}_${++world.entityCounter}`;
 
     const sprite = new PIXI.Sprite(texture);
+    // Physics body
+    let physicsBody = null;
+    const pc = options.physics;
+    
+    // Auto-adjust anchor and Y position for physics
+    if (pc && pc.type !== 'none') {
+        options.anchorX = options.anchorX ?? 0.5;
+        options.anchorY = options.anchorY ?? 0.5; // Physics objects need center anchor
+        if (options.isUserSpawn && (options.y === undefined || options.y === CONFIG.groundY)) {
+            // Offset starting position so it doesn't spawn half-buried
+            options.y = CONFIG.groundY - (def.height * (options.scaleY ?? 1) * 0.5);
+        }
+    }
+
     sprite.anchor.set(options.anchorX ?? 0.5, options.anchorY ?? 1.0); // Bottom center by default
     sprite.position.set(options.x ?? 0, options.y ?? CONFIG.groundY);
     sprite.scale.set(options.scaleX ?? 1, options.scaleY ?? 1);
@@ -409,9 +474,6 @@ function spawnEntity(spriteId, options = {}) {
 
     worldContainer.addChild(sprite);
 
-    // Physics body
-    let physicsBody = null;
-    const pc = options.physics;
     if (pc && pc.type !== 'none') {
         const bodyOptions = {
             isStatic: pc.type === 'static',
@@ -424,7 +486,7 @@ function spawnEntity(spriteId, options = {}) {
         if (pc.shape === 'circle') {
             physicsBody = Matter.Bodies.circle(
                 options.x ?? 0,
-                options.y ?? CONFIG.groundY,
+                options.y,
                 pc.radius ?? 20,
                 bodyOptions
             );
@@ -434,7 +496,7 @@ function spawnEntity(spriteId, options = {}) {
             const bh = pc.height ?? def.height * 0.8;
             physicsBody = Matter.Bodies.rectangle(
                 options.x ?? 0,
-                (options.y ?? CONFIG.groundY) - bh / 2,
+                options.y,
                 bw, bh,
                 bodyOptions
             );
@@ -490,8 +552,20 @@ function modifyEntity(idOrFilter, changes) {
     for (const ent of targets) {
         if (changes.x !== undefined) { ent.x = changes.x; if (ent.pixiSprite) ent.pixiSprite.x = changes.x; }
         if (changes.y !== undefined) { ent.y = changes.y; if (ent.pixiSprite) ent.pixiSprite.y = changes.y; }
-        if (changes.scaleX !== undefined) { ent.scaleX = changes.scaleX; if (ent.pixiSprite) ent.pixiSprite.scale.x = changes.scaleX; }
-        if (changes.scaleY !== undefined) { ent.scaleY = changes.scaleY; if (ent.pixiSprite) ent.pixiSprite.scale.y = changes.scaleY; }
+        if (changes.scaleX !== undefined || changes.scaleY !== undefined) {
+            const newScaleX = changes.scaleX ?? ent.scaleX;
+            const newScaleY = changes.scaleY ?? ent.scaleY;
+            if (ent.physicsBody) {
+                // Matter.js scale is relative to current scale
+                Matter.Body.scale(ent.physicsBody, newScaleX / ent.scaleX, newScaleY / ent.scaleY);
+            }
+            ent.scaleX = newScaleX;
+            ent.scaleY = newScaleY;
+            if (ent.pixiSprite) {
+                ent.pixiSprite.scale.x = newScaleX;
+                ent.pixiSprite.scale.y = newScaleY;
+            }
+        }
         if (changes.rotation !== undefined) { ent.rotation = changes.rotation; if (ent.pixiSprite) ent.pixiSprite.rotation = changes.rotation; }
         if (changes.zIndex !== undefined) { ent.zIndex = changes.zIndex; if (ent.pixiSprite) ent.pixiSprite.zIndex = changes.zIndex; }
         if (changes.tint !== undefined && ent.pixiSprite) { ent.pixiSprite.tint = changes.tint; }
@@ -538,43 +612,62 @@ function selectEntity(ent) {
 
 function deselectEntity() {
     selectedEntity = null;
-    $('inspector').classList.add('hidden');
+    $('inspector-panel').classList.add('hidden');
 }
 
 function showInspector(ent) {
-    const panel = $('inspector');
-    const content = $('inspector-content');
+    const panel = $('inspector-panel');
+    const content = $('inspector-props');
     panel.classList.remove('hidden');
 
     let html = '';
     const row = (k, v) => `<div class="prop-row"><span class="prop-key">${k}</span><span class="prop-val">${v}</span></div>`;
 
-    html += row('id', ent.id);
-    html += row('type', ent.type);
-    html += row('x', Math.round(ent.x));
-    html += row('y', Math.round(ent.y));
-    html += row('scale', `${ent.scaleX.toFixed(2)} × ${ent.scaleY.toFixed(2)}`);
-    html += row('rotation', `${(ent.rotation * 180 / Math.PI).toFixed(1)}°`);
+    html += row('ID', ent.id);
+    html += row('TYPE', ent.type);
+    html += row('POS', `${Math.round(ent.x)}, ${Math.round(ent.y)}`);
+    html += row('SCALE', `${ent.scaleX.toFixed(2)} × ${ent.scaleY.toFixed(2)}`);
+    html += row('ROT', `${(ent.rotation * 180 / Math.PI).toFixed(1)}°`);
 
     if (ent.physicsConfig) {
-        html += row('physics', ent.physicsConfig.type);
-        html += row('shape', ent.physicsConfig.shape || 'rect');
-    }
-
-    html += '<div style="margin: 10px 0 6px; font-weight: 600; color: var(--accent); font-size: 11px;">PROPERTIES</div>';
-    for (const [k, v] of Object.entries(ent.properties)) {
-        html += row(k, String(v));
+        html += row('PHYSICS', ent.physicsConfig.type);
+        html += row('SHAPE', ent.physicsConfig.shape || 'rect');
     }
 
     content.innerHTML = html;
+
+    const def = world.spriteDefinitions[ent.spriteId];
+    if (def) {
+        $('inspector-code').value = def.drawCode;
+    }
 }
 
-$('inspector-close').addEventListener('click', deselectEntity);
-$('inspector-delete').addEventListener('click', () => {
+const bindEvent = (id, event, fn) => { const el = $(id); if(el) el.addEventListener(event, fn); };
+
+bindEvent('inspector-close', 'click', deselectEntity);
+bindEvent('inspector-delete', 'click', () => {
     if (selectedEntity) {
         pushUndo();
         removeEntity(selectedEntity.id);
         deselectEntity();
+    }
+});
+
+bindEvent('inspector-compile', 'click', () => {
+    if (!selectedEntity) return;
+    const def = world.spriteDefinitions[selectedEntity.spriteId];
+    const newCode = $('inspector-code').value;
+    try {
+        defineSprite(selectedEntity.spriteId, def.width, def.height, newCode);
+        // Force redraw on all entities of this type
+        for (const e of world.entities) {
+            if (e.spriteId === selectedEntity.spriteId && e.pixiSprite) {
+                e.pixiSprite.texture = getOrCreateTexture(e.spriteId);
+            }
+        }
+        showToast('Shader recompiled successfully.', 'success');
+    } catch(err) {
+        showToast('Compile Error: ' + err.message, 'error');
     }
 });
 
@@ -674,15 +767,15 @@ const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 
 const api = {
     // ── Sprites ──
-    defineSprite(id, width, height, drawFn) {
-        defineSprite(id, width, height, drawFn);
+    defineSprite(id, width, height, drawFn, imagePrompt) {
+        defineSprite(id, width, height, drawFn, imagePrompt);
         return id;
     },
 
     // ── Entities ──
     spawn(spriteId, options = {}) {
         const y = options.y ?? CONFIG.groundY;
-        return spawnEntity(spriteId, { ...options, y })?.id || null;
+        return spawnEntity(spriteId, { ...options, y, isUserSpawn: true })?.id || null;
     },
 
     remove(idOrFilter) {
@@ -751,6 +844,18 @@ const api = {
     getGroundY(x) { return CONFIG.groundY; },
 
     // ── Interactions ──
+    onUpdate(handler) {
+        const source = typeof handler === 'function' ? handler.toString() : handler;
+        const fn = typeof handler === 'function' ? handler : new Function('return ' + handler)();
+        world.updateHandlers.push({ fn, source: typeof source === 'string' ? source : source.toString() });
+    },
+
+    onCollide(filterA, filterB, handler) {
+        const source = typeof handler === 'function' ? handler.toString() : handler;
+        const fn = typeof handler === 'function' ? handler : new Function('return ' + handler)();
+        world.collisionHandlers.push({ filterA, filterB, fn, source: typeof source === 'string' ? source : source.toString() });
+    },
+
     onClick(handler) {
         const source = typeof handler === 'function' ? handler.toString() : handler;
         const fn = typeof handler === 'function' ? handler : new Function('return ' + handler)();
@@ -766,6 +871,8 @@ const api = {
 
     clearClickHandlers() { world.clickHandlers = []; },
     clearKeyHandlers(key) { if (key) delete world.keyHandlers[key.toLowerCase()]; else world.keyHandlers = {}; },
+    clearUpdateHandlers() { world.updateHandlers = []; },
+    clearCollisionHandlers() { world.collisionHandlers = []; },
 
     // ── Particles ──
     particles(x, y, config) { spawnParticles(x, y, config); },
@@ -788,12 +895,20 @@ const api = {
     getCamera() { return { ...camera }; },
 
     // ── Environment ──
-    setBackground(topColor, bottomColor) {
-        world.environment.skyTop = topColor || world.environment.skyTop;
-        world.environment.skyBottom = bottomColor || world.environment.skyBottom;
-        const hex = parseInt((bottomColor || '#87CEEB').replace('#', ''), 16);
-        app.renderer.background.color = hex;
-        drawSky();
+    setEnvironment(opts) {
+        if (opts.skyTop) world.environment.skyTop = opts.skyTop;
+        if (opts.skyBottom) world.environment.skyBottom = opts.skyBottom;
+        if (opts.groundColor) world.environment.groundColor = opts.groundColor;
+        if (opts.groundDirtColor) world.environment.groundDirtColor = opts.groundDirtColor;
+        
+        if (opts.skyBottom || opts.skyTop) {
+            const hex = parseInt((world.environment.skyBottom || '#87CEEB').replace('#', ''), 16);
+            app.renderer.background.color = hex;
+            drawSky();
+        }
+        if (opts.groundColor || opts.groundDirtColor) {
+            drawGround();
+        }
     },
 
     // ── Animation ──
@@ -894,10 +1009,14 @@ api.explosion(x, y, radius, force) — physics explosion with particles + sound
 api.getGroundY(x) → y position of ground surface (currently flat at ${CONFIG.groundY})
 
 ### Interactions
+api.onUpdate(handler) — runs every frame. Receives (deltaMs).
+api.onCollide(filterA, filterB, handler) — filter by type string or '*'. Receives (entityA, entityB, event).
 api.onClick(handler) — handler receives (worldX, worldY, event, hitEntity)
 api.onKey(key, handler) — handler receives (key, event). key is lowercase.
 api.clearClickHandlers()
 api.clearKeyHandlers(key?)
+api.clearUpdateHandlers()
+api.clearCollisionHandlers()
 
 ### Particles
 api.particles(x, y, { count, color (hex int 0xRRGGBB), speed, life, size, gravity, spread, angle })
@@ -914,12 +1033,25 @@ api.animate(entityId, property, targetValue, durationMs)
 - property: 'x', 'y', 'scaleX', 'scaleY', 'rotation', 'alpha'
 
 ### Environment
-api.setBackground(topColorHex, bottomColorHex) — e.g. api.setBackground('#1a1a2e', '#16213e')
+api.setEnvironment({ skyTop, skyBottom, groundColor, groundDirtColor }) — Pass hex strings (e.g. '#000000') to change time of day or biome colors.
 
 ### DOM / Code
 api.addCSS(cssString) — inject CSS
 api.setHTML(selector, html) — set innerHTML of element
 api.exec(codeString) — execute arbitrary JS with full access
+
+### Behaviors & Logic (CRITICAL)
+- Use api.onUpdate(delta => { ... }) for continuous behaviors (e.g., burning, growing, chasing).
+- Store state in entity.properties (e.g., ent.properties.state = 'burning').
+- Use api.onCollide('*', '*', (entA, entB, event) => { ... }) for physics interactions.
+- Example: 
+  api.onUpdate(delta => {
+      for (const ent of api.query(e => e.properties.state === 'burning')) {
+          ent.properties.hp = (ent.properties.hp || 100) - delta;
+          if (Math.random() < 0.1) api.particles(ent.x, ent.y, { count: 5, color: 0xff4400, gravity: -0.05 });
+          if (ent.properties.hp <= 0) api.modify(ent.id, { spriteId: 'ash', properties: { state: 'dead' }, tint: 0x555555 });
+      }
+  });
 
 ### Utilities
 api.log(message) — show success toast
@@ -941,37 +1073,33 @@ When writing sprite drawFunctions, create beautiful semi-realistic illustrated a
 
 Example tree sprite:
 api.defineSprite('oak_tree', 100, 150, (ctx, w, h) => {
-    // Trunk
-    const trunk = ctx.createLinearGradient(w*0.42, h, w*0.58, h*0.3);
-    trunk.addColorStop(0, '#5D4037'); trunk.addColorStop(1, '#795548');
-    ctx.fillStyle = trunk;
-    ctx.beginPath();
-    ctx.moveTo(w*0.38, h); ctx.quadraticCurveTo(w*0.35, h*0.5, w*0.42, h*0.35);
-    ctx.lineTo(w*0.58, h*0.35); ctx.quadraticCurveTo(w*0.65, h*0.5, w*0.62, h);
-    ctx.closePath(); ctx.fill();
-    // Bark lines
-    ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=0.8;
-    for(let i=0;i<5;i++){const yy=h*0.4+i*h*0.12; ctx.beginPath(); ctx.moveTo(w*0.42,yy); ctx.quadraticCurveTo(w*0.5,yy-3,w*0.58,yy); ctx.stroke();}
-    // Canopy
-    const canopy = ctx.createRadialGradient(w*0.5,h*0.2,w*0.05, w*0.5,h*0.25,w*0.4);
-    canopy.addColorStop(0,'#81C784'); canopy.addColorStop(0.6,'#4CAF50'); canopy.addColorStop(1,'#2E7D32');
-    ctx.fillStyle = canopy;
-    [[w*0.3,h*0.28,w*0.22],[w*0.7,h*0.28,w*0.2],[w*0.5,h*0.15,w*0.28],[w*0.4,h*0.22,w*0.18],[w*0.6,h*0.2,w*0.17]].forEach(([cx,cy,r])=>{ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();});
-    // Leaf highlights
-    ctx.fillStyle='rgba(200,230,201,0.3)';
-    [[w*0.45,h*0.12,w*0.1],[w*0.35,h*0.22,w*0.07]].forEach(([cx,cy,r])=>{ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();});
+    // Placeholder drawing (fast)
+    ctx.fillStyle = '#795548'; ctx.fillRect(40, 50, 20, 100);
+    ctx.fillStyle = '#4CAF50'; ctx.beginPath(); ctx.arc(50, 40, 40, 0, Math.PI*2); ctx.fill();
+}, "a majestic oak tree with vibrant green leaves and detailed bark, transparent background, isolated 2d game asset");
+
+Example red sphere (NO imagePrompt):
+api.defineSprite('red_sphere', 50, 50, (ctx, w, h) => {
+    const grad = ctx.createRadialGradient(15, 15, 5, 25, 25, 25);
+    grad.addColorStop(0, '#ffaaaa'); grad.addColorStop(1, '#aa0000');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(25, 25, 25, 0, Math.PI*2); ctx.fill();
 });
 
 ## IMPORTANT RULES
+0. ESCAPE YOUR CODE: Your JavaScript code must be structurally valid inside the JSON. Do NOT use unescaped backticks or quotes that break the JSON string!
 1. ALWAYS define sprites before spawning entities that use them.
 2. Use api.getGroundY(x) for y-positions when placing on ground.
 3. Entities placed on ground should have y = api.getGroundY(x) (which is ${CONFIG.groundY}).
+NOTE: In this 2D engine, the Y axis points DOWN. y=0 is the sky, y=500 is the ground level, and y > 500 is underground. If you want an object to sit ON the ground, set its y to ${CONFIG.groundY}.
 4. When asked to add interactivity (click handlers, key bindings), use api.onClick / api.onKey.
 5. For multi-step visual effects, use api.wait() with await.
 6. If unsure what the user wants, make reasonable creative assumptions.
 7. If asked to modify existing things, use api.query() to find them first.
-8. You can use loops, conditionals, and any JavaScript in your code.
-9. If the user asks to change game code or site code, use api.exec() or api.addCSS().
+8. CRITICAL: Before completing your response, silently review your code for logical errors to ensure it fully and safely accomplishes the user's exact request without breaking the engine.
+9. SENSE OF SCALE: 1 unit in Matter.js = 1 pixel in PIXI. Keep objects sensibly sized (e.g., humans 40-60px, balls 10-30px, cars 100-200px) and mass/restitution appropriate for their size.
+10. You can use loops, conditionals, and any JavaScript in your code.
+11. If the user asks to change game code or site code, use api.exec() or api.addCSS().
 
 ## CONSISTENCY CHECK
 Before executing a command that conflicts with existing world state, mention it in your message.
@@ -984,15 +1112,16 @@ ${JSON.stringify({ entities: entitySummary, environment: world.environment, clic
 ${world.commandHistory.slice(-10).map(c => `> ${c}`).join('\n') || '(none)'}`;
 }
 
-async function processCommand(userInput) {
+async function processCommand(userInput, retryCount = 0) {
     if (!userInput.trim()) return;
 
-    const apiKey = localStorage.getItem(CONFIG.keys.apiKey);
-    const model = localStorage.getItem(CONFIG.keys.model) || 'google/gemini-2.5-flash';
+    const providerId = localStorage.getItem('genesis_provider') || 'groq';
+    const provider = PROVIDERS[providerId] || PROVIDERS['groq'];
+    const apiKey = localStorage.getItem(`genesis_key_${providerId}`);
 
     if (!apiKey) {
         $('settings-modal').classList.remove('hidden');
-        showToast('Please set your API key first', 'error');
+        showToast(`Please set your ${provider.name} API key first`, 'error');
         return;
     }
 
@@ -1001,45 +1130,85 @@ async function processCommand(userInput) {
     $('command-input').value = '';
 
     // Push undo state before executing
-    pushUndo();
-
-    world.commandHistory.push(userInput);
+    if (retryCount === 0) {
+        pushUndo();
+        world.commandHistory.push(userInput);
+    }
 
     try {
         const systemPrompt = buildSystemPrompt();
+        
+        const modelStr = localStorage.getItem(`genesis_model_${providerId}`) || provider.models[0].id;
+        const modelsToTry = [modelStr];
+        
+        // Add fallbacks if the user chose a specific model
+        for (const f of provider.models) if (f.id !== modelStr) modelsToTry.push(f.id);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        let raw = '';
+        let lastErr = null;
+        for (let i = 0; i < modelsToTry.length; i++) {
+            const currentModel = modelsToTry[i];
+            if (i > 0) {
+                $('ai-toast').className = 'toast info';
+                $('ai-toast').innerText = `Retrying with ${currentModel}...`;
+            }
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
+                
+                let url = provider.url;
+                let headers = { 'Content-Type': 'application/json' };
+                let body = {};
+                
+                if (providerId === 'gemini') {
+                    url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+                    body = {
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        contents: [{ role: 'user', parts: [{ text: userInput }] }]
+                    };
+                } else {
+                    headers['Authorization'] = `Bearer ${apiKey}`;
+                    if (providerId === 'openrouter') {
+                        headers['HTTP-Referer'] = window.location.href;
+                        headers['X-Title'] = 'Genesis';
+                    }
+                    body = {
+                        model: currentModel,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userInput }
+                        ]
+                    };
+                }
 
-        const response = await fetch(CONFIG.apiEndpoint, {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-                'HTTP-Referer': window.location.href,
-                'X-Title': 'Genesis',
-            },
-            body: JSON.stringify({
-                model,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userInput },
-                ],
-                max_tokens: CONFIG.maxTokens,
-                temperature: CONFIG.temperature,
-            }),
-        });
-        clearTimeout(timeoutId);
+                const response = await fetch(url, {
+                    method: 'POST',
+                    signal: controller.signal,
+                    headers: headers,
+                    body: JSON.stringify(body),
+                });
+                clearTimeout(timeoutId);
 
-        if (!response.ok) {
-            if (response.status === 401) { localStorage.removeItem(CONFIG.keys.apiKey); $('settings-modal').classList.remove('hidden'); }
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `API error ${response.status}`);
+                if (!response.ok) {
+                    if (response.status === 401) { localStorage.removeItem(`genesis_key_${providerId}`); $('settings-modal').classList.remove('hidden'); }
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.error?.message || `API error ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (providerId === 'gemini') {
+                    raw = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+                } else {
+                    raw = (data.choices?.[0]?.message?.content || '').trim();
+                }
+                
+                break;
+            } catch (err) {
+                console.warn(`Model ${currentModel} failed:`, err);
+                lastErr = err;
+                if (i === modelsToTry.length - 1) throw lastErr;
+            }
         }
-
-        const data = await response.json();
-        const raw = (data.choices?.[0]?.message?.content || '').trim();
 
         // Parse AI response
         let parsed = parseAIResponse(raw);
@@ -1054,7 +1223,14 @@ async function processCommand(userInput) {
             } catch (codeErr) {
                 console.error('AI code execution error:', codeErr);
                 showToast(`Code error: ${codeErr.message}`, 'error');
+                if (retryCount < 50) {
+                    showToast('AI is fixing its own code...', 'info');
+                    world.commandHistory.push(`[SYSTEM ERROR DURING EXECUTION]: ${codeErr.message}. Fix the syntax or logic error and try again.`);
+                    return await processCommand("Your previous code failed. Read the SYSTEM ERROR in the command history, find your mistake, and rewrite the code to fix it.", retryCount + 1);
+                }
             }
+        } else if (!parsed.message && !parsed.thinking) {
+            showToast('AI returned an empty response, try again.', 'error');
         }
 
         // Show message
@@ -1063,8 +1239,12 @@ async function processCommand(userInput) {
     } catch (err) {
         console.error('Command failed:', err);
         showToast(`Failed: ${err.message}`, 'error');
-        // Revert on error
-        performUndo();
+        if (retryCount < 50 && err.message.includes("parse valid JSON")) {
+            showToast('AI is fixing JSON format...', 'info');
+            return await processCommand("Your previous response was not valid JSON. Please respond with ONLY valid JSON.", retryCount + 1);
+        } else if (retryCount === 0) {
+            performUndo(true);
+        }
     } finally {
         $('command-loading').classList.add('hidden');
     }
@@ -1073,18 +1253,29 @@ async function processCommand(userInput) {
 function parseAIResponse(raw) {
     // Try direct JSON parse
     let parsed = null;
-    try { parsed = JSON.parse(raw); } catch (e) {}
+    try { 
+        parsed = JSON.parse(raw); 
+        if (typeof parsed !== 'object' || parsed === null) parsed = null;
+    } catch (e) {}
 
     // Try stripping markdown fences
     if (!parsed) {
         const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-        try { parsed = JSON.parse(stripped); } catch (e) {}
+        try { 
+            parsed = JSON.parse(stripped); 
+            if (typeof parsed !== 'object' || parsed === null) parsed = null;
+        } catch (e) {}
     }
 
     // Try extracting JSON object
     if (!parsed) {
         const match = raw.match(/\{[\s\S]*"code"[\s\S]*\}/);
-        if (match) try { parsed = JSON.parse(match[0]); } catch (e) {}
+        if (match) {
+            try { 
+                parsed = JSON.parse(match[0]); 
+                if (typeof parsed !== 'object' || parsed === null) parsed = null;
+            } catch (e) {}
+        }
     }
 
     // Fallback: treat entire response as code
@@ -1115,6 +1306,8 @@ function serializeWorld() {
             properties: { ...e.properties }, behaviors: e.behaviors,
         })),
         spriteDefinitions: { ...world.spriteDefinitions },
+        updateHandlers: world.updateHandlers.map(h => h.source),
+        collisionHandlers: world.collisionHandlers.map(h => ({ filterA: h.filterA, filterB: h.filterB, source: h.source })),
         clickHandlers: world.clickHandlers.map(h => h.source),
         keyHandlers: Object.fromEntries(
             Object.entries(world.keyHandlers).map(([k, arr]) => [k, arr.map(h => h.source)])
@@ -1134,6 +1327,8 @@ function deserializeWorld(data) {
     }
     world.entities = [];
     world.spriteTextures = {};
+    world.updateHandlers = [];
+    world.collisionHandlers = [];
     world.clickHandlers = [];
     world.keyHandlers = {};
 
@@ -1141,7 +1336,7 @@ function deserializeWorld(data) {
     world.spriteDefinitions = data.spriteDefinitions || {};
     for (const id of Object.keys(world.spriteDefinitions)) {
         const def = world.spriteDefinitions[id];
-        try { defineSprite(id, def.width, def.height, def.drawCode); }
+        try { defineSprite(id, def.width, def.height, def.drawCode, def.imagePrompt); }
         catch (e) { console.error(`Failed to restore sprite ${id}:`, e); }
     }
 
@@ -1149,15 +1344,27 @@ function deserializeWorld(data) {
     world.entityCounter = data.entityCounter || 0;
     for (const ed of (data.entities || [])) {
         const ent = spawnEntity(ed.spriteId, {
+            id: ed.id,
             x: ed.x, y: ed.y, scaleX: ed.scaleX, scaleY: ed.scaleY,
             rotation: ed.rotation, anchorX: ed.anchorX, anchorY: ed.anchorY,
             zIndex: ed.zIndex, physics: ed.physicsConfig, properties: ed.properties,
             behaviors: ed.behaviors,
         });
-        if (ent) ent.id = ed.id; // Preserve original ID
     }
 
     // Restore handlers
+    for (const source of (data.updateHandlers || [])) {
+        try {
+            const fn = new Function('return ' + source)();
+            world.updateHandlers.push({ fn, source });
+        } catch (e) { console.error('Failed to restore update handler:', e); }
+    }
+    for (const h of (data.collisionHandlers || [])) {
+        try {
+            const fn = new Function('return ' + h.source)();
+            world.collisionHandlers.push({ filterA: h.filterA, filterB: h.filterB, fn, source: h.source });
+        } catch (e) { console.error('Failed to restore collision handler:', e); }
+    }
     for (const source of (data.clickHandlers || [])) {
         try {
             const fn = new Function('return ' + source)();
@@ -1281,11 +1488,14 @@ function pushUndo() {
     if (undoStack.length > 50) undoStack.shift(); // Cap at 50
 }
 
-function performUndo() {
-    if (undoStack.length === 0) { showToast('Nothing to undo', 'error'); return; }
+function performUndo(silent = false) {
+    if (undoStack.length === 0) { 
+        if (!silent) showToast('Nothing to undo', 'error'); 
+        return; 
+    }
     const prev = undoStack.pop();
     deserializeWorld(prev);
-    showToast('Undone', 'success');
+    if (!silent) showToast('Undone', 'success');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1301,36 +1511,107 @@ function showToast(msg, type = 'info') {
 }
 
 // Command input
-$('command-input').addEventListener('keydown', e => {
+bindEvent('command-input', 'keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); processCommand($('command-input').value); }
 });
-$('command-send').addEventListener('click', () => processCommand($('command-input').value));
+bindEvent('command-send', 'click', () => { if($('command-input')) processCommand($('command-input').value); });
 
-// Settings
-$('settings-btn').addEventListener('click', () => {
-    $('api-key-input').value = localStorage.getItem(CONFIG.keys.apiKey) || '';
-    $('model-select').value = localStorage.getItem(CONFIG.keys.model) || 'google/gemini-2.5-flash';
+const PROVIDERS = {
+    groq: {
+        name: 'Groq',
+        url: 'https://api.groq.com/openai/v1/chat/completions',
+        helpHtml: 'Get a free key from <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">Groq Console</a>',
+        models: [
+            { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile' },
+            { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7b' }
+        ]
+    },
+    gemini: {
+        name: 'Google Gemini',
+        url: 'native', // Handled specially in processCommand
+        helpHtml: 'Get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">Google AI Studio</a>',
+        models: [
+            { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (1500 free/day)' },
+            { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (50 free/day)' }
+        ]
+    },
+    openrouter: {
+        name: 'OpenRouter',
+        url: 'https://openrouter.ai/api/v1/chat/completions',
+        helpHtml: 'Get a free key from <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">OpenRouter</a>',
+        models: [
+            { id: 'qwen/qwen3-coder:free', name: 'Qwen 3 Coder (Free)' },
+            { id: 'poolside/laguna-m.1:free', name: 'Poolside Laguna M.1 (Free)' },
+            { id: 'nousresearch/hermes-3-llama-3.1-405b:free', name: 'Hermes 3 405B (Free)' }
+        ]
+    }
+};
+
+function updateSettingsUI() {
+    if(!$('provider-select')) return;
+    const providerId = $('provider-select').value;
+    const provider = PROVIDERS[providerId];
+    if(!provider) return;
+    
+    $('api-key-help').innerHTML = provider.helpHtml;
+    
+    const modelSelect = $('model-select');
+    modelSelect.innerHTML = '';
+    provider.models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        modelSelect.appendChild(opt);
+    });
+    
+    // Try to restore previously selected model for this provider
+    const savedModel = localStorage.getItem(`genesis_model_${providerId}`);
+    if (savedModel && Array.from(modelSelect.options).some(o => o.value === savedModel)) {
+        modelSelect.value = savedModel;
+    }
+}
+
+bindEvent('provider-select', 'change', updateSettingsUI);
+
+bindEvent('settings-btn', 'click', () => {
+    if(!$('settings-modal')) return;
+    
+    const savedProvider = localStorage.getItem('genesis_provider') || 'groq';
+    if ($('provider-select')) {
+        $('provider-select').value = savedProvider;
+        updateSettingsUI();
+    }
+    
+    if($('api-key-input')) $('api-key-input').value = localStorage.getItem(`genesis_key_${savedProvider}`) || '';
     $('settings-modal').classList.remove('hidden');
 });
-$('settings-save').addEventListener('click', () => {
-    const key = $('api-key-input').value.trim();
+
+bindEvent('settings-save', 'click', () => {
+    const providerId = $('provider-select').value;
+    localStorage.setItem('genesis_provider', providerId);
+    
+    if($('api-key-input')) {
+        const key = $('api-key-input').value.trim();
+        if (key) localStorage.setItem(`genesis_key_${providerId}`, key);
+    }
+    
     const model = $('model-select').value;
-    if (key) localStorage.setItem(CONFIG.keys.apiKey, key);
-    localStorage.setItem(CONFIG.keys.model, model);
-    $('settings-modal').classList.add('hidden');
+    localStorage.setItem(`genesis_model_${providerId}`, model);
+    
+    if($('settings-modal')) $('settings-modal').classList.add('hidden');
     showToast('Settings saved', 'success');
 });
-$('settings-cancel').addEventListener('click', () => $('settings-modal').classList.add('hidden'));
+bindEvent('settings-cancel', 'click', () => { if($('settings-modal')) $('settings-modal').classList.add('hidden'); });
 
 // Save / Load
-$('save-btn').addEventListener('click', () => { renderSaveSlots(); $('save-modal').classList.remove('hidden'); });
-$('save-new').addEventListener('click', () => { const name = prompt('Save name:', `World ${getSaveSlots().length + 1}`); if (name) saveToSlot(name); });
-$('save-download').addEventListener('click', downloadWorld);
-$('save-close').addEventListener('click', () => $('save-modal').classList.add('hidden'));
-$('file-upload').addEventListener('change', e => { if (e.target.files[0]) uploadWorld(e.target.files[0]); e.target.value = ''; });
+bindEvent('save-btn', 'click', () => { renderSaveSlots(); if($('save-modal')) $('save-modal').classList.remove('hidden'); });
+bindEvent('save-new', 'click', () => { const name = prompt('Save name:', `World ${getSaveSlots().length + 1}`); if (name) saveToSlot(name); });
+bindEvent('save-download', 'click', downloadWorld);
+bindEvent('save-close', 'click', () => { if($('save-modal')) $('save-modal').classList.add('hidden'); });
+bindEvent('file-upload', 'change', e => { if (e.target.files[0]) uploadWorld(e.target.files[0]); e.target.value = ''; });
 
 // Undo
-$('undo-btn').addEventListener('click', performUndo);
+bindEvent('undo-btn', 'click', performUndo);
 
 // Close modals on backdrop click
 document.querySelectorAll('.modal-backdrop').forEach(el => {
@@ -1342,8 +1623,15 @@ document.querySelectorAll('.modal-backdrop').forEach(el => {
 // ══════════════════════════════════════════════════════════════
 
 function gameLoop(delta) {
+    const deltaMs = delta * 16.666;
+    
+    // Custom update logic
+    for (const handler of world.updateHandlers) {
+        try { handler.fn(deltaMs); } catch (err) { console.error('Update handler error:', err); }
+    }
+
     // Physics step
-    physicsStep(delta * 16.666);
+    physicsStep(deltaMs);
 
     // Sync physics bodies → PixiJS sprites
     syncPhysicsToRenderer();
@@ -1382,6 +1670,10 @@ window.Genesis = {
 };
 
 // Boot
-init();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 
 })();

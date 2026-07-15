@@ -64,7 +64,8 @@ const PROJECT_NAMES = {
     'paths.html': 'Text Adventure Editor',
     'waveform editor': 'Waveform Editor',
     'dvd': 'DVD Logo Simulator',
-    'rubiks': '2x2 Rubik\'s Cube'
+    'rubiks': '2x2 Rubik\'s Cube',
+    'synesthesia': 'Synesthesia Color Mixer'
 };
 
 function getDisplayProjectName(rawName) {
@@ -117,6 +118,21 @@ if (!username) {
 }
 
 let isOptedOut = localStorage.getItem('hyper_tracking_optout') === 'true';
+
+// Global flag and listener for hypergenius12 to see all users
+window.hyperShowAllUsers = false;
+window.loadLeaderboard = loadLeaderboard;
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'L' && e.shiftKey && username === 'hypergenius12') {
+        window.hyperShowAllUsers = !window.hyperShowAllUsers;
+        let mode = 'overall';
+        const tabProjects = document.getElementById('tab-projects');
+        if (tabProjects && tabProjects.style.background !== 'transparent' && tabProjects.style.background !== '') {
+            mode = 'projects';
+        }
+        loadLeaderboard(mode);
+    }
+});
 
 if (isHome) {
     const modal = document.getElementById('username-modal');
@@ -239,8 +255,8 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                 // Spoofing Protection: Ignore users with > 365 days of playtime
                 if (u.totalTime > 31536000) return;
                 
-                // Hide users with < 15s of playtime
-                if (u.totalTime < 15) return;
+                // Hide users with < 15s of playtime unless hyperShowAllUsers is true
+                if (u.totalTime < 15 && !window.hyperShowAllUsers) return;
                 
                 // Hide opted out users
                 if (u.optOut) return;
@@ -320,8 +336,8 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
                     let timeVal = u.projects[activeProj];
                     if (!timeVal || timeVal > 31536000) return; // Spoofing protection
                     
-                    // Hide users with < 15s of playtime
-                    if (timeVal < 15) return;
+                    // Hide users with < 15s of playtime unless hyperShowAllUsers is true
+                    if (timeVal < 15 && !window.hyperShowAllUsers) return;
                     
                     // Hide opted out users
                     if (u.optOut) return;
