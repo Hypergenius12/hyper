@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dust Sandbox</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="ui-layer">
+        <div class="panel toolbar">
+            <div class="toolbar-header">ELEMENTS</div>
+            <div class="tool-grid" id="element-grid">
+                <!-- Populated by JS -->
+            </div>
+            
+            <div class="toolbar-header" style="margin-top:1.5rem;">TOOLS</div>
+            <div class="tool-grid" id="action-grid">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="toolbar-header" style="margin-top:1.5rem;">BRUSH SIZE</div>
+            <input type="range" id="brush-size" min="1" max="50" value="5">
+            
+            <div class="toolbar-header" style="margin-top:1.5rem;">SYSTEM</div>
+            <div style="display: flex; gap: 0.5rem; flex-direction: column; margin-bottom: 1.5rem;">
+                <button id="btn-clear" class="tool-btn" style="justify-content: center;">CLEAR CANVAS</button>
+                <button id="btn-reset" class="tool-btn" style="justify-content: center; border-color: #ff3366; color: #ff3366;">FACTORY RESET</button>
+            </div>
+            
+            <div class="stats" id="fps-counter">FPS: 60</div>
+        </div>
+        
+        <div class="right-panels">
+            <div class="panel ai-panel">
+                <div class="toolbar-header">
+                    AI GENERATOR
+                    <a href="https://openrouter.ai/keys" target="_blank" style="float:right; color:var(--accent); text-decoration:none;">GET KEY</a>
+                </div>
+                
+                <input type="password" id="ai-key" placeholder="OpenRouter API Key..." class="ai-input" style="margin-bottom: 1rem;">
+                
+                <div id="ai-chat" class="ai-chat-box">
+                    <div class="chat-msg system">What would you like to create? (e.g. Acid, C4, Slime)</div>
+                </div>
+                
+                <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                    <input type="text" id="ai-prompt" placeholder="Type answer..." class="ai-input" style="margin-bottom:0; flex-grow:1;" autocomplete="off">
+                    <button id="ai-btn" class="ai-btn" style="margin-bottom:0; width:auto;">&#9166;</button>
+                </div>
+            </div>
+
+            <div class="panel debug-panel">
+                <div class="toolbar-header">PIXEL DEBUG</div>
+                <div id="debug-info">
+                    <div class="debug-row"><span>Element:</span> <span id="dbg-name">-</span></div>
+                    <div class="debug-row"><span>ID:</span> <span id="dbg-id">-</span></div>
+                    <div class="debug-row"><span>State:</span> <span id="dbg-state">-</span></div>
+                    <div class="debug-row"><span>Temp:</span> <span id="dbg-temp-val">-</span></div>
+                    <div class="debug-row"><span>Coord:</span> <span id="dbg-coord">-</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="canvas-container">
+        <canvas id="game-canvas"></canvas>
+        <canvas id="glow-canvas"></canvas>
+        <div id="brush-cursor"></div>
+    </div>
+    <div id="code-editor-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center;">
+        <div style="background: var(--bg-dark); padding: 1.5rem; border-radius: 8px; width: 80%; max-width: 800px; display: flex; flex-direction: column; gap: 1rem; border: 1px solid var(--border);">
+            <div class="toolbar-header">EDIT JSON CODE</div>
+            <textarea id="code-editor-textarea" style="width: 100%; height: 400px; background: #111; color: #0f0; font-family: monospace; padding: 1rem; border: 1px solid var(--border); border-radius: 4px; resize: vertical;"></textarea>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button id="code-editor-cancel" class="tool-btn" style="width: auto;">CANCEL</button>
+                <button id="code-editor-save" class="tool-btn" style="width: auto; border-color: var(--accent); color: var(--accent);">SAVE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tracker -->
+    <script type="module" src="../js/tracker.js"></script>
+    <script src="engine.js"></script>
+    <script src="ai.js"></script>
+</body>
+</html>

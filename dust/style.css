@@ -1,0 +1,310 @@
+:root {
+    --bg-color: #050505;
+    --panel-bg: #111111;
+    --panel-border: #333333;
+    --text-main: #ffffff;
+    --text-muted: #888888;
+    --accent: #ff3366;
+    --accent-hover: #ff0044;
+}
+
+* {
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: 'Space Grotesk', monospace; /* Sharp, technical font */
+    overflow: hidden;
+}
+
+#canvas-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+    background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 20px 20px; /* Blueprint grid effect */
+}
+
+/* Base Canvas for solids and liquids */
+#game-canvas {
+    position: absolute;
+    image-rendering: pixelated;
+    background-color: #000;
+    box-shadow: 0 0 50px rgba(0,0,0,0.9);
+    cursor: none;
+    border: 1px solid #222;
+    z-index: 2;
+}
+
+/* Glow Canvas for fire and smoke */
+#glow-canvas {
+    position: absolute;
+    image-rendering: pixelated;
+    pointer-events: none;
+    z-index: 3;
+    mix-blend-mode: screen;
+    filter: blur(2px) drop-shadow(0 0 5px rgba(239, 68, 68, 0.8));
+}
+
+#brush-cursor {
+    position: absolute;
+    border: 1px solid var(--text-main);
+    border-radius: 0; /* Sharp square cursor */
+    pointer-events: none;
+    z-index: 10;
+    display: none;
+    mix-blend-mode: difference;
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+    display: flex;
+    justify-content: space-between;
+    padding: 2rem;
+}
+
+.panel {
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--panel-border);
+    border-top: 2px solid var(--accent); /* Sleek top accent line */
+    border-radius: 0;
+    padding: 1.5rem;
+    pointer-events: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.toolbar {
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+}
+
+.debug-panel {
+    width: 250px;
+    height: fit-content;
+}
+
+.debug-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+.debug-row span:first-child {
+    color: var(--text-muted);
+}
+
+.debug-row span:last-child {
+    color: var(--accent);
+    font-family: monospace;
+}
+
+.toolbar-header {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 0.5rem;
+}
+
+.tool-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.tool-grid::-webkit-scrollbar {
+    width: 6px;
+}
+.tool-grid::-webkit-scrollbar-track {
+    background: #111;
+}
+.tool-grid::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+.tool-btn {
+    background: #000;
+    border: 1px solid var(--panel-border);
+    color: var(--text-main);
+    border-radius: 0;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+}
+
+.tool-btn:hover {
+    background: #222;
+    border-color: #555;
+}
+
+.tool-btn.active {
+    background: #222;
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.color-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 0; /* Sharp swatch */
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+input[type=range] {
+    width: 100%;
+    margin-top: 0.5rem;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+.stats {
+    margin-top: auto;
+    font-family: monospace;
+    color: var(--accent);
+    font-size: 1rem;
+    font-weight: bold;
+    text-align: right;
+    border-top: 1px solid var(--panel-border);
+    padding-top: 1rem;
+}
+
+.ai-panel {
+    width: 250px;
+    height: fit-content;
+}
+
+.ai-input {
+    width: 100%;
+    background: #000;
+    border: 1px solid var(--panel-border);
+    color: var(--text-main);
+    padding: 0.5rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.ai-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.ai-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 0.75rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.1s;
+    margin-bottom: 0.5rem;
+}
+
+.ai-btn:hover {
+    background: var(--accent-hover);
+}
+
+.ai-btn:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.ai-status {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: monospace;
+    line-height: 1.4;
+}
+
+.right-panels {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.ai-chat-box {
+    background: #000;
+    border: 1px solid var(--panel-border);
+    height: 180px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    word-break: break-word;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+}
+.ai-chat-box::-webkit-scrollbar {
+    width: 4px;
+}
+.ai-chat-box::-webkit-scrollbar-track {
+    background: #111;
+}
+.ai-chat-box::-webkit-scrollbar-thumb {
+    background: #444;
+}
+
+.chat-msg {
+    padding: 0.5rem;
+    border-radius: 4px;
+    line-height: 1.3;
+}
+.chat-msg.system {
+    background: rgba(255, 51, 102, 0.1);
+    color: var(--accent);
+    border-left: 2px solid var(--accent);
+}
+.chat-msg.user {
+    background: #222;
+    color: var(--text-main);
+    align-self: flex-end;
+    border-right: 2px solid #555;
+    text-align: right;
+}
