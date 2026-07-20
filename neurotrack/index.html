@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroTrack - AI Racing</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Main Menu -->
+    <div id="menu-screen" class="ui-layer">
+        <div class="menu-box">
+            <h1>NEUROTRACK</h1>
+            <p class="subtitle">PROJECT: EVOLUTION RACING</p>
+            <button id="btn-play" class="menu-btn">Time Trial</button>
+            <button id="btn-editor" class="menu-btn">Track Editor</button>
+            <button id="btn-train" class="menu-btn">Evolve Neural Net</button>
+        </div>
+    </div>
+
+    <!-- Play HUD -->
+    <div id="hud-screen" class="ui-layer" style="display: none;">
+        <div class="top-bar">
+            <div class="hud-stats">
+                <div class="stat-box">LAP <span id="lap-time">0.00</span></div>
+                <div class="stat-box">BEST <span id="best-time">--</span></div>
+                <div class="stat-box">SPEED <span id="speed">0</span></div>
+            </div>
+            <button class="btn-back">Menu</button>
+        </div>
+    </div>
+
+    <!-- Editor UI -->
+    <div id="editor-screen" class="ui-layer" style="display: none; pointer-events: none;">
+        <div class="top-bar">
+            <div class="hud-stats">
+                <div class="stat-box">BUILD <span>MODE</span></div>
+            </div>
+            <button class="btn-back">Save & Exit</button>
+        </div>
+        <div class="editor-toolbar" style="pointer-events: auto;">
+            <div class="toolbar-title">COMPONENTS</div>
+            <div id="editor-palette" class="palette">
+                <!-- Buttons injected via JS -->
+            </div>
+            <div style="margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: var(--gray-light);">
+                <p>L-CLICK: PLACE</p>
+                <p>R-CLICK: REMOVE</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Train UI -->
+    <div id="train-screen" class="ui-layer" style="display: none;">
+        <div class="top-bar">
+            <div class="hud-stats">
+                <div class="stat-box">GEN <span id="gen-count">1</span></div>
+                <div class="stat-box">FITNESS <span id="best-fitness">0</span></div>
+            </div>
+            <button class="btn-back">Menu</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/camera.js"></script>
+    <script src="js/track.js"></script>
+    <script src="js/car.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
