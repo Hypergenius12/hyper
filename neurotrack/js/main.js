@@ -377,10 +377,11 @@ function setupUI() {
             if (!name) { customAlert("Please enter a track name!"); return; }
             if (name === 'Default Oval' || name === 'Figure Eight') { customAlert("Cannot overwrite default tracks."); return; }
             
+            saveBestBrain(true);
             customTracks[name] = currentTrack.exportJSON();
             saveCustomTracks();
             currentTrackName = name;
-            customAlert("Track saved successfully!");
+            customAlert("Track and AI saved successfully!");
         };
     }
     
@@ -656,6 +657,12 @@ function startTrainMode() {
             timeLimit: trainTimeLimit
         });
         geneticAlgo.initialize();
+        const savedBrain = loadBestBrain();
+        if (savedBrain && geneticAlgo.population.length > 0) {
+            geneticAlgo.population[0].brain = savedBrain;
+            geneticAlgo.bestBrain = savedBrain.clone();
+            geneticAlgo.bestFitness = 0;
+        }
     }
     geneticAlgo.updateConfig({
         mutationRate: mutRate * 100,
@@ -853,13 +860,16 @@ function render() {
     camera.restore(ctx);
 }
 
-function saveBestBrain() {
+function saveBestBrain(quiet = false) {
     if (!geneticAlgo) return;
     const data = geneticAlgo.exportBest();
-    if (!data) { customAlert('No trained brain to save!'); return; }
+    if (!data) { 
+        if (!quiet) customAlert('No trained brain to save!'); 
+        return; 
+    }
     const key = 'neurotrack_brain_' + currentTrackName;
     localStorage.setItem(key, JSON.stringify(data));
-    customAlert('Best brain saved to local storage for track: ' + currentTrackName);
+    if (!quiet) customAlert('Best brain saved to local storage for track: ' + currentTrackName);
 }
 
 function loadBestBrain() {
