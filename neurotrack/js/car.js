@@ -272,6 +272,9 @@ class Car {
                     }
                 }
                 
+                const centerCheck = this.isPointOnTrack(this.x, this.y, collisionGrid);
+                if (centerCheck === 'crossroad_violation') crossroadViolation = true;
+                
                 if (crossroadViolation) {
                     this.x = prevX;
                     this.y = prevY;
@@ -280,7 +283,7 @@ class Car {
                     if (offCount >= 1) {
                         this.speed *= this.offTrackPenalty;
                     }
-                    if (offCount >= 3) {
+                    if (offCount >= 3 || centerCheck === false) {
                         if (this.alive && !this.brain && typeof playCrashSound === 'function') {
                             playCrashSound();
                         }
