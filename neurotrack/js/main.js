@@ -528,6 +528,7 @@ function setupUI() {
     document.getElementById('btn-save-brain').onclick = saveBestBrain;
     document.getElementById('btn-export-brain').onclick = exportBrain;
     document.getElementById('btn-import-brain').onclick = importBrain;
+    document.getElementById('btn-clear-brain').onclick = clearBestBrain;
     const sensorBtn = document.getElementById('btn-toggle-sensors');
     sensorBtn.onclick = () => { 
         showSensors = !showSensors; 
@@ -885,6 +886,16 @@ function loadBestBrain() {
         console.error("Failed to load brain:", e);
         return null;
     }
+}
+
+function clearBestBrain() {
+    const key = 'neurotrack_brain_' + currentTrackName;
+    localStorage.removeItem(key);
+    if (geneticAlgo) {
+        geneticAlgo.bestBrain = null;
+        geneticAlgo.bestFitness = 0;
+    }
+    customAlert('Cleared best brain for track: ' + currentTrackName);
 }
 
 function startRaceMode() {

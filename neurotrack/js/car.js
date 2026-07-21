@@ -317,15 +317,26 @@ class Car {
         }
         
         const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.1;
-        let newFitness = this.totalCheckpoints + this.checkpointIndex + progress + speedBonus;
+        const survivalBonus = this.totalTime * 0.05;
+        let newFitness = this.totalCheckpoints + this.checkpointIndex + progress + speedBonus + survivalBonus;
+        
+        // Wall scraping penalty
+        let wallPenalty = 0;
+        if (this.sensors && this.sensors.length > 0) {
+            for (const s of this.sensors) {
+                if (s.dist < 15) wallPenalty += (15 - s.dist) * 0.1 * dt;
+            }
+        }
         
         // Only increase fitness based on progress, but allow penalty to decrease it
         if (newFitness > this.fitness) {
             this.fitness = newFitness;
         }
         
-        if (this.speed <= 10 && this.started) {
-            this.fitness -= 0.5 * dt; // Penalize going too slow or reversing
+        this.fitness -= wallPenalty;
+        
+        if (this.speed <= 10 && this.started && this.totalTime > 1.5) {
+            this.alive = false; // Kill car if it's crawling/stuck/reversing for too long
         }
     }
 
