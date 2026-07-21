@@ -5,69 +5,196 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NeuroTrack - AI Racing</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
     <canvas id="game-canvas"></canvas>
+    
+    <audio id="bg-music" src="Creo - Drift [1 Hour].mp3" loop></audio>
 
-    <!-- Main Menu -->
+    <!-- ==================== MAIN MENU ==================== -->
     <div id="menu-screen" class="ui-layer">
         <div class="menu-box">
             <h1>NEUROTRACK</h1>
-            <p class="subtitle">PROJECT: EVOLUTION RACING</p>
-            <button id="btn-play" class="menu-btn">Time Trial</button>
-            <button id="btn-editor" class="menu-btn">Track Editor</button>
-            <button id="btn-train" class="menu-btn">Evolve Neural Net</button>
+            <p class="subtitle">EVOLUTION RACING</p>
+            <button id="btn-play" class="menu-btn">TIME TRIAL</button>
+            <button id="btn-race" class="menu-btn accent">RACE BEST BOT</button>
+            <button id="btn-editor" class="menu-btn">TRACK EDITOR</button>
+            <button id="btn-train" class="menu-btn">EVOLVE NEURAL NET</button>
+            
+            <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                <label style="font-size: 10px; color: #888; display: block; margin-bottom: 5px;">CURRENT TRACK</label>
+                <select id="track-select" class="text-input" style="width: 100%; text-align: center; margin-bottom: 15px;"></select>
+                
+                <div class="ctrl-row" style="margin-bottom: 10px; padding: 0 10px;">
+                    <label style="font-size: 10px; color: #888;">MUSIC VOLUME</label>
+                    <input type="range" id="menu-volume" min="0" max="1" step="0.01" value="0.5" style="width: 100px;">
+                </div>
+            </div>
+
+            <div class="menu-hint">WASD / Arrows to drive — R to restart</div>
         </div>
     </div>
 
-    <!-- Play HUD -->
+    <!-- ==================== PLAY HUD ==================== -->
     <div id="hud-screen" class="ui-layer" style="display: none;">
         <div class="top-bar">
             <div class="hud-stats">
                 <div class="stat-box">LAP <span id="lap-time">0.00</span></div>
                 <div class="stat-box">BEST <span id="best-time">--</span></div>
                 <div class="stat-box">SPEED <span id="speed">0</span></div>
+                <div class="stat-box">LAPS <span id="lap-count">0</span></div>
             </div>
-            <button class="btn-back">Menu</button>
+            <button class="btn-back">MENU</button>
         </div>
+        <div class="hud-settings" style="pointer-events: auto; position: absolute; top: 60px; right: 20px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); width: 220px;">
+            <div class="toolbar-title" style="margin-bottom: 10px; font-size: 12px; color: #888;">CAR SETTINGS</div>
+            <div class="ctrl-row" style="margin-bottom: 5px;">
+                <label style="font-size: 10px;">MAX SPEED</label><span id="hud-max-spd-val" style="font-size: 10px;">380</span>
+                <input type="range" id="hud-max-speed" min="200" max="600" value="380" step="10">
+            </div>
+            <div class="ctrl-row" style="margin-bottom: 5px;">
+                <label style="font-size: 10px;">TURN SPD</label><span id="hud-turn-spd-val" style="font-size: 10px;">3.2</span>
+                <input type="range" id="hud-turn-speed" min="1.0" max="6.0" value="3.2" step="0.1">
+            </div>
+            <div class="ctrl-row" style="margin-bottom: 5px;">
+                <label style="font-size: 10px;">ACCEL</label><span id="hud-accel-val" style="font-size: 10px;">420</span>
+                <input type="range" id="hud-accel" min="200" max="800" value="420" step="10">
+            </div>
+        </div>
+        <div class="hint-bar">Press R to restart</div>
     </div>
 
-    <!-- Editor UI -->
+    <!-- ==================== EDITOR ==================== -->
     <div id="editor-screen" class="ui-layer" style="display: none; pointer-events: none;">
-        <div class="top-bar">
+        <div class="top-bar" style="pointer-events: auto;">
             <div class="hud-stats">
-                <div class="stat-box">BUILD <span>MODE</span></div>
+                <div class="stat-box">TRACK <span>EDITOR</span></div>
             </div>
-            <button class="btn-back">Save & Exit</button>
+            <button class="btn-back">SAVE & EXIT</button>
         </div>
         <div class="editor-toolbar" style="pointer-events: auto;">
             <div class="toolbar-title">COMPONENTS</div>
-            <div id="editor-palette" class="palette">
-                <!-- Buttons injected via JS -->
+            <div id="editor-palette" class="palette"></div>
+            
+            <div class="toolbar-title" style="margin-top: 15px;">TRACK SETTINGS</div>
+            <input type="text" id="editor-track-name" class="text-input" placeholder="Track Name" style="width: 100%; text-align: center; margin-bottom: 10px;">
+            <div class="ctrl-buttons" style="gap: 5px;">
+                <button id="btn-save-track" class="ctrl-btn accent" style="flex: 1;">SAVE</button>
+                <button id="btn-delete-track" class="ctrl-btn danger" style="flex: 1;">DEL</button>
+                <button id="btn-clear-track" class="ctrl-btn" style="flex: 1;">CLEAR</button>
             </div>
-            <div style="margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: var(--gray-light);">
-                <p>L-CLICK: PLACE</p>
-                <p>R-CLICK: REMOVE</p>
+
+            <div class="editor-hint">
+                <p>L-CLICK → PLACE</p>
+                <p>R-CLICK → ERASE</p>
+                <p>SHIFT → ROTATE</p>
             </div>
         </div>
     </div>
 
-    <!-- Train UI -->
+    <!-- ==================== TRAIN ==================== -->
     <div id="train-screen" class="ui-layer" style="display: none;">
         <div class="top-bar">
             <div class="hud-stats">
-                <div class="stat-box">GEN <span id="gen-count">1</span></div>
-                <div class="stat-box">FITNESS <span id="best-fitness">0</span></div>
+                <div class="stat-box">GEN <span id="gen-count">0</span></div>
+                <div class="stat-box">FIT <span id="best-fitness">0</span></div>
+                <div class="stat-box">LAP <span id="best-train-lap">--</span></div>
+                <div class="stat-box">ALIVE <span id="alive-count">0</span></div>
+                <div class="stat-box">TIME <span id="gen-timer">0/15</span></div>
             </div>
-            <button class="btn-back">Menu</button>
+            <button class="btn-back">MENU</button>
+        </div>
+
+        <div class="train-panel">
+            <div class="toolbar-title">EVOLUTION CONTROLS</div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-row">
+                    <label>POPULATION <span class="help-icon" data-tooltip="How many cars are simulated per generation. Higher numbers find better solutions faster but use more CPU.">?</span></label><span id="train-pop-val">50</span>
+                    <input type="range" id="train-population" min="10" max="500" value="50" step="10">
+                </div>
+                <div class="ctrl-row">
+                    <label>MUTATION RATE <span class="help-icon" data-tooltip="The chance (percentage) that an offspring's brain gets mutated.">?</span></label><span id="train-mut-val">10%</span>
+                    <input type="range" id="train-mutation" min="1" max="100" value="10">
+                </div>
+                <div class="ctrl-row">
+                    <label>MUTATION STRENGTH <span class="help-icon" data-tooltip="How extreme the mutations are. Low = fine-tuning, High = chaotic changes.">?</span></label><span id="train-str-val">30%</span>
+                    <input type="range" id="train-strength" min="1" max="100" value="30">
+                </div>
+                <div class="ctrl-row">
+                    <label>ELITISM <span class="help-icon" data-tooltip="The percentage of top-performing cars preserved identically into the next generation.">?</span></label><span id="train-eli-val">10%</span>
+                    <input type="range" id="train-elitism" min="1" max="50" value="10">
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-row">
+                    <label>SENSORS <span class="help-icon" data-tooltip="Number of distance raycasts the car uses to see track walls. Must be an odd number.">?</span></label><span id="train-sen-val">7</span>
+                    <input type="range" id="train-sensors" min="3" max="31" value="7" step="2">
+                </div>
+                <div class="ctrl-row">
+                    <label>HIDDEN LAYERS <span class="help-icon" data-tooltip="Comma-separated list defining the neural network architecture. e.g. 8,6 means two hidden layers of 8 and 6 neurons.">?</span></label>
+                    <input type="text" id="train-hidden" value="8,6" class="text-input">
+                </div>
+                <div class="ctrl-row">
+                    <label>TIME LIMIT <span class="help-icon" data-tooltip="Maximum seconds a generation will run before forcibly ending and breeding the next generation.">?</span></label><span id="train-tl-val">15s</span>
+                    <input type="range" id="train-timelimit" min="5" max="220" value="15" step="1">
+                </div>
+                <div class="ctrl-row">
+                    <label>SPEED</label><span id="train-spd-val">1x</span>
+                    <input type="range" id="train-speed" min="1" max="50" value="1">
+                </div>
+                <div class="ctrl-row">
+                    <label>MAX SPEED</label><span id="car-max-spd-val">380</span>
+                    <input type="range" id="car-max-speed" min="200" max="600" value="380" step="10">
+                </div>
+                <div class="ctrl-row">
+                    <label>TURN SPD</label><span id="car-turn-spd-val">3.2</span>
+                    <input type="range" id="car-turn-speed" min="1.0" max="6.0" value="3.2" step="0.1">
+                </div>
+                <div class="ctrl-row">
+                    <label>ACCEL</label><span id="car-accel-val">420</span>
+                    <input type="range" id="car-accel" min="200" max="800" value="420" step="10">
+                </div>
+            </div>
+
+            <div class="ctrl-buttons">
+                <button id="btn-start-training" class="ctrl-btn accent">START</button>
+                <button id="btn-pause-training" class="ctrl-btn">PAUSE</button>
+                <button id="btn-reset-training" class="ctrl-btn danger">RESET</button>
+            </div>
+            <div class="ctrl-buttons">
+                <button id="btn-save-brain" class="ctrl-btn accent">SAVE BEST</button>
+                <button id="btn-export-brain" class="ctrl-btn">EXPORT</button>
+                <button id="btn-import-brain" class="ctrl-btn">IMPORT</button>
+            </div>
+            <div class="ctrl-buttons" style="margin-top: 10px;">
+                <button id="btn-toggle-sensors" class="ctrl-btn" style="width: 100%;">SENSORS: OFF</button>
+            </div>
+            <div class="train-hint">Press R to force next generation</div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="js/camera.js"></script>
-    <script src="js/track.js"></script>
-    <script src="js/car.js"></script>
-    <script src="js/ai.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/camera.js?v=2"></script>
+    <script src="js/track.js?v=2"></script>
+    <script src="js/sfx.js?v=2"></script>
+    <script src="js/car.js?v=2"></script>
+    <script src="js/ai.js?v=2"></script>
+    <script src="js/main.js?v=3"></script>
+    <script type="module" src="../js/tracker.js"></script>
+
+    <!-- ==================== CUSTOM MODALS ==================== -->
+    <div id="modal-overlay" class="ui-layer" style="display: none; background: rgba(0,0,0,0.8); pointer-events: auto;">
+        <div id="modal-box" class="menu-box" style="margin-top: auto; margin-bottom: auto;">
+            <h2 id="modal-title" style="margin-top: 0;"></h2>
+            <p id="modal-message" style="color: #ccc; font-size: 14px; margin-bottom: 20px;"></p>
+            <input type="text" id="modal-input" class="text-input" style="display: none; width: 100%; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-modal-cancel" class="ctrl-btn" style="flex: 1;">CANCEL</button>
+                <button id="btn-modal-ok" class="ctrl-btn accent" style="flex: 1;">OK</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

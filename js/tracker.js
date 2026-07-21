@@ -65,7 +65,9 @@ const PROJECT_NAMES = {
     'waveform editor': 'Waveform Editor',
     'dvd': 'DVD Logo Simulator',
     'rubiks': '2x2 Rubik\'s Cube',
-    'synesthesia': 'Synesthesia Color Mixer'
+    'synesthesia': 'Synesthesia Color Mixer',
+    'neurotrack': 'NeuroTrack AI Racing',
+    'dust': 'Dust Sandbox'
 };
 
 function getDisplayProjectName(rawName) {
