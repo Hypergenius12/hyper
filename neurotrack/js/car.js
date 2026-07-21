@@ -294,9 +294,39 @@ class Car {
             this.lapTime += dt;
             this.totalTime += dt;
         }
-        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.5;
-        this.fitness = this.totalCheckpoints + this.checkpointIndex + speedBonus;
-        if (this.speed <= 10) this.fitness -= 0.5 * dt; // Penalize going too slow or reversing
+        
+        // Calculate progress to next checkpoint for a smooth fitness gradient
+        let progress = 0;
+        if (typeof currentTrack !== 'undefined' && currentTrack && currentTrack.checkpoints && currentTrack.checkpoints.length) {
+            const targetIndex = this.checkpointIndex % currentTrack.checkpoints.length;
+            const cp = currentTrack.checkpoints[targetIndex];
+            
+            let prevCp = null;
+            if (this.totalCheckpoints === 0 && this.checkpointIndex === 0) {
+                prevCp = currentTrack.startPos;
+            } else {
+                let pIdx = (this.checkpointIndex - 1 + currentTrack.checkpoints.length) % currentTrack.checkpoints.length;
+                prevCp = currentTrack.checkpoints[pIdx];
+            }
+            
+            if (cp && prevCp) {
+                const totalDist = Math.hypot(cp.x - prevCp.x, cp.y - prevCp.y) || 1;
+                const currentDist = Math.hypot(this.x - cp.x, this.y - cp.y);
+                progress = Math.max(0, 1 - (currentDist / totalDist));
+            }
+        }
+        
+        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.1;
+        let newFitness = this.totalCheckpoints + this.checkpointIndex + progress + speedBonus;
+        
+        // Only increase fitness based on progress, but allow penalty to decrease it
+        if (newFitness > this.fitness) {
+            this.fitness = newFitness;
+        }
+        
+        if (this.speed <= 10 && this.started) {
+            this.fitness -= 0.5 * dt; // Penalize going too slow or reversing
+        }
     }
 
     isPointOnTrack(px, py, collisionGrid) {
