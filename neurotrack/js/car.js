@@ -103,9 +103,9 @@ class Car {
 
             this.speed += currentAccel * accelForce * dt;
             this.speed -= this.brakeForce * brakeForce * dt;
-            if (accelForce > 0.1) {
+            if (accelForce > 0.1 || brakeForce > 0.1) {
                 this.started = true;
-                this.isAccelerating = true;
+                if (accelForce > 0.1) this.isAccelerating = true;
             }
 
             if (Math.abs(this.speed) > 0.1) {

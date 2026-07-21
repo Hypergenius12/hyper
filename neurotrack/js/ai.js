@@ -361,13 +361,11 @@ class GeneticAlgorithm {
       const parentA = this._selectParent();
       const parentB = this._selectParent();
 
-      let children;
-      if (parentA !== parentB) {
-        children = parentA.brain.crossover(parentB.brain);
-      } else {
-        // Self-selected — just clone and mutate
-        children = [parentA.brain.clone(), parentA.brain.clone()];
-      }
+      let children = [];
+      // Instead of destructive uniform crossover of flat weights, we use asexual reproduction
+      // (clone and mutate). This is standard for simple fixed-topology neuroevolution.
+      children.push(parentA.brain.clone());
+      children.push(parentB.brain.clone());
 
       for (const childBrain of children) {
         if (nextGen.length >= popSize) break;
