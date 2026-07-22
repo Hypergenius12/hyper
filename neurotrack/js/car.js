@@ -433,11 +433,11 @@ class Car {
                 const localY = py - pointRow * 100;
                 
                 if (isCarHorizontal) {
-                    // Driving H: the V corridor (x < 5 or x > 95) is off-limits
-                    if (localX < 5 || localX > 95) return 'crossroad_violation';
-                } else {
-                    // Driving V: the H corridor (y < 5 or y > 95) is off-limits
+                    // Driving H: the top and bottom edges (y < 5 or y > 95) are off-limits
                     if (localY < 5 || localY > 95) return 'crossroad_violation';
+                } else {
+                    // Driving V: the left and right edges (x < 5 or x > 95) are off-limits
+                    if (localX < 5 || localX > 95) return 'crossroad_violation';
                 }
                 // Within the crossroad the pixel data alone decides the rest
                 return true;
