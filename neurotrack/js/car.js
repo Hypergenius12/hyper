@@ -502,26 +502,34 @@ class Car {
             }
         }
 
-        const targetIndex = this.checkpointIndex % checkpoints.length;
-        const cp = checkpoints[targetIndex];
-        if (!cp) return;
+        const LOOKAHEAD = Math.min(30, checkpoints.length);
         
-        const dx = this.x - cp.x;
-        const dy = this.y - cp.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        if (dist < cp.radius) {
-            if (this.lastCheckpointHitIndex !== targetIndex) {
-                this.lastCheckpointHitIndex = targetIndex;
-                this.checkpointIndex++;
-                if (this.checkpointIndex >= checkpoints.length) {
-                    // Completed a lap
-                    this.lapCount++;
-                    this.totalCheckpoints += checkpoints.length;
-                    if (this.lapTime < this.bestLap) this.bestLap = this.lapTime;
-                    this.lapTime = 0;
-                    this.checkpointIndex = 0;
+        for (let i = 0; i < LOOKAHEAD; i++) {
+            const checkIndex = this.checkpointIndex + i;
+            const targetIndex = checkIndex % checkpoints.length;
+            const cp = checkpoints[targetIndex];
+            if (!cp) continue;
+            
+            const dx = this.x - cp.x;
+            const dy = this.y - cp.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < cp.radius) {
+                if (this.lastCheckpointHitIndex !== targetIndex) {
+                    this.lastCheckpointHitIndex = targetIndex;
+                    
+                    this.checkpointIndex += (i + 1);
+                    
+                    if (this.checkpointIndex >= checkpoints.length) {
+                        // Completed a lap
+                        this.lapCount++;
+                        this.totalCheckpoints += checkpoints.length;
+                        if (this.lapTime < this.bestLap) this.bestLap = this.lapTime;
+                        this.lapTime = 0;
+                        this.checkpointIndex = this.checkpointIndex % checkpoints.length;
+                    }
                 }
+                break; // We hit one, stop looking further ahead
             }
         }
     }

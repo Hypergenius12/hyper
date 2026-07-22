@@ -686,7 +686,7 @@ class Track {
         return Object.values(TILE_TYPES).find(t => t.id === id) || TILE_TYPES.EMPTY;
     }
 
-    autoResolveTile(c, r) {
+    autoResolveTile(c, r, dx = 0, dy = 0) {
         if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return;
         if (!this.isAuto(c, r)) return; // Only modify auto-drawn tiles
         
@@ -702,10 +702,18 @@ class Track {
         const bottomType = this.getTileType(c, r + 1);
         const leftType = this.getTileType(c - 1, r);
 
-        const top = topType.id > 0 && (this.isAuto(c, r - 1) || topType.ports[2]);
-        const right = rightType.id > 0 && (this.isAuto(c + 1, r) || rightType.ports[3]);
-        const bottom = bottomType.id > 0 && (this.isAuto(c, r + 1) || bottomType.ports[0]);
-        const left = leftType.id > 0 && (this.isAuto(c - 1, r) || leftType.ports[1]);
+        let top = topType.id > 0 && (this.isAuto(c, r - 1) || topType.ports[2]);
+        let right = rightType.id > 0 && (this.isAuto(c + 1, r) || rightType.ports[3]);
+        let bottom = bottomType.id > 0 && (this.isAuto(c, r + 1) || bottomType.ports[0]);
+        let left = leftType.id > 0 && (this.isAuto(c - 1, r) || leftType.ports[1]);
+
+        if (Math.abs(dx) > 0) {
+            if (!topType.ports[2]) top = false;
+            if (!bottomType.ports[0]) bottom = false;
+        } else if (Math.abs(dy) > 0) {
+            if (!leftType.ports[1]) left = false;
+            if (!rightType.ports[3]) right = false;
+        }
 
         let newId = TILE_TYPES.STRAIGHT_H.id;
         const connections = (top ? 1 : 0) + (right ? 1 : 0) + (bottom ? 1 : 0) + (left ? 1 : 0);

@@ -50,6 +50,10 @@ let currentTrackName = 'Default Oval';
 let editorSelectedTile = 1;
 let isPainting = false;
 let paintTileType = 0;
+let lastPaintPos = { col: -1, row: -1 };
+
+let editorHistory = [];
+let editorRedoHistory = [];
 
 function init() {
     canvas = document.getElementById('game-canvas');
@@ -203,6 +207,41 @@ function setupInput() {
         if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
         if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
         if (e.code === 'KeyR') restartCurrent();
+        if (e.key === 'p' || e.key === 'P') {
+            if (currentState === GAME_STATES.TRAIN) {
+                togglePlayPause();
+            }
+        }
+        if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+            if (currentState === GAME_STATES.EDITOR && editorHistory.length > 0) {
+                const currentStateObj = {
+                    grid: new Uint8Array(currentTrack.grid),
+                    autoGrid: new Uint8Array(currentTrack.autoGrid)
+                };
+                editorRedoHistory.push(currentStateObj);
+                
+                const prevState = editorHistory.pop();
+                currentTrack.grid.set(prevState.grid);
+                currentTrack.autoGrid.set(prevState.autoGrid);
+                currentTrack.precomputeCheckpoints();
+                updateLimits();
+            }
+        }
+        if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
+            if (currentState === GAME_STATES.EDITOR && editorRedoHistory.length > 0) {
+                const currentStateObj = {
+                    grid: new Uint8Array(currentTrack.grid),
+                    autoGrid: new Uint8Array(currentTrack.autoGrid)
+                };
+                editorHistory.push(currentStateObj);
+                
+                const nextState = editorRedoHistory.pop();
+                currentTrack.grid.set(nextState.grid);
+                currentTrack.autoGrid.set(nextState.autoGrid);
+                currentTrack.precomputeCheckpoints();
+                updateLimits();
+            }
+        }
     });
     window.addEventListener('keyup', e => {
         if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
@@ -214,6 +253,7 @@ function setupInput() {
     let isPanning = false;
     let lastPanPos = { x: 0, y: 0 };
     let lastPaintPos = null;
+    let lastAutoDrawDir = { dx: 0, dy: 0 };
 
     function updateLimits() {
         let hasStart = false, teleCount = 0;
@@ -253,15 +293,26 @@ function setupInput() {
             const wasEmpty = currentTrack.getTile(c, r) === 0;
             const newId = paintTileType === 99 ? (wasEmpty ? TILE_TYPES.STRAIGHT_H.id : currentTrack.getTile(c, r)) : 0;
             currentTrack.setTile(c, r, newId, paintTileType === 99);
-            currentTrack.autoResolveTile(c, r);
-            currentTrack.autoResolveTile(c, r - 1);
-            currentTrack.autoResolveTile(c + 1, r);
-            currentTrack.autoResolveTile(c, r + 1);
-            currentTrack.autoResolveTile(c - 1, r);
+            currentTrack.autoResolveTile(c, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
+            currentTrack.autoResolveTile(c, r - 1, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
+            currentTrack.autoResolveTile(c + 1, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
+            currentTrack.autoResolveTile(c, r + 1, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
+            currentTrack.autoResolveTile(c - 1, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
         } else {
             currentTrack.setTile(c, r, paintTileType);
         }
         updateLimits();
+    }
+
+    function saveEditorState() {
+        if (!currentTrack) return;
+        const state = {
+            grid: new Uint8Array(currentTrack.grid),
+            autoGrid: new Uint8Array(currentTrack.autoGrid)
+        };
+        editorHistory.push(state);
+        if (editorHistory.length > 50) editorHistory.shift();
+        editorRedoHistory = [];
     }
 
     canvas.addEventListener('mousedown', e => {
@@ -273,6 +324,10 @@ function setupInput() {
                 isPainting = true; 
                 paintTileType = editorSelectedTile;
                 lastPaintPos = { col, row };
+                lastAutoDrawDir = { dx: 0, dy: 0 };
+                
+                saveEditorState();
+                
                 applyPaint(col, row);
                 return;
             }
@@ -306,13 +361,18 @@ function setupInput() {
                 while (cx !== col || cy !== row) {
                     // Step in the direction of the largest gap
                     if (Math.abs(col - cx) > Math.abs(row - cy)) {
-                        cx += Math.sign(col - cx);
+                        let step = Math.sign(col - cx);
+                        cx += step;
+                        lastAutoDrawDir = { dx: step, dy: 0 };
                     } else {
-                        cy += Math.sign(row - cy);
+                        let step = Math.sign(row - cy);
+                        cy += step;
+                        lastAutoDrawDir = { dx: 0, dy: step };
                     }
                     applyPaint(cx, cy);
                 }
             } else {
+                lastAutoDrawDir = { dx: 0, dy: 0 };
                 applyPaint(col, row);
             }
             lastPaintPos = { col, row };
@@ -637,8 +697,7 @@ function importBrain() {
                     if (geneticAlgo.population.length) {
                         geneticAlgo.population[0].brain = brain;
                         geneticAlgo.population[0].fitness = 999;
-                    }
-                    if (gameState === GAME_STATES.EDITOR) {
+                    if (currentState === GAME_STATES.EDITOR) {
                         switchState(GAME_STATES.TRAIN);
                     }
                 }
@@ -921,7 +980,14 @@ function update(rawDt) {
                 if (car.bestLap < bestTrainLap) { bestTrainLap = car.bestLap; }
             }
 
-            if (trainTimer >= trainTimeLimit) allDead = true;
+            const isInf = document.getElementById('train-timelimit-inf')?.checked;
+
+            if (isInf) {
+                const deadCount = aiCars.length - aliveCount;
+                if (deadCount / aiCars.length > 0.75) allDead = true;
+            } else {
+                if (trainTimer >= trainTimeLimit) allDead = true;
+            }
 
             if (allDead) {
                 endGeneration();
@@ -947,7 +1013,8 @@ function update(rawDt) {
         if (genEl) genEl.textContent = geneticAlgo.generation;
         if (fitEl) fitEl.textContent = maxFitness.toFixed(1);
         if (aliveEl) aliveEl.textContent = aliveCount;
-        if (timerEl) timerEl.textContent = trainTimer.toFixed(1) + '/' + trainTimeLimit;
+        const isInf = document.getElementById('train-timelimit-inf')?.checked;
+        if (timerEl) timerEl.textContent = isInf ? trainTimer.toFixed(1) + '/∞' : trainTimer.toFixed(1) + '/' + trainTimeLimit;
         if (lapEl) lapEl.textContent = bestTrainLap === Infinity ? '--' : bestTrainLap.toFixed(2);
     }
 
