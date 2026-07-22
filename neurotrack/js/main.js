@@ -738,7 +738,7 @@ function endGeneration() {
     const mutRate = parseInt(document.getElementById('train-mutation').value) || 10;
     const mutStr = parseInt(document.getElementById('train-strength').value) || 50;
     const elitism = parseInt(document.getElementById('train-elitism').value) || 10;
-    const trainTimeLimit = parseFloat(document.getElementById('train-limit')?.value) || 15;
+    trainTimeLimit = parseFloat(document.getElementById('train-timelimit')?.value) || 15;
 
     geneticAlgo.updateConfig({
         mutationRate: mutRate,
