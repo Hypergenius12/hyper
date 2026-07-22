@@ -589,9 +589,14 @@ function setupSlider(sliderId, labelId, format) {
 
 function exportBrain() {
     if (!geneticAlgo) return;
-    const json = geneticAlgo.exportBest();
-    if (!json) { customAlert('No trained brain to export!'); return; }
-    const blob = new Blob([json], { type: 'application/json' });
+    const data = geneticAlgo.exportBest();
+    if (!data) { customAlert('No trained brain to export!'); return; }
+    
+    // Bundle the track along with the AI
+    data.trackJSON = currentTrack.exportJSON();
+    data.trackName = currentTrackName;
+    
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'neurotrack_brain_gen' + geneticAlgo.generation + '.json';
@@ -605,14 +610,41 @@ function importBrain() {
         const reader = new FileReader();
         reader.onload = ev => {
             if (!geneticAlgo) return;
-            const brain = geneticAlgo.importBrain(ev.target.result);
-            if (brain) {
-                customAlert('Brain imported! It will seed the next generation.');
-                // Inject into the current best slot
-                if (geneticAlgo.population.length) {
-                    geneticAlgo.population[0].brain = brain;
-                    geneticAlgo.population[0].fitness = 999;
+            try {
+                const data = JSON.parse(ev.target.result);
+                
+                // If it has bundled track data, load it first
+                if (data.trackJSON) {
+                    const track = Track.importJSON(data.trackJSON);
+                    if (track) {
+                        currentTrack = track;
+                        currentTrackName = data.trackName || 'Imported Track';
+                        document.getElementById('track-name').textContent = currentTrackName;
+                        customTracks[currentTrackName] = data.trackJSON;
+                        buildTrackSelect();
+                        document.getElementById('track-select').value = currentTrackName;
+                        // Precompute offscreen canvas for the track
+                        if (typeof drawStaticBackground === 'function') drawStaticBackground();
+                    }
                 }
+                
+                // Fallback for older JSON exports that just had the raw array, or the new object
+                const brainData = data.brain ? data : { brain: data };
+                const brain = geneticAlgo.importBrain(brainData);
+                if (brain) {
+                    customAlert('Brain and track imported! It will seed the next generation.');
+                    // Inject into the current best slot
+                    if (geneticAlgo.population.length) {
+                        geneticAlgo.population[0].brain = brain;
+                        geneticAlgo.population[0].fitness = 999;
+                    }
+                    if (gameState === GAME_STATES.EDITOR) {
+                        switchState(GAME_STATES.TRAIN);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                customAlert('Failed to parse the imported file.');
             }
         };
         reader.readAsText(e.target.files[0]);
