@@ -390,16 +390,26 @@ class Car {
         // Fitness: checkpoint progress is king (worth 10 each), fractional progress fills in the gaps
         // Speed bonus rewards fast driving, survival bonus is tiny and capped to prevent idle-farming
         const checkpointScore = (this.totalCheckpoints + this.checkpointIndex) * 10 + progress * 10;
-        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 3.0; // Heavily incentivize top speed
+        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.5;
         const survivalBonus = Math.min(this.totalTime * 0.02, 1.0); // capped at 1.0
         let newFitness = checkpointScore + speedBonus + survivalBonus;
+        
+        // Ensure penalty is initialized
+        if (typeof this.accumulatedWallPenalty === 'undefined') this.accumulatedWallPenalty = 0;
+        
+        // Wall scraping penalty
+        if (this.sensors && this.sensors.length > 0) {
+            for (const s of this.sensors) {
+                if (s.dist < 15) this.accumulatedWallPenalty += (15 - s.dist) * 0.05 * dt;
+            }
+        }
         
         // Only increase base fitness based on progress
         if (newFitness > this.baseFitness || typeof this.baseFitness === 'undefined') {
             this.baseFitness = newFitness;
         }
         
-        this.fitness = this.baseFitness;
+        this.fitness = this.baseFitness - this.accumulatedWallPenalty;
         
         if (this.brain && this.speed <= 10 && this.started && this.totalTime > 1.5) {
             this.alive = false; // Kill car if it's crawling/stuck/reversing for too long
@@ -533,10 +543,11 @@ class Car {
         
         const carType = window.userCarType || 'f1';
         const hueShift = window.userHueShift || 0;
+        const brightness = window.userBrightness !== undefined ? window.userBrightness : 100;
         const currentSprite = CAR_IMAGES[carType];
 
         if (currentSprite.complete && currentSprite.naturalWidth > 0) {
-            ctx.filter = `hue-rotate(${hueShift}deg)`;
+            ctx.filter = `hue-rotate(${hueShift}deg) brightness(${brightness}%)`;
             ctx.drawImage(currentSprite, -this.width/2 * 1.5, -this.height/2 * 1.5, this.width * 1.5, this.height * 1.5);
             ctx.filter = 'none';
         } else {

@@ -923,6 +923,14 @@ class Track {
                     radius: TILE_SIZE * 0.5
                 });
             }
+            // Add the start line again as the final checkpoint to complete the loop
+            if (foundPath) {
+                this.checkpoints.push({
+                    x: finalPath[0].c * TILE_SIZE + TILE_SIZE / 2,
+                    y: finalPath[0].r * TILE_SIZE + TILE_SIZE / 2,
+                    radius: TILE_SIZE * 0.5
+                });
+            }
         }
     }
 

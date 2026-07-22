@@ -1133,14 +1133,17 @@ function startRaceMode() {
 
 // ==================== GARAGE LOGIC ====================
 const GARAGE_CARS = [
-    { id: 'f1', name: 'FORMULA 1', src: 'img/car_sprite.png' },
-    { id: 'rally', name: 'RALLY CAR', src: 'img/car_rally.png' },
-    { id: 'lambo', name: 'LAMBO', src: 'img/car_lambo.png' },
-    { id: 'sport', name: 'SPORTS CAR', src: 'img/car_sport.png' },
-    { id: 'limo', name: 'LIMO', src: 'img/car_limo.png' }
+    { id: 'f1', name: 'F1 RACER' },
+    { id: 'sport', name: 'SPORT' },
+    { id: 'rally', name: 'RALLY' },
+    { id: 'lambo', name: 'HYPER' },
+    { id: 'limo', name: 'LIMO' }
 ];
+
 window.userCarType = localStorage.getItem('nt_carType') || 'f1';
 window.userHueShift = parseInt(localStorage.getItem('nt_hueShift')) || 0;
+window.userBrightness = parseInt(localStorage.getItem('nt_brightness'));
+if (isNaN(window.userBrightness)) window.userBrightness = 100;
 let currentGarageIndex = Math.max(0, GARAGE_CARS.findIndex(c => c.id === window.userCarType));
 
 const garageCanvas = document.getElementById('garage-canvas');
@@ -1170,7 +1173,7 @@ function drawGarageCar() {
         const scaleY = targetHeight / img.height;
         const scale = Math.min(scaleX, scaleY);
         
-        garageCtx.filter = `hue-rotate(${window.userHueShift}deg)`;
+        garageCtx.filter = `hue-rotate(${window.userHueShift}deg) brightness(${window.userBrightness}%)`;
         garageCtx.drawImage(img, -(img.width * scale) / 2, -(img.height * scale) / 2, img.width * scale, img.height * scale);
         garageCtx.restore();
     }
@@ -1179,6 +1182,10 @@ function drawGarageCar() {
 function initGarage() {
     currentGarageIndex = Math.max(0, GARAGE_CARS.findIndex(c => c.id === window.userCarType));
     document.getElementById('garage-hue').value = window.userHueShift;
+    
+    const brightnessSlider = document.getElementById('garage-brightness');
+    if (brightnessSlider) brightnessSlider.value = window.userBrightness;
+    
     drawGarageCar();
 }
 
@@ -1196,9 +1203,17 @@ document.getElementById('garage-hue').addEventListener('input', (e) => {
     window.userHueShift = parseInt(e.target.value);
     drawGarageCar();
 });
+const brightnessSlider = document.getElementById('garage-brightness');
+if (brightnessSlider) {
+    brightnessSlider.addEventListener('input', (e) => {
+        window.userBrightness = parseInt(e.target.value);
+        drawGarageCar();
+    });
+}
 document.getElementById('btn-garage-back').addEventListener('click', () => {
     localStorage.setItem('nt_carType', window.userCarType);
     localStorage.setItem('nt_hueShift', window.userHueShift);
+    localStorage.setItem('nt_brightness', window.userBrightness);
     switchState(GAME_STATES.MENU);
 });
 
