@@ -1,17 +1,29 @@
 // ========================================
 // Car.js — 2D Top-Down Car Physics
 // ========================================
-const carSprite = new Image();
-carSprite.src = 'img/car_sprite.png';
+const CAR_IMAGES = {
+    'f1': new Image(),
+    'rally': new Image(),
+    'lambo': new Image(),
+    'sport': new Image(),
+    'limo': new Image()
+};
+CAR_IMAGES['f1'].src = 'img/car_sprite.png';
+CAR_IMAGES['rally'].src = 'img/car_rally.png';
+CAR_IMAGES['lambo'].src = 'img/car_lambo.png';
+CAR_IMAGES['sport'].src = 'img/car_sport.png';
+CAR_IMAGES['limo'].src = 'img/car_limo.png';
 
 class Car {
     constructor(x, y, angle, color) {
         this.x = x || 0;
         this.y = y || 0;
         this.angle = angle || 0;
+        this.velocityAngle = this.angle;
         this.speed = 0;
         this.color = color || '#ef4444';
-        this.width = 28;
+        const carType = window.userCarType || 'f1';
+        this.width = carType === 'limo' ? 49 : 28;
         this.height = 14;
         this.alive = true;
         this.crossroadAxis = null;
@@ -47,10 +59,11 @@ class Car {
         this.offTrackPenalty = 0.92;
     }
 
-    update(dt, keys, collisionGrid) {
+    update(dt, keys, collisionGrid, sensorGrid) {
         if (!this.alive) return;
 
         this.isAccelerating = false;
+        this.isTurning = false;
 
         let currentMaxSpeed = this.maxSpeed;
         let currentAccel = this.acceleration;
@@ -65,13 +78,14 @@ class Car {
             
             // Ice Physics
             if (centerTileId >= TILE_TYPES.ICE_STRAIGHT_V.id && centerTileId <= TILE_TYPES.ICE_CURVE_TL.id) {
-                currentTurnRate = this.turnRate * 0.15;
+                currentTurnRate = this.turnRate * 0.4; // 40% turning ability (down from 100%)
+                currentAccel = this.acceleration * 0.5; // Slippery acceleration
             }
             // Rough Physics
             if (centerTileId >= TILE_TYPES.ROUGH_STRAIGHT_V.id && centerTileId <= TILE_TYPES.ROUGH_CURVE_TL.id) {
                 currentMaxSpeed = this.maxSpeed * 0.4;
                 currentAccel = this.acceleration * 0.4;
-                this.speed *= 0.95; // Active slowdown drag
+                this.speed *= (1 - 3.0 * dt); // Active slowdown drag, framerate independent
             }
         }
 
@@ -83,34 +97,39 @@ class Car {
             }
 
             const inputs = this.sensors.map(s => s.dist / this.sensorLength);
-            inputs.push(this.speed / currentMaxSpeed);
+            inputs.push(this.speed / this.maxSpeed); // Use absolute maxSpeed so input stays <= 1.0 even if currentMaxSpeed drops
             for (let i = 0; i < this.memory.length; i++) {
                 inputs.push(this.memory[i]);
             }
 
             const outputs = this.brain.feedforward(inputs);
 
-            // Variable throttle/steering (raw outputs 0.0 - 1.0)
-            const accelForce = outputs[0];
-            const brakeForce = outputs[1];
-            const leftForce = outputs[2];
-            const rightForce = outputs[3];
+            // Map outputs to allow reaching 100% force while maintaining analog control
+            // Multiply by 1.2 to allow reaching 1.0 even if sigmoid output is ~0.85
+            const accelForce = Math.min(1, outputs[0] * 1.2);
+            const brakeForce = Math.min(1, outputs[1] * 1.2);
+            
+            // For steering, subtract left from right, then amplify so they can turn sharply if needed
+            let steer = outputs[3] - outputs[2];
+            steer = Math.max(-1, Math.min(1, steer * 1.5));
 
             // Store recurrent memory for next frame
             for (let i = 0; i < this.memory.length; i++) {
                 this.memory[i] = outputs[4 + i] || 0;
             }
 
-            this.speed += currentAccel * accelForce * dt;
-            this.speed -= this.brakeForce * brakeForce * dt;
+            if (!this.airborne) {
+                this.speed += currentAccel * accelForce * dt;
+                this.speed -= this.brakeForce * brakeForce * dt;
+            }
             if (accelForce > 0.1 || brakeForce > 0.1) {
                 this.started = true;
-                if (accelForce > 0.1) this.isAccelerating = true;
+                if (accelForce > 0.1 && !this.airborne) this.isAccelerating = true;
             }
 
-            if (Math.abs(this.speed) > 0.1) {
+            if (Math.abs(this.speed) > 0.1 && !this.airborne) {
                 const dir = this.speed > 0 ? 1 : -1;
-                const steer = rightForce - leftForce;
+                if (Math.abs(steer) > 0.05) this.isTurning = true;
                 this.angle += currentTurnRate * steer * dt * dir;
             }
 
@@ -118,7 +137,7 @@ class Car {
             keys = null;
         }
 
-        if (keys) {
+        if (keys && !this.airborne) {
             if (keys.up) {
                 this.speed += currentAccel * dt;
                 this.started = true;
@@ -128,8 +147,8 @@ class Car {
 
             if (Math.abs(this.speed) > 0.1) {
                 const dir = this.speed > 0 ? 1 : -1;
-                if (keys.left) this.angle -= currentTurnRate * dt * dir;
-                if (keys.right) this.angle += currentTurnRate * dt * dir;
+                if (keys.left) { this.angle -= currentTurnRate * dt * dir; this.isTurning = true; }
+                if (keys.right) { this.angle += currentTurnRate * dt * dir; this.isTurning = true; }
             }
         }
 
@@ -221,7 +240,11 @@ class Car {
 
         // Friction: Apply full friction when coasting, minimal drag when accelerating
         const currentFriction = this.isAccelerating ? (this.friction * 0.1) : this.friction;
-        this.speed *= (1 - currentFriction * dt);
+        if (!this.airborne) {
+            this.speed *= (1 - currentFriction * dt);
+        } else {
+            this.speed *= (1 - 0.2 * dt); // Light air drag instead of rolling friction
+        }
         
         this.speed = Math.max(-currentMaxSpeed * 0.4, Math.min(currentMaxSpeed, this.speed));
         if (Math.abs(this.speed) < 0.5) this.speed = 0;
@@ -229,13 +252,58 @@ class Car {
         const prevX = this.x;
         const prevY = this.y;
 
+        if (this.vx === undefined) {
+            this.vx = Math.cos(this.angle) * this.speed;
+            this.vy = Math.sin(this.angle) * this.speed;
+        }
+
+        // Drifting physics
+        if (window.enableDrift && !this.airborne) {
+            let targetVx = Math.cos(this.angle) * this.speed;
+            let targetVy = Math.sin(this.angle) * this.speed;
+            
+            let currentVAngle = Math.atan2(this.vy, this.vx);
+            if (Math.hypot(this.vx, this.vy) < 10) currentVAngle = this.angle;
+
+            let diff = this.angle - currentVAngle;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            
+            let grip = 8.0; 
+            
+            // Break traction for sick power slides
+            if (this.isTurning && Math.abs(this.speed) > this.maxSpeed * 0.4 && Math.abs(diff) > 0.15) {
+                grip = 2.0;
+            }
+            
+            // Regain traction extremely fast if we stopped steering
+            if (!this.isTurning) {
+                grip = 12.0;
+            }
+            
+            this.vx += (targetVx - this.vx) * Math.min(1, grip * dt);
+            this.vy += (targetVy - this.vy) * Math.min(1, grip * dt);
+            
+            // Snap to target if very close to prevent endless sliding
+            if (Math.hypot(targetVx - this.vx, targetVy - this.vy) < 2) {
+                this.vx = targetVx;
+                this.vy = targetVy;
+            }
+            
+            this.velocityAngle = Math.atan2(this.vy, this.vx);
+        } else {
+            this.vx = Math.cos(this.angle) * this.speed;
+            this.vy = Math.sin(this.angle) * this.speed;
+            this.velocityAngle = this.angle;
+        }
+
         // Move
-        this.x += Math.cos(this.angle) * this.speed * dt;
-        this.y += Math.sin(this.angle) * this.speed * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
 
         // Track collision
         if (collisionGrid) {
-            this.castSensors(collisionGrid);
+            this.castSensors(sensorGrid || collisionGrid);
             
             if (!this.airborne) {
                 const corners = this.getCorners();
@@ -283,7 +351,7 @@ class Car {
                     if (offCount >= 1) {
                         this.speed *= this.offTrackPenalty;
                     }
-                    if (offCount >= 3 || centerCheck === false) {
+                    if (centerCheck === false) {
                         if (this.alive && !this.brain && typeof playCrashSound === 'function') {
                             playCrashSound();
                         }
@@ -315,56 +383,68 @@ class Car {
             if (cp && prevCp) {
                 const totalDist = Math.hypot(cp.x - prevCp.x, cp.y - prevCp.y) || 1;
                 const currentDist = Math.hypot(this.x - cp.x, this.y - cp.y);
-                progress = Math.max(0, 1 - (currentDist / totalDist));
+                progress = Math.max(0, Math.min(1, 1 - (currentDist / totalDist)));
             }
         }
         
-        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.1;
-        const survivalBonus = this.totalTime * 0.05;
-        let newFitness = this.totalCheckpoints + this.checkpointIndex + progress + speedBonus + survivalBonus;
+        // Fitness: checkpoint progress is king (worth 10 each), fractional progress fills in the gaps
+        // Speed bonus rewards fast driving, survival bonus is tiny and capped to prevent idle-farming
+        const checkpointScore = (this.totalCheckpoints + this.checkpointIndex) * 10 + progress * 10;
+        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.5;
+        const survivalBonus = Math.min(this.totalTime * 0.02, 1.0); // capped at 1.0
+        let newFitness = checkpointScore + speedBonus + survivalBonus;
+        
+        // Ensure penalty is initialized
+        if (typeof this.accumulatedWallPenalty === 'undefined') this.accumulatedWallPenalty = 0;
         
         // Wall scraping penalty
-        let wallPenalty = 0;
         if (this.sensors && this.sensors.length > 0) {
             for (const s of this.sensors) {
-                if (s.dist < 15) wallPenalty += (15 - s.dist) * 0.1 * dt;
+                if (s.dist < 15) this.accumulatedWallPenalty += (15 - s.dist) * 0.05 * dt;
             }
         }
         
-        // Only increase fitness based on progress, but allow penalty to decrease it
-        if (newFitness > this.fitness) {
-            this.fitness = newFitness;
+        // Only increase base fitness based on progress
+        if (newFitness > this.baseFitness || typeof this.baseFitness === 'undefined') {
+            this.baseFitness = newFitness;
         }
         
-        this.fitness -= wallPenalty;
+        this.fitness = this.baseFitness - this.accumulatedWallPenalty;
         
-        if (this.speed <= 10 && this.started && this.totalTime > 1.5) {
+        if (this.brain && this.speed <= 10 && this.started && this.totalTime > 1.5) {
             this.alive = false; // Kill car if it's crawling/stuck/reversing for too long
         }
     }
 
     isPointOnTrack(px, py, collisionGrid) {
-        const ix = Math.floor(px);
-        const iy = Math.floor(py);
+        const ix = px | 0;
+        const iy = py | 0;
         if (ix < 0 || iy < 0 || ix >= collisionGrid.width || iy >= collisionGrid.height) return false;
         
+        // For crossroad tiles, use the crossroadAxis to detect if the car is going the wrong way.
+        // We use a more generous 5% margin (vs the 10% collision canvas margin) to avoid false
+        // violations caused by diagonal corners on the pixel boundary.
         if (typeof currentTrack !== 'undefined' && currentTrack && typeof TILE_TYPES !== 'undefined') {
-            const pointCol = Math.floor(px / 100);
-            const pointRow = Math.floor(py / 100);
-            if (currentTrack.getTile(pointCol, pointRow) === TILE_TYPES.CROSSROAD.id) {
-                const isCarHorizontal = this.crossroadAxis ? (this.crossroadAxis === 'H') : (Math.abs(Math.cos(this.angle)) > Math.abs(Math.sin(this.angle)));
+            const pointCol = (px / 100) | 0;
+            const pointRow = (py / 100) | 0;
+            if (currentTrack.getTile(pointCol, pointRow) === TILE_TYPES.CROSSROAD.id && this.crossroadAxis) {
+                const isCarHorizontal = this.crossroadAxis === 'H';
                 const localX = px - pointCol * 100;
                 const localY = py - pointRow * 100;
                 
                 if (isCarHorizontal) {
-                    if (localY < 10 || localY > 90) return 'crossroad_violation';
+                    // Driving H: the V corridor (x < 5 or x > 95) is off-limits
+                    if (localX < 5 || localX > 95) return 'crossroad_violation';
                 } else {
-                    if (localX < 10 || localX > 90) return 'crossroad_violation';
+                    // Driving V: the H corridor (y < 5 or y > 95) is off-limits
+                    if (localY < 5 || localY > 95) return 'crossroad_violation';
                 }
+                // Within the crossroad the pixel data alone decides the rest
+                return true;
             }
         }
 
-        const index = (iy * collisionGrid.width + ix) * 4;
+        const index = (iy * collisionGrid.width + ix) << 2;
         const data = collisionGrid.data;
         // Track is drawn in white (255,255,255), grass is black
         return data[index] > 200 && data[index + 1] > 200 && data[index + 2] > 200;
@@ -376,10 +456,14 @@ class Car {
         for (let i = 0; i < this.sensorCount; i++) {
             const frac = this.sensorCount === 1 ? 0 : (i / (this.sensorCount - 1)) - 0.5;
             const sAngle = this.angle + frac * spreadAngle;
+            
+            const cos = Math.cos(sAngle);
+            const sin = Math.sin(sAngle);
             let dist = this.sensorLength;
-            for (let d = 5; d <= this.sensorLength; d += 3) {
-                const sx = this.x + Math.cos(sAngle) * d;
-                const sy = this.y + Math.sin(sAngle) * d;
+            
+            for (let d = 5; d <= this.sensorLength; d += 5) {
+                const sx = this.x + cos * d;
+                const sy = this.y + sin * d;
                 const check = this.isPointOnTrack(sx, sy, collisionGrid);
                 if (check === false || check === 'crossroad_violation') {
                     dist = d;
@@ -457,8 +541,14 @@ class Car {
         ctx.scale(scale, scale);
         ctx.globalAlpha = this.alive ? 1.0 : 0.4;
         
-        if (carSprite.complete && carSprite.naturalWidth > 0) {
-            ctx.drawImage(carSprite, -this.width/2 * 1.5, -this.height/2 * 1.5, this.width * 1.5, this.height * 1.5);
+        const carType = window.userCarType || 'f1';
+        const hueShift = window.userHueShift || 0;
+        const currentSprite = CAR_IMAGES[carType];
+
+        if (currentSprite.complete && currentSprite.naturalWidth > 0) {
+            ctx.filter = `hue-rotate(${hueShift}deg)`;
+            ctx.drawImage(currentSprite, -this.width/2 * 1.5, -this.height/2 * 1.5, this.width * 1.5, this.height * 1.5);
+            ctx.filter = 'none';
         } else {
             ctx.fillStyle = this.alive ? this.color : '#333333';
             ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);

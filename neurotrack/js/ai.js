@@ -284,6 +284,7 @@ class GeneticAlgorithm {
     this.population = [];  // Array of { brain: NeuralNetwork, fitness: number }
     this.generation = 0;
     this.bestFitness = 0;
+    this.allTimeBestLap = Infinity;
     this.bestBrain   = null;
   }
 
@@ -298,6 +299,7 @@ class GeneticAlgorithm {
     this.population = [];
     this.generation = 0;
     this.bestFitness = 0;
+    this.allTimeBestLap = Infinity;
     this.bestBrain = null;
 
     for (let i = 0; i < this.populationSize; i++) {
@@ -317,21 +319,19 @@ class GeneticAlgorithm {
   }
 
   /**
-   * Record fitness scores after a generation runs.
-   * @param {number[]} fitnessValues - one fitness per individual, same order as getBrains()
+   * Evaluate the entire population by providing an array of results.
+   * @param {Array<{fitness: number, bestLap: number}>} results
    */
-  evaluate(fitnessValues) {
-    if (fitnessValues.length !== this.population.length) {
-      throw new Error(
-        `Expected ${this.population.length} fitness values, got ${fitnessValues.length}`
-      );
+  evaluate(results) {
+    if (results.length !== this.population.length) {
+      throw new Error('Results array must match population size.');
     }
 
     for (let i = 0; i < this.population.length; i++) {
-      this.population[i].fitness = fitnessValues[i];
+      this.population[i].fitness = results[i].fitness || 0;
+      this.population[i].bestLap = results[i].bestLap !== undefined ? results[i].bestLap : Infinity;
     }
 
-    // Track all-time best
     this._updateBest();
   }
 
@@ -356,22 +356,50 @@ class GeneticAlgorithm {
       });
     }
 
+    // --- Inject fresh random brains to maintain diversity ---
+    let randomCount = Math.max(1, Math.floor(popSize * 0.1));
+    
+    // Stagnation detection: if fitness hasn't improved much in 8 generations, nuke half the population
+    if (!this.stagnationGen) this.stagnationGen = 0;
+    if (!this.lastBestFitness) this.lastBestFitness = 0;
+    
+    if (this.bestFitness > this.lastBestFitness + 1.0) {
+        this.lastBestFitness = this.bestFitness;
+        this.stagnationGen = 0;
+    } else {
+        this.stagnationGen++;
+    }
+
+    if (this.stagnationGen > 8) {
+        // Massive diversity injection
+        randomCount = Math.floor(popSize * 0.5);
+        this.stagnationGen = 0; // Reset stagnation counter
+    }
+
+    for (let i = 0; i < randomCount && nextGen.length < popSize; i++) {
+      nextGen.push({
+        brain: new NeuralNetwork(this.layerSizes),
+        fitness: 0
+      });
+    }
+
     // --- Fill the rest via selection + crossover + mutation ---
     while (nextGen.length < popSize) {
       const parentA = this._selectParent();
       const parentB = this._selectParent();
 
-      let children = [];
-      // Instead of destructive uniform crossover of flat weights, we use asexual reproduction
-      // (clone and mutate). This is standard for simple fixed-topology neuroevolution.
-      children.push(parentA.brain.clone());
-      children.push(parentB.brain.clone());
+      // Real crossover: combine weights from both parents
+      const [child1, child2] = parentA.brain.crossover(parentB.brain);
 
-      for (const childBrain of children) {
-        if (nextGen.length >= popSize) break;
+      // Mutate the children
+      child1.mutate(this.mutationRate, this.mutationStrength);
+      if (nextGen.length < popSize) {
+        nextGen.push({ brain: child1, fitness: 0 });
+      }
 
-        childBrain.mutate(this.mutationRate, this.mutationStrength);
-        nextGen.push({ brain: childBrain, fitness: 0 });
+      child2.mutate(this.mutationRate, this.mutationStrength);
+      if (nextGen.length < popSize) {
+        nextGen.push({ brain: child2, fitness: 0 });
       }
     }
 
@@ -414,8 +442,17 @@ class GeneticAlgorithm {
    */
   _updateBest() {
     for (const ind of this.population) {
-      if (ind.fitness > this.bestFitness || this.bestBrain === null) {
-        this.bestFitness = ind.fitness;
+      const hasLap = ind.bestLap !== Infinity;
+      const isRecordLap = hasLap && ind.bestLap < this.allTimeBestLap;
+      const isBetterFitness = !hasLap && this.allTimeBestLap === Infinity && ind.fitness > this.bestFitness;
+
+      if (isRecordLap || isBetterFitness || this.bestBrain === null) {
+        if (hasLap && ind.bestLap < this.allTimeBestLap) {
+          this.allTimeBestLap = ind.bestLap;
+        }
+        if (ind.fitness > this.bestFitness) {
+          this.bestFitness = ind.fitness;
+        }
         this.bestBrain = ind.brain.clone();
       }
     }
@@ -487,11 +524,11 @@ class GeneticAlgorithm {
    */
   exportBest() {
     if (!this.bestBrain) return null;
-
     return {
       version: 1,
       generation: this.generation,
       fitness: this.bestFitness,
+      bestLap: this.allTimeBestLap,
       sensorCount: this.sensorCount,
       memoryCount: this.memoryCount,
       hiddenLayers: this.hiddenLayers.slice(),
@@ -513,6 +550,12 @@ class GeneticAlgorithm {
     }
 
     const imported = NeuralNetwork.fromJSON(data.brain);
+    
+    // Topology check to prevent input mismatch crashes
+    if (imported.layerSizes.join(',') !== this.layerSizes.join(',')) {
+      console.warn('Imported brain topology does not match current GA settings. Ignoring.');
+      return null;
+    }
     this.bestBrain = imported.clone();
     this.bestFitness = data.fitness || 0;
 

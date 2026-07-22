@@ -19,6 +19,7 @@
             <p class="subtitle">EVOLUTION RACING</p>
             <button id="btn-play" class="menu-btn">TIME TRIAL</button>
             <button id="btn-race" class="menu-btn accent">RACE BEST BOT</button>
+            <button id="btn-garage" class="menu-btn" style="border-color: #f59e0b; color: #f59e0b;">GARAGE</button>
             <button id="btn-editor" class="menu-btn">TRACK EDITOR</button>
             <button id="btn-train" class="menu-btn">EVOLVE NEURAL NET</button>
             
@@ -60,6 +61,10 @@
             <div class="ctrl-row" style="margin-bottom: 5px;">
                 <label style="font-size: 10px;">ACCEL</label><span id="hud-accel-val" style="font-size: 10px;">420</span>
                 <input type="range" id="hud-accel" min="200" max="800" value="420" step="10">
+            </div>
+            <div class="ctrl-row" style="margin-bottom: 5px; margin-top: 10px;">
+                <label style="font-size: 10px;">DRIFTING</label>
+                <input type="checkbox" id="hud-drift" class="ui-toggle">
             </div>
         </div>
         <div class="hint-bar">Press R to restart</div>
@@ -157,6 +162,10 @@
                     <label>ACCEL</label><span id="car-accel-val">420</span>
                     <input type="range" id="car-accel" min="200" max="800" value="420" step="10">
                 </div>
+                <div class="ctrl-row" style="margin-top: 10px;">
+                    <label>DRIFTING</label>
+                    <input type="checkbox" id="train-drift" class="ui-toggle">
+                </div>
             </div>
 
             <div class="ctrl-buttons">
@@ -166,6 +175,9 @@
             </div>
             <div class="ctrl-buttons">
                 <button id="btn-save-brain" class="ctrl-btn accent">SAVE BEST</button>
+                <button id="btn-watch-replay" class="ctrl-btn accent" style="background: #eab308;">WATCH REPLAY</button>
+            </div>
+            <div class="ctrl-buttons" style="margin-top: 10px;">
                 <button id="btn-export-brain" class="ctrl-btn">EXPORT</button>
                 <button id="btn-import-brain" class="ctrl-btn">IMPORT</button>
                 <button id="btn-clear-brain" class="ctrl-btn danger">CLEAR BEST</button>
@@ -177,12 +189,36 @@
         </div>
     </div>
 
-    <script src="js/camera.js?v=2"></script>
-    <script src="js/track.js?v=2"></script>
-    <script src="js/sfx.js?v=2"></script>
-    <script src="js/car.js?v=2"></script>
-    <script src="js/ai.js?v=2"></script>
-    <script src="js/main.js?v=3"></script>
+    <!-- ==================== GARAGE ==================== -->
+    <div id="garage-screen" class="ui-layer" style="display: none; background: rgba(0,0,0,0.9); pointer-events: auto;">
+        <div class="menu-box" style="margin-top: auto; margin-bottom: auto; width: 400px; text-align: center;">
+            <h1 style="margin-top: 0; color: #f59e0b;">GARAGE</h1>
+            
+            <div style="margin: 20px 0;">
+                <canvas id="garage-canvas" width="300" height="150" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;"></canvas>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button id="btn-garage-prev" class="ctrl-btn" style="width: 40px;">&lt;</button>
+                <div id="garage-car-name" style="color: white; font-weight: bold;">CLASSIC</div>
+                <button id="btn-garage-next" class="ctrl-btn" style="width: 40px;">&gt;</button>
+            </div>
+            
+            <div class="ctrl-row" style="margin-bottom: 20px; padding: 0;">
+                <label style="font-size: 12px; color: #888;">PAINT COLOR (HUE)</label>
+                <input type="range" id="garage-hue" min="0" max="360" value="0" style="width: 100%;">
+            </div>
+            
+            <button id="btn-garage-back" class="menu-btn accent" style="margin-top: 20px;">SAVE & EXIT</button>
+        </div>
+    </div>
+
+    <script src="js/camera.js?v=6"></script>
+    <script src="js/track.js?v=6"></script>
+    <script src="js/sfx.js?v=6"></script>
+    <script src="js/car.js?v=6"></script>
+    <script src="js/ai.js?v=6"></script>
+    <script src="js/main.js?v=6"></script>
     <script type="module" src="../js/tracker.js"></script>
 
     <!-- ==================== CUSTOM MODALS ==================== -->

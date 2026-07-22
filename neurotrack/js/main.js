@@ -11,25 +11,33 @@ const GAME_STATES = {
     MENU: 0,
     EDITOR: 1,
     TRAIN: 2,
-    RACE: 3
+    RACE: 3,
+    GARAGE: 4
 };
 
 let currentState = GAME_STATES.MENU;
-let canvas, ctx, collisionCanvas;
+let canvas, ctx, collisionCanvas, sensorCanvas;
 let collisionGrid = null;
+let sensorGrid = null;
 let camera;
 let currentTrack = null;
 let playerCar = null;
 let aiCars = [];
 let bestBotCar = null;
 let bestTrainLap = Infinity;
+let raceStarted = false;
+window.enableDrift = false;
 let geneticAlgo = null;
 let trainTimeLimit = 15;
 let trainTimer = 0;
 let trainSpeed = 1;
 let trainRunning = false;
+let physicsAccumulator = 0;
 let showSensors = true;
 let manualCamera = false;
+let isWatchingReplay = false;
+let replayCar = null;
+let wasTrainingRunning = false;
 
 let keys = { up: false, down: false, left: false, right: false };
 let lastTime = 0;
@@ -47,6 +55,7 @@ function init() {
     canvas = document.getElementById('game-canvas');
     ctx = canvas.getContext('2d', { alpha: false });
     collisionCanvas = document.createElement('canvas');
+    sensorCanvas = document.createElement('canvas');
 
     resize();
     window.addEventListener('resize', resize);
@@ -404,7 +413,18 @@ function setupUI() {
     if (btnClearTrack) {
         btnClearTrack.onclick = () => {
             currentTrack.grid.fill(0);
+            if (currentTrack.autoGrid) currentTrack.autoGrid.fill(false);
+            currentTrack.markDirty();
+            
             currentTrack.renderCollisionCanvas(collisionCanvas);
+            const cCtx = collisionCanvas.getContext('2d');
+            collisionGrid = { width: collisionCanvas.width, height: collisionCanvas.height, data: cCtx.getImageData(0, 0, collisionCanvas.width, collisionCanvas.height).data };
+            
+            if (typeof currentTrack.renderSensorCanvas === 'function') {
+                currentTrack.renderSensorCanvas(sensorCanvas);
+                const sCtx = sensorCanvas.getContext('2d');
+                sensorGrid = { width: sensorCanvas.width, height: sensorCanvas.height, data: sCtx.getImageData(0, 0, sensorCanvas.width, sensorCanvas.height).data };
+            }
         };
     }
 
@@ -414,7 +434,8 @@ function setupUI() {
         [99], // AUTO_DRAW
         [1, 2], // STRAIGHT
         [3, 4, 5, 6], // CURVE
-        [7, 8, 10, 11, 12, 13], // START
+        [7, 8], // START
+        [10, 11, 12, 13], // START_CURVE
         [9], // CROSSROAD
         [14, 15], // BOTTLENECK
         [16, 17, 18, 19], // BOOST
@@ -477,6 +498,13 @@ function setupUI() {
     setupSlider('train-timelimit', 'train-tl-val', v => v + 's');
     setupSlider('train-speed', 'train-spd-val', v => v + 'x');
 
+    document.getElementById('btn-editor').addEventListener('click', () => {
+    switchState(GAME_STATES.EDITOR);
+});
+document.getElementById('btn-garage').addEventListener('click', () => {
+    switchState(GAME_STATES.GARAGE);
+});
+
     document.getElementById('train-speed').addEventListener('input', (e) => {
         trainSpeed = parseFloat(e.target.value);
         document.getElementById('train-spd-val').innerText = trainSpeed.toFixed(1) + 'x';
@@ -507,6 +535,10 @@ function setupUI() {
             if (typeof playerCar !== 'undefined' && playerCar) playerCar.acceleration = parseFloat(val);
             if (typeof bestBotCar !== 'undefined' && bestBotCar) bestBotCar.acceleration = parseFloat(val);
             if (typeof aiCars !== 'undefined' && aiCars) aiCars.forEach(c => c.acceleration = parseFloat(val));
+        } else if (type === 'drift') {
+            document.getElementById('train-drift').checked = val;
+            document.getElementById('hud-drift').checked = val;
+            window.enableDrift = val;
         }
     };
 
@@ -516,6 +548,8 @@ function setupUI() {
     document.getElementById('hud-turn-speed').addEventListener('input', (e) => syncCarSettings('turnSpeed', e.target.value));
     document.getElementById('car-accel').addEventListener('input', (e) => syncCarSettings('accel', e.target.value));
     document.getElementById('hud-accel').addEventListener('input', (e) => syncCarSettings('accel', e.target.value));
+    document.getElementById('train-drift').addEventListener('change', (e) => syncCarSettings('drift', e.target.checked));
+    document.getElementById('hud-drift').addEventListener('change', (e) => syncCarSettings('drift', e.target.checked));
 
     document.getElementById('btn-start-training').onclick = () => {
         if (!trainRunning) { trainRunning = true; startTrainMode(); }
@@ -526,6 +560,7 @@ function setupUI() {
     };
 
     document.getElementById('btn-save-brain').onclick = saveBestBrain;
+    document.getElementById('btn-watch-replay').onclick = watchBestReplay;
     document.getElementById('btn-export-brain').onclick = exportBrain;
     document.getElementById('btn-import-brain').onclick = importBrain;
     document.getElementById('btn-clear-brain').onclick = clearBestBrain;
@@ -595,6 +630,11 @@ function switchState(newState) {
     document.getElementById('hud-screen').style.display = (newState === GAME_STATES.PLAY || newState === GAME_STATES.RACE) ? 'block' : 'none';
     document.getElementById('editor-screen').style.display = newState === GAME_STATES.EDITOR ? 'block' : 'none';
     document.getElementById('train-screen').style.display = newState === GAME_STATES.TRAIN ? 'block' : 'none';
+    document.getElementById('garage-screen').style.display = newState === GAME_STATES.GARAGE ? 'flex' : 'none';
+    
+    if (newState === GAME_STATES.GARAGE) {
+        initGarage();
+    }
 }
 
 function startPlayMode() {
@@ -604,6 +644,9 @@ function startPlayMode() {
     currentTrack.renderCollisionCanvas(collisionCanvas);
     const cCtx = collisionCanvas.getContext('2d');
     collisionGrid = { width: collisionCanvas.width, height: collisionCanvas.height, data: cCtx.getImageData(0, 0, collisionCanvas.width, collisionCanvas.height).data };
+    currentTrack.renderSensorCanvas(sensorCanvas);
+    const sCtx = sensorCanvas.getContext('2d');
+    sensorGrid = { width: sensorCanvas.width, height: sensorCanvas.height, data: sCtx.getImageData(0, 0, sensorCanvas.width, sensorCanvas.height).data };
     playerCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#00ffff');
     
     playerCar.maxSpeed = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
@@ -633,11 +676,14 @@ function startTrainMode() {
     currentTrack.renderCollisionCanvas(collisionCanvas);
     const cCtx = collisionCanvas.getContext('2d');
     collisionGrid = { width: collisionCanvas.width, height: collisionCanvas.height, data: cCtx.getImageData(0, 0, collisionCanvas.width, collisionCanvas.height).data };
+    currentTrack.renderSensorCanvas(sensorCanvas);
+    const sCtx = sensorCanvas.getContext('2d');
+    sensorGrid = { width: sensorCanvas.width, height: sensorCanvas.height, data: sCtx.getImageData(0, 0, sensorCanvas.width, sensorCanvas.height).data };
 
     const popSize = parseInt(document.getElementById('train-population').value) || 50;
-    const mutRate = (parseInt(document.getElementById('train-mutation').value) || 10) / 100;
-    const mutStr = (parseInt(document.getElementById('train-strength').value) || 30) / 100;
-    const elitism = (parseInt(document.getElementById('train-elitism').value) || 10) / 100;
+    const mutRate = parseInt(document.getElementById('train-mutation').value) || 10;
+    const mutStr = parseInt(document.getElementById('train-strength').value) || 30;
+    const elitism = parseInt(document.getElementById('train-elitism').value) || 10;
     const sensorCount = parseInt(document.getElementById('train-sensors').value) || 7;
     const hiddenStr = (document.getElementById('train-hidden').value || '8,6').trim();
     const hiddenLayers = hiddenStr.split(',').map(Number).filter(n => n > 0);
@@ -650,9 +696,9 @@ function startTrainMode() {
     if (archChanged || geneticAlgo.populationSize !== popSize) {
         geneticAlgo = new GeneticAlgorithm({
             populationSize: popSize,
-            mutationRate: mutRate * 100,
-            mutationStrength: mutStr * 100,
-            elitism: elitism * 100,
+            mutationRate: mutRate,
+            mutationStrength: mutStr,
+            elitism: elitism,
             sensorCount: sensorCount,
             hiddenLayers: hiddenLayers,
             timeLimit: trainTimeLimit
@@ -660,15 +706,20 @@ function startTrainMode() {
         geneticAlgo.initialize();
         const savedBrain = loadBestBrain();
         if (savedBrain && geneticAlgo.population.length > 0) {
-            geneticAlgo.population[0].brain = savedBrain;
-            geneticAlgo.bestBrain = savedBrain.clone();
-            geneticAlgo.bestFitness = 0;
+            // Only inject the saved brain if its topology matches the current config!
+            if (savedBrain.layerSizes.join(',') === geneticAlgo.layerSizes.join(',')) {
+                geneticAlgo.population[0].brain = savedBrain;
+                geneticAlgo.bestBrain = savedBrain.clone();
+                geneticAlgo.bestFitness = 0;
+            } else {
+                console.warn('Saved brain has incompatible topology. Cannot inject into new population.');
+            }
         }
     }
     geneticAlgo.updateConfig({
-        mutationRate: mutRate * 100,
-        mutationStrength: mutStr * 100,
-        elitism: elitism * 100,
+        mutationRate: mutRate,
+        mutationStrength: mutStr,
+        elitism: elitism,
         timeLimit: trainTimeLimit
     });
 
@@ -681,31 +732,41 @@ function startTrainMode() {
 }
 
 function endGeneration() {
-    const popSize = parseInt(document.getElementById('train-population').value) || 50;
-    const sensorCount = parseInt(document.getElementById('train-sensors').value) || 7;
-    const hiddenStr = (document.getElementById('train-hidden').value || '8,6').trim();
-    const hiddenLayers = hiddenStr.split(',').map(Number).filter(n => n > 0);
-    
-    const archChanged = !geneticAlgo || (geneticAlgo.sensorCount !== sensorCount || geneticAlgo.hiddenLayers.join(',') !== hiddenLayers.join(','));
+    if (!geneticAlgo) return;
 
-    if (archChanged || geneticAlgo.populationSize !== popSize) {
-        startTrainMode();
-    } else {
-        const fitnessValues = aiCars.map(c => c.fitness);
-        geneticAlgo.evaluate(fitnessValues);
-        geneticAlgo.evolve();
-        trainTimer = 0;
-        spawnAICars();
-    }
+    // Pass raw integer values — updateConfig() divides by 100 internally
+    const mutRate = parseInt(document.getElementById('train-mutation').value) || 10;
+    const mutStr = parseInt(document.getElementById('train-strength').value) || 50;
+    const elitism = parseInt(document.getElementById('train-elitism').value) || 10;
+    const trainTimeLimit = parseFloat(document.getElementById('train-limit')?.value) || 15;
+
+    geneticAlgo.updateConfig({
+        mutationRate: mutRate,
+        mutationStrength: mutStr,
+        elitism: elitism,
+        timeLimit: trainTimeLimit
+    });
+
+    const evaluateData = aiCars.map(c => ({ fitness: c.fitness, bestLap: c.bestLap }));
+    geneticAlgo.evaluate(evaluateData);
+    geneticAlgo.evolve();
+    trainTimer = 0;
+    spawnAICars();
 }
 
 function spawnAICars() {
     aiCars = [];
-    const brains = geneticAlgo.getBrains ? geneticAlgo.getBrains() : geneticAlgo.population.map(p => p.brain);
-    const sc = parseInt(document.getElementById('train-sensors')?.value) || 7;
+    
+    // Always use the geneticAlgo's topology if it exists to prevent crashes if the user drags the slider mid-training
+    const sc = (geneticAlgo && geneticAlgo.layerSizes) 
+        ? geneticAlgo.layerSizes[0] - 1 
+        : parseInt(document.getElementById('train-sensors')?.value) || 7;
+        
     const maxSpd = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
     const tSpd = parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2;
     const accel = parseFloat(document.getElementById('car-accel')?.value) || 420;
+
+    const brains = geneticAlgo.getBrains ? geneticAlgo.getBrains() : geneticAlgo.population.map(p => p.brain);
 
     for (let i = 0; i < brains.length; i++) {
         const car = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#ff0055');
@@ -742,8 +803,13 @@ function gameLoop(time) {
 
 function update(rawDt) {
     if (currentState === GAME_STATES.PLAY && playerCar) {
-        playerCar.update(rawDt, keys, collisionGrid);
-        playerCar.checkCheckpoints(currentTrack.checkpoints);
+        physicsAccumulator += rawDt;
+        const FIXED_DT = 1 / 60;
+        while (physicsAccumulator >= FIXED_DT) {
+            playerCar.update(FIXED_DT, keys, collisionGrid, sensorGrid);
+            playerCar.checkCheckpoints(currentTrack.checkpoints);
+            physicsAccumulator -= FIXED_DT;
+        }
         camera.follow(playerCar);
         document.getElementById('lap-time').innerText = playerCar.lapTime.toFixed(2);
         document.getElementById('best-time').innerText = playerCar.bestLap === Infinity ? '--' : playerCar.bestLap.toFixed(2);
@@ -754,10 +820,23 @@ function update(rawDt) {
     }
 
     if (currentState === GAME_STATES.RACE && playerCar && bestBotCar) {
-        playerCar.update(rawDt, keys, collisionGrid);
-        playerCar.checkCheckpoints(currentTrack.checkpoints);
-        bestBotCar.update(rawDt, null, collisionGrid);
-        bestBotCar.checkCheckpoints(currentTrack.checkpoints);
+        if (!raceStarted) {
+            const hasInput = keys.up || keys.down || keys.left || keys.right;
+            if (hasInput) raceStarted = true;
+        }
+
+        physicsAccumulator += rawDt;
+        const FIXED_DT = 1 / 60;
+        while (physicsAccumulator >= FIXED_DT) {
+            if (raceStarted) {
+                playerCar.update(FIXED_DT, keys, collisionGrid, sensorGrid);
+                bestBotCar.update(FIXED_DT, null, collisionGrid, sensorGrid);
+            }
+            playerCar.checkCheckpoints(currentTrack.checkpoints);
+            bestBotCar.checkCheckpoints(currentTrack.checkpoints);
+            physicsAccumulator -= FIXED_DT;
+        }
+        
         camera.follow(playerCar);
         
         document.getElementById('lap-time').innerText = playerCar.lapTime.toFixed(2);
@@ -769,35 +848,57 @@ function update(rawDt) {
     }
 
     if (currentState === GAME_STATES.TRAIN && geneticAlgo && trainRunning) {
-        const steps = Math.ceil(trainSpeed);
-        const dt = (rawDt * trainSpeed) / steps;
+        if (isWatchingReplay && replayCar) {
+            // Replay mode runs at 1x speed
+            physicsAccumulator += rawDt;
+            const FIXED_DT = 1 / 60;
+            while (physicsAccumulator >= FIXED_DT) {
+                replayCar.update(FIXED_DT, null, collisionGrid, sensorGrid);
+                replayCar.checkCheckpoints(currentTrack.checkpoints);
+                physicsAccumulator -= FIXED_DT;
+            }
+            camera.follow(replayCar);
+            
+            if (!replayCar.alive || replayCar.lapCount >= 1) {
+                endWatchReplay();
+            }
+            return;
+        }
 
+        physicsAccumulator += rawDt * trainSpeed;
+        const FIXED_DT = 1 / 60;
+        
+        let steps = 0;
         let allDead = true;
         let bestCar = null;
         let maxFitness = -1;
         let aliveCount = 0;
-
-        for (let s = 0; s < steps; s++) {
-            trainTimer += dt;
+        
+        while (physicsAccumulator >= FIXED_DT && steps < 1000) {
+            trainTimer += FIXED_DT;
             allDead = true;
             aliveCount = 0;
             bestCar = null;
             maxFitness = -1;
 
             for (const car of aiCars) {
-                car.update(dt, null, collisionGrid);
+                car.update(FIXED_DT, null, collisionGrid, sensorGrid);
                 car.checkCheckpoints(currentTrack.checkpoints);
                 if (car.alive) { allDead = false; aliveCount++; }
                 if (car.fitness > maxFitness) { maxFitness = car.fitness; bestCar = car; }
+                if (car.bestLap < bestTrainLap) { bestTrainLap = car.bestLap; }
             }
 
-            // Auto-kill after time limit
             if (trainTimer >= trainTimeLimit) allDead = true;
 
             if (allDead) {
                 endGeneration();
-                // Continue simulation step loop with new generation
+                physicsAccumulator = 0;
+                break;
             }
+            
+            physicsAccumulator -= FIXED_DT;
+            steps++;
         }
 
         if (bestCar && bestCar.alive && !manualCamera) camera.follow(bestCar);
@@ -809,9 +910,7 @@ function update(rawDt) {
         const timerEl = document.getElementById('gen-timer');
         const lapEl = document.getElementById('best-train-lap');
         
-        if (bestCar && bestCar.lapCount > 0 && bestCar.lapTime < bestTrainLap) {
-            bestTrainLap = bestCar.lapTime;
-        }
+        // bestTrainLap is now updated inside the inner simulation step loop
 
         if (genEl) genEl.textContent = geneticAlgo.generation;
         if (fitEl) fitEl.textContent = maxFitness.toFixed(1);
@@ -852,25 +951,92 @@ function render() {
     const isOverpass = (car) => car.crossroadAxis === 'H';
     const isUnderpassOrNormal = (car) => car.crossroadAxis !== 'H';
 
-    drawCars(isUnderpassOrNormal);
-    if (typeof currentTrack.renderOverlays === 'function') {
-        currentTrack.renderOverlays(ctx);
+    if (isWatchingReplay && replayCar) {
+        if (isUnderpassOrNormal(replayCar)) { replayCar.render(ctx); if (showSensors) replayCar.renderSensors(ctx); }
+        if (typeof currentTrack.renderOverlays === 'function') {
+            currentTrack.renderOverlays(ctx);
+        }
+        if (isOverpass(replayCar)) { replayCar.render(ctx); if (showSensors) replayCar.renderSensors(ctx); }
+        
+        // Draw Replay Text
+        ctx.fillStyle = '#eab308';
+        ctx.font = 'bold 24px Courier';
+        ctx.textAlign = 'center';
+        ctx.fillText('WATCHING REPLAY', camera.x, camera.y - canvas.height / 2 + 50);
+    } else {
+        drawCars(isUnderpassOrNormal);
+        if (typeof currentTrack.renderOverlays === 'function') {
+            currentTrack.renderOverlays(ctx);
+        }
+        drawCars(isOverpass);
     }
-    drawCars(isOverpass);
 
     camera.restore(ctx);
+
+
 }
 
 function saveBestBrain(quiet = false) {
     if (!geneticAlgo) return;
+
+    // Scan the current generation's running cars in case the record was broken mid-generation
+    if (typeof aiCars !== 'undefined' && aiCars.length > 0) {
+    // Scan the current active cars to see if any of them beat the current allTimeBestLap or fitness.
+    let bestCurrentCar = null;
+    for (const car of aiCars) {
+        if (!bestCurrentCar) {
+            bestCurrentCar = car;
+            continue;
+        }
+        
+        const hasLap = car.bestLap !== Infinity;
+        const bestHasLap = bestCurrentCar.bestLap !== Infinity;
+        
+        if (hasLap && !bestHasLap) {
+            bestCurrentCar = car;
+        } else if (hasLap && bestHasLap) {
+            if (car.bestLap < bestCurrentCar.bestLap) bestCurrentCar = car;
+        } else if (!hasLap && !bestHasLap) {
+            if (car.fitness > bestCurrentCar.fitness) bestCurrentCar = car;
+        }
+    }
+
+    if (bestCurrentCar) {
+        const hasLap = bestCurrentCar.bestLap !== Infinity;
+        const isRecordLap = hasLap && bestCurrentCar.bestLap < geneticAlgo.allTimeBestLap;
+        const isBetterFitness = !hasLap && geneticAlgo.allTimeBestLap === Infinity && bestCurrentCar.fitness > geneticAlgo.bestFitness;
+
+        if (isRecordLap || isBetterFitness || geneticAlgo.bestBrain === null) {
+            if (hasLap && bestCurrentCar.bestLap < geneticAlgo.allTimeBestLap) {
+                geneticAlgo.allTimeBestLap = bestCurrentCar.bestLap;
+            }
+            if (bestCurrentCar.fitness > geneticAlgo.bestFitness) {
+                geneticAlgo.bestFitness = bestCurrentCar.fitness;
+            }
+            geneticAlgo.bestBrain = bestCurrentCar.brain.clone();
+            geneticAlgo.generation = geneticAlgo.generation || 1;
+        }
+    }
+    }
+
     const data = geneticAlgo.exportBest();
-    if (!data) { 
+    if (!data || !data.brain) { 
         if (!quiet) customAlert('No trained brain to save!'); 
         return; 
     }
     const key = 'neurotrack_brain_' + currentTrackName;
     localStorage.setItem(key, JSON.stringify(data));
-    if (!quiet) customAlert('Best brain saved to local storage for track: ' + currentTrackName);
+    
+    if (!quiet) {
+        let msg = 'Best brain saved to local storage for track: ' + currentTrackName + '\n\n';
+        if (data.bestLap < 9999) {
+            msg += 'Record Time: ' + data.bestLap.toFixed(2) + 's\n';
+        } else {
+            msg += 'Fitness: ' + data.fitness.toFixed(0) + '\n';
+        }
+        msg += 'Generation: ' + data.generation;
+        customAlert(msg, 'BOT SAVED');
+    }
 }
 
 function loadBestBrain() {
@@ -887,21 +1053,51 @@ function loadBestBrain() {
         return null;
     }
 }
-
 function clearBestBrain() {
     const key = 'neurotrack_brain_' + currentTrackName;
     localStorage.removeItem(key);
     if (geneticAlgo) {
         geneticAlgo.bestBrain = null;
+        geneticAlgo.allTimeBestLap = Infinity;
         geneticAlgo.bestFitness = 0;
     }
-    customAlert('Cleared best brain for track: ' + currentTrackName);
+    customAlert('Best brain cleared for ' + currentTrackName, 'CLEARED');
+}
+
+function watchBestReplay() {
+    if (!geneticAlgo || !geneticAlgo.bestBrain) {
+        customAlert('No best brain available to watch. Let them train!', 'NO BRAIN');
+        return;
+    }
+    isWatchingReplay = true;
+    wasTrainingRunning = trainRunning;
+    
+    replayCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#eab308');
+    replayCar.sensorCount = geneticAlgo.layerSizes[0] - 1;
+    replayCar.brain = geneticAlgo.bestBrain.clone();
+    
+    // Copy settings so they drive identically
+    replayCar.maxSpeed = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
+    replayCar.turnSpeed = parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2;
+    replayCar.accel = parseFloat(document.getElementById('car-accel')?.value) || 420;
+}
+
+function endWatchReplay() {
+    isWatchingReplay = false;
+    replayCar = null;
+    trainRunning = wasTrainingRunning;
 }
 
 function startRaceMode() {
-    const brain = loadBestBrain();
+    let brain = null;
+    if (geneticAlgo && geneticAlgo.bestBrain) {
+        brain = geneticAlgo.bestBrain.clone();
+    } else {
+        brain = loadBestBrain();
+    }
+    
     if (!brain) {
-        customAlert('No saved brain found for ' + currentTrackName + '! Evolve a network and click SAVE BEST first.');
+        customAlert('No trained brain available! Evolve a network or load one first.');
         return;
     }
 
@@ -911,6 +1107,9 @@ function startRaceMode() {
     currentTrack.renderCollisionCanvas(collisionCanvas);
     const cCtx = collisionCanvas.getContext('2d');
     collisionGrid = { width: collisionCanvas.width, height: collisionCanvas.height, data: cCtx.getImageData(0, 0, collisionCanvas.width, collisionCanvas.height).data };
+    currentTrack.renderSensorCanvas(sensorCanvas);
+    const sCtx = sensorCanvas.getContext('2d');
+    sensorGrid = { width: sensorCanvas.width, height: sensorCanvas.height, data: sCtx.getImageData(0, 0, sensorCanvas.width, sensorCanvas.height).data };
 
     playerCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#00ffff');
     playerCar.maxSpeed = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
@@ -926,9 +1125,81 @@ function startRaceMode() {
 
     camera.setPosition(playerCar.x, playerCar.y);
     camera.targetZoom = 1.4;
+    raceStarted = false;
     switchState(GAME_STATES.RACE);
     
     if (typeof initAudio === 'function') initAudio();
 }
+
+// ==================== GARAGE LOGIC ====================
+const GARAGE_CARS = [
+    { id: 'f1', name: 'FORMULA 1', src: 'img/car_sprite.png' },
+    { id: 'rally', name: 'RALLY CAR', src: 'img/car_rally.png' },
+    { id: 'lambo', name: 'LAMBO', src: 'img/car_lambo.png' },
+    { id: 'sport', name: 'SPORTS CAR', src: 'img/car_sport.png' },
+    { id: 'limo', name: 'LIMO', src: 'img/car_limo.png' }
+];
+window.userCarType = localStorage.getItem('nt_carType') || 'f1';
+window.userHueShift = parseInt(localStorage.getItem('nt_hueShift')) || 0;
+let currentGarageIndex = Math.max(0, GARAGE_CARS.findIndex(c => c.id === window.userCarType));
+
+const garageCanvas = document.getElementById('garage-canvas');
+const garageCtx = garageCanvas.getContext('2d');
+const garageCarImages = {};
+GARAGE_CARS.forEach(car => {
+    const img = new Image();
+    img.src = car.src;
+    img.onload = drawGarageCar; // Redraw when loaded
+    garageCarImages[car.id] = img;
+});
+
+function drawGarageCar() {
+    if (!garageCtx) return;
+    garageCtx.clearRect(0, 0, garageCanvas.width, garageCanvas.height);
+    const car = GARAGE_CARS[currentGarageIndex];
+    document.getElementById('garage-car-name').innerText = car.name;
+    const img = garageCarImages[car.id];
+    if (img.complete && img.naturalWidth > 0) {
+        garageCtx.save();
+        garageCtx.translate(garageCanvas.width / 2, garageCanvas.height / 2);
+        
+        // Dynamic scaling to fit nicely in the 300x150 preview box
+        const targetWidth = 260;
+        const targetHeight = 130;
+        const scaleX = targetWidth / img.width;
+        const scaleY = targetHeight / img.height;
+        const scale = Math.min(scaleX, scaleY);
+        
+        garageCtx.filter = `hue-rotate(${window.userHueShift}deg)`;
+        garageCtx.drawImage(img, -(img.width * scale) / 2, -(img.height * scale) / 2, img.width * scale, img.height * scale);
+        garageCtx.restore();
+    }
+}
+
+function initGarage() {
+    currentGarageIndex = Math.max(0, GARAGE_CARS.findIndex(c => c.id === window.userCarType));
+    document.getElementById('garage-hue').value = window.userHueShift;
+    drawGarageCar();
+}
+
+document.getElementById('btn-garage-prev').addEventListener('click', () => {
+    currentGarageIndex = (currentGarageIndex - 1 + GARAGE_CARS.length) % GARAGE_CARS.length;
+    window.userCarType = GARAGE_CARS[currentGarageIndex].id;
+    drawGarageCar();
+});
+document.getElementById('btn-garage-next').addEventListener('click', () => {
+    currentGarageIndex = (currentGarageIndex + 1) % GARAGE_CARS.length;
+    window.userCarType = GARAGE_CARS[currentGarageIndex].id;
+    drawGarageCar();
+});
+document.getElementById('garage-hue').addEventListener('input', (e) => {
+    window.userHueShift = parseInt(e.target.value);
+    drawGarageCar();
+});
+document.getElementById('btn-garage-back').addEventListener('click', () => {
+    localStorage.setItem('nt_carType', window.userCarType);
+    localStorage.setItem('nt_hueShift', window.userHueShift);
+    switchState(GAME_STATES.MENU);
+});
 
 window.onload = init;

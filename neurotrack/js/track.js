@@ -73,21 +73,18 @@ const TILE_TYPES = {
 // Tile Render Functions
 // ========================================
 
-
-
 function renderIntersection(ctx, x, y, size) {
     const hw = size * 0.85; 
     const iw = size * 0.80; 
     
     ctx.fillStyle = '#cccccc';
-    ctx.fillRect(x + (size - hw) / 2, y - 1, hw, size + 2);
-    ctx.fillRect(x - 1, y + (size - hw) / 2, size + 2, hw);
+    ctx.fillRect(x + (size - hw) / 2, y, hw, size);
+    ctx.fillRect(x, y + (size - hw) / 2, size, hw);
     
     ctx.fillStyle = '#1e1e24';
-    ctx.fillRect(x + (size - iw) / 2, y - 1, iw, size + 2);
-    ctx.fillRect(x - 1, y + (size - iw) / 2, size + 2, iw);
+    ctx.fillRect(x + (size - iw) / 2, y, iw, size);
+    ctx.fillRect(x, y + (size - iw) / 2, size, iw);
 }
-
 
 function renderAutoDraw(ctx, x, y, size) {
     ctx.fillStyle = 'rgba(200, 100, 255, 0.5)';
@@ -99,26 +96,26 @@ function renderAutoDraw(ctx, x, y, size) {
     ctx.setLineDash([]);
 }
 
-function renderStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y - 1, x + size / 2, y + size + 1, size); }
-function renderStraightH(ctx, x, y, size) { drawRoadPath(ctx, x - 1, y + size / 2, x + size + 1, y + size / 2, size); }
-function renderCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2 - 0.02, Math.PI + 0.02, size); }
-function renderCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI - 0.02, Math.PI * 1.5 + 0.02, size); }
-function renderCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5 - 0.02, Math.PI * 2 + 0.02, size); }
-function renderCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, -0.02, Math.PI / 2 + 0.02, size); }
+function renderStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size); }
+function renderStraightH(ctx, x, y, size) { drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size); }
+function renderCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size); }
+function renderCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size); }
+function renderCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size); }
+function renderCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size); }
 
-function renderRoughStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y - 1, x + size / 2, y + size + 1, size, TILE_COLOR_ROUGH); }
-function renderRoughStraightH(ctx, x, y, size) { drawRoadPath(ctx, x - 1, y + size / 2, x + size + 1, y + size / 2, size, TILE_COLOR_ROUGH); }
-function renderRoughCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2 - 0.02, Math.PI + 0.02, size, TILE_COLOR_ROUGH); }
-function renderRoughCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI - 0.02, Math.PI * 1.5 + 0.02, size, TILE_COLOR_ROUGH); }
-function renderRoughCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5 - 0.02, Math.PI * 2 + 0.02, size, TILE_COLOR_ROUGH); }
-function renderRoughCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, -0.02, Math.PI / 2 + 0.02, size, TILE_COLOR_ROUGH); }
+function renderRoughStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, TILE_COLOR_ROUGH); }
+function renderRoughStraightH(ctx, x, y, size) { drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, TILE_COLOR_ROUGH); }
+function renderRoughCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size, TILE_COLOR_ROUGH); }
+function renderRoughCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size, TILE_COLOR_ROUGH); }
+function renderRoughCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size, TILE_COLOR_ROUGH); }
+function renderRoughCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size, TILE_COLOR_ROUGH); }
 
-function renderIceStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y - 1, x + size / 2, y + size + 1, size, TILE_COLOR_ICE, '#ffffff'); }
-function renderIceStraightH(ctx, x, y, size) { drawRoadPath(ctx, x - 1, y + size / 2, x + size + 1, y + size / 2, size, TILE_COLOR_ICE, '#ffffff'); }
-function renderIceCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2 - 0.02, Math.PI + 0.02, size, TILE_COLOR_ICE, '#ffffff'); }
-function renderIceCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI - 0.02, Math.PI * 1.5 + 0.02, size, TILE_COLOR_ICE, '#ffffff'); }
-function renderIceCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5 - 0.02, Math.PI * 2 + 0.02, size, TILE_COLOR_ICE, '#ffffff'); }
-function renderIceCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, -0.02, Math.PI / 2 + 0.02, size, TILE_COLOR_ICE, '#ffffff'); }
+function renderIceStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, TILE_COLOR_ICE, '#ffffff'); }
+function renderIceStraightH(ctx, x, y, size) { drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, TILE_COLOR_ICE, '#ffffff'); }
+function renderIceCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size, TILE_COLOR_ICE, '#ffffff'); }
+function renderIceCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size, TILE_COLOR_ICE, '#ffffff'); }
+function renderIceCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size, TILE_COLOR_ICE, '#ffffff'); }
+function renderIceCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size, TILE_COLOR_ICE, '#ffffff'); }
 
 function renderStartH(ctx, x, y, size) {
     renderStraightH(ctx, x, y, size);
@@ -162,7 +159,7 @@ function drawBottleneckShape(ctx, cx, cy, size, isVertical, isWhiteCollision = f
     ctx.translate(cx, cy);
     if (isVertical) ctx.rotate(Math.PI / 2);
 
-    const length = size + 2; // +2 for overlap
+    const length = size; // no overlap needed with cache
     const l2 = length / 2;
     
     const drawShape = (wBig, wSmall, color) => {
@@ -565,12 +562,21 @@ class Track {
         this.autoGrid = new Array(cols * rows).fill(false); // Tracks auto-drawn tiles
         this.checkpoints = [];
         this.startPos = { x: 0, y: 0, angle: 0 };
+
+        this.cacheCanvas = null;
+        this.cacheCtx = null;
+        this.isDirty = true;
+    }
+
+    markDirty() {
+        this.isDirty = true;
     }
 
     setTile(c, r, typeId, isAutoDraw = false) {
         if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return;
         this.grid[r * this.cols + c] = typeId;
         this.autoGrid[r * this.cols + c] = isAutoDraw;
+        this.markDirty();
     }
 
     getTile(c, r) {
@@ -824,9 +830,14 @@ class Track {
 
         // 3. Trace the path (DFS to find a closed loop back to start)
         let foundPath = null;
+        let longestPath = [];
         
         const dfs = (c, r, dir, currentPath, visited) => {
             if (foundPath) return; // Already found
+
+            if (currentPath.length > longestPath.length) {
+                longestPath = [...currentPath];
+            }
 
             // If we've returned to start and we have at least some tiles
             if (c === startC && r === startR && currentPath.length > 0) {
@@ -851,18 +862,47 @@ class Track {
                 if (type.id !== 0) {
                     const incomingPort = (dir + 2) % 4;
                     if (type.ports[incomingPort]) {
-                        // Prefer straight
-                        const straightDir = (incomingPort + 2) % 4;
-                        const tryDirs = [];
-                        if (type.ports[straightDir]) tryDirs.push(straightDir);
-                        for (let i = 0; i < 4; i++) {
-                            if (i !== incomingPort && i !== straightDir && type.ports[i]) {
-                                tryDirs.push(i);
+                        
+                        if (type.id >= TILE_TYPES.TELEPORT_UP.id && type.id <= TILE_TYPES.TELEPORT_LEFT.id) {
+                            let other = null;
+                            for (let _r = 0; _r < this.rows; _r++) {
+                                for (let _c = 0; _c < this.cols; _c++) {
+                                    if ((_c !== nc || _r !== nr)) {
+                                        const tType = this.getTileType(_c, _r);
+                                        if (tType.id >= TILE_TYPES.TELEPORT_UP.id && tType.id <= TILE_TYPES.TELEPORT_LEFT.id) {
+                                            other = {c: _c, r: _r, type: tType};
+                                        }
+                                    }
+                                }
                             }
-                        }
-
-                        for (const nextDir of tryDirs) {
-                            dfs(nc, nr, nextDir, currentPath, visited);
+                            if (other) {
+                                currentPath.push({c: nc, r: nr});
+                                visited.add(`${nc},${nr},0`);
+                                
+                                let outDir = 0;
+                                if (other.type.id === TILE_TYPES.TELEPORT_UP.id) outDir = 2; // Exits going DOWN
+                                else if (other.type.id === TILE_TYPES.TELEPORT_RIGHT.id) outDir = 3; // Exits going LEFT
+                                else if (other.type.id === TILE_TYPES.TELEPORT_DOWN.id) outDir = 0; // Exits going UP
+                                else if (other.type.id === TILE_TYPES.TELEPORT_LEFT.id) outDir = 1; // Exits going RIGHT
+                                
+                                dfs(other.c, other.r, outDir, currentPath, visited);
+                                
+                                visited.delete(`${nc},${nr},0`);
+                                currentPath.pop();
+                            }
+                        } else {
+                            // Prefer straight
+                            const straightDir = (incomingPort + 2) % 4;
+                            const tryDirs = [];
+                            if (type.ports[straightDir]) tryDirs.push(straightDir);
+                            for (let i = 0; i < 4; i++) {
+                                if (i !== incomingPort && i !== straightDir && type.ports[i]) {
+                                    tryDirs.push(i);
+                                }
+                            }
+                            for (const nextDir of tryDirs) {
+                                dfs(nc, nr, nextDir, currentPath, visited);
+                            }
                         }
                     }
                 }
@@ -874,23 +914,14 @@ class Track {
 
         dfs(startC, startR, currentDir, [], new Set());
 
-        if (foundPath) {
-            for (const pt of foundPath) {
+        const finalPath = foundPath || longestPath;
+        if (finalPath.length > 0) {
+            for (const pt of finalPath) {
                 this.checkpoints.push({
                     x: pt.c * TILE_SIZE + TILE_SIZE / 2,
                     y: pt.r * TILE_SIZE + TILE_SIZE / 2,
                     radius: TILE_SIZE * 0.5
                 });
-            }
-        } else {
-            // Fallback if no loop is found: just add all track tiles so it's not totally empty
-            for (let r = 0; r < this.rows; r++) {
-                for (let c = 0; c < this.cols; c++) {
-                    const type = this.getTileType(c, r);
-                    if (type.id !== 0) {
-                        this.checkpoints.push({ x: c * TILE_SIZE + TILE_SIZE / 2, y: r * TILE_SIZE + TILE_SIZE / 2, radius: TILE_SIZE * 0.5 });
-                    }
-                }
             }
         }
     }
@@ -899,23 +930,56 @@ class Track {
     // Render — rich background with crosshatch, ticks, and grass tint
     // ========================================
     render(ctx, inEditor = false) {
-        const w = this.cols * TILE_SIZE;
-        const h = this.rows * TILE_SIZE;
+        // Create or resize cache canvas if needed
+        if (!this.cacheCanvas) {
+            this.cacheCanvas = document.createElement('canvas');
+            this.cacheCtx = this.cacheCanvas.getContext('2d', { alpha: false });
+            this.isDirty = true;
+        }
+        
+        const expectedWidth = this.cols * TILE_SIZE;
+        const expectedHeight = this.rows * TILE_SIZE;
+        
+        if (this.cacheCanvas.width !== expectedWidth || this.cacheCanvas.height !== expectedHeight) {
+            this.cacheCanvas.width = expectedWidth;
+            this.cacheCanvas.height = expectedHeight;
+            this.isDirty = true;
+        }
 
-        // 1) Dark base fill
-        ctx.fillStyle = '#050508';
-        ctx.fillRect(0, 0, w, h);
+        if (this.isDirty) {
+            // Rebuild the cached track image
+            // We use integer coordinates internally, so strokes connect perfectly
+            this.cacheCtx.fillStyle = '#050508'; 
+            this.cacheCtx.fillRect(0, 0, this.cacheCanvas.width, this.cacheCanvas.height);
+
+            for (let r = 0; r < this.rows; r++) {
+                for (let c = 0; c < this.cols; c++) {
+                    const type = this.getTileType(c, r);
+                    if (type.id === TILE_TYPES.CROSSROAD.id) {
+                        // Render ONLY the underpass in the base layer.
+                        renderStraightV(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
+                    } else if (type.render) {
+                        type.render(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+            this.isDirty = false;
+        }
+
+        // Draw the cached track onto the main context (this prevents 1px anti-aliasing gaps between tiles)
+        ctx.drawImage(this.cacheCanvas, 0, 0);
 
         if (inEditor) {
             // 2) Subtle cross-hatch pattern
             ctx.save();
             ctx.beginPath();
-            ctx.rect(0, 0, w, h);
+            ctx.rect(0, 0, this.cols * TILE_SIZE, this.rows * TILE_SIZE);
             ctx.clip();
             ctx.strokeStyle = 'rgba(255,255,255,0.015)';
             ctx.lineWidth = 0.5;
             const diagSpacing = 20;
-            const maxDim = w + h;
+            const w = this.cols * TILE_SIZE;
+            const h = this.rows * TILE_SIZE;
             // Forward diagonals (\)
             for (let d = -h; d < w; d += diagSpacing) {
                 ctx.beginPath();
@@ -961,28 +1025,15 @@ class Track {
             }
         }
 
-        // 5) Draw Road tiles
-        for (let r = 0; r < this.rows; r++) {
-            for (let c = 0; c < this.cols; c++) {
-                const type = this.getTileType(c, r);
-                if (type.id === TILE_TYPES.CROSSROAD.id) {
-                    // Render ONLY the underpass in the base layer.
-                    renderStraightV(ctx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
-                } else if (type.render) {
-                    type.render(ctx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
-                }
-            }
-        }
-
         if (inEditor) {
             // 6) Faint grid lines (for editor)
             ctx.strokeStyle = 'rgba(255,255,255,0.04)';
             ctx.lineWidth = 1;
             for (let r = 0; r <= this.rows; r++) {
-                ctx.beginPath(); ctx.moveTo(0, r * TILE_SIZE); ctx.lineTo(w, r * TILE_SIZE); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, r * TILE_SIZE); ctx.lineTo(this.cols * TILE_SIZE, r * TILE_SIZE); ctx.stroke();
             }
             for (let c = 0; c <= this.cols; c++) {
-                ctx.beginPath(); ctx.moveTo(c * TILE_SIZE, 0); ctx.lineTo(c * TILE_SIZE, h); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(c * TILE_SIZE, 0); ctx.lineTo(c * TILE_SIZE, this.rows * TILE_SIZE); ctx.stroke();
             }
         }
     }
@@ -1082,6 +1133,68 @@ class Track {
                     drawCollisionCurve(ctx, px, py + TILE_SIZE, TILE_SIZE / 2, Math.PI * 1.5, Math.PI * 2, TILE_SIZE);
                 } else if (type.id === TILE_TYPES.CURVE_TL.id || type.id === TILE_TYPES.START_CURVE_TL.id || type.id === TILE_TYPES.ROUGH_CURVE_TL.id || type.id === TILE_TYPES.ICE_CURVE_TL.id) {
                     drawCollisionCurve(ctx, px, py, TILE_SIZE / 2, 0, Math.PI / 2, TILE_SIZE);
+                }
+            }
+        }
+    }
+
+    // ========================================
+    // Sensor Canvas — overlays bridges on jumps
+    // ========================================
+    renderSensorCanvas(sensorCanvas) {
+        // Start by rendering the standard collision canvas
+        this.renderCollisionCanvas(sensorCanvas);
+        const ctx = sensorCanvas.getContext('2d', { willReadFrequently: true });
+        
+        // Now overlay bridges for jumps
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const type = this.getTileType(c, r);
+                if (!type) continue;
+                
+                // Helper to draw a bridge
+                const drawBridge = (x, y, dx, dy, length) => {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + dx * length * TILE_SIZE, y + dy * length * TILE_SIZE);
+                    ctx.lineWidth = TILE_SIZE * 0.8;
+                    ctx.lineCap = 'butt';
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.stroke();
+                };
+
+                const px = c * TILE_SIZE;
+                const py = r * TILE_SIZE;
+                
+                // Check if it's a ramp and find how long the jump is
+                if (type.id === TILE_TYPES.RAMP_UP.id) {
+                    for (let y = r - 1; y >= 0; y--) {
+                        if (this.getTile(c, y) !== 0) {
+                            drawBridge(px + TILE_SIZE / 2, py, 0, -1, r - y);
+                            break;
+                        }
+                    }
+                } else if (type.id === TILE_TYPES.RAMP_DOWN.id) {
+                    for (let y = r + 1; y < this.rows; y++) {
+                        if (this.getTile(c, y) !== 0) {
+                            drawBridge(px + TILE_SIZE / 2, py + TILE_SIZE, 0, 1, y - r);
+                            break;
+                        }
+                    }
+                } else if (type.id === TILE_TYPES.RAMP_LEFT.id) {
+                    for (let x = c - 1; x >= 0; x--) {
+                        if (this.getTile(x, r) !== 0) {
+                            drawBridge(px, py + TILE_SIZE / 2, -1, 0, c - x);
+                            break;
+                        }
+                    }
+                } else if (type.id === TILE_TYPES.RAMP_RIGHT.id) {
+                    for (let x = c + 1; x < this.cols; x++) {
+                        if (this.getTile(x, r) !== 0) {
+                            drawBridge(px + TILE_SIZE, py + TILE_SIZE / 2, 1, 0, x - c);
+                            break;
+                        }
+                    }
                 }
             }
         }
