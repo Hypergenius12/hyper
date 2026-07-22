@@ -1133,11 +1133,11 @@ function startRaceMode() {
 
 // ==================== GARAGE LOGIC ====================
 const GARAGE_CARS = [
-    { id: 'f1', name: 'F1 RACER' },
-    { id: 'sport', name: 'SPORT' },
-    { id: 'rally', name: 'RALLY' },
-    { id: 'lambo', name: 'HYPER' },
-    { id: 'limo', name: 'LIMO' }
+    { id: 'f1', name: 'FORMULA 1', src: 'img/car_sprite.png' },
+    { id: 'rally', name: 'RALLY CAR', src: 'img/car_rally.png' },
+    { id: 'lambo', name: 'LAMBO', src: 'img/car_lambo.png' },
+    { id: 'sport', name: 'SPORTS CAR', src: 'img/car_sport.png' },
+    { id: 'limo', name: 'LIMO', src: 'img/car_limo.png' }
 ];
 
 window.userCarType = localStorage.getItem('nt_carType') || 'f1';
