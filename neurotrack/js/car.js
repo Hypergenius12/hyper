@@ -573,8 +573,8 @@ class Car {
             }
         }
 
-        // Limit lookahead to 100, but never more than half the track to prevent wrap-around exploits
-        const LOOKAHEAD = Math.min(100, Math.max(1, Math.floor(checkpoints.length / 2)));
+        // Limit lookahead to 3. 100 was too high and allowed cars to cheat by skipping huge track sections on crossroad intersections.
+        const LOOKAHEAD = Math.min(3, Math.max(1, Math.floor(checkpoints.length / 2)));
         let hitCheckpoint = false;
         
         for (let i = 0; i < LOOKAHEAD; i++) {
