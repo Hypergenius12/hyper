@@ -779,6 +779,26 @@ function exportBrain() {
     data.trackJSON = currentTrack.exportJSON();
     data.trackName = currentTrackName;
     
+    // Bundle all settings so the user can resume exactly where they left off
+    data.settings = {
+        'train-population': document.getElementById('train-population').value,
+        'train-mutation': document.getElementById('train-mutation').value,
+        'train-strength': document.getElementById('train-strength').value,
+        'train-elitism': document.getElementById('train-elitism').value,
+        'train-sensors': document.getElementById('train-sensors').value,
+        'train-hidden': document.getElementById('train-hidden').value,
+        'train-timelimit': document.getElementById('train-timelimit').value,
+        'train-speed': document.getElementById('train-speed').value,
+        'car-max-speed': document.getElementById('car-max-speed').value,
+        'car-turn-speed': document.getElementById('car-turn-speed').value,
+        'car-accel': document.getElementById('car-accel').value,
+        'car-friction': document.getElementById('car-friction').value,
+        'car-offroad-friction': document.getElementById('car-offroad-friction').value
+    };
+    
+    // Bundle the entire population
+    data.population = geneticAlgo.population.map(c => c.brain.toJSON());
+    
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -804,19 +824,57 @@ function importBrain() {
                     document.getElementById('track-select').value = currentTrackName;
                     loadTrack(currentTrackName);
                 }
+
+                // Restore UI settings if they exist in the exported file
+                if (data.settings) {
+                    for (const [id, val] of Object.entries(data.settings)) {
+                        const el = document.getElementById(id);
+                        if (el && val !== undefined) {
+                            el.value = val;
+                            el.dispatchEvent(new Event('input')); // trigger labels to update
+                        }
+                    }
+                }
                 
-                // Fallback for older JSON exports that just had the raw array, or the new object
+                // Read configurations for GA from the UI (which were just restored)
+                const popSize = parseInt(document.getElementById('train-population').value) || 50;
+                const mutRate = parseInt(document.getElementById('train-mutation').value) || 10;
+                const mutStr = parseInt(document.getElementById('train-strength').value) || 30;
+                const elitism = parseInt(document.getElementById('train-elitism').value) || 10;
+                const sensorCount = parseInt(document.getElementById('train-sensors').value) || 7;
+                const hiddenLayers = (document.getElementById('train-hidden').value || '8,6').trim().split(',').map(Number).filter(n => n > 0);
+                
+                // Re-initialize GA perfectly so topologies match
+                geneticAlgo = new GeneticAlgorithm({
+                    populationSize: popSize, mutationRate: mutRate, mutationStrength: mutStr,
+                    elitism: elitism, sensorCount: sensorCount, hiddenLayers: hiddenLayers,
+                    timeLimit: parseInt(document.getElementById('train-timelimit').value) || 15
+                });
+                geneticAlgo.initialize();
+                
+                // Load the best brain (this sets generation, bestFitness, etc.)
                 const brainData = data.brain ? data : { brain: data };
                 const brain = geneticAlgo.importBrain(brainData);
+                
                 if (brain) {
-                    customAlert('Brain and track imported! It will seed the next generation.');
-                    // Inject into the current best slot
-                    if (geneticAlgo.population.length) {
+                    // Inject full population if it was bundled
+                    if (data.population && Array.isArray(data.population)) {
+                        for (let i = 0; i < geneticAlgo.population.length && i < data.population.length; i++) {
+                            geneticAlgo.population[i].brain = NeuralNetwork.fromJSON(data.population[i], geneticAlgo.layerSizes);
+                        }
+                    } else if (geneticAlgo.population.length > 0) {
                         geneticAlgo.population[0].brain = brain;
                         geneticAlgo.population[0].fitness = 999;
                     }
+                    
+                    customAlert('Brain and track imported! It will seed the next generation.');
                     if (currentState === GAME_STATES.EDITOR) {
                         switchState(GAME_STATES.TRAIN);
+                    }
+                    
+                    // Physically reset cars to adopt new settings immediately
+                    if (currentState === GAME_STATES.TRAIN) {
+                        spawnAICars();
                     }
                 }
             } catch (err) {
