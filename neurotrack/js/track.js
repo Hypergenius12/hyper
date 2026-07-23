@@ -66,7 +66,25 @@ const TILE_TYPES = {
     ICE_CURVE_BR: { id: 45, ports: [0, 1, 1, 0], render: renderIceCurveBR },
     ICE_CURVE_BL: { id: 46, ports: [0, 0, 1, 1], render: renderIceCurveBL },
     ICE_CURVE_TL: { id: 47, ports: [1, 0, 0, 1], render: renderIceCurveTL },
-    INTERSECTION: { id: 48, ports: [1, 1, 1, 1], render: renderIntersection }
+    INTERSECTION: { id: 48, ports: [1, 1, 1, 1], render: renderIntersection },
+    BOUNCY_STRAIGHT_V: { id: 49, ports: [1, 0, 1, 0], render: renderBouncyStraightV },
+    BOUNCY_STRAIGHT_H: { id: 50, ports: [0, 1, 0, 1], render: renderBouncyStraightH },
+    BOUNCY_CURVE_TR: { id: 51, ports: [1, 1, 0, 0], render: renderBouncyCurveTR },
+    BOUNCY_CURVE_BR: { id: 52, ports: [0, 1, 1, 0], render: renderBouncyCurveBR },
+    BOUNCY_CURVE_BL: { id: 53, ports: [0, 0, 1, 1], render: renderBouncyCurveBL },
+    BOUNCY_CURVE_TL: { id: 54, ports: [1, 0, 0, 1], render: renderBouncyCurveTL },
+    PUDDLE_STRAIGHT_V: { id: 55, ports: [1, 0, 1, 0], render: renderPuddleStraightV },
+    PUDDLE_STRAIGHT_H: { id: 56, ports: [0, 1, 0, 1], render: renderPuddleStraightH },
+    PUDDLE_CURVE_TR: { id: 57, ports: [1, 1, 0, 0], render: renderPuddleCurveTR },
+    PUDDLE_CURVE_BR: { id: 58, ports: [0, 1, 1, 0], render: renderPuddleCurveBR },
+    PUDDLE_CURVE_BL: { id: 59, ports: [0, 0, 1, 1], render: renderPuddleCurveBL },
+    PUDDLE_CURVE_TL: { id: 60, ports: [1, 0, 0, 1], render: renderPuddleCurveTL },
+    FAST_STRAIGHT_V: { id: 61, ports: [1, 0, 1, 0], render: renderFastStraightV },
+    FAST_STRAIGHT_H: { id: 62, ports: [0, 1, 0, 1], render: renderFastStraightH },
+    FAST_CURVE_TR: { id: 63, ports: [1, 1, 0, 0], render: renderFastCurveTR },
+    FAST_CURVE_BR: { id: 64, ports: [0, 1, 1, 0], render: renderFastCurveBR },
+    FAST_CURVE_BL: { id: 65, ports: [0, 0, 1, 1], render: renderFastCurveBL },
+    FAST_CURVE_TL: { id: 66, ports: [1, 0, 0, 1], render: renderFastCurveTL }
 };
 
 // ========================================
@@ -116,6 +134,30 @@ function renderIceCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, siz
 function renderIceCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size, TILE_COLOR_ICE, '#ffffff'); }
 function renderIceCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size, TILE_COLOR_ICE, '#ffffff'); }
 function renderIceCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size, TILE_COLOR_ICE, '#ffffff'); }
+
+const TILE_COLOR_BOUNCY = '#800080';
+function renderBouncyStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, TILE_COLOR_ROAD, TILE_COLOR_BOUNCY); }
+function renderBouncyStraightH(ctx, x, y, size) { drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, TILE_COLOR_ROAD, TILE_COLOR_BOUNCY); }
+function renderBouncyCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size, TILE_COLOR_ROAD, TILE_COLOR_BOUNCY); }
+function renderBouncyCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size, TILE_COLOR_ROAD, TILE_COLOR_BOUNCY); }
+function renderBouncyCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size, TILE_COLOR_ROAD, TILE_COLOR_BOUNCY); }
+function renderBouncyCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size, TILE_COLOR_ROAD, TILE_COLOR_BOUNCY); }
+
+const TILE_COLOR_PUDDLE = '#0066aa';
+function renderPuddleStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, TILE_COLOR_PUDDLE, '#3399ff'); }
+function renderPuddleStraightH(ctx, x, y, size) { drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, TILE_COLOR_PUDDLE, '#3399ff'); }
+function renderPuddleCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size, TILE_COLOR_PUDDLE, '#3399ff'); }
+function renderPuddleCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size, TILE_COLOR_PUDDLE, '#3399ff'); }
+function renderPuddleCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size, TILE_COLOR_PUDDLE, '#3399ff'); }
+function renderPuddleCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size, TILE_COLOR_PUDDLE, '#3399ff'); }
+
+const TILE_COLOR_FAST = '#ffaa00'; // Orange
+function renderFastStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, TILE_COLOR_FAST, '#ffdd44'); }
+function renderFastStraightH(ctx, x, y, size) { drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, TILE_COLOR_FAST, '#ffdd44'); }
+function renderFastCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size, TILE_COLOR_FAST, '#ffdd44'); }
+function renderFastCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size, TILE_COLOR_FAST, '#ffdd44'); }
+function renderFastCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size, TILE_COLOR_FAST, '#ffdd44'); }
+function renderFastCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size, TILE_COLOR_FAST, '#ffdd44'); }
 
 function renderStartH(ctx, x, y, size) {
     renderStraightH(ctx, x, y, size);
@@ -558,8 +600,8 @@ class Track {
     constructor(cols = 16, rows = 12) {
         this.cols = cols;
         this.rows = rows;
-        this.grid = new Array(cols * rows).fill(0); // 0 = empty
-        this.autoGrid = new Array(cols * rows).fill(false); // Tracks auto-drawn tiles
+        this.grid = new Uint8Array(cols * rows);
+        this.autoGrid = new Uint32Array(cols * rows); // Tracks auto-drawn strokes (0 = manual, >0 = stroke ID)
         this.checkpoints = [];
         this.startPos = { x: 0, y: 0, angle: 0 };
 
@@ -572,10 +614,10 @@ class Track {
         this.isDirty = true;
     }
 
-    setTile(c, r, typeId, isAutoDraw = false) {
+    setTile(c, r, typeId, strokeId = 0) {
         if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return;
         this.grid[r * this.cols + c] = typeId;
-        this.autoGrid[r * this.cols + c] = isAutoDraw;
+        this.autoGrid[r * this.cols + c] = strokeId;
         this.markDirty();
     }
 
@@ -586,6 +628,11 @@ class Track {
 
     isAuto(c, r) {
         if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return false;
+        return this.autoGrid[r * this.cols + c] > 0;
+    }
+
+    getStrokeId(c, r) {
+        if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return 0;
         return this.autoGrid[r * this.cols + c];
     }
 
@@ -686,7 +733,7 @@ class Track {
         return Object.values(TILE_TYPES).find(t => t.id === id) || TILE_TYPES.EMPTY;
     }
 
-    autoResolveTile(c, r, dx = 0, dy = 0) {
+    autoResolveTile(c, r, prefDx = 0, prefDy = 0, strokeId = 0) {
         if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return;
         if (!this.isAuto(c, r)) return; // Only modify auto-drawn tiles
         
@@ -695,49 +742,67 @@ class Track {
         
         const type = this.getTileType(c, r);
         if (type.isStart) return; // Don't overwrite Start tiles
+        // Find if this tile already had ports open in these directions
+        const oldPorts = type.ports || [false, false, false, false];
 
-        // Check neighbors to see if they want to connect
-        const topType = this.getTileType(c, r - 1);
-        const rightType = this.getTileType(c + 1, r);
-        const bottomType = this.getTileType(c, r + 1);
-        const leftType = this.getTileType(c - 1, r);
-
-        let top = topType.id > 0 && (this.isAuto(c, r - 1) || topType.ports[2]);
-        let right = rightType.id > 0 && (this.isAuto(c + 1, r) || rightType.ports[3]);
-        let bottom = bottomType.id > 0 && (this.isAuto(c, r + 1) || bottomType.ports[0]);
-        let left = leftType.id > 0 && (this.isAuto(c - 1, r) || leftType.ports[1]);
-
-        if (Math.abs(dx) > 0) {
-            if (!topType.ports[2]) top = false;
-            if (!bottomType.ports[0]) bottom = false;
-        } else if (Math.abs(dy) > 0) {
-            if (!leftType.ports[1]) left = false;
-            if (!rightType.ports[3]) right = false;
+        // Check neighbors that have ports pointing to this tile, or are auto-drawn WITH THE SAME STROKE ID
+        let nUp = false, nRight = false, nDown = false, nLeft = false;
+        if (r > 0) {
+            let t = this.getTileType(c, r - 1);
+            let sameStroke = this.isAuto(c, r - 1) && (!strokeId || this.getStrokeId(c, r - 1) === strokeId);
+            if ((t.id !== 0 && t.ports[2]) || sameStroke) nUp = true;
+        }
+        if (c < this.cols - 1) {
+            let t = this.getTileType(c + 1, r);
+            let sameStroke = this.isAuto(c + 1, r) && (!strokeId || this.getStrokeId(c + 1, r) === strokeId);
+            if ((t.id !== 0 && t.ports[3]) || sameStroke) nRight = true;
+        }
+        if (r < this.rows - 1) {
+            let t = this.getTileType(c, r + 1);
+            let sameStroke = this.isAuto(c, r + 1) && (!strokeId || this.getStrokeId(c, r + 1) === strokeId);
+            if ((t.id !== 0 && t.ports[0]) || sameStroke) nDown = true;
+        }
+        if (c > 0) {
+            let t = this.getTileType(c - 1, r);
+            let sameStroke = this.isAuto(c - 1, r) && (!strokeId || this.getStrokeId(c - 1, r) === strokeId);
+            if ((t.id !== 0 && t.ports[1]) || sameStroke) nLeft = true;
         }
 
-        let newId = TILE_TYPES.STRAIGHT_H.id;
-        const connections = (top ? 1 : 0) + (right ? 1 : 0) + (bottom ? 1 : 0) + (left ? 1 : 0);
+        // Filter based on preferred movement direction to prioritize straights
+        // Only ignore a direction if the tile didn't already have a connection there!
+        if (Math.abs(prefDx) > 0) {
+            if (!oldPorts[0]) nUp = false;
+            if (!oldPorts[2]) nDown = false;
+        } else if (Math.abs(prefDy) > 0) {
+            if (!oldPorts[3]) nLeft = false;
+            if (!oldPorts[1]) nRight = false;
+        }
+
+        let bestMatch = TILE_TYPES.STRAIGHT_H;
+        const connections = (nUp ? 1 : 0) + (nRight ? 1 : 0) + (nDown ? 1 : 0) + (nLeft ? 1 : 0);
 
         if (connections === 4) {
-            newId = TILE_TYPES.CROSSROAD.id;
+            bestMatch = TILE_TYPES.CROSSROAD;
         } else if (connections === 3) {
-            if (top && bottom) newId = TILE_TYPES.STRAIGHT_V.id;
-            else if (left && right) newId = TILE_TYPES.STRAIGHT_H.id;
-            else if (top && right) newId = TILE_TYPES.CURVE_TR.id;
-            else if (bottom && right) newId = TILE_TYPES.CURVE_BR.id;
+            if (nUp && nDown) bestMatch = TILE_TYPES.STRAIGHT_V;
+            else if (nLeft && nRight) bestMatch = TILE_TYPES.STRAIGHT_H;
+            else if (nUp && nRight) bestMatch = TILE_TYPES.CURVE_TR;
+            else if (nDown && nRight) bestMatch = TILE_TYPES.CURVE_BR;
+            else if (nDown && nLeft) bestMatch = TILE_TYPES.CURVE_BL;
+            else if (nUp && nLeft) bestMatch = TILE_TYPES.CURVE_TL;
         } else if (connections === 2) {
-            if (top && bottom) newId = TILE_TYPES.STRAIGHT_V.id;
-            else if (left && right) newId = TILE_TYPES.STRAIGHT_H.id;
-            else if (top && right) newId = TILE_TYPES.CURVE_TR.id;
-            else if (bottom && right) newId = TILE_TYPES.CURVE_BR.id;
-            else if (bottom && left) newId = TILE_TYPES.CURVE_BL.id;
-            else if (top && left) newId = TILE_TYPES.CURVE_TL.id;
+            if (nUp && nDown) bestMatch = TILE_TYPES.STRAIGHT_V;
+            else if (nLeft && nRight) bestMatch = TILE_TYPES.STRAIGHT_H;
+            else if (nUp && nRight) bestMatch = TILE_TYPES.CURVE_TR;
+            else if (nDown && nRight) bestMatch = TILE_TYPES.CURVE_BR;
+            else if (nDown && nLeft) bestMatch = TILE_TYPES.CURVE_BL;
+            else if (nUp && nLeft) bestMatch = TILE_TYPES.CURVE_TL;
         } else if (connections === 1) {
-            if (top || bottom) newId = TILE_TYPES.STRAIGHT_V.id;
-            else if (left || right) newId = TILE_TYPES.STRAIGHT_H.id;
+            if (nUp || nDown) bestMatch = TILE_TYPES.STRAIGHT_V;
+            else if (nLeft || nRight) bestMatch = TILE_TYPES.STRAIGHT_H;
         }
 
-        this.setTile(c, r, newId, true);
+        this.setTile(c, r, bestMatch.id, strokeId || 1);
     }
 
     computeCheckpoints() {
@@ -762,7 +827,7 @@ class Track {
                 for (let c = 0; c < this.cols; c++) {
                     const type = this.getTileType(c, r);
                     if (type.id !== 0) {
-                        this.checkpoints.push({ x: c * TILE_SIZE + TILE_SIZE / 2, y: r * TILE_SIZE + TILE_SIZE / 2, radius: TILE_SIZE * 0.5 });
+                        this.checkpoints.push({ x: c * TILE_SIZE + TILE_SIZE / 2, y: r * TILE_SIZE + TILE_SIZE / 2, radius: TILE_SIZE * 0.85 });
                     }
                 }
             }
@@ -837,90 +902,125 @@ class Track {
         this.startPos.angle = sAngle;
 
         // 3. Trace the path (DFS to find a closed loop back to start)
+        const stack = [{
+            c: startC, r: startR, dir: currentDir,
+            phase: 0,
+            nc: 0, nr: 0, tryDirs: [], dirIndex: 0,
+            other: null
+        }];
+        
+        let currentPath = [];
+        let visited = new Set();
         let foundPath = null;
         let longestPath = [];
-        
-        const dfs = (c, r, dir, currentPath, visited) => {
-            if (foundPath) return; // Already found
 
-            if (currentPath.length > longestPath.length) {
-                longestPath = [...currentPath];
-            }
+        while (stack.length > 0) {
+            if (foundPath) break;
+            const state = stack[stack.length - 1];
 
-            // If we've returned to start and we have at least some tiles
-            if (c === startC && r === startR && currentPath.length > 0) {
-                foundPath = [...currentPath];
-                return;
-            }
+            if (state.phase === 0) {
+                if (currentPath.length > longestPath.length) {
+                    longestPath = [...currentPath];
+                }
+                
+                if (state.c === startC && state.r === startR && currentPath.length > 0) {
+                    foundPath = [...currentPath];
+                    break;
+                }
 
-            const axis = dir % 2;
-            const key = `${c},${r},${axis}`;
-            
-            if (visited.has(key)) return; // Loop closed but not start
+                const axis = state.dir % 2;
+                const key = `${state.c},${state.r},${axis}`;
+                if (visited.has(key)) {
+                    stack.pop();
+                    continue;
+                }
 
-            visited.add(key);
-            currentPath.push({c, r});
+                visited.add(key);
+                currentPath.push({c: state.c, r: state.r});
+                state.key = key;
 
-            // Move to next
-            const nc = c + dirs[dir].dx;
-            const nr = r + dirs[dir].dy;
-
-            if (nc >= 0 && nc < this.cols && nr >= 0 && nr < this.rows) {
-                const type = this.getTileType(nc, nr);
-                if (type.id !== 0) {
-                    const incomingPort = (dir + 2) % 4;
-                    if (type.ports[incomingPort]) {
-                        
-                        if (type.id >= TILE_TYPES.TELEPORT_UP.id && type.id <= TILE_TYPES.TELEPORT_LEFT.id) {
-                            let other = null;
-                            for (let _r = 0; _r < this.rows; _r++) {
-                                for (let _c = 0; _c < this.cols; _c++) {
-                                    if ((_c !== nc || _r !== nr)) {
-                                        const tType = this.getTileType(_c, _r);
-                                        if (tType.id >= TILE_TYPES.TELEPORT_UP.id && tType.id <= TILE_TYPES.TELEPORT_LEFT.id) {
-                                            other = {c: _c, r: _r, type: tType};
+                state.nc = state.c + dirs[state.dir].dx;
+                state.nr = state.r + dirs[state.dir].dy;
+                state.phase = 1;
+            } 
+            else if (state.phase === 1) {
+                let pushedNext = false;
+                if (state.nc >= 0 && state.nc < this.cols && state.nr >= 0 && state.nr < this.rows) {
+                    const type = this.getTileType(state.nc, state.nr);
+                    if (type.id !== 0) {
+                        const incomingPort = (state.dir + 2) % 4;
+                        if (type.ports[incomingPort]) {
+                            if (type.id >= TILE_TYPES.TELEPORT_UP.id && type.id <= TILE_TYPES.TELEPORT_LEFT.id) {
+                                let other = null;
+                                for (let _r = 0; _r < this.rows; _r++) {
+                                    for (let _c = 0; _c < this.cols; _c++) {
+                                        if (_c !== state.nc || _r !== state.nr) {
+                                            const tType = this.getTileType(_c, _r);
+                                            if (tType.id >= TILE_TYPES.TELEPORT_UP.id && tType.id <= TILE_TYPES.TELEPORT_LEFT.id) {
+                                                other = {c: _c, r: _r, type: tType};
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            if (other) {
-                                currentPath.push({c: nc, r: nr});
-                                visited.add(`${nc},${nr},0`);
-                                
-                                let outDir = 0;
-                                if (other.type.id === TILE_TYPES.TELEPORT_UP.id) outDir = 2; // Exits going DOWN
-                                else if (other.type.id === TILE_TYPES.TELEPORT_RIGHT.id) outDir = 3; // Exits going LEFT
-                                else if (other.type.id === TILE_TYPES.TELEPORT_DOWN.id) outDir = 0; // Exits going UP
-                                else if (other.type.id === TILE_TYPES.TELEPORT_LEFT.id) outDir = 1; // Exits going RIGHT
-                                
-                                dfs(other.c, other.r, outDir, currentPath, visited);
-                                
-                                visited.delete(`${nc},${nr},0`);
-                                currentPath.pop();
-                            }
-                        } else {
-                            // Prefer straight
-                            const straightDir = (incomingPort + 2) % 4;
-                            const tryDirs = [];
-                            if (type.ports[straightDir]) tryDirs.push(straightDir);
-                            for (let i = 0; i < 4; i++) {
-                                if (i !== incomingPort && i !== straightDir && type.ports[i]) {
-                                    tryDirs.push(i);
+                                if (other) {
+                                    state.other = other;
+                                    currentPath.push({c: state.nc, r: state.nr});
+                                    visited.add(`${state.nc},${state.nr},0`);
+                                    
+                                    let outDir = 0;
+                                    if (other.type.id === TILE_TYPES.TELEPORT_UP.id) outDir = 2; // Exits going DOWN
+                                    else if (other.type.id === TILE_TYPES.TELEPORT_RIGHT.id) outDir = 3; // Exits going LEFT
+                                    else if (other.type.id === TILE_TYPES.TELEPORT_DOWN.id) outDir = 0; // Exits going UP
+                                    else if (other.type.id === TILE_TYPES.TELEPORT_LEFT.id) outDir = 1; // Exits going RIGHT
+                                    
+                                    stack.push({
+                                        c: other.c, r: other.r, dir: outDir, phase: 0
+                                    });
+                                    state.phase = 3; // Teleport return phase
+                                    pushedNext = true;
                                 }
-                            }
-                            for (const nextDir of tryDirs) {
-                                dfs(nc, nr, nextDir, currentPath, visited);
+                            } else {
+                                const straightDir = (incomingPort + 2) % 4;
+                                state.tryDirs = [];
+                                if (type.ports[straightDir]) state.tryDirs.push(straightDir);
+                                for (let i = 0; i < 4; i++) {
+                                    if (i !== incomingPort && i !== straightDir && type.ports[i]) {
+                                        state.tryDirs.push(i);
+                                    }
+                                }
+                                state.dirIndex = 0;
+                                state.phase = 2; // Normal branches
                             }
                         }
                     }
                 }
+                
+                if (!pushedNext && state.phase === 1) {
+                    currentPath.pop();
+                    visited.delete(state.key);
+                    stack.pop();
+                }
+            } 
+            else if (state.phase === 2) { 
+                if (state.dirIndex < state.tryDirs.length) {
+                    const nextDir = state.tryDirs[state.dirIndex++];
+                    stack.push({
+                        c: state.nc, r: state.nr, dir: nextDir, phase: 0
+                    });
+                } else {
+                    currentPath.pop();
+                    visited.delete(state.key);
+                    stack.pop();
+                }
+            } 
+            else if (state.phase === 3) {
+                visited.delete(`${state.nc},${state.nr},0`);
+                currentPath.pop(); // teleport cleanup
+                currentPath.pop(); // main tile cleanup
+                visited.delete(state.key);
+                stack.pop();
             }
-
-            currentPath.pop();
-            visited.delete(key);
-        };
-
-        dfs(startC, startR, currentDir, [], new Set());
+        }
 
         const finalPath = foundPath || longestPath;
         if (finalPath.length > 0) {
@@ -928,7 +1028,7 @@ class Track {
                 this.checkpoints.push({
                     x: pt.c * TILE_SIZE + TILE_SIZE / 2,
                     y: pt.r * TILE_SIZE + TILE_SIZE / 2,
-                    radius: TILE_SIZE * 0.5
+                    radius: TILE_SIZE * 0.85
                 });
             }
             // Add the start line again as the final checkpoint to complete the loop
@@ -936,7 +1036,7 @@ class Track {
                 this.checkpoints.push({
                     x: finalPath[0].c * TILE_SIZE + TILE_SIZE / 2,
                     y: finalPath[0].r * TILE_SIZE + TILE_SIZE / 2,
-                    radius: TILE_SIZE * 0.5
+                    radius: TILE_SIZE * 0.85
                 });
             }
         }
@@ -1102,13 +1202,15 @@ class Track {
                 if (
                     type.id === TILE_TYPES.STRAIGHT_V.id || type.id === TILE_TYPES.START_V.id || 
                     type.id === TILE_TYPES.BOOST_UP.id || type.id === TILE_TYPES.BOOST_DOWN.id ||
-                    type.id === TILE_TYPES.ROUGH_STRAIGHT_V.id || type.id === TILE_TYPES.ICE_STRAIGHT_V.id
+                    type.id === TILE_TYPES.ROUGH_STRAIGHT_V.id || type.id === TILE_TYPES.ICE_STRAIGHT_V.id ||
+                    type.id === TILE_TYPES.BOUNCY_STRAIGHT_V.id || type.id === TILE_TYPES.PUDDLE_STRAIGHT_V.id || type.id === TILE_TYPES.FAST_STRAIGHT_V.id
                 ) {
                     drawCollisionPath(ctx, px + TILE_SIZE / 2, py, px + TILE_SIZE / 2, py + TILE_SIZE, TILE_SIZE);
                 } else if (
                     type.id === TILE_TYPES.STRAIGHT_H.id || type.id === TILE_TYPES.START_H.id || 
                     type.id === TILE_TYPES.BOOST_LEFT.id || type.id === TILE_TYPES.BOOST_RIGHT.id ||
-                    type.id === TILE_TYPES.ROUGH_STRAIGHT_H.id || type.id === TILE_TYPES.ICE_STRAIGHT_H.id
+                    type.id === TILE_TYPES.ROUGH_STRAIGHT_H.id || type.id === TILE_TYPES.ICE_STRAIGHT_H.id ||
+                    type.id === TILE_TYPES.BOUNCY_STRAIGHT_H.id || type.id === TILE_TYPES.PUDDLE_STRAIGHT_H.id || type.id === TILE_TYPES.FAST_STRAIGHT_H.id
                 ) {
                     drawCollisionPath(ctx, px, py + TILE_SIZE / 2, px + TILE_SIZE, py + TILE_SIZE / 2, TILE_SIZE);
                 } else if (type.id === TILE_TYPES.BOTTLENECK_V.id) {
@@ -1141,13 +1243,13 @@ class Track {
                     } else {
                         drawCollisionPath(ctx, px, py + TILE_SIZE / 2, px + TILE_SIZE, py + TILE_SIZE / 2, TILE_SIZE);
                     }
-                } else if (type.id === TILE_TYPES.CURVE_TR.id || type.id === TILE_TYPES.START_CURVE_TR.id || type.id === TILE_TYPES.ROUGH_CURVE_TR.id || type.id === TILE_TYPES.ICE_CURVE_TR.id) {
+                } else if (type.id === TILE_TYPES.CURVE_TR.id || type.id === TILE_TYPES.START_CURVE_TR.id || type.id === TILE_TYPES.ROUGH_CURVE_TR.id || type.id === TILE_TYPES.ICE_CURVE_TR.id || type.id === TILE_TYPES.BOUNCY_CURVE_TR.id || type.id === TILE_TYPES.PUDDLE_CURVE_TR.id || type.id === TILE_TYPES.FAST_CURVE_TR.id) {
                     drawCollisionCurve(ctx, px + TILE_SIZE, py, TILE_SIZE / 2, Math.PI / 2, Math.PI, TILE_SIZE);
-                } else if (type.id === TILE_TYPES.CURVE_BR.id || type.id === TILE_TYPES.START_CURVE_BR.id || type.id === TILE_TYPES.ROUGH_CURVE_BR.id || type.id === TILE_TYPES.ICE_CURVE_BR.id) {
+                } else if (type.id === TILE_TYPES.CURVE_BR.id || type.id === TILE_TYPES.START_CURVE_BR.id || type.id === TILE_TYPES.ROUGH_CURVE_BR.id || type.id === TILE_TYPES.ICE_CURVE_BR.id || type.id === TILE_TYPES.BOUNCY_CURVE_BR.id || type.id === TILE_TYPES.PUDDLE_CURVE_BR.id || type.id === TILE_TYPES.FAST_CURVE_BR.id) {
                     drawCollisionCurve(ctx, px + TILE_SIZE, py + TILE_SIZE, TILE_SIZE / 2, Math.PI, Math.PI * 1.5, TILE_SIZE);
-                } else if (type.id === TILE_TYPES.CURVE_BL.id || type.id === TILE_TYPES.START_CURVE_BL.id || type.id === TILE_TYPES.ROUGH_CURVE_BL.id || type.id === TILE_TYPES.ICE_CURVE_BL.id) {
+                } else if (type.id === TILE_TYPES.CURVE_BL.id || type.id === TILE_TYPES.START_CURVE_BL.id || type.id === TILE_TYPES.ROUGH_CURVE_BL.id || type.id === TILE_TYPES.ICE_CURVE_BL.id || type.id === TILE_TYPES.BOUNCY_CURVE_BL.id || type.id === TILE_TYPES.PUDDLE_CURVE_BL.id || type.id === TILE_TYPES.FAST_CURVE_BL.id) {
                     drawCollisionCurve(ctx, px, py + TILE_SIZE, TILE_SIZE / 2, Math.PI * 1.5, Math.PI * 2, TILE_SIZE);
-                } else if (type.id === TILE_TYPES.CURVE_TL.id || type.id === TILE_TYPES.START_CURVE_TL.id || type.id === TILE_TYPES.ROUGH_CURVE_TL.id || type.id === TILE_TYPES.ICE_CURVE_TL.id) {
+                } else if (type.id === TILE_TYPES.CURVE_TL.id || type.id === TILE_TYPES.START_CURVE_TL.id || type.id === TILE_TYPES.ROUGH_CURVE_TL.id || type.id === TILE_TYPES.ICE_CURVE_TL.id || type.id === TILE_TYPES.BOUNCY_CURVE_TL.id || type.id === TILE_TYPES.PUDDLE_CURVE_TL.id || type.id === TILE_TYPES.FAST_CURVE_TL.id) {
                     drawCollisionCurve(ctx, px, py, TILE_SIZE / 2, 0, Math.PI / 2, TILE_SIZE);
                 }
             }
@@ -1257,10 +1359,9 @@ class Track {
         try {
             const data = JSON.parse(jsonStr);
             const track = new Track(data.cols, data.rows);
-            track.grid = new Uint8Array(data.grid);
-            track.autoGrid = new Array(data.cols * data.rows).fill(false);
+            track.grid.set(data.grid);
             if (data.autoGrid) {
-                for (let i = 0; i < data.autoGrid.length; i++) track.autoGrid[i] = data.autoGrid[i];
+                track.autoGrid.set(data.autoGrid);
             }
             track.computeCheckpoints();
             return track;

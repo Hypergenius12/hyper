@@ -68,6 +68,7 @@ class Car {
         let currentMaxSpeed = this.maxSpeed;
         let currentAccel = this.acceleration;
         let currentTurnRate = this.turnRate;
+        let currentBrakeForce = this.brakeForce;
         
         let centerCol = Math.floor(this.x / 100);
         let centerRow = Math.floor(this.y / 100);
@@ -86,6 +87,16 @@ class Car {
                 currentMaxSpeed = this.maxSpeed * 0.4;
                 currentAccel = this.acceleration * 0.4;
                 this.speed *= (1 - 3.0 * dt); // Active slowdown drag, framerate independent
+            }
+            // Puddle Physics
+            if (centerTileId >= TILE_TYPES.PUDDLE_STRAIGHT_V.id && centerTileId <= TILE_TYPES.PUDDLE_CURVE_TL.id) {
+                currentTurnRate = 0; // No steering
+                currentAccel = 0; // No accelerating
+                currentBrakeForce = 0; // No braking
+            }
+            // Unlimited Speed (Fast) Physics
+            if (centerTileId >= TILE_TYPES.FAST_STRAIGHT_V.id && centerTileId <= TILE_TYPES.FAST_CURVE_TL.id) {
+                currentMaxSpeed = this.maxSpeed * 2.5; // Huge speed limit increase
             }
         }
 
@@ -120,7 +131,7 @@ class Car {
 
             if (!this.airborne) {
                 this.speed += currentAccel * accelForce * dt;
-                this.speed -= this.brakeForce * brakeForce * dt;
+                this.speed -= currentBrakeForce * brakeForce * dt;
             }
             if (accelForce > 0.1 || brakeForce > 0.1) {
                 this.started = true;
@@ -143,8 +154,10 @@ class Car {
                 this.started = true;
                 this.isAccelerating = true;
             }
-            if (keys.down) this.speed -= this.brakeForce * dt;
-
+            if (keys.down) {
+                this.speed -= currentBrakeForce * dt;
+                this.started = true;
+            }
             if (Math.abs(this.speed) > 0.1) {
                 const dir = this.speed > 0 ? 1 : -1;
                 if (keys.left) { this.angle -= currentTurnRate * dt * dir; this.isTurning = true; }
@@ -239,7 +252,14 @@ class Car {
         }
 
         // Friction: Apply full friction when coasting, minimal drag when accelerating
-        const currentFriction = this.isAccelerating ? (this.friction * 0.1) : this.friction;
+        let currentFriction = this.isAccelerating ? (this.friction * 0.1) : this.friction;
+        
+        if (typeof currentTrack !== 'undefined' && currentTrack && typeof TILE_TYPES !== 'undefined') {
+            if (centerTileId >= TILE_TYPES.PUDDLE_STRAIGHT_V.id && centerTileId <= TILE_TYPES.PUDDLE_CURVE_TL.id) {
+                currentFriction = 0; // Hydroplaning!
+            }
+        }
+
         if (!this.airborne) {
             this.speed *= (1 - currentFriction * dt);
         } else {
@@ -352,10 +372,58 @@ class Car {
                         this.speed *= this.offTrackPenalty;
                     }
                     if (centerCheck === false) {
-                        if (this.alive && !this.brain && typeof playCrashSound === 'function') {
-                            playCrashSound();
-                        }
-                        this.alive = false;
+                        const isBouncy = (centerTileId >= TILE_TYPES.BOUNCY_STRAIGHT_V.id && centerTileId <= TILE_TYPES.BOUNCY_CURVE_TL.id);
+                        if (isBouncy) {
+            // Revert position to prevent getting stuck in wall
+            this.x = prevX;
+            this.y = prevY;
+            if (offCount >= 1) this.speed /= this.offTrackPenalty; // Revert friction
+
+            // Apply bounce penalty for AI
+            if (this.brain) {
+                this.accumulatedWallPenalty += 50;
+            }
+
+            // Vector reflection based on wall type
+            let nx = 0, ny = 0; // Normal vector
+            if (centerTileId === TILE_TYPES.BOUNCY_STRAIGHT_V.id) {
+                nx = 1; ny = 0; 
+            } else if (centerTileId === TILE_TYPES.BOUNCY_STRAIGHT_H.id) {
+                nx = 0; ny = 1; 
+            } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_TL.id) {
+                nx = 0.707; ny = 0.707; 
+            } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_TR.id) {
+                nx = -0.707; ny = 0.707; 
+            } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_BL.id) {
+                nx = 0.707; ny = -0.707; 
+            } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_BR.id) {
+                nx = -0.707; ny = -0.707; 
+            } else {
+                nx = -Math.cos(this.angle);
+                ny = -Math.sin(this.angle);
+            }
+
+            // Incoming velocity vector
+            const vx = Math.cos(this.angle) * this.speed;
+            const vy = Math.sin(this.angle) * this.speed;
+
+            // Dot product (v . n)
+            const dotProduct = vx * nx + vy * ny;
+
+            // Reflected velocity: v_new = v - 2(v . n)n
+            const vxNew = vx - 2 * dotProduct * nx;
+            const vyNew = vy - 2 * dotProduct * ny;
+
+            // Set new angle and speed (bounce multiplier)
+            this.angle = Math.atan2(vyNew, vxNew);
+            this.speed = Math.sqrt(vxNew * vxNew + vyNew * vyNew) * 1.5;
+        } else {
+            this.speed = 0;
+            if (this.alive && !this.brain && typeof playCrashSound === 'function') {
+                playCrashSound();
+            }
+            this.alive = false;
+        }
                     }
                 }
             }
@@ -387,12 +455,15 @@ class Car {
             }
         }
         
-        // Fitness: checkpoint progress is king (worth 10 each), fractional progress fills in the gaps
-        // Speed bonus rewards fast driving, survival bonus is tiny and capped to prevent idle-farming
         const checkpointScore = (this.totalCheckpoints + this.checkpointIndex) * 10 + progress * 10;
         const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.5;
         const survivalBonus = Math.min(this.totalTime * 0.02, 1.0); // capped at 1.0
-        let newFitness = checkpointScore + speedBonus + survivalBonus;
+        
+        // Prioritize speed of completion: Massive bonus for completing a lap, scaled by how fast they did it!
+        const lapBonus = this.lapCount * 10000;
+        const lapTimePenalty = this.bestLap > 0 ? (1000 / this.bestLap) : 0;
+        
+        let newFitness = checkpointScore + speedBonus + survivalBonus + lapBonus + lapTimePenalty;
         
         // Ensure penalty is initialized
         if (typeof this.accumulatedWallPenalty === 'undefined') this.accumulatedWallPenalty = 0;
@@ -502,7 +573,9 @@ class Car {
             }
         }
 
-        const LOOKAHEAD = Math.min(30, checkpoints.length);
+        // Limit lookahead to 100, but never more than half the track to prevent wrap-around exploits
+        const LOOKAHEAD = Math.min(100, Math.max(1, Math.floor(checkpoints.length / 2)));
+        let hitCheckpoint = false;
         
         for (let i = 0; i < LOOKAHEAD; i++) {
             const checkIndex = this.checkpointIndex + i;
@@ -516,6 +589,15 @@ class Car {
             
             if (dist < cp.radius) {
                 if (this.lastCheckpointHitIndex !== targetIndex) {
+                    // Prevent glitching: if the car is physically at the exact same coordinates as the last checkpoint,
+                    // it cannot trigger this one (fixes the Crazy 8 Crossroad infinite loop exploit).
+                    if (this.lastCheckpointHitIndex !== undefined) {
+                        const lastCp = checkpoints[this.lastCheckpointHitIndex % checkpoints.length];
+                        if (lastCp && lastCp.x === cp.x && lastCp.y === cp.y) {
+                            continue;
+                        }
+                    }
+
                     this.lastCheckpointHitIndex = targetIndex;
                     
                     this.checkpointIndex += (i + 1);

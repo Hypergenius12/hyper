@@ -216,7 +216,15 @@ class NeuralNetwork {
    * @param {object} json
    * @returns {NeuralNetwork}
    */
-  static fromJSON(json) {
+  static fromJSON(json, defaultLayerSizes) {
+    if (Array.isArray(json)) {
+      const nn = new NeuralNetwork(defaultLayerSizes);
+      for (let i = 0; i < json.length; i++) {
+        nn.weights[i] = json[i];
+      }
+      return nn;
+    }
+    
     const nn = new NeuralNetwork(json.layerSizes);
     const w = json.weights;
     for (let i = 0; i < w.length; i++) {
@@ -549,7 +557,7 @@ class GeneticAlgorithm {
       throw new Error('Invalid brain data: missing "brain" field');
     }
 
-    const imported = NeuralNetwork.fromJSON(data.brain);
+    const imported = NeuralNetwork.fromJSON(data.brain, this.layerSizes);
     
     // Topology check to prevent input mismatch crashes
     if (imported.layerSizes.join(',') !== this.layerSizes.join(',')) {
@@ -602,6 +610,11 @@ class GeneticAlgorithm {
     if (config.memoryCount !== undefined) {
       this.memoryCount = config.memoryCount;
     }
+    
+    // Recalculate topology based on updated config
+    this.inputCount = this.sensorCount + 1 + this.memoryCount;
+    this.outputCount = 4 + this.memoryCount;
+    this.layerSizes = [this.inputCount, ...this.hiddenLayers, this.outputCount];
   }
 }
 

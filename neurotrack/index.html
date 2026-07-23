@@ -89,6 +89,11 @@
                 <button id="btn-delete-track" class="ctrl-btn danger" style="flex: 1;">DEL</button>
                 <button id="btn-clear-track" class="ctrl-btn" style="flex: 1;">CLEAR</button>
             </div>
+            <div class="ctrl-buttons" style="gap: 5px; margin-top: 5px;">
+                <button id="btn-export-track" class="ctrl-btn" style="flex: 1;">EXPORT TRACK</button>
+                <button id="btn-import-track" class="ctrl-btn" style="flex: 1;">IMPORT TRACK</button>
+                <input type="file" id="track-file-input" accept=".json" style="display: none;">
+            </div>
 
             <div class="editor-hint">
                 <p>L-CLICK → PLACE</p>
@@ -148,7 +153,7 @@
                 </div>
                 <div class="ctrl-row">
                     <label>INFINITY TIME <span class="help-icon" data-tooltip="If on, generation runs until 75% of cars are dead, bypassing the time limit.">?</span></label>
-                    <input type="checkbox" id="train-timelimit-inf">
+                    <input type="checkbox" id="train-timelimit-inf" class="ui-toggle">
                 </div>
                 <div class="ctrl-row">
                     <label>SPEED</label><span id="train-spd-val">1x</span>

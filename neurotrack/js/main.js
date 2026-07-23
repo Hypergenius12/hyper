@@ -85,6 +85,59 @@ function init() {
     }
     
     requestAnimationFrame(gameLoop);
+
+    // Auto-save session
+    window.addEventListener('beforeunload', () => {
+        if (currentTrack) {
+            const session = {
+                trackGrid: Array.from(currentTrack.grid)
+            };
+            if (currentTrack.autoGrid) {
+                session.autoGrid = Array.from(currentTrack.autoGrid);
+            }
+            if (typeof bestBotCar !== 'undefined' && bestBotCar && bestBotCar.brain) {
+                session.bestBrain = bestBotCar.brain.serialize();
+            }
+            localStorage.setItem('neurotrack_session', JSON.stringify(session));
+        }
+    });
+
+    const prevSession = localStorage.getItem('neurotrack_session');
+    if (prevSession) {
+        setTimeout(() => {
+            try {
+                const session = JSON.parse(prevSession);
+                if (session.trackGrid && session.trackGrid.length === currentTrack.grid.length) {
+                    currentTrack.grid.set(session.trackGrid);
+                    if (currentTrack.autoGrid) {
+                        if (session.autoGrid && session.autoGrid.length === currentTrack.autoGrid.length) {
+                            currentTrack.autoGrid.set(session.autoGrid);
+                        } else {
+                            currentTrack.autoGrid.fill(0);
+                        }
+                    }
+                    currentTrack.computeCheckpoints();
+                    currentTrack.markDirty();
+                    currentTrack.renderCollisionCanvas(collisionCanvas);
+                    const cCtx = collisionCanvas.getContext('2d');
+                    collisionGrid = { width: collisionCanvas.width, height: collisionCanvas.height, data: cCtx.getImageData(0, 0, collisionCanvas.width, collisionCanvas.height).data };
+                    
+                    if (typeof currentTrack.renderSensorCanvas === 'function') {
+                        currentTrack.renderSensorCanvas(sensorCanvas);
+                        const sCtx = sensorCanvas.getContext('2d');
+                        sensorGrid = { width: sensorCanvas.width, height: sensorCanvas.height, data: sCtx.getImageData(0, 0, sensorCanvas.width, sensorCanvas.height).data };
+                    }
+                }
+                if (session.bestBrain) {
+                    const restoredBrain = NeuralNetwork.deserialize(session.bestBrain);
+                    bestBotCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startAngle, true);
+                    bestBotCar.brain = restoredBrain;
+                }
+            } catch (e) {
+                console.error("Failed to restore session", e);
+            }
+        }, 100);
+    }
 }
 
 // ========================================
@@ -216,14 +269,16 @@ function setupInput() {
             if (currentState === GAME_STATES.EDITOR && editorHistory.length > 0) {
                 const currentStateObj = {
                     grid: new Uint8Array(currentTrack.grid),
-                    autoGrid: new Uint8Array(currentTrack.autoGrid)
+                    autoGrid: new Uint32Array(currentTrack.autoGrid)
                 };
                 editorRedoHistory.push(currentStateObj);
                 
                 const prevState = editorHistory.pop();
                 currentTrack.grid.set(prevState.grid);
                 currentTrack.autoGrid.set(prevState.autoGrid);
-                currentTrack.precomputeCheckpoints();
+                currentTrack.computeCheckpoints();
+                currentTrack.markDirty();
+                currentTrack.renderCollisionCanvas(collisionCanvas);
                 updateLimits();
             }
         }
@@ -231,14 +286,16 @@ function setupInput() {
             if (currentState === GAME_STATES.EDITOR && editorRedoHistory.length > 0) {
                 const currentStateObj = {
                     grid: new Uint8Array(currentTrack.grid),
-                    autoGrid: new Uint8Array(currentTrack.autoGrid)
+                    autoGrid: new Uint32Array(currentTrack.autoGrid)
                 };
                 editorHistory.push(currentStateObj);
                 
                 const nextState = editorRedoHistory.pop();
                 currentTrack.grid.set(nextState.grid);
                 currentTrack.autoGrid.set(nextState.autoGrid);
-                currentTrack.precomputeCheckpoints();
+                currentTrack.computeCheckpoints();
+                currentTrack.markDirty();
+                currentTrack.renderCollisionCanvas(collisionCanvas);
                 updateLimits();
             }
         }
@@ -252,8 +309,10 @@ function setupInput() {
 
     let isPanning = false;
     let lastPanPos = { x: 0, y: 0 };
+    let paintTileType = 1;
     let lastPaintPos = null;
     let lastAutoDrawDir = { dx: 0, dy: 0 };
+    let currentStrokeId = 1;
 
     function updateLimits() {
         let hasStart = false, teleCount = 0;
@@ -292,12 +351,12 @@ function setupInput() {
         if (paintTileType === 99 || paintTileType === 0) {
             const wasEmpty = currentTrack.getTile(c, r) === 0;
             const newId = paintTileType === 99 ? (wasEmpty ? TILE_TYPES.STRAIGHT_H.id : currentTrack.getTile(c, r)) : 0;
-            currentTrack.setTile(c, r, newId, paintTileType === 99);
-            currentTrack.autoResolveTile(c, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
-            currentTrack.autoResolveTile(c, r - 1, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
-            currentTrack.autoResolveTile(c + 1, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
-            currentTrack.autoResolveTile(c, r + 1, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
-            currentTrack.autoResolveTile(c - 1, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy);
+            currentTrack.setTile(c, r, newId, paintTileType === 99 ? currentStrokeId : 0);
+            currentTrack.autoResolveTile(c, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy, currentStrokeId);
+            currentTrack.autoResolveTile(c, r - 1, 0, 0, currentStrokeId);
+            currentTrack.autoResolveTile(c + 1, r, 0, 0, currentStrokeId);
+            currentTrack.autoResolveTile(c, r + 1, 0, 0, currentStrokeId);
+            currentTrack.autoResolveTile(c - 1, r, 0, 0, currentStrokeId);
         } else {
             currentTrack.setTile(c, r, paintTileType);
         }
@@ -308,7 +367,7 @@ function setupInput() {
         if (!currentTrack) return;
         const state = {
             grid: new Uint8Array(currentTrack.grid),
-            autoGrid: new Uint8Array(currentTrack.autoGrid)
+            autoGrid: new Uint32Array(currentTrack.autoGrid)
         };
         editorHistory.push(state);
         if (editorHistory.length > 50) editorHistory.shift();
@@ -325,6 +384,9 @@ function setupInput() {
                 paintTileType = editorSelectedTile;
                 lastPaintPos = { col, row };
                 lastAutoDrawDir = { dx: 0, dy: 0 };
+                if (paintTileType === 99) {
+                    currentStrokeId++;
+                }
                 
                 saveEditorState();
                 
@@ -487,6 +549,60 @@ function setupUI() {
             }
         };
     }
+    const btnExportTrack = document.getElementById('btn-export-track');
+    if (btnExportTrack) {
+        btnExportTrack.onclick = () => {
+            const dataStr = currentTrack.exportJSON();
+            const blob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.href = url;
+            downloadAnchorNode.download = "track.json";
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            URL.revokeObjectURL(url);
+        };
+    }
+
+    const btnImportTrack = document.getElementById('btn-import-track');
+    const trackFileInput = document.getElementById('track-file-input');
+    if (btnImportTrack && trackFileInput) {
+        btnImportTrack.onclick = () => {
+            trackFileInput.click();
+        };
+        trackFileInput.onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    saveEditorState();
+                    const importedTrack = Track.importJSON(ev.target.result);
+                    if (!importedTrack) {
+                        customAlert("Invalid track file!");
+                        return;
+                    }
+                    currentTrack = importedTrack;
+                    currentTrack.markDirty();
+                    currentTrack.renderCollisionCanvas(collisionCanvas);
+                    const cCtx = collisionCanvas.getContext('2d');
+                    collisionGrid = { width: collisionCanvas.width, height: collisionCanvas.height, data: cCtx.getImageData(0, 0, collisionCanvas.width, collisionCanvas.height).data };
+                    
+                    if (typeof currentTrack.renderSensorCanvas === 'function') {
+                        currentTrack.renderSensorCanvas(sensorCanvas);
+                        const sCtx = sensorCanvas.getContext('2d');
+                        sensorGrid = { width: sensorCanvas.width, height: sensorCanvas.height, data: sCtx.getImageData(0, 0, sensorCanvas.width, sensorCanvas.height).data };
+                    }
+                    updateLimits();
+                } catch (err) {
+                    customAlert("Invalid track file!");
+                }
+            };
+            reader.readAsText(file);
+            trackFileInput.value = ""; // reset
+        };
+    }
 
     const palette = document.getElementById('editor-palette');
     const TILE_FAMILIES = [
@@ -507,7 +623,13 @@ function setupUI() {
         [38, 39, 40, 41], // ROUGH CURVE
         [42, 43], // ICE STRAIGHT
         [44, 45, 46, 47], // ICE CURVE
-        [48] // INTERSECTION
+        [48], // INTERSECTION
+        [49, 50], // BOUNCY STRAIGHT
+        [51, 52, 53, 54], // BOUNCY CURVE
+        [55, 56], // PUDDLE STRAIGHT
+        [57, 58, 59, 60], // PUDDLE CURVE
+        [61, 62], // FAST STRAIGHT
+        [63, 64, 65, 66] // FAST CURVE
     ];
     window.TILE_FAMILIES = TILE_FAMILIES; // For limits check
 
@@ -515,7 +637,8 @@ function setupUI() {
         0: '⌫ Eraser', 99: '✨ Auto-Draw', 1: '│ Straight', 3: '╰ Curve', 7: '▶ Start', 9: '┼ Crossroad', 
         14: '─ Bottleneck', 16: '▲ Boost', 20: '╰ Bottleneck Curve', 24: '┴ Split', 28: '▲ Ramp',
         32: '▲ Teleport', 36: '⌇ Rough Straight', 38: '⌇ Rough Curve', 42: '❆ Ice Straight', 44: '❆ Ice Curve',
-        48: '✥ Intersection'
+        48: '✥ Intersection', 49: '⤧ Bouncy Straight', 51: '⤧ Bouncy Curve',
+        55: '⌇ Puddle Straight', 57: '⌇ Puddle Curve', 61: '▶ Fast Straight', 63: '▶ Fast Curve'
     };
 
     for (const family of TILE_FAMILIES) {
@@ -679,7 +802,8 @@ function importBrain() {
                     if (track) {
                         currentTrack = track;
                         currentTrackName = data.trackName || 'Imported Track';
-                        document.getElementById('track-name').textContent = currentTrackName;
+                        const nameField = document.getElementById('editor-track-name');
+                        if (nameField) nameField.value = currentTrackName;
                         customTracks[currentTrackName] = data.trackJSON;
                         buildTrackSelect();
                         document.getElementById('track-select').value = currentTrackName;
@@ -697,6 +821,7 @@ function importBrain() {
                     if (geneticAlgo.population.length) {
                         geneticAlgo.population[0].brain = brain;
                         geneticAlgo.population[0].fitness = 999;
+                    }
                     if (currentState === GAME_STATES.EDITOR) {
                         switchState(GAME_STATES.TRAIN);
                     }
