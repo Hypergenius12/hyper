@@ -965,17 +965,22 @@ function endGeneration() {
 
     const evaluateData = aiCars.map(c => ({ fitness: c.fitness, bestLap: c.bestLap }));
     geneticAlgo.evaluate(evaluateData);
+    saveBestBrain(true);
     geneticAlgo.evolve();
     trainTimer = 0;
     spawnAICars();
 }
 
+window.addEventListener('beforeunload', () => {
+    saveBestBrain(true);
+});
+
 function spawnAICars() {
     aiCars = [];
     
     // Always use the geneticAlgo's topology if it exists to prevent crashes if the user drags the slider mid-training
-    const sc = (geneticAlgo && geneticAlgo.layerSizes) 
-        ? geneticAlgo.layerSizes[0] - 1 
+    const sc = (geneticAlgo && geneticAlgo.sensorCount) 
+        ? geneticAlgo.sensorCount 
         : parseInt(document.getElementById('train-sensors')?.value) || 7;
         
     const maxSpd = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
@@ -1297,7 +1302,7 @@ function watchBestReplay() {
     wasTrainingRunning = trainRunning;
     
     replayCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#eab308');
-    replayCar.sensorCount = geneticAlgo.layerSizes[0] - 1;
+    replayCar.sensorCount = geneticAlgo.sensorCount;
     replayCar.brain = geneticAlgo.bestBrain.clone();
     
     // Copy settings so they drive identically
