@@ -805,7 +805,7 @@ function importBrain() {
                         const nameField = document.getElementById('editor-track-name');
                         if (nameField) nameField.value = currentTrackName;
                         customTracks[currentTrackName] = data.trackJSON;
-                        buildTrackSelect();
+                        updateTrackSelectUI();
                         document.getElementById('track-select').value = currentTrackName;
                         // Precompute offscreen canvas for the track
                         if (typeof drawStaticBackground === 'function') drawStaticBackground();
