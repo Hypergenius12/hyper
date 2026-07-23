@@ -798,18 +798,11 @@ function importBrain() {
                 
                 // If it has bundled track data, load it first
                 if (data.trackJSON) {
-                    const track = Track.importJSON(data.trackJSON);
-                    if (track) {
-                        currentTrack = track;
-                        currentTrackName = data.trackName || 'Imported Track';
-                        const nameField = document.getElementById('editor-track-name');
-                        if (nameField) nameField.value = currentTrackName;
-                        customTracks[currentTrackName] = data.trackJSON;
-                        updateTrackSelectUI();
-                        document.getElementById('track-select').value = currentTrackName;
-                        // Precompute offscreen canvas for the track
-                        if (typeof drawStaticBackground === 'function') drawStaticBackground();
-                    }
+                    currentTrackName = data.trackName || 'Imported Track';
+                    customTracks[currentTrackName] = data.trackJSON;
+                    updateTrackSelectUI();
+                    document.getElementById('track-select').value = currentTrackName;
+                    loadTrack(currentTrackName);
                 }
                 
                 // Fallback for older JSON exports that just had the raw array, or the new object
