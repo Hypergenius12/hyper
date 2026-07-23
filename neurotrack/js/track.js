@@ -27,7 +27,7 @@ const TILE_TYPES = {
     CURVE_TL: { id: 6, ports: [1, 0, 0, 1], render: renderCurveTL }, // Top & Left
     START_H: { id: 7, ports: [0, 1, 0, 1], render: renderStartH, isStart: true },
     START_V: { id: 8, ports: [1, 0, 1, 0], render: renderStartV, isStart: true },
-    CROSSROAD: { id: 9, ports: [1, 1, 1, 1], render: renderCrossroad },
+    CROSSROAD_H_OVER: { id: 9, ports: [1, 1, 1, 1], render: renderCrossroadHOver },
     START_CURVE_TR: { id: 10, ports: [1, 1, 0, 0], render: renderStartCurveTR, isStart: true },
     START_CURVE_BR: { id: 11, ports: [0, 1, 1, 0], render: renderStartCurveBR, isStart: true },
     START_CURVE_BL: { id: 12, ports: [0, 0, 1, 1], render: renderStartCurveBL, isStart: true },
@@ -84,7 +84,8 @@ const TILE_TYPES = {
     FAST_CURVE_TR: { id: 63, ports: [1, 1, 0, 0], render: renderFastCurveTR },
     FAST_CURVE_BR: { id: 64, ports: [0, 1, 1, 0], render: renderFastCurveBR },
     FAST_CURVE_BL: { id: 65, ports: [0, 0, 1, 1], render: renderFastCurveBL },
-    FAST_CURVE_TL: { id: 66, ports: [1, 0, 0, 1], render: renderFastCurveTL }
+    FAST_CURVE_TL: { id: 66, ports: [1, 0, 0, 1], render: renderFastCurveTL },
+    CROSSROAD_V_OVER: { id: 67, ports: [1, 1, 1, 1], render: renderCrossroadVOver }
 };
 
 // ========================================
@@ -167,12 +168,20 @@ function renderStartV(ctx, x, y, size) {
     renderStraightV(ctx, x, y, size);
     drawStartLine(ctx, x + size / 2, y + size / 2, size, true);
 }
-function renderCrossroad(ctx, x, y, size) {
+function renderCrossroadHOver(ctx, x, y, size) {
     // Underpass
     renderStraightV(ctx, x, y, size);
 
     // Overpass
     renderStraightH(ctx, x, y, size);
+}
+
+function renderCrossroadVOver(ctx, x, y, size) {
+    // Underpass
+    renderStraightH(ctx, x, y, size);
+
+    // Overpass
+    renderStraightV(ctx, x, y, size);
 }
 
 function renderStartCurveTR(ctx, x, y, size) {
@@ -782,7 +791,7 @@ class Track {
         const connections = (nUp ? 1 : 0) + (nRight ? 1 : 0) + (nDown ? 1 : 0) + (nLeft ? 1 : 0);
 
         if (connections === 4) {
-            bestMatch = TILE_TYPES.CROSSROAD;
+            bestMatch = TILE_TYPES.CROSSROAD_H_OVER;
         } else if (connections === 3) {
             if (nUp && nDown) bestMatch = TILE_TYPES.STRAIGHT_V;
             else if (nLeft && nRight) bestMatch = TILE_TYPES.STRAIGHT_H;
@@ -1071,9 +1080,12 @@ class Track {
             for (let r = 0; r < this.rows; r++) {
                 for (let c = 0; c < this.cols; c++) {
                     const type = this.getTileType(c, r);
-                    if (type.id === TILE_TYPES.CROSSROAD.id) {
-                        // Render ONLY the underpass in the base layer.
+                    if (type.id === TILE_TYPES.CROSSROAD_H_OVER.id) {
+                        // Render ONLY the underpass (Vertical) in the base layer.
                         renderStraightV(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
+                    } else if (type.id === TILE_TYPES.CROSSROAD_V_OVER.id) {
+                        // Render ONLY the underpass (Horizontal) in the base layer.
+                        renderStraightH(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
                     } else if (type.render) {
                         type.render(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
                     }
@@ -1158,12 +1170,18 @@ class Track {
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 const type = this.getTileType(c, r);
-                if (type.id === TILE_TYPES.CROSSROAD.id) {
+                if (type.id === TILE_TYPES.CROSSROAD_H_OVER.id) {
                     const x = c * TILE_SIZE;
                     const y = r * TILE_SIZE;
                     const size = TILE_SIZE;
                     
                     renderStraightH(ctx, x, y, size);
+                } else if (type.id === TILE_TYPES.CROSSROAD_V_OVER.id) {
+                    const x = c * TILE_SIZE;
+                    const y = r * TILE_SIZE;
+                    const size = TILE_SIZE;
+                    
+                    renderStraightV(ctx, x, y, size);
                 }
             }
         }
@@ -1225,7 +1243,7 @@ class Track {
                     drawBottleneckCurveShape(ctx, px, py + TILE_SIZE, TILE_SIZE / 2, 3 * Math.PI / 2, 2 * Math.PI, TILE_SIZE, true);
                 } else if (type.id === TILE_TYPES.BOTTLENECK_CURVE_TL.id) {
                     drawBottleneckCurveShape(ctx, px, py, TILE_SIZE / 2, 0, Math.PI / 2, TILE_SIZE, true);
-                } else if (type.id === TILE_TYPES.CROSSROAD.id || type.id === TILE_TYPES.INTERSECTION.id || (type.id >= TILE_TYPES.SPLIT_UP.id && type.id <= TILE_TYPES.SPLIT_LEFT.id)) {
+                } else if (type.id === TILE_TYPES.CROSSROAD_H_OVER.id || type.id === TILE_TYPES.CROSSROAD_V_OVER.id || type.id === TILE_TYPES.INTERSECTION.id || (type.id >= TILE_TYPES.SPLIT_UP.id && type.id <= TILE_TYPES.SPLIT_LEFT.id)) {
                     // Splits and Crossroads use the same open box collision
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(px, py + TILE_SIZE * 0.1, TILE_SIZE, TILE_SIZE * 0.8);
@@ -1455,7 +1473,7 @@ class Track {
         const track = new Track(32, 24);
         
         // Center Intersection
-        track.setTile(16, 12, TILE_TYPES.CROSSROAD.id);
+        track.setTile(16, 12, TILE_TYPES.CROSSROAD_H_OVER.id);
 
         // --- Top/Left Loop ---
         track.setTile(16, 11, TILE_TYPES.STRAIGHT_V.id);

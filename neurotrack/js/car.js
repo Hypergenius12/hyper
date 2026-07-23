@@ -333,7 +333,7 @@ class Car {
                         const col = Math.floor(c.x / 100);
                         const row = Math.floor(c.y / 100);
                         const tileId = currentTrack.getTile(col, row);
-                        if (tileId === TILE_TYPES.CROSSROAD.id || (tileId >= TILE_TYPES.SPLIT_UP.id && tileId <= TILE_TYPES.SPLIT_LEFT.id)) {
+                        if (tileId === TILE_TYPES.CROSSROAD_H_OVER.id || tileId === TILE_TYPES.CROSSROAD_V_OVER.id || (tileId >= TILE_TYPES.SPLIT_UP.id && tileId <= TILE_TYPES.SPLIT_LEFT.id)) {
                             touchingCrossroad = true;
                             break;
                         }
@@ -343,8 +343,15 @@ class Car {
                         if (!this.crossroadAxis) {
                             this.crossroadAxis = Math.abs(Math.cos(this.angle)) > Math.abs(Math.sin(this.angle)) ? 'H' : 'V';
                         }
+                        
+                        // Determine if car is on the overpass for rendering order
+                        this.isOnOverpass = false;
+                        const centerTileId = currentTrack.getTile(Math.floor(this.x / 100), Math.floor(this.y / 100));
+                        if (centerTileId === TILE_TYPES.CROSSROAD_H_OVER.id && this.crossroadAxis === 'H') this.isOnOverpass = true;
+                        if (centerTileId === TILE_TYPES.CROSSROAD_V_OVER.id && this.crossroadAxis === 'V') this.isOnOverpass = true;
                     } else {
                         this.crossroadAxis = null;
+                        this.isOnOverpass = false;
                     }
                 }
 
@@ -498,7 +505,8 @@ class Car {
         if (typeof currentTrack !== 'undefined' && currentTrack && typeof TILE_TYPES !== 'undefined') {
             const pointCol = (px / 100) | 0;
             const pointRow = (py / 100) | 0;
-            if (currentTrack.getTile(pointCol, pointRow) === TILE_TYPES.CROSSROAD.id && this.crossroadAxis) {
+            const tileId = currentTrack.getTile(pointCol, pointRow);
+            if ((tileId === TILE_TYPES.CROSSROAD_H_OVER.id || tileId === TILE_TYPES.CROSSROAD_V_OVER.id) && this.crossroadAxis) {
                 const isCarHorizontal = this.crossroadAxis === 'H';
                 const localX = px - pointCol * 100;
                 const localY = py - pointRow * 100;
@@ -561,20 +569,11 @@ class Car {
     checkCheckpoints(checkpoints) {
         if (!checkpoints || !checkpoints.length) return;
         
-        // Clear the last hit lock if we have driven out of it
-        if (this.lastCheckpointHitIndex !== undefined) {
-            const lastCp = checkpoints[this.lastCheckpointHitIndex % checkpoints.length];
-            if (lastCp) {
-                const dxLast = this.x - lastCp.x;
-                const dyLast = this.y - lastCp.y;
-                if (Math.sqrt(dxLast * dxLast + dyLast * dyLast) > lastCp.radius) {
-                    this.lastCheckpointHitIndex = undefined;
-                }
-            }
-        }
+        if (!this.recentCheckpoints) this.recentCheckpoints = [];
 
-        // Limit lookahead to 3. 100 was too high and allowed cars to cheat by skipping huge track sections on crossroad intersections.
-        const LOOKAHEAD = Math.min(3, Math.max(1, Math.floor(checkpoints.length / 2)));
+        // Limit lookahead to 100, but never more than half the track to prevent wrap-around exploits.
+        // Lookahead is high so that AI can find legit grass shortcuts.
+        const LOOKAHEAD = Math.min(100, Math.max(1, Math.floor(checkpoints.length / 2)));
         let hitCheckpoint = false;
         
         for (let i = 0; i < LOOKAHEAD; i++) {
@@ -588,29 +587,38 @@ class Car {
             const dist = Math.sqrt(dx * dx + dy * dy);
             
             if (dist < cp.radius) {
-                if (this.lastCheckpointHitIndex !== targetIndex) {
-                    // Prevent glitching: if the car is physically at the exact same coordinates as the last checkpoint,
-                    // it cannot trigger this one (fixes the Crazy 8 Crossroad infinite loop exploit).
-                    if (this.lastCheckpointHitIndex !== undefined) {
-                        const lastCp = checkpoints[this.lastCheckpointHitIndex % checkpoints.length];
-                        if (lastCp && lastCp.x === cp.x && lastCp.y === cp.y) {
-                            continue;
-                        }
-                    }
-
-                    this.lastCheckpointHitIndex = targetIndex;
-                    
-                    this.checkpointIndex += (i + 1);
-                    
-                    if (this.checkpointIndex >= checkpoints.length) {
-                        // Completed a lap
-                        this.lapCount++;
-                        this.totalCheckpoints += checkpoints.length;
-                        if (this.lapTime < this.bestLap) this.bestLap = this.lapTime;
-                        this.lapTime = 0;
-                        this.checkpointIndex = this.checkpointIndex % checkpoints.length;
+                // Prevent hitting a checkpoint if it occupies the exact same physical coordinates 
+                // as ANY of the last 5 checkpoints we recently hit.
+                // This fixes the crossroad overlapping bug where cars jumped ahead 50 checkpoints
+                // just because they were physically standing in the crossroad tile while progressing 
+                // through the underpass.
+                let isOverlap = false;
+                for (const recent of this.recentCheckpoints) {
+                    if (recent.x === cp.x && recent.y === cp.y) {
+                        isOverlap = true;
+                        break;
                     }
                 }
+                
+                if (isOverlap) continue;
+                
+                // Record this physical location in history
+                this.recentCheckpoints.push({x: cp.x, y: cp.y});
+                if (this.recentCheckpoints.length > 5) {
+                    this.recentCheckpoints.shift();
+                }
+
+                this.checkpointIndex += (i + 1);
+                
+                if (this.checkpointIndex >= checkpoints.length) {
+                    // Completed a lap
+                    this.lapCount++;
+                    this.totalCheckpoints += checkpoints.length;
+                    if (this.lapTime < this.bestLap) this.bestLap = this.lapTime;
+                    this.lapTime = 0;
+                    this.checkpointIndex = this.checkpointIndex % checkpoints.length;
+                }
+                
                 break; // We hit one, stop looking further ahead
             }
         }

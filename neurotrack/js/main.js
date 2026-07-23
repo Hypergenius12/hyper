@@ -612,7 +612,7 @@ function setupUI() {
         [3, 4, 5, 6], // CURVE
         [7, 8], // START
         [10, 11, 12, 13], // START_CURVE
-        [9], // CROSSROAD
+        [9, 67], // CROSSROAD
         [14, 15], // BOTTLENECK
         [16, 17, 18, 19], // BOOST
         [20, 21, 22, 23], // BOTTLENECK_CURVE
@@ -1228,8 +1228,8 @@ function render() {
         }
     };
 
-    const isOverpass = (car) => car.crossroadAxis === 'H';
-    const isUnderpassOrNormal = (car) => car.crossroadAxis !== 'H';
+    const isOverpass = (car) => car.isOnOverpass;
+    const isUnderpassOrNormal = (car) => !car.isOnOverpass;
 
     if (isWatchingReplay && replayCar) {
         if (isUnderpassOrNormal(replayCar)) { replayCar.render(ctx); if (showSensors) replayCar.renderSensors(ctx); }
