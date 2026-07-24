@@ -356,29 +356,18 @@ class Car {
                 }
 
                 let offCount = 0;
-                let crossroadViolation = false;
                 
                 for (const c of corners) {
                     const check = this.isPointOnTrack(c.x, c.y, collisionGrid);
                     if (check === false) offCount++;
-                    if (check === 'crossroad_violation') {
-                        crossroadViolation = true;
-                        offCount++;
-                    }
                 }
                 
                 const centerCheck = this.isPointOnTrack(this.x, this.y, collisionGrid);
-                if (centerCheck === 'crossroad_violation') crossroadViolation = true;
                 
-                if (crossroadViolation) {
-                    this.x = prevX;
-                    this.y = prevY;
-                    this.speed *= -0.5; // bounce
-                } else {
-                    if (offCount >= 1) {
-                        this.speed *= this.offTrackPenalty;
-                    }
-                    if (centerCheck === false) {
+                if (offCount >= 1) {
+                    this.speed *= this.offTrackPenalty;
+                }
+                if (centerCheck === false) {
                         const isBouncy = (centerTileId >= TILE_TYPES.BOUNCY_STRAIGHT_V.id && centerTileId <= TILE_TYPES.BOUNCY_CURVE_TL.id);
                         if (isBouncy) {
             // Revert position to prevent getting stuck in wall
@@ -513,10 +502,10 @@ class Car {
                 
                 if (isCarHorizontal) {
                     // Driving H: the top and bottom edges (y < 10 or y > 90) are off-limits
-                    if (localY < 10 || localY > 90) return 'crossroad_violation';
+                    if (localY < 10 || localY > 90) return false;
                 } else {
                     // Driving V: the left and right edges (x < 10 or x > 90) are off-limits
-                    if (localX < 10 || localX > 90) return 'crossroad_violation';
+                    if (localX < 10 || localX > 90) return false;
                 }
             }
         }
