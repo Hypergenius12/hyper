@@ -1398,20 +1398,40 @@ function generateBlockTexture(ctx, blockType, face, rng) {
         case BLOCKS.FURNACE:
             if (face === 'top' || face === 'bottom') {
                 fillBase(ctx, 110, 110, 110);
-                addNoise(ctx, rng, 15);
+                addNoise(ctx, rng, 20);
+                ctx.fillStyle = 'rgba(70, 70, 70, 0.8)';
+                ctx.fillRect(0, 0, 16, 1);
+                ctx.fillRect(0, 15, 16, 1);
+                ctx.fillRect(0, 0, 1, 16);
+                ctx.fillRect(15, 0, 1, 16);
+                ctx.fillRect(7, 0, 2, 16);
             } else {
                 fillBase(ctx, 120, 120, 120);
-                addNoise(ctx, rng, 15);
-                ctx.strokeStyle = 'rgba(80, 80, 80, 0.9)';
-                ctx.strokeRect(0, 0, TEX_SIZE, TEX_SIZE);
-                ctx.strokeRect(2, 2, 12, 12);
+                addNoise(ctx, rng, 20);
+                // Outer stone frame
+                ctx.fillStyle = 'rgba(70, 70, 70, 0.9)';
+                ctx.fillRect(0, 0, 16, 2);
+                ctx.fillRect(0, 14, 16, 2);
+                ctx.fillRect(0, 0, 2, 16);
+                ctx.fillRect(14, 0, 2, 16);
                 
                 if (face === 'front') {
-                    // fire pit only on front
+                    // Front panel with grill and fire pit
+                    ctx.fillStyle = '#444';
+                    ctx.fillRect(4, 4, 8, 3); // upper grill
+                    ctx.fillStyle = '#111';
+                    ctx.fillRect(5, 5, 2, 1);
+                    ctx.fillRect(9, 5, 2, 1);
+
                     ctx.fillStyle = '#222';
-                    ctx.fillRect(4, 8, 8, 5);
-                    addPixels(ctx, rng, 'rgba(255, 100, 0, 0.8)', 6);
-                    addPixels(ctx, rng, 'rgba(255, 200, 0, 0.9)', 3);
+                    ctx.fillRect(4, 9, 8, 4); // lower fire pit
+                    addPixels(ctx, rng, 'rgba(255, 80, 0, 0.9)', 5);
+                    addPixels(ctx, rng, 'rgba(255, 200, 0, 1.0)', 4);
+                } else {
+                    // Side stone brick lines
+                    ctx.fillStyle = 'rgba(80, 80, 80, 0.8)';
+                    ctx.fillRect(0, 7, 16, 2);
+                    ctx.fillRect(7, 0, 2, 16);
                 }
             }
             break;
@@ -1571,34 +1591,55 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             
         case BLOCKS.CRAFTING_TABLE:
             if (face === 'top' || face === 'bottom') {
-                // 3x3 grid pattern on top
-                fillBase(ctx, 160, 100, 50); // Wooden base
-                ctx.fillStyle = 'rgba(100, 50, 20, 0.8)';
-                // Vertical lines
-                ctx.fillRect(5, 0, 1, 16);
-                ctx.fillRect(10, 0, 1, 16);
-                // Horizontal lines
-                ctx.fillRect(0, 5, 16, 1);
-                ctx.fillRect(0, 10, 16, 1);
+                // 3x3 grid pattern on top with border
+                fillBase(ctx, 170, 110, 60); // Wooden base
+                addNoise(ctx, rng, 10);
+                ctx.fillStyle = 'rgba(90, 45, 15, 0.9)';
+                
+                // Outer rim
+                ctx.fillRect(0, 0, 16, 2);
+                ctx.fillRect(0, 14, 16, 2);
+                ctx.fillRect(0, 0, 2, 16);
+                ctx.fillRect(14, 0, 2, 16);
+                
+                // 3x3 Grid lines
+                ctx.fillRect(6, 2, 1, 12);
+                ctx.fillRect(10, 2, 1, 12);
+                ctx.fillRect(2, 6, 12, 1);
+                ctx.fillRect(2, 10, 12, 1);
             } else {
-                // Sides: Wood with some tool outlines
-                fillBase(ctx, 140, 80, 40);
-                addStripes(ctx, rng, 'rgb(120, 60, 30)', 'y', 3);
-                // A dark horizontal band for the workbench edge
-                ctx.fillStyle = 'rgba(80, 40, 10, 0.7)';
+                // Sides: Wood with nicely detailed tool outlines
+                fillBase(ctx, 150, 90, 45);
+                addStripes(ctx, rng, 'rgba(110, 55, 25, 0.8)', 'y', 4);
+                
+                // Workbench thick wooden edge at top
+                ctx.fillStyle = 'rgba(80, 40, 15, 0.9)';
                 ctx.fillRect(0, 0, 16, 4);
-                // Draw a simple saw or hammer shape
-                ctx.fillStyle = 'rgb(180, 180, 180)';
+                ctx.fillStyle = 'rgba(60, 30, 10, 0.9)';
+                ctx.fillRect(0, 4, 16, 1);
+
+                // Tools hanging on the side
                 if (face === 'front' || face === 'back') {
-                    // Hammer
-                    ctx.fillRect(10, 5, 4, 3);
-                    ctx.fillStyle = 'rgb(100, 50, 20)';
-                    ctx.fillRect(11, 8, 2, 6);
+                    // Detailed Hammer
+                    ctx.fillStyle = 'rgb(100, 50, 20)'; // handle
+                    ctx.fillRect(11, 7, 2, 7);
+                    ctx.fillStyle = 'rgb(180, 180, 180)'; // head
+                    ctx.fillRect(10, 5, 4, 2);
+                    ctx.fillStyle = 'rgb(150, 150, 150)'; // head shade
+                    ctx.fillRect(10, 7, 4, 1);
                 } else {
-                    // Saw
-                    ctx.fillRect(4, 8, 8, 4);
-                    ctx.fillStyle = 'rgb(100, 50, 20)';
-                    ctx.fillRect(12, 6, 2, 4);
+                    // Detailed Saw
+                    ctx.fillStyle = 'rgb(200, 200, 200)'; // blade
+                    ctx.fillRect(3, 7, 9, 3);
+                    // Saw teeth
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                    ctx.fillRect(3, 10, 1, 1); ctx.fillRect(5, 10, 1, 1);
+                    ctx.fillRect(7, 10, 1, 1); ctx.fillRect(9, 10, 1, 1); ctx.fillRect(11, 10, 1, 1);
+                    // Saw handle
+                    ctx.fillStyle = 'rgb(120, 60, 20)';
+                    ctx.fillRect(12, 6, 3, 5);
+                    ctx.fillStyle = 'rgb(80, 40, 10)'; // handle hole
+                    ctx.fillRect(13, 7, 1, 2);
                 }
             }
             break;
@@ -2019,7 +2060,10 @@ export function generateItemTexture(itemType, itemSubtype) {
         'shark_tooth': { c: '#ffffff', d: '#d3d3d3', h: '#f5f5f5' },
         'lavaslime_ball': { c: '#ff4500', d: '#8b0000', h: '#ff6347' },
         'nether_scrap': { c: '#4b0082', d: '#2a0052', h: '#6a0dad' },
-        'feather': { c: '#f8f8ff', d: '#dcdcdc', h: '#ffffff' }
+        'feather': { c: '#f8f8ff', d: '#dcdcdc', h: '#ffffff' },
+        'bucket': { c: '#C0C0C0', d: '#808080', h: '#E8E8E8' },
+        'water_bucket': { c: '#C0C0C0', d: '#808080', h: '#E8E8E8', l: '#3366CC', w: '#66AAFF' },
+        'lava_bucket': { c: '#C0C0C0', d: '#808080', h: '#E8E8E8', l: '#CC3300', w: '#FF6600' }
     };
 
     // Helper to determine material tier from subtype
@@ -2040,6 +2084,8 @@ export function generateItemTexture(itemType, itemSubtype) {
     } else if (itemType === 'wand') {
         p = palettes[itemSubtype] || palettes['wand_basic'];
     }
+    // Fallback if p is somehow undefined
+    if (!p) p = palettes['iron_ingot'];
 
     const drawGrid = (grid) => {
         for (let y = 0; y < grid.length; y++) {
@@ -2049,12 +2095,14 @@ export function generateItemTexture(itemType, itemSubtype) {
                 if (char === ' ') continue;
                 if (char === 'C') ctx.fillStyle = p.c; // core
                 else if (char === 'D') ctx.fillStyle = p.d; // dark
-                else if (char === 'H') ctx.fillStyle = p.h; // highlight
+                else if (char === 'H') ctx.fillStyle = p.h || p.c; // highlight
                 else if (char === 'S') ctx.fillStyle = palettes.stick.c; // stick
                 else if (char === 'T') ctx.fillStyle = palettes.stick.d; // stick dark
-                else if (char === 'G') ctx.fillStyle = p.g || p.h; // glow/gem
+                else if (char === 'G') ctx.fillStyle = p.g || p.h || p.c; // glow/gem
                 else if (char === 'B') ctx.fillStyle = '#000000'; // black border
                 else if (char === 'O') ctx.fillStyle = '#222222'; // outline
+                else if (char === 'L') ctx.fillStyle = p.l || '#3366CC'; // liquid dark
+                else if (char === 'W') ctx.fillStyle = p.w || '#66AAFF'; // liquid light
                 else continue;
                 ctx.fillRect(x, y, 1, 1);
             }
@@ -2397,6 +2445,27 @@ export function generateItemTexture(itemType, itemSubtype) {
                 "                "
             ];
             p = palettes['water_bucket'];
+        } else if (itemSubtype === 'lava_bucket') {
+            shape = [
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "   HHHHHHHHHH   ",
+                "  HLWLWLWLWLWC  ",
+                "  CWWLWLWLWLWD  ",
+                "  HLWLWLWLWLWC  ",
+                "   CWWLWLWLWD   ",
+                "   HLWLWLWLWC   ",
+                "    CWWLWLWD    ",
+                "    HLWLWLWC    ",
+                "     CWWLWD     ",
+                "     HLWLWC     ",
+                "      DDDD      ",
+                "                "
+            ];
+            p = palettes['lava_bucket'];
+
         } else if (itemSubtype === 'lavaslime_ball' || itemSubtype === 'nether_scrap' || itemSubtype === 'turtle_scute') {
             shape = [
                 "                ",

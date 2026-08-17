@@ -2,13 +2,13 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=16';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=16';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk } from './generation.js?v=16';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=16';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=16';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=16';
-import { AudioManager } from './audio.js?v=16';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=19';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=19';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk } from './generation.js?v=19';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=19';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=19';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=19';
+import { AudioManager } from './audio.js?v=19';
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
@@ -995,6 +995,70 @@ class Game {
                 if (this.player.activeSpellIndex === undefined) this.player.activeSpellIndex = 0;
                 this.player.activeSpellIndex = (this.player.activeSpellIndex + 1) % slot.item.data.wand.maxSlots;
                 this.audio.playClick();
+            } else if (slot && slot.item.type === 'material' && (slot.item.subtype === 'bucket' || slot.item.subtype === 'water_bucket' || slot.item.subtype === 'lava_bucket') && hit.hit) {
+                // Bucket logic
+                const bucketType = slot.item.subtype;
+                if (bucketType === 'bucket') {
+                    // Empty bucket - try to pick up liquid source block
+                    const targetBlock = hit.blockType;
+                    if (targetBlock === BLOCKS.WATER || targetBlock === BLOCKS.SWAMP_WATER) {
+                        // Check if it's a source block (data === 0)
+                        const data = this.world.getData(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                        if (data === 0) {
+                            this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
+                            // Replace bucket with water bucket
+                            slot.item = { type: 'material', subtype: 'water_bucket', name: 'Water Bucket', stackable: false, maxStack: 1, data: {} };
+                            this.audio.playPlace();
+                        }
+                    } else if (targetBlock === BLOCKS.LAVA) {
+                        const data = this.world.getData(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                        if (data === 0) {
+                            this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
+                            slot.item = { type: 'material', subtype: 'lava_bucket', name: 'Lava Bucket', stackable: false, maxStack: 1, data: {} };
+                            this.audio.playPlace();
+                        }
+                    }
+                } else if (bucketType === 'water_bucket') {
+                    // Place water source block
+                    const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
+                    const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
+                    if (curBlock === BLOCKS.AIR || curBlock === BLOCKS.LAVA) {
+                        // Water on lava source = obsidian
+                        if (curBlock === BLOCKS.LAVA) {
+                            const lavaData = this.world.getData(placePos.x, placePos.y, placePos.z);
+                            if (lavaData === 0) {
+                                this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.OBSIDIAN);
+                            } else {
+                                this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.COBBLESTONE);
+                            }
+                        } else {
+                            this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.WATER);
+                            this.world.setData(placePos.x, placePos.y, placePos.z, 0); // Source block
+                        }
+                        // Convert back to empty bucket
+                        slot.item = { type: 'material', subtype: 'bucket', name: 'Bucket', stackable: true, maxStack: 16, data: {} };
+                        this.audio.playPlace();
+                    }
+                } else if (bucketType === 'lava_bucket') {
+                    // Place lava source block
+                    const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
+                    const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
+                    if (curBlock === BLOCKS.AIR || curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER) {
+                        // Lava on water = stone
+                        if (curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER) {
+                            this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.STONE);
+                        } else {
+                            this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.LAVA);
+                            this.world.setData(placePos.x, placePos.y, placePos.z, 0); // Source block
+                            this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
+                        }
+                        // Convert back to empty bucket
+                        slot.item = { type: 'material', subtype: 'bucket', name: 'Bucket', stackable: true, maxStack: 16, data: {} };
+                        this.audio.playPlace();
+                    }
+                }
+                this.input.mouse.rightClick = false;
+                return;
             } else if (slot && slot.item.type === 'block' && hit.hit) {
                 // Place block
                 const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };

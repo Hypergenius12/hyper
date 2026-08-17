@@ -581,7 +581,7 @@ export class World {
         this.chunks = new Map();
         this.chunksToBuild = [];
         this.chunksToGenerate = []; // Chunks waiting for blocks
-        this.renderDistance = 4;
+        this.renderDistance = 3;
         this.onChunkUnloaded = onChunkUnloaded;
         this.onBlockDestroyed = onBlockDestroyed;
         
@@ -1004,9 +1004,40 @@ export class World {
                     }
                 }
             } else if (belowProps.isLiquid && bBelow !== type) {
-                // If water is above lava, turn lava into obsidian
+                // Water-lava vertical interactions
                 if (isWater && bBelow === BLOCKS.LAVA) {
                     this.setBlock(x, y - 1, z, BLOCKS.OBSIDIAN);
+                } else if (isLava && (bBelow === BLOCKS.WATER || bBelow === BLOCKS.SWAMP_WATER)) {
+                    // Lava flowing down onto water creates stone
+                    this.setBlock(x, y - 1, z, BLOCKS.STONE);
+                }
+            } else if (currentLevel < maxLevel) {
+                // Check if this flowing block still has a valid source feeding it
+                let hasFeed = false;
+                const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                // Check above - falling fluid feeds
+                const aboveBlock = this.getBlock(x, y + 1, z);
+                const aboveProps = getBlockProperties(aboveBlock);
+                if (aboveProps.isLiquid && aboveBlock === type) hasFeed = true;
+                // Check sides for higher level
+                if (!hasFeed) {
+                    for (const [dx, dz] of sides) {
+                        const sideBlock = this.getBlock(x + dx, y, z + dz);
+                        if (sideBlock === type) {
+                            const sideData = this.getData(x + dx, y, z + dz);
+                            const sideLevel = sideData === 0 ? maxLevel : sideData;
+                            if (sideLevel > currentLevel) { hasFeed = true; break; }
+                        }
+                    }
+                }
+                if (!hasFeed) {
+                    // No valid feed - decay this block
+                    this.setBlock(x, y, z, BLOCKS.AIR);
+                    // Queue neighbors to re-evaluate
+                    for (const [dx, dz] of sides) {
+                        this.queueLiquidUpdate(x + dx, y, z + dz);
+                    }
+                    this.queueLiquidUpdate(x, y - 1, z);
                 }
             }
         }

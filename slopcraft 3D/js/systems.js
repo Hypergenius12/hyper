@@ -157,12 +157,12 @@ export class LightingSystem {
             };
         } else if (currentDimension === 'caverns') {
             state = {
-                amb: new THREE.Color(0x2a352a), // Brighter ambient
-                bg: new THREE.Color(0x0a100a), // Slightly brighter fog/bg
-                top: new THREE.Color(0x334433), // Brighter top
+                amb: new THREE.Color(0x3a453a), // Brighter ambient
+                bg: new THREE.Color(0x1a201a), // Slightly brighter fog/bg
+                top: new THREE.Color(0x556655), // Brighter top
                 sun: 0,
                 moon: 0,
-                hemi: 1.0 // Increased hemi light
+                hemi: 1.5 // Increased hemi light
             };
         } else if (currentDimension === 'highlands') {
             state = {
@@ -273,11 +273,11 @@ export class TorchLightSystem {
         if (this.lights.has(key)) return;
         
         // Warm authentic fire color: orange-red with a hint of yellow
-        const light = new THREE.PointLight(0xff6a00, 14.0, 38);
-        light.decay = 1.5;
+        const light = new THREE.PointLight(0xff6a00, 20.0, 60);
+        light.decay = 1.0;
         light.position.set(x + 0.5, y + 0.75, z + 0.5);
         // Store base intensity for flickering
-        light._baseIntensity = 14.0;
+        light._baseIntensity = 20.0;
         light._flickerOffset = Math.random() * 100;
         this.scene.add(light);
         this.lights.set(key, light);
@@ -1433,6 +1433,10 @@ class UISystem {
                 s[3] === 'iron_ingot' && !s[4] && s[5] === 'iron_ingot' && 
                 !s[6] && s[7] === 'iron_ingot' && !s[8]) return mat('water_bucket', 'Water Bucket', 1);
 
+            if (!s[0] && s[1] === B.NETHERRACK && !s[2] && 
+                s[3] === 'iron_ingot' && !s[4] && s[5] === 'iron_ingot' && 
+                !s[6] && s[7] === 'iron_ingot' && !s[8]) return mat('lava_bucket', 'Lava Bucket', 1);
+
             r = spellRecipe(B.SNOW, 'ICE'); if (r) return r;
             r = spellRecipe('coal', 'FIRE'); if (r) return r;
             r = spellRecipe('gold_ingot', 'THUNDER'); if (r) return r;
@@ -1508,6 +1512,7 @@ class UISystem {
             { name: "Flint and Steel", desc: "Ignites TNT.", grid: [[_,_,_],[mat('iron_ingot'),_,_],[_,blk(B.SAND),_]], out: eqp('flint_and_steel'), outCount: 1, needs3x3: false },
             { name: "Bucket", desc: "Holds liquids.", grid: [[_,_,_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('bucket'), outCount: 1, needs3x3: true },
             { name: "Water Bucket", desc: "Crafted from snow.", grid: [[_,blk(B.SNOW),_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('water_bucket'), outCount: 1, needs3x3: true },
+            { name: "Lava Bucket", desc: "Crafted from netherrack.", grid: [[_,blk(B.NETHERRACK),_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('lava_bucket'), outCount: 1, needs3x3: true },
             { name: "Fire Spell", desc: "Crafted magic.", grid: [[_,mat('coal'),_],[mat('coal'),mat('mana_crystal'),mat('coal')],[_,mat('coal'),_]], out: spl('FIRE'), outCount: 1, needs3x3: true },
             { name: "Ice Spell", desc: "Crafted magic.", grid: [[_,blk(B.SNOW),_],[blk(B.SNOW),mat('mana_crystal'),blk(B.SNOW)],[_,blk(B.SNOW),_]], out: spl('ICE'), outCount: 1, needs3x3: true },
             { name: "Thunder Spell", desc: "Crafted magic.", grid: [[_,mat('gold_ingot'),_],[mat('gold_ingot'),mat('mana_crystal'),mat('gold_ingot')],[_,mat('gold_ingot'),_]], out: spl('THUNDER'), outCount: 1, needs3x3: true },
