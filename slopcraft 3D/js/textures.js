@@ -119,7 +119,25 @@ export const BLOCKS = {
     SUGARCANE: 110,
     FIRE: 111,
     TNT: 112,
-    CRAFTING_TABLE: 113
+    CRAFTING_TABLE: 113,
+    AETHER_STONE: 114,
+    AETHER_DIRT: 115,
+    AETHER_GRASS: 116,
+    AETHER_WOOD: 117,
+    AETHER_LEAVES: 118,
+    AETHER_PORTAL: 119,
+    AETHER_CLOUD: 120,
+    AETHER_TALL_GRASS: 121,
+    AETHER_FLOWER: 122,
+    AETHER_CRYSTAL: 123,
+    CAVERN_STONE: 124,
+    CAVERN_DIRT: 125,
+    CAVERN_PORTAL: 126,
+    MAGMA_STONE: 127,
+    HIGHLANDS_STONE: 128,
+    HIGHLANDS_DIRT: 129,
+    HIGHLANDS_GRASS: 130,
+    HIGHLANDS_PORTAL: 131
 };
 
 // Block properties
@@ -237,7 +255,25 @@ const BLOCK_PROPS = {
     [BLOCKS.CRIMSON_PLANKS]:{ name: 'Crimson Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.SUGARCANE]:     { name: 'Sugarcane',      health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.SUGARCANE, flammable: true },
     [BLOCKS.FIRE]:          { name: 'Fire',           health: 0, transparent: true,  emissive: 1.0, solid: false, isCross: true, drops: null },
-    [BLOCKS.TNT]:           { name: 'TNT',            health: 1, transparent: false, emissive: 0, solid: true, drops: null, flammable: true }
+    [BLOCKS.TNT]:           { name: 'TNT',            health: 1, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.AETHER_STONE]:  { name: 'Aether Stone',   health: 10, transparent: false, emissive: 0.1, solid: true, drops: null },
+    [BLOCKS.AETHER_DIRT]:   { name: 'Aether Dirt',    health: 4, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.AETHER_GRASS]:  { name: 'Aether Grass',   health: 4, transparent: false, emissive: 0.1, solid: true, drops: 115 },
+    [BLOCKS.AETHER_WOOD]:   { name: 'Aether Wood',    health: 7, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.AETHER_LEAVES]: { name: 'Aether Leaves',  health: 1, transparent: true, emissive: 0.2, solid: true, drops: null, flammable: true },
+    [BLOCKS.AETHER_PORTAL]: { name: 'Aether Portal',  health: 0, transparent: true, emissive: 1.0, solid: false, drops: null },
+    [BLOCKS.AETHER_CLOUD]:  { name: 'Aether Cloud',   health: 1, transparent: true, emissive: 0.5, solid: true, drops: null },
+    [BLOCKS.AETHER_TALL_GRASS]: { name: 'Aether Tall Grass', health: 1, transparent: true, emissive: 0.2, solid: false, isCross: true, drops: null },
+    [BLOCKS.AETHER_FLOWER]: { name: 'Aether Flower',  health: 1, transparent: true, emissive: 0.4, solid: false, isCross: true, drops: null },
+    [BLOCKS.AETHER_CRYSTAL]:{ name: 'Aether Crystal', health: 8, transparent: false, emissive: 0.8, solid: true, drops: null },
+    [BLOCKS.CAVERN_STONE]:  { name: 'Cavern Stone',   health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.CAVERN_DIRT]:   { name: 'Cavern Dirt',    health: 5, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.CAVERN_PORTAL]: { name: 'Cavern Portal',  health: 0, transparent: true, emissive: 1.0, solid: false, drops: null },
+    [BLOCKS.MAGMA_STONE]:   { name: 'Magma Stone',    health: 15, transparent: false, emissive: 0.8, solid: true, drops: null },
+    [BLOCKS.HIGHLANDS_STONE]:{ name: 'Highlands Stone',health: 10, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.HIGHLANDS_DIRT]:{ name: 'Highlands Dirt', health: 4, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.HIGHLANDS_GRASS]:{ name: 'Highlands Grass',health: 4, transparent: false, emissive: 0.1, solid: true, drops: 129 }, // drops HIGHLANDS_DIRT
+    [BLOCKS.HIGHLANDS_PORTAL]:{ name: 'Highlands Portal',health: 0, transparent: true, emissive: 1.0, solid: false, drops: null }
 };
 
 export function getBlockProperties(type) {
@@ -1567,6 +1603,164 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
 
+        case BLOCKS.AETHER_STONE:
+            fillBase(ctx, 220, 240, 255);
+            addNoise(ctx, rng, 15);
+            addPixels(ctx, rng, 'rgba(180, 220, 255, 0.5)', 30);
+            addPixels(ctx, rng, 'rgba(255, 255, 255, 0.8)', 20);
+            break;
+        case BLOCKS.AETHER_DIRT:
+            fillBase(ctx, 160, 180, 200);
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, 'rgba(120, 140, 160, 0.6)', 30);
+            break;
+        case BLOCKS.AETHER_GRASS:
+            if (face === 'top') {
+                fillBase(ctx, 255, 240, 160); // Golden hue
+                addNoise(ctx, rng, 10);
+                addPixels(ctx, rng, 'rgba(255, 220, 100, 0.8)', 20);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 160, 180, 200);
+                addNoise(ctx, rng, 20);
+            } else {
+                fillBase(ctx, 160, 180, 200); // Dirt base
+                addNoise(ctx, rng, 20);
+                ctx.fillStyle = 'rgba(255, 240, 160, 1)';
+                for (let x = 0; x < TEX_SIZE; x++) {
+                    const depth = 3 + Math.floor(rng() * 3);
+                    ctx.fillRect(x, 0, 1, depth);
+                }
+            }
+            break;
+        case BLOCKS.AETHER_WOOD:
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 255, 245, 230); // White inner wood
+                addNoise(ctx, rng, 5);
+                ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
+                ctx.beginPath();
+                ctx.arc(8, 8, 3, 0, Math.PI * 2);
+                ctx.arc(8, 8, 6, 0, Math.PI * 2);
+                ctx.stroke();
+            } else {
+                fillBase(ctx, 230, 240, 250); // White/blue bark
+                addNoise(ctx, rng, 10);
+                addStripes(ctx, rng, 'rgba(180, 200, 220, 0.5)', 'x', 5);
+            }
+            break;
+        case BLOCKS.AETHER_LEAVES:
+            fillBase(ctx, 255, 220, 100); // Golden leaves
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, 'rgba(0,0,0,0.4)', 40); // Transparency gaps
+            break;
+        case BLOCKS.AETHER_PORTAL:
+            fillBase(ctx, 200, 255, 255); // Cyan portal
+            addNoise(ctx, rng, 30);
+            addPixels(ctx, rng, 'rgba(100, 200, 255, 0.8)', 60);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            for(let i=0; i<5; i++) {
+                ctx.fillRect(rng()*TEX_SIZE, rng()*TEX_SIZE, 1+rng()*2, 4+rng()*4);
+            }
+            break;
+        case BLOCKS.AETHER_CLOUD:
+            fillBase(ctx, 255, 255, 255);
+            ctx.fillStyle = 'rgba(230, 240, 255, 0.8)';
+            ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+            addPixels(ctx, rng, 'rgba(200, 220, 255, 0.3)', 50); // Fluffy light shadows
+            break;
+        case BLOCKS.AETHER_TALL_GRASS:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = 'rgba(255, 240, 160, 1)'; // Golden grass
+            ctx.fillRect(4, 15, 1, 1); ctx.fillRect(4, 14, 1, 1);
+            ctx.fillRect(3, 13, 1, 1); ctx.fillRect(3, 12, 1, 1);
+            ctx.fillRect(7, 15, 2, 1); ctx.fillRect(7, 13, 1, 2);
+            ctx.fillRect(8, 10, 1, 3); ctx.fillRect(9, 7, 1, 3);
+            ctx.fillRect(11, 15, 1, 1); ctx.fillRect(11, 14, 1, 1);
+            ctx.fillRect(12, 13, 1, 1); ctx.fillRect(13, 11, 1, 2);
+            break;
+        case BLOCKS.AETHER_FLOWER:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = 'rgba(150, 200, 100, 1)'; // Stem
+            ctx.fillRect(7, 6, 2, 10);
+            ctx.fillStyle = 'rgba(0, 255, 255, 1)'; // Cyan flower top
+            ctx.fillRect(6, 2, 4, 4);
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+            ctx.fillRect(7, 3, 2, 2);
+            break;
+        case BLOCKS.AETHER_CRYSTAL:
+            fillBase(ctx, 150, 220, 255); // Blue crystal
+            addNoise(ctx, rng, 20);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.moveTo(2, 14);
+            ctx.lineTo(8, 2);
+            ctx.lineTo(14, 14);
+            ctx.fill();
+            break;
+        case BLOCKS.CAVERN_STONE:
+            fillBase(ctx, 30, 40, 30); // Very dark greenish grey
+            addNoise(ctx, rng, 15);
+            addPixels(ctx, rng, 'rgba(50, 60, 50, 1.0)', 60);
+            addPixels(ctx, rng, 'rgba(10, 20, 10, 1.0)', 60);
+            break;
+        case BLOCKS.CAVERN_DIRT:
+            fillBase(ctx, 45, 30, 20); // Darker brown
+            addNoise(ctx, rng, 15);
+            addPixels(ctx, rng, 'rgba(30, 20, 15, 1.0)', 80);
+            break;
+        case BLOCKS.CAVERN_PORTAL:
+            fillBase(ctx, 50, 100, 50); // Dark translucent green/brown
+            ctx.fillStyle = 'rgba(30, 80, 30, 0.5)';
+            ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+            addPixels(ctx, rng, 'rgba(150, 255, 150, 0.6)', 100);
+            addPixels(ctx, rng, 'rgba(100, 200, 100, 0.8)', 50);
+            break;
+
+        case BLOCKS.MAGMA_STONE:
+            fillBase(ctx, 40, 20, 20); // Dark reddish stone
+            addNoise(ctx, rng, 15);
+            addPixels(ctx, rng, 'rgba(255, 100, 0, 0.8)', 40); // Magma cracks
+            addPixels(ctx, rng, 'rgba(255, 50, 0, 1.0)', 20);
+            break;
+        case BLOCKS.HIGHLANDS_STONE:
+            fillBase(ctx, 160, 170, 180); // Light bluish/grey stone
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, 'rgba(200, 210, 220, 1.0)', 60);
+            addPixels(ctx, rng, 'rgba(120, 130, 140, 1.0)', 60);
+            break;
+        case BLOCKS.HIGHLANDS_DIRT:
+            fillBase(ctx, 100, 80, 70); // Light, dusty brown
+            addNoise(ctx, rng, 15);
+            addPixels(ctx, rng, 'rgba(80, 60, 50, 1.0)', 80);
+            break;
+        case BLOCKS.HIGHLANDS_GRASS:
+            if (face === 'top') {
+                fillBase(ctx, 80, 180, 140); // Bright teal/cyan grass
+                addNoise(ctx, rng, 20);
+                addPixels(ctx, rng, 'rgba(100, 200, 160, 1.0)', 50);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 100, 80, 70); // Dirt bottom
+                addNoise(ctx, rng, 15);
+                addPixels(ctx, rng, 'rgba(80, 60, 50, 1.0)', 80);
+            } else {
+                fillBase(ctx, 100, 80, 70); // Dirt base
+                addNoise(ctx, rng, 15);
+                addPixels(ctx, rng, 'rgba(80, 60, 50, 1.0)', 80);
+                // Grass overlay on side
+                ctx.fillStyle = 'rgba(80, 180, 140, 1)';
+                ctx.fillRect(0, 0, TEX_SIZE, (TEX_SIZE / 3) | 0);
+                for (let i = 0; i < TEX_SIZE; i += 2) {
+                    if (rng() > 0.5) ctx.fillRect(i, (TEX_SIZE / 3) | 0, 1, 1 + (rng() * 3) | 0);
+                }
+            }
+            break;
+        case BLOCKS.HIGHLANDS_PORTAL:
+            fillBase(ctx, 100, 255, 255); // Very bright cyan
+            ctx.fillStyle = 'rgba(0, 200, 255, 0.5)';
+            ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+            addPixels(ctx, rng, 'rgba(255, 255, 255, 0.8)', 80);
+            addPixels(ctx, rng, 'rgba(50, 255, 255, 0.9)', 50);
+            break;
+
         default:
             fillBase(ctx, 255, 0, 255);
             break;
@@ -1575,7 +1769,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
 function hasFaceVariants(blockType) {
     return [
         BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD,
-        BLOCKS.BOOKSHELF, BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE
+        BLOCKS.BOOKSHELF, BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS
     ].includes(blockType);
 }
 
@@ -2198,6 +2392,63 @@ export function generateItemTexture(itemType, itemSubtype) {
                 "                "
             ];
             p = palettes['water_bucket'];
+        } else if (itemSubtype === 'lavaslime_ball' || itemSubtype === 'nether_scrap' || itemSubtype === 'turtle_scute') {
+            shape = [
+                "                ",
+                "                ",
+                "                ",
+                "     OOOOOO     ",
+                "   OOOHHHHDOO   ",
+                "  OOHCCHHHCDDO  ",
+                "  OHCCCCCHCCDO  ",
+                " OOHCCCCCCCDDDO ",
+                " OHCCCCCCCCCDDO ",
+                " OHCCCCDDCCCDDO ",
+                " OOHCCDDDDDCDDO ",
+                "  OHDDDDDDDDDO  ",
+                "  OODDDDDDDDOO  ",
+                "   OOOOOOOOOO   ",
+                "                ",
+                "                "
+            ];
+        } else if (itemSubtype === 'shark_tooth' || itemSubtype === 'lizard_tail') {
+            shape = [
+                "                ",
+                "       OO       ",
+                "      OHDO      ",
+                "     OHCCDO     ",
+                "    OHCCCCDO    ",
+                "    OHCCCCDO    ",
+                "   OHCCCCCCDO   ",
+                "   OHCCCCCCDO   ",
+                "  OHCCCCCCCCDO  ",
+                "  OHCDDDDDCCDO  ",
+                " OHCDO    ODCDO ",
+                " OHO        ODO ",
+                " OO          OO ",
+                "                ",
+                "                ",
+                "                "
+            ];
+        } else if (itemSubtype === 'feather') {
+            shape = [
+                "                ",
+                "             OO ",
+                "            OHDO",
+                "           OHCDO",
+                "          OHC DO",
+                "   O     OHCD O ",
+                "  OHO   OHCD O  ",
+                "  OHCO OHCD O   ",
+                "  OHCDOHCD O    ",
+                "   OHDCCD O     ",
+                "    ODCD O      ",
+                "     ODOO       ",
+                "     OO         ",
+                "                ",
+                "                ",
+                "                "
+            ];
         }
     } else if (itemType === 'wand') {
         shape = [
@@ -2219,26 +2470,85 @@ export function generateItemTexture(itemType, itemSubtype) {
             "                "
         ];
     } else if (itemType === 'food') {
-        p = palettes[itemSubtype] || palettes['raw_porkchop'];
-        shape = [
-            "                ",
-            "                ",
-            "     OOOOO      ",
-            "   OOCHHDOO     ",
-            "  OCHHHHCDOO    ",
-            "  OHHHHHCCDOO   ",
-            "  OHHHHCCCCDO   ",
-            "  OHHHCCCCCDO   ",
-            "   OHCCCCCDO    ",
-            "    ODDDDOO     ",
-            "      OOO       ",
-            "                ",
-            "                ",
-            "                ",
-            "                ",
-            "                "
-        ];
-    } else if (itemType === 'spell') {
+            p = palettes[itemSubtype] || palettes['raw_porkchop'];
+            if (itemSubtype.includes('chicken')) {
+                shape = [
+                    "                ",
+                    "                ",
+                    "                ",
+                    "      OOOO      ",
+                    "     OHCHDO     ",
+                    "    OHCCCCDO    ",
+                    "    OHCCCCDO    ",
+                    "   OHCCCCCCDO   ",
+                    "  OHCCCCCCCCDO  ",
+                    "  OHCCCCDDCCDO  ",
+                    "   OHCCDOODDO   ",
+                    "    ODO OHO     ",
+                    "    OO  OHO     ",
+                    "        OOO     ",
+                    "                ",
+                    "                "
+                ];
+            } else if (itemSubtype.includes('fish')) {
+                shape = [
+                    "                ",
+                    "                ",
+                    "                ",
+                    "        OOOO    ",
+                    "      OOHHCDO   ",
+                    "   OOOHHCCCDDO  ",
+                    "  OHHHHHCCCCDDO ",
+                    "  OHHHHCCCCCCDO ",
+                    " OHHHCCCCCCCDDO ",
+                    "  OHHHHCCCCCCDO ",
+                    "  OHHHHHCCCCDDO ",
+                    "   OOODDDDDDOO  ",
+                    "      OOOOOO    ",
+                    "                ",
+                    "                ",
+                    "                "
+                ];
+            } else if (itemSubtype.includes('beef')) {
+                shape = [
+                    "                ",
+                    "                ",
+                    "    OOOOOOO     ",
+                    "   OHHHHCHDO    ",
+                    "  OHHHHHHCHDOO  ",
+                    "  OHHHCCCCHCDO  ",
+                    "  OHHCCCCCCCDO  ",
+                    "  OHHCCCCCCCDO  ",
+                    "  OHHCCCCCCCDO  ",
+                    "  OHCCCCCCCDDO  ",
+                    "   OHDDDDDDDDO  ",
+                    "    OOOOOOOOO   ",
+                    "                ",
+                    "                ",
+                    "                ",
+                    "                "
+                ];
+            } else {
+                shape = [
+                    "                ",
+                    "                ",
+                    "     OOOOO      ",
+                    "   OOCHHDOO     ",
+                    "  OCHHHHCDOO    ",
+                    "  OHHHHHCCDOO   ",
+                    "  OHHHHCCCCDO   ",
+                    "  OHHHCCCCCDO   ",
+                    "   OHCCCCCDO    ",
+                    "    ODDDDOO     ",
+                    "      OOO       ",
+                    "                ",
+                    "                ",
+                    "                ",
+                    "                ",
+                    "                "
+                ];
+            }
+        } else if (itemType === 'spell') {
         let sc = 'spell_basic';
         if (itemSubtype === 'FIRE') sc = 'spell_fire';
         if (itemSubtype === 'ICE') sc = 'spell_ice';

@@ -99,6 +99,7 @@ export class Player {
         this.height = 1.8;
         this.eyeHeight = 1.62;
         this.speedMult = 1.0;
+        this.jumpSpeed = 9.0;
 
         // Give starting items
         const starterWand = generateRandomWand();
@@ -248,7 +249,7 @@ export class Player {
                 this.velocity.y += 35 * dt;
                 if (this.velocity.y > 10) this.velocity.y = 10; // Cap fly speed
             } else if (this.grounded) {
-                this.velocity.y = 9; // Normal jump force for regular ground
+                this.velocity.y = this.jumpSpeed; // Normal jump force for regular ground
                 this.grounded = false;
             } else if (inWater || inLava) {
                 // Minecraft-style liquid swimming: apply upward acceleration instead of instant snap
@@ -1600,6 +1601,192 @@ export const MOB_TYPES = {
                 if (mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
             }
         }
+    },
+    AETHER_BUNNY: {
+        name: 'Aether Bunny', health: 10, damage: 0, speed: 4.0, hostile: false, color: 0xffffff,
+        size: 0.5, xpDrop: 2, lootChance: 0.5,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.6), new THREE.MeshStandardMaterial({color: 0xffffff}));
+            body.position.y = 0.2; group.add(body);
+            const earGeo = new THREE.BoxGeometry(0.1, 0.4, 0.1);
+            const earMat = new THREE.MeshStandardMaterial({color: 0xffdddd});
+            const earL = new THREE.Mesh(earGeo, earMat); earL.position.set(-0.1, 0.6, -0.2); group.add(earL);
+            const earR = new THREE.Mesh(earGeo, earMat); earR.position.set(0.1, 0.6, -0.2); group.add(earR);
+            return group;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3(1,0,0);
+            
+            // Flee if hit
+            if (mob.health < 10) {
+                const dir = mob.position.clone().sub(playerPos).normalize();
+                mob.velocity.x = dir.x * mob.speed * 1.5;
+                mob.velocity.z = dir.z * mob.speed * 1.5;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+            } else {
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    mob.wanderTimer = 1 + Math.random() * 2;
+                    const angle = Math.random() * Math.PI * 2;
+                    mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                    // Occasional jump
+                    if (Math.random() < 0.3) mob.velocity.y = 5;
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.5;
+                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.5;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+            }
+        }
+    },
+    ANGEL: {
+        name: 'Angel', health: 50, damage: 10, speed: 6.0, hostile: true, color: 0xffffaa,
+        size: 1.0, xpDrop: 20, lootChance: 0.8,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.6), new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0x222222}));
+            body.position.y = 0.6; group.add(body);
+            
+            // Halo
+            const haloGeo = new THREE.TorusGeometry(0.4, 0.05, 8, 16);
+            const haloMat = new THREE.MeshStandardMaterial({color: 0xffff00, emissive: 0x888800});
+            const halo = new THREE.Mesh(haloGeo, haloMat);
+            halo.rotation.x = Math.PI / 2;
+            halo.position.y = 1.5;
+            group.add(halo);
+
+            // Wings
+            const wingGeo = new THREE.BoxGeometry(1.5, 0.8, 0.1);
+            const wingMat = new THREE.MeshStandardMaterial({color: 0xaaffff, transparent: true, opacity: 0.8});
+            const wing = new THREE.Mesh(wingGeo, wingMat);
+            wing.position.set(0, 0.8, 0.4);
+            group.add(wing);
+
+            return group;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3(1,0,0);
+            
+            // Hover logic
+            mob.velocity.y += (0.5 - mob.velocity.y) * dt * 2; // Counteract some gravity
+            if (mob.position.y < playerPos.y + 3) mob.velocity.y += 10 * dt; // Try to stay above player
+
+            const dist = mob.position.distanceTo(playerPos);
+            if (dist < 20) {
+                const dir = playerPos.clone().sub(mob.position).normalize();
+                
+                // Hover/Kite instead of swoop
+                if (dist > 10) {
+                    mob.velocity.x = dir.x * mob.speed;
+                    mob.velocity.z = dir.z * mob.speed;
+                } else if (dist < 5) {
+                    mob.velocity.x = -dir.x * mob.speed * 0.5;
+                    mob.velocity.z = -dir.z * mob.speed * 0.5;
+                }
+                
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+                
+                if (mob.attackCooldown <= 0) {
+                    mob.attackCooldown = 3.0; // Cast every 3 seconds
+                    mob.wantsToCastWind = dir;
+                }
+            } else {
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    mob.wanderTimer = 2 + Math.random() * 3;
+                    const angle = Math.random() * Math.PI * 2;
+                    mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.5;
+                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.5;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+            }
+        }
+    },
+    CAVE_CRAWLER: {
+        name: 'Cave Crawler', health: 15, damage: 6, speed: 4.5, hostile: true, color: 0x445544,
+        size: 0.7, xpDrop: 5, lootChance: 0.3,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const mat = getMobMaterial('CAVE_CRAWLER');
+            const bodyGeo = new THREE.BoxGeometry(0.8, 0.4, 1.0);
+            const body = new THREE.Mesh(bodyGeo, mat);
+            body.position.y = 0.4;
+            group.add(body);
+            const legGeo = new THREE.BoxGeometry(0.1, 0.6, 0.1);
+            for(let i=0; i<6; i++) {
+                const leg = new THREE.Mesh(legGeo, mat);
+                leg.position.set((i%2===0?-0.4:0.4), 0.3, (Math.floor(i/2)*0.4)-0.4);
+                group.add(leg);
+            }
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            if (!isMoving) {
+                for(let i=0; i<6; i++) {
+                    mesh.children[i+1].rotation.x = 0;
+                    mesh.children[i+1].rotation.z = (i%2===0 ? 0.3 : -0.3);
+                }
+            } else {
+                for(let i=0; i<6; i++) {
+                    const offset = (i%2===0 ? 0 : Math.PI);
+                    mesh.children[i+1].rotation.x = Math.sin(age * 15 + offset) * 0.5;
+                    mesh.children[i+1].rotation.z = (i%2===0 ? 0.3 : -0.3);
+                }
+            }
+        },
+        behavior: (mob, dt, player) => {
+            if (mob.position.distanceTo(player.position) < 24) {
+                mob.target = player;
+            }
+            if (mob.target) {
+                const dir = mob.target.position.clone().sub(mob.position).normalize();
+                mob.velocity.x = dir.x * mob.speed;
+                mob.velocity.z = dir.z * mob.speed;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+            }
+        }
+    },
+    BLIND_HORROR: {
+        name: 'Blind Horror', health: 150, damage: 18, speed: 1.5, hostile: true, color: 0x111111,
+        size: 1.8, xpDrop: 25, lootChance: 0.8,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const mat = getMobMaterial('BLIND_HORROR');
+            const bodyGeo = new THREE.BoxGeometry(1.4, 2.0, 1.4);
+            const body = new THREE.Mesh(bodyGeo, mat);
+            body.position.y = 1.0;
+            group.add(body);
+            const armGeo = new THREE.BoxGeometry(0.4, 1.8, 0.4);
+            const arm1 = new THREE.Mesh(armGeo, mat);
+            arm1.position.set(0.9, 1.0, 0);
+            group.add(arm1);
+            const arm2 = new THREE.Mesh(armGeo, mat);
+            arm2.position.set(-0.9, 1.0, 0);
+            group.add(arm2);
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const bob = Math.sin(age * 2) * 0.05;
+            mesh.children[0].position.y = 1.0 + bob;
+            if (isMoving) {
+                mesh.children[1].rotation.x = Math.sin(age * 3) * 0.5;
+                mesh.children[2].rotation.x = -Math.sin(age * 3) * 0.5;
+            }
+        },
+        behavior: (mob, dt, player) => {
+            if (mob.position.distanceTo(player.position) < 30) {
+                mob.target = player;
+            }
+            if (mob.target) {
+                const dir = mob.target.position.clone().sub(mob.position).normalize();
+                mob.velocity.x = dir.x * mob.speed;
+                mob.velocity.z = dir.z * mob.speed;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+            }
+        }
     }
 };
 
@@ -1629,9 +1816,15 @@ const MOB_SPAWN_WEIGHTS = [
 ];
 const TOTAL_MOB_WEIGHT = MOB_SPAWN_WEIGHTS.reduce((s, e) => s + e.weight, 0);
 
-function pickRandomMobType(isNether = false) {
-    if (isNether) {
+function pickRandomMobType(dimension = 'overworld') {
+    if (dimension === 'nether') {
         return Math.random() < 0.5 ? 'LAVASLIME' : 'PIGLIN_BRUISER';
+    }
+    if (dimension === 'aether') {
+        return Math.random() < 0.5 ? 'AETHER_BUNNY' : 'ANGEL';
+    }
+    if (dimension === 'caverns') {
+        return Math.random() < 0.8 ? 'CAVE_CRAWLER' : 'BLIND_HORROR';
     }
 
     let r = Math.random() * TOTAL_MOB_WEIGHT;
@@ -1671,9 +1864,9 @@ export class ItemEntity {
                 const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
                 this.mesh = new THREE.Sprite(mat);
                 this.mesh.scale.set(0.4, 0.4, 0.4);
-            } else if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'wand' || this.item.type === 'spell' || this.item.type === 'modifier') {
+            } else if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'wand' || this.item.type === 'spell' || this.item.type === 'modifier' || this.item.type === 'food') {
                 let cvs;
-                if (this.item.type === 'material' || this.item.type === 'equipment') {
+                if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'food') {
                     cvs = generateItemTexture(this.item.type, this.item.subtype);
                 } else if (this.item.type === 'wand') {
                     cvs = generateItemTexture('wand', this.item.subtype || 'wand_basic');

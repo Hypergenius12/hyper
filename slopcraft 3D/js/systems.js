@@ -103,7 +103,7 @@ export class LightingSystem {
         return states[0]; // fallback
     }
     
-    update(dt, cameraPos, isUnderwater = false) {
+    update(dt, cameraPos, isUnderwater = false, currentDimension = 'overworld') {
         this.timeOfDay += dt / this.dayLength;
         if (this.timeOfDay > 1) this.timeOfDay -= 1;
 
@@ -133,8 +133,47 @@ export class LightingSystem {
 
         this.skyDome.position.copy(cameraPos);
 
-        // Smooth color interpolation
-        const state = this._getLightState(this.timeOfDay);
+        let state;
+        if (currentDimension === 'nether') {
+            state = {
+                amb: new THREE.Color(0x772222),
+                bg: new THREE.Color(0x330000),
+                top: new THREE.Color(0x993333),
+                sun: 0,
+                moon: 0,
+                hemi: 1.0
+            };
+        } else if (currentDimension === 'aether') {
+            state = {
+                amb: new THREE.Color(0xaaffff),
+                bg: new THREE.Color(0xddeeff),
+                top: new THREE.Color(0xffffff),
+                sun: 1.5,
+                moon: 0,
+                hemi: 1.0
+            };
+        } else if (currentDimension === 'caverns') {
+            state = {
+                amb: new THREE.Color(0x2a352a), // Brighter ambient
+                bg: new THREE.Color(0x0a100a), // Slightly brighter fog/bg
+                top: new THREE.Color(0x334433), // Brighter top
+                sun: 0,
+                moon: 0,
+                hemi: 1.0 // Increased hemi light
+            };
+        } else if (currentDimension === 'highlands') {
+            state = {
+                amb: new THREE.Color(0xaaccee),
+                bg: new THREE.Color(0x00ffff),
+                top: new THREE.Color(0x00aaff),
+                sun: 1.5,
+                moon: 0,
+                hemi: 1.2
+            };
+        } else {
+            state = this._getLightState(this.timeOfDay);
+        }
+
         this.sunLight.intensity = state.sun;
         this.moonLight.intensity = state.moon;
 
@@ -147,8 +186,14 @@ export class LightingSystem {
             this.scene.fog.color.copy(this.scene.background);
             if (isUnderwater) {
                 this.scene.fog.density = 0.05;
+            } else if (currentDimension === 'aether') {
+                this.scene.fog.density = 0.02; // Thicker fog in Aether to feel like clouds
+            } else if (currentDimension === 'nether') {
+                this.scene.fog.density = 0.015;
+            } else if (currentDimension === 'highlands') {
+                this.scene.fog.density = 0.005; // Light mist for scale
             } else {
-                this.scene.fog.density = this.scene.fog.baseDensity || 0.01;
+                this.scene.fog.density = this.scene.fog.baseDensity || 0.003;
             }
         }
         
@@ -499,6 +544,9 @@ class UISystem {
                 inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
             } else if (slot.item.type === 'modifier') {
                 const cvs = generateItemTexture('modifier', slot.item.subtype);
+                inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
+            } else if (slot.item.type === 'food') {
+                const cvs = generateItemTexture('food', slot.item.subtype);
                 inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
             } else {
                 inner = `<div style="text-align:center; line-height:100%;">${slot.item.name.substring(0,2).toUpperCase()}</div>`;
@@ -1377,7 +1425,7 @@ class UISystem {
             { name: "Fire Wand", desc: "Empowers fire magic.", grid: [[_,_,mat('coal')],[_,wnd('wand_basic'),_],[_,_,_]], out: wnd('wand_fire'), outCount: 1, needs3x3: false },
             { name: "Ice Wand", desc: "Empowers ice magic.", grid: [[_,_,blk(B.SNOW)],[_,wnd('wand_basic'),_],[_,_,_]], out: wnd('wand_ice'), outCount: 1, needs3x3: false },
             { name: "Furnace", desc: "Smelts ores.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),_,blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)]], out: blk(B.FURNACE), outCount: 1, needs3x3: true },
-            { name: "Chest", desc: "Stores items.", grid: [[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[blk(B.PLANKS),_,blk(B.PLANKS)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.CHEST), outCount: 1, needs3x3: true },
+            { name: "Chest", desc: "Stores items.", grid: [[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[blk(B.PLANKS),_,blk(B.PLANKS)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.CHEST_BLOCK), outCount: 1, needs3x3: true },
             { name: "Flint and Steel", desc: "Ignites TNT.", grid: [[_,_,_],[mat('iron_ingot'),_,_],[_,blk(B.SAND),_]], out: eqp('flint_and_steel'), outCount: 1, needs3x3: false },
             { name: "Bucket", desc: "Holds liquids.", grid: [[_,_,_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('bucket'), outCount: 1, needs3x3: true },
             { name: "Water Bucket", desc: "Crafted from snow.", grid: [[_,blk(B.SNOW),_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('water_bucket'), outCount: 1, needs3x3: true },
@@ -1387,11 +1435,56 @@ class UISystem {
             { name: "Earth Spell", desc: "Crafted magic.", grid: [[_,blk(B.STONE),_],[blk(B.STONE),mat('mana_crystal'),blk(B.STONE)],[_,blk(B.STONE),_]], out: spl('EARTH'), outCount: 1, needs3x3: true },
             { name: "Dark Spell", desc: "Crafted magic.", grid: [[_,blk(B.OBSIDIAN),_],[blk(B.OBSIDIAN),mat('mana_crystal'),blk(B.OBSIDIAN)],[_,blk(B.OBSIDIAN),_]], out: spl('DARK'), outCount: 1, needs3x3: true },
             { name: "Wind Spell", desc: "Crafted magic.", grid: [[_,mat('sugar'),_],[mat('sugar'),mat('mana_crystal'),mat('sugar')],[_,mat('sugar'),_]], out: spl('WIND'), outCount: 1, needs3x3: true },
-            { name: "Poison Spell", desc: "Crafted magic.", grid: [[_,blk(B.LEAVES),_],[blk(B.LEAVES),mat('mana_crystal'),blk(B.LEAVES)],[_,blk(B.LEAVES),_]], out: spl('POISON'), outCount: 1, needs3x3: true }
+            { name: "Poison Spell", desc: "Crafted magic.", grid: [[_,blk(B.LEAVES),_],[blk(B.LEAVES),mat('mana_crystal'),blk(B.LEAVES)],[_,blk(B.LEAVES),_]], out: spl('POISON'), outCount: 1, needs3x3: true },
+
+            { name: "Wooden Sword", desc: "Basic weapon.", grid: [[_,blk(B.PLANKS),_],[_,blk(B.PLANKS),_],[_,mat('stick'),_]], out: eqp('sword_wood'), outCount: 1, needs3x3: true },
+            { name: "Stone Sword", desc: "Decent weapon.", grid: [[_,blk(B.COBBLESTONE),_],[_,blk(B.COBBLESTONE),_],[_,mat('stick'),_]], out: eqp('sword_stone'), outCount: 1, needs3x3: true },
+            { name: "Gold Sword", desc: "Fast but weak.", grid: [[_,mat('gold_ingot'),_],[_,mat('gold_ingot'),_],[_,mat('stick'),_]], out: eqp('sword_gold'), outCount: 1, needs3x3: true },
+            { name: "Diamond Sword", desc: "Strongest weapon.", grid: [[_,mat('diamond'),_],[_,mat('diamond'),_],[_,mat('stick'),_]], out: eqp('sword_diamond'), outCount: 1, needs3x3: true },
+
+            { name: "Wooden Pickaxe", desc: "Basic miner.", grid: [[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('pickaxe_wood'), outCount: 1, needs3x3: true },
+            { name: "Stone Pickaxe", desc: "Mines iron.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('pickaxe_stone'), outCount: 1, needs3x3: true },
+            { name: "Gold Pickaxe", desc: "Fast mining.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('pickaxe_gold'), outCount: 1, needs3x3: true },
+            { name: "Diamond Pickaxe", desc: "Mines everything.", grid: [[mat('diamond'),mat('diamond'),mat('diamond')],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('pickaxe_diamond'), outCount: 1, needs3x3: true },
+
+            { name: "Wooden Axe", desc: "Basic chopper.", grid: [[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_wood'), outCount: 1, needs3x3: true },
+            { name: "Stone Axe", desc: "Decent chopper.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),_],[blk(B.COBBLESTONE),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_stone'), outCount: 1, needs3x3: true },
+            { name: "Gold Axe", desc: "Fast chopper.", grid: [[mat('gold_ingot'),mat('gold_ingot'),_],[mat('gold_ingot'),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_gold'), outCount: 1, needs3x3: true },
+            { name: "Diamond Axe", desc: "Best chopper.", grid: [[mat('diamond'),mat('diamond'),_],[mat('diamond'),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_diamond'), outCount: 1, needs3x3: true },
+
+            { name: "Gold Helmet", desc: "Shiny protection.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')],[_,_,_]], out: eqp('helmet_gold'), outCount: 1, needs3x3: true },
+            { name: "Gold Chestplate", desc: "Shiny protection.", grid: [[mat('gold_ingot'),_,mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: eqp('chest_gold'), outCount: 1, needs3x3: true },
+            { name: "Gold Leggings", desc: "Shiny protection.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')]], out: eqp('legs_gold'), outCount: 1, needs3x3: true },
+            { name: "Gold Boots", desc: "Shiny protection.", grid: [[_,_,_],[mat('gold_ingot'),_,mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')]], out: eqp('boots_gold'), outCount: 1, needs3x3: true },
+
+            { name: "Diamond Helmet", desc: "Strong protection.", grid: [[mat('diamond'),mat('diamond'),mat('diamond')],[mat('diamond'),_,mat('diamond')],[_,_,_]], out: eqp('helmet_diamond'), outCount: 1, needs3x3: true },
+            { name: "Diamond Chestplate", desc: "Strong protection.", grid: [[mat('diamond'),_,mat('diamond')],[mat('diamond'),mat('diamond'),mat('diamond')],[mat('diamond'),mat('diamond'),mat('diamond')]], out: eqp('chest_diamond'), outCount: 1, needs3x3: true },
+            { name: "Diamond Leggings", desc: "Strong protection.", grid: [[mat('diamond'),mat('diamond'),mat('diamond')],[mat('diamond'),_,mat('diamond')],[mat('diamond'),_,mat('diamond')]], out: eqp('legs_diamond'), outCount: 1, needs3x3: true },
+            { name: "Diamond Boots", desc: "Strong protection.", grid: [[_,_,_],[mat('diamond'),_,mat('diamond')],[mat('diamond'),_,mat('diamond')]], out: eqp('boots_diamond'), outCount: 1, needs3x3: true },
+
+            { name: "Nature Wand", desc: "Heals you.", grid: [[_,_,blk(B.LEAVES)],[_,wnd('wand_basic'),_],[_,_,_]], out: wnd('wand_nature'), outCount: 1, needs3x3: false },
+
+            { name: "Stone Bricks (4)", desc: "Building block.", grid: [[_,_,_],[blk(B.STONE),blk(B.STONE),_],[blk(B.STONE),blk(B.STONE),_]], out: blk(B.STONE_BRICKS), outCount: 4, needs3x3: false },
+            { name: "Bricks (4)", desc: "Building block.", grid: [[_,_,_],[blk(B.CLAY),blk(B.CLAY),_],[blk(B.CLAY),blk(B.CLAY),_]], out: blk(B.BRICKS), outCount: 4, needs3x3: false },
+            { name: "Sandstone (4)", desc: "Building block.", grid: [[_,_,_],[blk(B.SAND),blk(B.SAND),_],[blk(B.SAND),blk(B.SAND),_]], out: blk(B.SANDSTONE), outCount: 4, needs3x3: false },
+            { name: "Mossy Cobble", desc: "Building block.", grid: [[_,_,_],[blk(B.COBBLESTONE),blk(B.LEAVES),_],[_,_,_]], out: blk(B.MOSSY_COBBLESTONE), outCount: 1, needs3x3: false },
+
+            { name: "Sugar", desc: "Sweet dust.", grid: [[_,_,_],[blk(B.SUGARCANE),_,_],[_,_,_]], out: mat('sugar'), outCount: 1, needs3x3: false },
+            { name: "Paper (3)", desc: "Writing material.", grid: [[_,_,_],[blk(B.SUGARCANE),blk(B.SUGARCANE),_],[_,blk(B.SUGARCANE),_]], out: mat('paper'), outCount: 3, needs3x3: false },
+            { name: "Book", desc: "A readable item.", grid: [[_,_,_],[mat('paper'),mat('paper'),_],[mat('paper'),mat('leather'),_]], out: mat('book'), outCount: 1, needs3x3: false },
+            
+            { name: "Iron Block", desc: "Storage block.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')]], out: blk(B.IRON_BLOCK), outCount: 1, needs3x3: true },
+            { name: "Gold Block", desc: "Storage block.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: blk(B.GOLD_BLOCK), outCount: 1, needs3x3: true },
+            { name: "Diamond Block", desc: "Storage block.", grid: [[mat('diamond'),mat('diamond'),mat('diamond')],[mat('diamond'),mat('diamond'),mat('diamond')],[mat('diamond'),mat('diamond'),mat('diamond')]], out: blk(B.DIAMOND_BLOCK), outCount: 1, needs3x3: true },
+
+            { name: "Iron Ingot (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.IRON_BLOCK),_,_],[_,_,_]], out: mat('iron_ingot'), outCount: 9, needs3x3: false },
+            { name: "Gold Ingot (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.GOLD_BLOCK),_,_],[_,_,_]], out: mat('gold_ingot'), outCount: 9, needs3x3: false },
+            { name: "Diamond (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.DIAMOND_BLOCK),_,_],[_,_,_]], out: mat('diamond'), outCount: 9, needs3x3: false }
         ];
 
+        const filteredRecipes = recipes.filter(r => this.is3x3Crafting ? true : !r.needs3x3);
         let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
-        recipes.filter(r => this.is3x3Crafting ? true : !r.needs3x3).forEach((r, idx) => {
+        filteredRecipes.forEach((r, idx) => {
             html += `<li class="recipe-item" data-idx="${idx}" style="margin-bottom: 8px; cursor: pointer; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); transition: background 0.2s;">
                 <div style="color: #fff; font-weight: bold; font-size: 1rem; margin-bottom: 2px;">${r.name}</div>
             </li>`;
@@ -1413,8 +1506,8 @@ class UISystem {
                 item.style.background = 'rgba(100, 150, 255, 0.2)';
                 item.style.borderColor = 'rgba(100, 150, 255, 0.8)';
                 
-                const idx = item.getAttribute('data-idx');
-                this.showRecipeDetails(recipes[idx]);
+                const idx = parseInt(item.getAttribute('data-idx'));
+                this.showRecipeDetails(filteredRecipes[idx]);
             });
         });
 
@@ -1443,7 +1536,7 @@ class UISystem {
                 const iconCanvas = this.atlas.getBlockIcon(def.subtype);
                 dataURL = iconCanvas.toDataURL();
             } else {
-                const iconCanvas = this.atlas.generateItemTexture(def.type, def.subtype);
+                const iconCanvas = generateItemTexture(def.type, def.subtype);
                 dataURL = iconCanvas.toDataURL();
             }
             
@@ -1480,9 +1573,10 @@ class UISystem {
             num.style.textShadow = '1px 1px 0 #000';
             outEl.appendChild(num);
         }
-        // Steal the image out of the slotEl we created, or just append the whole slotEl
-        outContainer.appendChild(outEl.children[0]);
-        if (recipe.outCount > 1) outContainer.appendChild(outEl.children[1]);
+        // Steal the children out of the slotEl we created
+        while (outEl.children.length > 0) {
+            outContainer.appendChild(outEl.children[0]);
+        }
     }
 }
 

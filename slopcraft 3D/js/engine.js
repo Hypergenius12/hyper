@@ -230,6 +230,8 @@ const _crossIndices = new Uint32Array(MAX_INDICES);
 const _glowCrossIndices = new Uint32Array(MAX_INDICES);
 const _waterIndices = new Uint32Array(MAX_INDICES);
 const _transparentIndices = new Uint32Array(MAX_INDICES);
+const _glowOpaqueIndices = new Uint32Array(MAX_INDICES);
+const _glowTransparentIndices = new Uint32Array(MAX_INDICES);
 
 export class Chunk {
     constructor(cx, cz) {
@@ -288,6 +290,8 @@ export class Chunk {
         let glowCrossIndexCount = 0;
         let waterIndexCount = 0;
         let transparentIndexCount = 0;
+        let glowOpaqueIndexCount = 0;
+        let glowTransparentIndexCount = 0;
 
         let vertexCount = 0;
 
@@ -432,13 +436,21 @@ export class Chunk {
                                 if (blockType === BLOCKS.WATER || blockType === BLOCKS.SWAMP_WATER || blockType === BLOCKS.LAVA) {
                                     _waterIndices[waterIndexCount++] = vertexCount; _waterIndices[waterIndexCount++] = vertexCount + 1; _waterIndices[waterIndexCount++] = vertexCount + 2;
                                     _waterIndices[waterIndexCount++] = vertexCount; _waterIndices[waterIndexCount++] = vertexCount + 2; _waterIndices[waterIndexCount++] = vertexCount + 3;
+                                } else if (props.emissive > 0) {
+                                    _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 1; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 2;
+                                    _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 2; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 3;
                                 } else {
                                     _transparentIndices[transparentIndexCount++] = vertexCount; _transparentIndices[transparentIndexCount++] = vertexCount + 1; _transparentIndices[transparentIndexCount++] = vertexCount + 2;
                                     _transparentIndices[transparentIndexCount++] = vertexCount; _transparentIndices[transparentIndexCount++] = vertexCount + 2; _transparentIndices[transparentIndexCount++] = vertexCount + 3;
                                 }
                             } else {
-                                _opaqueIndices[opaqueIndexCount++] = vertexCount; _opaqueIndices[opaqueIndexCount++] = vertexCount + 1; _opaqueIndices[opaqueIndexCount++] = vertexCount + 2;
-                                _opaqueIndices[opaqueIndexCount++] = vertexCount; _opaqueIndices[opaqueIndexCount++] = vertexCount + 2; _opaqueIndices[opaqueIndexCount++] = vertexCount + 3;
+                                if (props.emissive > 0) {
+                                    _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 1; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 2;
+                                    _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 2; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 3;
+                                } else {
+                                    _opaqueIndices[opaqueIndexCount++] = vertexCount; _opaqueIndices[opaqueIndexCount++] = vertexCount + 1; _opaqueIndices[opaqueIndexCount++] = vertexCount + 2;
+                                    _opaqueIndices[opaqueIndexCount++] = vertexCount; _opaqueIndices[opaqueIndexCount++] = vertexCount + 2; _opaqueIndices[opaqueIndexCount++] = vertexCount + 3;
+                                }
                             }
                             vertexCount += 4;
                         }
@@ -450,22 +462,28 @@ export class Chunk {
         const geometry = new THREE.BufferGeometry();
         
         // Merge indices into one big index array
-        const totalIndices = opaqueIndexCount + crossIndexCount + glowCrossIndexCount + waterIndexCount + transparentIndexCount;
+        const totalIndices = opaqueIndexCount + crossIndexCount + glowCrossIndexCount + waterIndexCount + transparentIndexCount + glowOpaqueIndexCount + glowTransparentIndexCount;
         const allIndices = new Uint32Array(totalIndices);
         
-        allIndices.set(_opaqueIndices.subarray(0, opaqueIndexCount), 0);
-        allIndices.set(_crossIndices.subarray(0, crossIndexCount), opaqueIndexCount);
-        allIndices.set(_glowCrossIndices.subarray(0, glowCrossIndexCount), opaqueIndexCount + crossIndexCount);
-        allIndices.set(_waterIndices.subarray(0, waterIndexCount), opaqueIndexCount + crossIndexCount + glowCrossIndexCount);
-        allIndices.set(_transparentIndices.subarray(0, transparentIndexCount), opaqueIndexCount + crossIndexCount + glowCrossIndexCount + waterIndexCount);
+        let offset = 0;
+        allIndices.set(_opaqueIndices.subarray(0, opaqueIndexCount), offset); offset += opaqueIndexCount;
+        allIndices.set(_crossIndices.subarray(0, crossIndexCount), offset); offset += crossIndexCount;
+        allIndices.set(_glowCrossIndices.subarray(0, glowCrossIndexCount), offset); offset += glowCrossIndexCount;
+        allIndices.set(_waterIndices.subarray(0, waterIndexCount), offset); offset += waterIndexCount;
+        allIndices.set(_transparentIndices.subarray(0, transparentIndexCount), offset); offset += transparentIndexCount;
+        allIndices.set(_glowOpaqueIndices.subarray(0, glowOpaqueIndexCount), offset); offset += glowOpaqueIndexCount;
+        allIndices.set(_glowTransparentIndices.subarray(0, glowTransparentIndexCount), offset); offset += glowTransparentIndexCount;
 
         geometry.setIndex(new THREE.BufferAttribute(allIndices, 1));
 
-        geometry.addGroup(0, opaqueIndexCount, 0);
-        geometry.addGroup(opaqueIndexCount, crossIndexCount, 1);
-        geometry.addGroup(opaqueIndexCount + crossIndexCount, glowCrossIndexCount, 2);
-        geometry.addGroup(opaqueIndexCount + crossIndexCount + glowCrossIndexCount, waterIndexCount, 3);
-        geometry.addGroup(opaqueIndexCount + crossIndexCount + glowCrossIndexCount + waterIndexCount, transparentIndexCount, 4);
+        let groupOffset = 0;
+        geometry.addGroup(groupOffset, opaqueIndexCount, 0); groupOffset += opaqueIndexCount;
+        geometry.addGroup(groupOffset, crossIndexCount, 1); groupOffset += crossIndexCount;
+        geometry.addGroup(groupOffset, glowCrossIndexCount, 2); groupOffset += glowCrossIndexCount;
+        geometry.addGroup(groupOffset, waterIndexCount, 3); groupOffset += waterIndexCount;
+        geometry.addGroup(groupOffset, transparentIndexCount, 4); groupOffset += transparentIndexCount;
+        geometry.addGroup(groupOffset, glowOpaqueIndexCount, 5); groupOffset += glowOpaqueIndexCount;
+        geometry.addGroup(groupOffset, glowTransparentIndexCount, 6); groupOffset += glowTransparentIndexCount;
 
         geometry.setAttribute('position', new THREE.BufferAttribute(_positions.slice(0, posCount), 3));
         geometry.setAttribute('normal', new THREE.BufferAttribute(_normals.slice(0, posCount), 3));
@@ -545,54 +563,95 @@ function calculateVertexAO(wx, wy, wz, face, getNeighborBlock, blockType) {
 // World
 // ============================================
 export class World {
-    constructor(scene, atlas) {
+    constructor(scene, textureAtlas, onChunkUnloaded = null, onBlockDestroyed = null) {
         this.scene = scene;
-        this.atlas = atlas;
+        this.textureAtlas = textureAtlas;
         this.chunks = new Map();
-        this.renderDistance = 8;
+        this.chunksToBuild = [];
+        this.chunksToGenerate = []; // Chunks waiting for blocks
+        this.renderDistance = 4;
+        this.onChunkUnloaded = onChunkUnloaded;
+        this.onBlockDestroyed = onBlockDestroyed;
+        
+        // Block change hooks
+        this.onChestPlaced = null;
+        this.onChestRemoved = null;
+        this.onDoorPlaced = null;
+        this.onDoorRemoved = null;
+        this.onTorchPlaced = null;
+        this.onTorchRemoved = null;
+
+        // Ambient Occlusion settings
+        this.enableAO = true;
+
+        this.liquidUpdates = new Set();
+        
+        // Persistent modifications map: chunkKey -> Map<idx, {block, data}>
+        this.modifications = new Map();
+        
         this.frustum = new THREE.Frustum();
         this.projScreenMatrix = new THREE.Matrix4();
         
         // Initialize shared materials to drastically reduce GC and WebGL overhead
         const matOpaque = new THREE.MeshLambertMaterial({
-            map: atlas.texture,
+            map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
             alphaTest: 0.5,
             side: THREE.DoubleSide
         });
         const matCross = new THREE.MeshLambertMaterial({
-            map: atlas.texture,
+            map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
             alphaTest: 0.5,
             side: THREE.DoubleSide
         });
         const matGlowCross = new THREE.MeshLambertMaterial({
-            map: atlas.texture,
+            map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
             alphaTest: 0.5,
             side: THREE.DoubleSide,
             emissive: new THREE.Color(0xffffff),
-            emissiveMap: atlas.texture,
+            emissiveMap: textureAtlas.texture,
             emissiveIntensity: 1.0
         });
         const matWater = new THREE.MeshLambertMaterial({
-            map: atlas.texture,
+            map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
             opacity: 0.8,
             side: THREE.DoubleSide
         });
         const matTransparent = new THREE.MeshLambertMaterial({
-            map: atlas.texture,
+            map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
             alphaTest: 0.5,
             side: THREE.DoubleSide
         });
-        this.sharedMaterials = [matOpaque, matCross, matGlowCross, matWater, matTransparent];
+        const matGlowOpaque = new THREE.MeshLambertMaterial({
+            map: textureAtlas.texture,
+            vertexColors: true,
+            transparent: false,
+            alphaTest: 0.5,
+            side: THREE.DoubleSide,
+            emissive: new THREE.Color(0xffffff),
+            emissiveMap: textureAtlas.texture,
+            emissiveIntensity: 1.0
+        });
+        const matGlowTransparent = new THREE.MeshLambertMaterial({
+            map: textureAtlas.texture,
+            vertexColors: true,
+            transparent: true,
+            alphaTest: 0.5,
+            side: THREE.DoubleSide,
+            emissive: new THREE.Color(0xffffff),
+            emissiveMap: textureAtlas.texture,
+            emissiveIntensity: 1.0
+        });
+        this.sharedMaterials = [matOpaque, matCross, matGlowCross, matWater, matTransparent, matGlowOpaque, matGlowTransparent];
 
         // Chunk queues to avoid stuttering
         this.chunksToGenerate = [];
@@ -656,13 +715,29 @@ export class World {
     setData(wx, wy, wz, dataValue) {
         wx = Math.floor(wx); wy = Math.floor(wy); wz = Math.floor(wz);
         if (wy < 0 || wy >= CHUNK_HEIGHT) return;
-
         const cx = Math.floor(wx / CHUNK_SIZE);
         const cz = Math.floor(wz / CHUNK_SIZE);
         const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
         const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        const chunk = this.getChunkAt(wx, wz);
+        
+        // Record modification
+        const chunkKey = this.getChunkKey(cx, cz);
+        let mods = this.modifications.get(chunkKey);
+        if (!mods) {
+            mods = new Map();
+            this.modifications.set(chunkKey, mods);
+        }
+        const idx = (wy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+        let mod = mods.get(idx);
+        if (!mod) {
+            const block = chunk ? chunk.getBlock(lx, wy, lz) : 0;
+            mod = { block: block, data: dataValue };
+            mods.set(idx, mod);
+        } else {
+            mod.data = dataValue;
+        }
 
-        const chunk = this.chunks.get(this.getChunkKey(cx, cz));
         if (chunk) chunk.setData(lx, wy, lz, dataValue);
     }
 
@@ -755,6 +830,24 @@ export class World {
         const cz = Math.floor(wz / CHUNK_SIZE);
         const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
         const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        
+        // Record modification
+        const chunkKey = this.getChunkKey(cx, cz);
+        let mods = this.modifications.get(chunkKey);
+        if (!mods) {
+            mods = new Map();
+            this.modifications.set(chunkKey, mods);
+        }
+        const idx = (wy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+        let mod = mods.get(idx);
+        if (!mod) {
+            const chunk = this.getChunkAt(wx, wz);
+            const data = chunk ? chunk.getData(lx, wy, lz) : 0;
+            mod = { block: type, data: data };
+            mods.set(idx, mod);
+        } else {
+            mod.block = type;
+        }
 
         const chunk = this.getChunkAt(wx, wz);
         if (chunk) {
@@ -947,14 +1040,25 @@ export class World {
             if (!this.chunks.has(this.getChunkKey(chunk.cx, chunk.cz))) continue;
 
             chunk.blocks = terrainGenerator(chunk.cx, chunk.cz);
+            
+            // Apply persistent modifications
+            const chunkKey = this.getChunkKey(chunk.cx, chunk.cz);
+            const mods = this.modifications.get(chunkKey);
+            if (mods) {
+                for (const [idx, mod] of mods.entries()) {
+                    chunk.blocks[idx] = mod.block;
+                    chunk.data[idx] = mod.data;
+                }
+            }
+
             chunk.dirty = true;
             this.chunksToBuild.push(chunk);
 
-            // Register chests
-            if (this.onChestGenerated || this.onDoorGenerated) {
+            // Register chests, doors, and torches
+            if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated) {
                 for (let i = 0; i < chunk.blocks.length; i++) {
                     const blockType = chunk.blocks[i];
-                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR) {
+                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH) {
                         const y = Math.floor(i / (16 * 16));
                         const rem = i % (16 * 16);
                         const z = Math.floor(rem / 16);
@@ -965,6 +1069,8 @@ export class World {
                             this.onChestGenerated(wx, y, wz);
                         } else if (blockType === window.BLOCKS.DUNGEON_DOOR && this.onDoorGenerated) {
                             this.onDoorGenerated(wx, y, wz);
+                        } else if (blockType === window.BLOCKS.TORCH && this.onTorchGenerated) {
+                            this.onTorchGenerated(wx, y, wz);
                         }
                     }
                 }

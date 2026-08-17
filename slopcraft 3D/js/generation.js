@@ -31,6 +31,156 @@ const BIOMES = {
     DARK_FOREST: { name: 'Dark Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isDark: true, hasMushrooms: true }
 };
 
+export function generateAetherChunk(cx, cz, params) {
+    const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
+    const rng = seededRandom(params.seed + cx * 314159 + cz);
+
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            const wx = cx * CHUNK_SIZE + x;
+            const wz = cz * CHUNK_SIZE + z;
+
+            // Determine Aether biome using temp and moist noise
+            const temp = (params.tempNoise(wx * 0.002, wz * 0.002) + 1) / 2;
+            const moist = (params.moistNoise(wx * 0.002, wz * 0.002) + 1) / 2;
+            
+            let biome = 'CRYSTAL_PLAINS';
+            if (temp > 0.7) {
+                biome = 'GOLDEN_FOREST';
+            } else if (temp < 0.3) {
+                biome = 'CLOUD_FOREST';
+            } else if (moist > 0.6) {
+                biome = 'CLOUD_PEAKS';
+            }
+
+            const colRng = seededRandom(params.seed + wx * 1234 + wz);
+
+            let maxSolidY = -1;
+
+            for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+
+                if (y === 0 || y === CHUNK_HEIGHT - 1) {
+                    blocks[idx] = BLOCKS.AIR; // No bedrock in Aether!
+                    continue;
+                }
+
+                // 3D noise to create floating islands
+                const nval = fbm3D(params.caveNoise, wx * 0.015, y * 0.02, wz * 0.015, 3);
+                
+                // Density drop-off: we want an island-like band in the middle
+                const midY = CHUNK_HEIGHT / 2;
+                const distFromMid = Math.abs(y - midY) / (CHUNK_HEIGHT / 4); 
+                
+                // Density threshold
+                let density = nval - (distFromMid * 1.5) + 0.3; // +0.3 makes more solid mass
+                
+                if (biome === 'CLOUD_PEAKS') {
+                    // Cloud peaks have higher density, pushing them higher up
+                    density += 0.2 + (y * 0.002);
+                }
+
+                if (density > 0) {
+                    // Solid block
+                    blocks[idx] = BLOCKS.AETHER_STONE;
+                    if (y > maxSolidY) maxSolidY = y;
+                } else {
+                    blocks[idx] = BLOCKS.AIR;
+                }
+            }
+
+            // Second pass: Decorate the column
+            // We iterate from top to bottom
+            for (let y = CHUNK_HEIGHT - 2; y >= 1; y--) {
+                const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                const idxAbove = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+
+                const b = blocks[idx];
+                const above = blocks[idxAbove];
+
+                if (b === BLOCKS.AETHER_STONE && above === BLOCKS.AIR) {
+                    // This is a top surface block
+                    if (biome === 'CLOUD_PEAKS') {
+                        blocks[idx] = BLOCKS.AETHER_CLOUD;
+                        // Build cloud formations up
+                        if (colRng() < 0.3) {
+                            safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_CLOUD, true);
+                            if (colRng() < 0.5) safeSetBlock(blocks, x, y + 2, z, BLOCKS.AETHER_CLOUD, true);
+                        }
+                    } else {
+                        blocks[idx] = BLOCKS.AETHER_GRASS;
+                        // Put dirt below grass
+                        for (let dy = 1; dy <= 3; dy++) {
+                            const subIdx = ((y - dy) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                            if (y - dy > 0 && blocks[subIdx] === BLOCKS.AETHER_STONE) {
+                                blocks[subIdx] = BLOCKS.AETHER_DIRT;
+                            }
+                        }
+
+                        // Surface decorations
+                        if (biome === 'GOLDEN_FOREST') {
+                            if (colRng() < 0.03) {
+                                generateAetherTree(blocks, x, y + 1, z, rng);
+                            } else if (colRng() < 0.15) {
+                                safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
+                            } else if (colRng() < 0.05) {
+                                safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_FLOWER, true);
+                            }
+                        } else if (biome === 'CLOUD_FOREST') {
+                            // Cloud forest has dense cloud trees
+                            if (colRng() < 0.05) {
+                                // Simple cloud tree
+                                for(let ty=0; ty<4; ty++) safeSetBlock(blocks, x, y+1+ty, z, BLOCKS.AETHER_WOOD, true);
+                                for(let dx=-2; dx<=2; dx++) {
+                                    for(let dz=-2; dz<=2; dz++) {
+                                        for(let dy=3; dy<=5; dy++) {
+                                            if (Math.abs(dx)===2 && Math.abs(dz)===2 && dy===5) continue;
+                                            safeSetBlock(blocks, x+dx, y+1+dy, z+dz, BLOCKS.AETHER_CLOUD, false);
+                                        }
+                                    }
+                                }
+                            } else if (colRng() < 0.3) {
+                                safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_FLOWER, true);
+                            }
+                        } else if (biome === 'CRYSTAL_PLAINS') {
+                            if (colRng() < 0.01) {
+                                // Crystal cluster
+                                safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_CRYSTAL, true);
+                                if (colRng() < 0.5) safeSetBlock(blocks, x, y + 2, z, BLOCKS.AETHER_CRYSTAL, true);
+                            } else if (colRng() < 0.2) {
+                                safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
+                            }
+                        }
+                    }
+                } else if (b === BLOCKS.AETHER_STONE && above !== BLOCKS.AIR) {
+                    // Underground decorations (maybe embedded crystals)
+                    if (colRng() < 0.005) {
+                        blocks[idx] = BLOCKS.AETHER_CRYSTAL;
+                    }
+                }
+            }
+        }
+    }
+
+    return blocks;
+}
+
+function generateAetherTree(blocks, x, y, z, rng) {
+    const h = 5 + Math.floor(rng() * 3);
+    for (let py = y; py < y + h; py++) {
+        safeSetBlock(blocks, x, py, z, BLOCKS.AETHER_WOOD, true);
+    }
+    // Golden Canopy
+    for (let px = x - 2; px <= x + 2; px++) {
+        for (let pz = z - 2; pz <= z + 2; pz++) {
+            for (let py = y + h - 2; py <= y + h + 1; py++) {
+                if (Math.abs(px - x) === 2 && Math.abs(pz - z) === 2 && py === y + h + 1) continue;
+                safeSetBlock(blocks, px, py, pz, BLOCKS.AETHER_LEAVES, true);
+            }
+        }
+    }
+}
+
 export class PlanetParams {
     constructor(seed) {
         this.seed = typeof seed === 'string' ? hashSeed(seed) : seed;
@@ -1205,4 +1355,140 @@ function generateCrimsonTree(blocks, x, y, z, rng) {
         }
     }
 }
+export function generateCavernsChunk(cx, cz, params) {
+    const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
+    const rng = seededRandom(params.seed + cx * 54321 + cz);
 
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            const wx = cx * CHUNK_SIZE + x;
+            const wz = cz * CHUNK_SIZE + z;
+            const colRng = seededRandom(params.seed + wx * 1234 + wz);
+
+            // Determine Cavern biome
+            const biomeNoise = params.tempNoise(wx * 0.005, wz * 0.005);
+            let biome = 'GENERIC';
+            if (biomeNoise > 0.4) biome = 'MAGMA_CAVES';
+            else if (biomeNoise < -0.4) biome = 'CRYSTAL_CAVES';
+
+            for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+
+                if (y === 0 || y === CHUNK_HEIGHT - 1) {
+                    blocks[idx] = BLOCKS.BEDROCK;
+                    continue;
+                }
+
+                // 3D noise for cavern generation
+                const nval = fbm3D(params.caveNoise, wx * 0.03, y * 0.04, wz * 0.03, 3);
+                
+                // More solid towards bottom, more open in middle
+                const midY = CHUNK_HEIGHT / 2;
+                const distFromMid = Math.abs(y - midY) / (CHUNK_HEIGHT / 2); 
+                const threshold = -0.2 + (distFromMid * 0.5); 
+
+                if (nval > threshold) {
+                    // Open space. Fill bottom of magma caves with lava
+                    if (biome === 'MAGMA_CAVES' && y < 15) {
+                        blocks[idx] = BLOCKS.LAVA;
+                    } else {
+                        blocks[idx] = BLOCKS.AIR;
+                    }
+                } else {
+                    if (biome === 'MAGMA_CAVES') blocks[idx] = BLOCKS.MAGMA_STONE;
+                    else blocks[idx] = BLOCKS.CAVERN_STONE;
+                }
+            }
+
+            // Second pass for decorations
+            for (let y = CHUNK_HEIGHT - 2; y >= 1; y--) {
+                const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                const idxAbove = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                const idxBelow = ((y - 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+
+                const b = blocks[idx];
+                const above = y < CHUNK_HEIGHT - 1 ? blocks[idxAbove] : BLOCKS.BEDROCK;
+                const below = y > 0 ? blocks[idxBelow] : BLOCKS.BEDROCK;
+
+                // Floor decorations
+                if ((b === BLOCKS.CAVERN_STONE || b === BLOCKS.MAGMA_STONE) && above === BLOCKS.AIR) {
+                    if (biome === 'GENERIC') {
+                        if (colRng() < 0.15) blocks[idx] = BLOCKS.CAVERN_DIRT;
+                        if (colRng() < 0.02) safeSetBlock(blocks, x, y + 1, z, BLOCKS.GLOW_SHROOM, true);
+                    } else if (biome === 'CRYSTAL_CAVES') {
+                        if (colRng() < 0.05) safeSetBlock(blocks, x, y + 1, z, BLOCKS.CRYSTAL_ORE, true);
+                        else if (colRng() < 0.05) safeSetBlock(blocks, x, y + 1, z, BLOCKS.MANA_ORE, true);
+                        else if (colRng() < 0.1) safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_CRYSTAL, true);
+                    } else if (biome === 'MAGMA_CAVES') {
+                        if (colRng() < 0.05) safeSetBlock(blocks, x, y + 1, z, BLOCKS.FIRE, true);
+                    }
+                }
+
+                // Ceiling decorations
+                if ((b === BLOCKS.CAVERN_STONE || b === BLOCKS.MAGMA_STONE) && below === BLOCKS.AIR) {
+                    if (biome === 'GENERIC') {
+                        if (colRng() < 0.03) safeSetBlock(blocks, x, y - 1, z, BLOCKS.GLOW_SHROOM, true);
+                    } else if (biome === 'CRYSTAL_CAVES') {
+                        if (colRng() < 0.05) safeSetBlock(blocks, x, y - 1, z, BLOCKS.GLOWSTONE, true);
+                    }
+                }
+            }
+        }
+    }
+
+    return blocks;
+}
+
+export function generateHighlandsChunk(cx, cz, params) {
+    const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
+    const rng = seededRandom(params.seed + cx * 9999 + cz);
+
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            const wx = cx * CHUNK_SIZE + x;
+            const wz = cz * CHUNK_SIZE + z;
+            const colRng = seededRandom(params.seed + wx * 1234 + wz);
+
+            // Extreme height map
+            const n1 = params.noise2D(wx * 0.005, wz * 0.005);
+            const n2 = params.noise2D(wx * 0.015, wz * 0.015) * 0.5;
+            const n3 = params.noise2D(wx * 0.05, wz * 0.05) * 0.25;
+            // Exponentiate to get sharp peaks and deep valleys
+            let heightVal = (n1 + n2 + n3 + 1) / 2; 
+            heightVal = Math.pow(heightVal, 2.5); 
+            
+            const surfaceY = 20 + Math.floor(heightVal * (CHUNK_HEIGHT - 40));
+
+            for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+
+                if (y === 0) {
+                    blocks[idx] = BLOCKS.BEDROCK;
+                    continue;
+                }
+
+                if (y <= surfaceY) {
+                    if (y === surfaceY) {
+                        if (y > 100) blocks[idx] = BLOCKS.SNOW; // Snow on peaks
+                        else blocks[idx] = BLOCKS.HIGHLANDS_GRASS;
+                    } else if (y > surfaceY - 3) {
+                        blocks[idx] = BLOCKS.HIGHLANDS_DIRT;
+                    } else {
+                        blocks[idx] = BLOCKS.HIGHLANDS_STONE;
+                    }
+                } else {
+                    blocks[idx] = BLOCKS.AIR;
+                }
+            }
+
+            // Decorations on surface
+            if (surfaceY < CHUNK_HEIGHT - 10) {
+                if (colRng() < 0.01) {
+                    // Small floating cloud puff above ground
+                    safeSetBlock(blocks, x, surfaceY + 5 + Math.floor(colRng()*10), z, BLOCKS.AETHER_CLOUD, true);
+                }
+            }
+        }
+    }
+    return blocks;
+}

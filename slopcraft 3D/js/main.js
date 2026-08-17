@@ -4,21 +4,25 @@
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js';
 import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk } from './generation.js';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk } from './generation.js';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js';
 import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js';
 import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js';
 import { AudioManager } from './audio.js';
 
 // Helper: find safe spawn location
-function findSafeSpawn(params, isNether = false) {
+function findSafeSpawn(params, dimension = 'overworld') {
     const searchRadiusChunks = 10;
     for (let cr = 0; cr <= searchRadiusChunks; cr++) {
         for (let cx = -cr; cx <= cr; cx++) {
             for (let cz = -cr; cz <= cr; cz++) {
                 if (Math.max(Math.abs(cx), Math.abs(cz)) !== cr) continue;
                 
-                const centerBlocks = isNether ? generateNetherChunk(cx, cz, params) : generateChunkTerrain(cx, cz, params);
+                let centerBlocks;
+                if (dimension === 'nether') centerBlocks = generateNetherChunk(cx, cz, params);
+                else if (dimension === 'aether') centerBlocks = generateAetherChunk(cx, cz, params);
+                else if (dimension === 'caverns') centerBlocks = generateCavernsChunk(cx, cz, params);
+                else centerBlocks = generateChunkTerrain(cx, cz, params);
 
                 const searchRadius = Math.floor(CHUNK_SIZE / 2);
                 for (let r = 0; r < searchRadius; r++) {
@@ -26,12 +30,12 @@ function findSafeSpawn(params, isNether = false) {
                         for (let z = CHUNK_SIZE / 2 - r; z <= CHUNK_SIZE / 2 + r; z++) {
                             if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) continue;
 
-                            const startY = isNether ? 100 : CHUNK_HEIGHT - 3;
+                            const startY = (dimension === 'nether' || dimension === 'aether') ? 100 : CHUNK_HEIGHT - 3;
                             for (let y = startY; y > 0; y--) {
                                 const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                 const block = centerBlocks[idx];
 
-                                if (!isNether && (block === BLOCKS.WATER || block === BLOCKS.SWAMP_WATER || block === BLOCKS.LAVA)) {
+                                if (dimension === 'overworld' && (block === BLOCKS.WATER || block === BLOCKS.SWAMP_WATER || block === BLOCKS.LAVA)) {
                                     break; // Reject columns that are ocean or lava lakes from the top
                                 }
 
@@ -40,7 +44,7 @@ function findSafeSpawn(params, isNether = false) {
                                     const idxUp2 = ((y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                     if (centerBlocks[idxUp1] === BLOCKS.AIR && centerBlocks[idxUp2] === BLOCKS.AIR) {
                                         return { x: cx * CHUNK_SIZE + x, y: y + 1, z: cz * CHUNK_SIZE + z };
-                                    } else if (!isNether) {
+                                    } else if (dimension === 'overworld') {
                                         break; // Overworld: if the top block isn't safe, reject column. Don't look underground.
                                     }
                                 }
@@ -52,7 +56,7 @@ function findSafeSpawn(params, isNether = false) {
         }
     }
 
-    return { x: CHUNK_SIZE / 2, y: isNether ? 60 : CHUNK_HEIGHT + 10, z: CHUNK_SIZE / 2 };
+    return { x: CHUNK_SIZE / 2, y: (dimension === 'nether' || dimension === 'aether') ? 60 : CHUNK_HEIGHT + 10, z: CHUNK_SIZE / 2 };
 }
 
 class ChestVisual {
@@ -177,6 +181,7 @@ class Game {
         this.furnaces = new Map(); // key -> { input, fuel, output, progress, isSmelting }
 
         this.world.onChestGenerated = (x, y, z) => this._addChest(x, y, z, true);
+        this.world.onTorchGenerated = (x, y, z) => this.torchSystem.addTorch(x, y, z);
         this.world.onChestPlaced = (x, y, z) => this._addChest(x, y, z, false);
         this.world.onFurnacePlaced = (x, y, z) => this._addFurnace(x, y, z);
         
@@ -859,7 +864,7 @@ class Game {
                     // The setBlock call will trigger onBlockDestroyed which spawns the item
                     this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
                     
-                    if (blockType === BLOCKS.TORCH) this.torchSystem.removeTorch(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    if (blockType === BLOCKS.TORCH || blockType === BLOCKS.GLOWSTONE) this.torchSystem.removeTorch(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                     
                     this.audio.playBreak(blockType);
                     this.breakTimer = 0;
@@ -896,8 +901,8 @@ class Game {
             const slot = this.player.inventory.slots[this.player.selectedSlot];
 
             if (slot && slot.item.subtype === 'flint_and_steel' && hit.hit) {
-                // If clicked on Obsidian, try to light a portal
-                if (hit.blockType === window.BLOCKS.OBSIDIAN) {
+                // If clicked on Obsidian, Glowstone, Dirt, Stone, or Cobblestone, try to light a portal
+                if (hit.blockType === window.BLOCKS.OBSIDIAN || hit.blockType === window.BLOCKS.GLOWSTONE || hit.blockType === window.BLOCKS.DIRT || hit.blockType === window.BLOCKS.GRASS || hit.blockType === window.BLOCKS.STONE || hit.blockType === window.BLOCKS.COBBLESTONE) {
                     this.tryLightPortal(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                     this.audio.playHit();
                 } else if (hit.blockType === window.BLOCKS.TNT) {
@@ -996,7 +1001,7 @@ class Game {
                 const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
                 if (curBlock === BLOCKS.AIR || curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER || curBlock === BLOCKS.LAVA) {
                     this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype);
-                    if (slot.item.subtype === BLOCKS.TORCH) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
+                    if (slot.item.subtype === BLOCKS.TORCH || slot.item.subtype === BLOCKS.GLOWSTONE) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
                     this.audio.playPlace();
                     slot.count--;
                     if (slot.count <= 0) {
@@ -1022,6 +1027,16 @@ class Game {
         requestAnimationFrame(this._boundLoop);
 
         if (!this.isReady) return;
+
+        // Check if we need to build a pending portal
+        if (this.pendingPortal && this.pendingPortal.pos) {
+            const p = this.pendingPortal.pos;
+            // Wait for chunk to be generated before building portal
+            if (this.world.getChunkAt(p.x, p.z)) {
+                this.buildLitPortal(p.x, p.y, p.z, this.pendingPortal.isNether, this.pendingPortal.isAether, this.pendingPortal.isCaverns, this.pendingPortal.isHighlands);
+                this.pendingPortal = null;
+            }
+        }
 
         const time = performance.now();
         const dt = Math.min((time - this.lastTime) / 1000, 0.1);
@@ -1053,7 +1068,7 @@ class Game {
         if (this.isPaused) {
             this.input.resetMouse();
             // Continue loading chunks while paused
-            const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : generateChunkTerrain;
+            const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'caverns' ? generateCavernsChunk : generateChunkTerrain));
             this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), dt);
             return;
         }
@@ -1090,6 +1105,14 @@ class Game {
                 this.footstepTimer = 0.45; // trigger immediately next step
             }
 
+            if (this.currentDimension === 'highlands') {
+                this.player.speedMult = 3.0; // Super fast speed
+                this.player.jumpSpeed = 16.0; // 2x jump height (base is 8.0)
+            } else {
+                this.player.speedMult = 1.0;
+                this.player.jumpSpeed = 8.0;
+            }
+            
             this.player.update(dt, this.input.keys, this.input.mouse, this.world);
             this.handleInput(dt);
 
@@ -1097,7 +1120,14 @@ class Game {
                 // Respawn
                 this.player.health = this.player.maxHealth;
                 this.player.mana = this.player.maxMana;
-                const spawnPos = findSafeSpawn(this.planetParams);
+                
+                if (this.currentDimension === 'aether') {
+                    // Warp to overworld on death
+                    this.warpToNewPlanet('overworld');
+                    return; // Skip standard respawn logic since warp handles it
+                }
+                
+                const spawnPos = findSafeSpawn(this.planetParams, this.currentDimension);
                 this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
                 this.player.velocity.set(0, 0, 0);
                 this.audio.playHit();
@@ -1131,11 +1161,22 @@ class Game {
         const pbx = Math.floor(this.player.position.x);
         const pby = Math.floor(this.player.position.y);
         const pbz = Math.floor(this.player.position.z);
-        if (this.world.getBlock(pbx, pby, pbz) === BLOCKS.PORTAL && !this.isWarping) {
-            this.warpToNewPlanet();
+        const pBlock = this.world.getBlock(pbx, pby, pbz);
+        if (pBlock === BLOCKS.PORTAL && !this.isWarping) {
+            this.warpToNewPlanet('nether');
+            this.audio.playHit();
+        } else if (pBlock === window.BLOCKS.AETHER_PORTAL) {
+            this.warpToNewPlanet('aether');
+            this.audio.playHit();
+        } else if (pBlock === window.BLOCKS.CAVERN_PORTAL) {
+            this.warpToNewPlanet('caverns');
+            this.audio.playHit();
+        } else if (pBlock === window.BLOCKS.HIGHLANDS_PORTAL) {
+            this.warpToNewPlanet('highlands');
+            this.audio.playHit();
         }
         
-        const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : generateChunkTerrain;
+        const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'caverns' ? generateCavernsChunk : (this.currentDimension === 'highlands' ? generateHighlandsChunk : generateChunkTerrain)));
         this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), dt);
 
         // Update Systems
@@ -1154,7 +1195,7 @@ class Game {
             }
         }
 
-        this.lighting.update(dt, this.engine.camera.position, isUnderwater, isUnderground);
+        this.lighting.update(dt, this.engine.camera.position, isUnderwater, this.currentDimension);
 
         if (this.engine.scene.fog) {
             // Keep track of the original planet fog density for Systems to use
@@ -1165,6 +1206,43 @@ class Game {
         this.particles.update(dt);
         this.cloudSystem.update(dt, this.engine.camera.position);
         this.entityManager.update(dt, this.world, this.player.position, this.player.inventory, this.player, this.lighting.timeOfDay, this.currentDimension);
+
+        // Process mob spell casting
+        for (const mob of this.entityManager.mobs) {
+            if (mob.wantsToCastWind) {
+                const dir = mob.wantsToCastWind;
+                mob.wantsToCastWind = null;
+                const stats = {
+                    damage: mob.damage,
+                    manaCost: 0,
+                    speed: 25,
+                    count: 3,
+                    pierce: false,
+                    homing: false,
+                    castTwo: false,
+                    effects: [],
+                    element: 'WIND',
+                    cooldown: 0
+                };
+                
+                const eyePos = mob.position.clone();
+                eyePos.y += 0.5; // From mob center/head
+                
+                for (let i = 0; i < stats.count; i++) {
+                    let projDir = dir.clone();
+                    projDir.x += (Math.random() - 0.5) * 0.4;
+                    projDir.y += (Math.random() - 0.5) * 0.4;
+                    projDir.z += (Math.random() - 0.5) * 0.4;
+                    projDir.normalize();
+                    // We color the wind projectile cyan
+                    const proj = new window.SpellProjectile(eyePos, projDir, stats, 0xaaffff);
+                    // Flag it so it hits the player, not mobs
+                    proj.isMobProjectile = true;
+                    this.projectileManager.add(proj);
+                }
+                this.audio.playCast();
+            }
+        }
 
         for (let visual of this.chestVisuals.values()) {
             visual.update(dt);
@@ -1186,10 +1264,34 @@ class Game {
 
             // Check entities
             _tempVec3.copy(proj.velocity).normalize();
-            const eHit = this.entityManager.raycast(proj.position, _tempVec3, dt * proj.stats.speed + 0.5);
-            if (eHit.hit && eHit.mob) {
-                hitFound = true;
-                hitPos.copy(eHit.mob.position);
+            
+            let playerHit = false;
+            let eHit = { hit: false, mob: null };
+            
+            if (proj.isMobProjectile) {
+                // Check player collision
+                const distToPlayer = proj.position.distanceTo(this.player.position);
+                // Player height is ~1.8, width ~0.6
+                if (distToPlayer < 1.0 || (Math.abs(proj.position.x - this.player.position.x) < 0.5 && 
+                                           Math.abs(proj.position.z - this.player.position.z) < 0.5 && 
+                                           proj.position.y >= this.player.position.y && 
+                                           proj.position.y <= this.player.position.y + 1.8)) {
+                    hitFound = true;
+                    playerHit = true;
+                    hitPos.copy(this.player.position);
+                    this.player.takeDamage(proj.stats.damage);
+                    const d = document.getElementById('damage-flash');
+                    if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                }
+            } else {
+                eHit = this.entityManager.raycast(proj.position, _tempVec3, dt * proj.stats.speed + 0.5);
+                if (eHit.hit && eHit.mob) {
+                    hitFound = true;
+                    hitPos.copy(eHit.mob.position);
+                }
+            }
+
+            if (hitFound && !playerHit) {
                 if (proj.stats.element === 'ICE') {
                     eHit.mob.takeDamage(proj.stats.damage, _tempVec3);
                     eHit.mob.freeze(3.0); // 3 seconds freeze
@@ -1573,18 +1675,27 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
         }
     }
 
-    warpToNewPlanet() {
-        this.isWarping = true;
-        this.audio.playCast();
+    warpToNewPlanet(targetDim = 'nether') {
+        if (!this.isReady) return;
+        this.isReady = false;
 
-        const warpToNether = this.currentDimension !== 'nether';
+        const isAether = targetDim === 'aether';
+        const isCaverns = targetDim === 'caverns';
+        const isHighlands = targetDim === 'highlands';
+        const isWarpingToDim = targetDim !== 'overworld';
+
+        if (isWarpingToDim) {
+            // Save the exact position we left from and the portal type
+            this.overworldReturnPos = this.player.position.clone();
+            this.lastPortalDim = targetDim;
+        }
 
         // Simple screen fade
         const fade = document.createElement('div');
         fade.style.position = 'fixed';
         fade.style.top = '0'; fade.style.left = '0';
         fade.style.width = '100%'; fade.style.height = '100%';
-        fade.style.backgroundColor = warpToNether ? '#400000' : 'white';
+        fade.style.backgroundColor = isWarpingToDim ? (isAether ? 'white' : (isHighlands ? '#00ffff' : '#400000')) : 'white';
         fade.style.opacity = '0';
         fade.style.transition = 'opacity 1.5s ease-in-out';
         fade.style.zIndex = '9999';
@@ -1594,13 +1705,10 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
         setTimeout(() => { fade.style.opacity = '1'; }, 50);
 
         setTimeout(() => {
-            if (!warpToNether) {
-                // New Seed only when returning to overworld (or keep it if you want)
-                this.currentSeed = Math.floor(Math.random() * 1000000);
-            }
+            // Keep the same seed to preserve world generation
             this.planetParams = generatePlanetParams(this.currentSeed);
             this.world.planetParams = this.planetParams;
-            this.currentDimension = warpToNether ? 'nether' : 'overworld';
+            this.currentDimension = targetDim;
 
             // Clear World
             for (const chunk of this.world.chunks.values()) {
@@ -1617,8 +1725,18 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
             this.entityManager.items = [];
 
             // Reset Player
-            const spawnPos = findSafeSpawn(this.planetParams, warpToNether);
-            this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
+            let spawnPos;
+            if (isWarpingToDim) {
+                spawnPos = findSafeSpawn(this.planetParams, targetDim);
+                this.pendingPortal = { pos: spawnPos, isNether: targetDim === 'nether', isAether: targetDim === 'aether', isCaverns: targetDim === 'caverns', isHighlands: targetDim === 'highlands' };
+            } else {
+                spawnPos = this.overworldReturnPos || findSafeSpawn(this.planetParams, 'overworld');
+                // Use the saved portal type for the return portal
+                const returnDim = this.lastPortalDim || 'nether';
+                this.pendingPortal = { pos: spawnPos, isNether: returnDim === 'nether', isAether: returnDim === 'aether', isCaverns: returnDim === 'caverns', isHighlands: returnDim === 'highlands' };
+            }
+            // Center player in the block to avoid wall clipping
+            this.player.position.set(spawnPos.x + 0.5, spawnPos.y, spawnPos.z + 0.5);
             this.player.velocity.set(0, 0, 0);
 
             // Update UI/Env
@@ -1629,9 +1747,61 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
             setTimeout(() => {
                 fade.remove();
                 this.isWarping = false;
+                this.isReady = true; // Resume game loop
             }, 1500);
 
         }, 1500);
+    }
+
+    buildLitPortal(px, py, pz, isNether, isAether = false, isCaverns = false, isHighlands = false) {
+        const startX = Math.floor(px) - 1;
+        const startY = Math.floor(py);
+        const startZ = Math.floor(pz) - 3; // Offset portal 3 blocks away
+        
+        let frameBlock = window.BLOCKS.OBSIDIAN;
+        if (isAether) frameBlock = window.BLOCKS.GLOWSTONE;
+        if (isCaverns) frameBlock = window.BLOCKS.DIRT;
+        if (isHighlands) frameBlock = window.BLOCKS.STONE;
+
+        let interiorBlock = window.BLOCKS.PORTAL;
+        if (isAether) interiorBlock = window.BLOCKS.AETHER_PORTAL;
+        if (isCaverns) interiorBlock = window.BLOCKS.CAVERN_PORTAL;
+        if (isHighlands) interiorBlock = window.BLOCKS.HIGHLANDS_PORTAL;
+
+        // Build 4x5 lit portal with obsidian/glowstone frame
+        for (let x = startX; x < startX + 4; x++) {
+            for (let y = startY; y < startY + 5; y++) {
+                if (x === startX || x === startX + 3 || y === startY || y === startY + 4) {
+                    this.world.setBlock(x, y, startZ, frameBlock);
+                } else {
+                    this.world.setBlock(x, y, startZ, interiorBlock);
+                }
+            }
+        }
+        
+        // Platform block
+        let floorBlock = window.BLOCKS.OBSIDIAN;
+        if (isNether) floorBlock = window.BLOCKS.NETHERRACK;
+        if (isAether) floorBlock = window.BLOCKS.AETHER_STONE;
+        if (isCaverns) floorBlock = window.BLOCKS.CAVERN_STONE;
+        if (isHighlands) floorBlock = window.BLOCKS.HIGHLANDS_STONE;
+
+        // Clear space and build platform
+        for (let x = startX - 2; x <= startX + 5; x++) {
+            for (let z = startZ - 2; z <= startZ + 4; z++) {
+                // Ensure there is solid ground
+                if (this.world.getBlock(x, startY - 1, z) === window.BLOCKS.AIR || 
+                    this.world.getBlock(x, startY - 1, z) === window.BLOCKS.LAVA) {
+                    this.world.setBlock(x, startY - 1, z, floorBlock);
+                }
+                
+                // Clear air above platform (skip the portal itself)
+                for (let y = startY; y < startY + 5; y++) {
+                    if (z === startZ && x >= startX && x < startX + 4) continue; // Don't delete portal
+                    this.world.setBlock(x, y, z, window.BLOCKS.AIR);
+                }
+            }
+        }
     }
 
     igniteTNT(x, y, z) {
@@ -1684,8 +1854,20 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
     }
 
     tryLightPortal(startX, startY, startZ) {
-        const frameBlocks = [window.BLOCKS.OBSIDIAN, window.BLOCKS.PORTAL_FRAME];
+        // First try Obsidian -> Nether Portal
+        if (this._tryLightPortalType(startX, startY, startZ, [window.BLOCKS.OBSIDIAN, window.BLOCKS.PORTAL_FRAME], window.BLOCKS.PORTAL)) return;
         
+        // Then try Glowstone -> Aether Portal
+        if (this._tryLightPortalType(startX, startY, startZ, [window.BLOCKS.GLOWSTONE], window.BLOCKS.AETHER_PORTAL)) return;
+        
+        // Then try Dirt -> Caverns Portal
+        if (this._tryLightPortalType(startX, startY, startZ, [window.BLOCKS.DIRT, window.BLOCKS.GRASS], window.BLOCKS.CAVERN_PORTAL)) return;
+
+        // Then try Stone or Cobblestone -> Highlands Portal
+        if (this._tryLightPortalType(startX, startY, startZ, [window.BLOCKS.STONE, window.BLOCKS.COBBLESTONE], window.BLOCKS.HIGHLANDS_PORTAL)) return;
+    }
+
+    _tryLightPortalType(startX, startY, startZ, frameBlocks, portalBlock) {
         const dirs = [
             [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]
         ];
@@ -1699,16 +1881,17 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
             
             // Try Z-plane (fixed Z)
             if (dz === 0) {
-                if (this._floodFillPortal(sx, sy, startZ, 'z', frameBlocks)) return;
+                if (this._floodFillPortal(sx, sy, startZ, 'z', frameBlocks, portalBlock)) return true;
             }
             // Try X-plane (fixed X)
             if (dx === 0) {
-                if (this._floodFillPortal(startX, sy, sz, 'x', frameBlocks)) return;
+                if (this._floodFillPortal(startX, sy, sz, 'x', frameBlocks, portalBlock)) return true;
             }
         }
+        return false;
     }
 
-    _floodFillPortal(sx, sy, sz, plane, frameBlocks) {
+    _floodFillPortal(sx, sy, sz, plane, frameBlocks, portalBlock) {
         const MAX_AREA = 441; // max 21x21 interior
         const visited = new Set();
         const queue = [{x: sx, y: sy, z: sz}];
@@ -1743,7 +1926,7 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
         if (interior.length < 6) return false; // Minimum inside is 2x3
         
         for (const p of interior) {
-            this.world.setBlock(p.x, p.y, p.z, window.BLOCKS.PORTAL);
+            this.world.setBlock(p.x, p.y, p.z, portalBlock);
         }
         return true;
     }
