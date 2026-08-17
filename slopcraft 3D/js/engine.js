@@ -1381,7 +1381,7 @@ export class World {
         }
     }
 
-    raycast(origin, direction, maxDist = 8) {
+    raycast(origin, direction, maxDist = 8, hitLiquids = false) {
         // Fast voxel raycast algorithm (Amanatides & Woo)
         let t = 0;
         let ix = Math.floor(origin.x);
@@ -1406,7 +1406,8 @@ export class World {
             const blockType = this.getBlock(ix, iy, iz);
             const props = getBlockProperties(blockType);
 
-            if (blockType !== BLOCKS.AIR && blockType !== BLOCKS.WATER && blockType !== BLOCKS.LAVA && (props.solid || props.isCross)) {
+            const isLiquidHit = hitLiquids && props.isLiquid;
+            if (blockType !== BLOCKS.AIR && (isLiquidHit || (blockType !== BLOCKS.WATER && blockType !== BLOCKS.LAVA && blockType !== BLOCKS.SWAMP_WATER && (props.solid || props.isCross)))) {
                 const hitNormal = new THREE.Vector3(0, 0, 0);
                 if (steppedIndex === 0) hitNormal.x = -stepX;
                 if (steppedIndex === 1) hitNormal.y = -stepY;
