@@ -1236,16 +1236,16 @@ class Game {
         const pbz = Math.floor(this.player.position.z);
         const pBlock = this.world.getBlock(pbx, pby, pbz);
         if (pBlock === BLOCKS.PORTAL && !this.isWarping) {
-            this.warpToNewPlanet('nether');
+            this.warpToNewPlanet(this.currentDimension === 'nether' ? 'overworld' : 'nether');
             this.audio.playHit();
         } else if (pBlock === window.BLOCKS.AETHER_PORTAL) {
-            this.warpToNewPlanet('aether');
+            this.warpToNewPlanet(this.currentDimension === 'aether' ? 'overworld' : 'aether');
             this.audio.playHit();
         } else if (pBlock === window.BLOCKS.CAVERN_PORTAL) {
-            this.warpToNewPlanet('caverns');
+            this.warpToNewPlanet(this.currentDimension === 'caverns' ? 'overworld' : 'caverns');
             this.audio.playHit();
         } else if (pBlock === window.BLOCKS.HIGHLANDS_PORTAL) {
-            this.warpToNewPlanet('highlands');
+            this.warpToNewPlanet(this.currentDimension === 'highlands' ? 'overworld' : 'highlands');
             this.audio.playHit();
         }
         
