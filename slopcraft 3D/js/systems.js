@@ -1394,38 +1394,35 @@ class UISystem {
             return null;
         };
 
-        if (!this.is3x3Crafting) {
-            // ONLY 2x2 recipes
-            if (woodType !== undefined && totalItems === 1) return block(woodToPlankMap[woodType].block, woodToPlankMap[woodType].name, 4);
-            if (countAnyPlank === 2 && totalItems === 2) return mat('stick', 'Stick', 4);
-            if (getCount('coal') === 1 && getCount('stick') === 1 && totalItems === 2) return block(B.TORCH, 'Torch', 4);
-            
-            if (s[0] === 'stick' && s[1] === 'iron_ingot' && !s[2] && !s[3]) return equip('wand_basic', {}, 'Basic Wand', 'Channels raw magic.');
-            if (s[0] === 'wand_basic' && s[1] === 'coal' && !s[2] && !s[3]) return equip('wand_fire', { element: 'FIRE' }, 'Fire Wand', 'Shoots fireballs.');
-            if (s[0] === 'wand_basic' && s[1] === B.SNOW && !s[2] && !s[3]) return equip('wand_ice', { element: 'ICE' }, 'Ice Wand', 'Shoots ice blasts.');
-            if (s[0] === 'wand_basic' && (s[1] === B.LEAVES || s[1] === B.CHERRY_LEAVES || s[1] === B.AUTUMN_LEAVES) && !s[2] && !s[3]) return equip('wand_nature', { element: 'HEAL' }, 'Nature Wand', 'Heals the wielder.');
+        // --- 2x2 and 3x3 shared recipes ---
+        if (woodType !== undefined && totalItems === 1) return block(woodToPlankMap[woodType].block, woodToPlankMap[woodType].name, 4);
+        if (countAnyPlank === 2 && totalItems === 2) return mat('stick', 'Stick', 4);
+        if (getCount('coal') === 1 && getCount('stick') === 1 && totalItems === 2) return block(B.TORCH, 'Torch', 4);
+        
+        if (getCount('stick') === 1 && getCount('iron_ingot') === 1 && totalItems === 2) return equip('wand_basic', {}, 'Basic Wand', 'Channels raw magic.');
+        if (getCount('wand_basic') === 1 && getCount('coal') === 1 && totalItems === 2) return equip('wand_fire', { element: 'FIRE' }, 'Fire Wand', 'Shoots fireballs.');
+        if (getCount('wand_basic') === 1 && getCount(B.SNOW) === 1 && totalItems === 2) return equip('wand_ice', { element: 'ICE' }, 'Ice Wand', 'Shoots ice blasts.');
+        if (getCount('wand_basic') === 1 && (getCount(B.LEAVES) === 1 || getCount(B.CHERRY_LEAVES) === 1 || getCount(B.AUTUMN_LEAVES) === 1) && totalItems === 2) return equip('wand_nature', { element: 'HEAL' }, 'Nature Wand', 'Heals the wielder.');
 
-            if (getCount(B.STONE) === 4) return block(B.STONE_BRICKS, 'Stone Bricks', 4);
-            if (getCount(B.CLAY) === 4) return block(B.BRICKS, 'Bricks', 4);
-            if (countAnyPlank === 4 && totalItems === 4) return block(B.CRAFTING_TABLE, 'Crafting Table', 1);
-            if (getCount('iron_ingot') === 1 && getCount(B.SAND) === 1 && totalItems === 2) return equip('flint_and_steel', { damage: 0 }, 'Flint and Steel', 'Lights fires.');
-            if (getCount(B.COBBLESTONE) === 1 && (getCount(B.LEAVES) === 1 || getCount(B.CHERRY_LEAVES) === 1 || getCount(B.AUTUMN_LEAVES) === 1) && totalItems === 2) return block(B.MOSSY_COBBLESTONE, 'Mossy Cobble', 1);
-            
-            if (getCount(B.SUGARCANE) === 1 && totalItems === 1) return mat('sugar', 'Sugar', 1);
-            if (getCount(B.SUGARCANE) === 3 && totalItems === 3) return mat('paper', 'Paper', 3);
-            if (getCount('paper') === 3 && getCount('leather') === 1 && totalItems === 4) return mat('book', 'Book', 1);
-            if (getCount(B.SANDSTONE) === 4) return block(B.SANDSTONE, 'Smooth Sandstone', 4);
+        if (getCount(B.STONE) === 4 && totalItems === 4) return block(B.STONE_BRICKS, 'Stone Bricks', 4);
+        if (getCount(B.CLAY) === 4 && totalItems === 4) return block(B.BRICKS, 'Bricks', 4);
+        if (countAnyPlank === 4 && totalItems === 4) return block(B.CRAFTING_TABLE, 'Crafting Table', 1);
+        if (getCount('iron_ingot') === 1 && getCount(B.SAND) === 1 && totalItems === 2) return equip('flint_and_steel', { damage: 0 }, 'Flint and Steel', 'Lights fires.');
+        if (getCount(B.COBBLESTONE) === 1 && (getCount(B.LEAVES) === 1 || getCount(B.CHERRY_LEAVES) === 1 || getCount(B.AUTUMN_LEAVES) === 1) && totalItems === 2) return block(B.MOSSY_COBBLESTONE, 'Mossy Cobble', 1);
+        
+        if (getCount(B.SUGARCANE) === 1 && totalItems === 1) return mat('sugar', 'Sugar', 1);
+        if (getCount(B.SUGARCANE) === 3 && totalItems === 3) return mat('paper', 'Paper', 3);
+        if (getCount('paper') === 3 && getCount('leather') === 1 && totalItems === 4) return mat('book', 'Book', 1);
+        if (getCount(B.SANDSTONE) === 4 && totalItems === 4) return block(B.SANDSTONE, 'Smooth Sandstone', 4);
 
-            // Reverse Storage is 1 item -> 9 items. Can be done in 2x2 grid.
-            if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
-            if (getCount(B.GOLD_BLOCK) === 1 && totalItems === 1) return mat('gold_ingot', 'Gold Ingot', 9);
-            if (getCount(B.DIAMOND_BLOCK) === 1 && totalItems === 1) return mat('diamond', 'Diamond', 9);
+        // Reverse Storage is 1 item -> 9 items.
+        if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
+        if (getCount(B.GOLD_BLOCK) === 1 && totalItems === 1) return mat('gold_ingot', 'Gold Ingot', 9);
+        if (getCount(B.DIAMOND_BLOCK) === 1 && totalItems === 1) return mat('diamond', 'Diamond', 9);
 
-            return null;
-        }
+        if (!this.is3x3Crafting) return null;
 
-        if (this.is3x3Crafting) {
-            // ONLY 3x3 recipes
+        // ONLY 3x3 recipes
             let r;
             r = pickaxeRecipe('iron_ingot', 3.0, 5, 1.5, 'Iron Pickaxe'); if (r) return r;
             r = pickaxeRecipe('diamond', 6.0, 8, 3.0, 'Diamond Pickaxe'); if (r) return r;
