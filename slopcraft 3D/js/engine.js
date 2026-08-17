@@ -492,8 +492,8 @@ export class Chunk {
         geometry.setAttribute('uv', new THREE.BufferAttribute(_uvs.slice(0, uvCount), 2));
         geometry.setAttribute('color', new THREE.BufferAttribute(_colors.slice(0, colorCount), 3));
 
-        geometry.computeBoundingSphere();
-        geometry.computeBoundingBox();
+        geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(CHUNK_SIZE/2, CHUNK_HEIGHT/2, CHUNK_SIZE/2), 65);
+        geometry.boundingBox = new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE));
 
         // Use shared materials instead of allocating new ones
         const materials = atlas.sharedMaterials;
