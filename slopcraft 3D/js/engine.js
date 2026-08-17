@@ -233,6 +233,8 @@ const _transparentIndices = new Uint32Array(MAX_INDICES);
 const _glowOpaqueIndices = new Uint32Array(MAX_INDICES);
 const _glowTransparentIndices = new Uint32Array(MAX_INDICES);
 
+const _meshPool = [];
+
 export class Chunk {
     constructor(cx, cz) {
         this.cx = cx;
@@ -490,6 +492,9 @@ export class Chunk {
         geometry.setAttribute('uv', new THREE.BufferAttribute(_uvs.slice(0, uvCount), 2));
         geometry.setAttribute('color', new THREE.BufferAttribute(_colors.slice(0, colorCount), 3));
 
+        geometry.computeBoundingSphere();
+        geometry.computeBoundingBox();
+
         // Use shared materials instead of allocating new ones
         const materials = atlas.sharedMaterials;
 
@@ -498,6 +503,11 @@ export class Chunk {
             // DO NOT dispose materials since they are shared globally
             this.mesh.geometry = geometry;
             this.mesh.material = materials;
+        } else if (_meshPool.length > 0) {
+            this.mesh = _meshPool.pop();
+            this.mesh.geometry = geometry;
+            this.mesh.material = materials;
+            this.mesh.position.set(this.cx * CHUNK_SIZE, 0, this.cz * CHUNK_SIZE);
         } else {
             this.mesh = new THREE.Mesh(geometry, materials);
             this.mesh.position.set(this.cx * CHUNK_SIZE, 0, this.cz * CHUNK_SIZE);
@@ -512,7 +522,9 @@ export class Chunk {
         if (this.mesh) {
             if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
             this.mesh.geometry.dispose();
+            this.mesh.geometry = null;
             // DO NOT dispose materials since they are shared globally
+            _meshPool.push(this.mesh);
             this.mesh = null;
         }
     }
@@ -1107,7 +1119,8 @@ export class World {
 
         // Process a few chunks per frame
         let buildsThisFrame = 0;
-        while (this.chunksToBuild.length > 0 && buildsThisFrame < 2) {
+        // Limit to 1 build per frame to ensure smooth 60 FPS
+        while (this.chunksToBuild.length > 0 && buildsThisFrame < 1) {
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToBuild.length; i++) {
