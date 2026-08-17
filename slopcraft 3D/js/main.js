@@ -2,13 +2,13 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=21';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=21';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk } from './generation.js?v=21';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=21';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=21';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=21';
-import { AudioManager } from './audio.js?v=21';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=22';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=22';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk } from './generation.js?v=22';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=22';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=22';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=22';
+import { AudioManager } from './audio.js?v=22';
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
@@ -668,8 +668,8 @@ class Game {
         const lookDir = this.player.getLookDirection();
         const eyePos = this.player.getEyePosition();
         
-        const slot = this.player.inventory[this.player.selectedSlot];
-        const isHoldingBucket = slot && slot.item && slot.item.type === 'material' && (slot.item.subtype === 'bucket' || slot.item.subtype === 'water_bucket' || slot.item.subtype === 'lava_bucket');
+        const invSlot = this.player.inventory.slots[this.player.selectedSlot];
+        const isHoldingBucket = invSlot && invSlot.item && invSlot.item.type === 'material' && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket');
         const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingBucket);
         const entityHit = this.entityManager.raycast(eyePos, lookDir, 4); // Melee range
 
@@ -1729,8 +1729,8 @@ class Game {
                 const lookDir = this.player.getLookDirection();
                 const eyePos = this.player.getEyePosition();
                 
-                const slot = this.player.inventory[this.player.selectedSlot];
-                const isHoldingBucket = slot && slot.item && slot.item.type === 'material' && (slot.item.subtype === 'bucket' || slot.item.subtype === 'water_bucket' || slot.item.subtype === 'lava_bucket');
+                const invSlot = this.player.inventory.slots[this.player.selectedSlot];
+                const isHoldingBucket = invSlot && invSlot.item && invSlot.item.type === 'material' && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket');
                 const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingBucket);
                 const lookBlockName = hit.hit ? `${getBlockName(hit.blockType)} [${hit.blockPos.x}, ${hit.blockPos.y}, ${hit.blockPos.z}]` : 'None';
                 
