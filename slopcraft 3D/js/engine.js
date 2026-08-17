@@ -581,7 +581,7 @@ export class World {
         this.chunks = new Map();
         this.chunksToBuild = [];
         this.chunksToGenerate = []; // Chunks waiting for blocks
-        this.renderDistance = 3;
+        this.renderDistance = 6;
         this.onChunkUnloaded = onChunkUnloaded;
         this.onBlockDestroyed = onBlockDestroyed;
         
@@ -611,7 +611,7 @@ export class World {
             vertexColors: true,
             transparent: false,
             alphaTest: 0.5,
-            side: THREE.DoubleSide,
+            side: THREE.FrontSide, // Massive performance gain for opaque blocks
             shininess: 2,
             specular: new THREE.Color(0x111111)
         });
@@ -656,7 +656,7 @@ export class World {
             vertexColors: true,
             transparent: false,
             alphaTest: 0.5,
-            side: THREE.DoubleSide,
+            side: THREE.FrontSide, // Massive performance gain for opaque blocks
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
             emissiveIntensity: 2.0,

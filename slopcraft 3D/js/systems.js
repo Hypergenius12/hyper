@@ -317,38 +317,73 @@ export class ParticleSystem {
         this.particles = [];
         this.geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
         this.material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        
+        // High-performance InstancedMesh for particles
+        this.maxParticles = 2000;
+        this.mesh = new THREE.InstancedMesh(this.geometry, this.material, this.maxParticles);
+        this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        if (this.mesh.instanceColor) this.mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+        this.mesh.count = 0;
+        this.mesh.frustumCulled = false; // Always update all particles
+        this.scene.add(this.mesh);
+        
+        this._dummy = new THREE.Object3D();
+        this._color = new THREE.Color();
     }
 
     emit(pos, type, count = 10, color = 0xffffff) {
         for(let i=0; i<count; i++) {
-            const mat = this.material.clone();
-            mat.color.setHex(color);
-            const mesh = new THREE.Mesh(this.geometry, mat);
-            mesh.position.copy(pos);
-            
+            if (this.particles.length >= this.maxParticles) {
+                // Drop oldest if we reach limit
+                this.particles.shift();
+            }
             const vel = new THREE.Vector3(
                 (Math.random()-0.5)*5,
                 (Math.random()-0.5)*5 + 2,
                 (Math.random()-0.5)*5
             );
-            
-            this.scene.add(mesh);
-            this.particles.push({ mesh, vel, age: 0, maxAge: 0.5 + Math.random() });
+            this.particles.push({
+                pos: pos.clone(),
+                vel: vel,
+                age: 0,
+                maxAge: 0.5 + Math.random(),
+                colorHex: color
+            });
         }
     }
 
     update(dt) {
-        for(let i=this.particles.length-1; i>=0; i--) {
+        let aliveCount = 0;
+        let needsUpdate = false;
+        
+        for(let i = 0; i < this.particles.length; i++) {
             const p = this.particles[i];
             p.age += dt;
             if(p.age >= p.maxAge) {
-                this.scene.remove(p.mesh);
-                p.mesh.material.dispose();
-                this.particles.splice(i, 1);
-            } else {
-                p.mesh.position.addScaledVector(p.vel, dt);
-                p.vel.y -= 9.8 * dt; // gravity
+                continue; // Dies naturally
             }
+            
+            p.pos.addScaledVector(p.vel, dt);
+            p.vel.y -= 9.8 * dt; // gravity
+            
+            this._dummy.position.copy(p.pos);
+            this._dummy.updateMatrix();
+            this.mesh.setMatrixAt(aliveCount, this._dummy.matrix);
+            
+            this._color.setHex(p.colorHex);
+            this.mesh.setColorAt(aliveCount, this._color);
+            
+            this.particles[aliveCount] = p; // Keep alive
+            aliveCount++;
+            needsUpdate = true;
+        }
+        
+        this.particles.length = aliveCount;
+        this.mesh.count = aliveCount;
+        
+        if (needsUpdate || aliveCount === 0) {
+            this.mesh.instanceMatrix.needsUpdate = true;
+            if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
         }
     }
 }
