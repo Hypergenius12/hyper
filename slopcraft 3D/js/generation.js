@@ -1237,44 +1237,34 @@ export function generateNetherChunk(cx, cz, params) {
 
             const colRng = seededRandom(params.seed + wx * 1234 + wz);
 
-            for (let y = 0; y < CHUNK_HEIGHT; y++) {
-                const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+            let nextNval = fbm3D(params.caveNoise, wx * 0.02, 0 * 0.03, wz * 0.02, 2);
+            for (let y = 0; y < CHUNK_HEIGHT; y += 4) {
+                const nval0 = nextNval;
+                nextNval = fbm3D(params.caveNoise, wx * 0.02, (y + 4) * 0.03, wz * 0.02, 2);
 
-                if (y === 0 || y === CHUNK_HEIGHT - 1) {
-                    blocks[idx] = BLOCKS.BEDROCK;
-                    continue;
-                }
+                for (let dy = 0; dy < 4 && y + dy < CHUNK_HEIGHT; dy++) {
+                    const cy = y + dy;
+                    const idx = (cy * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
 
-                // Carve caves
-                // Base solid block is netherrack
-                let isSolid = true;
-                
-                // We use 3D noise to create large caverns.
-                const nval = fbm3D(params.caveNoise, wx * 0.02, y * 0.03, wz * 0.02, 3);
-                
-                // nval ranges roughly -1 to 1. 
-                // We want large open caves, especially in the middle Y ranges.
-                // Distance from center Y
-                const midY = CHUNK_HEIGHT / 2;
-                const distFromMid = Math.abs(y - midY) / (CHUNK_HEIGHT / 2); // 0 at center, 1 at edges
-                
-                // More solid near top and bottom, more open in middle.
-                const threshold = -0.1 + (distFromMid * 0.4); 
+                    if (cy === 0 || cy === CHUNK_HEIGHT - 1) {
+                        blocks[idx] = BLOCKS.BEDROCK;
+                        continue;
+                    }
 
-                if (nval > threshold) {
-                    isSolid = false; // Air/Cave
-                }
+                    const lerpFactor = dy / 4;
+                    const nval = nval0 * (1 - lerpFactor) + nextNval * lerpFactor;
+                    
+                    const midY = CHUNK_HEIGHT / 2;
+                    const distFromMid = Math.abs(cy - midY) / (CHUNK_HEIGHT / 2); 
+                    const threshold = -0.1 + (distFromMid * 0.4); 
 
-                if (isSolid) {
-                    // Floor block or just Netherrack?
-                    // We need to know if this is the "surface" of a cave floor.
-                    // We'll approximate: if the block above is not solid (computed cheaply here, or we do a second pass).
-                    // Actually, a simpler way is just to make all solid blocks Netherrack/Soul sand.
-                    blocks[idx] = (biome === 'SOUL_SAND_VALLEY') ? BLOCKS.SOUL_SAND : BLOCKS.NETHERRACK;
-                } else if (y <= seaLevel) {
-                    blocks[idx] = BLOCKS.LAVA;
-                } else {
-                    blocks[idx] = BLOCKS.AIR;
+                    if (nval <= threshold) {
+                        blocks[idx] = (biome === 'SOUL_SAND_VALLEY') ? BLOCKS.SOUL_SAND : BLOCKS.NETHERRACK;
+                    } else if (cy <= seaLevel) {
+                        blocks[idx] = BLOCKS.LAVA;
+                    } else {
+                        blocks[idx] = BLOCKS.AIR;
+                    }
                 }
             }
 
@@ -1371,32 +1361,37 @@ export function generateCavernsChunk(cx, cz, params) {
             if (biomeNoise > 0.4) biome = 'MAGMA_CAVES';
             else if (biomeNoise < -0.4) biome = 'CRYSTAL_CAVES';
 
-            for (let y = 0; y < CHUNK_HEIGHT; y++) {
-                const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+            let nextNval = fbm3D(params.caveNoise, wx * 0.03, 0 * 0.04, wz * 0.03, 2);
+            for (let y = 0; y < CHUNK_HEIGHT; y += 4) {
+                const nval0 = nextNval;
+                nextNval = fbm3D(params.caveNoise, wx * 0.03, (y + 4) * 0.04, wz * 0.03, 2);
 
-                if (y === 0 || y === CHUNK_HEIGHT - 1) {
-                    blocks[idx] = BLOCKS.BEDROCK;
-                    continue;
-                }
+                for (let dy = 0; dy < 4 && y + dy < CHUNK_HEIGHT; dy++) {
+                    const cy = y + dy;
+                    const idx = (cy * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
 
-                // 3D noise for cavern generation
-                const nval = fbm3D(params.caveNoise, wx * 0.03, y * 0.04, wz * 0.03, 3);
-                
-                // More solid towards bottom, more open in middle
-                const midY = CHUNK_HEIGHT / 2;
-                const distFromMid = Math.abs(y - midY) / (CHUNK_HEIGHT / 2); 
-                const threshold = -0.2 + (distFromMid * 0.5); 
-
-                if (nval > threshold) {
-                    // Open space. Fill bottom of magma caves with lava
-                    if (biome === 'MAGMA_CAVES' && y < 15) {
-                        blocks[idx] = BLOCKS.LAVA;
-                    } else {
-                        blocks[idx] = BLOCKS.AIR;
+                    if (cy === 0 || cy === CHUNK_HEIGHT - 1) {
+                        blocks[idx] = BLOCKS.BEDROCK;
+                        continue;
                     }
-                } else {
-                    if (biome === 'MAGMA_CAVES') blocks[idx] = BLOCKS.MAGMA_STONE;
-                    else blocks[idx] = BLOCKS.CAVERN_STONE;
+
+                    const lerpFactor = dy / 4;
+                    const nval = nval0 * (1 - lerpFactor) + nextNval * lerpFactor;
+                    
+                    const midY = CHUNK_HEIGHT / 2;
+                    const distFromMid = Math.abs(cy - midY) / (CHUNK_HEIGHT / 2); 
+                    const threshold = -0.2 + (distFromMid * 0.5); 
+
+                    if (nval > threshold) {
+                        if (biome === 'MAGMA_CAVES' && cy < 15) {
+                            blocks[idx] = BLOCKS.LAVA;
+                        } else {
+                            blocks[idx] = BLOCKS.AIR;
+                        }
+                    } else {
+                        if (biome === 'MAGMA_CAVES') blocks[idx] = BLOCKS.MAGMA_STONE;
+                        else blocks[idx] = BLOCKS.CAVERN_STONE;
+                    }
                 }
             }
 
