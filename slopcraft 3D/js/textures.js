@@ -1861,11 +1861,16 @@ export function createTextureAtlas() {
         else if (face === 'bottom' || face === 'ny') faceKey = 'bottom';
         else if (face === 'front' || face === 'pz') faceKey = 'front';
         const entry = map[faceKey] || map.side || map.top;
+        
+        // Add a tiny inset (0.1px) to prevent texture bleeding / 1px gaps
+        const epU = (1.0 / atlasW) * 0.1;
+        const epV = (1.0 / atlasH) * 0.1;
+        
         return {
-            u: entry.col * uUnit,
-            v: 1 - (entry.row + 1) * vUnit, // flip Y for Three.js
-            uSize: uUnit,
-            vSize: vUnit
+            u: entry.col * uUnit + epU,
+            v: 1 - (entry.row + 1) * vUnit + epV, // flip Y for Three.js
+            uSize: uUnit - epU * 2,
+            vSize: vUnit - epV * 2
         };
     }
 
