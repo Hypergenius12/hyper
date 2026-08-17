@@ -60,6 +60,8 @@ export const BLOCKS = {
     YELLOW_FLOWER: 51,
     FERN: 52,
     WHITE_FLOWER: 53,
+    PURPLE_FLOWER: 185,
+    ORANGE_FLOWER: 186,
     CHERRY_LOG: 54,
     CHERRY_LEAVES: 55,
     PINK_PETALS: 56,
@@ -197,6 +199,8 @@ const BLOCK_PROPS = {
     [BLOCKS.YELLOW_FLOWER]: { name: 'Yellow Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.FERN]:          { name: 'Fern',           health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
     [BLOCKS.WHITE_FLOWER]:  { name: 'White Flower',   health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.PURPLE_FLOWER]: { name: 'Purple Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.ORANGE_FLOWER]: { name: 'Orange Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.CHERRY_LOG]:    { name: 'Cherry Log',     health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.CHERRY_LEAVES]: { name: 'Cherry Leaves',  health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.PINK_PETALS]:   { name: 'Pink Petals',    health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
@@ -1051,6 +1055,8 @@ function generateBlockTexture(ctx, blockType, face, rng) {
         case BLOCKS.BLUE_FLOWER:
         case BLOCKS.YELLOW_FLOWER:
         case BLOCKS.WHITE_FLOWER:
+        case BLOCKS.PURPLE_FLOWER:
+        case BLOCKS.ORANGE_FLOWER:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
             ctx.fillStyle = '#3ca02d'; // Stem
             ctx.fillRect(7, 9, 2, 7);
@@ -1061,11 +1067,20 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             if (blockType === BLOCKS.BLUE_FLOWER) ctx.fillStyle = '#2266ff';
             if (blockType === BLOCKS.YELLOW_FLOWER) ctx.fillStyle = '#ffee22';
             if (blockType === BLOCKS.WHITE_FLOWER) ctx.fillStyle = '#ffffff';
+            if (blockType === BLOCKS.PURPLE_FLOWER) ctx.fillStyle = '#aa33ff';
+            if (blockType === BLOCKS.ORANGE_FLOWER) ctx.fillStyle = '#ff8800';
+
             ctx.fillRect(6, 5, 4, 4);
             ctx.fillRect(7, 4, 2, 1);
             ctx.fillRect(5, 6, 1, 2);
             ctx.fillRect(10, 6, 1, 2);
+
             if (blockType === BLOCKS.WHITE_FLOWER) ctx.fillStyle = '#eeeeee';
+            if (blockType === BLOCKS.RED_FLOWER) ctx.fillStyle = '#cc0000';
+            if (blockType === BLOCKS.BLUE_FLOWER) ctx.fillStyle = '#0044cc';
+            if (blockType === BLOCKS.YELLOW_FLOWER) ctx.fillStyle = '#ccaa00';
+            if (blockType === BLOCKS.PURPLE_FLOWER) ctx.fillStyle = '#8811cc';
+            if (blockType === BLOCKS.ORANGE_FLOWER) ctx.fillStyle = '#cc5500';
             else ctx.fillStyle = '#ddaa00'; // center
             ctx.fillRect(7, 6, 2, 2);
             break;

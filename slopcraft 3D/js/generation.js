@@ -1434,6 +1434,48 @@ export function generateCavernsChunk(cx, cz, params) {
     return blocks;
 }
 
+function generateHighlandTree(blocks, x, y, z, treeType, rng) {
+    let logBlock = BLOCKS.WOOD;
+    let leavesBlock = BLOCKS.LEAVES;
+    
+    if (treeType === 'PINE') {
+        logBlock = BLOCKS.PINE_WOOD;
+        leavesBlock = BLOCKS.PINE_LEAVES;
+        const height = 6 + Math.floor(rng() * 4);
+        for (let i = 0; i < height; i++) safeSetBlock(blocks, x, y + i, z, logBlock, true);
+        let radius = 2;
+        for (let ty = Math.floor(height/2); ty <= height + 1; ty++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dz = -radius; dz <= radius; dz++) {
+                    if (Math.abs(dx) === radius && Math.abs(dz) === radius && rng() < 0.5) continue;
+                    if (dx === 0 && dz === 0 && ty < height) continue;
+                    safeSetBlock(blocks, x + dx, y + ty, z + dz, leavesBlock, false);
+                }
+            }
+            if (ty % 2 === 1) radius = Math.max(1, radius - 1);
+        }
+    } else { // MEADOW
+        if (rng() < 0.5) {
+            logBlock = BLOCKS.CHERRY_LOG;
+            leavesBlock = BLOCKS.CHERRY_LEAVES;
+        } else {
+            logBlock = BLOCKS.AUTUMN_WOOD;
+            leavesBlock = BLOCKS.AUTUMN_LEAVES;
+        }
+        const height = 4 + Math.floor(rng() * 3);
+        for (let i = 0; i < height; i++) safeSetBlock(blocks, x, y + i, z, logBlock, true);
+        for (let dy = -2; dy <= 1; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dz = -2; dz <= 2; dz++) {
+                    if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
+                    if (dy === 1 && (Math.abs(dx) > 1 || Math.abs(dz) > 1)) continue;
+                    safeSetBlock(blocks, x + dx, y + height + dy, z + dz, leavesBlock, false);
+                }
+            }
+        }
+    }
+}
+
 export function generateHighlandsChunk(cx, cz, params) {
     const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
     const rng = seededRandom(params.seed + cx * 9999 + cz);
@@ -1444,19 +1486,58 @@ export function generateHighlandsChunk(cx, cz, params) {
             const wz = cz * CHUNK_SIZE + z;
             const colRng = seededRandom(params.seed + wx * 1234 + wz);
 
-            // Extreme height map
-            const n1 = params.noise2D(wx * 0.005, wz * 0.005);
-            const n2 = params.noise2D(wx * 0.015, wz * 0.015) * 0.5;
-            const n3 = params.noise2D(wx * 0.05, wz * 0.05) * 0.25;
-            // Exponentiate to get sharp peaks and deep valleys
-            let heightVal = (n1 + n2 + n3 + 1) / 2; 
-            heightVal = Math.pow(heightVal, 2.5); 
-            
-            const surfaceY = 20 + Math.floor(heightVal * (CHUNK_HEIGHT - 40));
+            const biomeNoiseVal = params.noise2D(wx * 0.002 + 5000, wz * 0.002 + 5000);
+            let biome = 'JAGGED_PEAKS';
+            if (biomeNoiseVal < -0.3) biome = 'VOLCANIC';
+            else if (biomeNoiseVal < 0.2) biome = 'MEADOWS';
+            else if (biomeNoiseVal < 0.6) biome = 'FROZEN_WASTES';
+
+            let surfaceY = 20;
+            let topBlock = BLOCKS.HIGHLANDS_GRASS;
+            let subBlock = BLOCKS.HIGHLANDS_DIRT;
+            let baseBlock = BLOCKS.HIGHLANDS_STONE;
+
+            if (biome === 'JAGGED_PEAKS') {
+                const n1 = params.noise2D(wx * 0.005, wz * 0.005);
+                const n2 = params.noise2D(wx * 0.015, wz * 0.015) * 0.5;
+                const n3 = params.noise2D(wx * 0.05, wz * 0.05) * 0.25;
+                let heightVal = (n1 + n2 + n3 + 1) / 2;
+                heightVal = Math.pow(heightVal, 2.5);
+                surfaceY = 20 + Math.floor(heightVal * (CHUNK_HEIGHT - 40));
+                
+                topBlock = surfaceY > 90 ? BLOCKS.SNOW : BLOCKS.HIGHLANDS_GRASS;
+                if (surfaceY > 70 && surfaceY <= 90) topBlock = BLOCKS.HIGHLANDS_STONE;
+
+            } else if (biome === 'VOLCANIC') {
+                const n1 = params.noise2D(wx * 0.01, wz * 0.01);
+                let heightVal = (n1 + 1) / 2;
+                heightVal = Math.pow(heightVal, 1.2);
+                surfaceY = 30 + Math.floor(heightVal * 20);
+                
+                const craterNoise = params.noise2D(wx * 0.04 + 1000, wz * 0.04 + 1000);
+                if (craterNoise > 0.4) {
+                    surfaceY -= Math.floor((craterNoise - 0.4) * 40);
+                }
+
+                topBlock = (surfaceY < 32) ? BLOCKS.OBSIDIAN : BLOCKS.STONE;
+                subBlock = BLOCKS.STONE;
+            } else if (biome === 'MEADOWS') {
+                const n1 = params.noise2D(wx * 0.008, wz * 0.008);
+                const n2 = params.noise2D(wx * 0.02, wz * 0.02) * 0.5;
+                let heightVal = (n1 + n2 + 1) / 2;
+                surfaceY = 30 + Math.floor(heightVal * 25);
+            } else if (biome === 'FROZEN_WASTES') {
+                const n1 = params.noise2D(wx * 0.01, wz * 0.01);
+                const n2 = params.noise2D(wx * 0.03, wz * 0.03) * 0.3;
+                let heightVal = (n1 + n2 + 1) / 2;
+                surfaceY = 35 + Math.floor(heightVal * 25);
+                topBlock = BLOCKS.SNOW;
+                subBlock = BLOCKS.DIRT;
+            }
 
             for (let y = 0; y < CHUNK_HEIGHT; y++) {
                 const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
-
+                
                 if (y === 0) {
                     blocks[idx] = BLOCKS.BEDROCK;
                     continue;
@@ -1464,23 +1545,50 @@ export function generateHighlandsChunk(cx, cz, params) {
 
                 if (y <= surfaceY) {
                     if (y === surfaceY) {
-                        if (y > 100) blocks[idx] = BLOCKS.SNOW; // Snow on peaks
-                        else blocks[idx] = BLOCKS.HIGHLANDS_GRASS;
+                        blocks[idx] = topBlock;
                     } else if (y > surfaceY - 3) {
-                        blocks[idx] = BLOCKS.HIGHLANDS_DIRT;
+                        blocks[idx] = subBlock;
                     } else {
-                        blocks[idx] = BLOCKS.HIGHLANDS_STONE;
+                        blocks[idx] = baseBlock;
                     }
                 } else {
-                    blocks[idx] = BLOCKS.AIR;
+                    if (biome === 'VOLCANIC' && y < 32) {
+                        blocks[idx] = BLOCKS.LAVA;
+                    } else {
+                        blocks[idx] = BLOCKS.AIR;
+                    }
                 }
             }
 
-            // Decorations on surface
-            if (surfaceY < CHUNK_HEIGHT - 10) {
-                if (colRng() < 0.01) {
-                    // Small floating cloud puff above ground
-                    safeSetBlock(blocks, x, surfaceY + 5 + Math.floor(colRng()*10), z, BLOCKS.AETHER_CLOUD, true);
+            if (surfaceY < CHUNK_HEIGHT - 10 && surfaceY >= 32) {
+                if (biome === 'MEADOWS') {
+                    if (colRng() < 0.005) {
+                        generateHighlandTree(blocks, x, surfaceY + 1, z, 'MEADOW', rng);
+                    } else if (colRng() < 0.2) {
+                        safeSetBlock(blocks, x, surfaceY + 1, z, BLOCKS.TALL_GRASS, true);
+                    } else if (colRng() < 0.1) {
+                        const flowers = [BLOCKS.RED_FLOWER, BLOCKS.BLUE_FLOWER, BLOCKS.YELLOW_FLOWER, BLOCKS.WHITE_FLOWER, BLOCKS.PURPLE_FLOWER, BLOCKS.ORANGE_FLOWER];
+                        const flower = flowers[Math.floor(colRng() * flowers.length)];
+                        safeSetBlock(blocks, x, surfaceY + 1, z, flower, true);
+                    }
+                } else if (biome === 'FROZEN_WASTES') {
+                    if (colRng() < 0.01) {
+                        generateHighlandTree(blocks, x, surfaceY + 1, z, 'PINE', rng);
+                    } else if (colRng() < 0.01) {
+                        safeSetBlock(blocks, x, surfaceY + 1, z, BLOCKS.PACKED_ICE, true);
+                        if (colRng() < 0.5) safeSetBlock(blocks, x, surfaceY + 2, z, BLOCKS.PACKED_ICE, true);
+                    }
+                } else if (biome === 'VOLCANIC') {
+                    if (colRng() < 0.01 && surfaceY > 32) {
+                        safeSetBlock(blocks, x, surfaceY + 1, z, BLOCKS.OBSIDIAN, true);
+                        if (colRng() < 0.3) safeSetBlock(blocks, x, surfaceY + 2, z, BLOCKS.OBSIDIAN, true);
+                    } else if (colRng() < 0.005) {
+                        safeSetBlock(blocks, x, surfaceY + 1, z, BLOCKS.DEAD_BUSH, true);
+                    }
+                } else if (biome === 'JAGGED_PEAKS') {
+                    if (colRng() < 0.005) {
+                        safeSetBlock(blocks, x, surfaceY + 5 + Math.floor(colRng()*10), z, BLOCKS.AETHER_CLOUD, true);
+                    }
                 }
             }
         }
