@@ -1129,7 +1129,7 @@ export class World {
             }
             if (chunk.dirty) {
                 // Pass shared materials through atlas for convenience
-                this.atlas.sharedMaterials = this.sharedMaterials;
+                this.textureAtlas.sharedMaterials = this.sharedMaterials;
                 const neighborChunks = [
                     [null, null, null],
                     [null, null, null],
@@ -1141,7 +1141,7 @@ export class World {
                         neighborChunks[dx + 1][dz + 1] = this.chunks.get(key) || null;
                     }
                 }
-                const mesh = chunk.buildMesh(this.atlas, neighborChunks);
+                const mesh = chunk.buildMesh(this.textureAtlas, neighborChunks);
                 if (mesh && !mesh.parent) {
                     this.scene.add(mesh);
                 }
