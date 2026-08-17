@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raycaster Engine</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔫</text></svg>">
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+    <div id="crt-overlay"></div>
+    
+    <div class="header">
+        <h1>CRAPCASTER v1.0</h1>
+        <div class="controls">
+            <button id="btn-editor" class="active">MAP EDITOR</button>
+            <button id="btn-play" class="accent">PLAY (ESC to exit)</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- MAP EDITOR VIEW -->
+        <div id="view-editor" class="view active">
+            <div class="editor-sidebar">
+                <div class="panel">
+                    <h3>WALL PALETTE</h3>
+                    <div id="palette-grid" class="palette-grid"></div>
+                    <div class="palette-tools" style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
+                        <button id="tool-player" class="tool-btn">SET SPAWN</button>
+                        <input type="file" id="custom-texture-upload" accept="image/*" style="display:none;">
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3>SPRITE PALETTE</h3>
+                    <div id="sprite-palette-grid" class="palette-grid"></div>
+                </div>
+
+                <div class="panel">
+                    <h2>ENVIRONMENT</h2>
+                    
+                    <h3>BASIC</h3>
+                    <div class="input-group">
+                        <label for="color-floor">FLOOR COLOR</label>
+                        <input type="color" id="color-floor" value="#333333">
+                    </div>
+                    <div class="input-group">
+                        <label for="color-ceiling">CEILING COLOR</label>
+                        <input type="color" id="color-ceiling" value="#111111">
+                    </div>
+                    
+                    <h3>TEXTURES</h3>
+                    <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="use-tex-floor" checked style="width:20px;height:20px;">
+                        <label for="use-tex-floor" style="margin:0;">TEXTURED FLOOR</label>
+                    </div>
+                    <div class="input-group">
+                        <label for="tex-floor-select">FLOOR TEXTURE</label>
+                        <select id="tex-floor-select" style="width: 100%; padding: 5px; background: #000; color: #fff; border: 1px solid #444;">
+                            <option value="1">Red Brick</option>
+                            <option value="2">Stone Wall</option>
+                            <option value="3">Wood Paneling</option>
+                            <option value="4">Metal Plating</option>
+                            <option value="5">Tech Panel</option>
+                            <option value="6">Mossy Brick</option>
+                            <option value="7">Sci-Fi Hex</option>
+                            <option value="8" selected>Dirty Concrete</option>
+                            <option value="19">Sliding Door</option>
+                            <option value="23">Waterfall</option>
+                            <option value="24">Lava Fall</option>
+                            <option value="25">Static Noise</option>
+                            <option value="26">Pulsing Flesh</option>
+                            <option value="27">Matrix Rain</option>
+                            <option value="28">Disco Floor</option>
+                            <option value="29">Psychedelic Warp</option>
+                            <option value="30">Conveyor Belt</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="use-tex-ceil" checked style="width:20px;height:20px;">
+                        <label for="use-tex-ceil" style="margin:0;">TEXTURED CEILING</label>
+                    </div>
+                    <div class="input-group">
+                        <label for="tex-ceil-select">CEILING TEXTURE</label>
+                        <select id="tex-ceil-select" style="width: 100%; padding: 5px; background: #000; color: #fff; border: 1px solid #444;">
+                            <option value="1">Red Brick</option>
+                            <option value="2">Stone Wall</option>
+                            <option value="3">Wood Paneling</option>
+                            <option value="4">Metal Plating</option>
+                            <option value="5">Tech Panel</option>
+                            <option value="6">Mossy Brick</option>
+                            <option value="7" selected>Sci-Fi Hex</option>
+                            <option value="8">Dirty Concrete</option>
+                            <option value="19">Sliding Door</option>
+                            <option value="23">Waterfall</option>
+                            <option value="24">Lava Fall</option>
+                            <option value="25">Static Noise</option>
+                            <option value="26">Pulsing Flesh</option>
+                            <option value="27">Matrix Rain</option>
+                            <option value="28">Disco Floor</option>
+                            <option value="29">Psychedelic Warp</option>
+                            <option value="30">Conveyor Belt</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="ceil-height">CEILING HEIGHT</label>
+                        <input type="range" id="ceil-height" min="0.5" max="2.0" step="0.1" value="1.0">
+                    </div>
+
+                    <h3>ENGINE</h3>
+                    <div class="input-group">
+                        <label for="fog-intensity">FOG INTENSITY</label>
+                        <input type="range" id="fog-intensity" min="0" max="3" step="0.1" value="1.0">
+                    </div>
+                    <div class="input-group">
+                        <label for="hitbox-radius">PLAYER HITBOX</label>
+                        <input type="range" id="hitbox-radius" min="0.05" max="0.5" step="0.05" value="0.2">
+                    </div>
+                    <div class="input-group">
+                        <label for="render-dist">RENDER DISTANCE</label>
+                        <input type="range" id="render-dist" min="5" max="30" value="20">
+                    </div>
+                    <div class="input-group">
+                        <label for="fov">FOV</label>
+                        <input type="range" id="fov" min="60" max="120" value="90">
+                    </div>
+                    <div class="input-group">
+                        <label for="mouse-sens">MOUSE SENSITIVITY</label>
+                        <input type="range" id="mouse-sens" min="1" max="20" value="10">
+                    </div>
+                    <div class="input-group">
+                        <label for="move-speed">MOVE SPEED</label>
+                        <input type="range" id="move-speed" min="1" max="15" value="5">
+                    </div>
+                    <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 10px;">
+                        <input type="checkbox" id="crt-toggle" checked style="width:20px;height:20px;">
+                        <label for="crt-toggle" style="margin:0;">CRT EFFECT</label>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h2>MAP DATA</h2>
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <label for="map-size">MAP SIZE</label>
+                        <select id="map-size" style="width: 100%; padding: 5px; background: #000; color: #fff; border: 1px solid #444;">
+                            <option value="16">16 x 16</option>
+                            <option value="24" selected>24 x 24</option>
+                            <option value="32">32 x 32</option>
+                            <option value="48">48 x 48</option>
+                            <option value="64">64 x 64</option>
+                        </select>
+                    </div>
+                    <button id="btn-clear" class="danger">CLEAR MAP</button>
+                    <button id="btn-save">SAVE MAP</button>
+                    <button id="btn-load">LOAD MAP</button>
+                </div>
+            </div>
+
+            <div class="editor-canvas-container">
+                <canvas id="map-canvas" width="640" height="640"></canvas>
+            </div>
+        </div>
+
+        <!-- GAME VIEW -->
+        <div id="view-game" class="view">
+            <canvas id="game-canvas" width="640" height="400"></canvas>
+            <div id="crosshair">+</div>
+            
+            <div id="hud">
+                <div class="hud-box">
+                    <span class="hud-label">HEALTH</span>
+                    <span id="hud-health" class="hud-value">100%</span>
+                </div>
+                <div class="hud-face">
+                    <canvas id="face-canvas" width="64" height="64"></canvas>
+                </div>
+                <div class="hud-box">
+                    <span class="hud-label">AMMO</span>
+                    <span id="hud-ammo" class="hud-value">50</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/entities.js?v=3"></script>
+    <script src="js/audio.js?v=3"></script>
+    <script src="js/textures.js?v=3"></script>
+    <script src="js/map.js?v=3"></script>
+    <script src="js/player.js?v=3"></script>
+    <script src="js/weapon.js?v=3"></script>
+    <script src="js/engine.js?v=3"></script>
+    <script src="js/main.js?v=3"></script>
+</body>
+</html>
