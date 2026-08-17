@@ -883,18 +883,22 @@ class Game {
         // Hover Outline
         if (hit.hit && !entityHit.hit) {
             const props = getBlockProperties(hit.blockType);
-            const isSmall = props.isCross || hit.blockType === BLOCKS.TORCH || hit.blockType === BLOCKS.DEAD_BUSH || hit.blockType === BLOCKS.MUSHROOM_STEM;
-            const size = isSmall ? 0.4 : 1.02;
-
-            this.blockOutline.geometry.dispose();
-            this.blockOutline.geometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(size, size, size));
-
-            if (isSmall) {
-                this.blockOutline.position.set(hit.blockPos.x + 0.5, hit.blockPos.y + 0.2, hit.blockPos.z + 0.5);
+            if (props.isLiquid) {
+                this.blockOutline.visible = false;
             } else {
-                this.blockOutline.position.set(hit.blockPos.x + 0.5, hit.blockPos.y + 0.5, hit.blockPos.z + 0.5);
+                const isSmall = props.isCross || hit.blockType === BLOCKS.TORCH || hit.blockType === BLOCKS.DEAD_BUSH || hit.blockType === BLOCKS.MUSHROOM_STEM;
+                const size = isSmall ? 0.4 : 1.02;
+
+                this.blockOutline.geometry.dispose();
+                this.blockOutline.geometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(size, size, size));
+
+                if (isSmall) {
+                    this.blockOutline.position.set(hit.blockPos.x + 0.5, hit.blockPos.y + 0.2, hit.blockPos.z + 0.5);
+                } else {
+                    this.blockOutline.position.set(hit.blockPos.x + 0.5, hit.blockPos.y + 0.5, hit.blockPos.z + 0.5);
+                }
+                this.blockOutline.visible = true;
             }
-            this.blockOutline.visible = true;
         } else {
             this.blockOutline.visible = false;
         }
@@ -998,6 +1002,8 @@ class Game {
                 if (this.player.activeSpellIndex === undefined) this.player.activeSpellIndex = 0;
                 this.player.activeSpellIndex = (this.player.activeSpellIndex + 1) % slot.item.data.wand.maxSlots;
                 this.audio.playClick();
+                this.input.mouse.rightClick = false;
+                return;
             } else if (slot && slot.item.type === 'material' && (slot.item.subtype === 'bucket' || slot.item.subtype === 'water_bucket' || slot.item.subtype === 'lava_bucket') && hit.hit) {
                 // Bucket logic
                 const bucketType = slot.item.subtype;

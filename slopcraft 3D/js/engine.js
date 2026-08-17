@@ -1278,7 +1278,7 @@ export class World {
 
         if (dt) {
             this.tickTimer += dt;
-            if (this.tickTimer >= 0.2) { // tick every 200ms
+            if (this.tickTimer >= 0.8) { // tick every 800ms
                 this.tickTimer = 0;
                 this.tickFluids();
                 this.tickRandomBlocks();
