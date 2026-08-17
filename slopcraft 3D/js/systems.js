@@ -259,6 +259,7 @@ export class LightingSystem {
         this._stars = new THREE.Points(geo, mat);
         this.scene.add(this._stars);
     }
+}
 
 export class TorchLightSystem {
     constructor(scene) {
