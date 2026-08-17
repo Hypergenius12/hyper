@@ -68,6 +68,9 @@ export class LightingSystem {
         });
         this.skyDome = new THREE.Mesh(skyGeo, this.skyMat);
         this.scene.add(this.skyDome);
+
+        // Build star field (starts invisible, fades in at night)
+        this._buildStars();
     }
     
     _getLightState(time) {
@@ -200,23 +203,81 @@ export class LightingSystem {
         // Update SkyDome gradient
         this.skyMat.uniforms.topColor.value.copy(state.top);
         this.skyMat.uniforms.bottomColor.value.copy(state.bg);
+
+        // Tint fog with warm sun scatter at sunrise/sunset
+        if (this.scene.fog && currentDimension === 'overworld') {
+            const t = this.timeOfDay;
+            // Sunrise 0.22-0.28, sunset 0.72-0.78
+            const isSunrise = t > 0.22 && t < 0.28;
+            const isSunset = t > 0.72 && t < 0.78;
+            if (isSunrise || isSunset) {
+                const horizonFrac = isSunrise
+                    ? 1 - Math.abs(t - 0.25) / 0.03
+                    : 1 - Math.abs(t - 0.75) / 0.03;
+                const warmFog = new THREE.Color(0xff7733);
+                this.scene.fog.color.lerp(warmFog, Math.min(1, horizonFrac * 0.4));
+            }
+        }
+
+        // Update star field visibility
+        if (this._stars) {
+            const t = this.timeOfDay;
+            // Stars visible from ~0.8 (nightfall) to ~0.2 (dawn)
+            let starOpacity = 0;
+            if (t > 0.8 || t < 0.2) {
+                starOpacity = t > 0.8 ? (t - 0.8) / 0.1 : (0.2 - t) / 0.1;
+                starOpacity = Math.min(1, starOpacity);
+            }
+            this._stars.material.opacity = starOpacity * 0.9;
+            this._stars.visible = starOpacity > 0.01;
+            this._stars.position.copy(cameraPos);
+        }
     }
-}
+
+    _buildStars() {
+        const COUNT = 1500;
+        const geo = new THREE.BufferGeometry();
+        const positions = new Float32Array(COUNT * 3);
+        for (let i = 0; i < COUNT; i++) {
+            // Random points on a hemisphere above the player
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI * 0.5; // upper half only
+            const r = 350;
+            positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = r * Math.cos(phi);
+            positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+        }
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const mat = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 1.2,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            sizeAttenuation: false
+        });
+        this._stars = new THREE.Points(geo, mat);
+        this.scene.add(this._stars);
+    }
 
 export class TorchLightSystem {
     constructor(scene) {
         this.scene = scene;
         this.lights = new Map();
+        this._time = 0;
     }
 
     addTorch(x, y, z) {
         const key = `${x},${y},${z}`;
         if (this.lights.has(key)) return;
         
-        // Brighter intensity, larger distance, less decay so the area is well lit
-        const light = new THREE.PointLight(0xffcc55, 12.0, 40);
-        light.decay = 1.2;
-        light.position.set(x + 0.5, y + 0.5, z + 0.5);
+        // Warm authentic fire color: orange-red with a hint of yellow
+        const light = new THREE.PointLight(0xff6a00, 14.0, 38);
+        light.decay = 1.5;
+        light.position.set(x + 0.5, y + 0.75, z + 0.5);
+        // Store base intensity for flickering
+        light._baseIntensity = 14.0;
+        light._flickerOffset = Math.random() * 100;
         this.scene.add(light);
         this.lights.set(key, light);
     }
@@ -228,6 +289,23 @@ export class TorchLightSystem {
             this.scene.remove(light);
             light.dispose();
             this.lights.delete(key);
+        }
+    }
+
+    update(dt) {
+        this._time += dt;
+        for (const light of this.lights.values()) {
+            // Layered sine waves at different frequencies = organic fire flicker
+            const t = this._time + light._flickerOffset;
+            const flicker = Math.sin(t * 7.3) * 0.15
+                          + Math.sin(t * 13.7) * 0.08
+                          + Math.sin(t * 23.1) * 0.04;
+            light.intensity = light._baseIntensity * (1 + flicker);
+            // Subtle color shift: hotter = slightly more yellow, cooler = more red
+            const r = 1.0;
+            const g = 0.38 + flicker * 0.15;
+            const b = 0.0;
+            light.color.setRGB(r, g, b);
         }
     }
 }

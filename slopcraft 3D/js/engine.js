@@ -605,21 +605,25 @@ export class World {
         this.projScreenMatrix = new THREE.Matrix4();
         
         // Initialize shared materials to drastically reduce GC and WebGL overhead
-        const matOpaque = new THREE.MeshLambertMaterial({
+        // MeshPhongMaterial gives per-pixel shading + specular highlights vs flat Lambert
+        const matOpaque = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
             alphaTest: 0.5,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            shininess: 2,
+            specular: new THREE.Color(0x111111)
         });
-        const matCross = new THREE.MeshLambertMaterial({
+        const matCross = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
             alphaTest: 0.5,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            shininess: 0
         });
-        const matGlowCross = new THREE.MeshLambertMaterial({
+        const matGlowCross = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
@@ -627,23 +631,27 @@ export class World {
             side: THREE.DoubleSide,
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 1.0
+            emissiveIntensity: 1.5,
+            shininess: 0
         });
-        const matWater = new THREE.MeshLambertMaterial({
+        const matWater = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
             opacity: 0.8,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            shininess: 80,
+            specular: new THREE.Color(0x4488bb)
         });
-        const matTransparent = new THREE.MeshLambertMaterial({
+        const matTransparent = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
             alphaTest: 0.5,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            shininess: 0
         });
-        const matGlowOpaque = new THREE.MeshLambertMaterial({
+        const matGlowOpaque = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
@@ -651,9 +659,11 @@ export class World {
             side: THREE.DoubleSide,
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 1.0
+            emissiveIntensity: 2.0,
+            shininess: 5,
+            specular: new THREE.Color(0x333333)
         });
-        const matGlowTransparent = new THREE.MeshLambertMaterial({
+        const matGlowTransparent = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
@@ -661,7 +671,8 @@ export class World {
             side: THREE.DoubleSide,
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 1.0
+            emissiveIntensity: 2.0,
+            shininess: 5
         });
         this.sharedMaterials = [matOpaque, matCross, matGlowCross, matWater, matTransparent, matGlowOpaque, matGlowTransparent];
 
