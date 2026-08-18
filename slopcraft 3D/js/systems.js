@@ -471,6 +471,21 @@ class UISystem {
             this.elements.tooltip.classList.add('hidden');
             if (this.dragState.isDragging) this.cancelDrag();
             
+            // Return all crafting items back to inventory when closing
+            for (let i = 0; i < 9; i++) {
+                if (this.craftingSlots[i]) {
+                    if (this.currentPlayer) {
+                        const added = this.currentPlayer.inventory.addItem(this.craftingSlots[i].item, this.craftingSlots[i].count);
+                        if (!added && this.currentPlayer.manager) {
+                            // Drop item at player feet if inventory full
+                            this.currentPlayer.manager.spawnItem(this.craftingSlots[i].item, this.craftingSlots[i].count, this.currentPlayer.position);
+                        }
+                    }
+                    this.craftingSlots[i] = null;
+                }
+            }
+            this._matchRecipe();
+            
             // Close chest if open
             if (this.chestPos) {
                 if (this.onChestClose) this.onChestClose();
@@ -1105,7 +1120,12 @@ class UISystem {
                 
                 // If switching to 2x2, drop items in hidden slots
                 if (i >= 4 && this.craftingSlots[i]) {
-                    this.currentPlayer.inventory.addItem(this.craftingSlots[i].item, this.craftingSlots[i].count);
+                    if (this.currentPlayer) {
+                        const added = this.currentPlayer.inventory.addItem(this.craftingSlots[i].item, this.craftingSlots[i].count);
+                        if (!added && this.currentPlayer.manager) {
+                            this.currentPlayer.manager.spawnItem(this.craftingSlots[i].item, this.craftingSlots[i].count, this.currentPlayer.position);
+                        }
+                    }
                     this.craftingSlots[i] = null;
                 }
             }
@@ -1533,7 +1553,7 @@ class UISystem {
             { name: "Iron Axe", desc: "Chops wood quickly.", grid: [[mat('iron_ingot'),mat('iron_ingot'),_],[mat('iron_ingot'),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_iron'), outCount: 1, needs3x3: true },
             { name: "Iron Helmet", desc: "Basic protection.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),_,mat('iron_ingot')],[_,_,_]], out: eqp('helmet_iron'), outCount: 1, needs3x3: true },
             { name: "Iron Chestplate", desc: "Solid defense.", grid: [[mat('iron_ingot'),_,mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')]], out: eqp('chest_iron'), outCount: 1, needs3x3: true },
-            { name: "Basic Wand", desc: "Casts spells.", grid: [[_,_,mat('iron_ingot')],[_,mat('stick'),_],[mat('stick'),_,_]], out: wnd('wand_basic'), outCount: 1, needs3x3: false },
+            { name: "Basic Wand", desc: "Casts spells.", grid: [[_,_,_],[_,mat('iron_ingot'),_],[mat('stick'),_,_]], out: wnd('wand_basic'), outCount: 1, needs3x3: false },
             { name: "Fire Wand", desc: "Empowers fire magic.", grid: [[_,_,mat('coal')],[_,wnd('wand_basic'),_],[_,_,_]], out: wnd('wand_fire'), outCount: 1, needs3x3: false },
             { name: "Ice Wand", desc: "Empowers ice magic.", grid: [[_,_,blk(B.SNOW)],[_,wnd('wand_basic'),_],[_,_,_]], out: wnd('wand_ice'), outCount: 1, needs3x3: false },
             { name: "Furnace", desc: "Smelts ores.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),_,blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)]], out: blk(B.FURNACE), outCount: 1, needs3x3: true },
@@ -1662,10 +1682,46 @@ class UISystem {
             return el;
         };
 
-        // Render 3x3
-        for (let y = 0; y < 3; y++) {
-            for (let x = 0; x < 3; x++) {
-                gridContainer.appendChild(createSlotEl(recipe.grid[y][x]));
+        if (!this.is3x3Crafting && !recipe.needs3x3) {
+            // Find the bounding box of the recipe
+            let minX = 2, maxX = 0, minY = 2, maxY = 0;
+            for (let y = 0; y < 3; y++) {
+                for (let x = 0; x < 3; x++) {
+                    if (recipe.grid[y][x]) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+            // If empty (shouldn't happen), default to top-left
+            if (minX > maxX) { minX = 0; maxX = 0; minY = 0; maxY = 0; }
+            
+            // Expand bounding box to 2x2
+            if (maxX - minX < 1) maxX = minX + 1;
+            if (maxY - minY < 1) maxY = minY + 1;
+            
+            // Clamp to 2x2 maximum size (just in case)
+            if (maxX - minX > 1) maxX = minX + 1;
+            if (maxY - minY > 1) maxY = minY + 1;
+            
+            gridContainer.style.gridTemplateColumns = 'repeat(2, 40px)';
+            gridContainer.style.gridTemplateRows = 'repeat(2, 40px)';
+            
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    gridContainer.appendChild(createSlotEl(recipe.grid[y] ? recipe.grid[y][x] : null));
+                }
+            }
+        } else {
+            gridContainer.style.gridTemplateColumns = 'repeat(3, 40px)';
+            gridContainer.style.gridTemplateRows = 'repeat(3, 40px)';
+            // Render 3x3
+            for (let y = 0; y < 3; y++) {
+                for (let x = 0; x < 3; x++) {
+                    gridContainer.appendChild(createSlotEl(recipe.grid[y][x]));
+                }
             }
         }
 
