@@ -10,6 +10,7 @@ import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem
 import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=22';
 import { AudioManager } from './audio.js?v=22';
 import { BiomeMap } from './map.js';
+import { DevMode } from './dev.js';
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
@@ -309,6 +310,8 @@ class Game {
         this.lighting = new LightingSystem(this.engine.scene);
         this.torchSystem = new TorchLightSystem(this.engine.scene);
         this.particles = new ParticleSystem(this.engine.scene);
+        this.biomeMap = new BiomeMap(this);
+        this.devMode = new DevMode(this);
         this.audio = new AudioManager();
 
         // Entities
@@ -1208,21 +1211,35 @@ class Game {
         }
 
         if (this.input.menuKeys.map) {
-            this.biomeMap.toggle();
+            if (this.biomeMap.isOpen) {
+                this.biomeMap.close();
+            } else if (!this.ui.isInventoryOpen && !this.ui.isSpellConfigOpen) {
+                this.biomeMap.open();
+            }
             this.input.menuKeys.map = false;
         }
 
+        if (this.input.menuKeys.devMode && this.input.devModeUnlocked) {
+            this.input.menuKeys.devMode = false;
+            this.devMode.toggle();
+        }
+
         if (this.input.menuKeys.debug) {
+            this.input.menuKeys.debug = false;
             const di = document.getElementById('debug-info');
             if (di) di.classList.toggle('hidden');
-            this.input.menuKeys.debug = false;
         }
 
         if (this.isPaused) {
             this.input.resetMouse();
             // Continue loading chunks while paused
             const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'caverns' ? generateCavernsChunk : generateChunkTerrain));
-            this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), dt);
+            this.world.update(this.player.position, (cx, cz) => {
+                const start = performance.now();
+                const res = chunkGenFn(cx, cz, this.planetParams);
+                if (this.devMode) this.devMode.reportChunkGenTime(performance.now() - start);
+                return res;
+            }, dt);
             return;
         }
 
@@ -1330,7 +1347,12 @@ class Game {
         }
         
         const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'caverns' ? generateCavernsChunk : (this.currentDimension === 'highlands' ? generateHighlandsChunk : generateChunkTerrain)));
-        this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), dt);
+        this.world.update(this.player.position, (cx, cz) => {
+            const start = performance.now();
+            const chunkBlocks = chunkGenFn(cx, cz, this.planetParams);
+            if (this.devMode) this.devMode.reportChunkGenTime(performance.now() - start);
+            return chunkBlocks;
+        }, dt);
 
         // Check if player is underwater for lighting
         const headX = Math.floor(this.engine.camera.position.x);
@@ -1688,6 +1710,12 @@ class Game {
             this.particles.emit(this.player.position.clone().add(new THREE.Vector3(rx, ry, rz)), 'magic', 1, 0xff5500);
             if (Math.random() < 0.1) this.audio.playHit(); // small sizzle sound
         }
+
+        // Update particles
+        if (this.particles) this.particles.update(dt);
+        
+        // Update Dev Mode
+        if (this.devMode) this.devMode.update(dt);
 
         // Render
         if (this.atlas && this.atlas.updateAnimatedTextures) {

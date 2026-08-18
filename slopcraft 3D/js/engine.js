@@ -15,11 +15,13 @@ export class InputManager {
     constructor() {
         this.keys = { forward: false, backward: false, left: false, right: false, jump: false, sprint: false, crouch: false };
         this.mouse = { dx: 0, dy: 0, leftClick: false, rightClick: false, scrollDelta: 0 };
-        this.menuKeys = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false };
-        this._menuKeysDown = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false };
+        this.menuKeys = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false };
+        this._menuKeysDown = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false };
         this.hotbarIndex = -1;
         this.isLocked = false;
         this.canvas = null;
+        this.keySequence = '';
+        this.devModeUnlocked = false;
     }
 
     init(canvas) {
@@ -86,6 +88,7 @@ export class InputManager {
         this.menuKeys.pause = false;
         this.menuKeys.planet = false;
         this.menuKeys.map = false;
+        this.menuKeys.devMode = false;
     }
 
     isPointerLocked() {
@@ -93,8 +96,26 @@ export class InputManager {
     }
 
     onKeyDown(e) {
+        // Dev Mode sequence tracking
+        if (!this.devModeUnlocked) {
+            this.keySequence += e.key;
+            if (this.keySequence.length > 6) {
+                this.keySequence = this.keySequence.substring(this.keySequence.length - 6);
+            }
+            if (this.keySequence === '779812') {
+                this.devModeUnlocked = true;
+                this.keySequence = '';
+                console.log("Dev Mode Unlocked! Press 'U' to toggle.");
+            }
+        } else if (e.key.toLowerCase() === 'u') {
+            if (!this._menuKeysDown.devMode) {
+                this.menuKeys.devMode = true;
+                this._menuKeysDown.devMode = true;
+            }
+        }
+
         if (e.code === 'Tab' || e.code === 'F3') e.preventDefault();
-        if (!this.isLocked && !['Escape', 'KeyE', 'KeyF', 'KeyP', 'Tab', 'KeyI', 'F3', 'KeyQ', 'KeyM'].includes(e.code)) return;
+        if (!this.isLocked && !['Escape', 'KeyE', 'KeyF', 'KeyP', 'Tab', 'KeyI', 'F3', 'KeyQ', 'KeyM', 'KeyU'].includes(e.code)) return;
 
         switch (e.code) {
             case 'KeyW': case 'ArrowUp': this.keys.forward = true; break;
@@ -160,6 +181,7 @@ export class InputManager {
             case 'Escape': this._menuKeysDown.pause = false; break;
             case 'F3': case 'ControlLeft': case 'ControlRight': this._menuKeysDown.debug = false; break;
             case 'KeyQ': this._menuKeysDown.dropItem = false; break;
+            case 'KeyU': this._menuKeysDown.devMode = false; break;
         }
     }
 }
