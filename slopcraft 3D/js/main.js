@@ -113,13 +113,14 @@ class ChestVisual {
 
     dispose() {
         this.scene.remove(this.group);
-        this.group.children.forEach(c => {
+        for (let i = this.group.children.length - 1; i >= 0; i--) {
+            const c = this.group.children[i];
             if (c.geometry) c.geometry.dispose();
             if (c.material) {
                 if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
                 else c.material.dispose();
             }
-        });
+        }
     }
 }
 
@@ -1238,13 +1239,13 @@ class Game {
         if (pBlock === BLOCKS.PORTAL && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'nether' ? 'overworld' : 'nether');
             this.audio.playHit();
-        } else if (pBlock === window.BLOCKS.AETHER_PORTAL) {
+        } else if (pBlock === window.BLOCKS.AETHER_PORTAL && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'aether' ? 'overworld' : 'aether');
             this.audio.playHit();
-        } else if (pBlock === window.BLOCKS.CAVERN_PORTAL) {
+        } else if (pBlock === window.BLOCKS.CAVERN_PORTAL && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'caverns' ? 'overworld' : 'caverns');
             this.audio.playHit();
-        } else if (pBlock === window.BLOCKS.HIGHLANDS_PORTAL) {
+        } else if (pBlock === window.BLOCKS.HIGHLANDS_PORTAL && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'highlands' ? 'overworld' : 'highlands');
             this.audio.playHit();
         }
@@ -1755,6 +1756,7 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
     warpToNewPlanet(targetDim = 'nether') {
         if (!this.isReady) return;
         this.isReady = false;
+        this.isWarping = true;
 
         const isAether = targetDim === 'aether';
         const isCaverns = targetDim === 'caverns';

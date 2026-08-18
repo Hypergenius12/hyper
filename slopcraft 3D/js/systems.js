@@ -461,7 +461,7 @@ class UISystem {
         }
 
         this.isOpen = !this.isOpen;
-        this.is3x3Crafting = false; // normal inventory gets 2x2
+        this.is3x3Crafting = true; // normal inventory now gets 3x3 too
         this._updateCraftingUILayout();
         
         if (this.isOpen) {
@@ -1496,9 +1496,6 @@ class UISystem {
             if (getCount(B.SAND) === 4 && getCount('coal') === 5 && totalItems === 9) return block(B.TNT, 'TNT', 1);
 
             return null;
-        }
-
-        return null;
     }
 
     _consumeCraftingSlots(result) {
