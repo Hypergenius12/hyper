@@ -581,6 +581,16 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 } else if (y <= surfaceY) {
                     type = (y === surfaceY) ? biome.surface : biome.dirt;
+                    
+                    if (y === surfaceY) {
+                        if (biome === BIOMES.SWAMP) {
+                            const pondNoise = fbm2D(params.noise2D, wx / 12, wz / 12, 2);
+                            if (pondNoise > 0.3) type = BLOCKS.SWAMP_WATER;
+                        } else if (biome === BIOMES.OASIS) {
+                            const pondNoise = fbm2D(params.noise2D, wx / 15, wz / 15, 2);
+                            if (pondNoise > 0.4) type = BLOCKS.WATER;
+                        }
+                    }
                     // Grass shouldn't survive underwater
                     const isAnyGrass = type === BLOCKS.GRASS || type === BLOCKS.SWAMP_GRASS || type === BLOCKS.SAVANNA_GRASS || type === BLOCKS.ALIEN_GRASS;
                     const isDirt = type === BLOCKS.DIRT || type === BLOCKS.COARSE_DIRT || type === BLOCKS.PODZOL || type === BLOCKS.MYCELIUM;
@@ -655,7 +665,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 // Don't spawn flora if a structure overwrote the ground (e.g., placed planks/cobblestone)
                 const groundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
                 const groundBlock = blocks[groundIdx];
-                const isValidGround = groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.SNOW || groundBlock === BLOCKS.MYCELIUM;
+                const isValidGround = groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.SNOW || groundBlock === BLOCKS.MYCELIUM || groundBlock === BLOCKS.SWAMP_GRASS || groundBlock === BLOCKS.SAVANNA_GRASS || groundBlock === BLOCKS.ALIEN_GRASS || groundBlock === BLOCKS.ALIEN_STONE || groundBlock === BLOCKS.RED_SAND;
                 if (!isValidGround) continue;
 
                 if (biome.hasTrees && r < (biome.isDark ? 0.06 : 0.02)) {
