@@ -784,12 +784,16 @@ export class World {
             if (blockBelow === window.BLOCKS.SUGARCANE) {
                 needsBreak = false;
             } else if ([window.BLOCKS.SAND, window.BLOCKS.DIRT, window.BLOCKS.GRASS, window.BLOCKS.PODZOL, window.BLOCKS.MYCELIUM, window.BLOCKS.COARSE_DIRT].includes(blockBelow)) {
-                // Must be adjacent to water horizontally
+                // Must be adjacent to water horizontally or diagonally below
                 const neighbors = [
                     this.getBlock(x + 1, y - 1, z),
                     this.getBlock(x - 1, y - 1, z),
                     this.getBlock(x, y - 1, z + 1),
-                    this.getBlock(x, y - 1, z - 1)
+                    this.getBlock(x, y - 1, z - 1),
+                    this.getBlock(x + 1, y - 2, z),
+                    this.getBlock(x - 1, y - 2, z),
+                    this.getBlock(x, y - 2, z + 1),
+                    this.getBlock(x, y - 2, z - 1)
                 ];
                 if (!neighbors.includes(window.BLOCKS.WATER) && !neighbors.includes(window.BLOCKS.SWAMP_WATER)) {
                     needsBreak = true;

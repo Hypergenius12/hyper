@@ -625,8 +625,8 @@ export function generateChunkTerrain(cx, cz, params) {
                 const r = floraRng();
                 
                 // Sugarcane logic
-                if (surfaceY === params.seaLevel + 1 && r < 0.1 && (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome === BIOMES.SWAMP || biome === BIOMES.DESERT)) {
-                    // It must be placed exactly near water, and surfaceY is 1 block above water. We know beaches are sand here.
+                if ((surfaceY === params.seaLevel || surfaceY === params.seaLevel + 1) && r < 0.1 && (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome === BIOMES.SWAMP || biome === BIOMES.DESERT)) {
+                    // It must be placed exactly near water. We know beaches are sand here.
                     // We only spawn if the chunk column is adjacent to water (the chunk itself generated water next to it)
                     // We can estimate by checking the neighbors' surfaceY
                     const left = getColumnInfo(wx - 1, wz, params).surfaceY;

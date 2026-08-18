@@ -2147,6 +2147,7 @@ export function generateItemTexture(itemType, itemSubtype) {
                 else if (char === 'O') ctx.fillStyle = '#222222'; // outline
                 else if (char === 'L') ctx.fillStyle = p.l || '#3366CC'; // liquid dark
                 else if (char === 'W') ctx.fillStyle = p.w || '#66AAFF'; // liquid light
+                else if (char === 'A') ctx.fillStyle = '#111111'; // accent/dark shade
                 else continue;
                 ctx.fillRect(x, y, 1, 1);
             }
@@ -2332,7 +2333,67 @@ export function generateItemTexture(itemType, itemSubtype) {
             ];
         }
     } else if (itemType === 'material') {
-        if (itemSubtype === 'coal' || itemSubtype === 'diamond' || itemSubtype === 'mana_crystal') {
+        if (itemSubtype === 'book') {
+            shape = [
+                "                ",
+                "     OOOOOOO    ",
+                "    OBBDDDDBO   ",
+                "   OBBBDDDDBBO  ",
+                "   OBDHDDDBBBO  ",
+                "   OBDDDDDBBBO  ",
+                "   OBDHDDDBBBO  ",
+                "   OBDDDDDBBBO  ",
+                "   OBDHDDDBBBO  ",
+                "   OBDDDDDBBBO  ",
+                "   OBDHDDDBBBO  ",
+                "   OBDDDDDBBBO  ",
+                "    OBBDDDDBO   ",
+                "     OOOOOOO    ",
+                "                ",
+                "                "
+            ];
+            p = { c: '#8d6e63', d: '#5d4037', h: '#d7ccc8', g: '#ffffff', b: '#ff0000' };
+        } else if (itemSubtype === 'sugar') {
+            shape = [
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "       O O      ",
+                "      OCCOO     ",
+                "     OCCCCO     ",
+                "     OCCCCO     ",
+                "     OCCCCO     ",
+                "     OCCCCO     ",
+                "      OOOO      ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            p = { c: '#ffffff', d: '#e0e0e0', h: '#ffffff' };
+        } else if (itemSubtype === 'paper') {
+            shape = [
+                "                ",
+                "                ",
+                "    OOOOOOOO    ",
+                "   ODCCCCCDO    ",
+                "  ODCCCCCCDO    ",
+                "  ODCCCCCCDO    ",
+                "  ODCCCCCCDO    ",
+                "  ODCCCCCCDO    ",
+                "  ODCCCCCCDO    ",
+                "  ODCCCCCCDO    ",
+                "  ODCCCCCCDO    ",
+                "  ODCCCCCCDO    ",
+                "   ODCCCCCDO    ",
+                "    OOOOOOOO    ",
+                "                ",
+                "                "
+            ];
+            p = { c: '#ffffff', d: '#e0e0e0', h: '#ffffff' };
+        } else if (itemSubtype === 'coal' || itemSubtype === 'diamond' || itemSubtype === 'mana_crystal') {
             shape = [
                 "                ",
                 "      OOOO      ",

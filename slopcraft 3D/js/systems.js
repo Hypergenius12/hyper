@@ -461,7 +461,7 @@ class UISystem {
         }
 
         this.isOpen = !this.isOpen;
-        this.is3x3Crafting = true; // normal inventory now gets 3x3 too
+        this.is3x3Crafting = false; // normal inventory gets 2x2
         this._updateCraftingUILayout();
         
         if (this.isOpen) {
@@ -1313,72 +1313,133 @@ class UISystem {
         const countAnyPlank = s.filter(x => x !== null && isPlank(x)).length;
         const matchesMat = (t, expected) => expected === B.PLANKS ? isPlank(t) : t === expected;
 
-        // Pickaxes: 3 top mat, 2 stick middle
+        // Pickaxes: 3 top mat, 2 stick middle OR 2x2 shape
         const pickaxeRecipe = (matType, mineSpeed, damage, chopSpeed, toolName) => {
-            if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && matchesMat(s[2], matType) &&
-                !s[3] && s[4] === 'stick' && !s[5] &&
-                !s[6] && s[7] === 'stick' && !s[8])
-                return equip('pickaxe', { mineSpeed, damage, chopSpeed }, toolName, `${toolName}. Mine Speed: ${mineSpeed}x`);
+            if (this.is3x3Crafting) {
+                if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && matchesMat(s[2], matType) &&
+                    !s[3] && s[4] === 'stick' && !s[5] &&
+                    !s[6] && s[7] === 'stick' && !s[8])
+                    return equip('pickaxe', { mineSpeed, damage, chopSpeed }, toolName, `${toolName}. Mine Speed: ${mineSpeed}x`);
+            } else {
+                if (matchesMat(s[0], matType) && matchesMat(s[1], matType) &&
+                    matchesMat(s[2], matType) && s[3] === 'stick')
+                    return equip('pickaxe', { mineSpeed, damage, chopSpeed }, toolName, `${toolName}. Mine Speed: ${mineSpeed}x`);
+            }
             return null;
         };
 
         // Swords: 2 mat vertical, 1 stick bottom
         const swordRecipe = (matType, damage, toolName) => {
-            if (!s[0] && matchesMat(s[1], matType) && !s[2] &&
-                !s[3] && matchesMat(s[4], matType) && !s[5] &&
-                !s[6] && s[7] === 'stick' && !s[8])
-                return equip('sword', { mineSpeed: 1.0, damage, chopSpeed: 1.0 }, toolName, `${toolName}. Damage: ${damage}`);
+            if (this.is3x3Crafting) {
+                if (!s[0] && matchesMat(s[1], matType) && !s[2] &&
+                    !s[3] && matchesMat(s[4], matType) && !s[5] &&
+                    !s[6] && s[7] === 'stick' && !s[8])
+                    return equip('sword', { mineSpeed: 1.0, damage, chopSpeed: 1.0 }, toolName, `${toolName}. Damage: ${damage}`);
+            } else {
+                // Sword in 2x2: Mat top, Stick bottom
+                if (matchesMat(s[0], matType) && !s[1] &&
+                    s[2] === 'stick' && !s[3])
+                    return equip('sword', { mineSpeed: 1.0, damage, chopSpeed: 1.0 }, toolName, `${toolName}. Damage: ${damage}`);
+                if (!s[0] && matchesMat(s[1], matType) &&
+                    !s[2] && s[3] === 'stick')
+                    return equip('sword', { mineSpeed: 1.0, damage, chopSpeed: 1.0 }, toolName, `${toolName}. Damage: ${damage}`);
+            }
             return null;
         };
 
         // Axes: 3 mat corner, 2 stick
         const axeRecipe = (matType, chopSpeed, damage, toolName) => {
-            if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && !s[2] &&
-                matchesMat(s[3], matType) && s[4] === 'stick' && !s[5] &&
-                !s[6] && s[7] === 'stick' && !s[8])
-                return equip('axe', { mineSpeed: 1.0, damage, chopSpeed }, toolName, `${toolName}. Chops fast. Speed: ${chopSpeed}x`);
+            if (this.is3x3Crafting) {
+                if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && !s[2] &&
+                    matchesMat(s[3], matType) && s[4] === 'stick' && !s[5] &&
+                    !s[6] && s[7] === 'stick' && !s[8])
+                    return equip('axe', { mineSpeed: 1.0, damage, chopSpeed }, toolName, `${toolName}. Chops fast. Speed: ${chopSpeed}x`);
+            } else {
+                if (matchesMat(s[0], matType) && matchesMat(s[1], matType) &&
+                    s[2] === 'stick' && matchesMat(s[3], matType))
+                    return equip('axe', { mineSpeed: 1.0, damage, chopSpeed }, toolName, `${toolName}. Chops fast. Speed: ${chopSpeed}x`);
+            }
             return null;
         };
 
         // Armor Helmet: 5 mat top arch
         const armorRecipe2H = (matType, name, subType, protection) => {
-            if (s[0] === matType && s[1] === matType && s[2] === matType &&
-                s[3] === matType && !s[4] && s[5] === matType &&
-                !s[6] && !s[7] && !s[8])
-                return equip(subType, { protection }, name, `Protection: ${protection}`);
+            if (this.is3x3Crafting) {
+                if (s[0] === matType && s[1] === matType && s[2] === matType &&
+                    s[3] === matType && !s[4] && s[5] === matType &&
+                    !s[6] && !s[7] && !s[8])
+                    return equip(subType, { protection }, name, `Protection: ${protection}`);
+            } else {
+                // Helmet in 2x2: 3 mats
+                if (s[0] === matType && s[1] === matType && s[2] === matType && !s[3])
+                    return equip(subType, { protection }, name, `Protection: ${protection}`);
+            }
             return null;
         };
         // Armor Chestplate: 8 mat ring
         const armorRecipeFull = (matType, name, subType, protection) => {
-            if (s[0] === matType && !s[1] && s[2] === matType &&
-                s[3] === matType && s[4] === matType && s[5] === matType &&
-                s[6] === matType && s[7] === matType && s[8] === matType)
-                return equip(subType, { protection }, name, `Protection: ${protection}`);
+            if (this.is3x3Crafting) {
+                if (s[0] === matType && !s[1] && s[2] === matType &&
+                    s[3] === matType && s[4] === matType && s[5] === matType &&
+                    s[6] === matType && s[7] === matType && s[8] === matType)
+                    return equip(subType, { protection }, name, `Protection: ${protection}`);
+            } else {
+                // Chestplate in 2x2: 4 mats
+                if (s[0] === matType && s[1] === matType && s[2] === matType && s[3] === matType)
+                    return equip(subType, { protection }, name, `Protection: ${protection}`);
+            }
             return null;
         };
         // Armor Leggings: 7 mat arch
         const armorRecipeLegs = (matType, name, subType, protection) => {
-            if (s[0] === matType && s[1] === matType && s[2] === matType &&
-                s[3] === matType && !s[4] && s[5] === matType &&
-                s[6] === matType && !s[7] && s[8] === matType)
-                return equip(subType, { protection }, name, `Protection: ${protection}`);
+            if (this.is3x3Crafting) {
+                if (s[0] === matType && s[1] === matType && s[2] === matType &&
+                    s[3] === matType && !s[4] && s[5] === matType &&
+                    s[6] === matType && !s[7] && s[8] === matType)
+                    return equip(subType, { protection }, name, `Protection: ${protection}`);
+            } else {
+                // Leggings in 2x2: 3 mats
+                if (s[0] === matType && !s[1] && s[2] === matType && s[3] === matType)
+                    return equip(subType, { protection }, name, `Protection: ${protection}`);
+            }
             return null;
         };
         // Armor Boots: 4 mat sides
         const armorRecipeBoots = (matType, name, subType, protection) => {
-            if (!s[0] && !s[1] && !s[2] &&
-                s[3] === matType && !s[4] && s[5] === matType &&
-                s[6] === matType && !s[7] && s[8] === matType)
-                return equip(subType, { protection }, name, `Protection: ${protection}`);
+            if (this.is3x3Crafting) {
+                if (!s[0] && !s[1] && !s[2] &&
+                    s[3] === matType && !s[4] && s[5] === matType &&
+                    s[6] === matType && !s[7] && s[8] === matType)
+                    return equip(subType, { protection }, name, `Protection: ${protection}`);
+            } else {
+                // Boots in 2x2: 2 mats
+                if (s[0] === matType && !s[1] && s[2] === matType && !s[3])
+                    return equip(subType, { protection }, name, `Protection: ${protection}`);
+                if (!s[0] && s[1] === matType && !s[2] && s[3] === matType)
+                    return equip(subType, { protection }, name, `Protection: ${protection}`);
+            }
             return null;
         };
 
         // Spell Recipe: mana crystal center, 4 mats in cross
         const spellRecipe = (matType, spellId) => {
-            if (s[4] !== 'mana_crystal') return null;
-            if (!s[0] && matchesMat(s[1], matType) && !s[2] &&
-                matchesMat(s[3], matType) && matchesMat(s[5], matType) &&
-                !s[6] && matchesMat(s[7], matType) && !s[8]) {
+            let matches = false;
+            if (this.is3x3Crafting) {
+                if (s[4] === 'mana_crystal' &&
+                    !s[0] && matchesMat(s[1], matType) && !s[2] &&
+                    matchesMat(s[3], matType) && matchesMat(s[5], matType) &&
+                    !s[6] && matchesMat(s[7], matType) && !s[8]) {
+                    matches = true;
+                }
+            } else {
+                // 2x2 spell: Mana crystal + Mat
+                if (s[0] === 'mana_crystal' && matchesMat(s[1], matType) && !s[2] && !s[3]) matches = true;
+                if (!s[0] && !s[1] && s[2] === 'mana_crystal' && matchesMat(s[3], matType)) matches = true;
+                if (s[0] === 'mana_crystal' && !s[1] && matchesMat(s[2], matType) && !s[3]) matches = true;
+                if (!s[0] && s[1] === 'mana_crystal' && !s[2] && matchesMat(s[3], matType)) matches = true;
+            }
+
+            if (matches) {
                 const sp = SPELL_TYPES[spellId];
                 if (!sp) return null;
                 const spellInst = new Spell(spellId);
@@ -1442,20 +1503,20 @@ class UISystem {
             r = axeRecipe(B.PLANKS, 1.5, 3, 'Wooden Axe'); if (r) return r;
             r = axeRecipe('gold_ingot', 2.5, 4, 'Gold Axe'); if (r) return r;
 
-            r = armorRecipe2H('iron_ingot', 'Iron Helmet', 'head', 2); if (r) return r;
-            r = armorRecipeFull('iron_ingot', 'Iron Chestplate', 'chest', 5); if (r) return r;
-            r = armorRecipeLegs('iron_ingot', 'Iron Leggings', 'legs', 3); if (r) return r;
-            r = armorRecipeBoots('iron_ingot', 'Iron Boots', 'boots', 2); if (r) return r;
+            r = armorRecipe2H('iron_ingot', 'Iron Helmet', 'head_iron', 2); if (r) return r;
+            r = armorRecipeFull('iron_ingot', 'Iron Chestplate', 'chest_iron', 5); if (r) return r;
+            r = armorRecipeLegs('iron_ingot', 'Iron Leggings', 'legs_iron', 3); if (r) return r;
+            r = armorRecipeBoots('iron_ingot', 'Iron Boots', 'boots_iron', 2); if (r) return r;
 
-            r = armorRecipe2H('diamond', 'Diamond Helmet', 'head', 5); if (r) return r;
-            r = armorRecipeFull('diamond', 'Diamond Chestplate', 'chest', 10); if (r) return r;
-            r = armorRecipeLegs('diamond', 'Diamond Leggings', 'legs', 7); if (r) return r;
-            r = armorRecipeBoots('diamond', 'Diamond Boots', 'boots', 5); if (r) return r;
+            r = armorRecipe2H('diamond', 'Diamond Helmet', 'head_diamond', 5); if (r) return r;
+            r = armorRecipeFull('diamond', 'Diamond Chestplate', 'chest_diamond', 10); if (r) return r;
+            r = armorRecipeLegs('diamond', 'Diamond Leggings', 'legs_diamond', 7); if (r) return r;
+            r = armorRecipeBoots('diamond', 'Diamond Boots', 'boots_diamond', 5); if (r) return r;
 
-            r = armorRecipe2H('gold_ingot', 'Gold Helmet', 'head', 3); if (r) return r;
-            r = armorRecipeFull('gold_ingot', 'Gold Chestplate', 'chest', 7); if (r) return r;
-            r = armorRecipeLegs('gold_ingot', 'Gold Leggings', 'legs', 4); if (r) return r;
-            r = armorRecipeBoots('gold_ingot', 'Gold Boots', 'boots', 3); if (r) return r;
+            r = armorRecipe2H('gold_ingot', 'Gold Helmet', 'head_gold', 3); if (r) return r;
+            r = armorRecipeFull('gold_ingot', 'Gold Chestplate', 'chest_gold', 7); if (r) return r;
+            r = armorRecipeLegs('gold_ingot', 'Gold Leggings', 'legs_gold', 4); if (r) return r;
+            r = armorRecipeBoots('gold_ingot', 'Gold Boots', 'boots_gold', 3); if (r) return r;
 
             if (!s[0] && !s[1] && !s[2] && 
                 s[3] === 'iron_ingot' && !s[4] && s[5] === 'iron_ingot' && 
