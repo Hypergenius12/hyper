@@ -174,19 +174,27 @@ export class BiomeMap {
                 switch (biomeData.biome.name) {
                     case 'Deep Ocean': color = '#000055'; break;
                     case 'Ocean': color = '#0000AA'; break;
+                    case 'Coral Reef': color = '#3333AA'; break;
                     case 'Beach': color = '#E6D28A'; break;
                     case 'Desert': color = '#D9B340'; break;
+                    case 'Oasis': color = '#33CC33'; break;
+                    case 'Badlands': color = '#D98A40'; break;
                     case 'Savanna': color = '#A8A64B'; break;
                     case 'Plains': color = '#6BCC47'; break;
                     case 'Forest': color = '#2E8C19'; break;
                     case 'Jungle': color = '#156105'; break;
                     case 'Swamp': color = '#38592A'; break;
                     case 'Dark Forest': color = '#1C3312'; break;
-                    case 'Taiga': color = '#295E4D'; break;
-                    case 'Snowy Tundra': color = '#FFFFFF'; break;
+                    case 'Cherry Grove': color = '#FFB7C5'; break;
+                    case 'Autumn Forest': color = '#D2691E'; break;
+                    case 'Tundra': color = '#FFFFFF'; break;
                     case 'Ice Spikes': color = '#B3E6FF'; break;
-                    case 'Mushroom Island': color = '#FF66FF'; break;
+                    case 'Mountains': color = '#A0A0A0'; break;
+                    case 'Volcanic': color = '#331111'; break;
+                    case 'Mushroom': color = '#FF66FF'; break;
                     case 'Alien': color = '#8800FF'; break;
+                    case 'Glow Forest': color = '#00FFFF'; break;
+                    case 'Crystal': color = '#a36ddb'; break;
                     default: color = '#555555'; break;
                 }
                 

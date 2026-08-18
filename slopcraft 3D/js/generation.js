@@ -334,25 +334,25 @@ export function getBiomeParams(wx, wz, params) {
                 let ww = Math.max(0, Math.min(1, (weirdness - 0.7) / 0.1));
                 terraceWeight = Math.max(terraceWeight, ww);
                 biome = weirdness > 0.7 ? BIOMES.BADLANDS : BIOMES.DESERT;
-                if (biome === BIOMES.DESERT && temp < 0.85 && moist > 0.25) biome = BIOMES.OASIS;
+                if (biome === BIOMES.DESERT && moist > 0.2) biome = BIOMES.OASIS;
             } else if (moist > 0.6) {
                 biome = weirdness > 0.6 ? BIOMES.JUNGLE : BIOMES.SWAMP;
             } else {
                 biome = BIOMES.SAVANNA;
             }
-        } else if (temp < 0.3) { // Cold
-            biome = (weirdness > 0.8 && moist > 0.5) ? BIOMES.AUTUMN_FOREST : BIOMES.TUNDRA;
+        } else if (temp < 0.2) { // Cold
+            biome = (weirdness > 0.6 && moist > 0.4) ? BIOMES.AUTUMN_FOREST : BIOMES.TUNDRA;
         } else { // Temperate (0.3 to 0.75)
             if (moist < 0.35) {
-                biome = weirdness > 0.8 ? BIOMES.MUSHROOM : BIOMES.PLAINS;
+                biome = weirdness > 0.7 ? BIOMES.MUSHROOM : BIOMES.PLAINS;
             } else if (moist > 0.7) {
-                if (weirdness > 0.85) biome = BIOMES.ALIEN;
-                else if (weirdness > 0.7) biome = BIOMES.GLOW_FOREST;
-                else if (weirdness > 0.5) biome = BIOMES.DARK_FOREST;
+                if (weirdness > 0.75) biome = BIOMES.ALIEN;
+                else if (weirdness > 0.6) biome = BIOMES.GLOW_FOREST;
+                else if (weirdness > 0.4) biome = BIOMES.DARK_FOREST;
                 else biome = BIOMES.SWAMP;
             } else {
-                if (weirdness > 0.8) biome = BIOMES.CHERRY_GROVE;
-                else if (weirdness > 0.6) biome = BIOMES.CRYSTAL;
+                if (weirdness > 0.75) biome = BIOMES.CHERRY_GROVE;
+                else if (weirdness > 0.5) biome = BIOMES.CRYSTAL;
                 else if (isFlat) biome = BIOMES.PLAINS;
                 else biome = BIOMES.FOREST;
             }
