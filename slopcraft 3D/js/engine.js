@@ -69,10 +69,12 @@ export class InputManager {
                 if (promise) {
                     promise.catch(e => {
                         console.warn('Pointer lock prevented:', e);
+                        document.dispatchEvent(new Event('pointerlockerror'));
                     });
                 }
             } catch (e) {
                 console.warn('Pointer lock prevented:', e);
+                document.dispatchEvent(new Event('pointerlockerror'));
             }
         }
     }
@@ -98,11 +100,11 @@ export class InputManager {
     onKeyDown(e) {
         // Dev Mode sequence tracking
         if (!this.devModeUnlocked) {
-            this.keySequence += e.key;
+            this.keySequence += e.key.toLowerCase();
             if (this.keySequence.length > 6) {
                 this.keySequence = this.keySequence.substring(this.keySequence.length - 6);
             }
-            if (this.keySequence === '779812') {
+            if (this.keySequence.endsWith('1001')) {
                 this.devModeUnlocked = true;
                 this.keySequence = '';
                 console.log("Dev Mode Unlocked! Press 'U' to toggle.");
@@ -260,13 +262,14 @@ const _transparentIndices = new Uint32Array(MAX_INDICES);
 const _glowOpaqueIndices = new Uint32Array(MAX_INDICES);
 const _glowTransparentIndices = new Uint32Array(MAX_INDICES);
 
+
 const _meshPool = [];
 
 export class Chunk {
     constructor(cx, cz) {
         this.cx = cx;
         this.cz = cz;
-        this.blocks = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
+        this.blocks = new Uint16Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
         this.data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
         this.mesh = null;
         this.dirty = false;

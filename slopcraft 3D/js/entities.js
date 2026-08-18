@@ -1807,6 +1807,98 @@ export const MOB_TYPES = {
                 if (mob.mesh) mob.mesh.rotation.y = Math.atan2(dir.x, dir.z);
             }
         }
+    },
+    CAMEL: {
+        name: 'Camel', health: 20, damage: 0, speed: 3.5, hostile: false, color: 0xc2b280,
+        size: 1.0, xpDrop: 3, lootChance: 0.5,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.8, 1.6), new THREE.MeshStandardMaterial({color: 0xc2b280}));
+            body.position.y = 1.2; group.add(body);
+            const hump = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.6), new THREE.MeshStandardMaterial({color: 0xc2b280}));
+            hump.position.set(0, 1.7, 0); group.add(hump);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.6), new THREE.MeshStandardMaterial({color: 0xc2b280}));
+            head.position.set(0, 1.8, 1.0); group.add(head);
+            const legGeo = new THREE.BoxGeometry(0.3, 0.8, 0.3);
+            for(let i=0; i<4; i++) {
+                const leg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0xc2b280}));
+                leg.position.set((i%2===0?-0.4:0.4), 0.4, (i<2?0.6:-0.6));
+                group.add(leg);
+            }
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            if (isMoving) {
+                for(let i=0; i<4; i++) {
+                    mesh.children[i+3].rotation.x = Math.sin(age * 5 + (i%2===0?0:Math.PI)) * 0.4;
+                }
+            } else {
+                for(let i=0; i<4; i++) mesh.children[i+3].rotation.x = 0;
+            }
+        }
+    },
+    PENGUIN: {
+        name: 'Penguin', health: 8, damage: 0, speed: 2.0, hostile: false, color: 0x111111,
+        size: 0.6, xpDrop: 2, lootChance: 0.3,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.4), new THREE.MeshStandardMaterial({color: 0x111111}));
+            body.position.y = 0.5; group.add(body);
+            const belly = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.1), new THREE.MeshStandardMaterial({color: 0xffffff}));
+            belly.position.set(0, 0.4, 0.21); group.add(belly);
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            if (isMoving) {
+                mesh.rotation.z = Math.sin(age * 10) * 0.2; // Waddle
+            } else {
+                mesh.rotation.z = 0;
+            }
+        }
+    },
+    FROG: {
+        name: 'Frog', health: 5, damage: 0, speed: 5.0, hostile: false, color: 0x22cc44,
+        size: 0.3, xpDrop: 1, lootChance: 0.2,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.5), new THREE.MeshStandardMaterial({color: 0x22cc44}));
+            body.position.y = 0.15; group.add(body);
+            return group;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            mob.wanderTimer -= dt;
+            if (mob.wanderTimer <= 0) {
+                mob.wanderTimer = 1 + Math.random() * 3;
+                const angle = Math.random() * Math.PI * 2;
+                mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                if (mob.grounded) {
+                    mob.velocity.y = 6;
+                    mob.grounded = false;
+                }
+            }
+            if (!mob.grounded) {
+                mob.velocity.x = mob.wanderDir.x * mob.speed;
+                mob.velocity.z = mob.wanderDir.z * mob.speed;
+            } else {
+                mob.velocity.x *= 0.5;
+                mob.velocity.z *= 0.5;
+            }
+            if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+        }
+    },
+    ALIEN_BUG: {
+        name: 'Alien Bug', health: 35, damage: 8, speed: 6.5, hostile: true, color: 0xcc22ff,
+        size: 0.8, xpDrop: 10, lootChance: 0.6,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 1.2), new THREE.MeshStandardMaterial({color: 0xcc22ff}));
+            body.position.y = 0.5; group.add(body);
+            const eye = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.1), new THREE.MeshStandardMaterial({color: 0x00ff00, emissive: 0x00aa00}));
+            eye.position.set(0, 0.6, 0.61); group.add(eye);
+            return group;
+        }
     }
 };
 
@@ -1836,7 +1928,7 @@ const MOB_SPAWN_WEIGHTS = [
 ];
 const TOTAL_MOB_WEIGHT = MOB_SPAWN_WEIGHTS.reduce((s, e) => s + e.weight, 0);
 
-function pickRandomMobType(dimension = 'overworld') {
+function pickRandomMobType(dimension = 'overworld', biome = 'plains') {
     if (dimension === 'nether') {
         return Math.random() < 0.5 ? 'LAVASLIME' : 'PIGLIN_BRUISER';
     }
@@ -1846,6 +1938,11 @@ function pickRandomMobType(dimension = 'overworld') {
     if (dimension === 'caverns') {
         return Math.random() < 0.8 ? 'CAVE_CRAWLER' : 'BLIND_HORROR';
     }
+
+    if (biome === 'desert' && Math.random() < 0.4) return 'CAMEL';
+    if (biome === 'snow' && Math.random() < 0.4) return 'PENGUIN';
+    if (biome === 'swamp' && Math.random() < 0.4) return 'FROG';
+    if (biome === 'alien' && Math.random() < 0.4) return 'ALIEN_BUG';
 
     let r = Math.random() * TOTAL_MOB_WEIGHT;
     for (const entry of MOB_SPAWN_WEIGHTS) {
@@ -2470,9 +2567,16 @@ export class EntityManager {
                                 type = aquatic[Math.floor(Math.random() * aquatic.length)];
                             }
                         } else {
-                            type = pickRandomMobType(currentDimension === 'nether');
+                            const biomeBlock = b;
+                            let biome = 'plains';
+                            if (biomeBlock === BLOCKS.SAND || biomeBlock === BLOCKS.RED_SAND) biome = 'desert';
+                            else if (biomeBlock === BLOCKS.SNOW) biome = 'snow';
+                            else if (biomeBlock === BLOCKS.SWAMP_GRASS) biome = 'swamp';
+                            else if (biomeBlock === BLOCKS.ALIEN_GRASS) biome = 'alien';
+
+                            type = pickRandomMobType(currentDimension, biome);
                             while(MOB_TYPES[type].waterOnly) {
-                                type = pickRandomMobType(currentDimension === 'nether');
+                                type = pickRandomMobType(currentDimension, biome);
                             }
                         }
                 // Only allow hostile surface spawns at night (except in Nether)

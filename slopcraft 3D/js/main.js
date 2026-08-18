@@ -325,6 +325,20 @@ class Game {
         this.cloudSystem = new CloudSystem(this.engine.scene);
         this.meteorSystem = new MeteorShowerSystem(this.engine.scene, this.particles, this.audio, this.world);
 
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'F2') {
+                e.preventDefault();
+                this.engine.renderer.domElement.toBlob((blob) => {
+                    const link = document.createElement('a');
+                    link.download = `screenshot_${Date.now()}.png`;
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                    // Clean up URL to avoid memory leak
+                    setTimeout(() => URL.revokeObjectURL(link.href), 100);
+                });
+            }
+        });
+
         // Setup Scene
         const renderDistBlocks = (this.engine.renderDistance || 8) * 16;
         this.engine.scene.fog = new THREE.FogExp2(this.planetParams.skyColor || 0x87ceeb, 1.0 / (renderDistBlocks * 0.75));
@@ -414,13 +428,23 @@ class Game {
         // Pointer lock listener for pausing
         document.addEventListener('pointerlockchange', () => {
             const ps = document.getElementById('pause-screen');
-            if (!this.input.isLocked && !this.ui.isOpen && document.getElementById('start-screen').classList.contains('hidden')) {
-                // We lost pointer lock but the inventory is not open, show pause
+            const devModeOpen = this.devMode && this.devMode.isOpen;
+            const mapOpen = this.biomeMap && this.biomeMap.isOpen;
+            if (!this.input.isLocked && !this.ui.isOpen && !devModeOpen && !mapOpen && document.getElementById('start-screen').classList.contains('hidden')) {
+                // We lost pointer lock but the inventory/map/dev is not open, show pause
                 if (ps) ps.classList.remove('hidden');
                 this.isPaused = true;
             } else {
                 if (ps) ps.classList.add('hidden');
                 this.isPaused = false;
+            }
+        });
+
+        document.addEventListener('pointerlockerror', () => {
+            const ps = document.getElementById('pause-screen');
+            if (ps && document.getElementById('start-screen').classList.contains('hidden')) {
+                ps.classList.remove('hidden');
+                this.isPaused = true;
             }
         });
 
@@ -1717,6 +1741,8 @@ class Game {
         // Update Dev Mode
         if (this.devMode) this.devMode.update(dt);
 
+        this.updateWaypoints();
+
         // Render
         if (this.atlas && this.atlas.updateAnimatedTextures) {
             this.atlas.updateAnimatedTextures(time);
@@ -1862,6 +1888,31 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
             } catch (e) {
                 di.innerHTML = `F3 Error: ${e.message}`;
             }
+        }
+    }
+
+    updateWaypoints() {
+        if (!this.waypointMeshes) this.waypointMeshes = [];
+        const waypoints = this.waypoints || [];
+        
+        // Remove old meshes
+        for (let i = 0; i < this.waypointMeshes.length; i++) {
+            this.engine.scene.remove(this.waypointMeshes[i]);
+        }
+        this.waypointMeshes = [];
+
+        for (const wp of waypoints) {
+            if (wp.dim !== this.currentDimension) continue;
+
+            // Draw a glowing green pillar
+            const geo = new THREE.CylinderGeometry(0.2, 0.2, 200, 8);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending });
+            const mesh = new THREE.Mesh(geo, mat);
+            // Height
+            mesh.position.set(wp.x, 100, wp.z);
+            mesh.renderOrder = 999;
+            this.engine.scene.add(mesh);
+            this.waypointMeshes.push(mesh);
         }
     }
 

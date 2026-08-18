@@ -538,6 +538,36 @@ function generateWizardTower(blocks, baseX, baseY, baseZ, rng) {
     }
 }
 
+function generateAncientPyramid(blocks, baseX, baseY, baseZ, rng) {
+    const size = 15; // Must be odd
+    const half = Math.floor(size / 2);
+    
+    for (let y = 0; y < half + 1; y++) {
+        const curRadius = half - y;
+        for (let x = -curRadius; x <= curRadius; x++) {
+            for (let z = -curRadius; z <= curRadius; z++) {
+                const localY = baseY + y;
+                // Hollow inside
+                const isEdge = Math.abs(x) === curRadius || Math.abs(z) === curRadius || y === 0;
+                
+                if (isEdge) {
+                    let type = rng() < 0.2 ? BLOCKS.SANDSTONE : BLOCKS.SMOOTH_SANDSTONE;
+                    // Entrance
+                    if (y > 0 && y < 3 && x === 0 && z === curRadius) {
+                        type = BLOCKS.AIR;
+                    }
+                    safeSetBlock(blocks, baseX + x, localY, baseZ + z, type);
+                } else {
+                    safeSetBlock(blocks, baseX + x, localY, baseZ + z, BLOCKS.AIR);
+                }
+            }
+        }
+    }
+    
+    // Center loot
+    safeSetBlock(blocks, baseX, baseY + 1, baseZ, BLOCKS.CHEST_BLOCK);
+    safeSetBlock(blocks, baseX, baseY + 2, baseZ, BLOCKS.TORCH);
+}
 // Generate the chunk terrain
 export function generateChunkTerrain(cx, cz, params) {
     const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
@@ -647,6 +677,9 @@ export function generateChunkTerrain(cx, cz, params) {
                 // Structures (checked first so they can spawn in any biome, not overridden by trees)
                 if (r < 0.000001) {
                     generateWizardTower(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                } else if (biome === BIOMES.DESERT && r < 0.000003) {
+                    generateAncientPyramid(blocks, tx, surfaceY, tz, floraRng);
                     continue;
                 } else if (r < 0.000003) {
                     generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng, 'nether');

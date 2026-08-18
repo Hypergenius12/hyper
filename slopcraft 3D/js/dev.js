@@ -187,8 +187,8 @@ export class DevMode {
             
             // Particles
             let particles = 0;
-            if (this.game.particles) {
-                particles = this.game.particles.systems.length;
+            if (this.game.particles && this.game.particles.particles) {
+                particles = this.game.particles.particles.length;
             }
             this.particlesEl.textContent = particles;
             
