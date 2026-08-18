@@ -123,6 +123,8 @@ export class Player {
         this.inventory.addItem(Item.wandItem(starterWand));
         this.inventory.addItem(Item.blockItem(BLOCKS.TORCH, 'Torch'), 64);
         this.equippedWand = starterWand;
+        this.burnTimer = 0;
+        this.burnTickTimer = 0;
     }
 
     update(dt, keys, mouse, world, sensitivity = 0.002) {
@@ -207,10 +209,28 @@ export class Player {
         const inFire = blockIn === BLOCKS.FIRE;
         const onLadder = blockIn === BLOCKS.LADDER;
 
-        if ((inLava || inFire) && Math.random() < dt * 4) {
-            this.takeDamage(inLava ? 5 : 2); // Fire hurts less than lava
-            const d = document.getElementById('damage-flash');
-            if(d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+        if (inWater) {
+            this.burnTimer = 0;
+        }
+
+        if (inLava || inFire) {
+            this.burnTimer = 5.0; // Stay burning as long as you're in it
+            if (Math.random() < dt * 4) {
+                this.takeDamage(inLava ? 5 : 2); // Initial intense damage
+                const d = document.getElementById('damage-flash');
+                if(d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+            }
+        }
+
+        if (this.burnTimer > 0) {
+            this.burnTimer -= dt;
+            this.burnTickTimer -= dt;
+            if (this.burnTickTimer <= 0) {
+                this.takeDamage(1); // take 1 damage per second
+                const d = document.getElementById('damage-flash');
+                if(d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                this.burnTickTimer = 1.0;
+            }
         }
 
         // Physics variables

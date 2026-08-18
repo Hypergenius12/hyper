@@ -1208,61 +1208,7 @@ export class World {
             }
         }
 
-        // Random Block Ticks (Fire Spread)
-        for (const key of chunksToKeep) {
-            const chunk = this.chunks.get(key);
-            if (!chunk || !chunk.blocks) continue;
-
-            // Tick 3 random blocks per chunk
-            for (let i = 0; i < 3; i++) {
-                const rx = Math.floor(Math.random() * CHUNK_SIZE);
-                const ry = Math.floor(Math.random() * CHUNK_HEIGHT);
-                const rz = Math.floor(Math.random() * CHUNK_SIZE);
-                const idx = (rx * CHUNK_HEIGHT * CHUNK_SIZE) + (ry * CHUNK_SIZE) + rz;
-                
-                const type = chunk.blocks[idx];
-                const props = getBlockProperties(type);
-                
-                if (type === BLOCKS.FIRE) {
-                    const wx = chunk.cx * CHUNK_SIZE + rx;
-                    const wz = chunk.cz * CHUNK_SIZE + rz;
-                    // Try to spread to adjacent flammable blocks
-                    const neighbors = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
-                    for (const [dx, dy, dz] of neighbors) {
-                        if (Math.random() < 0.2) {
-                            const nx = wx + dx, ny = ry + dy, nz = wz + dz;
-                            if (ny >= 0 && ny < CHUNK_HEIGHT) {
-                                const tBlock = this.getBlock(nx, ny, nz);
-                                const tProps = getBlockProperties(tBlock);
-                                if (tProps && tProps.flammable) {
-                                    this.setBlock(nx, ny, nz, BLOCKS.FIRE);
-                                }
-                            }
-                        }
-                    }
-                    // Fire burns out
-                    if (Math.random() < 0.15) {
-                        this.setBlock(wx, ry, wz, BLOCKS.AIR);
-                    }
-                } else if (props && props.flammable) {
-                    // Check if adjacent to lava
-                    const wx = chunk.cx * CHUNK_SIZE + rx;
-                    const wz = chunk.cz * CHUNK_SIZE + rz;
-                    const neighbors = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
-                    for (const [dx, dy, dz] of neighbors) {
-                        const nx = wx + dx, ny = ry + dy, nz = wz + dz;
-                        if (ny >= 0 && ny < CHUNK_HEIGHT) {
-                            if (this.getBlock(nx, ny, nz) === BLOCKS.LAVA) {
-                                if (Math.random() < 0.1) {
-                                    this.setBlock(wx, ry, wz, BLOCKS.FIRE);
-                                }
-                                break; // only catch fire once per tick
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // Frustum culling is immediately after chunk meshing now
 
         // Frustum culling
         if (this.camera) {
@@ -1338,46 +1284,95 @@ export class World {
                     const dirs = [
                         [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]
                     ];
-                    dirs.sort(() => Math.random() - 0.5); // shuffle
                     
-                    let spread = false;
-                    for (const [dx, dy, dz] of dirs) {
-                        const nx = wx + dx, ny = wy + dy, nz = wz + dz;
-                        const nb = this.getBlock(nx, ny, nz);
-                        
-                        // Is it flammable?
-                        if (this.isFlammable(nb)) {
-                            if (Math.random() < 0.1) { // 10% chance to spread per direction
-                                if (Math.random() < 0.3) {
-                                    this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
-                                } else {
-                                    this.setBlock(nx, ny, nz, window.BLOCKS.AIR); // burn it up
-                                }
-                                spread = true;
+                    // 1. Check if supported (needs solid block below, or adjacent flammable block)
+                    let supported = false;
+                    const blockBelow = this.getBlock(wx, wy - 1, wz);
+                    if (blockBelow !== window.BLOCKS.AIR && blockBelow !== window.BLOCKS.WATER && blockBelow !== window.BLOCKS.LAVA && blockBelow !== window.BLOCKS.FIRE) {
+                        supported = true;
+                    } else {
+                        for (const [dx, dy, dz] of dirs) {
+                            if (this.isFlammable(this.getBlock(wx + dx, wy + dy, wz + dz))) {
+                                supported = true;
                                 break;
                             }
                         }
                     }
                     
-                    // Fire dies out
-                    if (Math.random() < (spread ? 0.05 : 0.2)) {
+                    if (!supported) {
+                        this.setBlock(wx, wy, wz, window.BLOCKS.AIR);
+                        continue;
+                    }
+                    
+                    // 2. Spread to nearby AIR blocks that are next to flammable blocks
+                    if (Math.random() < 0.4) {
+                        // Pick a random nearby position (-1 to 1)
+                        const rx_spread = Math.floor(Math.random() * 3) - 1;
+                        const ry_spread = Math.floor(Math.random() * 3) - 1;
+                        const rz_spread = Math.floor(Math.random() * 3) - 1;
+                        
+                        if (rx_spread !== 0 || ry_spread !== 0 || rz_spread !== 0) {
+                            const nx = wx + rx_spread;
+                            const ny = wy + ry_spread;
+                            const nz = wz + rz_spread;
+                            
+                            if (this.getBlock(nx, ny, nz) === window.BLOCKS.AIR) {
+                                // Check if this air block is adjacent to something flammable
+                                let canCatch = false;
+                                for (const [dx, dy, dz] of dirs) {
+                                    if (this.isFlammable(this.getBlock(nx + dx, ny + dy, nz + dz))) {
+                                        canCatch = true;
+                                        break;
+                                    }
+                                }
+                                if (canCatch) {
+                                    this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 3. Destroy adjacent flammable blocks (burn them up)
+                    if (Math.random() < 0.2) {
+                        dirs.sort(() => Math.random() - 0.5); // shuffle
+                        for (const [dx, dy, dz] of dirs) {
+                            const nx = wx + dx, ny = wy + dy, nz = wz + dz;
+                            if (this.isFlammable(this.getBlock(nx, ny, nz))) {
+                                this.setBlock(nx, ny, nz, window.BLOCKS.AIR);
+                                break; // Only burn one at a time
+                            }
+                        }
+                    }
+                    
+                    // 4. Fire naturally dies out sometimes
+                    if (Math.random() < 0.1) {
                         this.setBlock(wx, wy, wz, window.BLOCKS.AIR);
                     }
                 } else if (block === window.BLOCKS.LAVA) {
-                    // Lava has a chance to light nearby flammable blocks on fire
-                    const wx = chunk.cx * 16 + rx;
-                    const wy = ry;
-                    const wz = chunk.cz * 16 + rz;
-                    
-                    const dx = Math.floor(Math.random() * 3) - 1;
-                    const dy = Math.floor(Math.random() * 3) - 1;
-                    const dz = Math.floor(Math.random() * 3) - 1;
-                    
-                    if (dx !== 0 || dy !== 0 || dz !== 0) {
-                        const nx = wx + dx, ny = wy + dy, nz = wz + dz;
-                        // Replace flammable blocks with fire directly to simulate catching fire
-                        if (this.isFlammable(this.getBlock(nx, ny, nz))) {
-                            this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                    // Lava has a chance to light nearby blocks on fire
+                    if (Math.random() < 0.1) {
+                        const wx = chunk.cx * 16 + rx;
+                        const wy = ry;
+                        const wz = chunk.cz * 16 + rz;
+                        
+                        const nx = wx + (Math.floor(Math.random() * 3) - 1);
+                        const ny = wy + (Math.floor(Math.random() * 3) - 1);
+                        const nz = wz + (Math.floor(Math.random() * 3) - 1);
+                        
+                        // If it found an air block...
+                        if (this.getBlock(nx, ny, nz) === window.BLOCKS.AIR) {
+                            // Check if that air block is adjacent to something flammable
+                            const dirs = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+                            let canCatch = false;
+                            for (const [dx, dy, dz] of dirs) {
+                                if (this.isFlammable(this.getBlock(nx + dx, ny + dy, nz + dz))) {
+                                    canCatch = true;
+                                    break;
+                                }
+                            }
+                            if (canCatch) {
+                                this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                            }
                         }
                     }
                 }

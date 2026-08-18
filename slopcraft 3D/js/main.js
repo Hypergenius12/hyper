@@ -1610,6 +1610,14 @@ class Game {
             return null;
         }, this.entityManager.mobs);
 
+        if (this.player.burnTimer > 0 && Math.random() < 0.2) {
+            const rx = (Math.random() - 0.5) * 0.8;
+            const ry = Math.random() * 1.5;
+            const rz = (Math.random() - 0.5) * 0.8;
+            this.particles.emit(this.player.position.clone().add(new THREE.Vector3(rx, ry, rz)), 'magic', 1, 0xff5500);
+            if (Math.random() < 0.1) this.audio.playHit(); // small sizzle sound
+        }
+
         // Render
         if (this.atlas && this.atlas.updateAnimatedTextures) {
             this.atlas.updateAnimatedTextures(time);
