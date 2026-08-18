@@ -21,7 +21,44 @@ export class BiomeMap {
     }
 
     setupEvents() {
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseZ = e.clientY - rect.top;
+            
+            const worldX = Math.floor(this.offsetX + (mouseX - this.canvas.width / 2) / this.zoom);
+            const worldZ = Math.floor(this.offsetZ + (mouseZ - this.canvas.height / 2) / this.zoom);
+            
+            // Set or remove waypoint
+            if (!this.game.waypoints) this.game.waypoints = [];
+            
+            // Check if clicking near an existing waypoint to remove it
+            let clickedExisting = false;
+            for (let i = 0; i < this.game.waypoints.length; i++) {
+                const wp = this.game.waypoints[i];
+                if (wp.dim !== this.game.currentDimension) continue;
+                
+                const screenX = this.canvas.width / 2 + (wp.x - this.offsetX) * this.zoom;
+                const screenZ = this.canvas.height / 2 + (wp.z - this.offsetZ) * this.zoom;
+                
+                const dist = Math.hypot(mouseX - screenX, mouseZ - screenZ);
+                if (dist < 15) {
+                    this.game.waypoints.splice(i, 1);
+                    clickedExisting = true;
+                    break;
+                }
+            }
+            
+            if (!clickedExisting) {
+                this.game.waypoints.push({ x: worldX, z: worldZ, dim: this.game.currentDimension });
+            }
+            
+            this.draw();
+        });
+
         this.canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 2) return; // Right click handles waypoints
             this.isDragging = true;
             this.lastMouse = { x: e.clientX, y: e.clientY };
             this.canvas.style.cursor = 'grabbing';
@@ -122,18 +159,47 @@ export class BiomeMap {
     }
 
     getGenerationParams() {
-        if (!this._params || this._seed !== this.game.worldSeed) {
-            this._seed = this.game.worldSeed;
-            this._params = {
-                noise2D: createNoise2D(this._seed),
-                tempNoise: createNoise2D(this._seed + 456),
-                moistNoise: createNoise2D(this._seed + 789)
-            };
+        return this.game.planetParams;
+    }
+
+    getMapBiome(worldX, worldZ) {
+        const params = this.getGenerationParams();
+        if (!params) return 'Unknown';
+        
+        const dim = this.game.currentDimension || 'overworld';
+        
+        if (dim === 'nether') {
+            const temp = (params.tempNoise(worldX * 0.005, worldZ * 0.005) + 1) / 2;
+            const moist = (params.moistNoise(worldX * 0.005, worldZ * 0.005) + 1) / 2;
+            if (temp > 0.6) return 'Crimson Forest';
+            if (moist < 0.4) return 'Soul Sand Valley';
+            return 'Nether Wastes';
+        } 
+        if (dim === 'caverns') {
+            const biomeNoise = params.tempNoise(worldX * 0.005, worldZ * 0.005);
+            if (biomeNoise > 0.4) return 'Magma Caves';
+            if (biomeNoise < -0.4) return 'Crystal Caves';
+            return 'Caverns';
         }
-        return this._params;
+        if (dim === 'highlands') {
+            const biomeNoiseVal = params.noise2D(worldX * 0.002 + 5000, worldZ * 0.002 + 5000);
+            if (biomeNoiseVal < -0.3) return 'Volcanic Peaks';
+            if (biomeNoiseVal < 0.2) return 'Meadows';
+            if (biomeNoiseVal < 0.6) return 'Frozen Wastes';
+            return 'Jagged Peaks';
+        }
+        if (dim === 'aether') {
+            return 'Aether Islands';
+        }
+        
+        // Overworld
+        const biomeData = getBiomeParams(worldX, worldZ, params);
+        return biomeData.biome.name;
     }
 
     updateTooltip(e) {
+        if (!this.isOpen) return;
+        
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseZ = e.clientY - rect.top;
@@ -141,13 +207,12 @@ export class BiomeMap {
         const worldX = Math.floor(this.offsetX + (mouseX - this.canvas.width / 2) / this.zoom);
         const worldZ = Math.floor(this.offsetZ + (mouseZ - this.canvas.height / 2) / this.zoom);
         
-        const params = this.getGenerationParams();
-        const biomeData = getBiomeParams(worldX, worldZ, params);
+        const biomeName = this.getMapBiome(worldX, worldZ);
         
         this.tooltip.style.left = (e.clientX + 10) + 'px';
         this.tooltip.style.top = (e.clientY + 10) + 'px';
         this.tooltip.style.display = 'block';
-        this.tooltip.innerText = `Biome: ${biomeData.biome.name}\nCoords: ${worldX}, ${worldZ}`;
+        this.tooltip.innerText = `Biome: ${biomeName}\nCoords: ${worldX}, ${worldZ}`;
     }
 
     draw() {
@@ -167,11 +232,11 @@ export class BiomeMap {
                 const worldX = this.offsetX + (x - w / 2) / this.zoom;
                 const worldZ = this.offsetZ + (z - h / 2) / this.zoom;
                 
-                const biomeData = getBiomeParams(worldX, worldZ, params);
+                const biomeName = this.getMapBiome(worldX, worldZ);
                 
                 // Base color based on biome name
                 let color = '#000000';
-                switch (biomeData.biome.name) {
+                switch (biomeName) {
                     case 'Deep Ocean': color = '#000055'; break;
                     case 'Ocean': color = '#0000AA'; break;
                     case 'Coral Reef': color = '#3333AA'; break;
@@ -195,6 +260,22 @@ export class BiomeMap {
                     case 'Alien': color = '#8800FF'; break;
                     case 'Glow Forest': color = '#00FFFF'; break;
                     case 'Crystal': color = '#a36ddb'; break;
+                    // Nether
+                    case 'Nether Wastes': color = '#5c1717'; break;
+                    case 'Crimson Forest': color = '#8a0a1a'; break;
+                    case 'Soul Sand Valley': color = '#4e3f36'; break;
+                    // Caverns
+                    case 'Caverns': color = '#444444'; break;
+                    case 'Magma Caves': color = '#cc3300'; break;
+                    case 'Crystal Caves': color = '#3399ff'; break;
+                    // Highlands
+                    case 'Jagged Peaks': color = '#DDDDDD'; break;
+                    case 'Volcanic Peaks': color = '#222222'; break;
+                    case 'Meadows': color = '#44AA55'; break;
+                    case 'Frozen Wastes': color = '#EEEEFF'; break;
+                    // Aether
+                    case 'Aether Islands': color = '#FFFFEE'; break;
+                    
                     default: color = '#555555'; break;
                 }
                 
@@ -209,14 +290,35 @@ export class BiomeMap {
             const pz = this.game.player.position.z;
             
             const screenX = w / 2 + (px - this.offsetX) * this.zoom;
-            const screenZ = h / 2 + (pz - this.offsetZ) * this.zoom;
+            const screenY = h / 2 + (pz - this.offsetZ) * this.zoom;
             
-            if (screenX >= 0 && screenX <= w && screenZ >= 0 && screenZ <= h) {
-                this.ctx.fillStyle = '#FF0000';
+            this.ctx.fillStyle = 'red';
+            this.ctx.beginPath();
+            this.ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.strokeStyle = 'white';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        }
+        
+        // Draw waypoints
+        if (this.game.waypoints) {
+            for (const wp of this.game.waypoints) {
+                if (wp.dim !== this.game.currentDimension) continue;
+                const screenX = w / 2 + (wp.x - this.offsetX) * this.zoom;
+                const screenY = h / 2 + (wp.z - this.offsetZ) * this.zoom;
+                
+                this.ctx.fillStyle = '#00FF00';
                 this.ctx.beginPath();
-                this.ctx.arc(screenX, screenZ, 4, 0, Math.PI * 2);
+                this.ctx.moveTo(screenX, screenY);
+                this.ctx.lineTo(screenX - 5, screenY - 10);
+                this.ctx.lineTo(screenX + 5, screenY - 10);
                 this.ctx.fill();
-                this.ctx.strokeStyle = '#FFFFFF';
+                
+                this.ctx.beginPath();
+                this.ctx.arc(screenX, screenY - 10, 5, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.strokeStyle = 'black';
                 this.ctx.lineWidth = 1;
                 this.ctx.stroke();
             }
