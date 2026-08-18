@@ -45,12 +45,18 @@ export function generateAetherChunk(cx, cz, params) {
             const moist = (params.moistNoise(wx * 0.002, wz * 0.002) + 1) / 2;
             
             let biome = 'CRYSTAL_PLAINS';
-            if (temp > 0.7) {
+            if (temp > 0.8) {
+                biome = 'QUICKSOIL_DESERT';
+            } else if (temp > 0.6) {
                 biome = 'GOLDEN_FOREST';
-            } else if (temp < 0.3) {
+            } else if (temp < 0.2) {
+                biome = 'HOLYSTONE_MOUNTAINS';
+            } else if (temp < 0.4) {
                 biome = 'CLOUD_FOREST';
-            } else if (moist > 0.6) {
+            } else if (moist > 0.7) {
                 biome = 'CLOUD_PEAKS';
+            } else if (moist > 0.5 && temp > 0.4 && temp < 0.6) {
+                biome = 'ENCHANTED_WOODLANDS';
             }
 
             const colRng = seededRandom(params.seed + wx * 1234 + wz);
@@ -78,6 +84,10 @@ export function generateAetherChunk(cx, cz, params) {
                 if (biome === 'CLOUD_PEAKS') {
                     // Cloud peaks have higher density, pushing them higher up
                     density += 0.2 + (y * 0.002);
+                } else if (biome === 'HOLYSTONE_MOUNTAINS') {
+                    density += 0.4 - Math.abs(distFromMid) * 0.5; // Very thick, large islands
+                } else if (biome === 'QUICKSOIL_DESERT') {
+                    density -= 0.1; // Flatter islands
                 }
 
                 if (density > 0) {
@@ -107,6 +117,30 @@ export function generateAetherChunk(cx, cz, params) {
                             safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_CLOUD, true);
                             if (colRng() < 0.5) safeSetBlock(blocks, x, y + 2, z, BLOCKS.AETHER_CLOUD, true);
                         }
+                    } else if (biome === 'QUICKSOIL_DESERT') {
+                        blocks[idx] = BLOCKS.QUICKSOIL;
+                        for (let dy = 1; dy <= 3; dy++) {
+                            const subIdx = ((y - dy) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                            if (y - dy > 0 && blocks[subIdx] === BLOCKS.AETHER_STONE) {
+                                blocks[subIdx] = BLOCKS.QUICKSOIL;
+                            }
+                        }
+                        if (colRng() < 0.01) {
+                            safeSetBlock(blocks, x, y + 1, z, BLOCKS.DEAD_BUSH, true);
+                        } else if (colRng() < 0.005) {
+                            safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_CRYSTAL, true);
+                        }
+                    } else if (biome === 'HOLYSTONE_MOUNTAINS') {
+                        blocks[idx] = BLOCKS.HOLYSTONE;
+                        for (let dy = 1; dy <= 3; dy++) {
+                            const subIdx = ((y - dy) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+                            if (y - dy > 0 && blocks[subIdx] === BLOCKS.AETHER_STONE) {
+                                blocks[subIdx] = BLOCKS.HOLYSTONE;
+                            }
+                        }
+                        if (y > CHUNK_HEIGHT / 2 + 15) {
+                            blocks[idx] = BLOCKS.SNOW;
+                        }
                     } else {
                         blocks[idx] = BLOCKS.AETHER_GRASS;
                         // Put dirt below grass
@@ -124,6 +158,14 @@ export function generateAetherChunk(cx, cz, params) {
                             } else if (colRng() < 0.15) {
                                 safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
                             } else if (colRng() < 0.05) {
+                                safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_FLOWER, true);
+                            }
+                        } else if (biome === 'ENCHANTED_WOODLANDS') {
+                            if (colRng() < 0.04) {
+                                generateEnchantedAetherTree(blocks, x, y + 1, z, rng);
+                            } else if (colRng() < 0.2) {
+                                safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
+                            } else if (colRng() < 0.1) {
                                 safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_FLOWER, true);
                             }
                         } else if (biome === 'CLOUD_FOREST') {
@@ -153,6 +195,9 @@ export function generateAetherChunk(cx, cz, params) {
                         }
                     }
                 } else if (b === BLOCKS.AETHER_STONE && above !== BLOCKS.AIR) {
+                    if (biome === 'HOLYSTONE_MOUNTAINS') {
+                        blocks[idx] = BLOCKS.HOLYSTONE;
+                    }
                     // Underground decorations (maybe embedded crystals)
                     if (colRng() < 0.005) {
                         blocks[idx] = BLOCKS.AETHER_CRYSTAL;
@@ -163,6 +208,22 @@ export function generateAetherChunk(cx, cz, params) {
     }
 
     return blocks;
+}
+
+function generateEnchantedAetherTree(blocks, x, y, z, rng) {
+    const height = 5 + Math.floor(rng() * 4);
+    for (let i = 0; i < height; i++) {
+        safeSetBlock(blocks, x, y + i, z, BLOCKS.ENCHANTED_AETHER_LOG, true);
+    }
+    for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dz = -2; dz <= 2; dz++) {
+                if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
+                if (Math.abs(dy) === 2 && (Math.abs(dx) > 1 || Math.abs(dz) > 1)) continue;
+                safeSetBlock(blocks, x + dx, y + height + dy, z + dz, BLOCKS.ENCHANTED_AETHER_LEAVES, false);
+            }
+        }
+    }
 }
 
 function generateAetherTree(blocks, x, y, z, rng) {

@@ -139,7 +139,11 @@ export const BLOCKS = {
     HIGHLANDS_STONE: 128,
     HIGHLANDS_DIRT: 129,
     HIGHLANDS_GRASS: 130,
-    HIGHLANDS_PORTAL: 131
+    HIGHLANDS_PORTAL: 131,
+    QUICKSOIL: 187,
+    HOLYSTONE: 188,
+    ENCHANTED_AETHER_LOG: 189,
+    ENCHANTED_AETHER_LEAVES: 190
 };
 
 // Block properties
@@ -277,7 +281,11 @@ const BLOCK_PROPS = {
     [BLOCKS.HIGHLANDS_STONE]:{ name: 'Highlands Stone',health: 10, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.HIGHLANDS_DIRT]:{ name: 'Highlands Dirt', health: 4, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.HIGHLANDS_GRASS]:{ name: 'Highlands Grass',health: 4, transparent: false, emissive: 0.1, solid: true, drops: 129 }, // drops HIGHLANDS_DIRT
-    [BLOCKS.HIGHLANDS_PORTAL]:{ name: 'Highlands Portal',health: 0, transparent: true, emissive: 1.0, solid: false, drops: null }
+    [BLOCKS.HIGHLANDS_PORTAL]:{ name: 'Highlands Portal',health: 0, transparent: true, emissive: 1.0, solid: false, drops: null },
+    [BLOCKS.QUICKSOIL]:     { name: 'Quicksoil',      health: 2, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.HOLYSTONE]:     { name: 'Holystone',      health: 8, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.ENCHANTED_AETHER_LOG]: { name: 'Enchanted Log', health: 5, transparent: false, emissive: 0.2, solid: true, drops: null, flammable: true },
+    [BLOCKS.ENCHANTED_AETHER_LEAVES]: { name: 'Enchanted Leaves', health: 1, transparent: true, emissive: 0.2, solid: true, drops: null, flammable: true }
 };
 
 export function getBlockProperties(type) {
@@ -1664,6 +1672,27 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addNoise(ctx, rng, 15);
             addPixels(ctx, rng, 'rgba(180, 220, 255, 0.5)', 30);
             addPixels(ctx, rng, 'rgba(255, 255, 255, 0.8)', 20);
+            break;
+        case BLOCKS.QUICKSOIL:
+            fillBase(ctx, 255, 250, 200); // Yellowish sand
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, 'rgba(220, 210, 150, 0.7)', 40);
+            // Add glassy swirls
+            for (let i = 0; i < 4; i++) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fillRect(Math.floor(rng()*TEX_SIZE), Math.floor(rng()*TEX_SIZE), 2, 1);
+            }
+            break;
+        case BLOCKS.HOLYSTONE:
+            fillBase(ctx, 240, 250, 255); // Pale bluish-white
+            addNoise(ctx, rng, 10);
+            addPixels(ctx, rng, 'rgba(200, 220, 230, 0.8)', 25);
+            addPixels(ctx, rng, 'rgba(150, 180, 200, 0.5)', 15);
+            // Slight cracks
+            for (let i = 0; i < 3; i++) {
+                ctx.fillStyle = 'rgba(180, 200, 210, 0.6)';
+                ctx.fillRect(Math.floor(rng()*TEX_SIZE), Math.floor(rng()*TEX_SIZE), 3, 1);
+            }
             break;
         case BLOCKS.AETHER_DIRT:
             fillBase(ctx, 160, 180, 200);
