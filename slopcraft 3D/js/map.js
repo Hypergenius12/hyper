@@ -147,7 +147,7 @@ export class BiomeMap {
         this.tooltip.style.left = (e.clientX + 10) + 'px';
         this.tooltip.style.top = (e.clientY + 10) + 'px';
         this.tooltip.style.display = 'block';
-        this.tooltip.innerText = `Biome: ${biomeData.biome.name}\nCoords: ${worldX}, ${worldZ}\nTemp: ${biomeData.temp.toFixed(2)} | Moist: ${biomeData.moist.toFixed(2)}`;
+        this.tooltip.innerText = `Biome: ${biomeData.biome.name}\nCoords: ${worldX}, ${worldZ}`;
     }
 
     draw() {

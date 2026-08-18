@@ -15,6 +15,7 @@ const BIOMES = {
     TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true },
     ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true },
     MUSHROOM: { name: 'Mushroom', surface: BLOCKS.DIRT, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true },
+    CRYSTAL: { name: 'Crystal', surface: BLOCKS.ALIEN_STONE, dirt: BLOCKS.STONE, freq: 0.1, hasTrees: false, hasCrystals: true },
     ALIEN: { name: 'Alien', surface: BLOCKS.ALIEN_STONE, dirt: BLOCKS.ALIEN_STONE, freq: 1.0, hasTrees: true, alienFlora: true },
     VOLCANIC: { name: 'Volcanic', surface: BLOCKS.OBSIDIAN, dirt: BLOCKS.STONE, freq: 0.5, hasTrees: false },
     SWAMP: { name: 'Swamp', surface: BLOCKS.SWAMP_GRASS, dirt: BLOCKS.MUD, freq: 0.6, hasTrees: true, swampFlora: true },
@@ -351,6 +352,7 @@ export function getBiomeParams(wx, wz, params) {
                 else biome = BIOMES.SWAMP;
             } else {
                 if (weirdness > 0.8) biome = BIOMES.CHERRY_GROVE;
+                else if (weirdness > 0.6) biome = BIOMES.CRYSTAL;
                 else if (isFlat) biome = BIOMES.PLAINS;
                 else biome = BIOMES.FOREST;
             }
@@ -660,6 +662,8 @@ export function generateChunkTerrain(cx, cz, params) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                 } else if (biome.hasMushrooms && r < 0.05) {
                     generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
+                } else if (biome.hasCrystals && r < 0.03) {
+                    generateCrystal(blocks, tx, surfaceY + 1, tz, floraRng);
                 } else if (biome.hasIceSpikes && r < 0.02) {
                     generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
                 } else if (biome.hasCactus && r < 0.01) {
