@@ -1040,14 +1040,14 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
                     // right corridor
                     rooms.push({ x: rx + CELL_SIZE/2, y: startY, z: rz, w: CELL_SIZE - 10, h: 4, d: 3, type: 'corridor', shape: 'square' });
                     // place doors
-                    doors.push({ x: rx + 6, y: startY, z: rz, type: 'door', orient: 'x' });
-                    doors.push({ x: rx + CELL_SIZE - 6, y: startY, z: rz, type: 'door', orient: 'x' });
+                    doors.push({ x: rx + 6, y: startY, z: rz, w: 3, h: 4, d: 3, type: 'door', orient: 'x' });
+                    doors.push({ x: rx + CELL_SIZE - 6, y: startY, z: rz, w: 3, h: 4, d: 3, type: 'door', orient: 'x' });
                 }
                 if (conn.z > gz) { 
                     // down corridor
                     rooms.push({ x: rx, y: startY, z: rz + CELL_SIZE/2, w: 3, h: 4, d: CELL_SIZE - 10, type: 'corridor', shape: 'square' });
-                    doors.push({ x: rx, y: startY, z: rz + 6, type: 'door', orient: 'z' });
-                    doors.push({ x: rx, y: startY, z: rz + CELL_SIZE - 6, type: 'door', orient: 'z' });
+                    doors.push({ x: rx, y: startY, z: rz + 6, w: 3, h: 4, d: 3, type: 'door', orient: 'z' });
+                    doors.push({ x: rx, y: startY, z: rz + CELL_SIZE - 6, w: 3, h: 4, d: 3, type: 'door', orient: 'z' });
                 }
             }
         }
@@ -1085,12 +1085,18 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                 const lz = wz - cMinZ;
                 
                 if (room.type === 'door') {
-                    if (wy >= minY && wy < minY + 3) {
-                        if (wx === room.x && wz === room.z && wy < minY + 2) {
-                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
-                        } else if (wy < minY + 3 && ((room.orient === 'x' && wz >= room.z - 1 && wz <= room.z + 1 && wx === room.x) || (room.orient === 'z' && wx >= room.x - 1 && wx <= room.x + 1 && wz === room.z))) {
-                            if (wx !== room.x || wz !== room.z) safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
-                            else if (wy === minY + 2) safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS); // Top of door frame
+                    if (wy >= minY && wy <= minY + 1) { // 2 blocks high
+                        if (room.orient === 'x' && wz === room.z && wx >= room.x - 1 && wx <= room.x + 1) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
+                        } else if (room.orient === 'z' && wx === room.x && wz >= room.z - 1 && wz <= room.z + 1) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
+                        }
+                    } else if (wy === Math.floor(minY) + 2) {
+                        // Place a stone brick block above the pathway to ensure it's closed
+                        if (room.orient === 'x' && wz === room.z && wx >= room.x - 1 && wx <= room.x + 1) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
+                        } else if (room.orient === 'z' && wx === room.x && wz >= room.z - 1 && wz <= room.z + 1) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
                         }
                     }
                     continue;
