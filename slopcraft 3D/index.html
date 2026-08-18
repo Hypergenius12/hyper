@@ -73,6 +73,17 @@
         <div id="debug-block">Looking at: None</div>
     </div>
     
+    <!-- Biome Map Menu -->
+    <div id="biome-map-screen" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <h2 style="color: white; font-family: 'Outfit'; font-size: 2rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;">World Map</h2>
+        <p style="color: rgba(255,255,255,0.7); font-family: 'Outfit'; margin-bottom: 20px;">Drag to pan, Scroll to zoom. Red dot is your position.</p>
+        <div style="position: relative; width: 80%; height: 70%; border: 4px solid rgba(255,255,255,0.2); border-radius: 8px; overflow: hidden; background: black; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+            <canvas id="biome-map-canvas" style="display: block; width: 100%; height: 100%; cursor: grab;"></canvas>
+            <div id="biome-map-tooltip" style="position: absolute; background: rgba(0,0,0,0.8); color: white; font-family: 'JetBrains Mono', monospace; padding: 4px 8px; border-radius: 4px; pointer-events: none; font-size: 12px; display: none; white-space: nowrap; z-index: 10;">Biome Info</div>
+        </div>
+        <button id="btn-close-map" class="menu-btn primary" style="margin-top: 20px;">Close Map</button>
+    </div>
+    
     <!-- Boss Health Bar -->
     <div id="boss-health-container" style="display:none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 400px; text-align: center; pointer-events: none; z-index: 1000;">
         <div id="boss-name" style="color: #ffaa00; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 18px; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; letter-spacing: 2px; margin-bottom: 5px; text-transform: uppercase;">BOSS NAME</div>

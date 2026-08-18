@@ -264,49 +264,68 @@ export class LightingSystem {
 export class TorchLightSystem {
     constructor(scene) {
         this.scene = scene;
-        this.lights = new Map();
+        this.torches = new Map();
         this._time = 0;
+        
+        // Light Pool to drastically improve FPS (max 8 dynamic lights ever compiled in shader)
+        this.poolSize = 8;
+        this.lightPool = [];
+        for (let i = 0; i < this.poolSize; i++) {
+            const light = new THREE.PointLight(0xff6a00, 0, 60);
+            light.decay = 1.0;
+            light.position.set(0, -10000, 0); // Hide initially
+            this.scene.add(light);
+            this.lightPool.push(light);
+        }
     }
 
     addTorch(x, y, z) {
         const key = `${x},${y},${z}`;
-        if (this.lights.has(key)) return;
+        if (this.torches.has(key)) return;
         
-        // Warm authentic fire color: orange-red with a hint of yellow
-        const light = new THREE.PointLight(0xff6a00, 20.0, 60);
-        light.decay = 1.0;
-        light.position.set(x + 0.5, y + 0.75, z + 0.5);
-        // Store base intensity for flickering
-        light._baseIntensity = 20.0;
-        light._flickerOffset = Math.random() * 100;
-        this.scene.add(light);
-        this.lights.set(key, light);
+        this.torches.set(key, {
+            position: new THREE.Vector3(x + 0.5, y + 0.75, z + 0.5),
+            flickerOffset: Math.random() * 100
+        });
     }
 
     removeTorch(x, y, z) {
         const key = `${x},${y},${z}`;
-        const light = this.lights.get(key);
-        if (light) {
-            this.scene.remove(light);
-            light.dispose();
-            this.lights.delete(key);
-        }
+        this.torches.delete(key);
     }
 
-    update(dt) {
+    update(dt, camPos) {
         this._time += dt;
-        for (const light of this.lights.values()) {
-            // Layered sine waves at different frequencies = organic fire flicker
-            const t = this._time + light._flickerOffset;
-            const flicker = Math.sin(t * 7.3) * 0.15
-                          + Math.sin(t * 13.7) * 0.08
-                          + Math.sin(t * 23.1) * 0.04;
-            light.intensity = light._baseIntensity * (1 + flicker);
-            // Subtle color shift: hotter = slightly more yellow, cooler = more red
-            const r = 1.0;
-            const g = 0.38 + flicker * 0.15;
-            const b = 0.0;
-            light.color.setRGB(r, g, b);
+        
+        const torchDists = [];
+        for (const torch of this.torches.values()) {
+            const distSq = camPos ? torch.position.distanceToSquared(camPos) : 0;
+            torchDists.push({ torch, distSq });
+        }
+        
+        torchDists.sort((a, b) => a.distSq - b.distSq);
+        
+        for (let i = 0; i < this.poolSize; i++) {
+            const light = this.lightPool[i];
+            
+            if (i < torchDists.length && (!camPos || torchDists[i].distSq < 1000)) { // ~31 blocks radius
+                const torch = torchDists[i].torch;
+                light.position.copy(torch.position);
+                
+                const t = this._time + torch.flickerOffset;
+                const flicker = Math.sin(t * 7.3) * 0.15
+                              + Math.sin(t * 13.7) * 0.08
+                              + Math.sin(t * 23.1) * 0.04;
+                light.intensity = 20.0 * (1 + flicker);
+                
+                const r = 1.0;
+                const g = 0.38 + flicker * 0.15;
+                const b = 0.0;
+                light.color.setRGB(r, g, b);
+            } else {
+                light.intensity = 0;
+                light.position.set(0, -10000, 0);
+            }
         }
     }
 }
@@ -735,10 +754,12 @@ class UISystem {
                 }
             }
         } else if (type === 'furnace') {
-            if (index === 0) slot = this.furnaceData.input;
-            else if (index === 1) slot = this.furnaceData.fuel;
-            else if (index === 2) {
-                slot = this.furnaceData.output; // Can pick up output
+            if (this.furnaceData) {
+                if (index === 0) slot = this.furnaceData.input;
+                else if (index === 1) slot = this.furnaceData.fuel;
+                else if (index === 2) {
+                    slot = this.furnaceData.output; // Can pick up output
+                }
             }
         }
         
@@ -1505,6 +1526,9 @@ class UISystem {
 
             if (getCount(B.SAND) === 8 && totalItems === 8) return block(B.GLASS, 'Glass', 8);
             if (getCount(B.COBBLESTONE) === 8 && totalItems === 8) return block(B.FURNACE, 'Furnace', 1);
+            if (isPlank(s[0]) && isPlank(s[1]) && !s[2] && isPlank(s[3]) && isPlank(s[4]) && !s[5] && isPlank(s[6]) && isPlank(s[7]) && !s[8]) return block(B.DUNGEON_DOOR, 'Door', 3);
+            if (!s[0] && isPlank(s[1]) && isPlank(s[2]) && !s[3] && isPlank(s[4]) && isPlank(s[5]) && !s[6] && isPlank(s[7]) && isPlank(s[8])) return block(B.DUNGEON_DOOR, 'Door', 3);
+
             if (countAnyPlank === 8 && totalItems === 8) return block(B.CHEST_BLOCK, 'Chest', 1);
             if (countAnyPlank === 6 && totalItems === 6) return block(B.BOOKSHELF, 'Bookshelf', 1);
             if (getCount('stick') === 7 && totalItems === 7) return block(B.LADDER, 'Ladder', 3);
@@ -1520,7 +1544,7 @@ class UISystem {
 
     _consumeCraftingSlots(result) {
         // Remove 1 from each crafting slot
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 9; i++) {
             if (this.craftingSlots[i]) {
                 this.craftingSlots[i].count -= 1;
                 if (this.craftingSlots[i].count <= 0) this.craftingSlots[i] = null;

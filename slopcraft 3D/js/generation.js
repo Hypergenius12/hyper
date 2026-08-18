@@ -289,20 +289,21 @@ export function getBiomeParams(wx, wz, params) {
     const tempNoise = params.tempNoise;
     const moistNoise = params.moistNoise;
 
-    // Continentalness and Erosion
-    const contNoise = (noise2D(wx * 0.0005, wz * 0.0005) + 1) / 2;
-    const erosionNoise = (noise2D(wx * 0.001 + 1000, wz * 0.001 + 1000) + 1) / 2;
+    // Continentalness and Erosion (Reverted to 0.00015 for large biomes)
+    const contNoise = (noise2D(wx * 0.00015, wz * 0.00015) + 1) / 2;
+    const erosionNoise = (noise2D(wx * 0.0003 + 1000, wz * 0.0003 + 1000) + 1) / 2;
 
     // Domain warp the coordinates slightly to make biome borders wavy/organic
-    const warpX = noise2D(wx * 0.01, wz * 0.01) * 30;
-    const warpZ = noise2D(wz * 0.01, wx * 0.01) * 30;
+    const warpX = noise2D(wx * 0.003 + 2000, wz * 0.003 + 2000) * 60;
+    const warpZ = noise2D(wz * 0.003 + 3000, wx * 0.003 + 3000) * 60;
     
-    const temp = (tempNoise((wx + warpX) * 0.0005, (wz + warpZ) * 0.0005) + 1) / 2;
-    const moist = (moistNoise((wx + warpX) * 0.0005, (wz + warpZ) * 0.0005) + 1) / 2;
-    const weirdness = (noise2D((wx + warpX) * 0.002, (wz + warpZ) * 0.002) + 1) / 2;
+    // Kept large offsets to prevent spawning exactly at (0.5, 0.5) forest every seed
+    const temp = (tempNoise((wx + warpX) * 0.00015 + 5000, (wz + warpZ) * 0.00015 + 5000) + 1) / 2;
+    const moist = (moistNoise((wx + warpX) * 0.00015 + 8000, (wz + warpZ) * 0.00015 + 8000) + 1) / 2;
+    const weirdness = (noise2D((wx + warpX) * 0.0006 + 15000, (wz + warpZ) * 0.0006 + 15000) + 1) / 2;
 
     const isOcean = contNoise < 0.3;
-    const isCoast = contNoise >= 0.3 && contNoise < 0.38;
+    const isCoast = contNoise >= 0.3 && contNoise < 0.35;
     const isMountain = erosionNoise < 0.35 && contNoise >= 0.38;
     const isFlat = erosionNoise > 0.65;
 
@@ -310,56 +311,48 @@ export function getBiomeParams(wx, wz, params) {
     let terraceWeight = 0;
 
     if (isOcean) {
-        if (temp > 0.7 && moist > 0.5) biome = BIOMES.CORAL_REEF;
-        else if (temp < 0.3) biome = BIOMES.TUNDRA;
-        else if (contNoise < 0.15) biome = BIOMES.DEEP_OCEAN;
-        else biome = BIOMES.PLAINS; // Default ocean biome type
+        if (temp > 0.75 && moist > 0.5) biome = BIOMES.CORAL_REEF;
+        else if (temp < 0.25) biome = BIOMES.TUNDRA; // Frozen ocean equivalent
+        else biome = BIOMES.DEEP_OCEAN; // Default ocean
     } else if (isCoast) {
-        if (temp < 0.35) biome = BIOMES.TUNDRA;
-        else if (temp > 0.65) biome = BIOMES.DESERT; // Beach
-        else biome = BIOMES.PLAINS; // Moderate coast
+        if (temp < 0.25) biome = BIOMES.TUNDRA;
+        else if (temp > 0.5) biome = BIOMES.DESERT; // Sandy beach
+        else biome = BIOMES.PLAINS; // Grassy/stony shore
     } else if (isMountain) {
         let tw = Math.max(0, Math.min(1, (temp - 0.6) / 0.1));
         let mw = Math.max(0, Math.min(1, (0.5 - moist) / 0.1));
         terraceWeight = Math.max(terraceWeight, tw * mw);
         
-        if (temp > 0.7 && moist < 0.4) {
-            biome = BIOMES.BADLANDS;
-        }
-        else if (temp < 0.3) biome = BIOMES.ICE_SPIKES;
-        else if (temp > 0.6) biome = BIOMES.VOLCANIC;
+        if (temp > 0.75 && moist < 0.4) biome = BIOMES.BADLANDS;
+        else if (temp < 0.25) biome = BIOMES.ICE_SPIKES;
+        else if (temp > 0.8) biome = BIOMES.VOLCANIC;
         else biome = BIOMES.MOUNTAINS;
     } else {
-        // Inland, moderate to flat
-        if (temp > 0.6) {
-            if (moist < 0.3) {
+        // Inland
+        if (temp > 0.75) { // Hot
+            if (moist < 0.4) {
                 let ww = Math.max(0, Math.min(1, (weirdness - 0.7) / 0.1));
                 terraceWeight = Math.max(terraceWeight, ww);
-                biome = weirdness > 0.8 ? BIOMES.BADLANDS : BIOMES.DESERT;
-                if (biome === BIOMES.DESERT && temp < 0.7 && moist > 0.25) biome = BIOMES.OASIS;
+                biome = weirdness > 0.7 ? BIOMES.BADLANDS : BIOMES.DESERT;
+                if (biome === BIOMES.DESERT && temp < 0.85 && moist > 0.25) biome = BIOMES.OASIS;
             } else if (moist > 0.6) {
-                if (weirdness > 0.7) biome = BIOMES.JUNGLE;
-                else biome = BIOMES.SWAMP;
+                biome = weirdness > 0.6 ? BIOMES.JUNGLE : BIOMES.SWAMP;
             } else {
                 biome = BIOMES.SAVANNA;
             }
-        } else if (temp < 0.4) {
-            if (moist < 0.4) {
-                biome = BIOMES.TUNDRA;
-            } else {
-                biome = weirdness > 0.7 ? BIOMES.AUTUMN_FOREST : BIOMES.TUNDRA;
-            }
-        } else {
-            // Moderate temp
+        } else if (temp < 0.3) { // Cold
+            biome = (weirdness > 0.8 && moist > 0.5) ? BIOMES.AUTUMN_FOREST : BIOMES.TUNDRA;
+        } else { // Temperate (0.3 to 0.75)
             if (moist < 0.35) {
                 biome = weirdness > 0.8 ? BIOMES.MUSHROOM : BIOMES.PLAINS;
-            } else if (moist > 0.65) {
-                if (weirdness > 0.8) biome = BIOMES.ALIEN;
-                else if (weirdness > 0.6) biome = BIOMES.GLOW_FOREST;
-                else biome = BIOMES.CRYSTAL;
+            } else if (moist > 0.7) {
+                if (weirdness > 0.85) biome = BIOMES.ALIEN;
+                else if (weirdness > 0.7) biome = BIOMES.GLOW_FOREST;
+                else if (weirdness > 0.5) biome = BIOMES.DARK_FOREST;
+                else biome = BIOMES.SWAMP;
             } else {
-                if (weirdness > 0.85) biome = BIOMES.CHERRY_GROVE;
-                else if (weirdness < 0.2) biome = BIOMES.DARK_FOREST;
+                if (weirdness > 0.8) biome = BIOMES.CHERRY_GROVE;
+                else if (weirdness > 0.6) biome = BIOMES.CRYSTAL;
                 else if (isFlat) biome = BIOMES.PLAINS;
                 else biome = BIOMES.FOREST;
             }
@@ -501,8 +494,10 @@ function generateWizardTower(blocks, baseX, baseY, baseZ, rng) {
                             type = BLOCKS.GLASS;
                         }
                         // Door
-                        if (y < 2 && x === 0 && z === radius) {
-                            type = BLOCKS.AIR;
+                        if (y === 0 && x === 0 && z === radius) {
+                            type = BLOCKS.DUNGEON_DOOR;
+                        } else if (y === 1 && x === 0 && z === radius) {
+                            type = BLOCKS.DUNGEON_DOOR;
                         }
                         safeSetBlock(blocks, baseX + x, localY, baseZ + z, type);
                     } else {
@@ -639,6 +634,30 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 }
 
+                // Structures (checked first so they can spawn in any biome, not overridden by trees)
+                if (r < 0.000001) {
+                    generateWizardTower(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                } else if (r < 0.000003) {
+                    generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng, 'nether');
+                    continue;
+                } else if (r < 0.000005) {
+                    generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng, 'cavern');
+                    continue;
+                } else if (r < 0.000007) {
+                    generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng, 'highlands');
+                    continue;
+                } else if (r < 0.000011) {
+                    generateCabin(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                }
+
+                // Don't spawn flora if a structure overwrote the ground (e.g., placed planks/cobblestone)
+                const groundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                const groundBlock = blocks[groundIdx];
+                const isValidGround = groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.SNOW || groundBlock === BLOCKS.MYCELIUM;
+                if (!isValidGround) continue;
+
                 if (biome.hasTrees && r < (biome.isDark ? 0.06 : 0.02)) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                 } else if (biome.hasMushrooms && r < 0.05) {
@@ -650,18 +669,12 @@ export function generateChunkTerrain(cx, cz, params) {
                 } else if (biome.hasCactus && r < 0.01) {
                     generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
                 } else if (biome.hasDeadBush && r < 0.04) {
-                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH);
+                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
                 } else if (biome.jungleFlora && r < 0.08) {
                     if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
-                    else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES); // Bush
+                    else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true); // Bush
                 } else if (biome.alienFlora && r < 0.15) {
-                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALIEN_TALL_GRASS);
-                } else if (r < 0.00005) {
-                    generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (r < 0.00002) {
-                    generateWizardTower(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (r < 0.00008) {
-                    generateCabin(blocks, tx, surfaceY + 1, tz, floraRng);
+                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALIEN_TALL_GRASS, true);
                 } else if (biome.isCoralReef && surfaceY < params.seaLevel && r < 0.3) {
                     const cRng = floraRng();
                     let coralType;
@@ -672,25 +685,25 @@ export function generateChunkTerrain(cx, cz, params) {
                     else if (cRng < 0.9) coralType = BLOCKS.GLOWSTONE; // Sea pickle equivalent
                     else coralType = BLOCKS.SAND; // Blank space
                     if (coralType !== BLOCKS.SAND) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType, true);
                     }
                 } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && biome.name !== 'Volcanic' && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef) {
                     // Normal grass logic
                     let r = floraRng();
                     if (biome === BIOMES.CHERRY_GROVE && r < 0.4) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
                     } else if (biome === BIOMES.AUTUMN_FOREST && r < 0.4) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FALLEN_LEAVES);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FALLEN_LEAVES, true);
                     } else if (biome === BIOMES.GLOW_FOREST && r < 0.1) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
                     } else if (biome === BIOMES.OASIS && r < 0.2) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.OASIS_FERN);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.OASIS_FERN, true);
                     } else if (r < 0.2) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, floraRng() > 0.3 ? BLOCKS.TALL_GRASS : BLOCKS.FERN);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, floraRng() > 0.3 ? BLOCKS.TALL_GRASS : BLOCKS.FERN, true);
                     } else if (r >= 0.2 && r < 0.25) {
                         const fRng = floraRng();
                         const flowerType = fRng < 0.25 ? BLOCKS.RED_FLOWER : (fRng < 0.5 ? BLOCKS.YELLOW_FLOWER : (fRng < 0.75 ? BLOCKS.BLUE_FLOWER : BLOCKS.WHITE_FLOWER));
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);
                     }
                 }
             }
@@ -823,7 +836,18 @@ function generateTree(blocks, x, y, z, biome, rng) {
         safeSetBlock(blocks, bx, y + height - 1, bz, trunkType);
         safeSetBlock(blocks, bx, by, bz, trunkType);
         
-        // Flat canopy
+        // Small canopy on main trunk
+        for (let ly = y + height - 1; ly <= y + height; ly++) {
+            const radius = ly === y + height - 1 ? 2 : 1;
+            for (let lx = x - radius; lx <= x + radius; lx++) {
+                for (let lz = z - radius; lz <= z + radius; lz++) {
+                    if (Math.abs(lx - x) === radius && Math.abs(lz - z) === radius) continue;
+                    safeSetBlock(blocks, lx, ly, lz, leafType, true);
+                }
+            }
+        }
+
+        // Flat canopy on branch
         for (let ly = by; ly <= by + 1; ly++) {
             const radius = ly === by ? 3 : 2;
             for (let lx = bx - radius; lx <= bx + radius; lx++) {
@@ -1038,16 +1062,14 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
             for (const conn of cell.connections) {
                 if (conn.x > gx) { 
                     // right corridor
-                    rooms.push({ x: rx + CELL_SIZE/2, y: startY, z: rz, w: CELL_SIZE - 10, h: 4, d: 3, type: 'corridor', shape: 'square' });
-                    // place doors
-                    doors.push({ x: rx + 6, y: startY, z: rz, w: 3, h: 4, d: 3, type: 'door', orient: 'x' });
-                    doors.push({ x: rx + CELL_SIZE - 6, y: startY, z: rz, w: 3, h: 4, d: 3, type: 'door', orient: 'x' });
+                    rooms.push({ x: rx + CELL_SIZE/2, y: startY, z: rz, w: CELL_SIZE - 8, h: 4, d: 5, type: 'corridor', shape: 'square' });
+                    // long door pathway
+                    doors.push({ x: rx + CELL_SIZE/2, y: startY, z: rz, w: CELL_SIZE, h: 4, d: 3, type: 'door', orient: 'x' });
                 }
                 if (conn.z > gz) { 
                     // down corridor
-                    rooms.push({ x: rx, y: startY, z: rz + CELL_SIZE/2, w: 3, h: 4, d: CELL_SIZE - 10, type: 'corridor', shape: 'square' });
-                    doors.push({ x: rx, y: startY, z: rz + 6, w: 3, h: 4, d: 3, type: 'door', orient: 'z' });
-                    doors.push({ x: rx, y: startY, z: rz + CELL_SIZE - 6, w: 3, h: 4, d: 3, type: 'door', orient: 'z' });
+                    rooms.push({ x: rx, y: startY, z: rz + CELL_SIZE/2, w: 5, h: 4, d: CELL_SIZE - 8, type: 'corridor', shape: 'square' });
+                    doors.push({ x: rx, y: startY, z: rz + CELL_SIZE/2, w: 3, h: 4, d: CELL_SIZE, type: 'door', orient: 'z' });
                 }
             }
         }
@@ -1085,18 +1107,11 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                 const lz = wz - cMinZ;
                 
                 if (room.type === 'door') {
-                    if (wy >= minY && wy <= minY + 1) { // 2 blocks high
-                        if (room.orient === 'x' && wz === room.z && wx >= room.x - 1 && wx <= room.x + 1) {
-                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
-                        } else if (room.orient === 'z' && wx === room.x && wz >= room.z - 1 && wz <= room.z + 1) {
-                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
-                        }
-                    } else if (wy === Math.floor(minY) + 2) {
-                        // Place a stone brick block above the pathway to ensure it's closed
-                        if (room.orient === 'x' && wz === room.z && wx >= room.x - 1 && wx <= room.x + 1) {
-                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
-                        } else if (room.orient === 'z' && wx === room.x && wz >= room.z - 1 && wz <= room.z + 1) {
-                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
+                    if (wy >= minY + 1 && wy <= minY + 2) { // 2 blocks high, above floor
+                        if (room.orient === 'x' && wz === room.z && wx === room.x) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
+                        } else if (room.orient === 'z' && wx === room.x && wz === room.z) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
                         }
                     }
                     continue;
@@ -1176,7 +1191,13 @@ function carveRoomInChunk(blocks, cx, cz, room) {
     }
 }
 
-export function generatePortalStructure(blocks, x, y, z, rng) {
+export function generatePortalStructure(blocks, x, y, z, rng, type = 'nether') {
+    let frame1, frame2, base;
+    if (type === 'nether') { frame1 = BLOCKS.OBSIDIAN; frame2 = BLOCKS.PORTAL_FRAME; base = BLOCKS.NETHERRACK; }
+    else if (type === 'aether') { frame1 = BLOCKS.GLOWSTONE; frame2 = BLOCKS.AETHER_STONE; base = BLOCKS.AETHER_DIRT; }
+    else if (type === 'cavern') { frame1 = BLOCKS.DIRT; frame2 = BLOCKS.GRASS; base = BLOCKS.STONE; }
+    else if (type === 'highlands') { frame1 = BLOCKS.STONE; frame2 = BLOCKS.COBBLESTONE; base = BLOCKS.DIRT; }
+
     // 4x5 ruined portal
     for (let px = x; px < x + 4; px++) {
         for (let py = y; py < y + 5; py++) {
@@ -1184,20 +1205,23 @@ export function generatePortalStructure(blocks, x, y, z, rng) {
             if (rng() < 0.3) continue; // missing blocks
             
             if (px === x || px === x + 3 || py === y || py === y + 4) {
-                safeSetBlock(blocks, px, py, z, rng() < 0.2 ? BLOCKS.OBSIDIAN : BLOCKS.PORTAL_FRAME);
+                safeSetBlock(blocks, px, py, z, rng() < 0.2 ? frame1 : frame2, true);
             }
-            // NO PORTAL blocks here anymore!
         }
     }
-    // Netherrack base
+    // Base platform
     for (let px = x - 1; px < x + 5; px++) {
         for (let pz = z - 2; pz < z + 3; pz++) {
-            if (rng() < 0.6) safeSetBlock(blocks, px, y - 1, pz, BLOCKS.NETHERRACK);
+            if (rng() < 0.6) safeSetBlock(blocks, px, y - 1, pz, base, true);
         }
     }
     // Add a chest with loot
     if (rng() < 0.8) {
-        safeSetBlock(blocks, x + 1, y, z + 1, BLOCKS.CHEST_BLOCK);
+        safeSetBlock(blocks, x + 1, y, z + 1, BLOCKS.CHEST_BLOCK, true);
+        if (type === 'nether') safeSetBlock(blocks, x + 1, y - 1, z + 1, BLOCKS.PORTAL, false);
+        else if (type === 'aether') safeSetBlock(blocks, x + 1, y - 1, z + 1, BLOCKS.AETHER_PORTAL, false);
+        else if (type === 'cavern') safeSetBlock(blocks, x + 1, y - 1, z + 1, BLOCKS.CAVERN_PORTAL, false);
+        else if (type === 'highlands') safeSetBlock(blocks, x + 1, y - 1, z + 1, BLOCKS.HIGHLANDS_PORTAL, false);
     }
 }
 
@@ -1211,9 +1235,9 @@ export function generateCabin(blocks, x, y, z, rng) {
                     if (py === y + 1 && (px === x || pz === z) && rng() < 0.5) {
                         safeSetBlock(blocks, px, py, pz, BLOCKS.GLASS); // Window
                     } else if (py === y && px === x && pz === z - 2) {
-                        safeSetBlock(blocks, px, py, pz, BLOCKS.AIR); // Door
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.DUNGEON_DOOR); // Door bottom
                     } else if (py === y + 1 && px === x && pz === z - 2) {
-                        safeSetBlock(blocks, px, py, pz, BLOCKS.AIR); // Door top
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.DUNGEON_DOOR); // Door top
                     } else {
                         safeSetBlock(blocks, px, py, pz, BLOCKS.WOOD); // Wall
                     }
@@ -1304,10 +1328,10 @@ export function generateNetherChunk(cx, cz, params) {
 
             const colRng = seededRandom(params.seed + wx * 1234 + wz);
 
-            let nextNval = fbm3D(params.caveNoise, wx * 0.02, 0 * 0.03, wz * 0.02, 2);
+            let nextNval = fbm3D(params.caveNoise, wx * 0.015, 0 * 0.02, wz * 0.015, 2);
             for (let y = 0; y < CHUNK_HEIGHT; y += 4) {
                 const nval0 = nextNval;
-                nextNval = fbm3D(params.caveNoise, wx * 0.02, (y + 4) * 0.03, wz * 0.02, 2);
+                nextNval = fbm3D(params.caveNoise, wx * 0.015, (y + 4) * 0.02, wz * 0.015, 2);
 
                 for (let dy = 0; dy < 4 && y + dy < CHUNK_HEIGHT; dy++) {
                     const cy = y + dy;
@@ -1321,11 +1345,12 @@ export function generateNetherChunk(cx, cz, params) {
                     const lerpFactor = dy / 4;
                     const nval = nval0 * (1 - lerpFactor) + nextNval * lerpFactor;
                     
-                    const midY = CHUNK_HEIGHT / 2;
-                    const distFromMid = Math.abs(cy - midY) / (CHUNK_HEIGHT / 2); 
-                    const threshold = -0.1 + (distFromMid * 0.4); 
+                    const midY = 48; // Lower mid point
+                    let distFromMid = Math.abs(cy - midY) / 48.0; 
+                    if (cy > 96) distFromMid += (cy - 96) * 0.1; // Heavily weight towards solid near the top
+                    const threshold = -0.1 + (distFromMid * 0.6); 
 
-                    if (nval <= threshold) {
+                    if (nval <= threshold || cy > 110) { // Force solid ceiling at very top
                         blocks[idx] = (biome === 'SOUL_SAND_VALLEY') ? BLOCKS.SOUL_SAND : BLOCKS.NETHERRACK;
                     } else if (cy <= seaLevel) {
                         blocks[idx] = BLOCKS.LAVA;
@@ -1392,6 +1417,21 @@ export function generateNetherChunk(cx, cz, params) {
         const fx = Math.floor(rng() * CHUNK_SIZE);
         const fz = Math.floor(rng() * CHUNK_SIZE);
         generateNetherFortress(blocks, fx, 35, fz, rng);
+    }
+
+    // Rare ruined aether portal in the Nether
+    if (rng() < 0.005) {
+        const px = Math.floor(rng() * CHUNK_SIZE);
+        const pz = Math.floor(rng() * CHUNK_SIZE);
+        let py = 35;
+        for (let y = 80; y > 20; y--) {
+            const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
+            if (blocks[idx] === BLOCKS.NETHERRACK || blocks[idx] === BLOCKS.CRIMSON_NYLIUM) {
+                py = y;
+                break;
+            }
+        }
+        generatePortalStructure(blocks, px, py + 1, pz, rng, 'aether');
     }
 
     return blocks;
@@ -1543,64 +1583,73 @@ function generateHighlandTree(blocks, x, y, z, treeType, rng) {
     }
 }
 
+function getHighlandsColumnInfo(wx, wz, params) {
+    const colRng = seededRandom(params.seed + wx * 1234 + wz);
+
+    const biomeNoiseVal = params.noise2D(wx * 0.002 + 5000, wz * 0.002 + 5000);
+    let biome = 'JAGGED_PEAKS';
+    if (biomeNoiseVal < -0.3) biome = 'VOLCANIC';
+    else if (biomeNoiseVal < 0.2) biome = 'MEADOWS';
+    else if (biomeNoiseVal < 0.6) biome = 'FROZEN_WASTES';
+
+    let surfaceY = 20;
+    let topBlock = BLOCKS.HIGHLANDS_GRASS;
+    let subBlock = BLOCKS.HIGHLANDS_DIRT;
+    let baseBlock = BLOCKS.HIGHLANDS_STONE;
+
+    if (biome === 'JAGGED_PEAKS') {
+        const n1 = params.noise2D(wx * 0.005, wz * 0.005);
+        const n2 = params.noise2D(wx * 0.015, wz * 0.015) * 0.5;
+        const n3 = params.noise2D(wx * 0.05, wz * 0.05) * 0.25;
+        let heightVal = (n1 + n2 + n3 + 1) / 2;
+        heightVal = Math.pow(heightVal, 2.5);
+        surfaceY = 20 + Math.floor(heightVal * (CHUNK_HEIGHT - 40));
+        
+        topBlock = surfaceY > 90 ? BLOCKS.SNOW : BLOCKS.HIGHLANDS_GRASS;
+        if (surfaceY > 70 && surfaceY <= 90) topBlock = BLOCKS.HIGHLANDS_STONE;
+
+    } else if (biome === 'VOLCANIC') {
+        const n1 = params.noise2D(wx * 0.01, wz * 0.01);
+        let heightVal = (n1 + 1) / 2;
+        heightVal = Math.pow(heightVal, 1.2);
+        surfaceY = 30 + Math.floor(heightVal * 20);
+        
+        const craterNoise = params.noise2D(wx * 0.04 + 1000, wz * 0.04 + 1000);
+        if (craterNoise > 0.4) {
+            surfaceY -= Math.floor((craterNoise - 0.4) * 40);
+        }
+
+        topBlock = (surfaceY < 32) ? BLOCKS.OBSIDIAN : BLOCKS.STONE;
+        subBlock = BLOCKS.STONE;
+    } else if (biome === 'MEADOWS') {
+        const n1 = params.noise2D(wx * 0.008, wz * 0.008);
+        const n2 = params.noise2D(wx * 0.02, wz * 0.02) * 0.5;
+        let heightVal = (n1 + n2 + 1) / 2;
+        surfaceY = 30 + Math.floor(heightVal * 25);
+    } else if (biome === 'FROZEN_WASTES') {
+        const n1 = params.noise2D(wx * 0.01, wz * 0.01);
+        const n2 = params.noise2D(wx * 0.03, wz * 0.03) * 0.3;
+        let heightVal = (n1 + n2 + 1) / 2;
+        surfaceY = 35 + Math.floor(heightVal * 25);
+        topBlock = BLOCKS.SNOW;
+        subBlock = BLOCKS.DIRT;
+    }
+    
+    return { biome, surfaceY, topBlock, subBlock, baseBlock, colRng };
+}
+
 export function generateHighlandsChunk(cx, cz, params) {
     const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
     const rng = seededRandom(params.seed + cx * 9999 + cz);
+    const wxBase = cx * CHUNK_SIZE;
+    const wzBase = cz * CHUNK_SIZE;
 
+    // Pass 1: Terrain
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
-            const wx = cx * CHUNK_SIZE + x;
-            const wz = cz * CHUNK_SIZE + z;
-            const colRng = seededRandom(params.seed + wx * 1234 + wz);
-
-            const biomeNoiseVal = params.noise2D(wx * 0.002 + 5000, wz * 0.002 + 5000);
-            let biome = 'JAGGED_PEAKS';
-            if (biomeNoiseVal < -0.3) biome = 'VOLCANIC';
-            else if (biomeNoiseVal < 0.2) biome = 'MEADOWS';
-            else if (biomeNoiseVal < 0.6) biome = 'FROZEN_WASTES';
-
-            let surfaceY = 20;
-            let topBlock = BLOCKS.HIGHLANDS_GRASS;
-            let subBlock = BLOCKS.HIGHLANDS_DIRT;
-            let baseBlock = BLOCKS.HIGHLANDS_STONE;
-
-            if (biome === 'JAGGED_PEAKS') {
-                const n1 = params.noise2D(wx * 0.005, wz * 0.005);
-                const n2 = params.noise2D(wx * 0.015, wz * 0.015) * 0.5;
-                const n3 = params.noise2D(wx * 0.05, wz * 0.05) * 0.25;
-                let heightVal = (n1 + n2 + n3 + 1) / 2;
-                heightVal = Math.pow(heightVal, 2.5);
-                surfaceY = 20 + Math.floor(heightVal * (CHUNK_HEIGHT - 40));
-                
-                topBlock = surfaceY > 90 ? BLOCKS.SNOW : BLOCKS.HIGHLANDS_GRASS;
-                if (surfaceY > 70 && surfaceY <= 90) topBlock = BLOCKS.HIGHLANDS_STONE;
-
-            } else if (biome === 'VOLCANIC') {
-                const n1 = params.noise2D(wx * 0.01, wz * 0.01);
-                let heightVal = (n1 + 1) / 2;
-                heightVal = Math.pow(heightVal, 1.2);
-                surfaceY = 30 + Math.floor(heightVal * 20);
-                
-                const craterNoise = params.noise2D(wx * 0.04 + 1000, wz * 0.04 + 1000);
-                if (craterNoise > 0.4) {
-                    surfaceY -= Math.floor((craterNoise - 0.4) * 40);
-                }
-
-                topBlock = (surfaceY < 32) ? BLOCKS.OBSIDIAN : BLOCKS.STONE;
-                subBlock = BLOCKS.STONE;
-            } else if (biome === 'MEADOWS') {
-                const n1 = params.noise2D(wx * 0.008, wz * 0.008);
-                const n2 = params.noise2D(wx * 0.02, wz * 0.02) * 0.5;
-                let heightVal = (n1 + n2 + 1) / 2;
-                surfaceY = 30 + Math.floor(heightVal * 25);
-            } else if (biome === 'FROZEN_WASTES') {
-                const n1 = params.noise2D(wx * 0.01, wz * 0.01);
-                const n2 = params.noise2D(wx * 0.03, wz * 0.03) * 0.3;
-                let heightVal = (n1 + n2 + 1) / 2;
-                surfaceY = 35 + Math.floor(heightVal * 25);
-                topBlock = BLOCKS.SNOW;
-                subBlock = BLOCKS.DIRT;
-            }
+            const wx = wxBase + x;
+            const wz = wzBase + z;
+            const { biome, surfaceY, topBlock, subBlock, baseBlock } = getHighlandsColumnInfo(wx, wz, params);
 
             for (let y = 0; y < CHUNK_HEIGHT; y++) {
                 const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
@@ -1626,39 +1675,49 @@ export function generateHighlandsChunk(cx, cz, params) {
                     }
                 }
             }
+        }
+    }
+
+    // Pass 2: Decorations
+    for (let tx = -3; tx <= CHUNK_SIZE + 2; tx++) {
+        for (let tz = -3; tz <= CHUNK_SIZE + 2; tz++) {
+            const wx = wxBase + tx;
+            const wz = wzBase + tz;
+            const { biome, surfaceY, colRng } = getHighlandsColumnInfo(wx, wz, params);
 
             if (surfaceY < CHUNK_HEIGHT - 10 && surfaceY >= 32) {
                 if (biome === 'MEADOWS') {
                     if (colRng() < 0.005) {
-                        generateHighlandTree(blocks, x, surfaceY + 1, z, 'MEADOW', rng);
+                        generateHighlandTree(blocks, tx, surfaceY + 1, tz, 'MEADOW', rng);
                     } else if (colRng() < 0.2) {
-                        safeSetBlock(blocks, x, surfaceY + 1, z, BLOCKS.TALL_GRASS, true);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                     } else if (colRng() < 0.1) {
                         const flowers = [BLOCKS.RED_FLOWER, BLOCKS.BLUE_FLOWER, BLOCKS.YELLOW_FLOWER, BLOCKS.WHITE_FLOWER, BLOCKS.PURPLE_FLOWER, BLOCKS.ORANGE_FLOWER];
                         const flower = flowers[Math.floor(colRng() * flowers.length)];
-                        safeSetBlock(blocks, x, surfaceY + 1, z, flower, true);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, flower, true);
                     }
                 } else if (biome === 'FROZEN_WASTES') {
                     if (colRng() < 0.01) {
-                        generateHighlandTree(blocks, x, surfaceY + 1, z, 'PINE', rng);
+                        generateHighlandTree(blocks, tx, surfaceY + 1, tz, 'PINE', rng);
                     } else if (colRng() < 0.01) {
-                        safeSetBlock(blocks, x, surfaceY + 1, z, BLOCKS.PACKED_ICE, true);
-                        if (colRng() < 0.5) safeSetBlock(blocks, x, surfaceY + 2, z, BLOCKS.PACKED_ICE, true);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PACKED_ICE, true);
+                        if (colRng() < 0.5) safeSetBlock(blocks, tx, surfaceY + 2, tz, BLOCKS.PACKED_ICE, true);
                     }
                 } else if (biome === 'VOLCANIC') {
                     if (colRng() < 0.01 && surfaceY > 32) {
-                        safeSetBlock(blocks, x, surfaceY + 1, z, BLOCKS.OBSIDIAN, true);
-                        if (colRng() < 0.3) safeSetBlock(blocks, x, surfaceY + 2, z, BLOCKS.OBSIDIAN, true);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.OBSIDIAN, true);
+                        if (colRng() < 0.3) safeSetBlock(blocks, tx, surfaceY + 2, tz, BLOCKS.OBSIDIAN, true);
                     } else if (colRng() < 0.005) {
-                        safeSetBlock(blocks, x, surfaceY + 1, z, BLOCKS.DEAD_BUSH, true);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
                     }
                 } else if (biome === 'JAGGED_PEAKS') {
                     if (colRng() < 0.005) {
-                        safeSetBlock(blocks, x, surfaceY + 5 + Math.floor(colRng()*10), z, BLOCKS.AETHER_CLOUD, true);
+                        safeSetBlock(blocks, tx, surfaceY + 5 + Math.floor(colRng()*10), tz, BLOCKS.AETHER_CLOUD, true);
                     }
                 }
             }
         }
     }
+
     return blocks;
 }

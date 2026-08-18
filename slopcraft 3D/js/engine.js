@@ -15,8 +15,8 @@ export class InputManager {
     constructor() {
         this.keys = { forward: false, backward: false, left: false, right: false, jump: false, sprint: false, crouch: false };
         this.mouse = { dx: 0, dy: 0, leftClick: false, rightClick: false, scrollDelta: 0 };
-        this.menuKeys = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false };
-        this._menuKeysDown = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false };
+        this.menuKeys = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false };
+        this._menuKeysDown = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false };
         this.hotbarIndex = -1;
         this.isLocked = false;
         this.canvas = null;
@@ -85,6 +85,7 @@ export class InputManager {
         this.menuKeys.spellConfig = false;
         this.menuKeys.pause = false;
         this.menuKeys.planet = false;
+        this.menuKeys.map = false;
     }
 
     isPointerLocked() {
@@ -93,7 +94,7 @@ export class InputManager {
 
     onKeyDown(e) {
         if (e.code === 'Tab' || e.code === 'F3') e.preventDefault();
-        if (!this.isLocked && !['Escape', 'KeyE', 'KeyF', 'KeyP', 'Tab', 'KeyI', 'F3', 'KeyQ'].includes(e.code)) return;
+        if (!this.isLocked && !['Escape', 'KeyE', 'KeyF', 'KeyP', 'Tab', 'KeyI', 'F3', 'KeyQ', 'KeyM'].includes(e.code)) return;
 
         switch (e.code) {
             case 'KeyW': case 'ArrowUp': this.keys.forward = true; break;
@@ -115,6 +116,9 @@ export class InputManager {
                 break;
             case 'KeyP':
                 if (!this._menuKeysDown.planet) { this.menuKeys.planet = true; this._menuKeysDown.planet = true; }
+                break;
+            case 'KeyM':
+                if (!this._menuKeysDown.map) { this.menuKeys.map = true; this._menuKeysDown.map = true; }
                 break;
             case 'Escape':
                 if (!this._menuKeysDown.pause) { this.menuKeys.pause = true; this._menuKeysDown.pause = true; }
@@ -152,6 +156,7 @@ export class InputManager {
             case 'Tab': case 'KeyI': case 'KeyE': this._menuKeysDown.inventory = false; break;
             case 'KeyF': this._menuKeysDown.spellConfig = false; break;
             case 'KeyP': this._menuKeysDown.planet = false; break;
+            case 'KeyM': this._menuKeysDown.map = false; break;
             case 'Escape': this._menuKeysDown.pause = false; break;
             case 'F3': case 'ControlLeft': case 'ControlRight': this._menuKeysDown.debug = false; break;
             case 'KeyQ': this._menuKeysDown.dropItem = false; break;
@@ -530,45 +535,50 @@ export class Chunk {
     }
 }
 
+const _aoResult = [1, 1, 1, 1];
+
+function _isSolid(wx, wy, wz, dx, dy, dz, getNeighborBlock) {
+    const type = getNeighborBlock(wx + dx, wy + dy, wz + dz);
+    const props = getBlockProperties(type);
+    if (type === window.BLOCKS.AIR || props.isLiquid || type === window.BLOCKS.GLASS || type === window.BLOCKS.LEAVES || type === window.BLOCKS.TORCH || props.isCross || type === window.BLOCKS.CHEST_BLOCK || type === window.BLOCKS.DUNGEON_DOOR) return false;
+    return true;
+}
+
+function _vertexAO(wx, wy, wz, vx, vy, vz, face, getNeighborBlock) {
+    let dx1 = 0, dy1 = 0, dz1 = 0;
+    let dx2 = 0, dy2 = 0, dz2 = 0;
+
+    if (face.dir[0] !== 0) { // X face
+        dy1 = vy === 1 ? 1 : -1;
+        dz2 = vz === 1 ? 1 : -1;
+    } else if (face.dir[1] !== 0) { // Y face
+        dx1 = vx === 1 ? 1 : -1;
+        dz2 = vz === 1 ? 1 : -1;
+    } else { // Z face
+        dx1 = vx === 1 ? 1 : -1;
+        dy2 = vy === 1 ? 1 : -1;
+    }
+
+    const side1 = _isSolid(wx, wy, wz, face.dir[0] + dx1, face.dir[1] + dy1, face.dir[2] + dz1, getNeighborBlock);
+    const side2 = _isSolid(wx, wy, wz, face.dir[0] + dx2, face.dir[1] + dy2, face.dir[2] + dz2, getNeighborBlock);
+    const corner = _isSolid(wx, wy, wz, face.dir[0] + dx1 + dx2, face.dir[1] + dy1 + dy2, face.dir[2] + dz1 + dz2, getNeighborBlock);
+
+    if (side1 && side2) return 0.2;
+    return 1.0 - (side1 + side2 + corner) * 0.25;
+}
+
 function calculateVertexAO(wx, wy, wz, face, getNeighborBlock, blockType) {
-    if (blockType === BLOCKS.WATER || blockType === BLOCKS.LAVA || blockType === BLOCKS.GLASS || blockType === BLOCKS.TORCH) return [1, 1, 1, 1];
+    if (blockType === window.BLOCKS.WATER || blockType === window.BLOCKS.LAVA || blockType === window.BLOCKS.GLASS || blockType === window.BLOCKS.TORCH) {
+        _aoResult[0] = 1; _aoResult[1] = 1; _aoResult[2] = 1; _aoResult[3] = 1;
+        return _aoResult;
+    }
 
-    const isSolid = (dx, dy, dz) => {
-        const type = getNeighborBlock(wx + dx, wy + dy, wz + dz);
-        const props = getBlockProperties(type);
-        if (type === BLOCKS.AIR || props.isLiquid || type === BLOCKS.GLASS || type === BLOCKS.LEAVES || type === BLOCKS.TORCH || props.isCross) return false;
-        return true;
-    };
-
-    const vertexAO = (vx, vy, vz) => {
-        let dx1 = 0, dy1 = 0, dz1 = 0;
-        let dx2 = 0, dy2 = 0, dz2 = 0;
-
-        if (face.dir[0] !== 0) { // X face
-            dy1 = vy === 1 ? 1 : -1;
-            dz2 = vz === 1 ? 1 : -1;
-        } else if (face.dir[1] !== 0) { // Y face
-            dx1 = vx === 1 ? 1 : -1;
-            dz2 = vz === 1 ? 1 : -1;
-        } else { // Z face
-            dx1 = vx === 1 ? 1 : -1;
-            dy2 = vy === 1 ? 1 : -1;
-        }
-
-        const side1 = isSolid(face.dir[0] + dx1, face.dir[1] + dy1, face.dir[2] + dz1);
-        const side2 = isSolid(face.dir[0] + dx2, face.dir[1] + dy2, face.dir[2] + dz2);
-        const corner = isSolid(face.dir[0] + dx1 + dx2, face.dir[1] + dy1 + dy2, face.dir[2] + dz1 + dz2);
-
-        if (side1 && side2) return 0.2;
-        return 1.0 - (side1 + side2 + corner) * 0.25;
-    };
-
-    return [
-        vertexAO(face.v[0][0], face.v[0][1], face.v[0][2]),
-        vertexAO(face.v[1][0], face.v[1][1], face.v[1][2]),
-        vertexAO(face.v[2][0], face.v[2][1], face.v[2][2]),
-        vertexAO(face.v[3][0], face.v[3][1], face.v[3][2])
-    ];
+    _aoResult[0] = _vertexAO(wx, wy, wz, face.v[0][0], face.v[0][1], face.v[0][2], face, getNeighborBlock);
+    _aoResult[1] = _vertexAO(wx, wy, wz, face.v[1][0], face.v[1][1], face.v[1][2], face, getNeighborBlock);
+    _aoResult[2] = _vertexAO(wx, wy, wz, face.v[2][0], face.v[2][1], face.v[2][2], face, getNeighborBlock);
+    _aoResult[3] = _vertexAO(wx, wy, wz, face.v[3][0], face.v[3][1], face.v[3][2], face, getNeighborBlock);
+    
+    return _aoResult;
 }
 
 // ============================================
@@ -610,7 +620,6 @@ export class World {
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
-            alphaTest: 0.5,
             side: THREE.FrontSide, // Massive performance gain for opaque blocks
             shininess: 2,
             specular: new THREE.Color(0x111111)
@@ -655,7 +664,6 @@ export class World {
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
-            alphaTest: 0.5,
             side: THREE.FrontSide, // Massive performance gain for opaque blocks
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
@@ -699,7 +707,7 @@ export class World {
     }
 
     getChunkKey(cx, cz) {
-        return `${cx},${cz}`;
+        return `${this.dimension || 'overworld'},${cx},${cz}`;
     }
 
     getBiomeAt(wx, wz) {
@@ -947,9 +955,7 @@ export class World {
 
     tickFluids() {
         const updates = Array.from(this.liquidUpdates);
-        this.liquidUpdates.clear();
-
-        for (const key of updates) {
+        this.liquidUpdates.clear();        for (const key of updates) {
             const [x, y, z] = key.split(',').map(Number);
             const type = this.getBlock(x, y, z);
             const props = getBlockProperties(type);
@@ -961,90 +967,85 @@ export class World {
             const maxLevel = isLava ? 3 : 7;
             
             const data = this.getData(x, y, z);
-            const currentLevel = data === 0 ? maxLevel : data;
+            const isFalling = (data === 8);
+            const currentLevel = (data === 0 || isFalling) ? maxLevel : data;
+
+            // 1. Decay check: if not a source block, it needs a valid feed to survive
+            if (data !== 0) {
+                let hasFeed = false;
+                const aboveBlock = this.getBlock(x, y + 1, z);
+                if (aboveBlock === type) hasFeed = true;
+                
+                if (!hasFeed && !isFalling) {
+                    const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                    for (const [dx, dz] of sides) {
+                        const sideBlock = this.getBlock(x + dx, y, z + dz);
+                        if (sideBlock === type) {
+                            const sideData = this.getData(x + dx, y, z + dz);
+                            const sideLevel = (sideData === 0 || sideData === 8) ? maxLevel : sideData;
+                            if (sideLevel > currentLevel) { hasFeed = true; break; }
+                        }
+                    }
+                }
+                
+                if (!hasFeed) {
+                    this.setBlock(x, y, z, BLOCKS.AIR);
+                    const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                    for (const [dx, dz] of sides) {
+                        this.queueLiquidUpdate(x + dx, y, z + dz);
+                    }
+                    this.queueLiquidUpdate(x, y - 1, z);
+                    continue; // Stop processing, the block is gone
+                }
+            }
 
             const bBelow = this.getBlock(x, y - 1, z);
             const belowProps = getBlockProperties(bBelow);
 
+            // 2. Flow downwards
             if (bBelow === BLOCKS.AIR || belowProps.isCross || belowProps.isGrass) {
                 this.setBlock(x, y - 1, z, type);
-                this.setData(x, y - 1, z, maxLevel); // Falling resets to max level
+                this.setData(x, y - 1, z, 8); // 8 indicates falling fluid
                 this.queueLiquidUpdate(x, y - 1, z);
-            } else if (!belowProps.isLiquid) {
-                // Spread sideways if blocked below
+            } 
+            // 3. Water-lava interactions
+            else if (belowProps.isLiquid && bBelow !== type) {
+                if (isWater && bBelow === BLOCKS.LAVA) {
+                    this.setBlock(x, y - 1, z, BLOCKS.OBSIDIAN);
+                } else if (isLava && (bBelow === BLOCKS.WATER || bBelow === BLOCKS.SWAMP_WATER)) {
+                    this.setBlock(x, y - 1, z, BLOCKS.STONE);
+                }
+            } 
+            // 4. Spread sideways if blocked below (solid block)
+            else if (!belowProps.isLiquid) {
                 if (currentLevel > 1) {
                     const nextLevel = currentLevel - 1;
-                    const sides = [
-                        [1, 0], [-1, 0], [0, 1], [0, -1]
-                    ];
+                    const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]];
                     for (const [dx, dz] of sides) {
                         const sideBlock = this.getBlock(x + dx, y, z + dz);
                         const sideProps = getBlockProperties(sideBlock);
 
                         if (sideBlock === BLOCKS.AIR || (sideProps.isCross || sideProps.isGrass)) {
-                            // Wash away small plants like grass/flowers when flowing
                             this.setBlock(x + dx, y, z + dz, type);
                             this.setData(x + dx, y, z + dz, nextLevel);
                             this.queueLiquidUpdate(x + dx, y, z + dz);
                         } else if (sideProps.isLiquid && sideBlock !== type) {
-                            // Liquid mixing!
-                            const sideIsWater = sideBlock === BLOCKS.WATER || sideBlock === BLOCKS.SWAMP_WATER;
+                            // Sideways mixing
                             const sideIsLava = sideBlock === BLOCKS.LAVA;
-
-                            if (isWater && sideIsLava) {
-                                this.setBlock(x + dx, y, z + dz, BLOCKS.OBSIDIAN);
-                            } else if (isLava && sideIsWater) {
-                                this.setBlock(x, y, z, BLOCKS.COBBLESTONE);
-                            }
+                            if (isWater && sideIsLava) this.setBlock(x + dx, y, z + dz, BLOCKS.OBSIDIAN);
+                            else if (isLava && !sideIsLava) this.setBlock(x, y, z, BLOCKS.COBBLESTONE);
                         } else if (sideBlock === type) {
-                            // Update existing liquid if we can provide a higher level
                             const sideData = this.getData(x + dx, y, z + dz);
-                            const sideLevel = sideData === 0 ? maxLevel : sideData;
-                            if (nextLevel > sideLevel) {
-                                this.setData(x + dx, y, z + dz, nextLevel);
-                                this.queueLiquidUpdate(x + dx, y, z + dz);
+                            if (sideData !== 0 && sideData !== 8) {
+                                if (nextLevel > sideData) {
+                                    this.setData(x + dx, y, z + dz, nextLevel);
+                                    this.queueLiquidUpdate(x + dx, y, z + dz);
+                                }
                             }
                         }
                     }
                 }
-            } else if (belowProps.isLiquid && bBelow !== type) {
-                // Water-lava vertical interactions
-                if (isWater && bBelow === BLOCKS.LAVA) {
-                    this.setBlock(x, y - 1, z, BLOCKS.OBSIDIAN);
-                } else if (isLava && (bBelow === BLOCKS.WATER || bBelow === BLOCKS.SWAMP_WATER)) {
-                    // Lava flowing down onto water creates stone
-                    this.setBlock(x, y - 1, z, BLOCKS.STONE);
-                }
-            } else if (currentLevel < maxLevel) {
-                // Check if this flowing block still has a valid source feeding it
-                let hasFeed = false;
-                const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-                // Check above - falling fluid feeds
-                const aboveBlock = this.getBlock(x, y + 1, z);
-                const aboveProps = getBlockProperties(aboveBlock);
-                if (aboveProps.isLiquid && aboveBlock === type) hasFeed = true;
-                // Check sides for higher level
-                if (!hasFeed) {
-                    for (const [dx, dz] of sides) {
-                        const sideBlock = this.getBlock(x + dx, y, z + dz);
-                        if (sideBlock === type) {
-                            const sideData = this.getData(x + dx, y, z + dz);
-                            const sideLevel = sideData === 0 ? maxLevel : sideData;
-                            if (sideLevel > currentLevel) { hasFeed = true; break; }
-                        }
-                    }
-                }
-                if (!hasFeed) {
-                    // No valid feed - decay this block
-                    this.setBlock(x, y, z, BLOCKS.AIR);
-                    // Queue neighbors to re-evaluate
-                    for (const [dx, dz] of sides) {
-                        this.queueLiquidUpdate(x + dx, y, z + dz);
-                    }
-                    this.queueLiquidUpdate(x, y - 1, z);
-                }
-            }
-        }
+            } }
     }
 
     update(playerPos, terrainGenerator, dt) {
@@ -1112,11 +1113,11 @@ export class World {
             chunk.dirty = true;
             this.chunksToBuild.push(chunk);
 
-            // Register chests, doors, and torches
-            if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated) {
+            // Register chests, doors, torches, and furnaces
+            if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated || this.onFurnaceGenerated) {
                 for (let i = 0; i < chunk.blocks.length; i++) {
                     const blockType = chunk.blocks[i];
-                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH) {
+                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.FURNACE) {
                         const y = Math.floor(i / (16 * 16));
                         const rem = i % (16 * 16);
                         const z = Math.floor(rem / 16);
@@ -1129,6 +1130,8 @@ export class World {
                             this.onDoorGenerated(wx, y, wz);
                         } else if (blockType === window.BLOCKS.TORCH && this.onTorchGenerated) {
                             this.onTorchGenerated(wx, y, wz);
+                        } else if (blockType === window.BLOCKS.FURNACE && this.onFurnaceGenerated) {
+                            this.onFurnaceGenerated(wx, y, wz);
                         }
                     }
                 }
@@ -1228,7 +1231,7 @@ export class World {
 
         if (dt) {
             this.tickTimer += dt;
-            if (this.tickTimer >= 0.8) { // tick every 800ms
+            if (this.tickTimer >= 1.2) { // tick every 1.2s
                 this.tickTimer = 0;
                 this.tickFluids();
                 this.tickRandomBlocks();

@@ -9,6 +9,7 @@ import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=22'
 import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=22';
 import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=22';
 import { AudioManager } from './audio.js?v=22';
+import { BiomeMap } from './map.js';
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
@@ -131,6 +132,7 @@ class Game {
         this.engine = new GameEngine();
         this.input = new InputManager();
         this.ui = new UISystem();
+        this.biomeMap = new BiomeMap(this);
 
         this.lastTime = performance.now();
         this.clock = new THREE.Clock();
@@ -171,6 +173,7 @@ class Game {
         this.currentDimension = 'overworld'; // 'overworld' or 'nether'
         this.planetParams = generatePlanetParams(rawSeed);
         this.world = new World(this.engine.scene, this.atlas);
+        this.world.dimension = 'overworld';
         this.world.planetParams = this.planetParams;
         this.world.setCamera(this.engine.camera);
 
@@ -185,9 +188,37 @@ class Game {
         this.world.onTorchGenerated = (x, y, z) => this.torchSystem.addTorch(x, y, z);
         this.world.onChestPlaced = (x, y, z) => this._addChest(x, y, z, false);
         this.world.onFurnacePlaced = (x, y, z) => this._addFurnace(x, y, z);
+        this.world.onFurnaceGenerated = (x, y, z) => this._addFurnace(x, y, z);
         
         this.doors = new Map(); // key -> { mesh, isOpen, baseRotationY }
         this.world.onDoorGenerated = (x, y, z) => this._addDoor(x, y, z);
+        this.world.onDoorPlaced = (x, y, z) => {
+            // Check if there's already a door here or one below (since it's 2 blocks)
+            if (this.world.getBlock(x, y - 1, z) !== window.BLOCKS.DUNGEON_DOOR) {
+                this._addDoor(x, y, z);
+            }
+        };
+        this.world.onDoorRemoved = (x, y, z) => {
+            const key1 = `${x},${y},${z}`;
+            const key2 = `${x},${y-1},${z}`;
+            
+            if (this.doors.has(key1)) {
+                this.engine.scene.remove(this.doors.get(key1).mesh);
+                this.doors.delete(key1);
+                // Also remove the top block if we broke the bottom
+                if (this.world.getBlock(x, y+1, z) === window.BLOCKS.DUNGEON_DOOR) {
+                    this.world.setBlock(x, y+1, z, window.BLOCKS.AIR);
+                }
+            } else if (this.doors.has(key2)) {
+                this.engine.scene.remove(this.doors.get(key2).mesh);
+                this.doors.delete(key2);
+                // Also remove the bottom block if we broke the top
+                if (this.world.getBlock(x, y-1, z) === window.BLOCKS.DUNGEON_DOOR) {
+                    this.world.setBlock(x, y-1, z, window.BLOCKS.AIR);
+                }
+            }
+        };
+        
         this.world.isDoorOpen = (x, y, z) => {
             const key1 = `${x},${y},${z}`;
             const key2 = `${x},${y-1},${z}`; // check bottom block too
@@ -406,30 +437,41 @@ class Game {
                 const rng = () => Math.random();
                 let lootTable = [];
                 
-                // Check for portal structure nearby
-                let isPortal = false;
+                // Check for portal markers underneath the chest
+                let portalType = null;
                 if (this.world) {
-                    for (let dx = -2; dx <= 2; dx++) {
-                        for (let dy = -2; dy <= 2; dy++) {
-                            for (let dz = -2; dz <= 2; dz++) {
-                                if (this.world.getBlock(x+dx, y+dy, z+dz) === window.BLOCKS.NETHERRACK || 
-                                    this.world.getBlock(x+dx, y+dy, z+dz) === window.BLOCKS.OBSIDIAN) {
-                                    isPortal = true;
-                                    break;
-                                }
-                            }
-                            if (isPortal) break;
-                        }
-                        if (isPortal) break;
-                    }
+                    const below = this.world.getBlock(x, y - 1, z);
+                    if (below === window.BLOCKS.PORTAL) { portalType = 'nether'; this.world.setBlock(x, y - 1, z, window.BLOCKS.NETHERRACK); }
+                    else if (below === window.BLOCKS.AETHER_PORTAL) { portalType = 'aether'; this.world.setBlock(x, y - 1, z, window.BLOCKS.AETHER_DIRT); }
+                    else if (below === window.BLOCKS.CAVERN_PORTAL) { portalType = 'cavern'; this.world.setBlock(x, y - 1, z, window.BLOCKS.STONE); }
+                    else if (below === window.BLOCKS.HIGHLANDS_PORTAL) { portalType = 'highlands'; this.world.setBlock(x, y - 1, z, window.BLOCKS.DIRT); }
                 }
 
-                if (isPortal) {
+                if (portalType === 'nether') {
                     lootTable = [
                         { item: Item.blockItem(window.BLOCKS.OBSIDIAN, 'Obsidian'), maxCount: 8, chance: 1.0 },
                         { item: Item.equipmentItem('flint_and_steel', { damage: 0 }, 'Flint and Steel'), maxCount: 1, chance: 1.0 },
                         { item: new Item('material', 'gold_ingot', {}, 'Gold Ingot'), maxCount: 5, chance: 0.6 },
                         { item: Item.equipmentItem('sword_gold', { damage: 6 }, 'Gold Sword'), maxCount: 1, chance: 0.3 }
+                    ];
+                } else if (portalType === 'aether') {
+                    lootTable = [
+                        { item: Item.blockItem(window.BLOCKS.GLOWSTONE, 'Glowstone'), maxCount: 8, chance: 1.0 },
+                        { item: new Item('material', 'diamond', {}, 'Diamond'), maxCount: 3, chance: 0.5 },
+                        { item: Item.equipmentItem('sword_diamond', { damage: 10 }, 'Diamond Sword'), maxCount: 1, chance: 0.3 },
+                        { item: Item.equipmentItem('pickaxe_diamond', { mineSpeed: 3, damage: 5 }, 'Diamond Pickaxe'), maxCount: 1, chance: 0.3 }
+                    ];
+                } else if (portalType === 'cavern') {
+                    lootTable = [
+                        { item: Item.blockItem(window.BLOCKS.COAL_ORE, 'Coal Ore'), maxCount: 10, chance: 0.8 },
+                        { item: new Item('material', 'iron_ingot', {}, 'Iron Ingot'), maxCount: 6, chance: 0.7 },
+                        { item: Item.equipmentItem('pickaxe_iron', { mineSpeed: 2, damage: 4 }, 'Iron Pickaxe'), maxCount: 1, chance: 0.5 }
+                    ];
+                } else if (portalType === 'highlands') {
+                    lootTable = [
+                        { item: Item.blockItem(window.BLOCKS.COBBLESTONE, 'Cobblestone'), maxCount: 20, chance: 1.0 },
+                        { item: new Item('material', 'emerald', {}, 'Emerald'), maxCount: 4, chance: 0.4 },
+                        { item: Item.equipmentItem('sword_stone', { damage: 5 }, 'Stone Sword'), maxCount: 1, chance: 0.6 }
                     ];
                 } else if (y < 40) {
                     // Dungeon loot - spells, modifiers, and rare gear
@@ -445,8 +487,8 @@ class Game {
                     ];
                 } else {
                     lootTable = [
-                        { item: new Item('material', 'wood_log', {}, 'Wood Log'), maxCount: 16, chance: 0.7 },
-                        { item: new Item('material', 'cobblestone', {}, 'Cobblestone'), maxCount: 32, chance: 0.8 },
+                        { item: Item.blockItem(window.BLOCKS.WOOD, 'Wood Log'), maxCount: 16, chance: 0.7 },
+                        { item: Item.blockItem(window.BLOCKS.COBBLESTONE, 'Cobblestone'), maxCount: 32, chance: 0.8 },
                         { item: new Item('material', 'coal', {}, 'Coal'), maxCount: 12, chance: 0.5 },
                         { item: Item.equipmentItem('pickaxe_stone', { mineSpeed: 1.5, damage: 3 }, 'Stone Pickaxe'), maxCount: 1, chance: 0.3 },
                         { factory: () => Item.spellItem(generateRandomSpell()), maxCount: 1, chance: 0.2 },
@@ -505,29 +547,48 @@ class Game {
             return;
         }
 
-        // Create door mesh (2 blocks high)
-        const doorGeom = new THREE.BoxGeometry(1, 2, 0.125);
+        // Create door geometry (1 block high)
+        const doorGeom = new THREE.BoxGeometry(1, 1, 0.125).toNonIndexed();
         
-        // Build material from texture atlas (DUNGEON_DOOR is 76)
-        const uv = this.atlas.getUV(window.BLOCKS.DUNGEON_DOOR);
-        const tex = this.atlas.texture.clone();
-        tex.needsUpdate = true;
-        // Adjust UVs for 1x2 if we want, but keeping it simple using full texture repeated
-        tex.repeat.set(1, 2);
+        // Build material from texture atlas
+        const uvInfo = this.atlas.getUV(window.BLOCKS.DUNGEON_DOOR);
         
-        const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.5 });
-        const mesh = new THREE.Mesh(doorGeom, mat);
+        // Map the UVs correctly so the door texture maps cleanly to the 1x1 face
+        const uvs = doorGeom.attributes.uv.array;
+        for (let i = 0; i < 6; i++) {
+            for (let v = 0; v < 6; v++) {
+                const baseU = uvs[i * 12 + v * 2];
+                const baseV = uvs[i * 12 + v * 2 + 1];
+                uvs[i * 12 + v * 2] = uvInfo.u + baseU * uvInfo.uSize;
+                uvs[i * 12 + v * 2 + 1] = uvInfo.v + baseV * uvInfo.vSize;
+            }
+        }
+        
+        const mat = new THREE.MeshLambertMaterial({ 
+            map: this.atlas.texture, 
+            transparent: true, 
+            alphaTest: 0.5,
+            side: THREE.DoubleSide
+        });
         
         // Pivot point should be on the edge, not center
-        mesh.geometry.translate(0.5, 1.0, 0); 
+        doorGeom.translate(0.5, 0.5, 0); 
         
-        // Place mesh at block origin
-        mesh.position.set(x - 0.5, y - 0.5, z);
-        mesh.rotation.y = 0; // Default facing
+        const doorGroup = new THREE.Group();
+        const meshBot = new THREE.Mesh(doorGeom, mat);
+        const meshTop = new THREE.Mesh(doorGeom, mat);
+        meshTop.position.y = 1;
         
-        this.engine.scene.add(mesh);
+        doorGroup.add(meshBot);
+        doorGroup.add(meshTop);
         
-        this.doors.set(key, { mesh, isOpen: false, baseRotationY: 0, x, y, z });
+        // Place mesh at block origin, centered in Z
+        doorGroup.position.set(x, y, z + 0.5);
+        doorGroup.rotation.y = 0; // Default facing
+        
+        this.engine.scene.add(doorGroup);
+        
+        this.doors.set(key, { mesh: doorGroup, isOpen: false, baseRotationY: 0, x, y, z });
     }
 
     _updateFurnaces(dt) {
@@ -1074,12 +1135,25 @@ class Game {
                 const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
                 const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
                 if (curBlock === BLOCKS.AIR || curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER || curBlock === BLOCKS.LAVA) {
-                    this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype);
-                    if (slot.item.subtype === BLOCKS.TORCH || slot.item.subtype === BLOCKS.GLOWSTONE) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
-                    this.audio.playPlace();
-                    slot.count--;
-                    if (slot.count <= 0) {
-                        this.player.inventory.slots[this.player.selectedSlot] = null;
+                    if (slot.item.subtype === BLOCKS.DUNGEON_DOOR) {
+                        const curBlockTop = this.world.getBlock(placePos.x, placePos.y + 1, placePos.z);
+                        if (curBlockTop === BLOCKS.AIR || curBlockTop === BLOCKS.WATER || curBlockTop === BLOCKS.SWAMP_WATER || curBlockTop === BLOCKS.LAVA) {
+                            this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype);
+                            this.world.setBlock(placePos.x, placePos.y + 1, placePos.z, slot.item.subtype);
+                            this.audio.playPlace();
+                            slot.count--;
+                            if (slot.count <= 0) {
+                                this.player.inventory.slots[this.player.selectedSlot] = null;
+                            }
+                        }
+                    } else {
+                        this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype);
+                        if (slot.item.subtype === BLOCKS.TORCH || slot.item.subtype === BLOCKS.GLOWSTONE) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
+                        this.audio.playPlace();
+                        slot.count--;
+                        if (slot.count <= 0) {
+                            this.player.inventory.slots[this.player.selectedSlot] = null;
+                        }
                     }
                 }
             } else if (slot && slot.item.type === 'food') {
@@ -1131,6 +1205,11 @@ class Game {
             } else {
                 this.input.requestPointerLock();
             }
+        }
+
+        if (this.input.menuKeys.map) {
+            this.biomeMap.toggle();
+            this.input.menuKeys.map = false;
         }
 
         if (this.input.menuKeys.debug) {
@@ -1253,21 +1332,13 @@ class Game {
         const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'caverns' ? generateCavernsChunk : (this.currentDimension === 'highlands' ? generateHighlandsChunk : generateChunkTerrain)));
         this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), dt);
 
-        // Update Systems
+        // Check if player is underwater for lighting
         const headX = Math.floor(this.engine.camera.position.x);
         const headY = Math.floor(this.engine.camera.position.y);
         const headZ = Math.floor(this.engine.camera.position.z);
         const headBlock = this.world.getBlock(headX, headY, headZ);
         const isUnderwater = window.getBlockProperties ? window.getBlockProperties(headBlock).isLiquid :
             (getBlockProperties ? getBlockProperties(headBlock).isLiquid : false);
-
-        let isUnderground = true;
-        for (let y = headY; y < 128; y++) {
-            if (this.world.getBlock(headX, y, headZ) === BLOCKS.AIR) {
-                isUnderground = false;
-                break;
-            }
-        }
 
         this.lighting.update(dt, this.engine.camera.position, isUnderwater, this.currentDimension);
 
@@ -1278,7 +1349,7 @@ class Game {
             }
         }
         this.particles.update(dt);
-        this.torchSystem.update(dt);
+        this.torchSystem.update(dt, this.engine.camera.position);
         this.cloudSystem.update(dt, this.engine.camera.position);
         this.entityManager.update(dt, this.world, this.player.position, this.player.inventory, this.player, this.lighting.timeOfDay, this.currentDimension);
 
@@ -1640,9 +1711,9 @@ class Game {
             const ry = window.innerHeight - mapSize - padding;
             
             // Tilt the camera for a 2.5D map look but fixed height to avoid jump parallax
-            const isNether = this.currentDimension === 'nether' || (this.engine.planetParams && this.engine.planetParams.theme === 'nether');
-            const camY = isNether ? this.player.position.y + 40 : 250;
-            const lookY = isNether ? camY - 250 : 0;
+            const isUnderground = this.currentDimension === 'nether' || this.currentDimension === 'caverns' || (this.engine.planetParams && this.engine.planetParams.theme === 'nether');
+            const camY = isUnderground ? this.player.position.y + 40 : 250;
+            const lookY = isUnderground ? camY - 250 : 0;
             this.minimapCamera.position.set(this.player.position.x, camY, this.player.position.z + 40);
             this.minimapCamera.lookAt(this.player.position.x, lookY, this.player.position.z);
             
@@ -1664,11 +1735,14 @@ class Game {
             const oldFog = this.engine.scene.fog;
             this.engine.scene.fog = null;
             
-            for (const chunk of this.world.chunks.values()) {
-                if (chunk.mesh) chunk.mesh.visible = true;
+            // Disable minimap rendering in underground dimensions to avoid massive lag from drawing millions of ceiling faces
+            if (!isUnderground) {
+                for (const chunk of this.world.chunks.values()) {
+                    if (chunk.mesh) chunk.mesh.visible = true;
+                }
+                
+                this.engine.renderer.render(this.engine.scene, this.minimapCamera);
             }
-            
-            this.engine.renderer.render(this.engine.scene, this.minimapCamera);
             
             // Update player indicator rotation
             const arrow = document.getElementById('minimap-player-arrow');
@@ -1798,6 +1872,7 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
             this.planetParams = generatePlanetParams(this.currentSeed);
             this.world.planetParams = this.planetParams;
             this.currentDimension = targetDim;
+            this.world.dimension = targetDim;
 
             // Clear World
             for (const chunk of this.world.chunks.values()) {
@@ -2012,7 +2087,26 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
             }
         }
         
-        if (interior.length < 6) return false; // Minimum inside is 2x3
+        if (interior.length !== 6) return false; // Exactly 2x3 interior
+        
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+        let minZ = Infinity, maxZ = -Infinity;
+        
+        for (const p of interior) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+            if (p.z < minZ) minZ = p.z;
+            if (p.z > maxZ) maxZ = p.z;
+        }
+        
+        if (plane === 'z') {
+            if (maxX - minX !== 1 || maxY - minY !== 2 || maxZ - minZ !== 0) return false;
+        } else {
+            if (maxZ - minZ !== 1 || maxY - minY !== 2 || maxX - minX !== 0) return false;
+        }
         
         for (const p of interior) {
             this.world.setBlock(p.x, p.y, p.z, portalBlock);
