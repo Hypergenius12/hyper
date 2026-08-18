@@ -14,7 +14,7 @@ export const SPELL_TYPES = {
     BOLT: { name: 'Arcane Bolt', baseDamage: 15, baseManaCost: 5, baseCooldown: 0, projectileSpeed: 20, projectileCount: 1, element: 'ICE', color: 0x0088ff, description: 'Fires a fast moving magical bolt.' },
     BURST: { name: 'Fire Burst', baseDamage: 25, baseManaCost: 15, baseCooldown: 0, projectileSpeed: 10, projectileCount: 5, element: 'FIRE', color: 0xff4422, description: 'Fires a spread of burning projectiles.' },
     HEAL: { name: 'Nature Grace', baseDamage: -20, baseManaCost: 30, baseCooldown: 0, projectileSpeed: 5, projectileCount: 1, element: 'HEAL', color: 0xadff2f, description: 'Heals the caster instantly.' },
-    MISSILE: { name: 'Magic Missile', baseDamage: 30, baseManaCost: 20, baseCooldown: 0, projectileSpeed: 8, projectileCount: 1, element: 'arcane', color: 0x4488ff, description: 'A slow but powerful homing missile.' },
+    MISSILE: { name: 'Magic Missile', baseDamage: 30, baseManaCost: 20, baseCooldown: 0, projectileSpeed: 8, projectileCount: 1, element: 'arcane', color: 0x4488ff, description: 'A slow but powerful homing missile.', homing: true },
     METEOR: { name: 'Meteor Strike', baseDamage: 100, baseManaCost: 50, baseCooldown: 0, projectileSpeed: 15, projectileCount: 1, element: 'FIRE', color: 0xffaa00, description: 'Calls down a massive meteor.' },
     EARTH: { name: 'Boulder Toss', baseDamage: 40, baseManaCost: 25, baseCooldown: 0, projectileSpeed: 12, projectileCount: 1, element: 'EARTH', color: 0x8B4513, description: 'Hurls a massive boulder that deals heavy damage.' },
     THUNDER: { name: 'Lightning Strike', baseDamage: 60, baseManaCost: 35, baseCooldown: 0, projectileSpeed: 40, projectileCount: 1, element: 'THUNDER', color: 0xFFFF00, description: 'A lightning-fast bolt that strikes instantly.' },
@@ -25,7 +25,7 @@ export const SPELL_TYPES = {
     WATER: { name: 'Aqua Jet', baseDamage: 0, baseManaCost: 10, baseCooldown: 0, projectileSpeed: 18, projectileCount: 1, element: 'WATER', color: 0x3399FF, description: 'High knockback. Extinguishes fire and turns lava to obsidian.' },
     LAVA: { name: 'Magma Bomb', baseDamage: 40, baseManaCost: 40, baseCooldown: 0, projectileSpeed: 8, projectileCount: 1, element: 'LAVA', color: 0xFF6600, description: 'Heavy projectile that spawns lava on impact.' },
     VOID: { name: 'Void Sphere', baseDamage: 150, baseManaCost: 80, baseCooldown: 0, projectileSpeed: 5, projectileCount: 1, element: 'VOID', color: 0x8800CC, description: 'Slow moving orb that destroys blocks on impact.' },
-    LIGHT: { name: 'Sunbeam', baseDamage: 20, baseManaCost: 20, baseCooldown: 0, projectileSpeed: 80, projectileCount: 1, element: 'LIGHT', color: 0xFFFF88, description: 'Extremely fast beam that pierces targets.' },
+    LIGHT: { name: 'Sunbeam', baseDamage: 20, baseManaCost: 20, baseCooldown: 0, projectileSpeed: 80, projectileCount: 1, element: 'LIGHT', color: 0xFFFF88, description: 'Extremely fast beam that pierces targets.', pierce: true },
     FROST: { name: 'Frost Nova', baseDamage: 0, baseManaCost: 30, baseCooldown: 0, projectileSpeed: 15, projectileCount: 1, element: 'FROST', color: 0x00FFFF, description: 'Freezes all nearby entities on impact.' },
     BUILDER: { name: 'Stone Wall', baseDamage: 0, baseManaCost: 20, baseCooldown: 0, projectileSpeed: 25, projectileCount: 1, element: 'BUILDER', color: 0xAAAAAA, description: 'Instantly builds a stone wall where it hits.' }
 };
@@ -81,9 +81,10 @@ export class Spell {
     }
 
     getCalculatedStats() {
+        const config = SPELL_TYPES[this.type];
         const stats = {
             damageMult: 1.0, speedMult: 1.0, manaMult: 1.0, projCountMult: 1.0,
-            pierce: false, homing: false, statusEffects: [], castTwo: false
+            pierce: config.pierce || false, homing: config.homing || false, statusEffects: [], castTwo: false
         };
         for (const mod of this.modifiers) {
             mod.config.effect(stats);
@@ -139,16 +140,25 @@ export class Wand {
     }
 
     castCombined(player) {
-        // Gather all valid spells
+        // Gather all valid spells and modifiers
         const spells = [];
+        const wandModifiers = [];
+
         for (let i = 0; i < this.maxSlots; i++) {
-            let spellItem = this.spellSlots[i];
-            if (!spellItem) continue;
-            let spell = spellItem;
-            if (spellItem.type === 'spell' && spellItem.data && spellItem.data.spell) spell = spellItem.data.spell;
-            else if (spellItem.item && spellItem.item.type === 'spell' && spellItem.item.data && spellItem.item.data.spell) spell = spellItem.item.data.spell;
-            if (typeof spell.getCalculatedStats === 'function') spells.push(spell);
+            let item = this.spellSlots[i];
+            if (!item) continue;
+            
+            // Check if it's a spell or modifier directly or wrapped in an Item
+            let obj = item;
+            if (item.type === 'spell' && item.data && item.data.spell) obj = item.data.spell;
+            else if (item.item && item.item.type === 'spell' && item.item.data && item.item.data.spell) obj = item.item.data.spell;
+            else if (item.type === 'modifier' && item.data && item.data.mod) obj = item.data.mod;
+            else if (item.item && item.item.type === 'modifier' && item.item.data && item.item.data.mod) obj = item.item.data.mod;
+
+            if (obj && typeof obj.getCalculatedStats === 'function') spells.push(obj);
+            else if (obj && obj.config && typeof obj.config.effect === 'function') wandModifiers.push(obj);
         }
+        
         if (spells.length === 0) return null;
 
         // Combine stats: sum damage, sum mana cost, average speed, sum projectile count, merge effects
@@ -157,7 +167,7 @@ export class Wand {
         const effects = [];
         const elements = [];
         let dominantSpell = spells[0];
-        let maxDmg = 0;
+        let maxDmg = -1; // Use -1 so 0-damage spells can still become dominant if they are the only ones
 
         for (const spell of spells) {
             const stats = spell.getCalculatedStats();
@@ -170,8 +180,27 @@ export class Wand {
             if (stats.castTwo) castTwo = true;
             if (stats.effects) effects.push(...stats.effects);
             elements.push(stats.element);
+            // The spell with the highest absolute damage is dominant. If multiple 0 damage spells, the first is dominant.
             if (Math.abs(stats.damage) > maxDmg) { maxDmg = Math.abs(stats.damage); dominantSpell = spell; }
         }
+
+        // Apply wand-level modifiers
+        const modStats = {
+            damageMult: 1.0, speedMult: 1.0, manaMult: 1.0, projCountMult: 1.0,
+            pierce: false, homing: false, statusEffects: [], castTwo: false
+        };
+        for (const mod of wandModifiers) {
+            mod.config.effect(modStats);
+        }
+
+        totalDamage *= modStats.damageMult;
+        totalMana *= modStats.manaMult;
+        totalSpeed *= modStats.speedMult;
+        totalCount = Math.floor(totalCount * modStats.projCountMult);
+        if (modStats.pierce) pierce = true;
+        if (modStats.homing) homing = true;
+        if (modStats.castTwo) castTwo = true;
+        if (modStats.statusEffects) effects.push(...modStats.statusEffects);
 
         // Synergies
         let element = dominantSpell.element;
@@ -191,7 +220,7 @@ export class Wand {
         const combinedStats = {
             damage: totalDamage,
             manaCost: totalMana,
-            speed: totalSpeed / spells.length,
+            speed: (totalSpeed / spells.length),
             count: Math.max(1, totalCount),
             pierce, homing, castTwo,
             effects: [...new Set(effects)],
@@ -208,6 +237,7 @@ export class Wand {
 export class SpellProjectile {
     constructor(origin, direction, stats, spellColor) {
         this.position = origin.clone();
+        this.previousPosition = origin.clone();
         this.velocity = direction.clone().normalize().multiplyScalar(stats.speed);
         this.stats = stats;
         this.color = spellColor;
@@ -304,7 +334,8 @@ export class SpellProjectile {
                 this.velocity.lerp(_tempVecProj2.copy(dirToMob).multiplyScalar(this.stats.speed), dt * 4);
             }
         }
-
+        
+        this.previousPosition = this.position.clone();
         this.position.addScaledVector(this.velocity, dt);
         if (this.mesh) {
             this.mesh.position.copy(this.position);
@@ -360,9 +391,10 @@ export class ProjectileManager {
             }
 
             const hitResult = checkHit(p);
-            if (hitResult) {
+            if (hitResult && hitResult.hit) {
                 // Apply damage/effects to hitResult.entity is handled in callback
-                if (!p.stats.pierce) {
+                // If it pierced, it should only continue if it hit an entity. Blocks always destroy it.
+                if (!p.stats.pierce || hitResult.hitType === 'block') {
                     p.alive = false;
                 }
             }

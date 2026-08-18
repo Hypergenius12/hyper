@@ -1403,6 +1403,7 @@ class Game {
             }
 
             // Check blocks
+            let hitBlock = false;
             if (!hitFound) {
                 const bx = Math.floor(proj.position.x);
                 const by = Math.floor(proj.position.y);
@@ -1412,6 +1413,7 @@ class Game {
                     const props = getBlockProperties(blockType);
                     if (props && (props.solid || props.isCross)) {
                         hitFound = true;
+                        hitBlock = true;
                     }
                 }
             }
@@ -1445,10 +1447,10 @@ class Game {
                 } else if (proj.stats.element === 'BUILDER') {
                     this.particles.emit(hitPos, 'explosion', 10, 0xAAAAAA);
                     if (!eHit.hit) {
-                        // Place block just before hit position
-                        const placePos = hitPos.clone().sub(proj.velocity.clone().normalize().multiplyScalar(0.6));
-                        const px = Math.floor(placePos.x), py = Math.floor(placePos.y), pz = Math.floor(placePos.z);
-                        if (this.world.getBlock(px, py, pz) === BLOCKS.AIR) {
+                        const px = Math.floor(proj.previousPosition.x);
+                        const py = Math.floor(proj.previousPosition.y);
+                        const pz = Math.floor(proj.previousPosition.z);
+                        if (this.world.getBlock(px, py, pz) === BLOCKS.AIR || this.world.getBlock(px, py, pz) === BLOCKS.WATER) {
                             this.world.setBlock(px, py, pz, BLOCKS.STONE_BRICKS);
                         }
                     }
@@ -1603,9 +1605,9 @@ class Game {
                     this.particles.emit(hitPos, 'magic', 15, proj.color);
                 }
                 this.audio.playHit();
-                return true;
+                return { hit: true, hitType: hitBlock ? 'block' : 'entity' };
             }
-            return false;
+            return null;
         }, this.entityManager.mobs);
 
         // Render
