@@ -366,7 +366,7 @@ export function getBiomeParams(wx, wz, params) {
 export function getColumnInfo(wx, wz, params) {
     const colRng = seededRandom(params.seed + wx * 3141 + wz);
     
-    const { biome, terraceWeight, contNoise, erosionNoise, weirdness } = getBiomeParams(wx, wz, params);
+    let { biome, terraceWeight, contNoise, erosionNoise, weirdness } = getBiomeParams(wx, wz, params);
     
     // 1. Continentalness Base
     let baseElevation = params.seaLevel;
