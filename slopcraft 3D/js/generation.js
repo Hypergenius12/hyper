@@ -289,17 +289,17 @@ export function getBiomeParams(wx, wz, params) {
     const tempNoise = params.tempNoise;
     const moistNoise = params.moistNoise;
 
-    // Continentalness and Erosion (Reverted to 0.00015 for large biomes)
-    const contNoise = (noise2D(wx * 0.00015, wz * 0.00015) + 1) / 2;
-    const erosionNoise = (noise2D(wx * 0.0003 + 1000, wz * 0.0003 + 1000) + 1) / 2;
+    // Continentalness and Erosion
+    const contNoise = (noise2D(wx * 0.00028, wz * 0.00028) + 1) / 2;
+    const erosionNoise = (noise2D(wx * 0.0004 + 1000, wz * 0.0004 + 1000) + 1) / 2;
 
     // Domain warp the coordinates slightly to make biome borders wavy/organic
     const warpX = noise2D(wx * 0.003 + 2000, wz * 0.003 + 2000) * 60;
     const warpZ = noise2D(wz * 0.003 + 3000, wx * 0.003 + 3000) * 60;
     
     // Kept large offsets to prevent spawning exactly at (0.5, 0.5) forest every seed
-    const temp = (tempNoise((wx + warpX) * 0.00015 + 5000, (wz + warpZ) * 0.00015 + 5000) + 1) / 2;
-    const moist = (moistNoise((wx + warpX) * 0.00015 + 8000, (wz + warpZ) * 0.00015 + 8000) + 1) / 2;
+    const temp = (tempNoise((wx + warpX) * 0.00028 + 5000, (wz + warpZ) * 0.00028 + 5000) + 1) / 2;
+    const moist = (moistNoise((wx + warpX) * 0.00028 + 8000, (wz + warpZ) * 0.00028 + 8000) + 1) / 2;
     const weirdness = (noise2D((wx + warpX) * 0.0006 + 15000, (wz + warpZ) * 0.0006 + 15000) + 1) / 2;
 
     const isOcean = contNoise < 0.3;
@@ -701,7 +701,11 @@ export function generateChunkTerrain(cx, cz, params) {
                 const isValidGround = groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.SNOW || groundBlock === BLOCKS.MYCELIUM || groundBlock === BLOCKS.SWAMP_GRASS || groundBlock === BLOCKS.SAVANNA_GRASS || groundBlock === BLOCKS.ALIEN_GRASS || groundBlock === BLOCKS.ALIEN_STONE || groundBlock === BLOCKS.RED_SAND;
                 if (!isValidGround) continue;
 
-                if (biome.hasTrees && r < (biome.isDark ? 0.06 : 0.02)) {
+                let treeChance = biome.isDark ? 0.06 : 0.02;
+                if (biome.isCherry) treeChance = 0.06;
+                else if (biome.name === 'Forest' || biome.name === 'Autumn Forest') treeChance = 0.05;
+
+                if (biome.hasTrees && r < treeChance) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                 } else if (biome.hasMushrooms && r < 0.05) {
                     generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
@@ -709,16 +713,16 @@ export function generateChunkTerrain(cx, cz, params) {
                     generateCrystal(blocks, tx, surfaceY + 1, tz, floraRng);
                 } else if (biome.hasIceSpikes && r < 0.02) {
                     generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (biome.hasCactus && r < 0.01) {
+                } else if (biome.hasCactus && r < 0.015) {
                     generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (biome.hasDeadBush && r < 0.04) {
+                } else if (biome.hasDeadBush && r < 0.06) {
                     safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
-                } else if (biome.jungleFlora && r < 0.08) {
+                } else if (biome.jungleFlora && r < 0.12) {
                     if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                     else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true); // Bush
-                } else if (biome.alienFlora && r < 0.15) {
+                } else if (biome.alienFlora && r < 0.25) {
                     safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALIEN_TALL_GRASS, true);
-                } else if (biome.isCoralReef && surfaceY < params.seaLevel && r < 0.3) {
+                } else if (biome.isCoralReef && surfaceY < params.seaLevel && r < 0.4) {
                     const cRng = floraRng();
                     let coralType;
                     if (cRng < 0.2) coralType = BLOCKS.TUBE_CORAL;
@@ -732,18 +736,17 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && biome.name !== 'Volcanic' && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef) {
                     // Normal grass logic
-                    let r = floraRng();
-                    if (biome === BIOMES.CHERRY_GROVE && r < 0.4) {
+                    if (biome === BIOMES.CHERRY_GROVE && r < 0.8) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
-                    } else if (biome === BIOMES.AUTUMN_FOREST && r < 0.4) {
+                    } else if (biome === BIOMES.AUTUMN_FOREST && r < 0.8) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FALLEN_LEAVES, true);
-                    } else if (biome === BIOMES.GLOW_FOREST && r < 0.1) {
+                    } else if (biome === BIOMES.GLOW_FOREST && r < 0.25) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
-                    } else if (biome === BIOMES.OASIS && r < 0.2) {
+                    } else if (biome === BIOMES.OASIS && r < 0.35) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.OASIS_FERN, true);
-                    } else if (r < 0.2) {
+                    } else if (r < 0.35) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, floraRng() > 0.3 ? BLOCKS.TALL_GRASS : BLOCKS.FERN, true);
-                    } else if (r >= 0.2 && r < 0.25) {
+                    } else if (r >= 0.35 && r < 0.42) {
                         const fRng = floraRng();
                         const flowerType = fRng < 0.25 ? BLOCKS.RED_FLOWER : (fRng < 0.5 ? BLOCKS.YELLOW_FLOWER : (fRng < 0.75 ? BLOCKS.BLUE_FLOWER : BLOCKS.WHITE_FLOWER));
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);

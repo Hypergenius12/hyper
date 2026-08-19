@@ -133,7 +133,6 @@ class Game {
         this.engine = new GameEngine();
         this.input = new InputManager();
         this.ui = new UISystem();
-        this.biomeMap = new BiomeMap(this);
 
         this.lastTime = performance.now();
         this.clock = new THREE.Clock();

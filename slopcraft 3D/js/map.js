@@ -110,6 +110,14 @@ export class BiomeMap {
         document.getElementById('btn-close-map').addEventListener('click', () => {
             this.close();
         });
+
+        document.getElementById('btn-clear-waypoints').addEventListener('click', () => {
+            if (this.game.waypoints) {
+                // Only clear waypoints for current dimension
+                this.game.waypoints = this.game.waypoints.filter(w => w.dim !== this.game.currentDimension);
+                this.draw();
+            }
+        });
         
         // Window resize
         window.addEventListener('resize', () => {
@@ -212,7 +220,12 @@ export class BiomeMap {
         this.tooltip.style.left = (e.clientX + 10) + 'px';
         this.tooltip.style.top = (e.clientY + 10) + 'px';
         this.tooltip.style.display = 'block';
-        this.tooltip.innerText = `Biome: ${biomeName}\nCoords: ${worldX}, ${worldZ}`;
+        this.tooltip.innerText = `${biomeName}`;
+
+        const coordsEl = document.getElementById('biome-map-coords');
+        if (coordsEl) {
+            coordsEl.innerText = `X: ${worldX}, Z: ${worldZ}`;
+        }
     }
 
     draw() {
