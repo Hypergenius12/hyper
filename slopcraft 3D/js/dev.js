@@ -1,3 +1,5 @@
+import { Item, Mob, MOB_TYPES } from './entities.js';
+
 export class DevMode {
     constructor(game) {
         this.game = game;
@@ -121,8 +123,52 @@ export class DevMode {
                     }
                     break;
                 case 'give':
+                    if (args.length >= 1) {
+                        const itemName = args[0].toUpperCase();
+                        const count = args.length > 1 ? parseInt(args[1]) || 1 : 1;
+                        let itemObj = null;
+
+                        // Check blocks
+                        if (window.BLOCKS && window.BLOCKS[itemName]) {
+                            itemObj = Item.blockItem(window.BLOCKS[itemName]);
+                        } else {
+                            // Assume material/item
+                            itemObj = Item.materialItem(itemName, itemName.charAt(0) + itemName.slice(1).toLowerCase());
+                        }
+                        
+                        if (itemObj) {
+                            if (this.game.player.inventory.addItem(itemObj, count)) {
+                                this.log(`Gave ${count}x ${itemName}`);
+                            } else {
+                                this.log(`Inventory full!`, "#FF5555");
+                            }
+                        } else {
+                            this.log(`Unknown item: ${itemName}`, "#FF5555");
+                        }
+                    } else {
+                        this.log("Usage: give <item> [count]", "#FF5555");
+                    }
+                    break;
                 case 'spawn':
-                    this.log(`Command '${cmd}' not fully implemented yet. Feel free to extend!`, "#FFAA00");
+                    if (args.length >= 1) {
+                        const mobType = args[0].toUpperCase();
+                        if (MOB_TYPES[mobType]) {
+                            const count = args.length > 1 ? parseInt(args[1]) || 1 : 1;
+                            for (let i = 0; i < count; i++) {
+                                const pos = this.game.player.position.clone();
+                                pos.x += (Math.random() - 0.5) * 4;
+                                pos.z += (Math.random() - 0.5) * 4;
+                                pos.y += 1;
+                                const mob = new Mob(mobType, pos);
+                                this.game.entityManager.addMob(mob);
+                            }
+                            this.log(`Spawned ${count}x ${mobType}`);
+                        } else {
+                            this.log(`Unknown mob: ${mobType}. Try ZOMBIE, SKELETON, SLIME...`, "#FF5555");
+                        }
+                    } else {
+                        this.log("Usage: spawn <mob> [count]", "#FF5555");
+                    }
                     break;
                 default:
                     this.log(`Unknown command: ${cmd}`, "#FF5555");

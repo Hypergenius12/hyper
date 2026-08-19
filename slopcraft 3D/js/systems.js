@@ -356,17 +356,29 @@ export class ParticleSystem {
                 // Drop oldest if we reach limit
                 this.particles.shift();
             }
-            const vel = new THREE.Vector3(
-                (Math.random()-0.5)*5,
-                (Math.random()-0.5)*5 + 2,
-                (Math.random()-0.5)*5
-            );
+            let vel, maxAge;
+            if (type === 'leaf') {
+                vel = new THREE.Vector3(
+                    (Math.random()-0.5)*1.5,
+                    -(Math.random()*1 + 0.5), // drift down
+                    (Math.random()-0.5)*1.5
+                );
+                maxAge = 3 + Math.random() * 2;
+            } else {
+                vel = new THREE.Vector3(
+                    (Math.random()-0.5)*5,
+                    (Math.random()-0.5)*5 + 2,
+                    (Math.random()-0.5)*5
+                );
+                maxAge = 0.5 + Math.random();
+            }
             this.particles.push({
                 pos: pos.clone(),
                 vel: vel,
                 age: 0,
-                maxAge: 0.5 + Math.random(),
-                colorHex: color
+                maxAge: maxAge,
+                colorHex: color,
+                type: type
             });
         }
     }
@@ -382,10 +394,25 @@ export class ParticleSystem {
                 continue; // Dies naturally
             }
             
-            p.pos.addScaledVector(p.vel, dt);
-            p.vel.y -= 9.8 * dt; // gravity
+            if (p.type === 'leaf') {
+                p.vel.x += (Math.random() - 0.5) * dt * 5;
+                p.vel.z += (Math.random() - 0.5) * dt * 5;
+                p.pos.addScaledVector(p.vel, dt);
+                // No gravity, they just drift down
+                this._dummy.rotation.x += dt;
+                this._dummy.rotation.y += dt * 0.5;
+            } else {
+                p.pos.addScaledVector(p.vel, dt);
+                p.vel.y -= 9.8 * dt; // gravity
+            }
             
             this._dummy.position.copy(p.pos);
+            if (p.type === 'leaf') {
+                this._dummy.scale.set(0.6, 0.1, 0.6);
+            } else {
+                this._dummy.scale.set(1, 1, 1);
+                this._dummy.rotation.set(0, 0, 0);
+            }
             this._dummy.updateMatrix();
             this.mesh.setMatrixAt(aliveCount, this._dummy.matrix);
             

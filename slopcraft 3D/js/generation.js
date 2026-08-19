@@ -701,11 +701,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 const isValidGround = groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.SNOW || groundBlock === BLOCKS.MYCELIUM || groundBlock === BLOCKS.SWAMP_GRASS || groundBlock === BLOCKS.SAVANNA_GRASS || groundBlock === BLOCKS.ALIEN_GRASS || groundBlock === BLOCKS.ALIEN_STONE || groundBlock === BLOCKS.RED_SAND;
                 if (!isValidGround) continue;
 
-                let treeChance = biome.isDark ? 0.06 : 0.02;
-                if (biome.isCherry) treeChance = 0.06;
-                else if (biome.name === 'Forest' || biome.name === 'Autumn Forest') treeChance = 0.05;
-
-                if (biome.hasTrees && r < treeChance) {
+                if (biome.hasTrees && r < (biome.isDark ? 0.06 : 0.02)) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                 } else if (biome.hasMushrooms && r < 0.05) {
                     generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
@@ -713,16 +709,16 @@ export function generateChunkTerrain(cx, cz, params) {
                     generateCrystal(blocks, tx, surfaceY + 1, tz, floraRng);
                 } else if (biome.hasIceSpikes && r < 0.02) {
                     generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (biome.hasCactus && r < 0.015) {
+                } else if (biome.hasCactus && r < 0.01) {
                     generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (biome.hasDeadBush && r < 0.06) {
+                } else if (biome.hasDeadBush && r < 0.04) {
                     safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
-                } else if (biome.jungleFlora && r < 0.12) {
+                } else if (biome.jungleFlora && r < 0.08) {
                     if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                     else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true); // Bush
-                } else if (biome.alienFlora && r < 0.25) {
+                } else if (biome.alienFlora && r < 0.15) {
                     safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALIEN_TALL_GRASS, true);
-                } else if (biome.isCoralReef && surfaceY < params.seaLevel && r < 0.4) {
+                } else if (biome.isCoralReef && surfaceY < params.seaLevel && r < 0.3) {
                     const cRng = floraRng();
                     let coralType;
                     if (cRng < 0.2) coralType = BLOCKS.TUBE_CORAL;
@@ -736,17 +732,18 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && biome.name !== 'Volcanic' && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef) {
                     // Normal grass logic
-                    if (biome === BIOMES.CHERRY_GROVE && r < 0.8) {
+                    let r = floraRng();
+                    if (biome === BIOMES.CHERRY_GROVE && r < 0.4) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
-                    } else if (biome === BIOMES.AUTUMN_FOREST && r < 0.8) {
+                    } else if (biome === BIOMES.AUTUMN_FOREST && r < 0.4) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FALLEN_LEAVES, true);
-                    } else if (biome === BIOMES.GLOW_FOREST && r < 0.25) {
+                    } else if (biome === BIOMES.GLOW_FOREST && r < 0.1) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
-                    } else if (biome === BIOMES.OASIS && r < 0.35) {
+                    } else if (biome === BIOMES.OASIS && r < 0.2) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.OASIS_FERN, true);
-                    } else if (r < 0.35) {
+                    } else if (r < 0.2) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, floraRng() > 0.3 ? BLOCKS.TALL_GRASS : BLOCKS.FERN, true);
-                    } else if (r >= 0.35 && r < 0.42) {
+                    } else if (r >= 0.2 && r < 0.25) {
                         const fRng = floraRng();
                         const flowerType = fRng < 0.25 ? BLOCKS.RED_FLOWER : (fRng < 0.5 ? BLOCKS.YELLOW_FLOWER : (fRng < 0.75 ? BLOCKS.BLUE_FLOWER : BLOCKS.WHITE_FLOWER));
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);

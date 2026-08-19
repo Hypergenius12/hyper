@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=22';
 import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=22';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk } from './generation.js?v=22';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=22';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=22';
 import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=22';
 import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=22';
@@ -1444,7 +1444,33 @@ class Game {
             this.ui._updateFurnaceSlots();
         }
 
-
+        // Ambient Biome Particles
+        if (Math.random() < 0.3 && this.currentDimension === 'overworld') {
+            const px = this.player.position.x;
+            const pz = this.player.position.z;
+            const { biome } = getBiomeParams(px, pz, this.planetParams);
+            
+            if (biome.isCherry || biome.name === 'Cherry Grove') {
+                const pos = this.player.position.clone();
+                pos.x += (Math.random() - 0.5) * 20;
+                pos.z += (Math.random() - 0.5) * 20;
+                pos.y += 5 + Math.random() * 5;
+                this.particles.emit(pos, 'leaf', 1, 0xffb7c5);
+            } else if (biome.name === 'Autumn Forest') {
+                const pos = this.player.position.clone();
+                pos.x += (Math.random() - 0.5) * 20;
+                pos.z += (Math.random() - 0.5) * 20;
+                pos.y += 5 + Math.random() * 5;
+                const colors = [0xff8800, 0xcc4400, 0xffaa00];
+                this.particles.emit(pos, 'leaf', 1, colors[Math.floor(Math.random()*colors.length)]);
+            } else if (biome.alienFlora) {
+                const pos = this.player.position.clone();
+                pos.x += (Math.random() - 0.5) * 20;
+                pos.z += (Math.random() - 0.5) * 20;
+                pos.y += Math.random() * 5;
+                this.particles.emit(pos, 'leaf', 1, 0x00ffcc);
+            }
+        }
 
         const _tempVec3 = new THREE.Vector3();
         const _tempVec4 = new THREE.Vector3();
