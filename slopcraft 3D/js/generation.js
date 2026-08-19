@@ -1025,7 +1025,6 @@ function carveGlobalDungeons(blocks, cx, cz, params) {
 
 function generateDungeonStructure(rng, startX, startY, startZ) {
     const rooms = [];
-    const doors = [];
     
     // Add a huge entrance shaft piercing the surface to make it discoverable
     rooms.push({ x: startX, y: startY, z: startZ, w: 7, h: 180, d: 7, type: 'entrance', shape: 'square' });
@@ -1051,7 +1050,6 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
     while(stack.length > 0) {
         const curr = stack[stack.length - 1];
         
-        // Find unvisited neighbors
         const neighbors = [];
         if (curr.x > 0 && !grid[curr.x-1][curr.z].visited) neighbors.push({x: curr.x-1, z: curr.z});
         if (curr.x < GRID_SIZE-1 && !grid[curr.x+1][curr.z].visited) neighbors.push({x: curr.x+1, z: curr.z});
@@ -1061,13 +1059,11 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
         if (neighbors.length > 0) {
             const next = neighbors[Math.floor(rng() * neighbors.length)];
             
-            // Randomly stop branching to leave some empty space
             if (rng() < 0.15 && stack.length > 1) {
                 stack.pop();
             } else {
                 grid[curr.x][curr.z].connections.push(next);
                 grid[next.x][next.z].connections.push(curr);
-                
                 grid[next.x][next.z].visited = true;
                 stack.push(next);
             }
@@ -1080,7 +1076,8 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
         }
     }
     
-    const shapes = ['square', 'circle', 'cross'];
+    // Extended shape list with new room types
+    const shapes = ['square', 'circle', 'cross', 'L_shaped', 'pillars', 'pit', 'library'];
     
     for (let gx=0; gx<GRID_SIZE; gx++) {
         for (let gz=0; gz<GRID_SIZE; gz++) {
@@ -1093,32 +1090,62 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
             const rx = startX + (gx - 2) * CELL_SIZE;
             const rz = startZ + (gz - 2) * CELL_SIZE;
             
+            const roomW = cell.type === 'boss' ? 15 : 13;
+            const roomH = cell.type === 'boss' ? 8 : 6;
+            const roomD = cell.type === 'boss' ? 15 : 13;
+            
             rooms.push({
                 x: rx, y: startY, z: rz,
-                w: cell.type === 'boss' ? 15 : 13,
-                h: cell.type === 'boss' ? 8 : 6,
-                d: cell.type === 'boss' ? 15 : 13,
+                w: roomW, h: roomH, d: roomD,
                 type: cell.type,
                 shape: cell.shape
             });
             
+            // Build corridors and doorways between connected rooms
             for (const conn of cell.connections) {
                 if (conn.x > gx) { 
-                    // right corridor
-                    rooms.push({ x: rx + CELL_SIZE/2, y: startY, z: rz, w: CELL_SIZE - 8, h: 4, d: 5, type: 'corridor', shape: 'square' });
-                    // long door pathway
-                    doors.push({ x: rx + CELL_SIZE/2, y: startY, z: rz, w: CELL_SIZE, h: 4, d: 3, type: 'door', orient: 'x' });
+                    // Right corridor (along X axis)
+                    const corrX = rx + CELL_SIZE / 2;
+                    const corrZ = rz;
+                    rooms.push({ x: corrX, y: startY, z: corrZ, w: CELL_SIZE - 6, h: 5, d: 5, type: 'corridor', shape: 'square' });
+                    
+                    // Doorway at the LEFT side of corridor (where it meets this room)
+                    rooms.push({ 
+                        x: rx + Math.floor(roomW / 2) + 1, y: startY, z: rz,
+                        w: 1, h: 5, d: 3, type: 'doorway', orient: 'x'
+                    });
+                    // Doorway at the RIGHT side of corridor (where it meets next room)
+                    const nextRx = startX + (conn.x - 2) * CELL_SIZE;
+                    const nextRoomW = grid[conn.x][conn.z].type === 'boss' ? 15 : 13;
+                    rooms.push({ 
+                        x: nextRx - Math.floor(nextRoomW / 2) - 1, y: startY, z: rz,
+                        w: 1, h: 5, d: 3, type: 'doorway', orient: 'x'
+                    });
                 }
                 if (conn.z > gz) { 
-                    // down corridor
-                    rooms.push({ x: rx, y: startY, z: rz + CELL_SIZE/2, w: 5, h: 4, d: CELL_SIZE - 8, type: 'corridor', shape: 'square' });
-                    doors.push({ x: rx, y: startY, z: rz + CELL_SIZE/2, w: 3, h: 4, d: CELL_SIZE, type: 'door', orient: 'z' });
+                    // Down corridor (along Z axis)
+                    const corrX = rx;
+                    const corrZ = rz + CELL_SIZE / 2;
+                    rooms.push({ x: corrX, y: startY, z: corrZ, w: 5, h: 5, d: CELL_SIZE - 6, type: 'corridor', shape: 'square' });
+                    
+                    // Doorway at TOP of corridor (meets this room)
+                    rooms.push({ 
+                        x: rx, y: startY, z: rz + Math.floor(roomD / 2) + 1,
+                        w: 3, h: 5, d: 1, type: 'doorway', orient: 'z'
+                    });
+                    // Doorway at BOTTOM of corridor (meets next room)
+                    const nextRz = startZ + (conn.z - 2) * CELL_SIZE;
+                    const nextRoomD = grid[conn.x][conn.z].type === 'boss' ? 15 : 13;
+                    rooms.push({ 
+                        x: rx, y: startY, z: nextRz - Math.floor(nextRoomD / 2) - 1,
+                        w: 3, h: 5, d: 1, type: 'doorway', orient: 'z'
+                    });
                 }
             }
         }
     }
     
-    return rooms.concat(doors);
+    return rooms;
 }
 
 function carveRoomInChunk(blocks, cx, cz, room) {
@@ -1149,12 +1176,43 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                 const lx = wx - cMinX;
                 const lz = wz - cMinZ;
                 
-                if (room.type === 'door') {
-                    if (wy >= minY + 1 && wy <= minY + 2) { // 2 blocks high, above floor
-                        if (room.orient === 'x' && wz === room.z && wx === room.x) {
-                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
-                        } else if (room.orient === 'z' && wx === room.x && wz === room.z) {
-                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
+                // Doorway: carve a proper archway with door blocks in the opening and frame around it
+                if (room.type === 'doorway') {
+                    const dx = Math.abs(wx - room.x);
+                    const dz = Math.abs(wz - room.z);
+                    
+                    if (room.orient === 'x') {
+                        // Doorway faces along X — opening is 2 wide on Z, 3 tall
+                        if (dz <= 1) {
+                            if (wy >= minY + 1 && wy <= minY + 3) {
+                                if (dz === 0) {
+                                    // Center: air opening
+                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
+                                } else {
+                                    // Frame sides
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
+                                }
+                            } else if (wy === minY + 4 && dz === 0) {
+                                // Archway top
+                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
+                            } else if (wy === minY) {
+                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS);
+                            }
+                        }
+                    } else {
+                        // Doorway faces along Z — opening is 2 wide on X, 3 tall
+                        if (dx <= 1) {
+                            if (wy >= minY + 1 && wy <= minY + 3) {
+                                if (dx === 0) {
+                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
+                                } else {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
+                                }
+                            } else if (wy === minY + 4 && dx === 0) {
+                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
+                            } else if (wy === minY) {
+                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS);
+                            }
                         }
                     }
                     continue;
@@ -1186,8 +1244,49 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                         const inArmInner = (dz <= coreD - 1 && dx <= armW - 1);
                         if (!inCoreInner && !inArmInner) isWall = true;
                     }
+                } else if (room.shape === 'L_shaped') {
+                    // L-shape: full bottom half + left half of top
+                    const inBottom = (dx <= rw && dz <= rd * 0.5);
+                    const inLeft = (dx <= rw * 0.5 && dz <= rd);
+                    if (inBottom || inLeft) {
+                        inside = true;
+                        const inBottomInner = (dx <= rw - 1 && dz <= rd * 0.5 - 1);
+                        const inLeftInner = (dx <= rw * 0.5 - 1 && dz <= rd - 1);
+                        if (!inBottomInner && !inLeftInner) isWall = true;
+                    }
+                } else if (room.shape === 'pillars') {
+                    // Square room with 4 pillars inside
+                    if (dx <= rw && dz <= rd) {
+                        inside = true;
+                        if (dx >= rw - 0.5 || dz >= rd - 0.5) isWall = true;
+                        // Pillars at 1/3 positions
+                        const pillarX = Math.floor(rw * 0.5);
+                        const pillarZ = Math.floor(rd * 0.5);
+                        if ((dx === pillarX || dx === pillarX - 1) && (dz === pillarZ || dz === pillarZ - 1)) {
+                            isWall = true; // Pillar block
+                        }
+                    }
+                } else if (room.shape === 'pit') {
+                    // Square room with sunken center
+                    if (dx <= rw && dz <= rd) {
+                        inside = true;
+                        if (dx >= rw - 0.5 || dz >= rd - 0.5) isWall = true;
+                    }
+                } else if (room.shape === 'library') {
+                    // Rectangular room with bookshelf blocks along walls
+                    if (dx <= rw && dz <= rd) {
+                        inside = true;
+                        if (dx >= rw - 0.5 || dz >= rd - 0.5) isWall = true;
+                        // Shelves 1 block inward from walls, 1-2 blocks tall
+                        if (wy >= minY + 1 && wy <= minY + 2) {
+                            if ((dx === Math.floor(rw) - 1 || dz === Math.floor(rd) - 1) && dx < rw - 0.5 && dz < rd - 0.5) {
+                                // Don't place shelves at the exact center (leave walkways)
+                                if (dx > 1 && dz > 1) isWall = true;
+                            }
+                        }
+                    }
                 } else {
-                    // square
+                    // square (default)
                     if (dx <= rw && dz <= rd) {
                         inside = true;
                         if (dx >= rw - 0.5 || dz >= rd - 0.5) isWall = true;
@@ -1202,16 +1301,35 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                 
                 if (isWall) {
                     if (room.type === 'boss') safeSetBlock(blocks, lx, wy, lz, BLOCKS.PORTAL_FRAME);
-                    else {
-                        // Degraded dungeon walls
+                    else if (room.shape === 'library' && wy >= minY + 1 && wy <= minY + 2) {
+                        // Use planks for bookshelves in interior, themed brick for outer walls
+                        const isOuterWall = dx >= rw - 0.5 || dz >= rd - 0.5 || wy === minY || wy === maxY;
+                        if (isOuterWall) {
+                            if (wy === minY) safeSetBlock(blocks, lx, wy, lz, room.theme.floor);
+                            else safeSetBlock(blocks, lx, wy, lz, room.theme.brick);
+                        } else {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.PLANKS); // Bookshelf
+                        }
+                    } else if (room.shape === 'pillars' && dx < rw - 0.5 && dz < rd - 0.5 && wy > minY && wy < maxY) {
+                        // Pillar columns: use cobblestone for contrast
+                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
+                    } else {
                         const wallRng = Math.random();
                         if (wy === minY) safeSetBlock(blocks, lx, wy, lz, room.theme.floor);
                         else if (wallRng < 0.15) safeSetBlock(blocks, lx, wy, lz, BLOCKS.COBBLESTONE);
                         else safeSetBlock(blocks, lx, wy, lz, room.theme.brick);
                     }
                 } else {
+                    // Interior air or special features
                     if (room.type === 'entrance' && wy <= minY + 2) {
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.WATER);
+                    } else if (room.shape === 'pit' && dx <= rw * 0.4 && dz <= rd * 0.4 && wy === minY + 1) {
+                        // Sunken pit center — use lava for fire theme, water for ice, etc.
+                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR); // Dig the pit
+                        if (wy === minY + 1) {
+                            safeSetBlock(blocks, lx, minY, lz, BLOCKS.AIR); // Remove floor for pit
+                            safeSetBlock(blocks, lx, minY - 1, lz, room.theme.floor); // New pit floor
+                        }
                     } else {
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
                     }
@@ -1221,11 +1339,21 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.BOSS_SPAWNER);
                     }
                     
-                    // Chests (center for simplicity in organic rooms)
+                    // Chests
                     if (room.type === 'normal' && wy === minY + 1 && wx === Math.floor(room.x) && wz === Math.floor(room.z)) {
                         const chestRng = Math.random();
                         if (chestRng < 0.3) {
                             safeSetBlock(blocks, lx, wy, lz, BLOCKS.CHEST_BLOCK);
+                        }
+                    }
+                    
+                    // Torches in rooms for light
+                    if (wy === minY + 3 && room.type !== 'entrance' && room.type !== 'corridor') {
+                        if (wx === Math.floor(room.x) && (wz === Math.floor(room.z - rd + 2) || wz === Math.floor(room.z + rd - 2))) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.TORCH);
+                        }
+                        if (wz === Math.floor(room.z) && (wx === Math.floor(room.x - rw + 2) || wx === Math.floor(room.x + rw - 2))) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.TORCH);
                         }
                     }
                 }

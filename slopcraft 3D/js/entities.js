@@ -1099,6 +1099,215 @@ export const MOB_TYPES = {
             mesh.position.y += Math.sin(age * 2) * 0.004;
         }
     },
+    FIRE_GOLEM: {
+        name: 'Fire Golem', health: 100, damage: 18, speed: 1.8, hostile: true, color: 0xff4400,
+        size: 1.3, xpDrop: 30, lootChance: 0.8,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const bodyColor = 0xcc3300;
+            const legColor = 0x881100;
+            const body = createBodyPart(new THREE.BoxGeometry(0.7, 0.8, 0.5), bodyColor);
+            body.position.y = 0.9;
+            group.add(body);
+            const head = createBodyPart(new THREE.BoxGeometry(0.4, 0.35, 0.35), bodyColor);
+            head.position.y = 1.5;
+            group.add(head);
+            const eyeGeo = new THREE.BoxGeometry(0.1, 0.06, 0.02);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+            const le = new THREE.Mesh(eyeGeo, eyeMat); le.position.set(-0.1, 1.52, 0.18); group.add(le);
+            const re = new THREE.Mesh(eyeGeo, eyeMat); re.position.set(0.1, 1.52, 0.18); group.add(re);
+            const armGeo = new THREE.BoxGeometry(0.25, 0.7, 0.25);
+            const la = createBodyPart(armGeo, bodyColor); la.position.set(-0.55, 0.75, 0); la.name = 'leftArm'; group.add(la);
+            const ra = createBodyPart(armGeo, bodyColor); ra.position.set(0.55, 0.75, 0); ra.name = 'rightArm'; group.add(ra);
+            const legGeo = new THREE.BoxGeometry(0.25, 0.5, 0.25);
+            const ll = createBodyPart(legGeo, legColor); ll.position.set(-0.2, 0.25, 0); ll.name = 'leftLeg'; group.add(ll);
+            const rl = createBodyPart(legGeo, legColor); rl.position.set(0.2, 0.25, 0); rl.name = 'rightLeg'; group.add(rl);
+            const flameGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+            const lsFlame = createBodyPart(flameGeo, 0xff4400, 0xff4400, 1.5); lsFlame.position.set(-0.55, 1.2, 0); lsFlame.name = 'lsFlame'; group.add(lsFlame);
+            const rsFlame = createBodyPart(flameGeo, 0xff4400, 0xff4400, 1.5); rsFlame.position.set(0.55, 1.2, 0); rsFlame.name = 'rsFlame'; group.add(rsFlame);
+            return group;
+        },
+        animate: (mesh, speed, dt, age) => {
+            const swing = Math.sin(age * 6) * 0.6 * Math.min(speed, 1.5);
+            if (speed > 0.1) {
+                mesh.getObjectByName('leftArm').rotation.x = swing;
+                mesh.getObjectByName('rightArm').rotation.x = -swing;
+                mesh.getObjectByName('leftLeg').rotation.x = -swing;
+                mesh.getObjectByName('rightLeg').rotation.x = swing;
+            } else {
+                mesh.getObjectByName('leftArm').rotation.x *= 0.9;
+                mesh.getObjectByName('rightArm').rotation.x *= 0.9;
+                mesh.getObjectByName('leftLeg').rotation.x *= 0.9;
+                mesh.getObjectByName('rightLeg').rotation.x *= 0.9;
+            }
+            mesh.getObjectByName('lsFlame').position.y = 1.2 + Math.sin(age * 8) * 0.05;
+            mesh.getObjectByName('rsFlame').position.y = 1.2 + Math.cos(age * 8) * 0.05;
+        }
+    },
+    ICE_GOLEM: {
+        name: 'Ice Golem', health: 90, damage: 14, speed: 1.4, hostile: true, color: 0x88ccff,
+        size: 1.3, xpDrop: 30, lootChance: 0.8,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const bodyColor = 0x88ccff;
+            const legColor = 0xccddff;
+            const body = createBodyPart(new THREE.BoxGeometry(0.7, 0.8, 0.5), bodyColor);
+            body.position.y = 0.9;
+            group.add(body);
+            const head = createBodyPart(new THREE.BoxGeometry(0.4, 0.35, 0.35), bodyColor);
+            head.position.y = 1.5;
+            group.add(head);
+            const eyeGeo = new THREE.BoxGeometry(0.1, 0.06, 0.02);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const le = new THREE.Mesh(eyeGeo, eyeMat); le.position.set(-0.1, 1.52, 0.18); group.add(le);
+            const re = new THREE.Mesh(eyeGeo, eyeMat); re.position.set(0.1, 1.52, 0.18); group.add(re);
+            const armGeo = new THREE.BoxGeometry(0.25, 0.7, 0.25);
+            const la = createBodyPart(armGeo, bodyColor); la.position.set(-0.55, 0.75, 0); la.name = 'leftArm'; group.add(la);
+            const ra = createBodyPart(armGeo, bodyColor); ra.position.set(0.55, 0.75, 0); ra.name = 'rightArm'; group.add(ra);
+            const legGeo = new THREE.BoxGeometry(0.25, 0.5, 0.25);
+            const ll = createBodyPart(legGeo, legColor); ll.position.set(-0.2, 0.25, 0); ll.name = 'leftLeg'; group.add(ll);
+            const rl = createBodyPart(legGeo, legColor); rl.position.set(0.2, 0.25, 0); rl.name = 'rightLeg'; group.add(rl);
+            const spikeGeo = new THREE.ConeGeometry(0.05, 0.2, 4);
+            const spike1 = createBodyPart(spikeGeo, 0xccddff); spike1.position.set(-0.1, 1.75, 0); group.add(spike1);
+            const spike2 = createBodyPart(spikeGeo, 0xccddff); spike2.position.set(0.1, 1.7, 0.05); group.add(spike2);
+            const spike3 = createBodyPart(spikeGeo, 0xccddff); spike3.position.set(0, 1.78, -0.05); group.add(spike3);
+            return group;
+        },
+        animate: (mesh, speed, dt, age) => {
+            const swing = Math.sin(age * 3.5) * 0.6 * Math.min(speed, 1.5);
+            if (speed > 0.1) {
+                mesh.getObjectByName('leftArm').rotation.x = swing;
+                mesh.getObjectByName('rightArm').rotation.x = -swing;
+                mesh.getObjectByName('leftLeg').rotation.x = -swing;
+                mesh.getObjectByName('rightLeg').rotation.x = swing;
+            } else {
+                mesh.getObjectByName('leftArm').rotation.x *= 0.9;
+                mesh.getObjectByName('rightArm').rotation.x *= 0.9;
+                mesh.getObjectByName('leftLeg').rotation.x *= 0.9;
+                mesh.getObjectByName('rightLeg').rotation.x *= 0.9;
+            }
+        }
+    },
+    JUNGLE_GUARDIAN: {
+        name: 'Jungle Guardian', health: 85, damage: 16, speed: 2.2, hostile: true, color: 0x338833,
+        size: 1.1, xpDrop: 28, lootChance: 0.8,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const bodyColor = 0x225522;
+            const mossColor = 0x338833;
+            const body = createBodyPart(new THREE.BoxGeometry(0.6, 0.7, 0.4), bodyColor);
+            body.position.y = 0.85;
+            group.add(body);
+            const head = createBodyPart(new THREE.BoxGeometry(0.35, 0.35, 0.35), mossColor);
+            head.position.y = 1.4;
+            group.add(head);
+            const eyeGeo = new THREE.BoxGeometry(0.08, 0.06, 0.02);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ff44 });
+            const le = new THREE.Mesh(eyeGeo, eyeMat); le.position.set(-0.1, 1.42, 0.18); group.add(le);
+            const re = new THREE.Mesh(eyeGeo, eyeMat); re.position.set(0.1, 1.42, 0.18); group.add(re);
+            const armGeo = new THREE.BoxGeometry(0.2, 0.65, 0.2);
+            const la = createBodyPart(armGeo, bodyColor); la.position.set(-0.45, 0.7, 0); la.name = 'leftArm'; group.add(la);
+            const ra = createBodyPart(armGeo, bodyColor); ra.position.set(0.45, 0.7, 0); ra.name = 'rightArm'; group.add(ra);
+            const vineGeo = new THREE.BoxGeometry(0.05, 0.5, 0.05);
+            const vineL = createBodyPart(vineGeo, mossColor); vineL.position.set(0, -0.3, 0); vineL.name = 'vine_left'; la.add(vineL);
+            const vineR = createBodyPart(vineGeo, mossColor); vineR.position.set(0, -0.3, 0); vineR.name = 'vine_right'; ra.add(vineR);
+            const legGeo = new THREE.BoxGeometry(0.2, 0.5, 0.2);
+            const ll = createBodyPart(legGeo, bodyColor); ll.position.set(-0.15, 0.25, 0); ll.name = 'leftLeg'; group.add(ll);
+            const rl = createBodyPart(legGeo, bodyColor); rl.position.set(0.15, 0.25, 0); rl.name = 'rightLeg'; group.add(rl);
+            return group;
+        },
+        animate: (mesh, speed, dt, age) => {
+            const swing = Math.sin(age * 5) * 0.6 * Math.min(speed, 1.5);
+            if (speed > 0.1) {
+                mesh.getObjectByName('leftArm').rotation.x = swing;
+                mesh.getObjectByName('rightArm').rotation.x = -swing;
+                mesh.getObjectByName('leftLeg').rotation.x = -swing;
+                mesh.getObjectByName('rightLeg').rotation.x = swing;
+            } else {
+                mesh.getObjectByName('leftArm').rotation.x *= 0.9;
+                mesh.getObjectByName('rightArm').rotation.x *= 0.9;
+                mesh.getObjectByName('leftLeg').rotation.x *= 0.9;
+                mesh.getObjectByName('rightLeg').rotation.x *= 0.9;
+            }
+            mesh.getObjectByName('leftArm').getObjectByName('vine_left').rotation.z = Math.sin(age * 4) * 0.3;
+            mesh.getObjectByName('rightArm').getObjectByName('vine_right').rotation.z = Math.sin(age * 4) * 0.3;
+        }
+    },
+    SAND_WRAITH: {
+        name: 'Sand Wraith', health: 75, damage: 20, speed: 2.8, hostile: true, color: 0xddbb66,
+        size: 1.0, xpDrop: 28, lootChance: 0.8, flying: true,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const bodyColor = 0xddbb66;
+            const cloakColor = 0xccaa55;
+            const skullColor = 0xeeeecc;
+            const body = createBodyPart(new THREE.BoxGeometry(0.5, 0.6, 0.3), bodyColor);
+            body.position.y = 1.0;
+            group.add(body);
+            const lowerBody = createBodyPart(new THREE.BoxGeometry(0.6, 0.4, 0.35), cloakColor);
+            lowerBody.position.y = 0.5;
+            group.add(lowerBody);
+            const tail = createBodyPart(new THREE.BoxGeometry(0.3, 0.4, 0.2), cloakColor);
+            tail.position.y = 0.1;
+            group.add(tail);
+            const head = createBodyPart(new THREE.BoxGeometry(0.3, 0.35, 0.3), skullColor);
+            head.position.y = 1.5;
+            group.add(head);
+            const eyeGeo = new THREE.BoxGeometry(0.06, 0.06, 0.02);
+            const le = createBodyPart(eyeGeo, 0x111111); le.position.set(-0.08, 1.52, 0.16); group.add(le);
+            const re = createBodyPart(eyeGeo, 0x111111); re.position.set(0.08, 1.52, 0.16); group.add(re);
+            const armGeo = new THREE.BoxGeometry(0.15, 0.6, 0.15);
+            const la = createBodyPart(armGeo, bodyColor); la.position.set(-0.35, 1.1, 0); la.rotation.z = 0.2; group.add(la);
+            const ra = createBodyPart(armGeo, bodyColor); ra.position.set(0.35, 1.1, 0); ra.rotation.z = -0.2; group.add(ra);
+            return group;
+        },
+        animate: (mesh, speed, dt, age) => {
+            mesh.position.y += Math.sin(age * 2) * 0.1 * dt;
+            mesh.rotation.z = Math.sin(age * 1.5) * 0.1;
+        }
+    },
+    LICH: {
+        name: 'Lich', health: 120, damage: 12, speed: 1.6, hostile: true, color: 0x6633aa,
+        size: 1.1, xpDrop: 35, lootChance: 0.9, flying: true,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const robeColor = 0x331166;
+            const skullColor = 0xddddcc;
+            const body = createBodyPart(new THREE.BoxGeometry(0.5, 0.8, 0.3), robeColor);
+            body.position.y = 0.9;
+            group.add(body);
+            const head = createBodyPart(new THREE.BoxGeometry(0.35, 0.35, 0.35), skullColor);
+            head.position.y = 1.5;
+            group.add(head);
+            const eyeGeo = new THREE.BoxGeometry(0.08, 0.06, 0.02);
+            const le = createBodyPart(eyeGeo, 0xaa00ff, 0xaa00ff, 1); le.position.set(-0.1, 1.52, 0.18); group.add(le);
+            const re = createBodyPart(eyeGeo, 0xaa00ff, 0xaa00ff, 1); re.position.set(0.1, 1.52, 0.18); group.add(re);
+            const armGeo = new THREE.BoxGeometry(0.15, 0.6, 0.15);
+            const la = createBodyPart(armGeo, robeColor); la.position.set(-0.35, 1.0, 0); group.add(la);
+            const ra = createBodyPart(armGeo, robeColor); ra.position.set(0.35, 1.0, 0); ra.rotation.x = -0.5; group.add(ra);
+            const staff = createBodyPart(new THREE.CylinderGeometry(0.03, 0.03, 1.2), 0x553311);
+            staff.position.set(0.35, 0.6, -0.2); staff.rotation.x = 0.2; staff.name = 'staff'; group.add(staff);
+            for (let i = 0; i < 3; i++) {
+                const p = createBodyPart(new THREE.BoxGeometry(0.1, 0.1, 0.1), 0xaa00ff, 0xaa00ff, 1);
+                p.name = `particle_${i}`; group.add(p);
+            }
+            return group;
+        },
+        animate: (mesh, speed, dt, age) => {
+            mesh.position.y += Math.sin(age * 2) * 0.1 * dt;
+            mesh.getObjectByName('staff').position.y = 0.6 + Math.sin(age * 3) * 0.05;
+            for (let i = 0; i < 3; i++) {
+                const p = mesh.getObjectByName(`particle_${i}`);
+                if (p) {
+                    const angle = age * 3 + i * Math.PI * 2 / 3;
+                    const r = 0.6 + Math.sin(age * 2 + i) * 0.1;
+                    p.position.x = Math.cos(angle) * r;
+                    p.position.z = Math.sin(angle) * r;
+                    p.position.y = 0.9 + Math.sin(age * 4 + i) * 0.2;
+                }
+            }
+        }
+    },
     COD: {
         name: 'Cod', health: 3, damage: 0, speed: 2.2, hostile: false, color: 0xbbbb99,
         size: 0.3, xpDrop: 1, lootChance: 0.1, waterOnly: true,
@@ -2415,9 +2624,8 @@ export class Mob {
 }
 
 export class Boss extends Mob {
-    constructor(typeKey, position) {
+    constructor(typeKey, position, bossTheme = 'normal') {
         super(typeKey, position);
-        // Scale up stats
         this.health *= 3;
         this.maxHealth = this.health;
         this.damage *= 2;
@@ -2427,6 +2635,12 @@ export class Boss extends Mob {
         this.abilityTimer = 0;
         this.didSlam = false;
         this.wantsToSummon = false;
+        this.bossTheme = bossTheme;
+        this.wantsToCastFireball = false;
+        this.wantsToFreeze = false;
+        this.wantsToPull = false;
+        this.wantsToTeleport = false;
+        this.wantsToDrain = false;
     }
     
     getMesh() {
@@ -2443,7 +2657,7 @@ export class Boss extends Mob {
         if (!this.alive) return;
 
         const dist = this.position.distanceTo(playerPos);
-        if (dist > 32) return; // Wait until player is near
+        if (dist > 32) return;
 
         // Phase Transition (Enrage below 50% health)
         const pct = this.health / this.maxHealth;
@@ -2451,7 +2665,6 @@ export class Boss extends Mob {
             this.phase = 2;
             this.speed *= 1.3;
             this.damage *= 1.3;
-            // Visual enrage effect (Red Tint)
             if (this.mesh) {
                 this.mesh.traverse(child => {
                     if (child.isMesh && child.material && child.material.emissive) {
@@ -2462,20 +2675,57 @@ export class Boss extends Mob {
             }
         }
 
-        // Special Abilities
+        // Theme-specific abilities
         this.abilityTimer += dt;
         const abilityInterval = this.phase === 1 ? 5.0 : 3.5;
 
         if (this.abilityTimer > abilityInterval) {
             this.abilityTimer = 0;
             const r = Math.random();
-            if (r < 0.5) {
-                // Ground Slam: Jump up, and trigger slam when hitting the ground
-                this.velocity.y = 8;
-                this.didSlam = true;
-            } else {
-                // Summon Minion
-                this.wantsToSummon = true;
+
+            switch (this.bossTheme) {
+                case 'fire':
+                    if (r < 0.5) {
+                        this.wantsToCastFireball = true; // Fireball barrage
+                    } else {
+                        this.velocity.y = 8; this.didSlam = true; // Fire slam
+                    }
+                    break;
+                case 'ice':
+                    if (r < 0.5) {
+                        this.wantsToFreeze = true; // Freeze blast
+                    } else {
+                        this.wantsToSummon = true;
+                    }
+                    break;
+                case 'jungle':
+                    if (r < 0.5) {
+                        this.wantsToPull = true; // Vine grab
+                    } else {
+                        this.velocity.y = 8; this.didSlam = true;
+                    }
+                    break;
+                case 'desert':
+                    if (r < 0.5) {
+                        this.wantsToTeleport = true; // Teleport behind player
+                    } else {
+                        this.velocity.y = 8; this.didSlam = true;
+                    }
+                    break;
+                case 'undead':
+                    if (r < 0.4) {
+                        this.wantsToDrain = true; // Soul drain
+                    } else {
+                        this.wantsToSummon = true; // Mass summon
+                    }
+                    break;
+                default: // normal
+                    if (r < 0.5) {
+                        this.velocity.y = 8; this.didSlam = true;
+                    } else {
+                        this.wantsToSummon = true;
+                    }
+                    break;
             }
         }
     }
@@ -2520,10 +2770,13 @@ export class EntityManager {
                             // Determine boss type based on surrounding blocks (theme)
                             let themeBlock = world.getBlock(px+x, py+y-1, pz+z);
                             let bossType = 'GOLEM';
-                            if (themeBlock === BLOCKS.DUNGEON_FIRE_FLOOR) bossType = 'WISP'; // Or fire boss
-                            else if (themeBlock === BLOCKS.DUNGEON_ICE_FLOOR) bossType = 'WISP';
-                            // Spawn Boss!
-                            const boss = new Boss(bossType, new THREE.Vector3(px+x, py+y, pz+z));
+                            let bossTheme = 'normal';
+                            if (themeBlock === BLOCKS.DUNGEON_FIRE_FLOOR) { bossType = 'FIRE_GOLEM'; bossTheme = 'fire'; }
+                            else if (themeBlock === BLOCKS.DUNGEON_ICE_FLOOR) { bossType = 'ICE_GOLEM'; bossTheme = 'ice'; }
+                            else if (themeBlock === BLOCKS.DUNGEON_JUNGLE_FLOOR) { bossType = 'JUNGLE_GUARDIAN'; bossTheme = 'jungle'; }
+                            else if (themeBlock === BLOCKS.DUNGEON_DESERT_FLOOR) { bossType = 'SAND_WRAITH'; bossTheme = 'desert'; }
+                            else if (themeBlock === BLOCKS.DUNGEON_UNDEAD_FLOOR) { bossType = 'LICH'; bossTheme = 'undead'; }
+                            const boss = new Boss(bossType, new THREE.Vector3(px+x, py+y, pz+z), bossTheme);
                             this.addMob(boss);
                         }
                     }
@@ -2624,12 +2877,56 @@ export class EntityManager {
                 }
                 if (mob.wantsToSummon) {
                     mob.wantsToSummon = false;
-                    // Summon a skeleton or zombie nearby
-                    const sx = mob.position.x + (Math.random() - 0.5) * 6;
-                    const sz = mob.position.z + (Math.random() - 0.5) * 6;
-                    const minionTypes = ['SKELETON', 'ZOMBIE', 'SPIDER'];
-                    const minion = new Mob(minionTypes[Math.floor(Math.random() * minionTypes.length)], new THREE.Vector3(sx, mob.position.y + 1, sz));
-                    this.addMob(minion);
+                    const count = mob.bossTheme === 'undead' ? 3 : 1;
+                    for (let si = 0; si < count; si++) {
+                        const sx = mob.position.x + (Math.random() - 0.5) * 6;
+                        const sz = mob.position.z + (Math.random() - 0.5) * 6;
+                        let minionTypes = ['SKELETON', 'ZOMBIE', 'SPIDER'];
+                        if (mob.bossTheme === 'undead') minionTypes = ['SKELETON', 'ZOMBIE'];
+                        else if (mob.bossTheme === 'ice') minionTypes = ['SKELETON'];
+                        const minion = new Mob(minionTypes[Math.floor(Math.random() * minionTypes.length)], new THREE.Vector3(sx, mob.position.y + 1, sz));
+                        this.addMob(minion);
+                    }
+                }
+                if (mob.wantsToCastFireball) {
+                    mob.wantsToCastFireball = false;
+                    mob.wantsToCastWind = playerPos.clone().sub(mob.position).normalize();
+                }
+                if (mob.wantsToFreeze) {
+                    mob.wantsToFreeze = false;
+                    if (player && mob.position.distanceTo(playerPos) < 12) {
+                        player.speedMultiplier = 0.3;
+                        setTimeout(() => { if (player) player.speedMultiplier = 1.0; }, 3000);
+                    }
+                }
+                if (mob.wantsToPull) {
+                    mob.wantsToPull = false;
+                    if (player && mob.position.distanceTo(playerPos) < 16) {
+                        const pullDir = mob.position.clone().sub(playerPos).normalize().multiplyScalar(8);
+                        player.velocity.x += pullDir.x;
+                        player.velocity.z += pullDir.z;
+                        player.velocity.y += 2;
+                    }
+                }
+                if (mob.wantsToTeleport) {
+                    mob.wantsToTeleport = false;
+                    if (player) {
+                        const behind = playerPos.clone();
+                        const facing = new THREE.Vector3(0, 0, -1).applyQuaternion(player.mesh ? player.mesh.quaternion : new THREE.Quaternion());
+                        behind.addScaledVector(facing, -3);
+                        mob.position.copy(behind);
+                        mob.position.y = playerPos.y;
+                    }
+                }
+                if (mob.wantsToDrain) {
+                    mob.wantsToDrain = false;
+                    if (player && mob.position.distanceTo(playerPos) < 10) {
+                        const drainDmg = 8;
+                        player.takeDamage(drainDmg);
+                        mob.health = Math.min(mob.maxHealth, mob.health + drainDmg * 2);
+                        const d = document.getElementById('damage-flash');
+                        if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                    }
                 }
             }
             
