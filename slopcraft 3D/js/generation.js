@@ -1304,8 +1304,11 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                         if (dz <= 1) {
                             if (wy >= minY + 1 && wy <= minY + 3) {
                                 if (dz === 0) {
-                                    // Center: air opening
-                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
+                                    if (wy === minY + 1 || wy === minY + 2) {
+                                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
+                                    } else {
+                                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
+                                    }
                                 } else {
                                     // Frame sides
                                     safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
@@ -1322,7 +1325,11 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                         if (dx <= 1) {
                             if (wy >= minY + 1 && wy <= minY + 3) {
                                 if (dx === 0) {
-                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
+                                    if (wy === minY + 1 || wy === minY + 2) {
+                                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
+                                    } else {
+                                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
+                                    }
                                 } else {
                                     safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
                                 }

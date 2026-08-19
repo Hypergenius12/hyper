@@ -608,13 +608,23 @@ class Game {
         doorGroup.add(meshBot);
         doorGroup.add(meshTop);
         
-        // Place mesh at block origin, centered in Z
-        doorGroup.position.set(x, y, z + 0.5);
-        doorGroup.rotation.y = 0; // Default facing
+        // Determine orientation by checking neighbors
+        const isWallX = this.world.getBlock(x - 1, y, z) !== window.BLOCKS.AIR && this.world.getBlock(x + 1, y, z) !== window.BLOCKS.AIR;
+        const isWallZ = this.world.getBlock(x, y, z - 1) !== window.BLOCKS.AIR && this.world.getBlock(x, y, z + 1) !== window.BLOCKS.AIR;
+        
+        if (isWallX) {
+            // Walls on X axis -> Tunnel on Z axis -> Door spans X
+            doorGroup.position.set(x, y, z + 0.5);
+            doorGroup.rotation.y = 0;
+            this.doors.set(key, { mesh: doorGroup, isOpen: false, baseRotationY: 0, x, y, z });
+        } else {
+            // Walls on Z axis -> Tunnel on X axis -> Door spans Z
+            doorGroup.position.set(x + 0.5, y, z);
+            doorGroup.rotation.y = Math.PI / 2;
+            this.doors.set(key, { mesh: doorGroup, isOpen: false, baseRotationY: Math.PI / 2, x, y, z });
+        }
         
         this.engine.scene.add(doorGroup);
-        
-        this.doors.set(key, { mesh: doorGroup, isOpen: false, baseRotationY: 0, x, y, z });
     }
 
     _updateFurnaces(dt) {
