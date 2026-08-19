@@ -249,8 +249,11 @@ const BLOCK_PROPS = {
     [BLOCKS.CRIMSON_STEM]:  { name: 'Crimson Stem',   health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true }, // Will make it drop custom wood in drops logic if needed
     [BLOCKS.CRIMSON_LEAVES]:{ name: 'Crimson Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.NETHER_WART_BLOCK]: { name: 'Nether Wart Block', health: 2, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.SEAGRASS]:      { name: 'Seagrass',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.KELP]:          { name: 'Kelp',           health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.TUBE_CORAL]:    { name: 'Tube Coral',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.BRAIN_CORAL]:   { name: 'Brain Coral',    health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.BUBBLE_CORAL]:  { name: 'Bubble Coral',   health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.FIRE_CORAL]:    { name: 'Fire Coral',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.HORN_CORAL]:    { name: 'Horn Coral',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.PINE_WOOD]:     { name: 'Pine Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
@@ -1385,6 +1388,38 @@ function generateBlockTexture(ctx, blockType, face, rng) {
                 ctx.fillRect(4, y, 8, 2); // rungs
             }
             addNoise(ctx, rng, 10);
+            break;
+        case BLOCKS.SEAGRASS:
+        case BLOCKS.KELP:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = blockType === BLOCKS.SEAGRASS ? 'rgb(60, 160, 80)' : 'rgb(80, 140, 60)';
+            const blades = blockType === BLOCKS.SEAGRASS ? 5 : 2;
+            for (let i = 0; i < blades; i++) {
+                let bx = 2 + Math.floor(rng() * 10);
+                let height = 8 + Math.floor(rng() * 8);
+                ctx.fillRect(bx, TEX_SIZE - height, 2, height);
+            }
+            break;
+        case BLOCKS.TUBE_CORAL:
+        case BLOCKS.BRAIN_CORAL:
+        case BLOCKS.BUBBLE_CORAL:
+        case BLOCKS.FIRE_CORAL:
+        case BLOCKS.HORN_CORAL:
+            let corBase;
+            if (blockType === BLOCKS.TUBE_CORAL) corBase = [0, 100, 255]; // blue
+            else if (blockType === BLOCKS.BRAIN_CORAL) corBase = [255, 100, 200]; // pink
+            else if (blockType === BLOCKS.BUBBLE_CORAL) corBase = [150, 0, 150]; // purple
+            else if (blockType === BLOCKS.FIRE_CORAL) corBase = [255, 50, 0]; // red
+            else corBase = [255, 200, 50]; // yellow
+            
+            fillBase(ctx, corBase[0], corBase[1], corBase[2]);
+            addNoise(ctx, rng, 30);
+            
+            // Draw coral details
+            ctx.fillStyle = `rgba(255,255,255,0.4)`;
+            for (let i = 0; i < 8; i++) {
+                ctx.fillRect(Math.floor(rng() * 14), Math.floor(rng() * 14), 2, 2);
+            }
             break;
         case BLOCKS.IRON_BLOCK:
             fillBase(ctx, 210, 210, 210);

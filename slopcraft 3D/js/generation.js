@@ -667,23 +667,47 @@ export function generateChunkTerrain(cx, cz, params) {
         for (let tz = -3; tz <= CHUNK_SIZE + 2; tz++) {
             const wx = wxBase + tx;
             const wz = wzBase + tz;
-            const { biome, surfaceY, colRng } = getColumnInfo(wx, wz, params);
+            const { biome, surfaceY, colRng, bData } = getColumnInfo(wx, wz, params);
             
-            // Re-roll colRng to match the exact state right after terrain gen if we want strictly same, 
-            // but since we do it procedurally per col it's fine. We need to skip the exact number of colRng calls made in terrain loop, 
-            // but it's easier to just use a new seeded random for flora.
             const floraRng = seededRandom(params.seed + wx * 7777 + wz);
 
-            if (surfaceY > params.seaLevel && surfaceY < CHUNK_HEIGHT - 10) {
-                // If it's outside chunk, we don't know if the base is air/water natively without checking blocks[]
-                // We'll trust getColumnInfo for height, assume valid if not water.
+            if (surfaceY < CHUNK_HEIGHT - 10) {
                 const r = floraRng();
+                const isUnderwater = surfaceY < params.seaLevel || (bData && bData.lakeSurfaceY && surfaceY < bData.lakeSurfaceY);
+                
+                if (isUnderwater) {
+                    if (biome.isCoralReef && r < 0.3) {
+                        const cRng = floraRng();
+                        let coralType;
+                        if (cRng < 0.2) coralType = BLOCKS.TUBE_CORAL;
+                        else if (cRng < 0.4) coralType = BLOCKS.BRAIN_CORAL;
+                        else if (cRng < 0.6) coralType = BLOCKS.FIRE_CORAL;
+                        else if (cRng < 0.8) coralType = BLOCKS.HORN_CORAL;
+                        else if (cRng < 0.9) coralType = BLOCKS.BUBBLE_CORAL;
+                        else coralType = BLOCKS.SAND; // Blank space
+                        if (coralType !== BLOCKS.SAND) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType, true);
+                        }
+                    } else if (r < 0.2) {
+                        const cRng = floraRng();
+                        if (cRng < 0.1) {
+                            // Kelp column
+                            const kHeight = 2 + Math.floor(floraRng() * 6);
+                            for(let i = 1; i <= kHeight; i++) {
+                                if (surfaceY + i < params.seaLevel - 1) {
+                                    safeSetBlock(blocks, tx, surfaceY + i, tz, BLOCKS.KELP, true);
+                                }
+                            }
+                        } else {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.SEAGRASS, true);
+                        }
+                    }
+                    continue; // Done with underwater flora
+                }
                 
                 // Sugarcane logic
                 if ((surfaceY === params.seaLevel || surfaceY === params.seaLevel + 1) && r < 0.1 && (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome === BIOMES.SWAMP || biome === BIOMES.DESERT)) {
                     // It must be placed exactly near water. We know beaches are sand here.
-                    // We only spawn if the chunk column is adjacent to water (the chunk itself generated water next to it)
-                    // We can estimate by checking the neighbors' surfaceY
                     const left = getColumnInfo(wx - 1, wz, params).surfaceY;
                     const right = getColumnInfo(wx + 1, wz, params).surfaceY;
                     const top = getColumnInfo(wx, wz - 1, params).surfaceY;
@@ -738,34 +762,22 @@ export function generateChunkTerrain(cx, cz, params) {
                     else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true); // Bush
                 } else if (biome.alienFlora && r < 0.15) {
                     safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALIEN_TALL_GRASS, true);
-                } else if (biome.isCoralReef && surfaceY < params.seaLevel && r < 0.3) {
-                    const cRng = floraRng();
-                    let coralType;
-                    if (cRng < 0.2) coralType = BLOCKS.TUBE_CORAL;
-                    else if (cRng < 0.4) coralType = BLOCKS.BRAIN_CORAL;
-                    else if (cRng < 0.6) coralType = BLOCKS.FIRE_CORAL;
-                    else if (cRng < 0.8) coralType = BLOCKS.HORN_CORAL;
-                    else if (cRng < 0.9) coralType = BLOCKS.GLOWSTONE; // Sea pickle equivalent
-                    else coralType = BLOCKS.SAND; // Blank space
-                    if (coralType !== BLOCKS.SAND) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType, true);
-                    }
                 } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && biome.name !== 'Volcanic' && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef) {
                     // Normal grass logic
-                    let r = floraRng();
-                    if (biome === BIOMES.CHERRY_GROVE && r < 0.4) {
+                    let fr = floraRng();
+                    if (biome === BIOMES.CHERRY_GROVE && fr < 0.4) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
-                    } else if (biome === BIOMES.AUTUMN_FOREST && r < 0.4) {
+                    } else if (biome === BIOMES.AUTUMN_FOREST && fr < 0.4) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FALLEN_LEAVES, true);
-                    } else if (biome === BIOMES.GLOW_FOREST && r < 0.1) {
+                    } else if (biome === BIOMES.GLOW_FOREST && fr < 0.1) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
-                    } else if (biome === BIOMES.OASIS && r < 0.2) {
+                    } else if (biome === BIOMES.OASIS && fr < 0.2) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.OASIS_FERN, true);
-                    } else if (r < 0.2) {
+                    } else if (fr < 0.2) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, floraRng() > 0.3 ? BLOCKS.TALL_GRASS : BLOCKS.FERN, true);
-                    } else if (r >= 0.2 && r < 0.25) {
-                        const fRng = floraRng();
-                        const flowerType = fRng < 0.25 ? BLOCKS.RED_FLOWER : (fRng < 0.5 ? BLOCKS.YELLOW_FLOWER : (fRng < 0.75 ? BLOCKS.BLUE_FLOWER : BLOCKS.WHITE_FLOWER));
+                    } else if (fr >= 0.2 && fr < 0.25) {
+                        const r3 = floraRng();
+                        const flowerType = r3 < 0.25 ? BLOCKS.RED_FLOWER : (r3 < 0.5 ? BLOCKS.YELLOW_FLOWER : (r3 < 0.75 ? BLOCKS.BLUE_FLOWER : BLOCKS.WHITE_FLOWER));
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);
                     }
                 }

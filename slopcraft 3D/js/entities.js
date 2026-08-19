@@ -2834,7 +2834,6 @@ export class EntityManager {
                         }
                 // Only allow hostile surface spawns at night (except in Nether)
                         const config = MOB_TYPES[type];
-                        // Check if mob is hostile by checking if it has damage
                         const isHostile = (config.damage || 0) > 0;
                         if (isHostile && isDay && !config.flying && !config.waterOnly && currentDimension !== 'nether') break; // Skip surface hostiles during day
 
@@ -2842,8 +2841,15 @@ export class EntityManager {
                         if (config.flying) spawnY = y + 5 + Math.random() * 10;
                         if (config.waterOnly) spawnY = y - 1 - Math.random() * 3;
                         
-                        const mob = new Mob(type, new THREE.Vector3(sx, spawnY, sz));
-                        this.addMob(mob);
+                        const spawnCount = config.waterOnly ? (Math.floor(Math.random() * 3) + 2) : 1; // 2 to 4 fish per spawn attempt
+                        
+                        for (let i = 0; i < spawnCount; i++) {
+                            if (this.mobs.length >= 30) break; // Increased global limit slightly if spawning groups
+                            const offsetX = config.waterOnly ? (Math.random() - 0.5) * 4 : 0;
+                            const offsetZ = config.waterOnly ? (Math.random() - 0.5) * 4 : 0;
+                            const mob = new Mob(type, new THREE.Vector3(sx + offsetX, spawnY, sz + offsetZ));
+                            this.addMob(mob);
+                        }
                         break;
                     }
                 }
