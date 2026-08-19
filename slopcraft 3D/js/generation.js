@@ -427,34 +427,85 @@ function getColumnInfo(wx, wz, params) {
         const targetTerraced = elevation * 0.2 + terracedElevation * 0.8;
         elevation = elevation * (1.0 - terraceWeight) + targetTerraced * terraceWeight;
     }
-    // Rare Lakes in non-ocean biomes
-    let lakeNoise = fbm2D(params.noise2D, wx / 40, wz / 40, 2); // Smaller size
+    // Rare Lakes in non-ocean biomes (Grid-based to prevent biome spread issues)
     let lakeSurfaceY = 0;
-    let puddleNoise = 0;
+    let inLake = false;
+    let lakeDepth = 0;
+    
+    // Size of the lake cells
+    const cellSize = 80;
+    const cx = Math.floor(wx / cellSize);
+    const cz = Math.floor(wz / cellSize);
+    
+    // Check neighboring cells for lakes that might overlap
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+            const nx = cx + dx;
+            const nz = cz + dz;
+            // Predictable random for this cell
+            const cellSeed = params.seed + nx * 13371 + nz * 918273;
+            const rng = seededRandom(cellSeed);
+            
+            // 20% chance for a lake in this cell
+            if (rng() < 0.2) {
+                const lx = nx * cellSize + rng() * cellSize;
+                const lz = nz * cellSize + rng() * cellSize;
+                
+                // Get the biome and elevation strictly at the center of the lake
+                const lContNoise = (params.noise2D(lx * 0.00028, lz * 0.00028) + 1) / 2;
+                if (lContNoise >= 0.3) {
+                    const lBaseElev = (params.seaLevel + 4) + ((lContNoise - 0.4) / 0.6) * 30;
+                    // Get biome params just for the center point
+                    const temp = (params.tempNoise(lx * 0.00028 + 5000, lz * 0.00028 + 5000) + 1) / 2;
+                    const moist = (params.moistNoise(lx * 0.00028 + 8000, lz * 0.00028 + 8000) + 1) / 2;
+                    const weird = (params.noise2D(lx * 0.0006 + 15000, lz * 0.0006 + 15000) + 1) / 2;
+                    
+                    let lBiome = BIOMES.PLAINS;
+                    if (temp < 0.2) lBiome = BIOMES.TUNDRA;
+                    else if (temp > 0.75 && moist < 0.4) lBiome = BIOMES.DESERT;
+                    else if (temp > 0.75 && moist > 0.6) lBiome = BIOMES.SWAMP;
+                    else if (moist > 0.7 && weird > 0.75) lBiome = BIOMES.ALIEN;
+                    else if (moist > 0.7 && weird > 0.6) lBiome = BIOMES.GLOW_FOREST;
+                    else if (temp > 0.75) lBiome = BIOMES.SAVANNA;
+                    
+                    const isNoLakeBiome = lBiome.name === 'Alien' || lBiome.name === 'Crystal' || lBiome.name === 'Volcanic';
+                    if (!isNoLakeBiome) {
+                        const maxR = 12 + rng() * 10;
+                        const dist = Math.hypot(wx - lx, wz - lz);
+                        const distortedDist = dist + params.noise2D(wx / 10, wz / 10) * (maxR * 0.3); // organic shape
+                        
+                        if (distortedDist < maxR) {
+                            inLake = true;
+                            lakeSurfaceY = Math.floor(lBaseElev);
+                            lakeDepth = (1 - (distortedDist / maxR)) * 7;
+                            biome = lBiome; // Override the entire lake to the central biome!
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     // Check for biome-specific puddles
     const isSwamp = biome.name === 'Swamp';
     const isOasis = biome.name === 'Oasis';
+    let puddleNoise = 0;
     if (isSwamp || isOasis) {
         puddleNoise = fbm2D(params.noise2D, wx / 12, wz / 12, 2);
     }
     
-    const isNoLakeBiome = biome.name === 'Alien' || biome.name === 'Crystal' || biome.name === 'Volcanic';
-    const hasLake = !isNoLakeBiome && lakeNoise > 0.82 && contNoise >= 0.3;
     const hasPuddle = (isSwamp || isOasis) && puddleNoise > 0.35 && factor < 0.6; // Only on flat terrain
     
-    if (hasLake || hasPuddle) {
+    if (inLake || hasPuddle) {
         let depth;
-        if (hasLake) {
-            depth = (lakeNoise - 0.82) * 50; 
+        if (inLake) {
+            depth = lakeDepth; 
         } else {
             depth = (puddleNoise - 0.35) * 15; // shallower puddles
+            let smoothOffset = hNoise * 40 * (factor * 0.2); 
+            lakeSurfaceY = Math.floor(baseElevation + smoothOffset);
         }
         
-        // Use a much smoother elevation for the surface to prevent sloping water
-        // Base elevation + a smoothed version of terrain offset
-        let smoothOffset = hNoise * 40 * (factor * 0.2); 
-        lakeSurfaceY = Math.floor(baseElevation + smoothOffset);
         elevation = lakeSurfaceY - depth;
         
         // Flatten the bottom a bit
@@ -649,25 +700,33 @@ export function generateChunkTerrain(cx, cz, params) {
                 } else if (y <= surfaceY) {
                     type = (y === surfaceY) ? biome.surface : biome.dirt;
                     
-                    const isAnyGrass = type === BLOCKS.GRASS || type === BLOCKS.SWAMP_GRASS || type === BLOCKS.SAVANNA_GRASS || type === BLOCKS.ALIEN_GRASS;
+                    const isSurfaceLike = type === BLOCKS.GRASS || type === BLOCKS.SWAMP_GRASS || type === BLOCKS.SAVANNA_GRASS || type === BLOCKS.ALIEN_GRASS || type === BLOCKS.SNOW;
                     const isDirt = type === BLOCKS.DIRT || type === BLOCKS.COARSE_DIRT || type === BLOCKS.PODZOL || type === BLOCKS.MYCELIUM;
                     
-                    // Replace grass/dirt under water or lake water with sand/dirt
-                    if ((y < params.seaLevel || y < bData.lakeSurfaceY) && isAnyGrass) {
-                        type = (biome === BIOMES.PLAINS || biome === BIOMES.DESERT || biome === BIOMES.SWAMP) ? BLOCKS.SAND : BLOCKS.DIRT;
+                    // Replace surface under water or lake water with sand/dirt/gravel
+                    if ((y < params.seaLevel || y < bData.lakeSurfaceY) && isSurfaceLike) {
+                        type = (biome === BIOMES.PLAINS || biome === BIOMES.DESERT || biome === BIOMES.SWAMP || biome === BIOMES.TUNDRA || biome === BIOMES.BEACH) ? BLOCKS.SAND : BLOCKS.DIRT;
                     }
                     
                     // Create beaches near water levels
-                    if (y <= params.seaLevel + 1 && y >= params.seaLevel - 2 && y >= surfaceY - 3 && (isAnyGrass || isDirt)) {
+                    if (y <= params.seaLevel + 1 && y >= params.seaLevel - 2 && y >= surfaceY - 3 && (isSurfaceLike || isDirt)) {
                         type = BLOCKS.SAND;
                     }
-                    if (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY + 1 && y >= bData.lakeSurfaceY - 1 && y >= surfaceY - 2 && (isAnyGrass || isDirt)) {
+                    if (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY + 1 && y >= bData.lakeSurfaceY - 1 && y >= surfaceY - 2 && (isSurfaceLike || isDirt)) {
                         type = BLOCKS.SAND; // Lake shores
                     }
                 } else if (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY) {
                     type = biome === BIOMES.VOLCANIC ? BLOCKS.LAVA : (biome === BIOMES.SWAMP ? BLOCKS.SWAMP_WATER : BLOCKS.WATER);
+                    // Freeze top layer in cold biomes
+                    if (y === bData.lakeSurfaceY && (biome === BIOMES.TUNDRA || biome === BIOMES.ICE_SPIKES || biome === BIOMES.MOUNTAINS)) {
+                        type = BLOCKS.ICE;
+                    }
                 } else if (y <= params.seaLevel) {
                     type = biome === BIOMES.VOLCANIC ? BLOCKS.LAVA : (biome === BIOMES.SWAMP ? BLOCKS.SWAMP_WATER : BLOCKS.WATER);
+                    // Freeze top layer in cold biomes
+                    if (y === params.seaLevel && (biome === BIOMES.TUNDRA || biome === BIOMES.ICE_SPIKES || biome === BIOMES.MOUNTAINS)) {
+                        type = BLOCKS.ICE;
+                    }
                 }
 
                 blocks[blockIndex(x, y, z)] = type;

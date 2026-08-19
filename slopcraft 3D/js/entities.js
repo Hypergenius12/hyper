@@ -2887,7 +2887,17 @@ export class EntityManager {
 
                         let spawnY = y + 2;
                         if (config.flying) spawnY = y + 5 + Math.random() * 10;
-                        if (config.waterOnly) spawnY = y - 1 - Math.random() * 3;
+                        if (config.waterOnly) {
+                            // Find highest non-solid block from surface
+                            spawnY = y;
+                            // Ensure they don't clip into shallow lake floors
+                            const floorDist = Math.floor(Math.random() * 2);
+                            for (let i = 0; i < floorDist; i++) {
+                                const below = world.getBlock(sx, spawnY - 1, sz);
+                                if (below === BLOCKS.WATER || below === BLOCKS.SWAMP_WATER) spawnY--;
+                                else break;
+                            }
+                        }
                         
                         const spawnCount = config.waterOnly ? (Math.floor(Math.random() * 3) + 2) : 1; // 2 to 4 fish per spawn attempt
                         
