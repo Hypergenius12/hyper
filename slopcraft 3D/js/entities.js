@@ -2771,7 +2771,7 @@ export class EntityManager {
                             let themeBlock = world.getBlock(px+x, py+y-1, pz+z);
                             let bossType = 'GOLEM';
                             let bossTheme = 'normal';
-                            if (themeBlock === BLOCKS.DUNGEON_FIRE_FLOOR) { bossType = 'FIRE_GOLEM'; bossTheme = 'fire'; }
+                            if (themeBlock === BLOCKS.DUNGEON_FIRE_FLOOR || themeBlock === BLOCKS.NETHER_BRICKS) { bossType = 'FIRE_GOLEM'; bossTheme = 'fire'; }
                             else if (themeBlock === BLOCKS.DUNGEON_ICE_FLOOR) { bossType = 'ICE_GOLEM'; bossTheme = 'ice'; }
                             else if (themeBlock === BLOCKS.DUNGEON_JUNGLE_FLOOR) { bossType = 'JUNGLE_GUARDIAN'; bossTheme = 'jungle'; }
                             else if (themeBlock === BLOCKS.DUNGEON_DESERT_FLOOR) { bossType = 'SAND_WRAITH'; bossTheme = 'desert'; }

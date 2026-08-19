@@ -368,13 +368,16 @@ function getColumnInfo(wx, wz, params) {
     const { biome, terraceWeight, contNoise, erosionNoise, weirdness } = getBiomeParams(wx, wz, params);
     
     // 1. Continentalness Base
-    let baseElevation = 60;
+    let baseElevation = params.seaLevel;
     if (contNoise < 0.3) {
-        baseElevation = 30 + (contNoise / 0.3) * 28; // 30 to 58
+        // Ocean (deep to shallow)
+        baseElevation = (params.seaLevel - 25) + (contNoise / 0.3) * 23; // e.g. -25 to -2 below sea level
     } else if (contNoise < 0.4) {
-        baseElevation = 58 + ((contNoise - 0.3) / 0.1) * 4; // 58 to 62
+        // Coastline/Beach
+        baseElevation = (params.seaLevel - 2) + ((contNoise - 0.3) / 0.1) * 6; // e.g. -2 to +4 relative to sea level
     } else {
-        baseElevation = 62 + ((contNoise - 0.4) / 0.6) * 20; // 62 to 82
+        // Inland
+        baseElevation = (params.seaLevel + 4) + ((contNoise - 0.4) / 0.6) * 30; // e.g. +4 to +34 relative to sea level
     }
 
     // 2. Erosion Factor
@@ -423,12 +426,23 @@ function getColumnInfo(wx, wz, params) {
         const targetTerraced = elevation * 0.2 + terracedElevation * 0.8;
         elevation = elevation * (1.0 - terraceWeight) + targetTerraced * terraceWeight;
     }
+    
+    // Rare Lakes in non-ocean biomes
+    let lakeNoise = fbm2D(params.noise2D, wx / 60, wz / 60, 2);
+    let lakeSurfaceY = 0;
+    if (lakeNoise > 0.75 && contNoise >= 0.3) {
+        let depth = (lakeNoise - 0.75) * 40; // max depth ~10
+        lakeSurfaceY = Math.floor(elevation);
+        elevation -= depth;
+        // Flatten the bottom a bit
+        if (depth > 2) elevation += 1;
+    }
 
     let surfaceY = Math.floor(elevation);
     if (surfaceY < 1) surfaceY = 1;
     if (surfaceY >= CHUNK_HEIGHT - 1) surfaceY = CHUNK_HEIGHT - 2;
 
-    return { biome, surfaceY, colRng, bData: { isTerraced: terraceWeight > 0.5 } };
+    return { biome, surfaceY, colRng, bData: { isTerraced: terraceWeight > 0.5, lakeSurfaceY } };
 }
 
 function safeSetBlock(blocks, x, y, z, type, onlyAir = false) {
@@ -583,7 +597,7 @@ export function generateChunkTerrain(cx, cz, params) {
             const wx = wxBase + x;
             const wz = wzBase + z;
             
-            const { biome, surfaceY, colRng } = getColumnInfo(wx, wz, params);
+            const { biome, surfaceY, colRng, bData } = getColumnInfo(wx, wz, params);
 
             for (let y = 0; y < CHUNK_HEIGHT; y++) {
                 let type = BLOCKS.AIR;
@@ -621,18 +635,24 @@ export function generateChunkTerrain(cx, cz, params) {
                             if (pondNoise > 0.4) type = BLOCKS.WATER;
                         }
                     }
-                    // Grass shouldn't survive underwater
+                    
                     const isAnyGrass = type === BLOCKS.GRASS || type === BLOCKS.SWAMP_GRASS || type === BLOCKS.SAVANNA_GRASS || type === BLOCKS.ALIEN_GRASS;
                     const isDirt = type === BLOCKS.DIRT || type === BLOCKS.COARSE_DIRT || type === BLOCKS.PODZOL || type === BLOCKS.MYCELIUM;
                     
-                    if (y < params.seaLevel && isAnyGrass) {
+                    // Replace grass/dirt under water or lake water with sand/dirt
+                    if ((y < params.seaLevel || y < bData.lakeSurfaceY) && isAnyGrass) {
                         type = (biome === BIOMES.PLAINS || biome === BIOMES.DESERT || biome === BIOMES.SWAMP) ? BLOCKS.SAND : BLOCKS.DIRT;
                     }
                     
-                    // Create beaches near water level (from sea level down a bit, and up 1 block)
+                    // Create beaches near water levels
                     if (y <= params.seaLevel + 1 && y >= params.seaLevel - 2 && y >= surfaceY - 3 && (isAnyGrass || isDirt)) {
                         type = BLOCKS.SAND;
                     }
+                    if (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY + 1 && y >= bData.lakeSurfaceY - 1 && y >= surfaceY - 2 && (isAnyGrass || isDirt)) {
+                        type = BLOCKS.SAND; // Lake shores
+                    }
+                } else if (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY) {
+                    type = BLOCKS.WATER;
                 } else if (y <= params.seaLevel) {
                     type = biome === BIOMES.VOLCANIC ? BLOCKS.LAVA : (biome === BIOMES.SWAMP ? BLOCKS.SWAMP_WATER : BLOCKS.WATER);
                 }
@@ -1433,41 +1453,45 @@ export function generateCabin(blocks, x, y, z, rng) {
     }
 }
 
-export function generateNetherFortress(blocks, x, y, z, rng) {
-    // Generate a simple nether fortress bridge/tower
-    const height = 15;
-    const width = 5;
-    const length = 15;
-
-    // Bridge
-    for (let px = x - width; px <= x + width; px++) {
-        for (let pz = z - length; pz <= z + length; pz++) {
-            for (let py = y - 3; py <= y + 5; py++) {
-                if (py === y - 3 || py === y - 2 || py === y - 1) {
-                    safeSetBlock(blocks, px, py, pz, BLOCKS.NETHER_BRICKS); // Floor/base
-                } else if (py === y) {
-                    safeSetBlock(blocks, px, py, pz, BLOCKS.AIR); // Walkway
-                } else if ((px === x - width || px === x + width) && py > y) {
-                    // Walls
-                    if (py === y + 1 || (py === y + 2 && (px+pz)%2 === 0)) {
-                        safeSetBlock(blocks, px, py, pz, BLOCKS.NETHER_BRICKS);
-                    } else {
-                        safeSetBlock(blocks, px, py, pz, BLOCKS.AIR);
+function carveGlobalNetherStructures(blocks, cx, cz, params) {
+    const searchRadius = 3;
+    for (let sx = cx - searchRadius; sx <= cx + searchRadius; sx++) {
+        for (let sz = cz - searchRadius; sz <= cz + searchRadius; sz++) {
+            const seedStr = params.seed + "_nether_" + sx + "_" + sz;
+            const startRng = seededRandom(hashSeed(seedStr));
+            if (startRng() < 0.05) { // 5% chance per chunk to start a fortress
+                const theme = { brick: BLOCKS.NETHER_BRICKS, floor: BLOCKS.NETHER_BRICKS };
+                // Generate high up above lava lakes
+                const rooms = generateDungeonStructure(startRng, sx * CHUNK_SIZE + 8, 40, sz * CHUNK_SIZE + 8);
+                
+                for (const room of rooms) {
+                    // Remove the massive entrance shaft for nether fortresses
+                    if (room.type === 'entrance') continue;
+                    
+                    room.theme = theme;
+                    carveRoomInChunk(blocks, cx, cz, room);
+                    
+                    // Add blaze spawners in boss rooms
+                    if (room.type === 'boss') {
+                        const minX = Math.floor(room.x - room.w / 2);
+                        const maxX = Math.floor(room.x + room.w / 2);
+                        const minZ = Math.floor(room.z - room.d / 2);
+                        const maxZ = Math.floor(room.z + room.d / 2);
+                        const minY = room.y;
+                        const cMinX = cx * CHUNK_SIZE;
+                        const cMaxX = cMinX + CHUNK_SIZE - 1;
+                        const cMinZ = cz * CHUNK_SIZE;
+                        const cMaxZ = cMinZ + CHUNK_SIZE - 1;
+                        
+                        if (Math.floor(room.x) >= cMinX && Math.floor(room.x) <= cMaxX && 
+                            Math.floor(room.z) >= cMinZ && Math.floor(room.z) <= cMaxZ) {
+                            const lx = Math.floor(room.x) - cMinX;
+                            const lz = Math.floor(room.z) - cMinZ;
+                            // Re-purpose boss spawner or just use it (it will spawn FIRE_GOLEM since floor is NETHER_BRICKS if we mapped it, wait no, let's let boss spawner work normally or just use it as is)
+                        }
                     }
-                } else {
-                    safeSetBlock(blocks, px, py, pz, BLOCKS.AIR);
                 }
             }
-        }
-    }
-
-    // Supports (pillars down to lava)
-    for (let pz = z - length + 2; pz <= z + length - 2; pz += 6) {
-        for (let py = y - 4; py >= 1; py--) {
-            safeSetBlock(blocks, x - width, py, pz, BLOCKS.NETHER_BRICKS);
-            safeSetBlock(blocks, x - width + 1, py, pz, BLOCKS.NETHER_BRICKS);
-            safeSetBlock(blocks, x + width, py, pz, BLOCKS.NETHER_BRICKS);
-            safeSetBlock(blocks, x + width - 1, py, pz, BLOCKS.NETHER_BRICKS);
         }
     }
 }
@@ -1549,22 +1573,19 @@ export function generateNetherChunk(cx, cz, params) {
                     // Apply floor biome blocks
                     if (biome === 'CRIMSON_FOREST' && b === BLOCKS.NETHERRACK) {
                         blocks[idx] = BLOCKS.CRIMSON_NYLIUM;
-                        // Trees
-                        if (colRng() < 0.02) {
+                        // Trees - increased frequency
+                        if (colRng() < 0.04) {
                             generateCrimsonTree(blocks, x, y + 1, z, rng);
-                        } else if (colRng() < 0.1) {
-                            // Grass/Fungi (we can use alien grass as a placeholder or crimson roots if we had it)
+                        } else if (colRng() < 0.15) {
                             safeSetBlock(blocks, x, y + 1, z, BLOCKS.MUSHROOM_STEM, true);
                         }
                     } else if (biome === 'SOUL_SAND_VALLEY') {
                         blocks[idx] = BLOCKS.SOUL_SAND;
                         if (colRng() < 0.05) {
-                            // Soul fire proxy
                             safeSetBlock(blocks, x, y + 1, z, BLOCKS.TORCH, true); 
                         }
                     }
 
-                    // Occasional Nether Quartz (Crystal Ore proxy) or Gold
                     if (colRng() < 0.05) blocks[idx] = BLOCKS.CRYSTAL_ORE;
                     if (colRng() < 0.02) blocks[idx] = BLOCKS.GOLD_ORE;
                 }
@@ -1575,20 +1596,20 @@ export function generateNetherChunk(cx, cz, params) {
                         // Glowstone clusters
                         safeSetBlock(blocks, x, y - 1, z, BLOCKS.GLOWSTONE, true);
                         if (colRng() < 0.5) safeSetBlock(blocks, x, y - 2, z, BLOCKS.GLOWSTONE, true);
+                    } else if (biome === 'CRIMSON_FOREST' && colRng() < 0.08) {
+                        // Weeping vines from ceiling
+                        const vLen = 2 + Math.floor(colRng() * 5);
+                        for (let v = 1; v <= vLen; v++) {
+                            safeSetBlock(blocks, x, y - v, z, BLOCKS.CRIMSON_LEAVES, true);
+                        }
                     }
                 }
             }
         }
     }
 
-    // Nether Fortress generation
-    if (rng() < 0.02) {
-        // Find a suitable Y
-        // We just plop it around Y=35 (just above lava)
-        const fx = Math.floor(rng() * CHUNK_SIZE);
-        const fz = Math.floor(rng() * CHUNK_SIZE);
-        generateNetherFortress(blocks, fx, 35, fz, rng);
-    }
+    // Fortress generation
+    carveGlobalNetherStructures(blocks, cx, cz, params);
 
     // Rare ruined aether portal in the Nether
     if (rng() < 0.005) {
@@ -1619,6 +1640,14 @@ function generateCrimsonTree(blocks, x, y, z, rng) {
             for (let py = y + h - 2; py <= y + h + 1; py++) {
                 if (Math.abs(px - x) === 2 && Math.abs(pz - z) === 2 && py === y + h + 1) continue;
                 safeSetBlock(blocks, px, py, pz, BLOCKS.CRIMSON_LEAVES, true);
+                
+                // Weeping vines from canopy
+                if (py === y + h - 2 && rng() < 0.3) {
+                    const vLen = 1 + Math.floor(rng() * 3);
+                    for (let v = 1; v <= vLen; v++) {
+                        safeSetBlock(blocks, px, py - v, pz, BLOCKS.CRIMSON_LEAVES, true);
+                    }
+                }
             }
         }
     }
