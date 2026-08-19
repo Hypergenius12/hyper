@@ -363,7 +363,7 @@ export function getBiomeParams(wx, wz, params) {
     return { biome, terraceWeight, contNoise, erosionNoise, weirdness };
 }
 
-function getColumnInfo(wx, wz, params) {
+export function getColumnInfo(wx, wz, params) {
     const colRng = seededRandom(params.seed + wx * 3141 + wz);
     
     const { biome, terraceWeight, contNoise, erosionNoise, weirdness } = getBiomeParams(wx, wz, params);
