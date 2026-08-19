@@ -76,5 +76,7 @@ export const BLOCKS = {
     HORN_CORAL: 71,
     SEASHELL_1: 72,
     SEASHELL_2: 73,
-    SEASHELL_3: 74
+    SEASHELL_3: 74,
+    LILY_PAD: 75,
+    ALGAE: 76
 };

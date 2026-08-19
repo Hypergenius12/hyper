@@ -259,6 +259,8 @@ const BLOCK_PROPS = {
     [BLOCKS.SEASHELL_1]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.SEASHELL_2]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.SEASHELL_3]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.LILY_PAD]:      { name: 'Lily Pad',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.ALGAE]:         { name: 'Algae',          health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.PINE_WOOD]:     { name: 'Pine Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.PINE_LEAVES]:   { name: 'Pine Leaves',    health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.ACACIA_PLANKS]: { name: 'Acacia Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
@@ -1445,6 +1447,24 @@ function generateBlockTexture(ctx, blockType, face, rng) {
                 ctx.fillRect(6, 12, 4, 4);
                 ctx.fillRect(4, 13, 2, 2);
                 ctx.fillRect(10, 13, 2, 2);
+            }
+            break;
+        case BLOCKS.LILY_PAD:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = '#2d7a2d'; // dark green pad
+            // Draw a flat pad in the middle
+            ctx.beginPath();
+            ctx.arc(8, 14, 6, 0, Math.PI * 2);
+            ctx.fill();
+            // Draw a pink flower
+            ctx.fillStyle = '#ff99cc';
+            ctx.fillRect(7, 12, 2, 2);
+            break;
+        case BLOCKS.ALGAE:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = '#558833'; // muddy green
+            for (let i = 0; i < 15; i++) {
+                ctx.fillRect(Math.floor(rng() * 14) + 1, Math.floor(rng() * 14) + 1, 2, 2);
             }
             break;
         case BLOCKS.IRON_BLOCK:

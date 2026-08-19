@@ -430,11 +430,33 @@ function getColumnInfo(wx, wz, params) {
     // Rare Lakes in non-ocean biomes
     let lakeNoise = fbm2D(params.noise2D, wx / 40, wz / 40, 2); // Smaller size
     let lakeSurfaceY = 0;
+    let puddleNoise = 0;
+    
+    // Check for biome-specific puddles
+    const isSwamp = biome.name === 'Swamp';
+    const isOasis = biome.name === 'Oasis';
+    if (isSwamp || isOasis) {
+        puddleNoise = fbm2D(params.noise2D, wx / 12, wz / 12, 2);
+    }
+    
     const isNoLakeBiome = biome.name === 'Alien' || biome.name === 'Crystal' || biome.name === 'Volcanic';
-    if (!isNoLakeBiome && lakeNoise > 0.82 && contNoise >= 0.3) { // Less frequent
-        let depth = (lakeNoise - 0.82) * 50; // max depth
-        lakeSurfaceY = Math.floor(elevation);
-        elevation -= depth;
+    const hasLake = !isNoLakeBiome && lakeNoise > 0.82 && contNoise >= 0.3;
+    const hasPuddle = (isSwamp || isOasis) && puddleNoise > 0.35 && factor < 0.6; // Only on flat terrain
+    
+    if (hasLake || hasPuddle) {
+        let depth;
+        if (hasLake) {
+            depth = (lakeNoise - 0.82) * 50; 
+        } else {
+            depth = (puddleNoise - 0.35) * 15; // shallower puddles
+        }
+        
+        // Use a much smoother elevation for the surface to prevent sloping water
+        // Base elevation + a smoothed version of terrain offset
+        let smoothOffset = hNoise * 40 * (factor * 0.2); 
+        lakeSurfaceY = Math.floor(baseElevation + smoothOffset);
+        elevation = lakeSurfaceY - depth;
+        
         // Flatten the bottom a bit
         if (depth > 2) elevation += 1;
     }
@@ -627,16 +649,6 @@ export function generateChunkTerrain(cx, cz, params) {
                 } else if (y <= surfaceY) {
                     type = (y === surfaceY) ? biome.surface : biome.dirt;
                     
-                    if (y === surfaceY) {
-                        if (biome === BIOMES.SWAMP) {
-                            const pondNoise = fbm2D(params.noise2D, wx / 12, wz / 12, 2);
-                            if (pondNoise > 0.3) type = BLOCKS.SWAMP_WATER;
-                        } else if (biome === BIOMES.OASIS) {
-                            const pondNoise = fbm2D(params.noise2D, wx / 15, wz / 15, 2);
-                            if (pondNoise > 0.4) type = BLOCKS.WATER;
-                        }
-                    }
-                    
                     const isAnyGrass = type === BLOCKS.GRASS || type === BLOCKS.SWAMP_GRASS || type === BLOCKS.SAVANNA_GRASS || type === BLOCKS.ALIEN_GRASS;
                     const isDirt = type === BLOCKS.DIRT || type === BLOCKS.COARSE_DIRT || type === BLOCKS.PODZOL || type === BLOCKS.MYCELIUM;
                     
@@ -653,7 +665,7 @@ export function generateChunkTerrain(cx, cz, params) {
                         type = BLOCKS.SAND; // Lake shores
                     }
                 } else if (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY) {
-                    type = BLOCKS.WATER;
+                    type = biome === BIOMES.VOLCANIC ? BLOCKS.LAVA : (biome === BIOMES.SWAMP ? BLOCKS.SWAMP_WATER : BLOCKS.WATER);
                 } else if (y <= params.seaLevel) {
                     type = biome === BIOMES.VOLCANIC ? BLOCKS.LAVA : (biome === BIOMES.SWAMP ? BLOCKS.SWAMP_WATER : BLOCKS.WATER);
                 }
@@ -700,7 +712,17 @@ export function generateChunkTerrain(cx, cz, params) {
                                 }
                             }
                         } else {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.SEAGRASS, true);
+                            if (biome === BIOMES.SWAMP || biome === BIOMES.OASIS) {
+                                if (cRng < 0.5) {
+                                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALGAE, true);
+                                } else {
+                                    // Lily pads go on top of the water surface
+                                    const waterTopY = (bData && bData.lakeSurfaceY > 0) ? bData.lakeSurfaceY : params.seaLevel;
+                                    safeSetBlock(blocks, tx, waterTopY + 1, tz, BLOCKS.LILY_PAD, true); // Places above water surface
+                                }
+                            } else {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.SEAGRASS, true);
+                            }
                         }
                     }
                     continue; // Done with underwater flora
