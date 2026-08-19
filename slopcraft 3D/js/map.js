@@ -1,4 +1,4 @@
-import { getBiomeParams } from './generation.js';
+import { getBiomeParams, getColumnInfo } from './generation.js';
 import { createNoise2D } from './noise.js';
 
 export class BiomeMap {
@@ -201,8 +201,11 @@ export class BiomeMap {
         }
         
         // Overworld
-        const biomeData = getBiomeParams(worldX, worldZ, params);
-        return biomeData.biome.name;
+        const colInfo = getColumnInfo(worldX, worldZ, params);
+        if (colInfo.bData && colInfo.bData.lakeSurfaceY > 0 && colInfo.surfaceY <= colInfo.bData.lakeSurfaceY) {
+            return 'Lake';
+        }
+        return colInfo.biome.name;
     }
 
     updateTooltip(e) {
@@ -252,6 +255,7 @@ export class BiomeMap {
                 switch (biomeName) {
                     case 'Deep Ocean': color = '#000055'; break;
                     case 'Ocean': color = '#0000AA'; break;
+                    case 'Lake': color = '#2277BB'; break;
                     case 'Coral Reef': color = '#3333AA'; break;
                     case 'Beach': color = '#E6D28A'; break;
                     case 'Desert': color = '#D9B340'; break;

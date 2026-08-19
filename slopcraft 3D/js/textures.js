@@ -256,6 +256,9 @@ const BLOCK_PROPS = {
     [BLOCKS.BUBBLE_CORAL]:  { name: 'Bubble Coral',   health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.FIRE_CORAL]:    { name: 'Fire Coral',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.HORN_CORAL]:    { name: 'Horn Coral',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.SEASHELL_1]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.SEASHELL_2]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.SEASHELL_3]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.PINE_WOOD]:     { name: 'Pine Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.PINE_LEAVES]:   { name: 'Pine Leaves',    health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.ACACIA_PLANKS]: { name: 'Acacia Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
@@ -1419,6 +1422,29 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillStyle = `rgba(255,255,255,0.4)`;
             for (let i = 0; i < 8; i++) {
                 ctx.fillRect(Math.floor(rng() * 14), Math.floor(rng() * 14), 2, 2);
+            }
+            break;
+        case BLOCKS.SEASHELL_1:
+        case BLOCKS.SEASHELL_2:
+        case BLOCKS.SEASHELL_3:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            let shColor = blockType === BLOCKS.SEASHELL_1 ? 'rgb(255, 230, 200)' : (blockType === BLOCKS.SEASHELL_2 ? 'rgb(255, 180, 180)' : 'rgb(200, 220, 255)');
+            ctx.fillStyle = shColor;
+            
+            // Draw a small shell shape at the bottom
+            if (blockType === BLOCKS.SEASHELL_1) {
+                // Spiral shell
+                ctx.fillRect(6, 12, 4, 4);
+                ctx.fillRect(7, 10, 2, 2);
+            } else if (blockType === BLOCKS.SEASHELL_2) {
+                // Clam shell
+                ctx.fillRect(5, 13, 6, 3);
+                ctx.fillRect(6, 11, 4, 2);
+            } else {
+                // Starfish / weird shell
+                ctx.fillRect(6, 12, 4, 4);
+                ctx.fillRect(4, 13, 2, 2);
+                ctx.fillRect(10, 13, 2, 2);
             }
             break;
         case BLOCKS.IRON_BLOCK:

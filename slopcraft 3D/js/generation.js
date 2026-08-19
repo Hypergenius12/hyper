@@ -11,6 +11,7 @@ const BIOMES = {
     FOREST: { name: 'Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: true },
     PLAINS: { name: 'Plains', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: false },
     DESERT: { name: 'Desert', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, hasDeadBush: true, hasCactus: true },
+    BEACH: { name: 'Beach', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, isBeach: true },
     BADLANDS: { name: 'Badlands', surface: BLOCKS.RED_SAND, dirt: BLOCKS.TERRACOTTA, freq: 0.5, hasTrees: false, hasDeadBush: true },
     TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true },
     ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true },
@@ -316,7 +317,7 @@ export function getBiomeParams(wx, wz, params) {
         else biome = BIOMES.DEEP_OCEAN; // Default ocean
     } else if (isCoast) {
         if (temp < 0.25) biome = BIOMES.TUNDRA;
-        else if (temp > 0.5) biome = BIOMES.DESERT; // Sandy beach
+        else if (temp > 0.4) biome = BIOMES.BEACH; // Sandy beach
         else biome = BIOMES.PLAINS; // Grassy/stony shore
     } else if (isMountain) {
         let tw = Math.max(0, Math.min(1, (temp - 0.6) / 0.1));
@@ -426,12 +427,12 @@ function getColumnInfo(wx, wz, params) {
         const targetTerraced = elevation * 0.2 + terracedElevation * 0.8;
         elevation = elevation * (1.0 - terraceWeight) + targetTerraced * terraceWeight;
     }
-    
     // Rare Lakes in non-ocean biomes
-    let lakeNoise = fbm2D(params.noise2D, wx / 60, wz / 60, 2);
+    let lakeNoise = fbm2D(params.noise2D, wx / 40, wz / 40, 2); // Smaller size
     let lakeSurfaceY = 0;
-    if (lakeNoise > 0.75 && contNoise >= 0.3) {
-        let depth = (lakeNoise - 0.75) * 40; // max depth ~10
+    const isNoLakeBiome = biome.name === 'Alien' || biome.name === 'Crystal' || biome.name === 'Volcanic';
+    if (!isNoLakeBiome && lakeNoise > 0.82 && contNoise >= 0.3) { // Less frequent
+        let depth = (lakeNoise - 0.82) * 50; // max depth
         lakeSurfaceY = Math.floor(elevation);
         elevation -= depth;
         // Flatten the bottom a bit
@@ -757,12 +758,16 @@ export function generateChunkTerrain(cx, cz, params) {
                     generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
                 } else if (biome.hasDeadBush && r < 0.04) {
                     safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
+                } else if (biome.isBeach && r < 0.08) {
+                    const shellRng = floraRng();
+                    const shell = shellRng < 0.33 ? BLOCKS.SEASHELL_1 : (shellRng < 0.66 ? BLOCKS.SEASHELL_2 : BLOCKS.SEASHELL_3);
+                    safeSetBlock(blocks, tx, surfaceY + 1, tz, shell, true);
                 } else if (biome.jungleFlora && r < 0.08) {
                     if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                     else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true); // Bush
                 } else if (biome.alienFlora && r < 0.15) {
                     safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALIEN_TALL_GRASS, true);
-                } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && biome.name !== 'Volcanic' && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef) {
+                } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && biome.name !== 'Volcanic' && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef && !biome.isBeach) {
                     // Normal grass logic
                     let fr = floraRng();
                     if (biome === BIOMES.CHERRY_GROVE && fr < 0.4) {

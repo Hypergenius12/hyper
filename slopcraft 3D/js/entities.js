@@ -1407,6 +1407,54 @@ export const MOB_TYPES = {
             if (rf) rf.rotation.x = Math.sin(age * speed + Math.PI) * 0.3;
         }
     },
+    CRAB: {
+        name: 'Crab', health: 4, damage: 1, speed: 1.5, hostile: false, color: 0xff3333,
+        size: 0.3, xpDrop: 1, lootChance: 0.1,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const body = createBodyPart(new THREE.BoxGeometry(0.3, 0.15, 0.2), 0xff3333);
+            body.position.y = 0.15; group.add(body);
+            
+            // Legs
+            for (let i = -1; i <= 1; i += 2) {
+                for (let j = 0; j < 3; j++) {
+                    const leg = createBodyPart(new THREE.BoxGeometry(0.15, 0.05, 0.05), 0xdd2222);
+                    leg.position.set(i * 0.2, 0.05, j * 0.06 - 0.06);
+                    leg.name = 'leg_' + i + '_' + j;
+                    group.add(leg);
+                }
+            }
+            
+            // Claws
+            const lclaw = createBodyPart(new THREE.BoxGeometry(0.1, 0.1, 0.1), 0xff1111);
+            lclaw.position.set(-0.2, 0.2, 0.15); lclaw.name = 'lclaw'; group.add(lclaw);
+            const rclaw = createBodyPart(new THREE.BoxGeometry(0.12, 0.12, 0.12), 0xff1111);
+            rclaw.position.set(0.2, 0.2, 0.15); rclaw.name = 'rclaw'; group.add(rclaw);
+            
+            // Eyes
+            const eyeGeo = new THREE.BoxGeometry(0.04, 0.08, 0.04);
+            const le = createBodyPart(eyeGeo, 0x000000); le.position.set(-0.06, 0.25, 0.08); group.add(le);
+            const re = createBodyPart(eyeGeo, 0x000000); re.position.set(0.06, 0.25, 0.08); group.add(re);
+            
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            if (!isMoving) return;
+            const speed = 20;
+            
+            for (let i = -1; i <= 1; i += 2) {
+                for (let j = 0; j < 3; j++) {
+                    const leg = mesh.getObjectByName('leg_' + i + '_' + j);
+                    if (leg) leg.rotation.z = Math.sin(age * speed + j) * 0.3 * i;
+                }
+            }
+            
+            const lclaw = mesh.getObjectByName('lclaw');
+            const rclaw = mesh.getObjectByName('rclaw');
+            if (lclaw) lclaw.rotation.y = Math.sin(age * speed * 0.5) * 0.2;
+            if (rclaw) rclaw.rotation.y = Math.cos(age * speed * 0.5) * 0.2;
+        }
+    },
     BLUE_TANG: {
         name: 'Blue Tang', health: 3, damage: 0, speed: 2.8, hostile: false, color: 0x0055ff,
         size: 0.3, xpDrop: 1, lootChance: 0.1, waterOnly: true,
@@ -2148,7 +2196,7 @@ function pickRandomMobType(dimension = 'overworld', biome = 'plains') {
         return Math.random() < 0.8 ? 'CAVE_CRAWLER' : 'BLIND_HORROR';
     }
 
-    if (biome === 'desert' && Math.random() < 0.4) return 'CAMEL';
+    if (biome === 'desert' && Math.random() < 0.6) return Math.random() < 0.5 ? 'CAMEL' : 'CRAB';
     if (biome === 'snow' && Math.random() < 0.4) return 'PENGUIN';
     if (biome === 'swamp' && Math.random() < 0.4) return 'FROG';
     if (biome === 'alien' && Math.random() < 0.4) return 'ALIEN_BUG';

@@ -73,5 +73,8 @@ export const BLOCKS = {
     BRAIN_CORAL: 68,
     BUBBLE_CORAL: 69,
     FIRE_CORAL: 70,
-    HORN_CORAL: 71
+    HORN_CORAL: 71,
+    SEASHELL_1: 72,
+    SEASHELL_2: 73,
+    SEASHELL_3: 74
 };
