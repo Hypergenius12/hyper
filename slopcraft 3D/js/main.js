@@ -659,42 +659,68 @@ class Game {
 
         const isFuel = (fuelItem) => {
             if (!fuelItem || !fuelItem.item) return false;
-            if (fuelItem.item.type === 'material' && (fuelItem.item.subtype === 'coal' || fuelItem.item.subtype === 'stick')) return true;
-            if (fuelItem.item.type === 'block' && (fuelItem.item.subtype === window.BLOCKS.PLANKS || fuelItem.item.subtype === window.BLOCKS.WOOD)) return true;
+            const t = fuelItem.item.type;
+            const s = fuelItem.item.subtype;
+            if (t === 'material' && (s === 'coal' || s === 'stick')) return true;
+            if (t === 'block' && (s === window.BLOCKS.PLANKS || s === window.BLOCKS.WOOD || s === window.BLOCKS.LEAVES)) return true;
+            if (t === 'equipment' && (s === 'wood_pickaxe' || s === 'wood_axe' || s === 'wood_sword' || s === 'wood_shovel')) return true;
             return false;
         };
 
         for (const [key, f] of this.furnaces.entries()) {
             const resultItem = getSmeltResult(f.input);
-            const hasFuel = isFuel(f.fuel);
-            
-            const canSmelt = resultItem && hasFuel && 
+            const canSmelt = resultItem && 
                 (!f.output || (f.output.item.type === resultItem.type && f.output.item.subtype === resultItem.subtype && f.output.count < f.output.item.maxStack));
 
-            if (canSmelt) {
-                f.isSmelting = true;
-                f.progress += dt / 5.0; // 5 seconds to smelt
+            // Initialize burn time properties if missing
+            if (typeof f.burnTime === 'undefined') f.burnTime = 0;
+            if (typeof f.maxBurnTime === 'undefined') f.maxBurnTime = 0;
 
-                if (f.progress >= 1.0) {
-                    // Smelted!
-                    f.progress = 0;
-                    f.input.count--;
-                    if (f.input.count <= 0) f.input = null;
-                    
-                    // Consume 1 fuel
-                    f.fuel.count--;
-                    if (f.fuel.count <= 0) f.fuel = null;
-                    
-                    if (f.output) {
-                        f.output.count++;
-                    } else {
-                        f.output = { item: resultItem, count: 1 };
+            let isBurning = f.burnTime > 0;
+
+            // Consume fuel if we can smelt but aren't burning
+            if (canSmelt && !isBurning && isFuel(f.fuel)) {
+                // Determine fuel value
+                let fuelVal = 10.0; // Sticks/Planks
+                if (f.fuel.item.subtype === 'coal') fuelVal = 40.0; // 8 items (5s each)
+                
+                f.maxBurnTime = fuelVal;
+                f.burnTime = fuelVal;
+                isBurning = true;
+                
+                f.fuel.count--;
+                if (f.fuel.count <= 0) f.fuel = null;
+            }
+
+            if (isBurning) {
+                f.burnTime -= dt;
+                f.isSmelting = true;
+                
+                if (canSmelt) {
+                    f.progress += dt / 5.0; // 5 seconds to smelt 1 item
+                    if (f.progress >= 1.0) {
+                        f.progress = 0;
+                        f.input.count--;
+                        if (f.input.count <= 0) f.input = null;
+                        
+                        if (f.output) {
+                            f.output.count++;
+                        } else {
+                            f.output = { item: resultItem, count: 1 };
+                        }
                     }
+                } else {
+                    f.progress = 0;
+                }
+                
+                if (f.burnTime <= 0) {
+                    f.burnTime = 0;
+                    f.isSmelting = false;
                 }
             } else {
                 f.isSmelting = false;
                 if (f.progress > 0) {
-                    f.progress -= dt / 2.0; // cool down if interrupted
+                    f.progress -= dt / 2.0;
                     if (f.progress < 0) f.progress = 0;
                 }
             }

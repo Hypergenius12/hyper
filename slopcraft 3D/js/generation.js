@@ -758,7 +758,7 @@ export function generateChunkTerrain(cx, cz, params) {
                         else if (cRng < 0.9) coralType = BLOCKS.BUBBLE_CORAL;
                         else coralType = BLOCKS.SAND; // Blank space
                         if (coralType !== BLOCKS.SAND) {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType, true);
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType, false);
                         }
                     } else if (r < 0.2) {
                         const cRng = floraRng();
@@ -767,20 +767,20 @@ export function generateChunkTerrain(cx, cz, params) {
                             const kHeight = 2 + Math.floor(floraRng() * 6);
                             for(let i = 1; i <= kHeight; i++) {
                                 if (surfaceY + i < params.seaLevel - 1) {
-                                    safeSetBlock(blocks, tx, surfaceY + i, tz, BLOCKS.KELP, true);
+                                    safeSetBlock(blocks, tx, surfaceY + i, tz, BLOCKS.KELP, false);
                                 }
                             }
                         } else {
                             if (biome === BIOMES.SWAMP || biome === BIOMES.OASIS) {
                                 if (cRng < 0.5) {
-                                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALGAE, true);
+                                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALGAE, false);
                                 } else {
                                     // Lily pads go on top of the water surface
                                     const waterTopY = (bData && bData.lakeSurfaceY > 0) ? bData.lakeSurfaceY : params.seaLevel;
                                     safeSetBlock(blocks, tx, waterTopY + 1, tz, BLOCKS.LILY_PAD, true); // Places above water surface
                                 }
                             } else {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.SEAGRASS, true);
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.SEAGRASS, false);
                             }
                         }
                     }

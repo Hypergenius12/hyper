@@ -1034,8 +1034,12 @@ class UISystem {
                     }
                 }
             } else {
-                // Swap
-                if (this.dragState.isSplit) {
+                // Swap or Merge
+                const canMerge = targetSlot.item.type === itemData.item.type && 
+                                 targetSlot.item.subtype === itemData.item.subtype && 
+                                 targetSlot.item.stackable;
+                if (canMerge) {
+                    // Merge
                     const s = getListSlot(srcType, srcIndex);
                     if (s) s.count += itemData.count;
                     else setListSlot(srcType, srcIndex, itemData);
