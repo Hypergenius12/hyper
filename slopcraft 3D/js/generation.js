@@ -443,6 +443,7 @@ export function getColumnInfo(wx, wz, params) {
     const cz = Math.floor(wz / cellSize);
     
     // Check neighboring cells for lakes that might overlap
+    /*
     for (let dx = -1; dx <= 1; dx++) {
         for (let dz = -1; dz <= 1; dz++) {
             const nx = cx + dx;
@@ -492,6 +493,7 @@ export function getColumnInfo(wx, wz, params) {
             }
         }
     }
+    */
     
     // Check for biome-specific puddles — only on very flat terrain to avoid pedestals
     const isSwamp = biome.name === 'Swamp';

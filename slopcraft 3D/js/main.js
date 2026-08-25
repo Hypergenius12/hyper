@@ -2,13 +2,13 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=24';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=24';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=24';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=24';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=24';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=24';
-import { AudioManager } from './audio.js?v=24';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=25';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=25';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=25';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=25';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=25';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=25';
+import { AudioManager } from './audio.js?v=25';
 import { BiomeMap } from './map.js';
 import { DevMode } from './dev.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -1443,8 +1443,8 @@ class Game {
         const headY = Math.floor(this.engine.camera.position.y);
         const headZ = Math.floor(this.engine.camera.position.z);
         const headBlock = this.world.getBlock(headX, headY, headZ);
-        const isUnderwater = window.getBlockProperties ? window.getBlockProperties(headBlock).isLiquid :
-            (getBlockProperties ? getBlockProperties(headBlock).isLiquid : false);
+        const headProps = window.getBlockProperties ? window.getBlockProperties(headBlock) : (getBlockProperties ? getBlockProperties(headBlock) : null);
+        const isUnderwater = headProps ? (headProps.isLiquid || headProps.isWaterlogged) : false;
 
         this.lighting.update(dt, this.engine.camera.position, isUnderwater, this.currentDimension);
 

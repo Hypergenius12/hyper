@@ -204,7 +204,7 @@ export class Player {
 
         const blockIn = world.getBlock(this.position.x, this.position.y + 0.1, this.position.z);
         const blockProps = getBlockProperties(blockIn);
-        const inWater = blockProps && blockProps.isLiquid && blockIn !== BLOCKS.LAVA;
+        const inWater = blockProps && (blockProps.isLiquid || blockProps.isWaterlogged) && blockIn !== BLOCKS.LAVA;
         const inLava = blockIn === BLOCKS.LAVA;
         const inFire = blockIn === BLOCKS.FIRE;
         const onLadder = blockIn === BLOCKS.LADDER;
@@ -2399,7 +2399,8 @@ export class Mob {
         const currentBlock = world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y), Math.floor(this.position.z));
         
         if (this.config.waterOnly) {
-            inWater = getBlockProperties(currentBlock).isLiquid;
+            const props = getBlockProperties(currentBlock);
+            inWater = props && (props.isLiquid || props.isWaterlogged);
         }
 
         if (currentBlock === BLOCKS.FIRE || currentBlock === BLOCKS.LAVA) {
