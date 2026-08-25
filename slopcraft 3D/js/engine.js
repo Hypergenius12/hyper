@@ -396,6 +396,7 @@ export class Chunk {
                             _crossIndices[crossIndexCount++] = vertexCount + 4; _crossIndices[crossIndexCount++] = vertexCount + 6; _crossIndices[crossIndexCount++] = vertexCount + 7;
                         }
                         vertexCount += 8;
+                    } // Missing brace added here
 
                     let currentBlockType = blockType;
                     let currentProps = props;
