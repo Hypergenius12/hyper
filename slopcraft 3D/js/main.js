@@ -2,18 +2,19 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=23';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=23';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=23';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=23';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=23';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=23';
-import { AudioManager } from './audio.js?v=23';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=24';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=24';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=24';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=24';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=24';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=24';
+import { AudioManager } from './audio.js?v=24';
 import { BiomeMap } from './map.js';
 import { DevMode } from './dev.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
@@ -171,6 +172,8 @@ class Game {
         this.composer = new EffectComposer(this.engine.renderer);
         this.composer.addPass(this.renderPass);
         this.composer.addPass(this.bokehPass);
+        this.outputPass = new OutputPass();
+        this.composer.addPass(this.outputPass);
 
         window.addEventListener('resize', () => {
             if (this.composer) {
@@ -1837,7 +1840,7 @@ class Game {
         this.engine.renderer.setScissorTest(false);
         this.engine.renderer.clear();
         if (this.composer) {
-            this.composer.render();
+            this.composer.render(dt);
         } else {
             this.engine.renderer.render(this.engine.scene, this.engine.camera);
         }
