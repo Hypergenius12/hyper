@@ -11,6 +11,9 @@ import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandom
 import { AudioManager } from './audio.js?v=22';
 import { BiomeMap } from './map.js';
 import { DevMode } from './dev.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
@@ -155,6 +158,25 @@ class Game {
 
         const canvas = document.getElementById('game-canvas');
         this.engine.init(canvas);
+
+        // Setup Post-processing
+        this.renderPass = new RenderPass(this.engine.scene, this.engine.camera);
+        this.bokehPass = new BokehPass(this.engine.scene, this.engine.camera, {
+            focus: 5.0,
+            aperture: 0.00005,
+            maxblur: 0.003, // Slight blur
+            width: window.innerWidth,
+            height: window.innerHeight
+        });
+        this.composer = new EffectComposer(this.engine.renderer);
+        this.composer.addPass(this.renderPass);
+        this.composer.addPass(this.bokehPass);
+
+        window.addEventListener('resize', () => {
+            if (this.composer) {
+                this.composer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
 
         // Create dynamic HUD elements
         this._createHUDElements();
@@ -592,7 +614,7 @@ class Game {
         
         const mat = new THREE.MeshLambertMaterial({ 
             map: this.atlas.texture, 
-            transparent: true, 
+            transparent: false, 
             alphaTest: 0.5,
             side: THREE.DoubleSide
         });
@@ -1814,7 +1836,11 @@ class Game {
         this.engine.renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
         this.engine.renderer.setScissorTest(false);
         this.engine.renderer.clear();
-        this.engine.renderer.render(this.engine.scene, this.engine.camera);
+        if (this.composer) {
+            this.composer.render();
+        } else {
+            this.engine.renderer.render(this.engine.scene, this.engine.camera);
+        }
 
         // 2. Minimap Render Pass
         const mmo = document.getElementById('minimap-overlay');

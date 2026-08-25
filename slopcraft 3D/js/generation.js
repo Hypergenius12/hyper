@@ -12,7 +12,7 @@ const BIOMES = {
     PLAINS: { name: 'Plains', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: false },
     DESERT: { name: 'Desert', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, hasDeadBush: true, hasCactus: true },
     BEACH: { name: 'Beach', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, isBeach: true },
-    BADLANDS: { name: 'Badlands', surface: BLOCKS.RED_SAND, dirt: BLOCKS.TERRACOTTA, freq: 0.5, hasTrees: false, hasDeadBush: true },
+    BADLANDS: { name: 'Badlands', surface: BLOCKS.RED_SAND, dirt: BLOCKS.TERRACOTTA, freq: 0.5, hasTrees: false, hasDeadBush: true, hasDeadTrees: true },
     TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true },
     ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true },
     MUSHROOM: { name: 'Mushroom', surface: BLOCKS.DIRT, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true },
@@ -388,8 +388,13 @@ export function getColumnInfo(wx, wz, params) {
     else if (erosionNoise > 0.3) factor = 0.5 + ((0.5 - erosionNoise) / 0.2) * 0.7; // 0.5 to 1.2
     else factor = 1.2 + ((0.3 - erosionNoise) / 0.3) * 2.8; // 1.2 to 4.0 (Mountains)
 
-    // Reduce roughness in oceans
-    if (contNoise < 0.3) factor *= 0.3;
+    // Reduce roughness in oceans and coastlines
+    if (contNoise < 0.3) {
+        factor *= 0.1;
+    } else if (contNoise < 0.4) {
+        let t = (contNoise - 0.3) / 0.1;
+        factor *= (0.1 + t * 0.9);
+    }
 
     // 3. Peaks and Valleys (Weirdness)
     let hNoise = fbm2D(params.noise2D, wx / params.terrainScale, wz / params.terrainScale, 3);
@@ -462,13 +467,15 @@ export function getColumnInfo(wx, wz, params) {
                     
                     let lBiome = BIOMES.PLAINS;
                     if (temp < 0.2) lBiome = BIOMES.TUNDRA;
+                    else if (temp > 0.75 && moist < 0.3) lBiome = BIOMES.BADLANDS; // hot & very dry → Badlands
                     else if (temp > 0.75 && moist < 0.4) lBiome = BIOMES.DESERT;
                     else if (temp > 0.75 && moist > 0.6) lBiome = BIOMES.SWAMP;
                     else if (moist > 0.7 && weird > 0.75) lBiome = BIOMES.ALIEN;
                     else if (moist > 0.7 && weird > 0.6) lBiome = BIOMES.GLOW_FOREST;
                     else if (temp > 0.75) lBiome = BIOMES.SAVANNA;
                     
-                    const isNoLakeBiome = lBiome.name === 'Alien' || lBiome.name === 'Crystal' || lBiome.name === 'Volcanic';
+                    const isNoLakeBiome = lBiome.name === 'Alien' || lBiome.name === 'Crystal' || lBiome.name === 'Volcanic'
+                        || lBiome.name === 'Badlands' || lBiome.name === 'Ice Spikes';
                     if (!isNoLakeBiome) {
                         const maxR = 12 + rng() * 10;
                         const dist = Math.hypot(wx - lx, wz - lz);
@@ -486,7 +493,7 @@ export function getColumnInfo(wx, wz, params) {
         }
     }
     
-    // Check for biome-specific puddles
+    // Check for biome-specific puddles — only on very flat terrain to avoid pedestals
     const isSwamp = biome.name === 'Swamp';
     const isOasis = biome.name === 'Oasis';
     let puddleNoise = 0;
@@ -494,16 +501,17 @@ export function getColumnInfo(wx, wz, params) {
         puddleNoise = fbm2D(params.noise2D, wx / 12, wz / 12, 2);
     }
     
-    const hasPuddle = (isSwamp || isOasis) && puddleNoise > 0.35 && factor < 0.6; // Only on flat terrain
+    // erosionNoise > 0.65 means the erosion factor is very small (nearly flat ground only)
+    const hasPuddle = (isSwamp || isOasis) && puddleNoise > 0.35 && erosionNoise > 0.65;
     
     if (inLake || hasPuddle) {
         let depth;
         if (inLake) {
             depth = lakeDepth; 
         } else {
-            depth = (puddleNoise - 0.35) * 15; // shallower puddles
-            let smoothOffset = hNoise * 40 * (factor * 0.2); 
-            lakeSurfaceY = Math.floor(baseElevation + smoothOffset);
+            depth = (puddleNoise - 0.35) * 8; // shallower puddles, max ~5 deep
+            // Use ONLY baseElevation (no noise) so all puddle columns share the same flat water surface
+            lakeSurfaceY = Math.floor(baseElevation);
         }
         
         elevation = lakeSurfaceY - depth;
@@ -748,7 +756,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 const isUnderwater = surfaceY < params.seaLevel || (bData && bData.lakeSurfaceY && surfaceY < bData.lakeSurfaceY);
                 
                 if (isUnderwater) {
-                    if (biome.isCoralReef && r < 0.3) {
+                    if (biome.isCoralReef && r < 0.3 && surfaceY < params.seaLevel - 1) {
                         const cRng = floraRng();
                         let coralType;
                         if (cRng < 0.2) coralType = BLOCKS.TUBE_CORAL;
@@ -758,7 +766,12 @@ export function generateChunkTerrain(cx, cz, params) {
                         else if (cRng < 0.9) coralType = BLOCKS.BUBBLE_CORAL;
                         else coralType = BLOCKS.SAND; // Blank space
                         if (coralType !== BLOCKS.SAND) {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType, false);
+                            // Only place if the block above the surface is actually water
+                            const aboveIdx = ((surfaceY + 1) * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                            const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[aboveIdx] : BLOCKS.WATER;
+                            if (aboveBlock === BLOCKS.WATER) {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType, false);
+                            }
                         }
                     } else if (r < 0.2) {
                         const cRng = floraRng();
@@ -829,6 +842,8 @@ export function generateChunkTerrain(cx, cz, params) {
 
                 if (biome.hasTrees && r < (biome.isDark ? 0.06 : 0.02)) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                } else if (biome.hasDeadTrees && r < 0.005) {
+                    generateDeadTree(blocks, tx, surfaceY + 1, tz, floraRng);
                 } else if (biome.hasMushrooms && r < 0.05) {
                     generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
                 } else if (biome.hasCrystals && r < 0.03) {
@@ -1105,6 +1120,39 @@ function generateCactus(blocks, x, y, z, rng) {
     }
 }
 
+function generateDeadTree(blocks, x, y, z, rng) {
+    const height = 7 + Math.floor(rng() * 6); // 7-12 blocks tall
+    // Trunk
+    for (let i = 0; i < height; i++) {
+        safeSetBlock(blocks, x, y + i, z, BLOCKS.WOOD, true);
+    }
+    // Branch stubs at random heights
+    const numBranches = 2 + Math.floor(rng() * 4);
+    for (let b = 0; b < numBranches; b++) {
+        const bh = Math.floor(rng() * (height - 2)) + 2; // Don't branch at base or top
+        const bLen = 1 + Math.floor(rng() * 3); // 1-3 blocks long
+        const bDir = Math.floor(rng() * 4); // 0=+x, 1=-x, 2=+z, 3=-z
+        const dx = bDir === 0 ? 1 : bDir === 1 ? -1 : 0;
+        const dz = bDir === 2 ? 1 : bDir === 3 ? -1 : 0;
+        // Branches go out then up one at the end for gnarled look
+        for (let i = 1; i <= bLen; i++) {
+            safeSetBlock(blocks, x + dx * i, y + bh, z + dz * i, BLOCKS.WOOD, true);
+        }
+        // Branch-end: dead bush or upward stub
+        if (rng() < 0.6) {
+            safeSetBlock(blocks, x + dx * bLen, y + bh + 1, z + dz * bLen, BLOCKS.DEAD_BUSH, true);
+        } else {
+            safeSetBlock(blocks, x + dx * bLen, y + bh + 1, z + dz * bLen, BLOCKS.WOOD, true);
+        }
+    }
+    // Small dead bush cluster at crown
+    if (rng() < 0.7) {
+        safeSetBlock(blocks, x, y + height, z, BLOCKS.DEAD_BUSH, true);
+        if (rng() < 0.5) safeSetBlock(blocks, x + 1, y + height - 1, z, BLOCKS.DEAD_BUSH, true);
+        if (rng() < 0.5) safeSetBlock(blocks, x - 1, y + height - 1, z, BLOCKS.DEAD_BUSH, true);
+    }
+}
+
 // ============================================
 // Dungeon Generation
 // ============================================
@@ -1119,24 +1167,45 @@ const DUNGEON_THEMES = [
 ];
 
 
+
+// Cache dungeon room layouts by origin chunk key to avoid recomputing per-adjacent-chunk
+const _dungeonCache = new Map();
+
 function carveGlobalDungeons(blocks, cx, cz, params) {
     const searchRadius = 3; // Reduced from 6 to eliminate huge lag spikes
     for (let sx = cx - searchRadius; sx <= cx + searchRadius; sx++) {
         for (let sz = cz - searchRadius; sz <= cz + searchRadius; sz++) {
             // Determine if a dungeon starts at chunk (sx, sz)
             const seedStr = params.seed + "_" + sx + "_" + sz;
-            const startRng = seededRandom(hashSeed(seedStr));
-            if (startRng() < params.dungeonFrequency * 0.02) { // increased frequency for better discoverability
-                const themeIndex = Math.floor(startRng() * DUNGEON_THEMES.length);
-                const theme = DUNGEON_THEMES[themeIndex];
-                const rooms = generateDungeonStructure(startRng, sx * CHUNK_SIZE + 8, 15, sz * CHUNK_SIZE + 8);
-                
+            const cacheKey = seedStr;
+            
+            let dungeonData = _dungeonCache.get(cacheKey);
+            if (dungeonData === undefined) {
+                const startRng = seededRandom(hashSeed(seedStr));
+                if (startRng() < params.dungeonFrequency * 0.015) { // Slightly reduced for less density
+                    const themeIndex = Math.floor(startRng() * DUNGEON_THEMES.length);
+                    const theme = DUNGEON_THEMES[themeIndex];
+                    const rooms = generateDungeonStructure(startRng, sx * CHUNK_SIZE + 8, 15, sz * CHUNK_SIZE + 8);
+                    for (const room of rooms) room.theme = theme;
+                    dungeonData = rooms;
+                } else {
+                    dungeonData = null; // No dungeon here
+                }
+                // Cap cache size to avoid unbounded memory growth
+                if (_dungeonCache.size > 512) {
+                    const firstKey = _dungeonCache.keys().next().value;
+                    _dungeonCache.delete(firstKey);
+                }
+                _dungeonCache.set(cacheKey, dungeonData);
+            }
+            
+            if (dungeonData) {
                 // Carve any room that intersects the current chunk (cx, cz)
-                for (const room of rooms) {
-                    room.theme = theme;
+                for (const room of dungeonData) {
                     carveRoomInChunk(blocks, cx, cz, room);
                 }
             }
+
         }
     }
 }
@@ -1294,50 +1363,19 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                 const lx = wx - cMinX;
                 const lz = wz - cMinZ;
                 
-                // Doorway: carve a proper archway with door blocks in the opening and frame around it
+                // Doorway: place a single door column at the exact center
                 if (room.type === 'doorway') {
-                    const dx = Math.abs(wx - room.x);
-                    const dz = Math.abs(wz - room.z);
+                    const dx = Math.abs(wx - Math.floor(room.x));
+                    const dz = Math.abs(wz - Math.floor(room.z));
                     
-                    if (room.orient === 'x') {
-                        // Doorway faces along X — opening is 2 wide on Z, 3 tall
-                        if (dz <= 1) {
-                            if (wy >= minY + 1 && wy <= minY + 3) {
-                                if (dz === 0) {
-                                    if (wy === minY + 1 || wy === minY + 2) {
-                                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
-                                    } else {
-                                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
-                                    }
-                                } else {
-                                    // Frame sides
-                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
-                                }
-                            } else if (wy === minY + 4 && dz === 0) {
-                                // Archway top
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
-                            } else if (wy === minY) {
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS);
-                            }
-                        }
-                    } else {
-                        // Doorway faces along Z — opening is 2 wide on X, 3 tall
-                        if (dx <= 1) {
-                            if (wy >= minY + 1 && wy <= minY + 3) {
-                                if (dx === 0) {
-                                    if (wy === minY + 1 || wy === minY + 2) {
-                                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
-                                    } else {
-                                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
-                                    }
-                                } else {
-                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
-                                }
-                            } else if (wy === minY + 4 && dx === 0) {
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS);
-                            } else if (wy === minY) {
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS);
-                            }
+                    // Only place blocks at the exact center column
+                    if (dx === 0 && dz === 0) {
+                        if (wy === minY + 1 || wy === minY + 2) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
+                        } else if (wy > minY + 2 && wy <= minY + 3) {
+                            safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR); // Headroom above door
+                        } else if (wy === minY) {
+                            safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS);
                         }
                     }
                     continue;

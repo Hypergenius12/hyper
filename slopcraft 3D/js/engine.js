@@ -396,7 +396,17 @@ export class Chunk {
                             _crossIndices[crossIndexCount++] = vertexCount + 4; _crossIndices[crossIndexCount++] = vertexCount + 6; _crossIndices[crossIndexCount++] = vertexCount + 7;
                         }
                         vertexCount += 8;
-                        continue;
+
+                    let currentBlockType = blockType;
+                    let currentProps = props;
+
+                    if (props.isCross) {
+                        if (props.isWaterlogged) {
+                            currentBlockType = window.BLOCKS.WATER;
+                            currentProps = getBlockProperties(window.BLOCKS.WATER);
+                        } else {
+                            continue;
+                        }
                     }
 
                     for (const face of FACES) {
@@ -413,13 +423,21 @@ export class Chunk {
                         }
 
                         const neighborProps = getBlockProperties(neighborType);
+                        
+                        let effectiveNeighborType = neighborType;
+                        let effectiveNeighborProps = neighborProps;
+                        
+                        if (neighborProps.isWaterlogged) {
+                            effectiveNeighborType = window.BLOCKS.WATER;
+                            effectiveNeighborProps = getBlockProperties(window.BLOCKS.WATER);
+                        }
 
-                        const bothLiquids = props.isLiquid && neighborProps.isLiquid;
+                        const bothLiquids = currentProps.isLiquid && effectiveNeighborProps.isLiquid;
 
                         // Render face if neighbor is transparent (and not the same transparent block, like water or leaves)
-                        if (neighborType === BLOCKS.AIR || (neighborProps.transparent && blockType !== neighborType && !bothLiquids)) {
+                        if (effectiveNeighborType === BLOCKS.AIR || (effectiveNeighborProps.transparent && currentBlockType !== effectiveNeighborType && !bothLiquids)) {
 
-                            const uvInfo = atlas.getUV(blockType, face.name);
+                            const uvInfo = atlas.getUV(currentBlockType, face.name);
 
                             // 4 vertices per face
                             for (let i = 0; i < 4; i++) {
