@@ -1411,15 +1411,75 @@ function generateBlockTexture(ctx, blockType, face, rng) {
         case BLOCKS.RED_KELP:
         case BLOCKS.BROWN_KELP:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            if (blockType === BLOCKS.SEAGRASS) ctx.fillStyle = 'rgb(60, 160, 80)';
-            else if (blockType === BLOCKS.RED_KELP) ctx.fillStyle = 'rgb(180, 50, 50)';
-            else if (blockType === BLOCKS.BROWN_KELP) ctx.fillStyle = 'rgb(120, 90, 40)';
-            else ctx.fillStyle = 'rgb(80, 140, 60)';
-            const blades = blockType === BLOCKS.SEAGRASS ? 5 : 2;
-            for (let i = 0; i < blades; i++) {
-                let bx = 2 + Math.floor(rng() * 10);
-                let height = 8 + Math.floor(rng() * 8);
-                ctx.fillRect(bx, TEX_SIZE - height, 2, height);
+            if (blockType === BLOCKS.SEAGRASS) {
+                const baseColor = [60, 160, 80];
+                const highlight = [100, 200, 100];
+                const shadow = [40, 120, 60];
+                
+                const bladesCount = 5 + Math.floor(rng() * 4);
+                for (let i = 0; i < bladesCount; i++) {
+                    let h = 5 + Math.floor(rng() * 7);
+                    let startX = 2 + Math.floor(rng() * 12);
+                    let xOffset = 0;
+                    let bendDir = rng() < 0.5 ? -1 : 1;
+                    
+                    for (let y = 0; y < h; y++) {
+                        let drawY = TEX_SIZE - 1 - y;
+                        let drawX = startX + Math.floor(xOffset);
+                        if (drawX >= 0 && drawX < TEX_SIZE) {
+                            let col = baseColor;
+                            let r = rng();
+                            if (r < 0.3) col = highlight;
+                            else if (r < 0.6) col = shadow;
+                            
+                            ctx.fillStyle = `rgb(${col[0]}, ${col[1]}, ${col[2]})`;
+                            ctx.fillRect(drawX, drawY, 2, 1);
+                        }
+                        if (rng() < 0.5) {
+                            xOffset += bendDir * (0.5 + rng() * 0.7);
+                        }
+                    }
+                }
+            } else {
+                let baseColor, highlight, shadow;
+                if (blockType === BLOCKS.RED_KELP) {
+                    baseColor = [180, 50, 50]; highlight = [220, 90, 90]; shadow = [120, 30, 30];
+                } else if (blockType === BLOCKS.BROWN_KELP) {
+                    baseColor = [150, 110, 40]; highlight = [190, 150, 70]; shadow = [100, 70, 20];
+                } else {
+                    baseColor = [70, 150, 50]; highlight = [120, 200, 90]; shadow = [40, 110, 30];
+                }
+                
+                const stalks = 1 + Math.floor(rng() * 2);
+                for (let s = 0; s < stalks; s++) {
+                    let startX = 4 + Math.floor(rng() * 8);
+                    let phase = rng() * Math.PI * 2;
+                    let freq = 0.15 + rng() * 0.2;
+                    let amp = 1.0 + rng() * 1.5;
+                    
+                    for (let y = TEX_SIZE - 1; y >= 0; y--) {
+                        let drawX = startX + Math.floor(Math.sin((TEX_SIZE - 1 - y) * freq + phase) * amp);
+                        
+                        let r = rng();
+                        let stalkCol = r < 0.2 ? highlight : (r < 0.5 ? shadow : baseColor);
+                        ctx.fillStyle = `rgb(${stalkCol[0]}, ${stalkCol[1]}, ${stalkCol[2]})`;
+                        ctx.fillRect(drawX, y, 2, 1);
+                        
+                        if (y < TEX_SIZE - 1 && y > 1 && rng() < 0.4) {
+                            let dir = rng() < 0.5 ? -1 : 1;
+                            let leafLen = 2 + Math.floor(rng() * 3);
+                            for (let l = 1; l <= leafLen; l++) {
+                                let lx = drawX + (dir > 0 ? 1 : 0) + (l * dir);
+                                let ly = y - Math.floor(l * 0.5);
+                                if (lx >= 0 && lx < TEX_SIZE && ly >= 0) {
+                                    let c = rng() < 0.5 ? highlight : baseColor;
+                                    ctx.fillStyle = `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+                                    ctx.fillRect(lx, ly, 2, 1);
+                                }
+                            }
+                        }
+                    }
+                }
             }
             break;
         case BLOCKS.TUBE_CORAL:
