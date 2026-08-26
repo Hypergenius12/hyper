@@ -462,7 +462,7 @@ export class Chunk {
                             const aoColor = calculateVertexAO(wx, y, wz, face, getBlockOptimized, blockType);
                             
                             let waterFade = 0;
-                            if (neighborType === BLOCKS.WATER || neighborType === BLOCKS.SWAMP_WATER) {
+                            if (effectiveNeighborType === BLOCKS.WATER || effectiveNeighborType === BLOCKS.SWAMP_WATER || neighborType === BLOCKS.WATER || neighborType === BLOCKS.SWAMP_WATER) {
                                 let depth = Math.max(0, 22 - y);
                                 waterFade = Math.min(1.0, depth / 10.0);
                             }
@@ -482,12 +482,12 @@ export class Chunk {
                                 }
                             }
 
-                            // Add indices
-                            if (props.transparent) {
-                                if (blockType === BLOCKS.WATER || blockType === BLOCKS.SWAMP_WATER || blockType === BLOCKS.LAVA) {
+                            // Add indices — use currentProps/currentBlockType so waterlogged blocks sort as water
+                            if (currentProps.transparent) {
+                                if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER || currentBlockType === BLOCKS.LAVA) {
                                     _waterIndices[waterIndexCount++] = vertexCount; _waterIndices[waterIndexCount++] = vertexCount + 1; _waterIndices[waterIndexCount++] = vertexCount + 2;
                                     _waterIndices[waterIndexCount++] = vertexCount; _waterIndices[waterIndexCount++] = vertexCount + 2; _waterIndices[waterIndexCount++] = vertexCount + 3;
-                                } else if (props.emissive > 0) {
+                                } else if (currentProps.emissive > 0) {
                                     _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 1; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 2;
                                     _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 2; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 3;
                                 } else {
@@ -495,7 +495,7 @@ export class Chunk {
                                     _transparentIndices[transparentIndexCount++] = vertexCount; _transparentIndices[transparentIndexCount++] = vertexCount + 2; _transparentIndices[transparentIndexCount++] = vertexCount + 3;
                                 }
                             } else {
-                                if (props.emissive > 0) {
+                                if (currentProps.emissive > 0) {
                                     _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 1; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 2;
                                     _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 2; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 3;
                                 } else {
