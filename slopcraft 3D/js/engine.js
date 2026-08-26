@@ -2,7 +2,7 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=26';
 import { getBiomeParams } from './generation.js';
 
 export const CHUNK_SIZE = 16;

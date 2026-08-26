@@ -2,7 +2,7 @@
 // audio.js — SFX Synthesizer using Web Audio API
 // ============================================
 
-import { BLOCKS } from './textures.js';
+import { BLOCKS } from './textures.js?v=26';
 
 export class AudioManager {
     constructor() {
