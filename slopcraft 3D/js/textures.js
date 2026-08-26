@@ -148,6 +148,8 @@ export const BLOCKS = {
     SEASHELL_3: 137,
     LILY_PAD: 138,
     ALGAE: 139,
+    RED_KELP: 140,
+    BROWN_KELP: 141,
     QUICKSOIL: 187,
     HOLYSTONE: 188,
     ENCHANTED_AETHER_LOG: 189,
@@ -258,7 +260,9 @@ const BLOCK_PROPS = {
     [BLOCKS.CRIMSON_LEAVES]:{ name: 'Crimson Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.NETHER_WART_BLOCK]: { name: 'Nether Wart Block', health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.SEAGRASS]:      { name: 'Seagrass',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
-    [BLOCKS.KELP]:          { name: 'Kelp',           health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
+    [BLOCKS.KELP]:          { name: 'Green Kelp',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
+    [BLOCKS.RED_KELP]:        { name: 'Red Kelp',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
+    [BLOCKS.BROWN_KELP]:      { name: 'Brown Kelp',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.TUBE_CORAL]:    { name: 'Tube Coral',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.BRAIN_CORAL]:   { name: 'Brain Coral',    health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.BUBBLE_CORAL]:  { name: 'Bubble Coral',   health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
@@ -1404,8 +1408,13 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         case BLOCKS.SEAGRASS:
         case BLOCKS.KELP:
+        case BLOCKS.RED_KELP:
+        case BLOCKS.BROWN_KELP:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            ctx.fillStyle = blockType === BLOCKS.SEAGRASS ? 'rgb(60, 160, 80)' : 'rgb(80, 140, 60)';
+            if (blockType === BLOCKS.SEAGRASS) ctx.fillStyle = 'rgb(60, 160, 80)';
+            else if (blockType === BLOCKS.RED_KELP) ctx.fillStyle = 'rgb(180, 50, 50)';
+            else if (blockType === BLOCKS.BROWN_KELP) ctx.fillStyle = 'rgb(120, 90, 40)';
+            else ctx.fillStyle = 'rgb(80, 140, 60)';
             const blades = blockType === BLOCKS.SEAGRASS ? 5 : 2;
             for (let i = 0; i < blades; i++) {
                 let bx = 2 + Math.floor(rng() * 10);

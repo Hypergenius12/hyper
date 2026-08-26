@@ -780,22 +780,42 @@ export function generateChunkTerrain(cx, cz, params) {
                         if (cRng < 0.1) {
                             // Kelp column
                             const kHeight = 2 + Math.floor(floraRng() * 6);
+                            const kTypeRng = floraRng();
+                            const kelpType = kTypeRng < 0.33 ? BLOCKS.RED_KELP : (kTypeRng < 0.66 ? BLOCKS.BROWN_KELP : BLOCKS.KELP);
                             for(let i = 1; i <= kHeight; i++) {
-                                if (surfaceY + i < params.seaLevel - 1) {
-                                    safeSetBlock(blocks, tx, surfaceY + i, tz, BLOCKS.KELP, false);
+                                const y = surfaceY + i;
+                                if (y < params.seaLevel - 1) {
+                                    const aboveIdx = (y * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                                    const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && y < CHUNK_HEIGHT) ? blocks[aboveIdx] : BLOCKS.WATER;
+                                    if (aboveBlock === BLOCKS.WATER) {
+                                        safeSetBlock(blocks, tx, y, tz, kelpType, false);
+                                    }
                                 }
                             }
                         } else {
+                            const y = surfaceY + 1;
+                            const aboveIdx = (y * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                            const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && y < CHUNK_HEIGHT) ? blocks[aboveIdx] : BLOCKS.WATER;
+                            
                             if (biome === BIOMES.SWAMP || biome === BIOMES.OASIS) {
                                 if (cRng < 0.5) {
-                                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALGAE, false);
+                                    if (aboveBlock === BLOCKS.WATER) {
+                                        safeSetBlock(blocks, tx, y, tz, BLOCKS.ALGAE, false);
+                                    }
                                 } else {
                                     // Lily pads go on top of the water surface
                                     const waterTopY = (bData && bData.lakeSurfaceY > 0) ? bData.lakeSurfaceY : params.seaLevel;
-                                    safeSetBlock(blocks, tx, waterTopY + 1, tz, BLOCKS.LILY_PAD, true); // Places above water surface
+                                    const padY = waterTopY + 1;
+                                    const padIdx = (padY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                                    const padBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && padY < CHUNK_HEIGHT) ? blocks[padIdx] : BLOCKS.AIR;
+                                    if (padBlock === BLOCKS.AIR || padBlock === BLOCKS.WATER) {
+                                        safeSetBlock(blocks, tx, padY, tz, BLOCKS.LILY_PAD, false);
+                                    }
                                 }
                             } else {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.SEAGRASS, false);
+                                if (aboveBlock === BLOCKS.WATER) {
+                                    safeSetBlock(blocks, tx, y, tz, BLOCKS.SEAGRASS, false);
+                                }
                             }
                         }
                     }
