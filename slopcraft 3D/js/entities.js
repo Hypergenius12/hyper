@@ -3,7 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture } from './textures.js?v=28';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture } from './textures.js';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
