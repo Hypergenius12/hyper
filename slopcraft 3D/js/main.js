@@ -169,7 +169,10 @@ class Game {
             width: window.innerWidth,
             height: window.innerHeight
         });
-        this.composer = new EffectComposer(this.engine.renderer);
+        const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+            type: THREE.HalfFloatType
+        });
+        this.composer = new EffectComposer(this.engine.renderer, renderTarget);
         this.composer.addPass(this.renderPass);
         this.composer.addPass(this.bokehPass);
         this.outputPass = new OutputPass();
