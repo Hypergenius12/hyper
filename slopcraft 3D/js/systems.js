@@ -2,7 +2,7 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js?v=26';
+import { BLOCKS, generateItemTexture } from './textures.js?v=28';
 import { Spell, SPELL_TYPES } from './magic.js';
 
 export class LightingSystem {
