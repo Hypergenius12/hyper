@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hypergenius 12 - Projects</title>
+    <meta name="description" content="A curated selection of interactive web projects and experiments by hypergenius 12.">
+    <meta property="og:title" content="hypergenius 12 - Projects">
+    <meta property="og:description" content="A curated selection of interactive web projects and experiments by hypergenius 12.">
+    <meta property="og:image" content="https://hypergenius12.com/screenshot_main.png">
+    <meta property="og:url" content="https://hypergenius12.com/">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="hypergenius 12 - Projects">
+    <meta name="twitter:description" content="A curated selection of interactive web projects and experiments by hypergenius 12.">
+    <meta name="twitter:image" content="https://hypergenius12.com/screenshot_main.png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f4f4f5;
+            --text-color: #18181b;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-hover: rgba(228, 228, 231, 0.95);
+            --border-color: rgba(212, 212, 216, 0.8);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #09090b;
+                --text-color: #f4f4f5;
+                --card-bg: rgba(24, 24, 27, 0.85);
+                --card-hover: rgba(39, 39, 42, 0.95);
+                --border-color: rgba(63, 63, 70, 0.8);
+            }
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Cool Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+            border-left: 1px solid var(--border-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+            border-radius: 6px;
+            border: 3px solid var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #2563eb, #7c3aed);
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .header-bar {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            padding: 1.5rem 2rem;
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        .share-btn {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s;
+        }
+
+        .share-btn:hover {
+            background-color: #2563eb;
+        }
+
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            padding: 5rem 2rem 2rem 2rem;
+            box-sizing: border-box;
+            flex-grow: 1;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.05em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        p.subtitle {
+            font-size: 1.1rem;
+            color: #71717a;
+            margin-bottom: 3rem;
+            font-weight: 400;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            p.subtitle {
+                color: #a1a1aa;
+            }
+        }
+
+        .projects-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .project-card {
+            width: calc(20% - 1.2rem); /* 5 columns */
+            min-width: 220px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-color);
+            transition: all 0.4s ease-out;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transform-style: preserve-3d;
+        }
+
+        /* Hover is handled by JavaScript for 3D tilt effect */
+
+        .project-image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .project-content {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .project-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .project-desc {
+            font-size: 0.95rem;
+            color: #71717a;
+            margin: 0 0 1rem 0;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .project-desc {
+                color: #a1a1aa;
+            }
+        }
+
+        .project-arrow {
+            align-self: flex-end;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+            font-size: 1.2rem;
+            margin-top: auto;
+        }
+
+        .project-card:hover .project-arrow {
+            opacity: 1;
+            transform: translateX(4px);
+        }
+
+        .footer {
+            width: 100%;
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.9rem;
+            color: #71717a;
+            margin-top: 2rem;
+            position: relative;
+            z-index: 10;
+        }
+        @media (prefers-color-scheme: dark) {
+            .footer {
+                color: #a1a1aa;
+            }
+        }
+        /* Bug Report Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #a855f7;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .fs-message {
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        [data-fs-error] { color: #ef4444; }
+        [data-fs-success] { color: #22c55e; }
+    </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LCRDCCZRXM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-LCRDCCZRXM');
+  </script>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="header-bar">
+    <div style="display: flex; align-items: center; gap: 1rem; margin-right: auto;">
+        <img src="purple.gif" alt="Timmy the Sheep" title="Timmy the Sheep" style="height: 100px;">
+        <div id="profile-badge" style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 8px; backdrop-filter: blur(10px); display: none; flex-direction: column; gap: 4px; font-family: monospace; font-size: 0.9rem;">
+            <div id="profile-name" style="font-weight: bold; color: #a855f7;"></div>
+            <div id="profile-rank" style="opacity: 0.8;"></div>
+        </div>
+    </div>
+    <div style="position: absolute; top: 20px; right: 20px; z-index: 20; display: flex; align-items: center;">
+        <button class="share-btn" onclick="addBookmark()" style="margin-right: 10px; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); color: #a855f7; padding: 0.2rem 0.5rem; font-size: 0.75rem;">Bookmark</button>
+        <button class="share-btn" onclick="openBugReportModal()" style="margin-right: 10px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">Report Bug</button>
+        <button class="share-btn" onclick="openFeedbackModal()" style="margin-right: 10px; background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #22c55e;">Submit Feedback</button>
+        <button class="share-btn" onclick="shareSite(this)">Share</button>
+    </div>
+</div>
+
+<script>
+    function addBookmark() {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 || navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+        const shortcut = isMac ? 'Cmd + D' : 'Ctrl + D';
+        alert(`To bookmark this page, please press ${shortcut} on your keyboard!`);
+    }
+</script>
+
+<div class="container">
+    <h1>hypergenius 12</h1>
+    <p class="subtitle">A curated selection of my web projects and experiments.</p>
+
+    <div class="projects-grid">
+
+        <a href="Computer%20Xp/index.html" class="project-card">
+            <img src="screenshot_xp.png" alt="Windows XP" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Windows XP</h2>
+                <p class="project-desc">A fully interactive, web-based recreation of the classic Windows XP desktop environment.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+        
+        <a href="slopcraft%203D/index.html" class="project-card">
+            <img src="screenshot_slopcraft.png" alt="Slopcraft 3D" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Slopcraft 3D</h2>
+                <p class="project-desc">A 3D voxel-based building game bringing creative block-building to the web.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="backrooms/index.html" class="project-card">
+            <img src="screenshot_backrooms.png" alt="The Backrooms" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">The Backrooms</h2>
+                <p class="project-desc">A psychological horror exploration game. Don't noclip out of reality.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+
+        <a href="cmd/index.html" class="project-card">
+            <img src="screenshot_cmd.png" alt="The Elias Thorne Mystery" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">The Elias Thorne Mystery</h2>
+                <p class="project-desc">Hacker-Sim: The Elias Thorne Mystery. A command prompt based puzzle and hacking simulation.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="excavator/index.html" class="project-card">
+            <img src="screenshot_excavator.png" alt="The DOM Excavator" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">The DOM Excavator</h2>
+                <p class="project-desc">A WebGL mining idle game. Dig through the geological strata of the internet.</p>
+            </div>
+        </a>
+
+        <a href="agar/index.html" class="project-card">
+            <img src="screenshot_agar.png" alt="Agar" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Agar</h2>
+                <p class="project-desc">A web-based multiplayer-style blob eating game with smooth rendering and mechanics.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="Cyber/index.html" class="project-card">
+            <img src="screenshot_cyber.png" alt="Exodus Adventure" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Exodus Adventure</h2>
+                <p class="project-desc">A cyberpunk-inspired web project with neon aesthetics.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="neurotrack/index.html" class="project-card">
+            <img src="screenshot_neurotrack.png" alt="NeuroTrack AI Racing" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">NeuroTrack</h2>
+                <p class="project-desc">A 2D top-down racing game with a grid-based track editor. Includes an AI neural network template ready for genetic algorithm training.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="paths.html" class="project-card">
+            <img src="screenshot_paths.png" alt="Text Adventure Editor" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Text Adventure Editor</h2>
+                <p class="project-desc">A node-based editor for creating and playing interactive text adventure games.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="rubiks/index.html" class="project-card">
+            <img src="screenshot_rubiks.png" alt="Cube Solver" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Cube Solver</h2>
+                <p class="project-desc">Solve Rubik's cubes from 1x1 to 10x10 in 3D.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="timeline/index.html" class="project-card">
+            <img src="screenshot_timeline.png" alt="Interactive US History Timeline" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Interactive US History Timeline</h2>
+                <p class="project-desc">Drag to explore an interactive US History timeline filled with events, eras, and mini-games.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="convert/index.html" class="project-card">
+            <img src="screenshot_convert.png" alt="Omni-Dimensional Converter" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Omni-Dimensional Converter</h2>
+                <p class="project-desc">A hyper-advanced physics engine capable of infinite cross-dimensional bridging.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="hyper/index.html" class="project-card">
+            <img src="screenshot_waveform.png" alt="Waveform Editor" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Waveform Editor</h2>
+                <p class="project-desc">A comprehensive audio manipulation toolkit for waveform editing and synthesis.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+        <a href="style/index.html" class="project-card">
+            <img src="screenshot_style.png" alt="Style" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">OS Style Showcase</h2>
+                <p class="project-desc">A visual showcase exploring the UI evolution of different operating systems.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="dvd/index.html" class="project-card">
+            <img src="dvd.png" alt="DVD Logo Simulator" class="project-image" style="object-position: left center;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">DVD Logo Simulator</h2>
+                <p class="project-desc">A highly satisfying interactive DVD logo simulator with generative ambient music and chaos modifiers.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+        <a href="raycaster/index.html" class="project-card">
+            <img src="screenshot_crapcaster.png" alt="Crapcaster" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Crapcaster</h2>
+                <p class="project-desc">A brutalist 3D retro raycasting engine with custom textures and map builder.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        <a href="synesthesia/index.html" class="project-card">
+            <img src="screenshot_synesthesia.png" alt="Synesthesia Color Mixer" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Synesthesia</h2>
+                <p class="project-desc">An infinite, AI-powered color mixing game with beautiful reactive shaders and an evolution tree.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+        
+
+        <a href="dust/index.html" class="project-card">
+            <img src="pixel.png" alt="Dust Sandbox" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Dust</h2>
+                <p class="project-desc">A high-performance pixel physics sandbox for elemental cellular automata. Note: it might be a little broken!</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+
+<a href="trillion/index.html" class="project-card">
+            <img src="screenshot_trillion.png" alt="Spend Elon's Money" class="project-image" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22280%22 height=%22160%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23e4e4e7%22/%3E%3C/svg%3E'">
+            <div class="project-content">
+                <h2 class="project-title">Spend Elon's Money</h2>
+                <p class="project-desc">An interactive simulation exploring large numbers and cosmic scales.</p>
+                <div class="project-arrow">&rarr;</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="leaderboard-container" style="max-width: 800px; width: 90%; margin: 3rem auto; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 2rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); position: relative; z-index: 10;">
+    <h2 style="margin-top: 0; text-align: center;">GLOBAL LEADERBOARD</h2>
+    
+    <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;">
+        <button id="tab-overall" class="lb-tab active" style="padding: 0.5rem 1rem; border-radius: 6px; border: none; background: #3b82f6; color: white; cursor: pointer; font-family: inherit; font-weight: 600;">Overall</button>
+        <button id="tab-projects" class="lb-tab" style="padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-color); cursor: pointer; font-family: inherit; font-weight: 600;">By Project</button>
+    </div>
+
+    <div id="lb-content" style="min-height: 200px; display: flex; flex-direction: column; gap: 0.5rem;">
+        <div style="text-align: center; opacity: 0.5; padding: 2rem;">Connecting to global database...</div>
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <button id="tracking-toggle-btn" style="background: transparent; color: var(--text-color); border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 0.8rem; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">Toggle Time Tracking</button>
+    </div>
+</div>
+
+<footer class="footer">
+    &copy; 2026 hypergenius 12. All rights reserved.<br>
+    <span style="opacity: 0.5; font-size: 0.8rem;">v1.3.26</span>
+</footer>
+
+<!-- Three.js for WebGL Parallax Background -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script>
+    function isWebGLAvailable() {
+        try {
+            const testCanvas = document.createElement('canvas');
+            return !!(window.WebGLRenderingContext && (testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl')));
+        } catch (e) {
+            return false;
+        }
+    }
+
+    if (isWebGLAvailable()) {
+        // Set up WebGL 3D parallax scene
+        const canvas = document.getElementById('bg-canvas');
+    const scene = new THREE.Scene();
+    
+    // Always use dark mode for the 3D scene to match the site's CSS
+    scene.background = new THREE.Color(0x09090b);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Create particles
+    const geometry = new THREE.BufferGeometry();
+    const particlesCount = 2000;
+    const posArray = new Float32Array(particlesCount * 3);
+    const originalPosArray = new Float32Array(particlesCount * 3);
+    const velocities = new Float32Array(particlesCount * 3);
+
+    for(let i = 0; i < particlesCount * 3; i++) {
+        // distribute particles around space
+        const val = (Math.random() - 0.5) * 15;
+        posArray[i] = val;
+        originalPosArray[i] = val;
+        velocities[i] = 0;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    
+    const material = new THREE.PointsMaterial({
+        size: 0.02,
+        color: 0xa1a1aa,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    const particlesMesh = new THREE.Points(geometry, material);
+    scene.add(particlesMesh);
+
+    camera.position.z = 3;
+
+    // Mouse Parallax Interaction
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetX = 0;
+    let targetY = 0;
+
+    const windowHalfX = window.innerWidth / 2;
+    const windowHalfY = window.innerHeight / 2;
+
+    document.addEventListener('mousemove', (event) => {
+        mouseX = (event.clientX - windowHalfX);
+        mouseY = (event.clientY - windowHalfY);
+    });
+
+    // Handle theme change dynamically
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        const newIsDark = e.matches;
+        scene.background.setHex(newIsDark ? 0x09090b : 0xf4f4f5);
+        material.color.setHex(newIsDark ? 0xa1a1aa : 0x71717a);
+    });
+
+    // Handle resize
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Animation Loop
+    const clock = new THREE.Clock();
+
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        const elapsedTime = clock.getElapsedTime();
+
+        // Spring physics for scatter
+        const positions = geometry.attributes.position.array;
+        let needsUpdate = false;
+        for(let i = 0; i < particlesCount * 3; i++) {
+            if (Math.abs(velocities[i]) > 0.0001 || Math.abs(positions[i] - originalPosArray[i]) > 0.0001) {
+                const force = (originalPosArray[i] - positions[i]) * 0.05;
+                velocities[i] += force;
+                velocities[i] *= 0.85; // friction
+                positions[i] += velocities[i];
+                needsUpdate = true;
+            }
+        }
+        if (needsUpdate) geometry.attributes.position.needsUpdate = true;
+
+        // Base slow rotation
+        particlesMesh.rotation.y = elapsedTime * 0.05;
+        particlesMesh.rotation.x = elapsedTime * 0.02;
+
+        // Mouse Parallax effect
+        targetX = mouseX * 0.001;
+        targetY = mouseY * 0.001;
+        
+        particlesMesh.rotation.y += 0.05 * (targetX - particlesMesh.rotation.y);
+        particlesMesh.rotation.x += 0.05 * (targetY - particlesMesh.rotation.x);
+
+        renderer.render(scene, camera);
+    }
+    
+    animate();
+
+    // Share functionality
+    function shareSite(btn) {
+        const originalText = btn ? btn.innerText : 'Share';
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            if (btn) {
+                btn.innerText = 'Copied!';
+                setTimeout(() => btn.innerText = originalText, 2000);
+            }
+        });
+    }
+    document.addEventListener('mousedown', (e) => {
+        // Scatter stars on bg click
+        if (e.target.tagName === 'CANVAS' || e.target.className === 'container') {
+            for(let i = 0; i < particlesCount * 3; i++) {
+                velocities[i] = (Math.random() - 0.5) * 1.5;
+            }
+        }
+    });
+    } else {
+        // Fallback for browsers without WebGL
+        document.getElementById('bg-canvas').style.display = 'none';
+    }
+
+    // === 3D Interactive Mouse Hover Cards ===
+    window.addEventListener('load', () => {
+        const cards = document.querySelectorAll('.project-card');
+        
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transition = 'none'; // Disable transition for instant mouse tracking
+            });
+            
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left; // x position within the element.
+                const y = e.clientY - rect.top;  // y position within the element.
+
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                // Max rotation 10deg
+                const rotateX = ((y - centerY) / centerY) * -10; 
+                const rotateY = ((x - centerX) / centerX) * 10;
+
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02) translateY(-4px)`;
+                
+                // Add a shine effect using radial gradient
+                card.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.15) 0%, transparent 60%), var(--card-bg)`;
+                card.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.3)';
+                card.style.borderColor = 'transparent';
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transition = 'all 0.4s ease-out';
+                card.style.transform = '';
+                card.style.background = '';
+                card.style.boxShadow = '';
+                card.style.borderColor = '';
+            });
+        });
+    });
+</script>
+<!-- Bug Report Modal -->
+<div class="modal-overlay" id="bug-modal" onclick="closeBugReportModal(event)">
+    <div class="modal-content" style="padding: 1.5rem; border-radius: 12px; max-width: 320px; position: relative;" onclick="event.stopPropagation()">
+        <button class="close-modal" onclick="closeBugReportModal()" style="position: absolute; top: 10px; right: 15px; font-size: 1.5rem;">&times;</button>
+        
+        <div data-fs-success class="fs-message" style="display:none; color: #22c55e; padding: 1rem 0; font-weight: bold;">Sent! Thanks.</div>
+        <div data-fs-error class="fs-message" style="display:none; color: #ef4444; padding: 1rem 0;">Error sending.</div>
+
+        <form id="bug-form" style="margin-top: 1rem;">
+            <textarea id="message" name="message" required data-fs-field placeholder="Describe the bug or error..." style="width: 100%; box-sizing: border-box; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: inherit; resize: vertical; min-height: 100px; max-height: 300px; margin-bottom: 0.5rem; outline: none;"></textarea>
+            <button type="submit" class="submit-btn" data-fs-submit-btn style="padding: 0.6rem; background: #3b82f6;">Send</button>
+        </form>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal-overlay" id="feedback-modal" onclick="closeFeedbackModal(event)">
+    <div class="modal-content" style="padding: 1.5rem; border-radius: 12px; max-width: 320px; position: relative;" onclick="event.stopPropagation()">
+        <button class="close-modal" onclick="closeFeedbackModal()" style="position: absolute; top: 10px; right: 15px; font-size: 1.5rem;">&times;</button>
+        
+        <div data-fs-success class="fs-message" id="feedback-success" style="display:none; color: #22c55e; padding: 1rem 0; font-weight: bold;">Feedback sent! Thanks.</div>
+        <div data-fs-error class="fs-message" id="feedback-error" style="display:none; color: #ef4444; padding: 1rem 0;">Error sending.</div>
+
+        <form id="feedback-form" style="margin-top: 1rem;">
+            <textarea id="feedback-message" name="message" required data-fs-field placeholder="What's your feedback?..." style="width: 100%; box-sizing: border-box; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: inherit; resize: vertical; min-height: 100px; max-height: 300px; margin-bottom: 0.5rem; outline: none;"></textarea>
+            <button type="submit" class="submit-btn" data-fs-submit-btn style="padding: 0.6rem; background: #22c55e; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">Send</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openBugReportModal() {
+        document.getElementById('bug-modal').classList.add('active');
+        document.getElementById('message').value = '';
+        document.getElementById('bug-form').style.display = 'block';
+        document.querySelector('#bug-modal [data-fs-success]').style.display = 'none';
+        setTimeout(() => document.getElementById('message').focus(), 100);
+    }
+    function closeBugReportModal(e) {
+        if (e && e.target !== document.getElementById('bug-modal')) return;
+        document.getElementById('bug-modal').classList.remove('active');
+    }
+
+    function openFeedbackModal() {
+        document.getElementById('feedback-modal').classList.add('active');
+        document.getElementById('feedback-message').value = '';
+        document.getElementById('feedback-form').style.display = 'block';
+        document.getElementById('feedback-success').style.display = 'none';
+        setTimeout(() => document.getElementById('feedback-message').focus(), 100);
+    }
+    function closeFeedbackModal(e) {
+        if (e && e.target !== document.getElementById('feedback-modal')) return;
+        document.getElementById('feedback-modal').classList.remove('active');
+    }
+
+    // Formspree init
+    window.formspree = window.formspree || function () { (formspree.q = formspree.q || []).push(arguments); };
+    formspree('initForm', { formElement: '#bug-form', formId: 'mnjkqkya' });
+    formspree('initForm', { formElement: '#feedback-form', formId: 'mqevarja' });
+
+    // Close automatically after hitting send
+    document.getElementById('bug-form').addEventListener('submit', function() {
+        setTimeout(() => {
+            document.getElementById('bug-form').style.display = 'none';
+            document.querySelector('#bug-modal [data-fs-success]').style.display = 'block';
+            setTimeout(closeBugReportModal, 1200);
+        }, 500);
+    });
+
+    document.getElementById('feedback-form').addEventListener('submit', function() {
+        setTimeout(() => {
+            document.getElementById('feedback-form').style.display = 'none';
+            document.getElementById('feedback-success').style.display = 'block';
+            setTimeout(closeFeedbackModal, 1200);
+        }, 500);
+    });
+</script>
+
+<!-- Username Registration Modal -->
+<div class="modal-overlay" id="username-modal">
+    <div class="modal-content" style="padding: 2rem; border-radius: 12px; max-width: 350px; text-align: center;">
+        <h2 style="margin-top: 0; font-size: 1.5rem;">Welcome! 👋</h2>
+        <p style="opacity: 0.8; font-size: 0.9rem; margin-bottom: 1.5rem;">Choose a unique username to join the global leaderboard and track your playtime.</p>
+        
+        <form id="username-form">
+            <input type="text" id="username-input" required placeholder="Enter username..." maxlength="15" pattern="[a-zA-Z0-9_]+" title="Letters, numbers, and underscores only" style="width: 100%; box-sizing: border-box; padding: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: inherit; margin-bottom: 1rem; outline: none; text-align: center; font-size: 1.1rem;">
+            
+            <div id="username-error" style="color: #ef4444; font-size: 0.8rem; margin-bottom: 1rem; display: none;">That name is taken!</div>
+            
+            <button type="submit" id="username-submit" style="width: 100%; padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: inherit;">Claim Name</button>
+            
+            <button type="button" onclick="document.getElementById('username-modal').classList.remove('active')" style="width: 100%; padding: 0.5rem; background: transparent; color: var(--text-color); border: none; font-size: 0.8rem; margin-top: 0.5rem; cursor: pointer; opacity: 0.5;">Later</button>
+        </form>
+    </div>
+</div>
+
+<!-- Firebase Config & Tracker -->
+<script type="module" src="js/firebase-config.js"></script>
+<script type="module" src="js/tracker.js"></script>
+
+<script src="https://unpkg.com/@formspree/ajax@1" defer></script>
+
+
+</body>
+</html>

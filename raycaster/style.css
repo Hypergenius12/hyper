@@ -1,0 +1,363 @@
+/* Brutalist 90s Shareware Aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+:root {
+    --bg-color: #000000;
+    --panel-bg: #0000aa; /* Classic DOS blue */
+    --border-light: #ffffff;
+    --border-dark: #000000;
+    --text-color: #ffffff;
+    --accent-color: #ff0000; /* DOOM Red */
+    --accent-hover: #ffff00; /* DOS Yellow */
+    --danger-color: #aa0000;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'VT323', monospace; /* Pixelated retro font */
+    font-size: 1.5rem;
+    overflow: hidden; /* Prevent scrolling during gameplay */
+    user-select: none;
+    text-transform: uppercase;
+}
+
+/* CRT Overlay Effect */
+#crt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.6;
+}
+
+/* Layout */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: var(--bg-color);
+    border-bottom: 4px solid var(--border-light);
+    position: relative;
+    z-index: 10;
+}
+
+h1 {
+    font-size: 3rem;
+    color: var(--accent-color);
+    text-shadow: 4px 4px 0px var(--border-light);
+    letter-spacing: 4px;
+}
+
+.controls button {
+    font-family: 'VT323', monospace;
+    font-size: 1.5rem;
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 4px solid var(--border-light);
+    padding: 5px 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.controls button:hover {
+    background: var(--border-light);
+    color: var(--bg-color);
+}
+
+.controls button.active {
+    background: var(--accent-color);
+    border-color: var(--border-light);
+    color: var(--border-light);
+}
+
+.controls button.accent {
+    background: var(--accent-color);
+    color: var(--border-light);
+    border: 4px solid var(--border-light);
+}
+
+.controls button.accent:hover {
+    background: var(--accent-hover);
+    color: var(--bg-color);
+}
+
+.main-container {
+    display: flex;
+    height: calc(100vh - 75px);
+    position: relative;
+    z-index: 10;
+}
+
+.view {
+    display: none; /* Toggled by JS */
+    width: 100%;
+    height: 100%;
+}
+
+.view.active {
+    display: flex;
+}
+
+/* Editor View */
+.editor-sidebar {
+    width: 350px;
+    background: var(--panel-bg);
+    border-right: 4px solid var(--border-light);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.editor-canvas-container {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #222;
+    padding: 20px;
+}
+
+#map-canvas {
+    image-rendering: pixelated;
+    border: 8px solid var(--border-light);
+    background: #000;
+    cursor: crosshair;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.panel {
+    border: 4px solid var(--border-light);
+    padding: 10px;
+    background: var(--bg-color);
+    margin-bottom: 20px;
+}
+
+.panel h2 {
+    font-size: 2rem;
+    color: var(--accent-hover);
+    border-bottom: 4px solid var(--border-light);
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
+
+.palette-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-bottom: 15px;
+    border: 4px solid var(--border-light);
+    background: var(--border-light);
+}
+
+.palette-block {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 2px solid var(--bg-color);
+    cursor: pointer;
+    image-rendering: pixelated;
+}
+
+.palette-block:hover {
+    border: 4px solid var(--accent-hover);
+}
+
+.palette-block.selected {
+    border: 4px solid var(--accent-color);
+}
+
+.palette-tools {
+    display: flex;
+    gap: 0;
+    border: 4px solid var(--border-light);
+}
+
+.tool-btn {
+    flex: 1;
+    font-family: 'VT323', monospace;
+    font-size: 1.2rem;
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 2px solid var(--bg-color);
+    padding: 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.tool-btn:hover {
+    background: var(--border-light);
+    color: var(--bg-color);
+}
+
+.tool-btn.selected {
+    background: var(--accent-color);
+    color: var(--border-light);
+    border: 2px solid var(--border-light);
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    margin-bottom: 5px;
+    color: var(--accent-hover);
+}
+
+.input-group input[type="color"] {
+    width: 100%;
+    height: 40px;
+    border: 4px solid var(--border-light);
+    background: none;
+    cursor: pointer;
+}
+
+.input-group input[type="range"] {
+    width: 100%;
+    height: 20px;
+    appearance: none;
+    background: var(--bg-color);
+    border: 4px solid var(--border-light);
+    outline: none;
+}
+
+.input-group input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: var(--accent-color);
+    cursor: pointer;
+}
+
+.panel button {
+    font-family: 'VT323', monospace;
+    font-size: 1.5rem;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 4px solid var(--border-light);
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.panel button:hover {
+    background: var(--border-light);
+    color: var(--bg-color);
+}
+
+.panel button.danger {
+    background: var(--danger-color);
+    color: var(--border-light);
+    border-color: var(--border-light);
+}
+
+.panel button.danger:hover {
+    background: var(--accent-color);
+}
+
+/* Game View */
+#view-game {
+    background: #000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+#view-game.active {
+    display: flex;
+}
+
+#game-canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+#crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--accent-hover);
+    font-size: 3rem;
+    pointer-events: none;
+    text-shadow: 2px 2px 0px #000;
+}
+
+/* DOOM HUD Overlay */
+#hud {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    background: #aaaaaa;
+    border-top: 4px solid var(--border-light);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 10;
+}
+
+.hud-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    border: 4px solid var(--border-light);
+    padding: 5px 15px;
+    min-width: 120px;
+}
+
+.hud-label {
+    color: var(--accent-hover);
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.hud-value {
+    color: var(--accent-color);
+    font-size: 2.5rem;
+    font-weight: bold;
+    line-height: 1;
+    text-shadow: 2px 2px 0 #fff;
+}
+
+.hud-face {
+    width: 72px;
+    height: 72px;
+    background: #000;
+    border: 4px solid var(--border-light);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#face-canvas {
+    width: 64px;
+    height: 64px;
+    image-rendering: pixelated;
+}

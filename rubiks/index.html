@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cube Solver</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="css/style.css?v=20260710-3">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Three.js and TrackballControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div id="ui-panel">
+        <h1 id="app-title">Cube Solver</h1>
+        
+        <div class="size-group">
+            <label for="cube-size">Cube Size:</label>
+            <select id="cube-size">
+                <option value="2x2" selected>2x2</option>
+                <option value="1x1">1x1</option>
+                <option value="3x3">3x3</option>
+                <option value="4x4">4x4</option>
+                <option value="5x5">5x5</option>
+                <option value="6x6">6x6</option>
+                <option value="10x10">10x10</option>
+            </select>
+        </div>
+        
+        <div class="controls-group">
+            <button id="btn-scramble">Scramble</button>
+            <button id="btn-reset">Reset</button>
+        </div>
+
+        <div class="solver-group">
+            <label for="solve-method">Method:</label>
+            <select id="solve-method">
+                <option value="guided">Guided (Layer by Layer + CLL)</option>
+                <option value="optimal">Optimal (Shortest Path)</option>
+            </select>
+            <button id="btn-solve" class="primary-btn">Solve Cube</button>
+        </div>
+
+        <div class="settings-group">
+            <details>
+                <summary>Settings</summary>
+                <div class="settings-content">
+                    <label>
+                        Animation Speed:
+                        <select id="setting-speed">
+                            <option value="slow">Slow</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="fast">Fast</option>
+                            <option value="instant">Instant</option>
+                        </select>
+                    </label>
+                    <label>
+                        Cube Colors:
+                        <select id="setting-colors">
+                            <option value="standard" selected>Standard</option>
+                            <option value="pastel">Pastel</option>
+                            <option value="neon">Neon</option>
+                            <option value="ocean">Ocean</option>
+                            <option value="sunset">Sunset</option>
+                        </select>
+                    </label>
+                    <label>
+                        Camera:
+                        <select id="setting-camera">
+                            <option value="perspective" selected>Perspective</option>
+                            <option value="orthographic">Orthographic</option>
+                        </select>
+                    </label>
+                    <label>
+                        Style:
+                        <select id="setting-style">
+                            <option value="block" selected>Block</option>
+                            <option value="floating">Floating</option>
+                            <option value="wireframe">Wireframe</option>
+                            <option value="glossy">Glossy</option>
+                        </select>
+                    </label>
+                </div>
+            </details>
+        </div>
+
+        <div id="solution-output" class="hidden">
+            <h3>Solution (<span id="solution-length">0</span> moves)</h3>
+            <p id="solution-text"></p>
+            <div class="playback-controls">
+                <button id="btn-prev">←</button>
+                <button id="btn-play">Play</button>
+                <button id="btn-next">→</button>
+            </div>
+        </div>
+        
+        <div class="manual-controls">
+            <p>Controls: Drag outside cube to rotate camera. Drag slices to turn them.</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/cubejs.js?v=20260710-2"></script>
+    <script src="js/solve.js?v=20260710-2"></script>
+    <script src="js/cubeState.js?v=20260710-2"></script>
+    <script src="js/solver.js?v=20260710-2"></script>
+    <script src="js/solver3x3.js?v=20260710-3"></script>
+    <script src="js/cube3d.js?v=20260710-3"></script>
+    <script type="module" src="js/cfopSolver.js"></script>
+    <script src="js/main.js?v=20260710-3"></script>
+    <script type="module" src="../js/firebase-config.js"></script>
+    <script type="module" src="../js/tracker.js"></script>
+</body>
+</html>

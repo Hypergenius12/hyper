@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The DOM Excavator</title>
+  <style>
+    :root {
+      --bg: #050508;
+      --text: #e0e0e0;
+      --accent: #00ff88;
+      --accent2: #0088ff;
+      --danger: #ff3366;
+      --panel-border: rgba(255,255,255,0.08);
+      --font-mono: 'Courier New', Courier, monospace;
+      --font-sans: system-ui, -apple-system, sans-serif;
+    }
+  </style>
+  <meta name="description" content="Dig through the geological strata of internet history.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Game Canvas (WebGL post-processing target) -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loader-content">
+      <div class="loader-icon">///</div>
+      <h1 class="loader-title">THE DOM EXCAVATOR</h1>
+      <p class="loader-subtitle">Initializing geological strata...</p>
+      <div class="loader-bar-track">
+        <div class="loader-bar-fill" id="loader-bar"></div>
+      </div>
+      <p class="loader-hint">Click anywhere to begin excavation</p>
+    </div>
+  </div>
+
+  <!-- Biome Announcement -->
+  <div id="biome-announce" class="biome-announce">
+    <div class="biome-announce-depth">DEPTH: 0m</div>
+    <div class="biome-announce-name">THE LANDING PAGE</div>
+    <div class="biome-announce-desc">Clean, modern web blocks</div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hud-stat">
+        <span class="hud-label">DEPTH</span>
+        <span class="hud-value" id="hud-depth">0m</span>
+      </div>
+      <div class="hud-stat">
+        <span class="hud-label">BANDWIDTH</span>
+        <span class="hud-value" id="hud-bandwidth">0 bits</span>
+      </div>
+      <div class="hud-stat">
+        <span class="hud-label">BIOME</span>
+        <span class="hud-value" id="hud-biome" style="color:#fff">The Landing Page</span>
+      </div>
+    </div>
+    <div class="hud-biome-progress">
+      <div class="hud-progress-track">
+        <div class="hud-progress-fill" id="hud-progress"></div>
+      </div>
+      <span class="hud-progress-label" id="hud-progress-label">Next biome: 50m</span>
+    </div>
+  </div>
+
+  <!-- Bandwidth Popup Container -->
+  <div id="bandwidth-popups"></div>
+
+  <!-- Left Action Buttons -->
+  <div id="left-actions" style="position:fixed; bottom:20px; left:20px; display:flex; gap:10px; z-index:100;">
+    <button id="map-btn" title="Geological Database [M]" style="background:rgba(5,5,10,0.8); border:1px solid rgba(0,136,255,0.4); color:#08f; padding:12px 20px; font-family:var(--font-mono); font-weight:bold; cursor:pointer; font-size:1.1rem; text-shadow:0 0 5px rgba(0,136,255,0.5); backdrop-filter:blur(5px); box-shadow:0 0 10px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,136,255,0.1); border-radius:4px;">
+      <span class="shop-text">[M] DATABASE</span>
+    </button>
+  </div>
+
+  <!-- Right Action Buttons -->
+  <div id="action-buttons" style="position:fixed; bottom:20px; right:20px; display:flex; gap:10px; z-index:100;">
+    <button id="shop-btn" title="Upgrade Shop [E]" style="background:rgba(5,5,10,0.8); border:1px solid rgba(0,255,136,0.4); color:var(--accent); padding:12px 20px; font-family:var(--font-mono); font-weight:bold; cursor:pointer; font-size:1.1rem; text-shadow:0 0 5px rgba(0,255,136,0.5); backdrop-filter:blur(5px); box-shadow:0 0 10px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,255,136,0.1); border-radius:4px;">
+      <span class="shop-text">[E] UPGRADES</span>
+    </button>
+  </div>
+
+  <!-- Shop Overlay -->
+  <div id="shop-overlay" class="hidden">
+    <div id="shop-panel">
+      <div class="shop-header">
+        <h2>UPGRADE TERMINAL</h2>
+        <div id="shop-multiplier-bar" style="display: flex; gap: 5px; margin-top: 10px; justify-content: center; width: 100%;">
+          <button class="shop-mult-btn active" data-mult="1" style="flex:1; padding:5px; background:#222; border:1px solid #555; color:#aaa; cursor:pointer;">x1</button>
+          <button class="shop-mult-btn" data-mult="10" style="flex:1; padding:5px; background:#222; border:1px solid #555; color:#aaa; cursor:pointer;">x10</button>
+          <button class="shop-mult-btn" data-mult="max" style="flex:1; padding:5px; background:#222; border:1px solid #555; color:#aaa; cursor:pointer;">MAX</button>
+        </div>
+        <div class="shop-balance" style="margin-top: 10px;">
+          <span class="shop-balance-label">BANDWIDTH:</span>
+          <span id="shop-balance-value">0 bits</span>
+        </div>
+        <div>
+          <button id="reset-btn" style="background:#400; border:1px solid #f00; color:#f55; padding:5px 8px; margin-right:10px; cursor:pointer; font-size:0.7rem;">RESET</button>
+          <button id="shop-close">[X]</button>
+        </div>
+      </div>
+      <div class="shop-grid" id="shop-grid"></div>
+      
+      <div id="prestige-section" style="padding: 14px; border-top: 1px solid rgba(0,255,136,0.2); text-align: center;">
+        <p style="color: var(--accent); font-size: 0.8rem; margin-bottom: 8px;">QUANTUM SHARDS: <span id="prestige-shards">0</span> (Each Shard = +25% Global Bonus)</p>
+        <button id="prestige-btn" style="background:#111; border:1px solid var(--accent); color:var(--accent); padding:10px 16px; cursor:pointer; font-weight:bold; font-size:0.8rem; transition:0.2s;">FORMAT DRIVE (PRESTIGE)</button>
+        <p style="font-size: 0.65rem; color: #888; margin-top: 6px;">Earn 1 Shard per 1000m of depth upon formatting. Resets depth and upgrades.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Map Overlay -->
+  <div id="map-overlay" class="hidden">
+    <div id="map-panel" style="width: 800px; max-width: 95vw; height: 90vh; max-height: 95vh; background: rgba(5,5,10,0.95); border: 1px solid rgba(0,136,255,0.5); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,136,255,0.2); backdrop-filter: blur(10px);">
+      <div class="shop-header" style="border-bottom: 1px solid rgba(0,136,255,0.3);">
+        <h2 style="color: #08f; text-shadow: 0 0 8px rgba(0,136,255,0.5);">GEOLOGICAL RECORD</h2>
+        <div class="shop-balance">
+          <span class="shop-balance-label">MAX DEPTH:</span>
+          <span id="map-max-depth" style="color: #08f;">0m</span>
+        </div>
+        <div>
+          <button id="map-close">[X]</button>
+        </div>
+      </div>
+      <div id="map-content" style="flex: 1; display: flex; overflow: hidden;">
+        <div id="map-scale-ruler" style="width: 120px; background: rgba(0,0,0,0.5); border-right: 1px solid rgba(255,255,255,0.1); position: relative; overflow-y: auto;">
+          <!-- Ruler segments injected via JS -->
+        </div>
+        <div id="map-info-panel" style="flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: radial-gradient(circle at center, rgba(0,136,255,0.05) 0%, transparent 70%);">
+          <canvas id="map-hover-preview-canvas" width="60" height="60" style="border-radius: 8px; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.5); background: #333;"></canvas>
+          <h3 id="map-hover-name" style="font-size: 2rem; color: #666; margin-bottom: 10px; font-family: var(--font-sans); letter-spacing: 2px;">HOVER OVER STRATA</h3>
+          <div id="map-hover-depth" style="font-size: 1.1rem; color: #aaa; margin-bottom: 15px; font-family: var(--font-mono); letter-spacing: 1px;">-</div>
+          <p id="map-hover-desc" style="font-size: 1.1rem; color: #ccc; max-width: 85%; line-height: 1.6; margin-bottom: 25px;"></p>
+          <div id="map-hover-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 80%; text-align: left; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); font-family: var(--font-mono); font-size: 0.95rem; color: #bbb;">
+            <div>HARDNESS: <span id="map-stat-hard" style="color: #fff;">-</span></div>
+            <div>BANDWIDTH: <span id="map-stat-bw" style="color: #fff;">-</span></div>
+            <div>BG COLOR: <span id="map-stat-bg" style="color: #fff;">-</span></div>
+            <div>STYLE: <span id="map-stat-style" style="color: #fff;">-</span></div>
+            <div>GLOW: <span id="map-stat-glow" style="color: #fff;">-</span></div>
+            <div>PARTICLES: <span id="map-stat-part" style="color: #fff;">-</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="settings-btn" style="position:fixed; top:14px; right:14px; z-index:100; background:rgba(5,5,10,0.7); border:1px solid rgba(0,255,136,0.2); color:#bbb; padding:8px 12px; cursor:pointer; font-size:1rem; backdrop-filter:blur(6px);">⚙️</button>
+  <div id="settings-modal" style="display:none; position:fixed; top:60px; right:14px; z-index:100; background:rgba(5,5,10,0.9); border:1px solid rgba(0,255,136,0.3); padding:16px; width:200px; backdrop-filter:blur(8px);">
+    <h3 style="color:var(--accent); font-size:0.9rem; margin-bottom:12px; font-family:var(--font-sans); letter-spacing:2px;">AUDIO SETTINGS</h3>
+    <label style="display:block; color:#aaa; font-size:0.75rem; margin-bottom:10px;">
+      <input type="checkbox" id="setting-bgm" checked> Play BGM
+    </label>
+    <label style="display:block; color:#aaa; font-size:0.75rem;">
+      <input type="checkbox" id="setting-sfx" checked> Play SFX
+    </label>
+  </div>
+
+  <audio id="bgm" src="creo.mp3" loop></audio>
+
+  <script type="module" src="js/biomes.js?v=28"></script>
+  <script type="module" src="js/ui.js?v=28"></script>
+  <script type="module" src="js/engine.js?v=28"></script>
+  <script type="module" src="js/main.js?v=28"></script>
+  <!-- Firebase Config & Tracker -->
+  <script type="module" src="../js/firebase-config.js"></script>
+  <script type="module" src="../js/tracker.js"></script>
+</body>
+</html>

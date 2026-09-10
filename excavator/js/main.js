@@ -1,0 +1,246 @@
+// ============================================================
+// THE DOM EXCAVATOR — MAIN
+// Entry point, game loop, save/load
+// ============================================================
+
+import { Engine } from './engine.js?v=28';
+import { UI } from './ui.js?v=28';
+import { BIOMES, getBiomeAtDepth } from './biomes.js?v=28';
+
+const engine = new Engine();
+const ui = new UI();
+window.engine = engine;
+window.ui = ui;
+
+let ready = false;
+let started = false;
+let isResetting = false;
+
+// Loading bar
+let loadPct = 0;
+const loadInterval = setInterval(() => {
+  loadPct += Math.random() * 18 + 6;
+  if (loadPct >= 100) {
+    loadPct = 100;
+    clearInterval(loadInterval);
+    ready = true;
+  }
+  ui.setLoadProgress(Math.min(loadPct, 100));
+}, 180);
+
+// Click to start
+document.getElementById('loading-screen').addEventListener('click', () => {
+  if (!ready || started) return;
+  started = true;
+
+  const canvas = document.getElementById('game-canvas');
+  engine.init(canvas);
+
+  // Load save
+  loadGame();
+
+  // Apply current biome visuals
+  const { biome } = getBiomeAtDepth(engine.gameState.depth);
+  engine.gameState.currentBiomeIndex = getBiomeAtDepth(engine.gameState.depth).index;
+
+  // Wire callbacks
+  engine.onBiomeChange = (biome, depth) => ui.announceBiome(biome, depth);
+  engine.onBlockMined = (type, data) => {
+    if (type === 'mined') ui.spawnBandwidthPopup(data.screenX, data.screenY, data.earned);
+    if (type === 'shake') ui.screenShake();
+  };
+
+  // Wire shop
+  ui.onUpgrade((id, cost, levels = 1) => {
+    if (engine.gameState.bandwidth >= cost) {
+      engine.gameState.bandwidth -= cost;
+      engine.gameState.upgrades[id] = (engine.gameState.upgrades[id] || 0) + levels;
+    }
+  });
+
+  // Wire Map
+  const mapBtn = document.getElementById('map-btn');
+  const mapOverlay = document.getElementById('map-overlay');
+  const mapClose = document.getElementById('map-close');
+
+  mapBtn.addEventListener('click', () => {
+    mapOverlay.classList.remove('hidden');
+    ui.renderMap(engine.gameState.maxDepth, BIOMES);
+  });
+  mapClose.addEventListener('click', () => mapOverlay.classList.add('hidden'));
+
+  // Hotkeys
+  document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'm') {
+      if (mapOverlay.classList.contains('hidden')) {
+        mapOverlay.classList.remove('hidden');
+        ui.renderMap(engine.gameState.maxDepth, BIOMES);
+      } else {
+        mapOverlay.classList.add('hidden');
+      }
+    }
+  });
+
+  // Init audio on gesture
+  engine.initAudio();
+
+  // Announce biome
+  ui.announceBiome(biome, engine.gameState.depth);
+
+  // Hide loading
+  ui.hideLoading();
+
+  // Reset button logic
+  document.getElementById('prestige-btn').addEventListener('click', () => {
+    const shardsEarned = Math.floor(engine.gameState.depth / 1000);
+    if (shardsEarned < 1) {
+      alert("You need to reach at least 1000m to Format the Drive!");
+      return;
+    }
+    if (confirm("Format the Drive? You will gain " + shardsEarned + " Quantum Shards, but lose all depth and upgrades!")) {
+      const newShards = (engine.gameState.prestigeShards || 0) + shardsEarned;
+      const prestigeMulti = 1 + newShards * 0.50;
+      const s = {
+        depth: 0,
+        maxDepth: engine.gameState.maxDepth, // preserve max depth on format
+        bandwidth: Math.floor(600 * prestigeMulti),
+        totalMined: 0,
+        currentBiomeIndex: 0,
+        prestigeShards: newShards,
+        upgrades: {}
+      };
+      isResetting = true;
+      localStorage.setItem('dom-excavator-save', JSON.stringify(s));
+      location.reload();
+    }
+  });
+
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsModal = document.getElementById('settings-modal');
+  settingsBtn.addEventListener('click', () => {
+    settingsModal.style.display = settingsModal.style.display === 'none' ? 'block' : 'none';
+  });
+  
+  const bgm = document.getElementById('bgm');
+  const bgmToggle = document.getElementById('setting-bgm');
+  bgmToggle.addEventListener('change', () => {
+    if (bgmToggle.checked) bgm.play().catch(e => console.log("Audio play failed"));
+    else bgm.pause();
+  });
+  
+  // Try to start BGM on first interaction
+  document.body.addEventListener('click', () => {
+    if (bgmToggle.checked && bgm.paused) {
+      bgm.volume = 0.4;
+      bgm.play().catch(e => console.log("Audio play failed"));
+    }
+  }, { once: true });
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (confirm("Are you sure you want to completely wipe your save? This cannot be undone.")) {
+      isResetting = true;
+      localStorage.clear();
+      location.reload();
+    }
+  });
+
+  // Background tab execution support
+  let bgTimer = null;
+  let lastBgTick = 0;
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      lastBgTick = performance.now();
+      bgTimer = setInterval(() => {
+        const now = performance.now();
+        const dt = (now - lastBgTick) / 1000;
+        lastBgTick = now;
+        
+        engine.isCatchingUp = true;
+        engine._updateLogic(dt);
+        engine.isCatchingUp = false;
+        
+        // Save state in background
+        saveGame();
+      }, 1000);
+    } else {
+      if (bgTimer) {
+        clearInterval(bgTimer);
+        bgTimer = null;
+        engine.lastTime = performance.now();
+      }
+    }
+  });
+
+  // Start loop
+  function loop(ts) {
+    requestAnimationFrame(loop);
+    engine.update(ts);
+
+    const { biome: b, index: i } = getBiomeAtDepth(engine.gameState.depth);
+    const next = i < BIOMES.length - 1 ? BIOMES[i + 1] : null;
+    ui.updateHUD(engine.gameState, b, next);
+
+    if (ui.shopOpen) ui.renderShop(engine.gameState);
+  }
+  requestAnimationFrame(loop);
+});
+
+// Save / Load
+function saveGame() {
+  if (isResetting) return;
+  try {
+    const s = {
+      depth: engine.gameState.depth,
+      maxDepth: engine.gameState.maxDepth,
+      bandwidth: engine.gameState.bandwidth,
+      totalMined: engine.gameState.totalMined,
+      currentBiomeIndex: engine.gameState.currentBiomeIndex,
+      prestigeShards: engine.gameState.prestigeShards,
+      upgrades: { ...engine.gameState.upgrades },
+    };
+    localStorage.setItem('dom-excavator-save', JSON.stringify(s));
+  } catch (e) { /* silent */ }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem('dom-excavator-save');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    engine.gameState.depth = s.depth || 0;
+    engine.gameState.maxDepth = s.maxDepth || Math.max(s.depth || 0, 0);
+    const prestigeMulti = 1 + (s.prestigeShards || 0) * 0.50;
+    engine.gameState.bandwidth = s.bandwidth !== undefined ? s.bandwidth : Math.floor(600 * prestigeMulti);
+    engine.gameState.totalMined = s.totalMined || 0;
+    engine.gameState.currentBiomeIndex = s.currentBiomeIndex || 0;
+    engine.gameState.prestigeShards = s.prestigeShards || 0;
+    const defaults = {
+      miningPower:0, autoMiner:0, bandwidthMulti:0,
+      sqlInjection:0, critChance:0, particleBoost:0,
+      depthBoost:0, cacheBoost:0, pierce:0, autoSpeed:0, 
+      cryptoHijack:0, ramSweep:0, zeroDay:0,
+      overclock: 0, firewallBypass: 0
+    };
+    engine.gameState.upgrades = { ...defaults, ...(s.upgrades || {}) };
+
+    // Restore active row and camera if we have saved depth
+    if (engine.gameState.depth > 0) {
+      const SKY_ROWS = 8;
+      engine.activeRow = SKY_ROWS + Math.floor(engine.gameState.depth);
+      
+      const targetRow = engine.activeRow - 1;
+      engine.targetCameraY = Math.max(0, targetRow * engine.blockSize - engine.height * 0.25);
+      engine.cameraY = engine.targetCameraY;
+      
+      const visibleBottom = Math.ceil((engine.cameraY + engine.height) / engine.blockSize);
+      while (engine.generatedRows < visibleBottom + 5) {
+        engine._generateRow(engine.generatedRows);
+        engine.generatedRows++;
+      }
+    }
+  } catch (e) { /* corrupt save */ }
+}
+
+setInterval(saveGame, 30000);
+window.addEventListener('beforeunload', saveGame);

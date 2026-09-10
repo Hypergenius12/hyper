@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html>
+<body>
+<iframe id="f" src="https://example.com" style="width:500px;height:500px;"></iframe>
+<button onclick="try { document.getElementById('f').contentWindow.history.back(); console.log('success'); } catch(e) { console.log('error', e); }">Back</button>
+</body>
+</html>

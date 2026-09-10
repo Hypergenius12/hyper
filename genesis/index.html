@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Genesis — AI World Sandbox</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=6">
+</head>
+<body>
+    <div id="app">
+        <!-- Main Viewport -->
+        <div id="viewport">
+            <div id="canvas-container"></div>
+            <!-- In-viewport HUD -->
+            <div id="hud">
+                <span id="entity-count" class="hud-badge">0 ENTITIES</span>
+                <span id="coord-display" class="hud-badge coord">0, 0</span>
+            </div>
+        </div>
+
+        <!-- Right Panel: Inspector -->
+        <div id="inspector-panel" class="panel hidden">
+            <div class="panel-header">
+                <span>INSPECTOR</span>
+                <button id="inspector-close" class="icon-btn small">✕</button>
+            </div>
+            <div class="panel-content">
+                <div id="inspector-props"></div>
+                
+                <div class="code-section-title">SPRITE DEFINITION (CANVAS 2D)</div>
+                <textarea id="inspector-code" spellcheck="false"></textarea>
+                <button id="inspector-compile" class="btn-primary">COMPILE SHADER</button>
+                
+                <button id="inspector-delete" class="btn-danger">DELETE ENTITY</button>
+            </div>
+        </div>
+
+        <!-- Bottom Bar: Console & Toolbar -->
+        <div id="bottom-bar">
+            <div class="toolbar">
+                <div class="brand">GENESIS // ENGINE</div>
+                <div class="tools">
+                    <button id="undo-btn" class="tool-btn" title="Undo (Ctrl+Z)">UNDO</button>
+                    <button id="save-btn" class="tool-btn" title="Save / Load">STORAGE</button>
+                    <button id="settings-btn" class="tool-btn" title="Settings">CONFIG</button>
+                </div>
+            </div>
+            
+            <div class="console-area">
+                <div id="ai-toast" class="hidden"></div>
+                <div class="prompt-line">
+                    <span class="prompt-prefix">GEN_CMD ></span>
+                    <div id="command-loading" class="hidden"><div class="spinner"></div></div>
+                    <input id="command-input" type="text" placeholder="Enter command (e.g. 'spawn a tall oak tree')" autocomplete="off" spellcheck="false">
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">ENGINE CONFIGURATION</div>
+                <div class="form-group">
+                    <label>API PROVIDER</label>
+                    <select id="provider-select">
+                        <option value="groq">Groq (Blazing Fast, Free)</option>
+                        <option value="gemini">Google Gemini API (Huge Free Tier)</option>
+                        <option value="openrouter">OpenRouter (Free Tier)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label id="api-key-label">API KEY</label>
+                    <input type="password" id="api-key-input" placeholder="Paste your key here..." />
+                    <p class="help-text" id="api-key-help">Get a free key from Groq Console</p>
+                </div>
+                <div class="form-group">
+                    <label>AI MODEL</label>
+                    <select id="model-select">
+                        <!-- Populated dynamically based on provider -->
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button id="settings-save" class="btn-primary">APPLY</button>
+                    <button id="settings-cancel" class="btn-secondary">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save/Load Modal -->
+        <div id="save-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">LOCAL STORAGE</div>
+                <div id="save-slots"></div>
+                <div class="modal-actions">
+                    <button id="save-new" class="btn-primary">SAVE CURRENT STATE</button>
+                    <button id="save-download" class="btn-secondary">EXPORT TO FILE</button>
+                    <label id="save-upload" class="btn-secondary" for="file-upload">IMPORT FILE</label>
+                    <button id="save-close" class="btn-secondary">CLOSE</button>
+                </div>
+                <input type="file" id="file-upload" accept=".json,.genesis" class="hidden">
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.3/dist/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+    <script src="engine.js?v=6"></script>
+</body>
+</html>

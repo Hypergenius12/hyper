@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agar.io Clone</title>
+    <link rel="stylesheet" href="style.css?v=2">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-LCRDCCZRXM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-LCRDCCZRXM');
+  </script>
+</head>
+<body>
+
+    <canvas id="gameCanvas" tabindex="1"></canvas>
+
+    <div id="overlays">
+        <div id="startMenu">
+            <h1>Agar.io</h1>
+            <input type="text" id="playerNameInput" placeholder="Nick-name" maxlength="15" autofocus>
+            <div style="margin: 10px 0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <label for="playerColor" style="color: #666; font-family: sans-serif; font-weight: bold;">Color:</label>
+                <input type="color" id="playerColor" value="#ff0000" style="cursor: pointer;">
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="playBtn" style="flex: 1;">Play</button>
+                <button id="spectateBtn" style="flex: 1; background-color: #95a5a6;">Spectate</button>
+            </div>
+            <div id="spectateTip" class="hidden" style="margin-top: 15px; color: #666; font-family: sans-serif; font-size: 14px;">Press ESC to return to menu</div>
+            <div id="menuLeaderboardBox" style="margin-top: 20px; text-align: left; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 5px; max-height: 150px; overflow-y: auto;">
+                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 10px;">
+                    <button id="tabGlobal" style="padding: 5px 10px; font-size: 12px; background: #2ecc71; color: white;">Global Scores</button>
+                    <button id="tabPersonal" style="padding: 5px 10px; font-size: 12px; background: #ecf0f1; color: #333;">My Scores</button>
+                </div>
+                <ol id="menuLeaderboardList" style="margin: 0; padding-left: 25px; font-size: 14px; color: #333;">
+                    <li>Loading...</li>
+                </ol>
+            </div>
+        </div>
+
+        <div id="deathPopup" class="hidden">
+            <h1>You Died!</h1>
+            <div style="margin: 20px 0; font-size: 18px; color: #333;">
+                <p style="margin: 5px 0;">Score: <span id="deathScoreDisplay" style="font-weight: bold;">0</span></p>
+                <p style="margin: 5px 0;">Global Rank: <span id="globalPlacementDisplay" style="font-weight: bold;">Loading...</span></p>
+                <p style="margin: 5px 0;">Personal Rank: <span id="personalPlacementDisplay" style="font-weight: bold;">Loading...</span></p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px; justify-content: center;">
+                <button id="submitScoreBtn">Submit to Global Leaderboard</button>
+                <button id="skipScoreBtn" style="background-color: #95a5a6;">Return to Main Menu</button>
+            </div>
+        </div>
+
+        <div id="leaderboard" class="hidden">
+            <h3>Leaderboard</h3>
+            <div id="leaderboardList"></div>
+        </div>
+
+        <div id="scoreBox" class="hidden">
+            Score: <span id="scoreDisplay">0</span>
+        </div>
+    </div>
+
+    <!-- Load scripts in order -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="entities.js"></script>
+    <script src="bot.js"></script>
+    <script src="player.js"></script>
+    <script src="game.js"></script>
+    <script src="renderer.js"></script>
+    <script src="main.js"></script>
+
+<script type="module" src="../js/firebase-config.js"></script>
+<script type="module" src="../js/tracker.js"></script>
+</body>
+</html>
