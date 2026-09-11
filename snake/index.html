@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Snake Dev</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <!-- Floating Top Right API Guide Button -->
+  <button id="btn-api-guide" style="position: absolute; top: 15px; right: 15px; font-weight: bold; padding: 6px 12px; cursor: pointer;">
+    [ API & Bot Guide ]
+  </button>
+
+  <!-- API Guide Modal -->
+  <!-- API Guide Modal -->
+  <dialog id="api-modal" style="margin: auto; padding: 20px; max-width: 900px; border: 1px solid black; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+    <h2 style="margin-top: 0;">Snake Dev Sandbox - Bot & Macro Guide</h2>
+    <div style="font-family: sans-serif; font-size: 14px; line-height: 1.5; max-height: 70vh; overflow-y: auto;">
+      
+      <div style="background: #f4f4f4; padding: 15px; border-left: 4px solid #333; margin-bottom: 20px;">
+        <h3 style="margin-top: 0;">Beginner's Tutorial: Writing Your First Bot</h3>
+        <p>Welcome to bot scripting! The game runs in a continuous loop. Every "tick" (frame), the game engine asks your bot code: <b>"Which direction should I move next?"</b></p>
+        
+        <p>To answer that, your bot needs to look at the board. You are provided two powerful tools: <code>state</code> and <code>utils</code>.</p>
+        
+        <h4>Step 1: Find the Snake and the Food</h4>
+        <p>The <code>state</code> object holds everything on the board. The snake is an array of segments, and the head is always the first segment in the list (index 0).</p>
+        <ul>
+          <li><code>const head = state.snake[0];</code> // Gets the {x, y} coordinates of the head.</li>
+          <li><code>const food = state.foods[0];</code> // Gets the {x, y} coordinates of the first apple.</li>
+        </ul>
+
+        <h4>Step 2: Decide Which Way to Go</h4>
+        <p>Compare the X (horizontal) and Y (vertical) coordinates. If the food's X is greater than the head's X, the food is to the right.</p>
+<pre style="background: #fff; padding: 10px; border: 1px solid #ccc; font-size: 12px;">
+if (food.x > head.x) { return 'RIGHT'; }
+if (food.x < head.x) { return 'LEFT'; }
+if (food.y > head.y) { return 'DOWN'; }
+if (food.y < head.y) { return 'UP'; }
+</pre>
+
+        <h4>Step 3: Don't Crash!</h4>
+        <p>The code above is the absolute most basic bot possible, but it is dumb. It will immediately crash into walls and its own tail! To make it smart, use the <code>utils.isWalkable(x, y, state)</code> function to check if a tile is safe before you move into it.</p>
+<pre style="background: #fff; padding: 10px; border: 1px solid #ccc; font-size: 12px;">
+// Example: Check if moving RIGHT is safe before doing it
+if (food.x > head.x && utils.isWalkable(head.x + 1, head.y, state)) {
+  return 'RIGHT';
+}
+</pre>
+      </div>
+
+      
+
+      <h3>Bot Scripting API Reference</h3>
+      <p>Your script evaluates every single tick. You must <code>return</code> a direction string (<code>'UP'</code>, <code>'DOWN'</code>, <code>'LEFT'</code>, <code>'RIGHT'</code>) or <code>null</code> to do nothing.</p>
+      
+      <h4>The <code>state</code> Object Structure:</h4>
+<pre style="background: #f4f4f4; padding: 10px; border: 1px solid #ccc; font-size: 12px;">{
+  "status": "RUNNING", // IDLE, PAUSED, GAME_OVER
+  "tickCount": 125,
+  "score": 50,
+  "currentTickRate": 120, // ms per tick
+  "snake": [
+    { "x": 10, "y": 15 }, // Head is always index 0
+    { "x": 10, "y": 14 }  // Tail segments...
+  ],
+  "direction": { "x": 0, "y": 1 }, // Current moving direction vector
+  "foods": [
+    { "x": 5, "y": 8, "type": "NORMAL", "spawnTick": 100 }
+  ],
+  "obstacles": [
+    { "x": 2, "y": 2 }
+  ]
+}</pre>
+      
+      <h4>The <code>utils</code> Object (Helper Functions for Bots):</h4>
+<pre style="background: #f4f4f4; padding: 10px; border: 1px solid #ccc; font-size: 12px;">
+utils.distance(a, b); // Returns Manhattan distance between two {x,y} points
+utils.isWalkable(x, y, state); // Returns true if cell is safe (no wall/tail/rock)
+</pre>
+
+      <h3>Global Developer Console (F12)</h3>
+      <p>The entire engine is exposed globally as <code>window.SNAKE_DEV</code>. You can write your own custom scripts in the browser console.</p>
+<pre style="background: #f4f4f4; padding: 10px; border: 1px solid #ccc; font-size: 12px;">
+SNAKE_DEV.engine.getState(); // Get current snapshot
+SNAKE_DEV.engine.setDirection('UP'); // Force a move
+SNAKE_DEV.engine.pause(); // Programmatically pause
+
+// Listen to internal game events:
+SNAKE_DEV.engine.on('eat', (data) => console.log('Ate food:', data));
+SNAKE_DEV.engine.on('collision', (data) => console.log('Crashed:', data));
+</pre>
+
+      <div style="background: #f4f4f4; padding: 15px; border-left: 4px solid #333; margin-top: 20px;">
+        <h3 style="margin-top: 0;">Advanced Example: The "Genius" Bot</h3>
+        <p>This is a highly advanced bot that uses <b>Breadth-First Search</b> to find perfect paths, <b>Flood-Fill</b> to avoid dead ends, and <b>Future Sight</b> to chase its own tail and stall indefinitely when trapped! Copy and paste this into the Bot Code box.</p>
+<pre style="background: #fff; padding: 10px; border: 1px solid #ccc; font-size: 11px; overflow-x: auto;">
+// ====== SNAKE DEV GENIUS BOT (Future Sight) ======
+// 1. Pathfinds using Breadth-First Search
+// 2. Looks into the future: Treats its own tail tip as walkable because it knows it will move!
+// 3. Fallback: If it's trapped and food is unreachable, it chases its own tail to stall indefinitely.
+const head = state.snake[0];
+const tail = state.snake[state.snake.length - 1];
+
+const DIRS = [
+  { name: 'UP', dx: 0, dy: -1 }, { name: 'DOWN', dx: 0, dy: 1 },
+  { name: 'LEFT', dx: -1, dy: 0 }, { name: 'RIGHT', dx: 1, dy: 0 }
+];
+
+function getCoords(x, y) {
+  if (state.config.wrapWalls) {
+    x = (x + state.config.gridWidth) % state.config.gridWidth;
+    y = (y + state.config.gridHeight) % state.config.gridHeight;
+  }
+  return { x, y };
+}
+
+function getSafetyScore(startX, startY) {
+  const visited = new Set([`${startX},${startY}`]);
+  const queue = [{ x: startX, y: startY }];
+  let count = 0;
+  const maxSearch = state.snake.length * 2;
+  
+  while (queue.length > 0 && count < maxSearch) {
+    const curr = queue.shift();
+    count++;
+    for (const d of DIRS) {
+      const { x: cx, y: cy } = getCoords(curr.x + d.dx, curr.y + d.dy);
+      const key = `${cx},${cy}`;
+      // FUTURE SIGHT: The tail is treated as walkable empty space in deep simulation!
+      const isTail = (cx === tail.x && cy === tail.y); 
+      if (!visited.has(key) && (utils.isWalkable(cx, cy, state) || isTail)) {
+        visited.add(key); queue.push({ x: cx, y: cy });
+      }
+    }
+  }
+  return count;
+}
+
+function getPathToTarget(tx, ty) {
+  const visited = new Set([`${head.x},${head.y}`]);
+  const queue = [];
+  
+  for (const d of DIRS) {
+    const { x: cx, y: cy } = getCoords(head.x + d.dx, head.y + d.dy);
+    // Even the first step could be our tail retreating!
+    const isFirstStepTail = (cx === tx && cy === ty && cx === tail.x && cy === tail.y);
+    if (utils.isWalkable(cx, cy, state) || isFirstStepTail) {
+      visited.add(`${cx},${cy}`); queue.push({ x: cx, y: cy, firstMove: d.name, dist: 1 });
+    }
+  }
+  
+  while(queue.length > 0) {
+    const curr = queue.shift();
+    if (curr.x === tx && curr.y === ty) return curr.firstMove;
+    if (curr.dist > 150) continue; // safety limit
+    
+    for (const d of DIRS) {
+      const { x: cx, y: cy } = getCoords(curr.x + d.dx, curr.y + d.dy);
+      const key = `${cx},${cy}`;
+      const isTargetTail = (cx === tx && cy === ty && cx === tail.x && cy === tail.y);
+      if (!visited.has(key) && (utils.isWalkable(cx, cy, state) || isTargetTail)) {
+        visited.add(key); queue.push({ x: cx, y: cy, firstMove: curr.firstMove, dist: curr.dist + 1 });
+      }
+    }
+  }
+  return null;
+}
+
+// 1. Prioritize Targets
+let bestFood = null, minScore = Infinity;
+for (const f of state.foods) {
+  if (f.type === 'POISON') continue;
+  const dist = utils.distance(head, f);
+  const score = f.type === 'GOLDEN' ? dist - 30 : dist; // aggressively hunt gold
+  if (score < minScore) { minScore = score; bestFood = f; }
+}
+
+let foodMove = bestFood ? getPathToTarget(bestFood.x, bestFood.y) : null;
+let tailMove = getPathToTarget(tail.x, tail.y); // Safe fallback target
+
+// 2. Eval safety of adjacent cells
+let safeMoves = [];
+for (const d of DIRS) {
+  const { x: cx, y: cy } = getCoords(head.x + d.dx, head.y + d.dy);
+  if (utils.isWalkable(cx, cy, state)) {
+    safeMoves.push({ name: d.name, safety: getSafetyScore(cx, cy) });
+  }
+}
+
+if (safeMoves.length === 0) return null;
+safeMoves.sort((a, b) => b.safety - a.safety);
+
+// 3. Make decision
+let finalMove = safeMoves[0].name; // default to safest open area
+const requiredSpace = state.snake.length;
+
+if (foodMove) {
+  const fd = safeMoves.find(m => m.name === foodMove);
+  // Eat if the path opens up to enough space OR if it safely loops us back to our own tail!
+  if (fd && (fd.safety >= requiredSpace || foodMove === tailMove)) return foodMove;
+}
+
+// If food path is deadly, chase our own tail to survive infinitely!
+if (tailMove) {
+  const td = safeMoves.find(m => m.name === tailMove);
+  if (td && td.safety >= 5) return tailMove;
+}
+
+return finalMove;
+</pre>
+      </div>
+    </div>
+    <div style="text-align: right; margin-top: 15px;">
+      <button id="btn-close-modal" style="padding: 5px 15px; font-weight: bold;">Close Guide</button>
+    </div>
+  </dialog>
+
+  <h1>Snake Dev Sandbox</h1>
+
+  <div id="stat-panel">
+    <span>Score: <b id="stat-score">0</b></span><span> | Length: <b id="stat-length">3</b></span><span> | Ticks: <b id="stat-ticks">0</b></span><span> | Speed: <b id="stat-speed">120</b>ms</span><span> | Status: <b id="stat-status">IDLE</b></span>
+  </div>
+
+  <canvas id="game-canvas" width="400" height="400"></canvas>
+
+  <div style="margin-bottom: 15px;">
+    <button id="btn-pause">Pause</button>
+    <button id="btn-step">Step</button>
+    <button id="btn-restart">Restart</button>
+  </div>
+
+  <details open style="margin-bottom: 15px; width: 100%; max-width: 800px;">
+    <summary><b>Engine Modifiers & Settings (TONS OF SETTINGS)</b></summary>
+
+    <details style="margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <summary style="cursor: pointer; margin-bottom: 10px;"><b>Physics, Rules & Geometry</b></summary>
+      <label>Grid Width: <input type="number" id="cfg-grid-w" value="20" min="5" max="250" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Grid Height: <input type="number" id="cfg-grid-h" value="20" min="5" max="250" style="width: 50px;"></label>
+      <label style="margin-left: 10px;"><b>Zoom (px):</b> <input type="number" id="cfg-zoom" value="20" min="2" max="100" style="width: 50px;"></label>
+      <br><br>
+      <label><input type="checkbox" id="cfg-wrap"> Wrap Walls (Toroidal)</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-ghost-walls"> Ghost Walls (Wrap while Ghost)</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-invinc-walls"> Invincible Walls (Bounce/Halt)</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-bouncy-walls"> Bouncy Walls (Auto 180 on hit)</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-invinc-tail"> Invincible Tail (Pass Through Self)</label>
+      <br><br>
+      <label><input type="checkbox" id="cfg-invert"> Invert Controls (Reverse)</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-allow-180"> Allow 180° Reversal (Instantly turn back)</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-auto-pilot"> Auto-Pilot Assist (Avoid crashes)</label>
+      <br><br>
+      <label><input type="checkbox" id="cfg-auto-start"> Auto-Start (Skips IDLE state)</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-rnd-spawn"> Randomize Spawn Location</label>
+      <br><br>
+      <label>Base Tick Speed (ms): <input type="number" id="cfg-speed" value="120" min="1" step="any" style="width: 60px;"></label>
+      <label style="margin-left: 10px;">Speedup per Apple (ms): <input type="number" id="cfg-speedup" value="0" min="0" step="any" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Length Speed Mod (ms/seg): <input type="number" id="cfg-len-speed" value="0" step="any" style="width: 50px;" title="Negative = faster as you grow. Positive = slower."></label>
+      <br><br>
+      <label>Score to Win: <input type="number" id="cfg-win-score" value="0" min="0" style="width: 70px;" title="0 = Endless. Set to a number to win the game!"></label>
+      <label style="margin-left: 10px;"><input type="checkbox" id="cfg-screen-shake"> Screen Shake on Eat/Collide</label>
+    </details>
+
+    <details style="margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <summary style="cursor: pointer; margin-bottom: 10px;"><b>Snake Mechanics</b></summary>
+      <label>Initial Length: <input type="number" id="cfg-init-len" value="3" min="1" max="100" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Max Length: <input type="number" id="cfg-max-len" value="0" min="0" style="width: 50px;" title="0 = infinite"></label>
+      <br><br>
+      <label>Growth per Apple: <input type="number" id="cfg-growth" value="1" min="0" max="10" step="any" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Tail Decay (ticks without food): <input type="number" id="cfg-decay" value="0" min="0" style="width: 60px;" title="0 = disabled"></label>
+      <br><br>
+      <label><input type="checkbox" id="cfg-hunger-damage"> Hunger Damage (Die instead of shrink)</label>
+      <br><br>
+      <label>Ghost Duration (ticks): <input type="number" id="cfg-ghost-dur" value="30" min="0" style="width: 50px;"></label>
+      <br><br>
+      <label><input type="checkbox" id="cfg-tail-chop"> Tail Chop (Sever tail instead of dying on self-hit)</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-drop-food"> Drop Apples on Tail Chop</label>
+    </details>
+
+    <details style="margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <summary style="cursor: pointer; margin-bottom: 10px;"><b>Board Spawners & Lifetimes</b></summary>
+      <label>Max Apples on Board: <input type="number" id="cfg-food-count" value="1" min="1" max="500" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Food Lifespan (ticks): <input type="number" id="cfg-food-life" value="0" min="0" style="width: 50px;" title="0 = never rots"></label>
+      <br><br>
+      <label>Spoil Time (ticks): <input type="number" id="cfg-spoilage" value="0" min="0" style="width: 50px;" title="0 = disabled. Turns normal apples to poison."></label>
+      <label style="margin-left: 10px;">Poison Lifespan (ticks): <input type="number" id="cfg-poison-life" value="0" min="0" style="width: 50px;" title="0 = never rots"></label>
+      <br><br>
+      <label>Teleporting Apple Chance %: <input type="number" id="cfg-teleport" value="0" min="0" max="100" step="any" style="width: 50px;"></label>
+      <br><br>
+      <label>Food Evasion Chance %: <input type="number" id="cfg-food-evade" value="0" min="0" max="100" step="any" style="width: 50px;" title="Chance per tick for food to run away"></label>
+      <label style="margin-left: 10px;">Apple Wander Chance %: <input type="number" id="cfg-apple-wander" value="0" min="0" max="100" step="any" style="width: 50px;" title="Chance per tick to roam aimlessly"></label>
+      <br><br>
+      <label>Exploding Apple Chance %: <input type="number" id="cfg-explode-pct" value="0" min="0" max="100" step="any" style="width: 50px;" title="Chance to obliterate a 3x3 radius of obstacles/tail when eaten"></label>
+      <br><br>
+      <label>Score Drain per Tick: <input type="number" id="cfg-score-drain" value="0" min="0" step="any" style="width: 50px;"></label>
+      <br><br>
+      <label>Normal Apple Score: <input type="number" id="cfg-score-n" value="10" step="any" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Golden Apple Score: <input type="number" id="cfg-score-g" value="50" step="any" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Poison Apple Score: <input type="number" id="cfg-score-p" value="-50" step="any" style="width: 50px;"></label>
+      <br><br>
+      <label>Golden Apple Chance %: <input type="number" id="cfg-gold-pct" value="5" min="0" max="100" step="any" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Poison Apple Chance %: <input type="number" id="cfg-poison-pct" value="5" min="0" max="100" step="any" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Ghost Apple Chance %: <input type="number" id="cfg-ghost-pct" value="0" min="0" max="100" step="any" style="width: 50px;" title="Cyan apples that grant invincibility!"></label>
+      <br><br>
+      <label>Initial Obstacle Rocks: <input type="number" id="cfg-obstacles" value="0" min="0" max="500" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Obstacle Spawn Chance %: <input type="number" id="cfg-obs-spawn-pct" value="0" min="0" max="100" step="any" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Wandering Obstacle Chance %: <input type="number" id="cfg-obs-wander" value="0" min="0" max="100" step="any" style="width: 50px;"></label>
+      <br><br>
+      <label><input type="checkbox" id="cfg-poison-bomb"> Poison Destroys Obstacles</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-invis-obs"> Invisible Obstacles (Minesweeper Mode)</label>
+    </details>
+
+        <details style="margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <summary style="cursor: pointer; margin-bottom: 10px;"><b>Chaos and Fun</b></summary>
+      <label>Fog of War Radius (px): <input type="number" id="cfg-fog" value="0" min="0" max="1000" style="width: 50px;"></label>
+      <label style="margin-left: 10px;">Scramble Controls (ticks): <input type="number" id="cfg-scramble" value="0" min="0" style="width: 50px;"></label>
+      <br><br>
+      <label>Drunk Snake Chance %: <input type="number" id="cfg-drunk" value="0" min="0" max="100" step="any" style="width: 50px;"></label>
+      <label style="margin-left: 10px;"><input type="checkbox" id="cfg-apple-gravity"> Black Hole Apples (Pull towards you)</label>
+      <br><br>
+      <label>Apple Multiplier: <input type="number" id="cfg-apple-mult" value="1" min="1" style="width: 50px;" title="Spawns N apples when you eat one!"></label>
+      <label style="margin-left: 10px;">Random Teleport (ticks): <input type="number" id="cfg-rnd-teleport" value="0" min="0" style="width: 50px;" title="0 = disabled. Warps you randomly!"></label>
+      <br><br>
+      <label>Poop Rocks (ticks): <input type="number" id="cfg-poop-rocks" value="0" min="0" style="width: 50px;" title="0 = disabled. Leaves obstacles out your tail"></label>
+      <label style="margin-left: 10px;"><input type="checkbox" id="cfg-acid-mode"> Acid Mode (Psychedelic smears)</label>
+      <br><br>
+      <label>Grid Shrink (ticks): <input type="number" id="cfg-shrink" value="0" min="0" style="width: 50px;" title="0 = disabled. Battle Royale mode!"></label>
+      <label style="margin-left: 10px;">Reverse Apple Chance %: <input type="number" id="cfg-rev-apple" value="0" min="0" max="100" step="any" style="width: 50px;"></label>
+      <br><br>
+      <label>Tornado Shuffle (ticks): <input type="number" id="cfg-tornado" value="0" min="0" style="width: 50px;" title="0 = disabled. Scrambles board!"></label>
+      <label style="margin-left: 10px;">Invert Colors (ticks): <input type="number" id="cfg-invert-cols" value="0" min="0" style="width: 50px;"></label>
+    </details>
+
+    <details style="margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <summary style="cursor: pointer; margin-bottom: 10px;"><b>Audio & Sound Effects</b></summary>
+      <label><input type="checkbox" id="cfg-sfx" checked> Enable Synthesizer SFX</label>
+      <br><br>
+      <label>Volume %: <input type="number" id="cfg-vol" value="10" min="0" max="100" style="width: 50px;"></label>
+    </details>
+    <details style="margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <summary style="cursor: pointer; margin-bottom: 10px;"><b>Visual Colors (Hex) & UI</b></summary>
+      <label>Render Style: 
+        <select id="cfg-render-style">
+          <option value="square">Square</option>
+          <option value="circle">Circle / Rounded</option>
+        </select>
+      </label>
+      <label style="margin-left: 10px;">Snake Fatness (0.1 - 1.5): <input type="number" id="cfg-fatness" value="1.0" min="0.1" max="1.5" step="0.1" style="width: 50px;"></label>
+      <br><br>
+      <label><input type="checkbox" id="cfg-show-grid" checked> Show Grid Lines</label>
+      <label style="margin-left: 15px;"><input type="checkbox" id="cfg-rainbow"> Rainbow Snake Mode</label>
+      <br><br>
+      <label>Background: <input type="color" id="cfg-col-bg" value="#ffffff"></label>
+      <label style="margin-left: 10px;">Grid: <input type="color" id="cfg-col-grid" value="#eeeeee"></label>
+      <label style="margin-left: 10px;">Snake Head: <input type="color" id="cfg-col-head" value="#15803d"></label>
+      <label style="margin-left: 10px;">Snake Body: <input type="color" id="cfg-col-body" value="#22c55e"></label>
+      <br><br>
+      <label>Normal Food: <input type="color" id="cfg-col-food" value="#dc2626"></label>
+      <label style="margin-left: 10px;">Golden Food: <input type="color" id="cfg-col-gold" value="#fbbf24"></label>
+      <label style="margin-left: 10px;">Poison Food: <input type="color" id="cfg-col-poison" value="#9333ea"></label>
+      <label style="margin-left: 10px;">Ghost Food: <input type="color" id="cfg-col-ghost" value="#06b6d4"></label>
+      <label style="margin-left: 10px;">Obstacles: <input type="color" id="cfg-col-obs" value="#64748b"></label>
+    </details>
+
+    <button id="btn-apply-cfg" style="margin-top: 15px; font-weight: bold; background-color: #d1d5db; padding: 10px 15px; cursor: pointer; width: 100%;">APPLY SETTINGS & RESTART</button>
+    <button id="btn-reset-cfg" style="margin-top: 5px; font-weight: bold; background-color: #ef4444; color: white; padding: 10px 15px; cursor: pointer; width: 100%;">RESET TO DEFAULTS</button>
+  </details>
+
+  <details style="margin-bottom: 15px; width: 100%; max-width: 800px;">
+    <summary><b>Bot Script Injection</b></summary>
+    <details style="margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <summary style="cursor: pointer; margin-bottom: 10px;">JavaScript Bot Logic</summary>
+      <p style="font-size: 12px; margin-bottom: 5px;">
+        Write logic that returns <code>'UP'</code>, <code>'DOWN'</code>, <code>'LEFT'</code>, or <code>'RIGHT'</code>.<br>
+        Available variables: <code>state</code>, <code>utils</code>. Need help? Click <b>[ API & Bot Guide ]</b> in top right!
+      </p>
+      <textarea id="bot-code" style="width: 100%; height: 180px; font-family: monospace;">
+// The most basic bot possible!
+const head = state.snake[0];
+const food = state.foods[0];
+
+if (!food) return null;
+
+if (food.x > head.x) return 'RIGHT';
+if (food.x < head.x) return 'LEFT';
+if (food.y > head.y) return 'DOWN';
+if (food.y < head.y) return 'UP';
+
+return null;
+      </textarea>
+      <br>
+      <button id="btn-inject-bot" style="margin-top: 5px; font-weight: bold; background-color: #d1d5db; padding: 5px 10px;">Inject Bot & Start Game</button>
+      <button id="btn-stop-bot" style="margin-top: 5px; padding: 5px 10px;">Stop Bot</button>
+      <span id="bot-status" style="margin-left: 10px; font-size: 12px; color: green; display: none;">Bot Active!</span>
+    </details>
+  </details>
+
+    <details style="margin-bottom: 15px; width: 100%; max-width: 800px;">
+    <summary><b>Custom Mods & Setup</b></summary>
+    
+    <details style="margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <summary style="cursor: pointer; margin-bottom: 10px;">JavaScript Mod Injection</summary>
+      <p style="font-size: 12px; margin-bottom: 5px;">
+        Inject arbitrary code into the global console context. Overwrite <code>SNAKE_DEV.engine</code> functions or add events here!
+      </p>
+      <textarea id="mod-code" style="width: 100%; height: 100px; font-family: monospace;">
+// Example: Console log every time an apple is eaten
+SNAKE_DEV.engine.on('eat', (data) => {
+  console.log('Nom! Score is now: ' + SNAKE_DEV.engine.getState().score);
+});
+      </textarea>
+      <br>
+      <button id="btn-inject-mod" style="margin-top: 5px; font-weight: bold; background-color: #d1d5db; padding: 5px 10px;">Inject Mod Code</button>
+      <span id="mod-status" style="margin-left: 10px; font-size: 12px; color: green; display: none;">Mod Injected!</span>
+    </details>
+
+    <details style="margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+      <summary style="cursor: pointer; margin-bottom: 10px;">Config Import/Export</summary>
+      <button id="btn-export-cfg" style="padding: 5px 15px; font-weight: bold;">Export Current Settings (.json)</button>
+      <hr style="margin: 10px 0; border: 0; border-top: 1px solid #ccc;">
+      <label>Import Settings JSON: <input type="file" id="file-cfg" accept=".json"></label>
+    </details>
+  </details>
+
+    <script type="module" src="./src/main.js?v=28"></script>
+</body>
+</html>

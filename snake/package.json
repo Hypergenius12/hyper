@@ -1,0 +1,9 @@
+{
+  "name": "snake-dev",
+  "version": "0.1.0",
+  "description": "Extensible developer-focused Snake playground",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}
