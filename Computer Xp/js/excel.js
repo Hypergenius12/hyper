@@ -325,10 +325,30 @@
     };
 
     window.excelNew = function() {
-        data = {};
-        initGrid();
+        if (typeof window.checkUnsavedChanges === 'function') {
+            window.checkUnsavedChanges('excel-window', function(canProceed) {
+                if (canProceed) {
+                    window.executeExcelNew();
+                }
+            }, 'new');
+        } else {
+            window.executeExcelNew();
+        }
+    };
+
+    window.executeExcelNew = function() {
+        if(typeof window.excelClearAll === 'function') {
+            window.excelClearAll();
+        } else {
+            data = {};
+            refreshGrid();
+        }
         currentFileName = "Book1";
         document.querySelector('#excel-window .title-bar span').innerHTML = '<img src="Windows XP Icons/Excel.png" class="sys-icon-small" onerror="this.style.display=\'none\'"> Microsoft Excel - Book1';
+        if (typeof window.appSavedStates !== 'undefined') {
+            window.appSavedStates['excel-window'] = "{}";
+        }
+        selectCell("A1");
     };
 
     window.excelSave = function() {

@@ -1,13 +1,22 @@
 window.appSavedStates = {};
 
-window.pendingCloseApp = null;
+window.pendingAppAction = null;
 
 window.markAppSaved = function(id, content) {
     window.appSavedStates[id] = content;
-    if (window.pendingCloseApp === id) {
-        window.pendingCloseApp = null;
-        if(typeof window.forceCloseWindow === 'function') {
-            window.forceCloseWindow(id);
+    if (window.pendingAppAction && window.pendingAppAction.id === id) {
+        let action = window.pendingAppAction.action;
+        window.pendingAppAction = null;
+        if (action === 'close') {
+            if(typeof window.forceCloseWindow === 'function') {
+                window.forceCloseWindow(id);
+            }
+        } else if (action === 'new') {
+            if (id === 'excel-window' && typeof window.executeExcelNew === 'function') {
+                window.executeExcelNew();
+            } else if (id === 'notepad-window' && typeof window.clearNotepad === 'function') {
+                window.clearNotepad();
+            }
         }
     }
 };
@@ -57,7 +66,8 @@ window.triggerAppSave = function(id) {
     }
 };
 
-window.checkUnsavedChanges = function(id, callback) {
+window.checkUnsavedChanges = function(id, callback, action='close') {
+    window.currentUnsavedAction = action;
     let currentState = window.getAppCurrentState(id);
     if (currentState !== null) {
         let savedState = window.appSavedStates[id] !== undefined ? window.appSavedStates[id] : "";
@@ -166,39 +176,39 @@ window.showUnsavedDialog = function(id, appName, docName, callback) {
     
     window.unsavedCallbacks = window.unsavedCallbacks || {};
     window.unsavedCallbacks[id] = callback;
-};window.handleUnsavedYes = function(id, dlgId) {
+};
+
+window.handleUnsavedYes = function(id, dlgId) {
     let dlg = document.getElementById(dlgId);
     if(dlg) dlg.remove();
     
-    window.pendingCloseApp = id;
+    window.pendingAppAction = { id: id, action: window.currentUnsavedAction || 'close' };
     window.triggerAppSave(id);
     
     let cb = window.unsavedCallbacks[id];
-    if (cb) cb(false); // Wait for markAppSaved to force close
-};window.handleUnsavedNo = function(id, dlgId) {
+    if (cb) cb(false); // Wait for markAppSaved to act
+};
+
+window.handleUnsavedNo = function(id, dlgId) {
     let dlg = document.getElementById(dlgId);
     if(dlg) dlg.remove();
     
-    // Force close without saving
     window.appSavedStates[id] = undefined;
     
-    // Clear content for instantiated apps so they are blank next time
     if(id.startsWith('notepad-window')) {
-        let ta = document.querySelector('#' + id + ' textarea');
-        if(ta) ta.value = '';
+        if(typeof window.clearNotepad === 'function') window.clearNotepad();
     } else if (id === 'wordpad-window') {
         let ed = document.getElementById('wordpad-content');
         if(ed) ed.innerHTML = '';
     } else if (id === 'excel-window') {
-        let inputs = document.querySelectorAll('#excel-grid td input');
-        inputs.forEach(inp => inp.value = '');
+        if(typeof window.executeExcelNew === 'function') window.executeExcelNew();
     } else if (id === 'frontpage-window') {
         let ca = document.getElementById('fp-code-area');
         if(ca) ca.value = "<html>\n<head>\n<title>Untitled Normal Page</title>\n</head>\n<body>\n<h1>Welcome to Microsoft FrontPage</h1><p>Edit your webpage here.</p>\n</body>\n</html>";
     }
     
     let cb = window.unsavedCallbacks[id];
-    if (cb) cb(true); // Close it
+    if (cb && window.currentUnsavedAction !== 'new') cb(true); 
 };
 
 window.handleUnsavedCancel = function(id, dlgId) {

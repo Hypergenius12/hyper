@@ -44,7 +44,7 @@ class Car {
 
         // Sensors (for AI)
         this.sensors = [];
-        this.sensorLength = 150;
+        this.sensorLength = 200;
         this.sensorCount = 7;
 
         // Neural network brain (null for human player)
@@ -407,12 +407,26 @@ class Car {
             const dotProduct = vx * nx + vy * ny;
 
             // Reflected velocity: v_new = v - 2(v . n)n
-            const vxNew = vx - 2 * dotProduct * nx;
-            const vyNew = vy - 2 * dotProduct * ny;
+            let vxNew = vx;
+            let vyNew = vy;
+            
+            // Only reflect if we are moving towards the plane (or if we don't care, but avoiding double-bounces is good)
+            if (dotProduct > 0) {
+                // n is pointing away from us, v.n > 0 means we are moving in the same direction as n (towards the wall if n points into the wall)
+                vxNew = vx - 2 * dotProduct * nx;
+                vyNew = vy - 2 * dotProduct * ny;
+            } else if (dotProduct < 0) {
+                vxNew = vx - 2 * dotProduct * nx;
+                vyNew = vy - 2 * dotProduct * ny;
+            }
 
             // Set new angle and speed (bounce multiplier)
             this.angle = Math.atan2(vyNew, vxNew);
-            this.speed = Math.sqrt(vxNew * vxNew + vyNew * vyNew) * 1.5;
+            this.speed = Math.min(Math.sqrt(vxNew * vxNew + vyNew * vyNew) * 1.5, this.maxSpeed * 1.2);
+            
+            // Nudge the car slightly forward along the new angle to prevent getting stuck in the same collision pixel
+            this.x += Math.cos(this.angle) * 2;
+            this.y += Math.sin(this.angle) * 2;
         } else {
             this.speed = 0;
             if (this.alive && !this.brain && typeof playCrashSound === 'function') {
@@ -641,6 +655,29 @@ class Car {
         ctx.restore();
     }
 
+    static renderGhost(ctx, x, y, angle) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.globalAlpha = 0.45;
+        
+        const carType = window.userCarType || 'f1';
+        const currentSprite = CAR_IMAGES[carType];
+
+        if (currentSprite && currentSprite.complete && currentSprite.naturalWidth > 0) {
+            ctx.filter = 'hue-rotate(180deg) brightness(140%) drop-shadow(0 0 6px rgba(0,255,255,0.7))';
+            ctx.drawImage(currentSprite, -15 * 1.5, -7.5 * 1.5, 30 * 1.5, 15 * 1.5);
+            ctx.filter = 'none';
+        } else {
+            ctx.fillStyle = '#38bdf8';
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 8;
+            ctx.fillRect(-15, -7.5, 30, 15);
+        }
+
+        ctx.restore();
+    }
+
     renderSensors(ctx) {
         if (!this.sensors.length || !this.alive) return;
         ctx.save();
@@ -667,6 +704,7 @@ class Car {
         this.totalCheckpoints = 0;
         this.lapCount = 0;
         this.lapTime = 0;
+        this.bestLap = Infinity;
         this.totalTime = 0;
         this.started = false;
         this.sensors = [];

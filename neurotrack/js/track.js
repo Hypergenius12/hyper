@@ -85,7 +85,11 @@ const TILE_TYPES = {
     FAST_CURVE_BR: { id: 64, ports: [0, 1, 1, 0], render: renderFastCurveBR },
     FAST_CURVE_BL: { id: 65, ports: [0, 0, 1, 1], render: renderFastCurveBL },
     FAST_CURVE_TL: { id: 66, ports: [1, 0, 0, 1], render: renderFastCurveTL },
-    CROSSROAD_V_OVER: { id: 67, ports: [1, 1, 1, 1], render: renderCrossroadVOver }
+    CROSSROAD_V_OVER: { id: 67, ports: [1, 1, 1, 1], render: renderCrossroadVOver },
+    DEAD_END_UP: { id: 68, ports: [0, 0, 1, 0], render: renderDeadEndUp },
+    DEAD_END_RIGHT: { id: 69, ports: [0, 0, 0, 1], render: renderDeadEndRight },
+    DEAD_END_DOWN: { id: 70, ports: [1, 0, 0, 0], render: renderDeadEndDown },
+    DEAD_END_LEFT: { id: 71, ports: [0, 1, 0, 0], render: renderDeadEndLeft }
 };
 
 // ========================================
@@ -561,6 +565,88 @@ function renderTeleportRight(ctx, x, y, size) { renderTeleport(ctx, x, y, size, 
 function renderTeleportDown(ctx, x, y, size) { renderTeleport(ctx, x, y, size, 'DOWN'); }
 function renderTeleportLeft(ctx, x, y, size) { renderTeleport(ctx, x, y, size, 'LEFT'); }
 
+function renderDeadEnd(ctx, x, y, size, dir) {
+    ctx.save();
+    ctx.translate(x + size / 2, y + size / 2);
+    let rot = 0;
+    if (dir === 'RIGHT') rot = Math.PI / 2;
+    else if (dir === 'DOWN') rot = Math.PI;
+    else if (dir === 'LEFT') rot = -Math.PI / 2;
+    ctx.rotate(rot);
+
+    // 1. Road border (exact match to drawRoadPath: 85% width #cccccc)
+    ctx.beginPath();
+    ctx.moveTo(0, size / 2);
+    ctx.lineTo(0, 0);
+    ctx.lineWidth = size * 0.85;
+    ctx.lineCap = 'butt';
+    ctx.strokeStyle = '#cccccc';
+    ctx.stroke();
+
+    // 2. Road asphalt (exact match to drawRoadPath: 80% width #1e1e24)
+    ctx.beginPath();
+    ctx.moveTo(0, size / 2);
+    ctx.lineTo(0, 0);
+    ctx.lineWidth = size * 0.80;
+    ctx.lineCap = 'butt';
+    ctx.strokeStyle = TILE_COLOR_ROAD;
+    ctx.stroke();
+
+    // 3. Center line (exact match to drawRoadPath: 2px width, [15, 15] dash, #eebc1f)
+    ctx.beginPath();
+    ctx.moveTo(0, size / 2);
+    ctx.lineTo(0, 8);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'butt';
+    ctx.setLineDash([15, 15]);
+    ctx.lineDashOffset = -10;
+    ctx.strokeStyle = TILE_COLOR_STRIPE;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineDashOffset = 0;
+
+    // 4. Hazard Barrier across the dead end
+    const bw = size * 0.85 + 6;
+    const bh = 14;
+    ctx.save();
+    ctx.translate(-bw / 2, -bh / 2);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, bw, bh);
+
+    // Diagonal hazard stripes on the barrier (Yellow & Dark)
+    ctx.beginPath();
+    ctx.rect(0, 0, bw, bh);
+    ctx.clip();
+    for (let sx = -bh * 2; sx < bw + bh * 2; sx += 14) {
+        ctx.fillStyle = (Math.floor(sx / 14) % 2 === 0) ? '#1e1e24' : '#eebc1f';
+        ctx.beginPath();
+        ctx.moveTo(sx, bh);
+        ctx.lineTo(sx + 10, bh);
+        ctx.lineTo(sx + 18, 0);
+        ctx.lineTo(sx + 8, 0);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // Steel frame around barricade
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-bw / 2, -bh / 2, bw, bh);
+
+    // Steel support base plates at ends of barricade
+    ctx.fillStyle = '#4b5563';
+    ctx.fillRect(-bw / 2 + 4, bh / 2, 8, 4);
+    ctx.fillRect(bw / 2 - 12, bh / 2, 8, 4);
+
+    ctx.restore();
+}
+
+function renderDeadEndUp(ctx, x, y, size) { renderDeadEnd(ctx, x, y, size, 'UP'); }
+function renderDeadEndRight(ctx, x, y, size) { renderDeadEnd(ctx, x, y, size, 'RIGHT'); }
+function renderDeadEndDown(ctx, x, y, size) { renderDeadEnd(ctx, x, y, size, 'DOWN'); }
+function renderDeadEndLeft(ctx, x, y, size) { renderDeadEnd(ctx, x, y, size, 'LEFT'); }
+
 // ========================================
 // Start/Finish Line
 // ========================================
@@ -648,6 +734,7 @@ class Track {
     // Validates if the tile connections match up
     isValid() {
         let startCount = 0;
+        let firstOpenReason = null;
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 const id = this.getTile(c, r);
@@ -699,32 +786,35 @@ class Track {
                     return false;
                 };
 
-                // Top
-                if (ports[0]) {
-                    const adj = this.getTileType(c, r - 1);
-                    if (!adj || !adj.ports[2]) {
-                        if (!isRampJump(0)) return { valid: false, reason: `Tile at (${c}, ${r}) has an open top connection.` };
+                // Check for first broken connection if loop is missing
+                if (firstOpenReason === null) {
+                    // Top
+                    if (ports[0]) {
+                        const adj = this.getTileType(c, r - 1);
+                        if (!adj || !adj.ports[2]) {
+                            if (!isRampJump(0)) firstOpenReason = `Tile at (${c}, ${r}) has an open top connection.`;
+                        }
                     }
-                }
-                // Right
-                if (ports[1]) {
-                    const adj = this.getTileType(c + 1, r);
-                    if (!adj || !adj.ports[3]) {
-                        if (!isRampJump(1)) return { valid: false, reason: `Tile at (${c}, ${r}) has an open right connection.` };
+                    // Right
+                    if (ports[1] && !firstOpenReason) {
+                        const adj = this.getTileType(c + 1, r);
+                        if (!adj || !adj.ports[3]) {
+                            if (!isRampJump(1)) firstOpenReason = `Tile at (${c}, ${r}) has an open right connection.`;
+                        }
                     }
-                }
-                // Bottom
-                if (ports[2]) {
-                    const adj = this.getTileType(c, r + 1);
-                    if (!adj || !adj.ports[0]) {
-                        if (!isRampJump(2)) return { valid: false, reason: `Tile at (${c}, ${r}) has an open bottom connection.` };
+                    // Bottom
+                    if (ports[2] && !firstOpenReason) {
+                        const adj = this.getTileType(c, r + 1);
+                        if (!adj || !adj.ports[0]) {
+                            if (!isRampJump(2)) firstOpenReason = `Tile at (${c}, ${r}) has an open bottom connection.`;
+                        }
                     }
-                }
-                // Left
-                if (ports[3]) {
-                    const adj = this.getTileType(c - 1, r);
-                    if (!adj || !adj.ports[1]) {
-                        if (!isRampJump(3)) return { valid: false, reason: `Tile at (${c}, ${r}) has an open left connection.` };
+                    // Left
+                    if (ports[3] && !firstOpenReason) {
+                        const adj = this.getTileType(c - 1, r);
+                        if (!adj || !adj.ports[1]) {
+                            if (!isRampJump(3)) firstOpenReason = `Tile at (${c}, ${r}) has an open left connection.`;
+                        }
                     }
                 }
             }
@@ -732,6 +822,12 @@ class Track {
         
         if (startCount !== 1) {
             return { valid: false, reason: `Track must have exactly one START tile. Found ${startCount}.` };
+        }
+
+        // Check if there is a drivable closed loop from the Start tile
+        this.computeCheckpoints();
+        if (!this.checkpoints || this.checkpoints.length < 3) {
+            return { valid: false, reason: firstOpenReason || "Track must form a complete closed loop starting from the Start tile." };
         }
         
         return { valid: true };
@@ -1269,6 +1365,14 @@ class Track {
                     drawCollisionCurve(ctx, px, py + TILE_SIZE, TILE_SIZE / 2, Math.PI * 1.5, Math.PI * 2, TILE_SIZE);
                 } else if (type.id === TILE_TYPES.CURVE_TL.id || type.id === TILE_TYPES.START_CURVE_TL.id || type.id === TILE_TYPES.ROUGH_CURVE_TL.id || type.id === TILE_TYPES.ICE_CURVE_TL.id || type.id === TILE_TYPES.BOUNCY_CURVE_TL.id || type.id === TILE_TYPES.PUDDLE_CURVE_TL.id || type.id === TILE_TYPES.FAST_CURVE_TL.id) {
                     drawCollisionCurve(ctx, px, py, TILE_SIZE / 2, 0, Math.PI / 2, TILE_SIZE);
+                } else if (type.id === TILE_TYPES.DEAD_END_UP.id) {
+                    drawCollisionPath(ctx, px + TILE_SIZE / 2, py + TILE_SIZE, px + TILE_SIZE / 2, py + TILE_SIZE * 0.5, TILE_SIZE);
+                } else if (type.id === TILE_TYPES.DEAD_END_RIGHT.id) {
+                    drawCollisionPath(ctx, px, py + TILE_SIZE / 2, px + TILE_SIZE * 0.5, py + TILE_SIZE / 2, TILE_SIZE);
+                } else if (type.id === TILE_TYPES.DEAD_END_DOWN.id) {
+                    drawCollisionPath(ctx, px + TILE_SIZE / 2, py, px + TILE_SIZE / 2, py + TILE_SIZE * 0.5, TILE_SIZE);
+                } else if (type.id === TILE_TYPES.DEAD_END_LEFT.id) {
+                    drawCollisionPath(ctx, px + TILE_SIZE, py + TILE_SIZE / 2, px + TILE_SIZE * 0.5, py + TILE_SIZE / 2, TILE_SIZE);
                 }
             }
         }
@@ -1364,24 +1468,95 @@ class Track {
     // ========================================
     // Serialization
     // ========================================
-    exportJSON() {
-        return JSON.stringify({
+    exportJSON(trackName = null) {
+        const out = {
             cols: this.cols,
             rows: this.rows,
             grid: Array.from(this.grid),
             autoGrid: Array.from(this.autoGrid)
-        });
+        };
+        if (trackName) out.name = trackName;
+        return JSON.stringify(out);
     }
 
     static importJSON(jsonStr) {
         try {
-            const data = JSON.parse(jsonStr);
-            const track = new Track(data.cols, data.rows);
-            track.grid.set(data.grid);
-            if (data.autoGrid) {
-                track.autoGrid.set(data.autoGrid);
+            if (!jsonStr) return null;
+            let data = jsonStr;
+            if (typeof data === 'string') {
+                data = data.trim().replace(/^\uFEFF/, '');
+                data = JSON.parse(data);
             }
-            track.computeCheckpoints();
+            while (typeof data === 'string') {
+                try { data = JSON.parse(data); } catch(e) { break; }
+            }
+            
+            // Extract from wrapper objects if present
+            let trackName = data && data.name ? data.name : null;
+            if (data && data.trackJSON) {
+                let t = data.trackJSON;
+                while (typeof t === 'string') { try { t = JSON.parse(t); } catch(e) { break; } }
+                if (data.trackName && !trackName) trackName = data.trackName;
+                data = t;
+            } else if (data && data.track && typeof data.track === 'object') {
+                data = data.track;
+            } else if (data && data.data && typeof data.data === 'object' && (data.data.grid || Array.isArray(data.data))) {
+                data = data.data;
+            }
+            if (data && data.name && !trackName) trackName = data.name;
+
+            // Extract raw grid and autoGrid
+            let rawGrid = null;
+            let rawAutoGrid = null;
+            if (Array.isArray(data)) {
+                rawGrid = data;
+            } else if (data && typeof data === 'object') {
+                rawGrid = data.grid || data.tiles || null;
+                rawAutoGrid = data.autoGrid || null;
+            }
+
+            if (!rawGrid) {
+                console.error("Failed to import track: no grid array found in JSON", data);
+                return null;
+            }
+
+            const gridArr = Array.isArray(rawGrid) ? rawGrid : Object.values(rawGrid);
+            let cols = (data && data.cols) ? parseInt(data.cols, 10) : 0;
+            let rows = (data && data.rows) ? parseInt(data.rows, 10) : 0;
+
+            if (!cols || !rows || isNaN(cols) || isNaN(rows)) {
+                if (gridArr.length === 768) {
+                    cols = 32; rows = 24;
+                } else if (gridArr.length === 192) {
+                    cols = 16; rows = 12;
+                } else if (cols && !rows) {
+                    rows = Math.ceil(gridArr.length / cols);
+                } else if (!cols && rows) {
+                    cols = Math.ceil(gridArr.length / rows);
+                } else {
+                    cols = 32; rows = 24;
+                }
+            }
+
+            const track = new Track(cols, rows);
+            if (trackName) track.name = trackName;
+            for (let i = 0; i < gridArr.length && i < track.grid.length; i++) {
+                track.grid[i] = Number(gridArr[i]) || 0;
+            }
+
+            if (rawAutoGrid) {
+                const autoArr = Array.isArray(rawAutoGrid) ? rawAutoGrid : Object.values(rawAutoGrid);
+                for (let i = 0; i < autoArr.length && i < track.autoGrid.length; i++) {
+                    track.autoGrid[i] = Number(autoArr[i]) || 0;
+                }
+            }
+
+            try {
+                track.computeCheckpoints();
+            } catch (cpErr) {
+                console.warn("computeCheckpoints failed during import:", cpErr);
+            }
+
             return track;
         } catch(e) {
             console.error("Failed to import track", e);
@@ -1514,6 +1689,63 @@ class Track {
         track.setTile(16, 15, TILE_TYPES.CURVE_TR.id);
         track.setTile(16, 14, TILE_TYPES.STRAIGHT_V.id);
         track.setTile(16, 13, TILE_TYPES.STRAIGHT_V.id);
+
+        track.computeCheckpoints();
+        return track;
+    }
+
+    // ========================================
+    // Built-in Track: Dead End Track (32x24 grid)
+    // ========================================
+    static createDeadEndTrack() {
+        const track = new Track(32, 24);
+
+        // Top main straight: row 9, cols 11..20
+        track.setTile(11, 9, TILE_TYPES.CURVE_BR.id);
+        track.setTile(12, 9, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(13, 9, TILE_TYPES.START_H.id); // Start Line facing right
+        track.setTile(14, 9, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(15, 9, TILE_TYPES.STRAIGHT_H.id);
+        
+        // At (16, 9), a T-split: SPLIT_UP (ports [0, 1, 1, 1]: left, right, and bottom are open)
+        // Main track continues right to (17, 9)
+        // Deceptive Dead-End branches DOWN into rows 10, 11, 12!
+        track.setTile(16, 9, TILE_TYPES.SPLIT_UP.id);
+        
+        // --- Dead End Branch (going south into a trap) ---
+        track.setTile(16, 10, TILE_TYPES.STRAIGHT_V.id);
+        track.setTile(16, 11, TILE_TYPES.STRAIGHT_V.id);
+        track.setTile(16, 12, TILE_TYPES.DEAD_END_DOWN.id); // Crash barricade at the end!
+
+        // --- Main Track continues around ---
+        track.setTile(17, 9, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(18, 9, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(19, 9, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(20, 9, TILE_TYPES.CURVE_BL.id);
+
+        // Right side: col 20, rows 10..14
+        track.setTile(20, 10, TILE_TYPES.STRAIGHT_V.id);
+        track.setTile(20, 11, TILE_TYPES.STRAIGHT_V.id);
+        track.setTile(20, 12, TILE_TYPES.STRAIGHT_V.id);
+        track.setTile(20, 13, TILE_TYPES.STRAIGHT_V.id);
+        track.setTile(20, 14, TILE_TYPES.CURVE_TL.id);
+
+        // Bottom straight: row 14, cols 12..19
+        track.setTile(19, 14, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(18, 14, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(17, 14, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(16, 14, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(15, 14, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(14, 14, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(13, 14, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(12, 14, TILE_TYPES.STRAIGHT_H.id);
+        track.setTile(11, 14, TILE_TYPES.CURVE_TR.id);
+
+        // Left side: col 11, rows 10..13
+        track.setTile(11, 13, TILE_TYPES.STRAIGHT_V.id);
+        track.setTile(11, 12, TILE_TYPES.STRAIGHT_V.id);
+        track.setTile(11, 11, TILE_TYPES.STRAIGHT_V.id);
+        track.setTile(11, 10, TILE_TYPES.STRAIGHT_V.id);
 
         track.computeCheckpoints();
         return track;

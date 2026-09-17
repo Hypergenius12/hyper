@@ -28,6 +28,11 @@
                 <select id="track-select" class="text-input" style="width: 100%; text-align: center; margin-bottom: 15px;"></select>
                 
                 <div class="ctrl-row" style="margin-bottom: 10px; padding: 0 10px;">
+                    <label style="font-size: 10px; color: #888;">GHOST CAR</label>
+                    <input type="checkbox" id="menu-ghost" class="ui-toggle" checked>
+                </div>
+
+                <div class="ctrl-row" style="margin-bottom: 10px; padding: 0 10px;">
                     <label style="font-size: 10px; color: #888;">MUSIC VOLUME</label>
                     <input type="range" id="menu-volume" min="0" max="1" step="0.01" value="0.5" style="width: 100px;">
                 </div>
@@ -66,8 +71,12 @@
                 <label style="font-size: 10px;">DRIFTING</label>
                 <input type="checkbox" id="hud-drift" class="ui-toggle">
             </div>
+            <div class="ctrl-row" style="margin-bottom: 5px;">
+                <label style="font-size: 10px;">GHOST CAR</label>
+                <input type="checkbox" id="hud-ghost" class="ui-toggle" checked>
+            </div>
         </div>
-        <div class="hint-bar">Press R to restart</div>
+        <div class="hint-bar">Press R to restart • G to toggle Ghost</div>
     </div>
 
     <!-- ==================== EDITOR ==================== -->
@@ -227,12 +236,12 @@
         </div>
     </div>
 
-    <script src="js/camera.js?v=21"></script>
-    <script src="js/track.js?v=21"></script>
-    <script src="js/sfx.js?v=21"></script>
-    <script src="js/car.js?v=21"></script>
-    <script src="js/ai.js?v=21"></script>
-    <script src="js/main.js?v=21"></script>
+    <script src="js/camera.js?v=29"></script>
+    <script src="js/track.js?v=33"></script>
+    <script src="js/sfx.js?v=29"></script>
+    <script src="js/car.js?v=33"></script>
+    <script src="js/ai.js?v=33"></script>
+    <script src="js/main.js?v=33"></script>
     <script type="module" src="../js/tracker.js"></script>
 
     <!-- ==================== CUSTOM MODALS ==================== -->

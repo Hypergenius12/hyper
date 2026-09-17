@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WORDPLAY ARCADE • Visual Riddles & Word Games</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css?v=2" />
+  </head>
+  <body class="theme-paper">
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- Animated Neo-Brutalist Background Elements -->
+    <div id="arcadeAnimatedBg" class="arcade-animated-bg" aria-hidden="true">
+      <div class="bg-grid-pattern"></div>
+      <div class="bg-floating-shape shape-1">✦</div>
+      <div class="bg-floating-shape shape-2">A</div>
+      <div class="bg-floating-shape shape-3">?</div>
+      <div class="bg-floating-shape shape-4">★</div>
+      <div class="bg-floating-shape shape-5">+</div>
+      <div class="bg-floating-shape shape-6">🧩</div>
+      <div class="bg-floating-shape shape-7">&</div>
+      <div class="bg-floating-shape shape-8">Z</div>
+      <div class="bg-floating-shape shape-9">#</div>
+      <div class="bg-floating-shape shape-10">⬡</div>
+      <div class="bg-floating-shape shape-11">!</div>
+      <div class="bg-floating-shape shape-12">●</div>
+    </div>
+
+    <div id="app" class="app-root">
+      <!-- Universal Top Nav Bar -->
+      <header class="tactile-header">
+        <div class="header-left">
+          <button id="homeNavBtn" class="brand-badge" title="Go to Home Lobby">
+            <span class="badge-icon">🕹️</span>
+            <span class="badge-title">WORDPLAY ARCADE</span>
+            <span class="badge-edition">INDIE ED.</span>
+          </button>
+        </div>
+
+        <div class="header-right">
+          <div class="hud-pill coins-pill" title="Coins available to spend on hints">
+            <span class="hud-label">COINS</span>
+            <span class="hud-val" id="coinCount">100</span>
+            <span class="hud-symbol">🪙</span>
+          </div>
+
+          <div class="hud-pill streak-pill" title="Current consecutive correct answers">
+            <span class="hud-label">STREAK</span>
+            <span class="hud-val" id="streakCount">0</span>
+            <span class="hud-symbol">🔥</span>
+          </div>
+
+          <div class="header-tools">
+            <button id="bookBtn" class="tactile-icon-btn" title="Open Collection Archive">
+              📖 <span class="btn-text">Archive</span>
+            </button>
+            <button id="soundToggleBtn" class="tactile-icon-btn" title="Toggle procedural sound effects">
+              🔊
+            </button>
+            <button id="themeToggleBtn" class="tactile-icon-btn" title="Switch Theme (Paper Ink / Dark Arcade)">
+              🌓
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- ================= HOME SCREEN LOBBY ================= -->
+      <section id="homeScreen" class="view-screen active">
+        <div class="hero-banner">
+          <div class="hero-stamp">ARCADE WORD VAULT</div>
+          <h1 class="hero-heading">Visual Wordplay & Riddle Arcade</h1>
+          <p class="hero-deck">
+            Five handcrafted modes of lateral thinking, word deduction, visual puns, and semantic exploration. Pick a mode or roll the dice!
+          </p>
+
+          <div class="hero-actions-row">
+            <button id="quickPlayBtn" class="tactile-btn primary hero-cta-btn">
+              🎲 Quick Play: Surprise Me
+            </button>
+            <button id="heroArchiveBtn" class="tactile-btn ghost hero-sub-btn">
+              📖 Solution Archive
+            </button>
+          </div>
+
+          <div class="hero-pill-ticker">
+            <span class="ticker-item"><span class="ticker-dot">●</span> 5 Distinct Modes</span>
+            <span class="ticker-item"><span class="ticker-dot">●</span> 6,000+ Curated Puzzles</span>
+            <span class="ticker-item"><span class="ticker-dot">●</span> 100% Free & Unlimited</span>
+          </div>
+        </div>
+
+        <!-- Featured Daily Mystery Banner -->
+        <div class="lobby-teaser-banner" id="dailyTeaserBanner">
+          <div class="teaser-left">
+            <span class="teaser-badge">💡 DAILY MYSTERY TEASER</span>
+            <div class="teaser-display">
+              <span class="td-emoji">🌧️</span>
+              <span class="td-op">+</span>
+              <span class="td-emoji">🏹</span>
+              <span class="td-op">=</span>
+              <span class="td-target">❓</span>
+            </div>
+          </div>
+          <div class="teaser-mid">
+            <div class="teaser-title">Can you decode the formula?</div>
+            <div class="teaser-sub">A spectrum of vibrant colors appearing after a rainstorm.</div>
+          </div>
+          <div class="teaser-right">
+            <button class="tactile-btn mini primary" id="solveTeaserBtn">Solve This Riddle ➔</button>
+          </div>
+        </div>
+
+        <div class="modes-deck">
+          <!-- Card 1: Emoji Alchemy -->
+          <div class="mode-card card-emoji" id="startEmojiBtn">
+            <div class="card-art">
+              <span class="sample-emoji">🧈</span>
+              <span class="sample-op">+</span>
+              <span class="sample-emoji">🪰</span>
+              <span class="sample-op">=</span>
+              <span class="sample-result">🦋</span>
+            </div>
+            <div class="card-body">
+              <h2 class="card-title">🔮 Emoji Alchemy</h2>
+              <div class="card-meta">235 Puzzles • Lateral Emoji Fusions</div>
+              <p class="card-desc">
+                Decipher what everyday things, classic movies, snacks, and idioms are formed when emojis fuse together.
+              </p>
+            </div>
+            <div class="card-footer">
+              <button class="tactile-btn primary">Play Emoji Riddles ➔</button>
+            </div>
+          </div>
+
+          <!-- Card 2: Rebus Puzzles -->
+          <div class="mode-card card-rebus" id="startRebusBtn">
+            <div class="card-art rebus-art-preview">
+              <div class="mini-rebus-square">
+                <span class="square-side square-top">DANCE</span>
+                <span class="square-side square-right">DANCE</span>
+                <span class="square-side square-bottom">DANCE</span>
+                <span class="square-side square-left">DANCE</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <h2 class="card-title">🧩 Rebus Wordplay</h2>
+              <div class="card-meta">189 Brainteasers • Typographic Visuals</div>
+              <p class="card-desc">
+                Classic newspaper brainteasers! Uncover phrases hidden inside stacked typography, word positions, missing letters, and literal visual arrangements.
+              </p>
+            </div>
+            <div class="card-footer">
+              <button class="tactile-btn accent">Play Rebus Mode ➔</button>
+            </div>
+          </div>
+
+          <!-- Card 3: Wordle -->
+          <div class="mode-card card-wordle" id="startWordleBtn">
+            <div class="card-art wordle-art-preview">
+              <div class="wordle-mini-grid">
+                <span class="wg-green">S</span><span class="wg-yellow">M</span><span class="wg-gray">A</span><span class="wg-gray">R</span><span class="wg-green">T</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <h2 class="card-title">🟩 Wordle</h2>
+              <div class="card-meta">5,757 Words • 6 Tries Logic Deduction</div>
+              <p class="card-desc">
+                Crack the hidden 5-letter target word in six attempts. Classic daily word-deduction rules applied to our tactile letterpress board.
+              </p>
+            </div>
+            <div class="card-footer">
+              <button class="tactile-btn primary">Play Wordle ➔</button>
+            </div>
+          </div>
+
+          <!-- Card 4: Connections -->
+          <div class="mode-card card-connections" id="startConnectionsBtn">
+            <div class="card-art connections-art-preview">
+              <div class="connections-mini-grid">
+                <span class="cg-yellow">DANCE</span>
+                <span class="cg-green">KEYS</span>
+                <span class="cg-blue">CAKE</span>
+                <span class="cg-purple">PALINDROME</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <h2 class="card-title">🟨 Connections</h2>
+              <div class="card-meta">110 Boards • 440 Group Categories</div>
+              <p class="card-desc">
+                Group sixteen words into four secret sets of four that share a clever connection. Beware of red herrings and tricky overlaps!
+              </p>
+            </div>
+            <div class="card-footer">
+              <button class="tactile-btn accent">Play Connections ➔</button>
+            </div>
+          </div>
+
+          <!-- Card 5: Contexto -->
+          <div class="mode-card card-contexto" id="startContextoBtn">
+            <div class="card-art contexto-art-preview">
+              <div class="contexto-mini-preview">
+                <div class="cmp-row cmp-green"><span>ESPRESSO</span><span class="cmp-rank">2</span></div>
+                <div class="cmp-row cmp-yellow"><span>MORNING</span><span class="cmp-rank">428</span></div>
+                <div class="cmp-row cmp-red"><span>ASTRONAUT</span><span class="cmp-rank">8,941</span></div>
+              </div>
+            </div>
+            <div class="card-body">
+              <h2 class="card-title">🧠 Contexto</h2>
+              <div class="card-meta">50 Target Words • Hot & Cold Proximity</div>
+              <p class="card-desc">
+                Find the secret word with unlimited guesses. Each word you guess receives a number and color showing how semantically close it is!
+              </p>
+            </div>
+            <div class="card-footer">
+              <button class="tactile-btn primary">Play Contexto ➔</button>
+            </div>
+          </div>
+
+          <!-- Card 6: Spelling Bee (The Hive) -->
+          <div class="mode-card card-spelling-bee" id="startSpellingBeeBtn">
+            <div class="card-art bee-art-preview">
+              <div class="bee-mini-hive">
+                <span class="bmh-cell outer">A</span>
+                <span class="bmh-cell outer">C</span>
+                <span class="bmh-cell center">P</span>
+                <span class="bmh-cell outer">E</span>
+                <span class="bmh-cell outer">G</span>
+                <span class="bmh-cell outer">H</span>
+                <span class="bmh-cell outer">M</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <h2 class="card-title">🐝 Spelling Bee</h2>
+              <div class="card-meta">50 Hives • Honeycomb Word Search</div>
+              <p class="card-desc">
+                Make words with 7 honeycomb letters! The golden center letter is mandatory in every word. Can you find the secret Pangram?
+              </p>
+            </div>
+            <div class="card-footer">
+              <button class="tactile-btn accent">Play Bee Hive ➔</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-stats-strip">
+          <div class="stat-block">
+            <div class="stat-number" id="homeCurrentStreak">0🔥</div>
+            <div class="stat-title">Current Streak</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-block">
+            <div class="stat-number" id="homeBestStreak">0x</div>
+            <div class="stat-title">Longest Win Streak</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-block">
+            <div class="stat-number" id="homeCoins">100🪙</div>
+            <div class="stat-title">Arcade Balance</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-block stat-action-block" id="homeVaultBtn" title="Open Solution Archive">
+            <div class="stat-number" id="homeVaultCount">0 / 424 📖</div>
+            <div class="stat-title">Vault Solved (Tap)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= GAME PLAY SCREEN ================= -->
+      <section id="gameScreen" class="view-screen">
+        <!-- In-game Sub-header / Breadcrumb bar -->
+        <div class="game-top-bar">
+          <button id="backToLobbyBtn" class="tactile-btn mini" title="Return to lobby">
+            ← Lobby
+          </button>
+
+          <div class="mode-switcher-segmented">
+            <button id="switchEmojiModeBtn" class="seg-btn active">🔮 Emoji</button>
+            <button id="switchRebusModeBtn" class="seg-btn">🧩 Rebus</button>
+            <button id="switchWordleModeBtn" class="seg-btn">🟩 Wordle</button>
+            <button id="switchConnectionsModeBtn" class="seg-btn">🟨 Connections</button>
+            <button id="switchContextoModeBtn" class="seg-btn">🧠 Contexto</button>
+            <button id="switchSpellingBeeModeBtn" class="seg-btn">🐝 Hive</button>
+          </div>
+
+          <div class="puzzle-counter-pill" id="puzzleProgressPill">
+            🎲 Random Play
+          </div>
+        </div>
+
+        <!-- Category Pills (Visible when in Emoji Mode) -->
+        <nav class="tactile-category-nav" id="categoryNav">
+          <!-- Injected via JavaScript -->
+        </nav>
+
+        <!-- Main Physical Playboard Card -->
+        <div class="playboard-card">
+          <!-- Card Header & Metadata -->
+          <div class="playboard-header">
+            <div class="meta-left">
+              <span class="puzzle-type-stamp" id="puzzleTypeBadge">COMPOUND WORD</span>
+              <span class="puzzle-index-label" id="puzzleIdLabel">#1</span>
+            </div>
+            <div class="meta-right">
+              <span class="mode-descriptor" id="modeDescriptor">Adventure Mode</span>
+            </div>
+          </div>
+
+          <!-- Universal Validation Feedback Banner (Available to all 6 modes) -->
+          <div class="validation-message" id="answerFeedback"></div>
+
+          <!-- Admire Board Control Bar (Shown when user admires completed board or solutions revealed) -->
+          <div class="admire-board-bar hidden" id="admireBoardBar">
+            <div class="admire-bar-left">
+              <span class="admire-bar-badge">✨ ADMIRING BOARD</span>
+              <span class="admire-bar-label" id="admireBarLabel">Take your time to review the answers!</span>
+            </div>
+            <div class="admire-bar-actions">
+              <button id="admireReopenModalBtn" class="tactile-btn mini utility" title="Reopen victory summary">
+                🏆 Summary
+              </button>
+              <button id="admireNextBtn" class="tactile-btn mini primary" title="Advance to next puzzle (Enter)">
+                Next Challenge <kbd>[Enter]</kbd> ➔
+              </button>
+            </div>
+          </div>
+
+          <!-- Puzzle Exhibition Canvas (Emoji Equation OR Visual Rebus) -->
+          <div class="exhibition-stage" id="exhibitionStage">
+            <!-- Dynamic visual injected here -->
+          </div>
+
+          <!-- Unlocked Hint Clue Banner (Shown if bought) -->
+          <div class="hint-banner hidden" id="hintBanner">
+            <span class="hint-icon">💡</span>
+            <span class="hint-body-text" id="hintBodyText"></span>
+          </div>
+
+          <!-- Wordle Grid (Hidden by default) -->
+          <div class="wordle-board hidden" id="wordleBoard">
+            <!-- 6x5 grid injected here -->
+          </div>
+
+          <!-- Connections Board (Hidden by default) -->
+          <div class="connections-board hidden" id="connectionsBoard">
+            <div class="connections-instructions">
+              Create four groups of four! Tap 4 tiles, then hit Submit.
+            </div>
+            <div class="connections-solved-container" id="connectionsSolvedContainer">
+              <!-- Solved category banner cards appear here -->
+            </div>
+            <div class="connections-tiles-grid" id="connectionsTilesGrid">
+              <!-- 16 interactive tiles appear here -->
+            </div>
+            <div class="connections-mistakes-row">
+              <span class="mistakes-label">Mistakes remaining:</span>
+              <span class="mistakes-dots" id="connectionsMistakesDots">● ● ● ●</span>
+            </div>
+            <div class="connections-actions-row">
+              <button id="connectionsShuffleBtn" class="tactile-btn mini utility" title="Shuffle remaining tiles">🔀 Shuffle</button>
+              <button id="connectionsDeselectBtn" class="tactile-btn mini" title="Deselect all chosen words">Deselect All</button>
+              <button id="connectionsSubmitBtn" class="tactile-btn mini primary" disabled title="Submit group of 4">Submit</button>
+            </div>
+          </div>
+
+          <!-- Contexto Board (Hidden by default) -->
+          <div class="contexto-board hidden" id="contextoBoard">
+            <div class="contexto-instructions">
+              Guess the secret word! Enter any English word to measure its semantic distance.
+            </div>
+
+            <div class="contexto-input-box">
+              <input
+                type="text"
+                id="contextoInputField"
+                placeholder="TYPE A WORD..."
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="characters"
+                spellcheck="false"
+              />
+              <button id="contextoSubmitBtn" class="tactile-btn mini primary">GUESS ↵</button>
+            </div>
+
+            <div class="contexto-meta-bar">
+              <div class="contexto-stat-item">
+                <span class="c-stat-label">Guesses:</span>
+                <span class="c-stat-val" id="contextoGuessCount">0</span>
+              </div>
+              <div class="contexto-stat-item">
+                <span class="c-stat-label">Best Rank:</span>
+                <span class="c-stat-val" id="contextoBestRank">---</span>
+              </div>
+              <div class="contexto-controls-group">
+                <button id="contextoSortBtn" class="tactile-btn mini utility" title="Toggle sorting by closeness or order">
+                  📶 By Closeness
+                </button>
+                <button id="contextoHintBtn" class="tactile-btn mini" title="Get a hint closer to the secret word">
+                  💡 Hint <span class="badge-cost">20🪙</span>
+                </button>
+                <button id="contextoGiveUpBtn" class="tactile-btn mini" title="Give up and reveal secret word">
+                  🏳️ Give Up
+                </button>
+              </div>
+            </div>
+
+            <div class="contexto-legend">
+              <span class="c-legend-pill c-green">1 - 300: Close</span>
+              <span class="c-legend-pill c-yellow">301 - 1500: Medium</span>
+              <span class="c-legend-pill c-red">1500+: Far</span>
+            </div>
+
+            <div class="contexto-guesses-container" id="contextoGuessesContainer">
+              <div class="contexto-empty-placeholder">No guesses yet. Type your first word above!</div>
+            </div>
+          </div>
+
+          <!-- Spelling Bee (The Hive) Board (Hidden by default) -->
+          <div class="spelling-bee-board hidden" id="spellingBeeBoard">
+            <!-- Rank & Score Progress Strip -->
+            <div class="bee-progress-bar-container">
+              <div class="bee-rank-info">
+                <span class="bee-rank-badge" id="beeRankBadge">Beginner</span>
+                <span class="bee-score-pill"><strong id="beeScoreVal">0</strong> pts</span>
+                <span class="bee-target-pill" id="beeGeniusTarget">Genius: 50 pts</span>
+              </div>
+              <div class="bee-progress-track">
+                <div class="bee-progress-fill" id="beeProgressFill" style="width: 0%;"></div>
+                <div class="bee-progress-milestones">
+                  <span class="bee-m-dot active" title="Beginner"></span>
+                  <span class="bee-m-dot" title="Novice"></span>
+                  <span class="bee-m-dot" title="Good"></span>
+                  <span class="bee-m-dot" title="Solid"></span>
+                  <span class="bee-m-dot" title="Nice"></span>
+                  <span class="bee-m-dot" title="Great"></span>
+                  <span class="bee-m-dot" title="Amazing"></span>
+                  <span class="bee-m-dot" title="Genius"></span>
+                  <span class="bee-m-dot" title="Queen Bee"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Discovered Words Shelf (Always visible with live count & chips) -->
+            <div class="bee-words-shelf" id="beeWordsShelf">
+              <div class="bee-shelf-header">
+                <span class="bee-shelf-title">Discovered Words</span>
+                <span class="bee-shelf-counter" id="beeFoundCountLabel">0 / 0 words • 0 pts</span>
+              </div>
+              <div class="bee-found-chips-list" id="beeFoundChipsList">
+                <div class="bee-no-words">Words you find will appear here!</div>
+              </div>
+            </div>
+
+            <!-- Current Input Letters Display (Single clean cursor) -->
+            <div class="bee-input-display" id="beeInputDisplay">
+              <span class="bee-input-text" id="beeInputText"></span>
+              <span class="bee-cursor" id="beeCursor">|</span>
+            </div>
+
+            <!-- Honeycomb Hexagonal Cells (Flush Interlocking Ring) -->
+            <div class="bee-honeycomb-cluster" id="beeHoneycombCluster">
+              <button class="bee-hex-btn outer" data-cell="0" id="beeCell0"><span class="bee-hex-letter"></span></button>
+              <button class="bee-hex-btn outer" data-cell="1" id="beeCell1"><span class="bee-hex-letter"></span></button>
+              <button class="bee-hex-btn outer" data-cell="2" id="beeCell2"><span class="bee-hex-letter"></span></button>
+              <button class="bee-hex-btn center" data-cell="center" id="beeCellCenter"><span class="bee-hex-letter"></span></button>
+              <button class="bee-hex-btn outer" data-cell="3" id="beeCell3"><span class="bee-hex-letter"></span></button>
+              <button class="bee-hex-btn outer" data-cell="4" id="beeCell4"><span class="bee-hex-letter"></span></button>
+              <button class="bee-hex-btn outer" data-cell="5" id="beeCell5"><span class="bee-hex-letter"></span></button>
+            </div>
+
+            <!-- Bee Action Controls -->
+            <div class="bee-controls-row">
+              <button id="beeDeleteBtn" class="tactile-btn mini utility" title="Delete last letter (Backspace)">⌫ Delete</button>
+              <button id="beeShuffleBtn" class="tactile-btn mini" title="Shuffle outer letters (Spacebar)">🔀 Shuffle</button>
+              <button id="beeHintBtn" class="tactile-btn mini" title="Get a letter hint (15🪙)">💡 Clue <span class="badge-cost">15🪙</span></button>
+              <button id="beeEnterBtn" class="tactile-btn mini primary" title="Submit word (Enter)">Enter ↵</button>
+            </div>
+          </div>
+
+          <!-- Printed Letterpress Word Slots -->
+          <div class="slots-assembly" id="standardSlotsAssembly">
+            <div class="letter-slots-row" id="slotsContainer">
+              <!-- Physical letter slots injected here -->
+            </div>
+          </div>
+
+          <!-- Tactical Help & Hint Bar -->
+          <div class="tactical-action-bar" id="tacticalActionBar">
+            <button id="clueHintBtn" class="tool-btn" title="Purchase a clue explaining the puzzle theme">
+              💡 Clue <span class="badge-cost">10🪙</span>
+            </button>
+            <button id="revealLetterBtn" class="tool-btn" title="Directly reveal one correct character">
+              🔤 Reveal <span class="badge-cost">25🪙</span>
+            </button>
+            <button id="clearDistractorsBtn" class="tool-btn" title="Remove bogus letters from the pool">
+              🧹 Clean Pool <span class="badge-cost">20🪙</span>
+            </button>
+            <button id="shuffleKeyboardBtn" class="tool-btn utility" title="Shuffle remaining unused letters">
+              🔀 Mix
+            </button>
+            <button id="skipBtn" class="tool-btn utility" title="Skip to next puzzle">
+              ⏩ Skip <span class="badge-cost">15🪙</span>
+            </button>
+          </div>
+
+          <!-- Physical Keyboard Tile Pool -->
+          <div class="keyboard-board">
+            <div class="tile-rack" id="keyboardTiles">
+              <!-- Physical pressable letter tiles -->
+            </div>
+            <div class="rack-controls">
+              <button id="backspaceBtn" class="rack-action-btn" title="Delete last letter (Backspace key)">
+                ⌫ Erase <kbd>[Bksp]</kbd>
+              </button>
+              <button id="clearAllBtn" class="rack-action-btn" title="Clear all placed letters">
+                🗑️ Clear All <kbd>[Esc]</kbd>
+              </button>
+              <button id="toggleTypeInputBtn" class="rack-action-btn toggle-input" title="Toggle direct typing text box">
+                ⌨️ Direct Typing
+              </button>
+            </div>
+          </div>
+
+          <!-- Alternative Direct Text Input Field -->
+          <div class="direct-type-box hidden" id="directInputSection">
+            <input
+              type="text"
+              id="directInputField"
+              placeholder="TYPE ANSWER..."
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="characters"
+              spellcheck="false"
+            />
+            <button id="submitDirectBtn" class="direct-submit-btn">SUBMIT <kbd>[Enter]</kbd> ↵</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SOLVED VICTORY MODAL ================= -->
+      <div class="overlay-modal hidden" id="winModal">
+        <div class="modal-dialog victory-dialog">
+          <div class="dialog-stamp">DECODED!</div>
+          <h2 class="dialog-title" id="modalTitle">PUZZLE SOLVED</h2>
+
+          <div class="solved-showcase">
+            <div class="showcase-visual" id="modalEquation"></div>
+            <div class="showcase-answer" id="modalAnswer"></div>
+            <p class="showcase-rationale" id="modalExplanation"></p>
+          </div>
+
+          <div class="loot-receipt">
+            <div class="receipt-row">
+              <span>BASE REWARD</span>
+              <span class="loot-num" id="modalCoinReward">+15 🪙</span>
+            </div>
+            <div class="receipt-row" id="modalStreakItem">
+              <span>STREAK BONUS</span>
+              <span class="loot-num" id="modalStreakReward">+5 🪙</span>
+            </div>
+          </div>
+
+          <div class="victory-actions-group">
+            <button id="admirePuzzleBtn" class="tactile-btn secondary admire-btn" title="Close popup to view and admire your answers">
+              👁️ Admire Board
+            </button>
+            <button id="nextPuzzleBtn" class="tactile-btn primary large-btn" title="Advance to the next puzzle">
+              Next Challenge <kbd>[Enter]</kbd> ➔
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= COLLECTION ARCHIVE MODAL ================= -->
+      <div class="overlay-modal hidden" id="bookModal">
+        <div class="modal-dialog archive-dialog">
+          <div class="dialog-header-bar">
+            <div>
+              <div class="dialog-stamp">ARCHIVE CATALOG</div>
+              <h2 class="dialog-title">Collection & Solution Book</h2>
+            </div>
+            <button id="closeBookBtn" class="close-x-btn">✕</button>
+          </div>
+
+          <div class="archive-tabs">
+            <button id="archiveTabEmoji" class="tab-btn active">🔮 Emoji Riddles (185)</button>
+            <button id="archiveTabRebus" class="tab-btn">🧩 Rebus Puzzles (156)</button>
+          </div>
+
+          <div class="archive-grid" id="bookGrid">
+            <!-- Populated via JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tactile Footer -->
+      <footer class="tactile-footer">
+        <div class="footer-line">
+          <span>Handcrafted Wordplay Arcade</span>
+          <span>•</span>
+          <span>341 Total Puzzles (185 Emojis + 156 Typographic Rebuses)</span>
+          <span>•</span>
+          <span>Keyboard & Touch Friendly</span>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="./main.js?v=2"></script>
+  </body>
+</html>

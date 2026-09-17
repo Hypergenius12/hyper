@@ -1385,12 +1385,21 @@ class UISystem {
         const countAnyPlank = s.filter(x => x !== null && isPlank(x)).length;
         const matchesMat = (t, expected) => expected === B.PLANKS ? isPlank(t) : t === expected;
 
+        const getMatSuffix = (matType) => {
+            if (matType === 'iron_ingot') return '_iron';
+            if (matType === 'gold_ingot') return '_gold';
+            if (matType === 'diamond') return '_diamond';
+            if (matType === B.COBBLESTONE) return '_stone';
+            if (matType === B.PLANKS) return '_wood';
+            return '_iron';
+        };
+
         // Pickaxes: 3 top mat, 2 stick middle
         const pickaxeRecipe = (matType, mineSpeed, damage, chopSpeed, toolName) => {
             if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && matchesMat(s[2], matType) &&
                 !s[3] && s[4] === 'stick' && !s[5] &&
                 !s[6] && s[7] === 'stick' && !s[8])
-                return equip('pickaxe', { mineSpeed, damage, chopSpeed }, toolName, `${toolName}. Mine Speed: ${mineSpeed}x`);
+                return equip('pickaxe' + getMatSuffix(matType), { mineSpeed, damage, chopSpeed }, toolName, `${toolName}. Mine Speed: ${mineSpeed}x`);
             return null;
         };
 
@@ -1399,7 +1408,7 @@ class UISystem {
             if (!s[0] && matchesMat(s[1], matType) && !s[2] &&
                 !s[3] && matchesMat(s[4], matType) && !s[5] &&
                 !s[6] && s[7] === 'stick' && !s[8])
-                return equip('sword', { mineSpeed: 1.0, damage, chopSpeed: 1.0 }, toolName, `${toolName}. Damage: ${damage}`);
+                return equip('sword' + getMatSuffix(matType), { mineSpeed: 1.0, damage, chopSpeed: 1.0 }, toolName, `${toolName}. Damage: ${damage}`);
             return null;
         };
 
@@ -1408,7 +1417,7 @@ class UISystem {
             if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && !s[2] &&
                 matchesMat(s[3], matType) && s[4] === 'stick' && !s[5] &&
                 !s[6] && s[7] === 'stick' && !s[8])
-                return equip('axe', { mineSpeed: 1.0, damage, chopSpeed }, toolName, `${toolName}. Chops fast. Speed: ${chopSpeed}x`);
+                return equip('axe' + getMatSuffix(matType), { mineSpeed: 1.0, damage, chopSpeed }, toolName, `${toolName}. Chops fast. Speed: ${chopSpeed}x`);
             return null;
         };
 

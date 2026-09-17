@@ -3846,11 +3846,7 @@ window.paintNew = function() {
     window.openNewAppInstance('paint-window', 'Paint', 'Windows XP Icons/Paint.png');
 };
 
-// Excel new
-window._origExcelNew = window.excelNew;
-window.excelNew = function() {
-    window.openNewAppInstance('excel-window', 'Microsoft Excel', 'Windows XP Icons/Graph View.png');
-};
+
 
 // ===== NOTEPAD WORD WRAP =====
 window.toggleWordWrap = function() {

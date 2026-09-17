@@ -4,9 +4,9 @@
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js';
 import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=2';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=2';
 import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js';
 import { AudioManager } from './audio.js';
 import { BiomeMap } from './map.js';
@@ -156,6 +156,10 @@ class Game {
     start() {
         if (this.hasStarted) return;
         this.hasStarted = true;
+        
+        // Show hotbar when game begins
+        const hotbar = document.getElementById('geometric-hotbar');
+        if (hotbar) hotbar.classList.remove('hidden');
 
         const canvas = document.getElementById('game-canvas');
         this.engine.init(canvas);
@@ -2288,16 +2292,19 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
 }
 
 // Start game on load
-window.onload = () => {
+const initGame = () => {
     const game = new Game();
     window.game = game;
     const startBtn = document.getElementById('btn-new-game');
     if (startBtn) {
         startBtn.onclick = () => {
             document.getElementById('start-screen').classList.add('hidden');
+            const hotbar = document.getElementById('geometric-hotbar');
+            if (hotbar) hotbar.classList.remove('hidden');
             game.start();
         };
     } else {
         game.start(); // fallback if no button
     }
 };
+initGame();

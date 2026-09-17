@@ -260,6 +260,31 @@ class NeuralNetwork {
  *  - Elitism: top N% survive unchanged into the next generation
  * ============================================================ */
 
+function isBetterCandidate(a, b) {
+  if (!a || !a.brain) return false;
+  if (!b || !b.brain) return true;
+
+  const aLap = (a.bestLap !== undefined && a.bestLap !== null && a.bestLap < Infinity) ? a.bestLap : Infinity;
+  const bLap = (b.bestLap !== undefined && b.bestLap !== null && b.bestLap < Infinity) ? b.bestLap : Infinity;
+
+  // Both finished a lap: faster lap time wins; tie-break with higher fitness
+  if (aLap < Infinity && bLap < Infinity) {
+    if (Math.abs(aLap - bLap) > 0.005) {
+      return aLap < bLap;
+    }
+    return (a.fitness || 0) > (b.fitness || 0);
+  }
+
+  // Lap finisher always beats non-finisher
+  if (aLap < Infinity && bLap === Infinity) return true;
+  if (aLap === Infinity && bLap < Infinity) return false;
+
+  // Neither finished a lap: furthest progress (highest fitness) wins!
+  return (a.fitness || 0) > (b.fitness || 0);
+}
+if (typeof window !== 'undefined') window.isBetterCandidate = isBetterCandidate;
+if (typeof module !== 'undefined' && module.exports) module.exports.isBetterCandidate = isBetterCandidate;
+
 class GeneticAlgorithm {
   /**
    * @param {object} config
@@ -294,6 +319,8 @@ class GeneticAlgorithm {
     this.bestFitness = 0;
     this.allTimeBestLap = Infinity;
     this.bestBrain   = null;
+    this.stagnationGen = 0;
+    this.lastBestFitness = 0;
   }
 
   /* ----------------------------------------------------------
@@ -309,11 +336,14 @@ class GeneticAlgorithm {
     this.bestFitness = 0;
     this.allTimeBestLap = Infinity;
     this.bestBrain = null;
+    this.stagnationGen = 0;
+    this.lastBestFitness = 0;
 
     for (let i = 0; i < this.populationSize; i++) {
       this.population.push({
         brain: new NeuralNetwork(this.layerSizes),
-        fitness: 0
+        fitness: 0,
+        bestLap: Infinity
       });
     }
   }
@@ -350,8 +380,12 @@ class GeneticAlgorithm {
   evolve() {
     const popSize = this.populationSize;
 
-    // --- Sort by fitness descending ---
-    this.population.sort((a, b) => b.fitness - a.fitness);
+    // --- Sort by candidate performance descending (lap finishers first, then fastest, tie-break fitness) ---
+    this.population.sort((a, b) => {
+      if (isBetterCandidate(a, b)) return -1;
+      if (isBetterCandidate(b, a)) return 1;
+      return 0;
+    });
 
     // --- Elitism: carry top individuals forward unchanged ---
     const eliteCount = Math.max(1, Math.floor(popSize * this.elitismPercent));
@@ -360,14 +394,15 @@ class GeneticAlgorithm {
     for (let i = 0; i < eliteCount && i < this.population.length; i++) {
       nextGen.push({
         brain: this.population[i].brain.clone(),
-        fitness: 0
+        fitness: 0,
+        bestLap: Infinity
       });
     }
 
     // --- Inject fresh random brains to maintain diversity ---
     let randomCount = Math.max(1, Math.floor(popSize * 0.1));
     
-    // Stagnation detection: if fitness hasn't improved much in 8 generations, nuke half the population
+    // Stagnation detection: if fitness hasn't improved much in 20 generations, inject controlled diversity
     if (!this.stagnationGen) this.stagnationGen = 0;
     if (!this.lastBestFitness) this.lastBestFitness = 0;
     
@@ -378,16 +413,17 @@ class GeneticAlgorithm {
         this.stagnationGen++;
     }
 
-    if (this.stagnationGen > 8) {
-        // Massive diversity injection
-        randomCount = Math.floor(popSize * 0.5);
-        this.stagnationGen = 0; // Reset stagnation counter
+    if (this.stagnationGen > 20) {
+        // Controlled diversity injection (20% of population) to escape local minima without destroying learning
+        randomCount = Math.floor(popSize * 0.2);
+        this.stagnationGen = 0;
     }
 
     for (let i = 0; i < randomCount && nextGen.length < popSize; i++) {
       nextGen.push({
         brain: new NeuralNetwork(this.layerSizes),
-        fitness: 0
+        fitness: 0,
+        bestLap: Infinity
       });
     }
 
@@ -402,12 +438,12 @@ class GeneticAlgorithm {
       // Mutate the children
       child1.mutate(this.mutationRate, this.mutationStrength);
       if (nextGen.length < popSize) {
-        nextGen.push({ brain: child1, fitness: 0 });
+        nextGen.push({ brain: child1, fitness: 0, bestLap: Infinity });
       }
 
       child2.mutate(this.mutationRate, this.mutationStrength);
       if (nextGen.length < popSize) {
-        nextGen.push({ brain: child2, fitness: 0 });
+        nextGen.push({ brain: child2, fitness: 0, bestLap: Infinity });
       }
     }
 
@@ -421,8 +457,8 @@ class GeneticAlgorithm {
 
   /**
    * Tournament Selection (k=4).
-   * Picks 4 individuals at random and returns the one with the highest fitness.
-   * Provides consistent selection pressure regardless of fitness scaling.
+   * Picks 4 individuals at random and returns the best candidate.
+   * Uses isBetterCandidate so lap finishers and fastest times win.
    * @returns {object} selected individual { brain, fitness }
    */
   _selectParent() {
@@ -433,7 +469,7 @@ class GeneticAlgorithm {
     for (let i = 0; i < tournamentSize; i++) {
       const idx = Math.floor(Math.random() * pop.length);
       const contender = pop[idx];
-      if (!best || contender.fitness > best.fitness) {
+      if (!best || isBetterCandidate(contender, best)) {
         best = contender;
       }
     }
@@ -449,19 +485,25 @@ class GeneticAlgorithm {
    * Scan current population and update the all-time best brain.
    */
   _updateBest() {
-    for (const ind of this.population) {
-      const hasLap = ind.bestLap !== Infinity;
-      const isRecordLap = hasLap && ind.bestLap < this.allTimeBestLap;
-      const isBetterFitness = !hasLap && this.allTimeBestLap === Infinity && ind.fitness > this.bestFitness;
+    let currentBest = this.bestBrain ? {
+      brain: this.bestBrain,
+      bestLap: this.allTimeBestLap,
+      fitness: this.bestFitness
+    } : null;
 
-      if (isRecordLap || isBetterFitness || this.bestBrain === null) {
-        if (hasLap && ind.bestLap < this.allTimeBestLap) {
+    for (const ind of this.population) {
+      if (isBetterCandidate(ind, currentBest)) {
+        const indHasLap = ind.bestLap !== undefined && ind.bestLap !== null && ind.bestLap < Infinity;
+        if (indHasLap) {
           this.allTimeBestLap = ind.bestLap;
         }
-        if (ind.fitness > this.bestFitness) {
-          this.bestFitness = ind.fitness;
-        }
+        this.bestFitness = ind.fitness || 0;
         this.bestBrain = ind.brain.clone();
+        currentBest = {
+          brain: this.bestBrain,
+          bestLap: this.allTimeBestLap,
+          fitness: this.bestFitness
+        };
       }
     }
   }
@@ -566,6 +608,10 @@ class GeneticAlgorithm {
     }
     this.bestBrain = imported.clone();
     this.bestFitness = data.fitness || 0;
+    this.allTimeBestLap = data.bestLap !== undefined ? data.bestLap : Infinity;
+    if (data.generation !== undefined) {
+      this.generation = data.generation;
+    }
 
     if (seedPopulation && this.population.length > 0) {
       this.population[0].brain = imported.clone();

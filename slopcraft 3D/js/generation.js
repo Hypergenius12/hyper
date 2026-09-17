@@ -888,8 +888,16 @@ export function generateChunkTerrain(cx, cz, params) {
                 } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && biome.name !== 'Volcanic' && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef && !biome.isBeach) {
                     // Normal grass logic
                     let fr = floraRng();
-                    if (biome === BIOMES.CHERRY_GROVE && fr < 0.4) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
+                    if (biome === BIOMES.CHERRY_GROVE && fr < 0.6) {
+                        if (fr < 0.35) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
+                        } else if (fr < 0.45) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
+                        } else if (fr < 0.50) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
+                        } else {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                        }
                     } else if (biome === BIOMES.AUTUMN_FOREST && fr < 0.4) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FALLEN_LEAVES, true);
                     } else if (biome === BIOMES.GLOW_FOREST && fr < 0.1) {

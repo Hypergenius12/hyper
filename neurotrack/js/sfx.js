@@ -5,12 +5,18 @@ let isAudioInitialized = false;
 
 function initAudio() {
     if (isAudioInitialized) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
         return;
     }
     try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
         audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
         
         // Engine sound: low saw wave
         engineOsc = audioCtx.createOscillator();
@@ -36,8 +42,15 @@ function initAudio() {
     }
 }
 
+// Auto-unlock audio on first user key or click
+window.addEventListener('keydown', () => { initAudio(); }, { once: true });
+window.addEventListener('pointerdown', () => { initAudio(); }, { once: true });
+
 function updateAudio(playerCar) {
     if (!isAudioInitialized || !audioCtx) return;
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+    }
     
     // Map speed to frequency and volume
     const speedRatio = Math.abs(playerCar.speed) / playerCar.maxSpeed;

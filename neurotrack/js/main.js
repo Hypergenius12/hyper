@@ -12,8 +12,10 @@ const GAME_STATES = {
     EDITOR: 1,
     TRAIN: 2,
     RACE: 3,
-    GARAGE: 4
+    GARAGE: 4,
+    PLAY: 5
 };
+window.GAME_STATES = GAME_STATES;
 
 let currentState = GAME_STATES.MENU;
 let canvas, ctx, collisionCanvas, sensorCanvas;
@@ -33,6 +35,16 @@ let trainTimer = 0;
 let trainSpeed = 1;
 let trainRunning = false;
 let physicsAccumulator = 0;
+
+Object.defineProperty(window, 'bestTrainLap', { get: () => bestTrainLap, set: v => { bestTrainLap = v; }, configurable: true });
+Object.defineProperty(window, 'geneticAlgo', { get: () => geneticAlgo, set: v => { geneticAlgo = v; }, configurable: true });
+Object.defineProperty(window, 'aiCars', { get: () => aiCars, set: v => { aiCars = v; }, configurable: true });
+Object.defineProperty(window, 'currentTrack', { get: () => currentTrack, set: v => { currentTrack = v; }, configurable: true });
+Object.defineProperty(window, 'currentTrackName', { get: () => currentTrackName, set: v => { currentTrackName = v; }, configurable: true });
+Object.defineProperty(window, 'bestBotCar', { get: () => bestBotCar, set: v => { bestBotCar = v; }, configurable: true });
+Object.defineProperty(window, 'currentState', { get: () => currentState, set: v => { currentState = v; }, configurable: true });
+Object.defineProperty(window, 'trainRunning', { get: () => trainRunning, set: v => { trainRunning = v; }, configurable: true });
+Object.defineProperty(window, 'trackPersonalBest', { get: () => trackPersonalBest, set: v => { trackPersonalBest = v; }, configurable: true });
 let showSensors = true;
 let manualCamera = false;
 let isWatchingReplay = false;
@@ -46,6 +58,123 @@ let lastTime = 0;
 let customTracks = {};
 let currentTrackName = 'Default Oval';
 
+// Ghost Car & Track Records (Time Trial)
+let trackPersonalBest = Infinity;
+let bestGhostPath = null;
+let currentLapRecording = [];
+let showGhost = localStorage.getItem('neurotrack_show_ghost') !== 'false';
+
+function setGhostEnabled(val) {
+    showGhost = !!val;
+    try {
+        localStorage.setItem('neurotrack_show_ghost', showGhost ? 'true' : 'false');
+    } catch (e) {}
+    const hudToggle = document.getElementById('hud-ghost');
+    if (hudToggle) hudToggle.checked = showGhost;
+    const menuToggle = document.getElementById('menu-ghost');
+    if (menuToggle) menuToggle.checked = showGhost;
+}
+window.setGhostEnabled = setGhostEnabled;
+
+function isBetterCandidate(a, b) {
+    if (!a || !a.brain) return false;
+    if (!b || !b.brain) return true;
+
+    const aLap = (a.bestLap !== undefined && a.bestLap !== null && a.bestLap < Infinity) ? a.bestLap : Infinity;
+    const bLap = (b.bestLap !== undefined && b.bestLap !== null && b.bestLap < Infinity) ? b.bestLap : Infinity;
+
+    // Both finished a lap
+    if (aLap < Infinity && bLap < Infinity) {
+        if (Math.abs(aLap - bLap) > 0.005) {
+            return aLap < bLap; // Faster time wins
+        }
+        return (a.fitness || 0) > (b.fitness || 0); // Tie-break with higher fitness
+    }
+
+    // One finished a lap, other did not
+    if (aLap < Infinity && bLap === Infinity) return true;
+    if (aLap === Infinity && bLap < Infinity) return false;
+
+    // Neither finished a lap -> furthest (highest fitness) wins!
+    return (a.fitness || 0) > (b.fitness || 0);
+}
+window.isBetterCandidate = isBetterCandidate;
+
+function isStartTile(id) {
+    return id === 7 || id === 8 || (id >= 10 && id <= 13);
+}
+
+function loadTrackRecords(name) {
+    trackPersonalBest = Infinity;
+    bestGhostPath = null;
+    currentLapRecording = [];
+    if (!name) {
+        const bestTimeEl = document.getElementById('best-time');
+        if (bestTimeEl) bestTimeEl.innerText = '--';
+        return;
+    }
+    try {
+        const savedTime = localStorage.getItem('neurotrack_best_time_' + name);
+        if (savedTime) {
+            const parsedTime = parseFloat(savedTime);
+            if (!isNaN(parsedTime) && parsedTime > 0) {
+                trackPersonalBest = parsedTime;
+            }
+        }
+        const savedGhost = localStorage.getItem('neurotrack_ghost_' + name);
+        if (savedGhost) {
+            const parsedGhost = JSON.parse(savedGhost);
+            if (Array.isArray(parsedGhost) && parsedGhost.length > 0) {
+                bestGhostPath = parsedGhost;
+            }
+        }
+    } catch (e) {
+        console.warn('Could not load track records for ' + name, e);
+        trackPersonalBest = Infinity;
+        bestGhostPath = null;
+    }
+    const bestTimeEl = document.getElementById('best-time');
+    if (bestTimeEl) {
+        bestTimeEl.innerText = trackPersonalBest === Infinity ? '--' : trackPersonalBest.toFixed(2);
+    }
+}
+
+function getGhostSample(path, t) {
+    if (!path || path.length === 0) return null;
+    if (t <= path[0].t) return path[0];
+    if (t >= path[path.length - 1].t) return path[path.length - 1];
+
+    let low = 0;
+    let high = path.length - 1;
+    while (low <= high) {
+        const mid = (low + high) >> 1;
+        if (path[mid].t < t) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    const idx1 = Math.max(0, low - 1);
+    const idx2 = Math.min(path.length - 1, low);
+    if (idx1 === idx2) return path[idx1];
+
+    const p1 = path[idx1];
+    const p2 = path[idx2];
+    const span = p2.t - p1.t;
+    const factor = span > 0.0001 ? (t - p1.t) / span : 0;
+
+    let da = p2.angle - p1.angle;
+    while (da > Math.PI) da -= 2 * Math.PI;
+    while (da < -Math.PI) da += 2 * Math.PI;
+
+    return {
+        x: p1.x + (p2.x - p1.x) * factor,
+        y: p1.y + (p2.y - p1.y) * factor,
+        angle: p1.angle + da * factor,
+        overpass: factor < 0.5 ? p1.overpass : p2.overpass
+    };
+}
+
 // Editor State
 let editorSelectedTile = 1;
 let isPainting = false;
@@ -54,6 +183,18 @@ let lastPaintPos = { col: -1, row: -1 };
 
 let editorHistory = [];
 let editorRedoHistory = [];
+
+function saveEditorState() {
+    if (!currentTrack) return;
+    const state = {
+        grid: new Uint8Array(currentTrack.grid),
+        autoGrid: new Uint32Array(currentTrack.autoGrid)
+    };
+    editorHistory.push(state);
+    if (editorHistory.length > 50) editorHistory.shift();
+    editorRedoHistory = [];
+}
+window.saveEditorState = saveEditorState;
 
 function init() {
     canvas = document.getElementById('game-canvas');
@@ -207,6 +348,7 @@ function updateTrackSelectUI() {
     // Default tracks
     const def1 = document.createElement('option'); def1.value = 'Default Oval'; def1.text = 'Default Oval'; select.appendChild(def1);
     const def2 = document.createElement('option'); def2.value = 'Figure Eight'; def2.text = 'Figure Eight'; select.appendChild(def2);
+    const def3 = document.createElement('option'); def3.value = 'Dead End Track'; def3.text = 'Dead End Track'; select.appendChild(def3);
     
     for (const name in customTracks) {
         const opt = document.createElement('option');
@@ -218,21 +360,40 @@ function updateTrackSelectUI() {
 }
 
 function loadTrack(name) {
+    if (name !== currentTrackName) {
+        geneticAlgo = null;
+        bestTrainLap = Infinity;
+        const lapEl = document.getElementById('best-train-lap');
+        if (lapEl) lapEl.textContent = '--';
+        const fitEl = document.getElementById('best-fitness');
+        if (fitEl) fitEl.textContent = '0';
+        const genEl = document.getElementById('gen-count');
+        if (genEl) genEl.textContent = '0';
+    }
     currentTrackName = name;
     if (name === 'Default Oval') {
         currentTrack = Track.createDefaultOval();
     } else if (name === 'Figure Eight') {
         currentTrack = Track.createFigureEight();
+    } else if (name === 'Dead End Track' || name === 'Dead End') {
+        currentTrack = Track.createDeadEndTrack();
     } else if (customTracks[name]) {
         currentTrack = Track.importJSON(customTracks[name]);
         if (!currentTrack) currentTrack = Track.createDefaultOval();
     }
-    currentTrack.renderCollisionCanvas(collisionCanvas);
+    if (collisionCanvas) {
+        currentTrack.renderCollisionCanvas(collisionCanvas);
+    }
     
     const editorName = document.getElementById('editor-track-name');
     if (editorName) {
-        editorName.value = (name === 'Default Oval' || name === 'Figure Eight') ? 'My Custom Track' : name;
+        editorName.value = (name === 'Default Oval' || name === 'Figure Eight' || name === 'Dead End Track') ? 'My Custom Track' : name;
     }
+    const select = document.getElementById('track-select');
+    if (select) {
+        select.value = name;
+    }
+    loadTrackRecords(name);
 }
 
 function resize() {
@@ -260,6 +421,9 @@ function setupInput() {
         if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
         if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
         if (e.code === 'KeyR') restartCurrent();
+        if ((e.key === 'g' || e.key === 'G') && (!e.target || e.target.tagName !== 'INPUT')) {
+            setGhostEnabled(!showGhost);
+        }
         if (e.key === 'p' || e.key === 'P') {
             if (currentState === GAME_STATES.TRAIN) {
                 togglePlayPause();
@@ -309,70 +473,88 @@ function setupInput() {
 
     let isPanning = false;
     let lastPanPos = { x: 0, y: 0 };
-    let paintTileType = 1;
-    let lastPaintPos = null;
-    let lastAutoDrawDir = { dx: 0, dy: 0 };
-    let currentStrokeId = 1;
+    paintTileType = 1;
+    lastPaintPos = null;
+    lastAutoDrawDir = { dx: 0, dy: 0 };
+    currentStrokeId = 1;
 
     function updateLimits() {
         let hasStart = false, teleCount = 0;
-        if (!currentTrack || !window.TILE_FAMILIES) return {hasStart, teleCount};
+        if (!currentTrack || !window.TILE_FAMILIES) return { hasStart, teleCount };
         
-        const startFamily = window.TILE_FAMILIES.find(f => f.includes(7)) || [];
         const teleportFamily = window.TILE_FAMILIES.find(f => f.includes(32)) || [];
         
-        for(let c=0; c<currentTrack.cols; c++){
-            for(let r=0; r<currentTrack.rows; r++){
-                const id = currentTrack.getTile(c,r);
-                if (startFamily.includes(id)) hasStart = true;
+        for (let c = 0; c < currentTrack.cols; c++) {
+            for (let r = 0; r < currentTrack.rows; r++) {
+                const id = currentTrack.getTile(c, r);
+                if (isStartTile(id)) hasStart = true;
                 if (teleportFamily.includes(id)) teleCount++;
             }
         }
         const startBtn = document.getElementById('btn-tile-family-7');
+        const startCurveBtn = document.getElementById('btn-tile-family-10');
         const teleBtn = document.getElementById('btn-tile-family-32');
         
-        if (startBtn) { startBtn.disabled = hasStart; startBtn.style.opacity = hasStart ? '0.3' : '1'; }
+        // Start buttons are never disabled because placing a start tile automatically relocates any previous one
+        if (startBtn) { startBtn.disabled = false; startBtn.style.opacity = '1'; }
+        if (startCurveBtn) { startCurveBtn.disabled = false; startCurveBtn.style.opacity = '1'; }
         if (teleBtn) { teleBtn.disabled = teleCount >= 2; teleBtn.style.opacity = teleCount >= 2 ? '0.3' : '1'; }
         return { hasStart, teleCount };
     }
 
-    function applyPaint(c, r) {
-        if (paintTileType !== 99 && paintTileType !== 0) {
+    function applyPaint(c, r, tileToPaint = null) {
+        if (c < 0 || c >= currentTrack.cols || r < 0 || r >= currentTrack.rows) return;
+        const activeTile = (tileToPaint !== null && tileToPaint !== undefined) ? tileToPaint : paintTileType;
+
+        if (activeTile !== 99 && activeTile !== 0) {
             const limits = updateLimits();
             const currentTile = currentTrack.getTile(c, r);
-            
-            const startFamily = window.TILE_FAMILIES.find(f => f.includes(7)) || [];
-            const teleportFamily = window.TILE_FAMILIES.find(f => f.includes(32)) || [];
-            
-            if (startFamily.includes(paintTileType) && limits.hasStart && !startFamily.includes(currentTile)) return;
-            if (teleportFamily.includes(paintTileType) && limits.teleCount >= 2 && !teleportFamily.includes(currentTile)) return;
+            const teleportFamily = window.TILE_FAMILIES ? (window.TILE_FAMILIES.find(f => f.includes(32)) || []) : [];
+            if (teleportFamily.includes(activeTile) && limits.teleCount >= 2 && !teleportFamily.includes(currentTile)) return;
         }
 
-        if (paintTileType === 99 || paintTileType === 0) {
+        if (isStartTile(activeTile)) {
+            // Automatically relocate previous Start tile (straight or curved alike)
+            for (let col = 0; col < currentTrack.cols; col++) {
+                for (let row = 0; row < currentTrack.rows; row++) {
+                    if (col === c && row === r) continue;
+                    const tid = currentTrack.getTile(col, row);
+                    if (isStartTile(tid)) {
+                        currentTrack.setTile(col, row, 0);
+                    }
+                }
+            }
+            currentTrack.setTile(c, r, activeTile);
+            updateLimits();
+            return;
+        }
+
+        if (activeTile === 99 || activeTile === 0) {
             const wasEmpty = currentTrack.getTile(c, r) === 0;
-            const newId = paintTileType === 99 ? (wasEmpty ? TILE_TYPES.STRAIGHT_H.id : currentTrack.getTile(c, r)) : 0;
-            currentTrack.setTile(c, r, newId, paintTileType === 99 ? currentStrokeId : 0);
+            const newId = activeTile === 99 ? (wasEmpty ? TILE_TYPES.STRAIGHT_H.id : currentTrack.getTile(c, r)) : 0;
+            currentTrack.setTile(c, r, newId, activeTile === 99 ? currentStrokeId : 0);
             currentTrack.autoResolveTile(c, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy, currentStrokeId);
             currentTrack.autoResolveTile(c, r - 1, 0, 0, currentStrokeId);
             currentTrack.autoResolveTile(c + 1, r, 0, 0, currentStrokeId);
             currentTrack.autoResolveTile(c, r + 1, 0, 0, currentStrokeId);
             currentTrack.autoResolveTile(c - 1, r, 0, 0, currentStrokeId);
         } else {
-            currentTrack.setTile(c, r, paintTileType);
+            currentTrack.setTile(c, r, activeTile);
+        }
+        if (currentState === GAME_STATES.EDITOR) {
+            bestGhostPath = null;
+            trackPersonalBest = Infinity;
+            try {
+                localStorage.removeItem('neurotrack_best_time_' + currentTrackName);
+                localStorage.removeItem('neurotrack_ghost_' + currentTrackName);
+            } catch (e) {}
+            const bestTimeEl = document.getElementById('best-time');
+            if (bestTimeEl) bestTimeEl.innerText = '--';
         }
         updateLimits();
     }
-
-    function saveEditorState() {
-        if (!currentTrack) return;
-        const state = {
-            grid: new Uint8Array(currentTrack.grid),
-            autoGrid: new Uint32Array(currentTrack.autoGrid)
-        };
-        editorHistory.push(state);
-        if (editorHistory.length > 50) editorHistory.shift();
-        editorRedoHistory = [];
-    }
+    window.updateLimits = updateLimits;
+    window.applyPaint = applyPaint;
 
     canvas.addEventListener('mousedown', e => {
         if (currentState === GAME_STATES.EDITOR) {
@@ -473,6 +655,8 @@ function setupInput() {
 function restartCurrent() {
     if (currentState === GAME_STATES.PLAY && playerCar) {
         playerCar.reset(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle);
+        playerCar.bestLap = trackPersonalBest;
+        currentLapRecording = [];
     }
     if (currentState === GAME_STATES.TRAIN && geneticAlgo) {
         endGeneration();
@@ -480,6 +664,7 @@ function restartCurrent() {
     if (currentState === GAME_STATES.RACE && playerCar && bestBotCar) {
         playerCar.reset(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle);
         bestBotCar.reset(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle);
+        raceStarted = false;
     }
 }
 
@@ -491,6 +676,9 @@ function setupUI() {
 
     document.querySelectorAll('.btn-back').forEach(btn => {
         btn.onclick = () => {
+            if (currentState === GAME_STATES.TRAIN && trainRunning) {
+                saveBestBrain(true);
+            }
             trainRunning = false;
             switchState(GAME_STATES.MENU);
             updateTrackSelectUI();
@@ -506,12 +694,14 @@ function setupUI() {
         btnSaveTrack.onclick = () => {
             const name = document.getElementById('editor-track-name').value.trim();
             if (!name) { customAlert("Please enter a track name!"); return; }
-            if (name === 'Default Oval' || name === 'Figure Eight') { customAlert("Cannot overwrite default tracks."); return; }
+            if (name === 'Default Oval' || name === 'Figure Eight' || name === 'Dead End Track') { customAlert("Cannot overwrite default tracks."); return; }
             
             saveBestBrain(true);
             customTracks[name] = currentTrack.exportJSON();
             saveCustomTracks();
             currentTrackName = name;
+            loadTrackRecords(name);
+            updateTrackSelectUI();
             customAlert("Track and AI saved successfully!");
         };
     }
@@ -538,6 +728,28 @@ function setupUI() {
             if (currentTrack.autoGrid) currentTrack.autoGrid.fill(false);
             currentTrack.markDirty();
             
+            bestGhostPath = null;
+            trackPersonalBest = Infinity;
+            bestTrainLap = Infinity;
+            if (geneticAlgo) {
+                geneticAlgo.allTimeBestLap = Infinity;
+                geneticAlgo.bestFitness = 0;
+                geneticAlgo.bestBrain = null;
+            }
+            try {
+                localStorage.removeItem('neurotrack_best_time_' + currentTrackName);
+                localStorage.removeItem('neurotrack_ghost_' + currentTrackName);
+                localStorage.removeItem('neurotrack_brain_' + currentTrackName);
+            } catch (e) {}
+            const bestTimeEl = document.getElementById('best-time');
+            if (bestTimeEl) bestTimeEl.innerText = '--';
+            const lapEl = document.getElementById('best-train-lap');
+            if (lapEl) lapEl.textContent = '--';
+            const fitEl = document.getElementById('best-fitness');
+            if (fitEl) fitEl.textContent = '0';
+            const genEl = document.getElementById('gen-count');
+            if (genEl) genEl.textContent = '0';
+
             currentTrack.renderCollisionCanvas(collisionCanvas);
             const cCtx = collisionCanvas.getContext('2d');
             collisionGrid = { width: collisionCanvas.width, height: collisionCanvas.height, data: cCtx.getImageData(0, 0, collisionCanvas.width, collisionCanvas.height).data };
@@ -552,12 +764,17 @@ function setupUI() {
     const btnExportTrack = document.getElementById('btn-export-track');
     if (btnExportTrack) {
         btnExportTrack.onclick = () => {
-            const dataStr = currentTrack.exportJSON();
+            const editorNameInput = document.getElementById('editor-track-name');
+            let trackName = (editorNameInput && editorNameInput.value.trim()) 
+                ? editorNameInput.value.trim() 
+                : (currentTrackName || 'My Custom Track');
+            const dataStr = currentTrack.exportJSON(trackName);
             const blob = new Blob([dataStr], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const downloadAnchorNode = document.createElement('a');
             downloadAnchorNode.href = url;
-            downloadAnchorNode.download = "track.json";
+            const safeFileName = trackName.replace(/[\\/:*?"<>|]/g, '_').trim() || 'My Custom Track';
+            downloadAnchorNode.download = `${safeFileName}.json`;
             document.body.appendChild(downloadAnchorNode);
             downloadAnchorNode.click();
             downloadAnchorNode.remove();
@@ -580,10 +797,43 @@ function setupUI() {
                     saveEditorState();
                     const importedTrack = Track.importJSON(ev.target.result);
                     if (!importedTrack) {
-                        customAlert("Invalid track file!");
+                        customAlert("Invalid track file: could not parse grid data.");
                         return;
                     }
                     currentTrack = importedTrack;
+                    
+                    // Create a name for the imported track
+                    let importedName = (importedTrack.name && importedTrack.name.trim())
+                        ? importedTrack.name.trim()
+                        : (file.name ? file.name.replace(/\.json$/i, '').trim() : '');
+                    if (!importedName || importedName.toLowerCase() === 'track') importedName = 'Imported Track';
+                    let name = importedName;
+                    let counter = 1;
+                    while (customTracks[name] || name === 'Default Oval' || name === 'Figure Eight' || name === 'Dead End Track') {
+                        name = importedName + ' ' + counter;
+                        counter++;
+                    }
+                    currentTrackName = name;
+                    geneticAlgo = null;
+                    bestTrainLap = Infinity;
+                    const lapEl = document.getElementById('best-train-lap');
+                    if (lapEl) lapEl.textContent = '--';
+                    const fitEl = document.getElementById('best-fitness');
+                    if (fitEl) fitEl.textContent = '0';
+                    const genEl = document.getElementById('gen-count');
+                    if (genEl) genEl.textContent = '0';
+
+                    customTracks[currentTrackName] = currentTrack.exportJSON();
+                    saveCustomTracks();
+                    loadTrackRecords(currentTrackName);
+                    updateTrackSelectUI();
+
+                    const trackSelect = document.getElementById('track-select');
+                    if (trackSelect) trackSelect.value = currentTrackName;
+
+                    const editorNameInput = document.getElementById('editor-track-name');
+                    if (editorNameInput) editorNameInput.value = currentTrackName;
+
                     currentTrack.markDirty();
                     currentTrack.renderCollisionCanvas(collisionCanvas);
                     const cCtx = collisionCanvas.getContext('2d');
@@ -595,8 +845,10 @@ function setupUI() {
                         sensorGrid = { width: sensorCanvas.width, height: sensorCanvas.height, data: sCtx.getImageData(0, 0, sensorCanvas.width, sensorCanvas.height).data };
                     }
                     updateLimits();
+                    customAlert(`Imported as "${currentTrackName}"`);
                 } catch (err) {
-                    customAlert("Invalid track file!");
+                    console.error("Track import failed:", err);
+                    customAlert("Invalid track file: " + (err.message || err));
                 }
             };
             reader.readAsText(file);
@@ -629,16 +881,18 @@ function setupUI() {
         [55, 56], // PUDDLE STRAIGHT
         [57, 58, 59, 60], // PUDDLE CURVE
         [61, 62], // FAST STRAIGHT
-        [63, 64, 65, 66] // FAST CURVE
+        [63, 64, 65, 66], // FAST CURVE
+        [68, 69, 70, 71] // DEAD END
     ];
     window.TILE_FAMILIES = TILE_FAMILIES; // For limits check
 
     const friendlyNames = {
-        0: '⌫ Eraser', 99: '✨ Auto-Draw', 1: '│ Straight', 3: '╰ Curve', 7: '▶ Start', 9: '┼ Crossroad', 
+        0: '⌫ Eraser', 99: '✨ Auto-Draw', 1: '│ Straight', 3: '╰ Curve', 7: '▶ Start', 10: '▶ Curved Start', 9: '┼ Crossroad', 
         14: '─ Bottleneck', 16: '▲ Boost', 20: '╰ Bottleneck Curve', 24: '┴ Split', 28: '▲ Ramp',
         32: '▲ Teleport', 36: '⌇ Rough Straight', 38: '⌇ Rough Curve', 42: '❆ Ice Straight', 44: '❆ Ice Curve',
         48: '✥ Intersection', 49: '⤧ Bouncy Straight', 51: '⤧ Bouncy Curve',
-        55: '⌇ Puddle Straight', 57: '⌇ Puddle Curve', 61: '▶ Fast Straight', 63: '▶ Fast Curve'
+        55: '⌇ Puddle Straight', 57: '⌇ Puddle Curve', 61: '▶ Fast Straight', 63: '▶ Fast Curve',
+        68: '⛔ Dead End'
     };
 
     for (const family of TILE_FAMILIES) {
@@ -734,12 +988,49 @@ document.getElementById('btn-garage').addEventListener('click', () => {
     document.getElementById('train-drift').addEventListener('change', (e) => syncCarSettings('drift', e.target.checked));
     document.getElementById('hud-drift').addEventListener('change', (e) => syncCarSettings('drift', e.target.checked));
 
+    const hudGhost = document.getElementById('hud-ghost');
+    if (hudGhost) {
+        hudGhost.checked = showGhost;
+        hudGhost.addEventListener('change', (e) => setGhostEnabled(e.target.checked));
+    }
+    const menuGhost = document.getElementById('menu-ghost');
+    if (menuGhost) {
+        menuGhost.checked = showGhost;
+        menuGhost.addEventListener('change', (e) => setGhostEnabled(e.target.checked));
+    }
+
     document.getElementById('btn-start-training').onclick = () => {
         if (!trainRunning) { trainRunning = true; startTrainMode(); }
     };
     document.getElementById('btn-pause-training').onclick = () => { trainRunning = !trainRunning; };
     document.getElementById('btn-reset-training').onclick = () => {
-        if (geneticAlgo) { geneticAlgo.generation = 0; trainTimer = 0; startTrainMode(); }
+        bestTrainLap = Infinity;
+        trainTimer = 0;
+        if (geneticAlgo) {
+            geneticAlgo.initialize();
+            geneticAlgo.bestBrain = null;
+            geneticAlgo.allTimeBestLap = Infinity;
+            geneticAlgo.bestFitness = 0;
+            geneticAlgo.generation = 0;
+            spawnAICars();
+        }
+        if (typeof aiCars !== 'undefined') {
+            for (const car of aiCars) {
+                car.bestLap = Infinity;
+                car.lapCount = 0;
+                car.lapTime = 0;
+                car.fitness = 0;
+                car.baseFitness = 0;
+            }
+        }
+        const lapEl = document.getElementById('best-train-lap');
+        if (lapEl) lapEl.textContent = '--';
+        const fitEl = document.getElementById('best-fitness');
+        if (fitEl) fitEl.textContent = '0';
+        const genEl = document.getElementById('gen-count');
+        if (genEl) genEl.textContent = '0';
+        const timerEl = document.getElementById('gen-timer');
+        if (timerEl) timerEl.textContent = '0/' + trainTimeLimit;
     };
 
     document.getElementById('btn-save-brain').onclick = saveBestBrain;
@@ -781,19 +1072,18 @@ function exportBrain() {
     
     // Bundle all settings so the user can resume exactly where they left off
     data.settings = {
-        'train-population': document.getElementById('train-population').value,
-        'train-mutation': document.getElementById('train-mutation').value,
-        'train-strength': document.getElementById('train-strength').value,
-        'train-elitism': document.getElementById('train-elitism').value,
-        'train-sensors': document.getElementById('train-sensors').value,
-        'train-hidden': document.getElementById('train-hidden').value,
-        'train-timelimit': document.getElementById('train-timelimit').value,
-        'train-speed': document.getElementById('train-speed').value,
-        'car-max-speed': document.getElementById('car-max-speed').value,
-        'car-turn-speed': document.getElementById('car-turn-speed').value,
-        'car-accel': document.getElementById('car-accel').value,
-        'car-friction': document.getElementById('car-friction').value,
-        'car-offroad-friction': document.getElementById('car-offroad-friction').value
+        'train-population': document.getElementById('train-population')?.value,
+        'train-mutation': document.getElementById('train-mutation')?.value,
+        'train-strength': document.getElementById('train-strength')?.value,
+        'train-elitism': document.getElementById('train-elitism')?.value,
+        'train-sensors': document.getElementById('train-sensors')?.value,
+        'train-hidden': document.getElementById('train-hidden')?.value,
+        'train-timelimit': document.getElementById('train-timelimit')?.value,
+        'train-speed': document.getElementById('train-speed')?.value,
+        'car-max-speed': document.getElementById('car-max-speed')?.value,
+        'car-turn-speed': document.getElementById('car-turn-speed')?.value,
+        'car-accel': document.getElementById('car-accel')?.value,
+        'train-drift': document.getElementById('train-drift')?.checked
     };
     
     // Bundle the entire population
@@ -830,8 +1120,13 @@ function importBrain() {
                     for (const [id, val] of Object.entries(data.settings)) {
                         const el = document.getElementById(id);
                         if (el && val !== undefined) {
-                            el.value = val;
-                            el.dispatchEvent(new Event('input')); // trigger labels to update
+                            if (el.type === 'checkbox') {
+                                el.checked = val;
+                                el.dispatchEvent(new Event('change'));
+                            } else {
+                                el.value = val;
+                                el.dispatchEvent(new Event('input')); // trigger labels to update
+                            }
                         }
                     }
                 }
@@ -888,8 +1183,9 @@ function importBrain() {
 }
 
 function switchState(newState) {
-    if (currentState === GAME_STATES.PLAY && newState !== GAME_STATES.PLAY && typeof stopAudio === 'function') {
-        stopAudio();
+    if (currentState === GAME_STATES.PLAY && newState !== GAME_STATES.PLAY) {
+        if (typeof stopAudio === 'function') stopAudio();
+        currentLapRecording = [];
     }
     currentState = newState;
     manualCamera = false;
@@ -905,6 +1201,13 @@ function switchState(newState) {
 }
 
 function startPlayMode() {
+    const trackSelect = document.getElementById('track-select');
+    if (trackSelect && trackSelect.value && trackSelect.value !== currentTrackName) {
+        loadTrack(trackSelect.value);
+    } else {
+        loadTrackRecords(currentTrackName);
+    }
+
     const validity = currentTrack.isValid();
     if (!validity.valid) { customAlert("Track invalid: " + validity.reason); return; }
     currentTrack.computeCheckpoints();
@@ -919,6 +1222,9 @@ function startPlayMode() {
     playerCar.maxSpeed = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
     playerCar.turnRate = parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2;
     playerCar.acceleration = parseFloat(document.getElementById('car-accel')?.value) || 420;
+
+    playerCar.bestLap = trackPersonalBest;
+    currentLapRecording = [];
 
     camera.setPosition(playerCar.x, playerCar.y);
     camera.targetZoom = 1.4;
@@ -971,13 +1277,19 @@ function startTrainMode() {
             timeLimit: trainTimeLimit
         });
         geneticAlgo.initialize();
-        const savedBrain = loadBestBrain();
-        if (savedBrain && geneticAlgo.population.length > 0) {
+        const savedData = loadBestBrainData();
+        if (savedData && savedData.brain && geneticAlgo.population.length > 0) {
+            const savedBrain = NeuralNetwork.fromJSON(savedData.brain);
             // Only inject the saved brain if its topology matches the current config!
-            if (savedBrain.layerSizes.join(',') === geneticAlgo.layerSizes.join(',')) {
+            if (savedBrain && savedBrain.layerSizes.join(',') === geneticAlgo.layerSizes.join(',')) {
                 geneticAlgo.population[0].brain = savedBrain;
                 geneticAlgo.bestBrain = savedBrain.clone();
-                geneticAlgo.bestFitness = 0;
+                geneticAlgo.bestFitness = savedData.fitness || 0;
+                geneticAlgo.allTimeBestLap = (savedData.bestLap !== undefined && savedData.bestLap !== null && savedData.bestLap < Infinity) ? savedData.bestLap : Infinity;
+                geneticAlgo.generation = savedData.generation || 0;
+                if (geneticAlgo.allTimeBestLap < Infinity) {
+                    bestTrainLap = geneticAlgo.allTimeBestLap;
+                }
             } else {
                 console.warn('Saved brain has incompatible topology. Cannot inject into new population.');
             }
@@ -993,6 +1305,13 @@ function startTrainMode() {
     trainTimer = 0;
     trainRunning = true;
     spawnAICars();
+
+    const lapEl = document.getElementById('best-train-lap');
+    if (lapEl) lapEl.textContent = (bestTrainLap && bestTrainLap < Infinity) ? bestTrainLap.toFixed(2) : '--';
+    const fitEl = document.getElementById('best-fitness');
+    if (fitEl) fitEl.textContent = (geneticAlgo && geneticAlgo.bestFitness) ? geneticAlgo.bestFitness.toFixed(1) : '0';
+    const genEl = document.getElementById('gen-count');
+    if (genEl) genEl.textContent = (geneticAlgo && geneticAlgo.generation) ? geneticAlgo.generation : '0';
 
     camera.targetZoom = 0.9;
     switchState(GAME_STATES.TRAIN);
@@ -1027,8 +1346,6 @@ window.addEventListener('beforeunload', () => {
 });
 
 function spawnAICars() {
-    aiCars = [];
-    
     // Always use the geneticAlgo's topology if it exists to prevent crashes if the user drags the slider mid-training
     const sc = (geneticAlgo && geneticAlgo.sensorCount) 
         ? geneticAlgo.sensorCount 
@@ -1040,14 +1357,33 @@ function spawnAICars() {
 
     const brains = geneticAlgo.getBrains ? geneticAlgo.getBrains() : geneticAlgo.population.map(p => p.brain);
 
+    // Reuse existing Car instances in aiCars to prevent GC stutter
+    while (aiCars.length > brains.length) {
+        aiCars.pop();
+    }
+
     for (let i = 0; i < brains.length; i++) {
-        const car = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#ff0055');
+        let car;
+        if (i < aiCars.length) {
+            car = aiCars[i];
+            car.reset(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle);
+            car.color = '#ff0055';
+            car.baseFitness = 0;
+            car.accumulatedWallPenalty = 0;
+            car.recentCheckpoints = [];
+            car.isOnOverpass = false;
+            car.airborne = false;
+            car.z = 0;
+            car.vz = 0;
+        } else {
+            car = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#ff0055');
+            aiCars.push(car);
+        }
         car.sensorCount = sc;
         car.maxSpeed = maxSpd;
         car.turnRate = tSpd;
         car.acceleration = accel;
         car.brain = brains[i];
-        aiCars.push(car);
     }
 }
 
@@ -1079,12 +1415,49 @@ function update(rawDt) {
         const FIXED_DT = 1 / 60;
         while (physicsAccumulator >= FIXED_DT) {
             playerCar.update(FIXED_DT, keys, collisionGrid, sensorGrid);
+
+            // Record telemetry for ghost replay while player is driving an active lap
+            if (playerCar.started && playerCar.alive) {
+                const lastSample = currentLapRecording[currentLapRecording.length - 1];
+                if (!lastSample || (playerCar.lapTime - lastSample.t >= 0.015)) {
+                    currentLapRecording.push({
+                        t: Number(playerCar.lapTime.toFixed(3)),
+                        x: Number(playerCar.x.toFixed(2)),
+                        y: Number(playerCar.y.toFixed(2)),
+                        angle: Number(playerCar.angle.toFixed(3)),
+                        overpass: playerCar.isOnOverpass ? 1 : 0
+                    });
+                }
+            }
+
+            const prevLaps = playerCar.lapCount;
             playerCar.checkCheckpoints(currentTrack.checkpoints);
+
+            if (playerCar.lapCount > prevLaps) {
+                // Completed a lap! Check if it's a new personal best
+                const finishedLapTime = currentLapRecording.length > 0 
+                    ? currentLapRecording[currentLapRecording.length - 1].t 
+                    : playerCar.bestLap;
+
+                if (finishedLapTime > 0.5 && finishedLapTime < trackPersonalBest) {
+                    trackPersonalBest = finishedLapTime;
+                    playerCar.bestLap = trackPersonalBest;
+                    bestGhostPath = currentLapRecording.slice();
+                    try {
+                        localStorage.setItem('neurotrack_best_time_' + currentTrackName, trackPersonalBest.toString());
+                        localStorage.setItem('neurotrack_ghost_' + currentTrackName, JSON.stringify(bestGhostPath));
+                    } catch (e) {
+                        console.warn("Could not save best lap/ghost", e);
+                    }
+                }
+                currentLapRecording = [];
+            }
+
             physicsAccumulator -= FIXED_DT;
         }
         camera.follow(playerCar);
         document.getElementById('lap-time').innerText = playerCar.lapTime.toFixed(2);
-        document.getElementById('best-time').innerText = playerCar.bestLap === Infinity ? '--' : playerCar.bestLap.toFixed(2);
+        document.getElementById('best-time').innerText = trackPersonalBest === Infinity ? '--' : trackPersonalBest.toFixed(2);
         document.getElementById('speed').innerText = Math.floor(Math.abs(playerCar.speed));
         document.getElementById('lap-count').innerText = playerCar.lapCount;
         
@@ -1159,6 +1532,15 @@ function update(rawDt) {
                 if (car.alive) { allDead = false; aliveCount++; }
                 if (car.fitness > maxFitness) { maxFitness = car.fitness; bestCar = car; }
                 if (car.bestLap < bestTrainLap) { bestTrainLap = car.bestLap; }
+                if (car.bestLap < Infinity) {
+                    const currentBest = { brain: geneticAlgo.bestBrain, bestLap: geneticAlgo.allTimeBestLap, fitness: geneticAlgo.bestFitness };
+                    if (isBetterCandidate(car, currentBest)) {
+                        geneticAlgo.allTimeBestLap = car.bestLap;
+                        if (car.fitness > geneticAlgo.bestFitness) geneticAlgo.bestFitness = car.fitness;
+                        geneticAlgo.bestBrain = car.brain.clone();
+                        saveBestBrain(true);
+                    }
+                }
             }
 
             const isInf = document.getElementById('train-timelimit-inf')?.checked;
@@ -1214,6 +1596,13 @@ function render() {
         if (currentState === GAME_STATES.PLAY && playerCar && filter(playerCar)) {
             playerCar.render(ctx);
         }
+        if (showGhost && currentState === GAME_STATES.PLAY && bestGhostPath && bestGhostPath.length > 0 && playerCar) {
+            const sampleTime = playerCar.started ? playerCar.lapTime : 0;
+            const ghost = getGhostSample(bestGhostPath, sampleTime);
+            if (ghost && filter({ isOnOverpass: !!ghost.overpass })) {
+                Car.renderGhost(ctx, ghost.x, ghost.y, ghost.angle);
+            }
+        }
         if (currentState === GAME_STATES.RACE && playerCar && bestBotCar) {
             if (filter(bestBotCar)) bestBotCar.render(ctx);
             if (filter(playerCar)) playerCar.render(ctx);
@@ -1259,44 +1648,28 @@ function render() {
 function saveBestBrain(quiet = false) {
     if (!geneticAlgo) return;
 
-    // Scan the current generation's running cars in case the record was broken mid-generation
+    // Scan the current generation's running cars in case a car beat the record or fitness
     if (typeof aiCars !== 'undefined' && aiCars.length > 0) {
-    // Scan the current active cars to see if any of them beat the current allTimeBestLap or fitness.
-    let bestCurrentCar = null;
-    for (const car of aiCars) {
-        if (!bestCurrentCar) {
-            bestCurrentCar = car;
-            continue;
-        }
-        
-        const hasLap = car.bestLap !== Infinity;
-        const bestHasLap = bestCurrentCar.bestLap !== Infinity;
-        
-        if (hasLap && !bestHasLap) {
-            bestCurrentCar = car;
-        } else if (hasLap && bestHasLap) {
-            if (car.bestLap < bestCurrentCar.bestLap) bestCurrentCar = car;
-        } else if (!hasLap && !bestHasLap) {
-            if (car.fitness > bestCurrentCar.fitness) bestCurrentCar = car;
-        }
-    }
-
-    if (bestCurrentCar) {
-        const hasLap = bestCurrentCar.bestLap !== Infinity;
-        const isRecordLap = hasLap && bestCurrentCar.bestLap < geneticAlgo.allTimeBestLap;
-        const isBetterFitness = !hasLap && geneticAlgo.allTimeBestLap === Infinity && bestCurrentCar.fitness > geneticAlgo.bestFitness;
-
-        if (isRecordLap || isBetterFitness || geneticAlgo.bestBrain === null) {
-            if (hasLap && bestCurrentCar.bestLap < geneticAlgo.allTimeBestLap) {
-                geneticAlgo.allTimeBestLap = bestCurrentCar.bestLap;
+        let bestCurrentCar = null;
+        for (const car of aiCars) {
+            if (!bestCurrentCar || isBetterCandidate(car, bestCurrentCar)) {
+                bestCurrentCar = car;
             }
-            if (bestCurrentCar.fitness > geneticAlgo.bestFitness) {
-                geneticAlgo.bestFitness = bestCurrentCar.fitness;
-            }
-            geneticAlgo.bestBrain = bestCurrentCar.brain.clone();
-            geneticAlgo.generation = geneticAlgo.generation || 1;
         }
-    }
+
+        if (bestCurrentCar) {
+            const currentBest = { brain: geneticAlgo.bestBrain, bestLap: geneticAlgo.allTimeBestLap, fitness: geneticAlgo.bestFitness };
+            if (isBetterCandidate(bestCurrentCar, currentBest)) {
+                if (bestCurrentCar.bestLap < Infinity) {
+                    geneticAlgo.allTimeBestLap = bestCurrentCar.bestLap;
+                }
+                if (bestCurrentCar.fitness > geneticAlgo.bestFitness) {
+                    geneticAlgo.bestFitness = bestCurrentCar.fitness;
+                }
+                geneticAlgo.bestBrain = bestCurrentCar.brain.clone();
+                geneticAlgo.generation = geneticAlgo.generation || 1;
+            }
+        }
     }
 
     const data = geneticAlgo.exportBest();
@@ -1304,28 +1677,71 @@ function saveBestBrain(quiet = false) {
         if (!quiet) customAlert('No trained brain to save!'); 
         return; 
     }
+
+    // Preserve physics tuning settings so the bot always drives with the exact physics it was trained on
+    data.settings = {
+        maxSpeed: parseFloat(document.getElementById('car-max-speed')?.value) || 380,
+        turnRate: parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2,
+        acceleration: parseFloat(document.getElementById('car-accel')?.value) || 420,
+        drift: document.getElementById('train-drift')?.checked || false
+    };
+
     const key = 'neurotrack_brain_' + currentTrackName;
-    localStorage.setItem(key, JSON.stringify(data));
+    const existing = loadBestBrainData();
+    if (existing && existing.brain) {
+        const candidateNew = { brain: data.brain, bestLap: data.bestLap, fitness: data.fitness };
+        const candidateExisting = { brain: existing.brain, bestLap: existing.bestLap, fitness: existing.fitness };
+        if (!isBetterCandidate(candidateNew, candidateExisting)) {
+            // Existing saved brain is better than current candidate!
+            if (!quiet) {
+                let msg = 'Track already has a superior bot saved:\n\n';
+                if (candidateExisting.bestLap && candidateExisting.bestLap < Infinity) {
+                    msg += 'Existing Record Time: ' + candidateExisting.bestLap.toFixed(2) + 's\n';
+                } else {
+                    msg += 'Existing Fitness: ' + (candidateExisting.fitness || 0).toFixed(0) + '\n';
+                }
+                msg += 'Existing Generation: ' + (existing.generation || 0);
+                customAlert(msg, 'PREVIOUS BOT BETTER');
+            }
+            return;
+        }
+    }
+
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+        console.warn("Could not save best brain to localStorage:", e);
+    }
     
     if (!quiet) {
         let msg = 'Best brain saved to local storage for track: ' + currentTrackName + '\n\n';
-        if (data.bestLap < 9999) {
+        if (data.bestLap && data.bestLap < Infinity) {
             msg += 'Record Time: ' + data.bestLap.toFixed(2) + 's\n';
         } else {
-            msg += 'Fitness: ' + data.fitness.toFixed(0) + '\n';
+            msg += 'Fitness: ' + (data.fitness || 0).toFixed(0) + '\n';
         }
-        msg += 'Generation: ' + data.generation;
+        msg += 'Generation: ' + (data.generation || 0);
         customAlert(msg, 'BOT SAVED');
     }
 }
 
-function loadBestBrain() {
+function loadBestBrainData() {
     const key = 'neurotrack_brain_' + currentTrackName;
     const jsonStr = localStorage.getItem(key);
     if (!jsonStr) return null;
     try {
         const data = JSON.parse(jsonStr);
-        // Handle wrapper object from exportBest, or fallback to raw brain data
+        return data;
+    } catch (e) {
+        console.error("Failed to parse brain data:", e);
+        return null;
+    }
+}
+
+function loadBestBrain() {
+    const data = loadBestBrainData();
+    if (!data) return null;
+    try {
         const brainData = data.brain ? data.brain : data;
         return NeuralNetwork.fromJSON(brainData);
     } catch (e) {
@@ -1333,6 +1749,7 @@ function loadBestBrain() {
         return null;
     }
 }
+
 function clearBestBrain() {
     const key = 'neurotrack_brain_' + currentTrackName;
     localStorage.removeItem(key);
@@ -1345,21 +1762,80 @@ function clearBestBrain() {
 }
 
 function watchBestReplay() {
-    if (!geneticAlgo || !geneticAlgo.bestBrain) {
+    let gaCandidate = null;
+    if (geneticAlgo && geneticAlgo.bestBrain) {
+        gaCandidate = {
+            brain: geneticAlgo.bestBrain,
+            bestLap: geneticAlgo.allTimeBestLap,
+            fitness: geneticAlgo.bestFitness,
+            sensorCount: geneticAlgo.sensorCount,
+            settings: {
+                maxSpeed: parseFloat(document.getElementById('car-max-speed')?.value) || 380,
+                turnRate: parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2,
+                acceleration: parseFloat(document.getElementById('car-accel')?.value) || 420
+            }
+        };
+    }
+    if (typeof aiCars !== 'undefined' && aiCars.length > 0) {
+        for (const car of aiCars) {
+            if (car.brain && isBetterCandidate(car, gaCandidate)) {
+                gaCandidate = {
+                    brain: car.brain,
+                    bestLap: car.bestLap,
+                    fitness: car.fitness,
+                    sensorCount: car.sensorCount || (geneticAlgo ? geneticAlgo.sensorCount : 7),
+                    settings: {
+                        maxSpeed: car.maxSpeed || 380,
+                        turnRate: car.turnRate || 3.2,
+                        acceleration: car.acceleration || 420
+                    }
+                };
+            }
+        }
+    }
+
+    let savedCandidate = null;
+    const savedData = loadBestBrainData();
+    if (savedData && savedData.brain) {
+        savedCandidate = {
+            brain: NeuralNetwork.fromJSON(savedData.brain),
+            bestLap: savedData.bestLap,
+            fitness: savedData.fitness,
+            sensorCount: savedData.sensorCount,
+            settings: savedData.settings
+        };
+    }
+
+    let bestChoice = null;
+    if (gaCandidate && savedCandidate) {
+        bestChoice = isBetterCandidate(gaCandidate, savedCandidate) ? gaCandidate : savedCandidate;
+    } else {
+        bestChoice = gaCandidate || savedCandidate;
+    }
+
+    if (!bestChoice || !bestChoice.brain) {
         customAlert('No best brain available to watch. Let them train!', 'NO BRAIN');
         return;
     }
+
     isWatchingReplay = true;
     wasTrainingRunning = trainRunning;
     
     replayCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#eab308');
-    replayCar.sensorCount = geneticAlgo.sensorCount;
-    replayCar.brain = geneticAlgo.bestBrain.clone();
+    const brain = bestChoice.brain.clone ? bestChoice.brain.clone() : NeuralNetwork.fromJSON(bestChoice.brain);
+    
+    let botSensorCount = bestChoice.sensorCount;
+    const memCount = Math.max(0, brain.layerSizes[brain.layerSizes.length - 1] - 4);
+    const inferredSensors = Math.max(1, brain.layerSizes[0] - 1 - memCount);
+    if (!botSensorCount) botSensorCount = inferredSensors;
+
+    replayCar.sensorCount = botSensorCount;
+    replayCar.brain = brain;
     
     // Copy settings so they drive identically
-    replayCar.maxSpeed = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
-    replayCar.turnSpeed = parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2;
-    replayCar.accel = parseFloat(document.getElementById('car-accel')?.value) || 420;
+    replayCar.maxSpeed = (bestChoice.settings && bestChoice.settings.maxSpeed) ? bestChoice.settings.maxSpeed : (parseFloat(document.getElementById('car-max-speed')?.value) || 380);
+    replayCar.turnRate = (bestChoice.settings && bestChoice.settings.turnRate) ? bestChoice.settings.turnRate : (parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2);
+    replayCar.acceleration = (bestChoice.settings && bestChoice.settings.acceleration) ? bestChoice.settings.acceleration : (parseFloat(document.getElementById('car-accel')?.value) || 420);
 }
 
 function endWatchReplay() {
@@ -1369,17 +1845,65 @@ function endWatchReplay() {
 }
 
 function startRaceMode() {
-    let brain = null;
+    let gaCandidate = null;
     if (geneticAlgo && geneticAlgo.bestBrain) {
-        brain = geneticAlgo.bestBrain.clone();
-    } else {
-        brain = loadBestBrain();
+        gaCandidate = {
+            brain: geneticAlgo.bestBrain,
+            bestLap: geneticAlgo.allTimeBestLap,
+            fitness: geneticAlgo.bestFitness,
+            sensorCount: geneticAlgo.sensorCount,
+            settings: {
+                maxSpeed: parseFloat(document.getElementById('car-max-speed')?.value) || 380,
+                turnRate: parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2,
+                acceleration: parseFloat(document.getElementById('car-accel')?.value) || 420
+            }
+        };
     }
-    
-    if (!brain) {
+    if (typeof aiCars !== 'undefined' && aiCars.length > 0) {
+        for (const car of aiCars) {
+            if (car.brain && isBetterCandidate(car, gaCandidate)) {
+                gaCandidate = {
+                    brain: car.brain,
+                    bestLap: car.bestLap,
+                    fitness: car.fitness,
+                    sensorCount: car.sensorCount || (geneticAlgo ? geneticAlgo.sensorCount : 7),
+                    settings: {
+                        maxSpeed: car.maxSpeed || 380,
+                        turnRate: car.turnRate || 3.2,
+                        acceleration: car.acceleration || 420
+                    }
+                };
+            }
+        }
+    }
+
+    let savedCandidate = null;
+    const savedData = loadBestBrainData();
+    if (savedData && savedData.brain) {
+        savedCandidate = {
+            brain: NeuralNetwork.fromJSON(savedData.brain),
+            bestLap: savedData.bestLap,
+            fitness: savedData.fitness,
+            sensorCount: savedData.sensorCount,
+            settings: savedData.settings
+        };
+    }
+
+    let bestChoice = null;
+    if (gaCandidate && savedCandidate) {
+        bestChoice = isBetterCandidate(gaCandidate, savedCandidate) ? gaCandidate : savedCandidate;
+    } else {
+        bestChoice = gaCandidate || savedCandidate;
+    }
+
+    if (!bestChoice || !bestChoice.brain) {
         customAlert('No trained brain available! Evolve a network or load one first.');
         return;
     }
+
+    const brain = bestChoice.brain.clone ? bestChoice.brain.clone() : NeuralNetwork.fromJSON(bestChoice.brain);
+    let botSensorCount = bestChoice.sensorCount;
+    const botSettings = bestChoice.settings;
 
     const validity = currentTrack.isValid();
     if (!validity.valid) { customAlert("Track invalid: " + validity.reason); return; }
@@ -1396,12 +1920,19 @@ function startRaceMode() {
     playerCar.turnRate = parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2;
     playerCar.acceleration = parseFloat(document.getElementById('car-accel')?.value) || 420;
 
+    // Calculate exact sensor count matching the neural network architecture
+    const memCount = Math.max(0, brain.layerSizes[brain.layerSizes.length - 1] - 4);
+    const inferredSensors = Math.max(1, brain.layerSizes[0] - 1 - memCount);
+    if (!botSensorCount) botSensorCount = inferredSensors;
+
     bestBotCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#ff0055');
-    bestBotCar.maxSpeed = playerCar.maxSpeed;
-    bestBotCar.turnRate = playerCar.turnRate;
-    bestBotCar.acceleration = playerCar.acceleration;
-    bestBotCar.sensorCount = brain.layerSizes[0] - 1;
+    bestBotCar.sensorCount = botSensorCount;
     bestBotCar.brain = brain;
+
+    // Use the exact physics settings the bot was trained with
+    bestBotCar.maxSpeed = (botSettings && botSettings.maxSpeed) ? botSettings.maxSpeed : playerCar.maxSpeed;
+    bestBotCar.turnRate = (botSettings && botSettings.turnRate) ? botSettings.turnRate : playerCar.turnRate;
+    bestBotCar.acceleration = (botSettings && botSettings.acceleration) ? botSettings.acceleration : playerCar.acceleration;
 
     camera.setPosition(playerCar.x, playerCar.y);
     camera.targetZoom = 1.4;
