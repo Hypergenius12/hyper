@@ -207,31 +207,29 @@ class Car {
                 }
                 
                 if (distToCenter < 20 && !this.justTeleported) {
-                    // Find all teleporters on the grid
-                    let teleporters = [];
-                    for (let c = 0; c < currentTrack.cols; c++) {
-                        for (let r = 0; r < currentTrack.rows; r++) {
-                            const tid = currentTrack.getTile(c, r);
-                            if (tid >= TILE_TYPES.TELEPORT_UP.id && tid <= TILE_TYPES.TELEPORT_LEFT.id) {
-                                teleporters.push({c, r, tid});
-                            }
-                        }
-                    }
+                    const partner = typeof currentTrack.getPortalPartner === 'function'
+                        ? currentTrack.getPortalPartner(centerCol, centerRow)
+                        : null;
                     
-                    if (teleporters.length === 2) {
-                        const outTeleporter = teleporters.find(t => t.c !== centerCol || t.r !== centerRow);
-                        if (outTeleporter) {
-                            this.x = outTeleporter.c * 100 + 50;
-                            this.y = outTeleporter.r * 100 + 50;
-                            
-                            const inAngles = { 32: -Math.PI/2, 33: 0, 34: Math.PI/2, 35: Math.PI };
-                            const outAngles = { 32: Math.PI/2, 33: Math.PI, 34: -Math.PI/2, 35: 0 };
-                            const entryBaseAngle = inAngles[centerTileId];
-                            const exitBaseAngle = outAngles[outTeleporter.tid];
-                            
-                            const relativeAngle = this.angle - entryBaseAngle;
-                            this.angle = exitBaseAngle + relativeAngle;
-                            this.justTeleported = true;
+                    if (partner) {
+                        this.x = partner.c * 100 + 50;
+                        this.y = partner.r * 100 + 50;
+                        
+                        const inAngles = { 32: -Math.PI/2, 33: 0, 34: Math.PI/2, 35: Math.PI };
+                        const outAngles = { 32: Math.PI/2, 33: Math.PI, 34: -Math.PI/2, 35: 0 };
+                        const entryBaseAngle = inAngles[centerTileId];
+                        const exitBaseAngle = outAngles[partner.tid];
+                        
+                        const relativeAngle = this.angle - entryBaseAngle;
+                        this.angle = exitBaseAngle + relativeAngle;
+                        
+                        // Push slightly forward along exit direction so the car exits smoothly
+                        this.x += Math.cos(this.angle) * 12;
+                        this.y += Math.sin(this.angle) * 12;
+                        
+                        this.justTeleported = true;
+                        if (typeof playTeleportSound === 'function') {
+                            playTeleportSound();
                         }
                     }
                 }

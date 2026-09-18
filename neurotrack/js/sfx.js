@@ -97,3 +97,24 @@ function stopAudio() {
     if (!isAudioInitialized) return;
     engineGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
 }
+
+function playTeleportSound() {
+    if (!isAudioInitialized || !audioCtx) return;
+    try {
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(1100, now + 0.15);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    } catch (e) {}
+}

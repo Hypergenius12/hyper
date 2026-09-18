@@ -188,7 +188,8 @@ function saveEditorState() {
     if (!currentTrack) return;
     const state = {
         grid: new Uint8Array(currentTrack.grid),
-        autoGrid: new Uint32Array(currentTrack.autoGrid)
+        autoGrid: new Uint32Array(currentTrack.autoGrid),
+        portals: JSON.parse(JSON.stringify(currentTrack.portals || []))
     };
     editorHistory.push(state);
     if (editorHistory.length > 50) editorHistory.shift();
@@ -231,7 +232,8 @@ function init() {
     window.addEventListener('beforeunload', () => {
         if (currentTrack) {
             const session = {
-                trackGrid: Array.from(currentTrack.grid)
+                trackGrid: Array.from(currentTrack.grid),
+                portals: currentTrack.portals || []
             };
             if (currentTrack.autoGrid) {
                 session.autoGrid = Array.from(currentTrack.autoGrid);
@@ -257,6 +259,10 @@ function init() {
                             currentTrack.autoGrid.fill(0);
                         }
                     }
+                    if (Array.isArray(session.portals)) {
+                        currentTrack.portals = session.portals;
+                    }
+                    currentTrack.sanitizePortals();
                     currentTrack.computeCheckpoints();
                     currentTrack.markDirty();
                     currentTrack.renderCollisionCanvas(collisionCanvas);
@@ -433,13 +439,16 @@ function setupInput() {
             if (currentState === GAME_STATES.EDITOR && editorHistory.length > 0) {
                 const currentStateObj = {
                     grid: new Uint8Array(currentTrack.grid),
-                    autoGrid: new Uint32Array(currentTrack.autoGrid)
+                    autoGrid: new Uint32Array(currentTrack.autoGrid),
+                    portals: JSON.parse(JSON.stringify(currentTrack.portals || []))
                 };
                 editorRedoHistory.push(currentStateObj);
                 
                 const prevState = editorHistory.pop();
                 currentTrack.grid.set(prevState.grid);
                 currentTrack.autoGrid.set(prevState.autoGrid);
+                currentTrack.portals = JSON.parse(JSON.stringify(prevState.portals || []));
+                currentTrack.sanitizePortals();
                 currentTrack.computeCheckpoints();
                 currentTrack.markDirty();
                 currentTrack.renderCollisionCanvas(collisionCanvas);
@@ -450,13 +459,16 @@ function setupInput() {
             if (currentState === GAME_STATES.EDITOR && editorRedoHistory.length > 0) {
                 const currentStateObj = {
                     grid: new Uint8Array(currentTrack.grid),
-                    autoGrid: new Uint32Array(currentTrack.autoGrid)
+                    autoGrid: new Uint32Array(currentTrack.autoGrid),
+                    portals: JSON.parse(JSON.stringify(currentTrack.portals || []))
                 };
                 editorHistory.push(currentStateObj);
                 
                 const nextState = editorRedoHistory.pop();
                 currentTrack.grid.set(nextState.grid);
                 currentTrack.autoGrid.set(nextState.autoGrid);
+                currentTrack.portals = JSON.parse(JSON.stringify(nextState.portals || []));
+                currentTrack.sanitizePortals();
                 currentTrack.computeCheckpoints();
                 currentTrack.markDirty();
                 currentTrack.renderCollisionCanvas(collisionCanvas);
@@ -495,10 +507,10 @@ function setupInput() {
         const startCurveBtn = document.getElementById('btn-tile-family-10');
         const teleBtn = document.getElementById('btn-tile-family-32');
         
-        // Start buttons are never disabled because placing a start tile automatically relocates any previous one
+        // Start buttons and Teleporters are never disabled
         if (startBtn) { startBtn.disabled = false; startBtn.style.opacity = '1'; }
         if (startCurveBtn) { startCurveBtn.disabled = false; startCurveBtn.style.opacity = '1'; }
-        if (teleBtn) { teleBtn.disabled = teleCount >= 2; teleBtn.style.opacity = teleCount >= 2 ? '0.3' : '1'; }
+        if (teleBtn) { teleBtn.disabled = false; teleBtn.style.opacity = '1'; }
         return { hasStart, teleCount };
     }
 
@@ -507,10 +519,7 @@ function setupInput() {
         const activeTile = (tileToPaint !== null && tileToPaint !== undefined) ? tileToPaint : paintTileType;
 
         if (activeTile !== 99 && activeTile !== 0) {
-            const limits = updateLimits();
-            const currentTile = currentTrack.getTile(c, r);
-            const teleportFamily = window.TILE_FAMILIES ? (window.TILE_FAMILIES.find(f => f.includes(32)) || []) : [];
-            if (teleportFamily.includes(activeTile) && limits.teleCount >= 2 && !teleportFamily.includes(currentTile)) return;
+            updateLimits();
         }
 
         if (isStartTile(activeTile)) {
@@ -724,8 +733,11 @@ function setupUI() {
     const btnClearTrack = document.getElementById('btn-clear-track');
     if (btnClearTrack) {
         btnClearTrack.onclick = () => {
+            saveEditorState();
             currentTrack.grid.fill(0);
-            if (currentTrack.autoGrid) currentTrack.autoGrid.fill(false);
+            if (currentTrack.autoGrid) currentTrack.autoGrid.fill(0);
+            currentTrack.portals = [];
+            currentTrack.computeCheckpoints();
             currentTrack.markDirty();
             
             bestGhostPath = null;

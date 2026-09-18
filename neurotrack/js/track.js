@@ -523,7 +523,7 @@ function renderRampLeft(ctx, x, y, size) { renderRamp(ctx, x, y, size, 'LEFT'); 
 // Teleporters
 // ========================================
 
-function renderTeleport(ctx, x, y, size, dir) {
+function renderTeleport(ctx, x, y, size, dir, pairInfo = null) {
     ctx.save();
     ctx.translate(x + size/2, y + size/2);
     
@@ -547,23 +547,42 @@ function renderTeleport(ctx, x, y, size, dir) {
     ctx.beginPath(); ctx.moveTo(0, size/2); ctx.lineTo(0, 0); ctx.stroke();
     ctx.setLineDash([]);
     
-    // Draw the portal image instead of Canvas geometry!
+    const themeColor = (pairInfo && pairInfo.color) ? pairInfo.color : '#00e5ff';
+    const filter = (pairInfo && pairInfo.filter) ? pairInfo.filter : 'none';
+
+    // Draw the portal image with pair-specific hue shift
     const imgSize = size * 0.7; // size is 100, so 70x70
-    if (teleporterImg.complete) {
+    if (teleporterImg.complete && teleporterImg.naturalWidth > 0) {
+        ctx.save();
+        if (filter && filter !== 'none') {
+            ctx.filter = filter;
+        }
         ctx.drawImage(teleporterImg, -imgSize/2, -imgSize/2, imgSize, imgSize);
+        ctx.restore();
     } else {
         // fallback
-        ctx.fillStyle = '#0055ff';
+        ctx.fillStyle = themeColor;
         ctx.beginPath(); ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2); ctx.fill();
     }
     
+    // Outer energy glow ring tinted to the portal pair's color
+    ctx.save();
+    ctx.shadowColor = themeColor;
+    ctx.shadowBlur = 12;
+    ctx.strokeStyle = themeColor;
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.33, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
     ctx.restore();
 }
 
-function renderTeleportUp(ctx, x, y, size) { renderTeleport(ctx, x, y, size, 'UP'); }
-function renderTeleportRight(ctx, x, y, size) { renderTeleport(ctx, x, y, size, 'RIGHT'); }
-function renderTeleportDown(ctx, x, y, size) { renderTeleport(ctx, x, y, size, 'DOWN'); }
-function renderTeleportLeft(ctx, x, y, size) { renderTeleport(ctx, x, y, size, 'LEFT'); }
+function renderTeleportUp(ctx, x, y, size, pairInfo) { renderTeleport(ctx, x, y, size, 'UP', pairInfo); }
+function renderTeleportRight(ctx, x, y, size, pairInfo) { renderTeleport(ctx, x, y, size, 'RIGHT', pairInfo); }
+function renderTeleportDown(ctx, x, y, size, pairInfo) { renderTeleport(ctx, x, y, size, 'DOWN', pairInfo); }
+function renderTeleportLeft(ctx, x, y, size, pairInfo) { renderTeleport(ctx, x, y, size, 'LEFT', pairInfo); }
 
 function renderDeadEnd(ctx, x, y, size, dir) {
     ctx.save();
@@ -691,12 +710,26 @@ function drawStartLineRotated(ctx, cx, cy, size, angle) {
 // Track Class
 // ========================================
 
+const PORTAL_PALETTE = [
+    { name: 'Cyan',    color: '#00e5ff', glow: 'rgba(0, 229, 255, 0.7)', filter: 'hue-rotate(0deg)' },
+    { name: 'Orange',  color: '#ff7700', glow: 'rgba(255, 119, 0, 0.7)', filter: 'hue-rotate(180deg)' },
+    { name: 'Purple',  color: '#b026ff', glow: 'rgba(176, 38, 255, 0.7)', filter: 'hue-rotate(75deg)' },
+    { name: 'Lime',    color: '#39ff14', glow: 'rgba(57, 255, 20, 0.7)', filter: 'hue-rotate(270deg)' },
+    { name: 'Yellow',  color: '#ffe600', glow: 'rgba(255, 230, 0, 0.7)', filter: 'hue-rotate(215deg)' },
+    { name: 'Magenta', color: '#ff00aa', glow: 'rgba(255, 0, 170, 0.7)', filter: 'hue-rotate(105deg)' },
+    { name: 'Red',     color: '#ff2a2a', glow: 'rgba(255, 42, 42, 0.7)', filter: 'hue-rotate(150deg)' },
+    { name: 'Teal',    color: '#00ffcc', glow: 'rgba(0, 255, 204, 0.7)', filter: 'hue-rotate(330deg)' },
+    { name: 'Blue',    color: '#3388ff', glow: 'rgba(51, 136, 255, 0.7)', filter: 'hue-rotate(30deg)' },
+    { name: 'Coral',   color: '#ff5e7e', glow: 'rgba(255, 94, 126, 0.7)', filter: 'hue-rotate(125deg)' }
+];
+
 class Track {
     constructor(cols = 16, rows = 12) {
         this.cols = cols;
         this.rows = rows;
         this.grid = new Uint8Array(cols * rows);
         this.autoGrid = new Uint32Array(cols * rows); // Tracks auto-drawn strokes (0 = manual, >0 = stroke ID)
+        this.portals = []; // Array of { c, r, pairId }
         this.checkpoints = [];
         this.startPos = { x: 0, y: 0, angle: 0 };
 
@@ -709,10 +742,107 @@ class Track {
         this.isDirty = true;
     }
 
+    addPortal(c, r) {
+        if (!Array.isArray(this.portals)) this.portals = [];
+        this.portals = this.portals.filter(p => p.c !== c || p.r !== r);
+        
+        const counts = {};
+        for (const p of this.portals) {
+            counts[p.pairId] = (counts[p.pairId] || 0) + 1;
+        }
+        
+        let targetPairId = null;
+        const sortedPairIds = Object.keys(counts).map(Number).sort((a, b) => a - b);
+        for (const pid of sortedPairIds) {
+            if (counts[pid] === 1) {
+                targetPairId = pid;
+                break;
+            }
+        }
+        
+        if (targetPairId === null) {
+            let candidate = 0;
+            while (counts[candidate] !== undefined && counts[candidate] >= 2) {
+                candidate++;
+            }
+            targetPairId = candidate;
+        }
+        
+        this.portals.push({ c, r, pairId: targetPairId });
+        return targetPairId;
+    }
+
+    removePortal(c, r) {
+        if (!Array.isArray(this.portals)) return;
+        this.portals = this.portals.filter(p => p.c !== c || p.r !== r);
+    }
+
+    sanitizePortals() {
+        if (!Array.isArray(this.portals)) this.portals = [];
+        this.portals = this.portals.filter(p => {
+            if (p.c < 0 || p.c >= this.cols || p.r < 0 || p.r >= this.rows) return false;
+            const tid = this.getTile(p.c, p.r);
+            return tid >= 32 && tid <= 35;
+        });
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const tid = this.getTile(c, r);
+                if (tid >= 32 && tid <= 35) {
+                    const exists = this.portals.some(p => p.c === c && p.r === r);
+                    if (!exists) {
+                        this.addPortal(c, r);
+                    }
+                }
+            }
+        }
+    }
+
+    getPortalPartner(c, r) {
+        this.sanitizePortals();
+        const entry = this.portals.find(p => p.c === c && p.r === r);
+        if (!entry) return null;
+        const partner = this.portals.find(p => p.pairId === entry.pairId && (p.c !== c || p.r !== r));
+        if (!partner) return null;
+        const tid = this.getTile(partner.c, partner.r);
+        if (tid < 32 || tid > 35) return null;
+        return {
+            c: partner.c,
+            r: partner.r,
+            tid: tid,
+            pairId: entry.pairId
+        };
+    }
+
+    getPortalInfo(c, r) {
+        if (!Array.isArray(this.portals)) return null;
+        const entry = this.portals.find(p => p.c === c && p.r === r);
+        if (!entry) return null;
+        const pal = PORTAL_PALETTE[entry.pairId % PORTAL_PALETTE.length];
+        return {
+            pairId: entry.pairId,
+            pairNumber: entry.pairId + 1,
+            label: `P${entry.pairId + 1}`,
+            name: pal.name,
+            color: pal.color,
+            glow: pal.glow,
+            filter: pal.filter
+        };
+    }
+
     setTile(c, r, typeId, strokeId = 0) {
         if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return;
+        const oldId = this.grid[r * this.cols + c];
         this.grid[r * this.cols + c] = typeId;
         this.autoGrid[r * this.cols + c] = strokeId;
+
+        const wasPortal = oldId >= 32 && oldId <= 35;
+        const isPortal = typeId >= 32 && typeId <= 35;
+        if (wasPortal && !isPortal) {
+            this.removePortal(c, r);
+        } else if (isPortal && !wasPortal) {
+            this.addPortal(c, r);
+        }
+
         this.markDirty();
     }
 
@@ -822,6 +952,18 @@ class Track {
         
         if (startCount !== 1) {
             return { valid: false, reason: `Track must have exactly one START tile. Found ${startCount}.` };
+        }
+
+        // Validate portal pairs: each placed portal pair must have exactly 2 portals
+        this.sanitizePortals();
+        const pairCounts = {};
+        for (const p of this.portals) {
+            pairCounts[p.pairId] = (pairCounts[p.pairId] || 0) + 1;
+        }
+        for (const pid in pairCounts) {
+            if (pairCounts[pid] !== 2) {
+                return { valid: false, reason: `Portal pair P${Number(pid) + 1} is incomplete (found ${pairCounts[pid]} of 2 portals).` };
+            }
         }
 
         // Check if there is a drivable closed loop from the Start tile
@@ -1056,27 +1198,17 @@ class Track {
                         const incomingPort = (state.dir + 2) % 4;
                         if (type.ports[incomingPort]) {
                             if (type.id >= TILE_TYPES.TELEPORT_UP.id && type.id <= TILE_TYPES.TELEPORT_LEFT.id) {
-                                let other = null;
-                                for (let _r = 0; _r < this.rows; _r++) {
-                                    for (let _c = 0; _c < this.cols; _c++) {
-                                        if (_c !== state.nc || _r !== state.nr) {
-                                            const tType = this.getTileType(_c, _r);
-                                            if (tType.id >= TILE_TYPES.TELEPORT_UP.id && tType.id <= TILE_TYPES.TELEPORT_LEFT.id) {
-                                                other = {c: _c, r: _r, type: tType};
-                                            }
-                                        }
-                                    }
-                                }
+                                const other = this.getPortalPartner(state.nc, state.nr);
                                 if (other) {
                                     state.other = other;
                                     currentPath.push({c: state.nc, r: state.nr});
                                     visited.add(`${state.nc},${state.nr},0`);
                                     
                                     let outDir = 0;
-                                    if (other.type.id === TILE_TYPES.TELEPORT_UP.id) outDir = 2; // Exits going DOWN
-                                    else if (other.type.id === TILE_TYPES.TELEPORT_RIGHT.id) outDir = 3; // Exits going LEFT
-                                    else if (other.type.id === TILE_TYPES.TELEPORT_DOWN.id) outDir = 0; // Exits going UP
-                                    else if (other.type.id === TILE_TYPES.TELEPORT_LEFT.id) outDir = 1; // Exits going RIGHT
+                                    if (other.tid === TILE_TYPES.TELEPORT_UP.id) outDir = 2; // Exits going DOWN
+                                    else if (other.tid === TILE_TYPES.TELEPORT_RIGHT.id) outDir = 3; // Exits going LEFT
+                                    else if (other.tid === TILE_TYPES.TELEPORT_DOWN.id) outDir = 0; // Exits going UP
+                                    else if (other.tid === TILE_TYPES.TELEPORT_LEFT.id) outDir = 1; // Exits going RIGHT
                                     
                                     stack.push({
                                         c: other.c, r: other.r, dir: outDir, phase: 0
@@ -1183,7 +1315,8 @@ class Track {
                         // Render ONLY the underpass (Horizontal) in the base layer.
                         renderStraightH(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
                     } else if (type.render) {
-                        type.render(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
+                        const pairInfo = (type.id >= 32 && type.id <= 35) ? this.getPortalInfo(c, r) : null;
+                        type.render(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, pairInfo);
                     }
                 }
             }
@@ -1247,9 +1380,51 @@ class Track {
                     ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy - tickLen); ctx.stroke();
                 }
             }
-        }
 
-        if (inEditor) {
+            // 5) Draw portal pair badges in editor
+            for (let r = 0; r < this.rows; r++) {
+                for (let c = 0; c < this.cols; c++) {
+                    const tid = this.getTile(c, r);
+                    if (tid >= 32 && tid <= 35) {
+                        const info = this.getPortalInfo(c, r);
+                        if (info) {
+                            const bx = c * TILE_SIZE + TILE_SIZE / 2;
+                            const by = r * TILE_SIZE + TILE_SIZE / 2;
+                            ctx.save();
+                            ctx.font = 'bold 16px "Segoe UI", Arial, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            
+                            const labelText = info.label;
+                            const textMetrics = ctx.measureText(labelText);
+                            const padX = 8, padY = 4;
+                            const rw = textMetrics.width + padX * 2;
+                            const rh = 22;
+                            
+                            // Glowing pill badge
+                            ctx.shadowColor = info.color;
+                            ctx.shadowBlur = 10;
+                            ctx.fillStyle = 'rgba(10, 14, 24, 0.92)';
+                            ctx.strokeStyle = info.color;
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            if (typeof ctx.roundRect === 'function') {
+                                ctx.roundRect(bx - rw/2, by - rh/2, rw, rh, 6);
+                            } else {
+                                ctx.rect(bx - rw/2, by - rh/2, rw, rh);
+                            }
+                            ctx.fill();
+                            ctx.stroke();
+                            
+                            ctx.shadowBlur = 0;
+                            ctx.fillStyle = info.color;
+                            ctx.fillText(labelText, bx, by + 1);
+                            ctx.restore();
+                        }
+                    }
+                }
+            }
+
             // 6) Faint grid lines (for editor)
             ctx.strokeStyle = 'rgba(255,255,255,0.04)';
             ctx.lineWidth = 1;
@@ -1444,11 +1619,13 @@ class Track {
     // Serialize / Deserialize
     // ========================================
     serialize() {
+        this.sanitizePortals();
         return JSON.stringify({
             cols: this.cols,
             rows: this.rows,
-            grid: this.grid,
-            autoGrid: this.autoGrid
+            grid: Array.from(this.grid),
+            autoGrid: Array.from(this.autoGrid),
+            portals: (this.portals || []).map(p => ({ c: p.c, r: p.r, pairId: p.pairId }))
         });
     }
 
@@ -1457,8 +1634,14 @@ class Track {
             const data = JSON.parse(dataStr);
             this.cols = data.cols;
             this.rows = data.rows;
-            this.grid = data.grid;
-            this.autoGrid = data.autoGrid || new Array(this.cols * this.rows).fill(false);
+            this.grid = new Uint8Array(data.grid);
+            this.autoGrid = data.autoGrid ? new Uint32Array(data.autoGrid) : new Uint32Array(this.cols * this.rows);
+            if (Array.isArray(data.portals)) {
+                this.portals = data.portals.map(p => ({ c: Number(p.c), r: Number(p.r), pairId: Number(p.pairId) }));
+            } else {
+                this.portals = [];
+            }
+            this.sanitizePortals();
             this.computeCheckpoints();
         } catch (e) {
             console.error("Failed to load track data");
@@ -1469,11 +1652,13 @@ class Track {
     // Serialization
     // ========================================
     exportJSON(trackName = null) {
+        this.sanitizePortals();
         const out = {
             cols: this.cols,
             rows: this.rows,
             grid: Array.from(this.grid),
-            autoGrid: Array.from(this.autoGrid)
+            autoGrid: Array.from(this.autoGrid),
+            portals: (this.portals || []).map(p => ({ c: p.c, r: p.r, pairId: p.pairId }))
         };
         if (trackName) out.name = trackName;
         return JSON.stringify(out);
@@ -1550,6 +1735,11 @@ class Track {
                     track.autoGrid[i] = Number(autoArr[i]) || 0;
                 }
             }
+
+            if (data && Array.isArray(data.portals)) {
+                track.portals = data.portals.map(p => ({ c: Number(p.c), r: Number(p.r), pairId: Number(p.pairId) }));
+            }
+            track.sanitizePortals();
 
             try {
                 track.computeCheckpoints();
