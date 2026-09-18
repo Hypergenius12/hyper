@@ -96,15 +96,15 @@ const TILE_TYPES = {
 // Tile Render Functions
 // ========================================
 
-function renderIntersection(ctx, x, y, size) {
+function renderIntersection(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
     const hw = size * 0.85; 
     const iw = size * 0.80; 
     
-    ctx.fillStyle = '#cccccc';
+    ctx.fillStyle = wallColor;
     ctx.fillRect(x + (size - hw) / 2, y, hw, size);
     ctx.fillRect(x, y + (size - hw) / 2, size, hw);
     
-    ctx.fillStyle = '#1e1e24';
+    ctx.fillStyle = roadColor;
     ctx.fillRect(x + (size - iw) / 2, y, iw, size);
     ctx.fillRect(x, y + (size - iw) / 2, size, iw);
 }
@@ -119,12 +119,12 @@ function renderAutoDraw(ctx, x, y, size) {
     ctx.setLineDash([]);
 }
 
-function renderStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size); }
-function renderStraightH(ctx, x, y, size) { drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size); }
-function renderCurveTR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size); }
-function renderCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size); }
-function renderCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size); }
-function renderCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size); }
+function renderStraightV(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') { drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, roadColor, wallColor); }
+function renderStraightH(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') { drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, roadColor, wallColor); }
+function renderCurveTR(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') { drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size, roadColor, wallColor); }
+function renderCurveBR(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') { drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size, roadColor, wallColor); }
+function renderCurveBL(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size, roadColor, wallColor); }
+function renderCurveTL(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size, roadColor, wallColor); }
 
 function renderRoughStraightV(ctx, x, y, size) { drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, TILE_COLOR_ROUGH); }
 function renderRoughStraightH(ctx, x, y, size) { drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, TILE_COLOR_ROUGH); }
@@ -164,52 +164,50 @@ function renderFastCurveBR(ctx, x, y, size) { drawRoadCurve(ctx, x + size, y + s
 function renderFastCurveBL(ctx, x, y, size) { drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size, TILE_COLOR_FAST, '#ffdd44'); }
 function renderFastCurveTL(ctx, x, y, size) { drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size, TILE_COLOR_FAST, '#ffdd44'); }
 
-function renderStartH(ctx, x, y, size) {
-    renderStraightH(ctx, x, y, size);
+function renderStartH(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, roadColor, wallColor);
     drawStartLine(ctx, x + size / 2, y + size / 2, size, false);
 }
-function renderStartV(ctx, x, y, size) {
-    renderStraightV(ctx, x, y, size);
+function renderStartV(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, roadColor, wallColor);
     drawStartLine(ctx, x + size / 2, y + size / 2, size, true);
 }
-function renderCrossroadHOver(ctx, x, y, size) {
+function renderCrossroadHOver(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
     // Underpass
-    renderStraightV(ctx, x, y, size);
-
+    drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, roadColor, wallColor);
     // Overpass
-    renderStraightH(ctx, x, y, size);
+    drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, roadColor, wallColor);
 }
 
-function renderCrossroadVOver(ctx, x, y, size) {
+function renderCrossroadVOver(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
     // Underpass
-    renderStraightH(ctx, x, y, size);
-
+    drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, roadColor, wallColor);
     // Overpass
-    renderStraightV(ctx, x, y, size);
+    drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, roadColor, wallColor);
 }
 
-function renderStartCurveTR(ctx, x, y, size) {
-    renderCurveTR(ctx, x, y, size);
+function renderStartCurveTR(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadCurve(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size, roadColor, wallColor);
     const cx = x + size, cy = y, R = size / 2, a = 3 * Math.PI / 4;
     drawStartLineRotated(ctx, cx + Math.cos(a)*R, cy + Math.sin(a)*R, size, a);
 }
-function renderStartCurveBR(ctx, x, y, size) {
-    renderCurveBR(ctx, x, y, size);
+function renderStartCurveBR(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadCurve(ctx, x + size, y + size, size / 2, Math.PI, Math.PI * 1.5, size, roadColor, wallColor);
     const cx = x + size, cy = y + size, R = size / 2, a = 5 * Math.PI / 4;
     drawStartLineRotated(ctx, cx + Math.cos(a)*R, cy + Math.sin(a)*R, size, a);
 }
-function renderStartCurveBL(ctx, x, y, size) {
-    renderCurveBL(ctx, x, y, size);
+function renderStartCurveBL(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadCurve(ctx, x, y + size, size / 2, Math.PI * 1.5, Math.PI * 2, size, roadColor, wallColor);
     const cx = x, cy = y + size, R = size / 2, a = 7 * Math.PI / 4;
     drawStartLineRotated(ctx, cx + Math.cos(a)*R, cy + Math.sin(a)*R, size, a);
 }
-function renderStartCurveTL(ctx, x, y, size) {
-    renderCurveTL(ctx, x, y, size);
+function renderStartCurveTL(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadCurve(ctx, x, y, size / 2, 0, Math.PI / 2, size, roadColor, wallColor);
     const cx = x, cy = y, R = size / 2, a = Math.PI / 4;
     drawStartLineRotated(ctx, cx + Math.cos(a)*R, cy + Math.sin(a)*R, size, a);
 }
 
-function drawBottleneckShape(ctx, cx, cy, size, isVertical, isWhiteCollision = false) {
+function drawBottleneckShape(ctx, cx, cy, size, isVertical, isWhiteCollision = false, roadColor = '#1e1e24', wallColor = '#cccccc') {
     ctx.save();
     ctx.translate(cx, cy);
     if (isVertical) ctx.rotate(Math.PI / 2);
@@ -237,8 +235,8 @@ function drawBottleneckShape(ctx, cx, cy, size, isVertical, isWhiteCollision = f
     if (isWhiteCollision) {
         drawShape(size * 0.8, size * 0.4, '#ffffff');
     } else {
-        drawShape(size * 0.85, size * 0.45, '#cccccc'); // border
-        drawShape(size * 0.80, size * 0.40, '#1e1e24'); // road
+        drawShape(size * 0.85, size * 0.45, wallColor); // border
+        drawShape(size * 0.80, size * 0.40, roadColor); // road
         
         // Center line
         ctx.beginPath(); ctx.moveTo(-l2, 0); ctx.lineTo(l2, 0);
@@ -251,11 +249,11 @@ function drawBottleneckShape(ctx, cx, cy, size, isVertical, isWhiteCollision = f
     ctx.restore();
 }
 
-function renderBottleneckV(ctx, x, y, size) {
-    drawBottleneckShape(ctx, x + size / 2, y + size / 2, size, true);
+function renderBottleneckV(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawBottleneckShape(ctx, x + size / 2, y + size / 2, size, true, false, roadColor, wallColor);
 }
-function renderBottleneckH(ctx, x, y, size) {
-    drawBottleneckShape(ctx, x + size / 2, y + size / 2, size, false);
+function renderBottleneckH(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawBottleneckShape(ctx, x + size / 2, y + size / 2, size, false, false, roadColor, wallColor);
 }
 
 function drawBoostArrows(ctx, cx, cy, angle, size) {
@@ -279,20 +277,20 @@ function drawBoostArrows(ctx, cx, cy, angle, size) {
     ctx.restore();
 }
 
-function renderBoostUp(ctx, x, y, size) {
-    renderStraightV(ctx, x, y, size);
+function renderBoostUp(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, roadColor, wallColor);
     drawBoostArrows(ctx, x + size/2, y + size/2, -Math.PI/2, size);
 }
-function renderBoostRight(ctx, x, y, size) {
-    renderStraightH(ctx, x, y, size);
+function renderBoostRight(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, roadColor, wallColor);
     drawBoostArrows(ctx, x + size/2, y + size/2, 0, size);
 }
-function renderBoostDown(ctx, x, y, size) {
-    renderStraightV(ctx, x, y, size);
+function renderBoostDown(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadPath(ctx, x + size / 2, y, x + size / 2, y + size, size, roadColor, wallColor);
     drawBoostArrows(ctx, x + size/2, y + size/2, Math.PI/2, size);
 }
-function renderBoostLeft(ctx, x, y, size) {
-    renderStraightH(ctx, x, y, size);
+function renderBoostLeft(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawRoadPath(ctx, x, y + size / 2, x + size, y + size / 2, size, roadColor, wallColor);
     drawBoostArrows(ctx, x + size/2, y + size/2, Math.PI, size);
 }
 
@@ -348,7 +346,7 @@ function drawRoadCurve(ctx, cx, cy, radius, startAngle, endAngle, size, roadColo
     ctx.setLineDash([]);
 }
 
-function drawBottleneckCurveShape(ctx, cx, cy, radius, startAngle, endAngle, size, isWhiteCollision = false) {
+function drawBottleneckCurveShape(ctx, cx, cy, radius, startAngle, endAngle, size, isWhiteCollision = false, roadColor = '#1e1e24', wallColor = '#cccccc') {
     const drawArcShape = (wMax, wMin, color) => {
         const steps = 20;
         const angleRange = endAngle - startAngle;
@@ -378,8 +376,8 @@ function drawBottleneckCurveShape(ctx, cx, cy, radius, startAngle, endAngle, siz
     if (isWhiteCollision) {
         drawArcShape(size * 0.8, size * 0.4, '#ffffff');
     } else {
-        drawArcShape(size * 0.85, size * 0.45, '#cccccc');
-        drawArcShape(size * 0.80, size * 0.40, '#1e1e24');
+        drawArcShape(size * 0.85, size * 0.45, wallColor);
+        drawArcShape(size * 0.80, size * 0.40, roadColor);
         
         ctx.beginPath();
         ctx.arc(cx, cy, radius, startAngle, endAngle);
@@ -390,70 +388,83 @@ function drawBottleneckCurveShape(ctx, cx, cy, radius, startAngle, endAngle, siz
     }
 }
 
-function renderBottleneckCurveTR(ctx, x, y, size) {
-    drawBottleneckCurveShape(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size);
+function renderBottleneckCurveTR(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawBottleneckCurveShape(ctx, x + size, y, size / 2, Math.PI / 2, Math.PI, size, false, roadColor, wallColor);
 }
-function renderBottleneckCurveBR(ctx, x, y, size) {
-    drawBottleneckCurveShape(ctx, x + size, y + size, size / 2, Math.PI, 3 * Math.PI / 2, size);
+function renderBottleneckCurveBR(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawBottleneckCurveShape(ctx, x + size, y + size, size / 2, Math.PI, 3 * Math.PI / 2, size, false, roadColor, wallColor);
 }
-function renderBottleneckCurveBL(ctx, x, y, size) {
-    drawBottleneckCurveShape(ctx, x, y + size, size / 2, 3 * Math.PI / 2, 2 * Math.PI, size);
+function renderBottleneckCurveBL(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawBottleneckCurveShape(ctx, x, y + size, size / 2, 3 * Math.PI / 2, 2 * Math.PI, size, false, roadColor, wallColor);
 }
-function renderBottleneckCurveTL(ctx, x, y, size) {
-    drawBottleneckCurveShape(ctx, x, y, size / 2, 0, Math.PI / 2, size);
+function renderBottleneckCurveTL(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawBottleneckCurveShape(ctx, x, y, size / 2, 0, Math.PI / 2, size, false, roadColor, wallColor);
 }
 
-function drawSplitLines(ctx, x, y, size, ports) {
-    const cx = x + size / 2, cy = y + size / 2;
+function drawSplitTile(ctx, cx, cy, size, rotAngle, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotAngle);
+
+    const s2 = size / 2;
+    const rw = (size * 0.80) / 2; // 40px
+
+    // 1) Fill the road surface
+    ctx.fillStyle = roadColor;
+    ctx.fillRect(-s2 - 0.5, -rw, size + 1, rw * 2); // Horizontal main branch
+    ctx.fillRect(-rw, -rw, rw * 2, s2 + rw + 0.5);   // Down branch
+
+    // 2) Stroke standard walls with uniform 2.5px thickness matching all tracks
+    ctx.strokeStyle = wallColor;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'butt';
+
+    // Top outer wall along the closed edge
     ctx.beginPath();
-    if (ports[0]) { ctx.moveTo(cx, cy); ctx.lineTo(cx, y); }
-    if (ports[1]) { ctx.moveTo(cx, cy); ctx.lineTo(x + size, cy); }
-    if (ports[2]) { ctx.moveTo(cx, cy); ctx.lineTo(cx, y + size); }
-    if (ports[3]) { ctx.moveTo(cx, cy); ctx.lineTo(x, cy); }
+    ctx.moveTo(-s2, -rw);
+    ctx.lineTo(s2, -rw);
+    ctx.stroke();
+
+    // Bottom-left inner corner wall
+    ctx.beginPath();
+    ctx.moveTo(-s2, rw);
+    ctx.lineTo(-rw, rw);
+    ctx.lineTo(-rw, s2);
+    ctx.stroke();
+
+    // Bottom-right inner corner wall
+    ctx.beginPath();
+    ctx.moveTo(s2, rw);
+    ctx.lineTo(rw, rw);
+    ctx.lineTo(rw, s2);
+    ctx.stroke();
+
+    // Centerline dashes
+    ctx.beginPath();
+    ctx.moveTo(-s2, 0); ctx.lineTo(s2, 0);
+    ctx.moveTo(0, 0); ctx.lineTo(0, s2);
     ctx.lineWidth = 2; ctx.setLineDash([15, 15]);
     ctx.strokeStyle = '#eebc1f';
     ctx.stroke();
     ctx.setLineDash([]);
+
+    ctx.restore();
 }
 
-function renderSplitUp(ctx, x, y, size) {
-    ctx.fillStyle = '#cccccc';
-    ctx.fillRect(x, y + size * 0.075, size, size * 0.85); // horizontal
-    ctx.fillRect(x + size * 0.075, y + size * 0.075, size * 0.85, size * 0.925); // center to bottom
-    ctx.fillStyle = '#1e1e24';
-    ctx.fillRect(x, y + size * 0.1, size, size * 0.8);
-    ctx.fillRect(x + size * 0.1, y + size * 0.1, size * 0.8, size * 0.9);
-    drawSplitLines(ctx, x, y, size, TILE_TYPES.SPLIT_UP.ports);
+function renderSplitUp(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawSplitTile(ctx, x + size / 2, y + size / 2, size, 0, roadColor, wallColor);
 }
-function renderSplitRight(ctx, x, y, size) {
-    ctx.fillStyle = '#cccccc';
-    ctx.fillRect(x + size * 0.075, y, size * 0.85, size); // vertical
-    ctx.fillRect(x, y + size * 0.075, size * 0.925, size * 0.85); // center to left
-    ctx.fillStyle = '#1e1e24';
-    ctx.fillRect(x + size * 0.1, y, size * 0.8, size);
-    ctx.fillRect(x, y + size * 0.1, size * 0.9, size * 0.8);
-    drawSplitLines(ctx, x, y, size, TILE_TYPES.SPLIT_RIGHT.ports);
+function renderSplitRight(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawSplitTile(ctx, x + size / 2, y + size / 2, size, Math.PI / 2, roadColor, wallColor);
 }
-function renderSplitDown(ctx, x, y, size) {
-    ctx.fillStyle = '#cccccc';
-    ctx.fillRect(x, y + size * 0.075, size, size * 0.85); // horizontal
-    ctx.fillRect(x + size * 0.075, y, size * 0.85, size * 0.925); // top to center
-    ctx.fillStyle = '#1e1e24';
-    ctx.fillRect(x, y + size * 0.1, size, size * 0.8);
-    ctx.fillRect(x + size * 0.1, y, size * 0.8, size * 0.9);
-    drawSplitLines(ctx, x, y, size, TILE_TYPES.SPLIT_DOWN.ports);
+function renderSplitDown(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawSplitTile(ctx, x + size / 2, y + size / 2, size, Math.PI, roadColor, wallColor);
 }
-function renderSplitLeft(ctx, x, y, size) {
-    ctx.fillStyle = '#cccccc';
-    ctx.fillRect(x + size * 0.075, y, size * 0.85, size); // vertical
-    ctx.fillRect(x + size * 0.075, y + size * 0.075, size * 0.925, size * 0.85); // center to right
-    ctx.fillStyle = '#1e1e24';
-    ctx.fillRect(x + size * 0.1, y, size * 0.8, size);
-    ctx.fillRect(x + size * 0.1, y + size * 0.1, size * 0.9, size * 0.8);
-    drawSplitLines(ctx, x, y, size, TILE_TYPES.SPLIT_LEFT.ports);
+function renderSplitLeft(ctx, x, y, size, pairInfo, roadColor = '#1e1e24', wallColor = '#cccccc') {
+    drawSplitTile(ctx, x + size / 2, y + size / 2, size, -Math.PI / 2, roadColor, wallColor);
 }
 
-function renderRamp(ctx, x, y, size, direction) {
+function renderRamp(ctx, x, y, size, direction, roadColor = '#1e1e24', wallColor = '#cccccc') {
     ctx.save();
     ctx.translate(x + size/2, y + size/2);
     if (direction === 'RIGHT') ctx.rotate(0);
@@ -465,7 +476,7 @@ function renderRamp(ctx, x, y, size, direction) {
     const entryX = -size / 2 - 1; // Slight overlap to avoid seams
     
     // Draw Border
-    ctx.fillStyle = '#cccccc';
+    ctx.fillStyle = wallColor;
     ctx.beginPath();
     ctx.moveTo(entryX, -size * 0.45);
     ctx.lineTo(lipX, -size * 0.45);
@@ -474,7 +485,7 @@ function renderRamp(ctx, x, y, size, direction) {
     ctx.fill();
     
     // Draw Road
-    ctx.fillStyle = '#1e1e24';
+    ctx.fillStyle = roadColor;
     ctx.beginPath();
     ctx.moveTo(entryX, -size * 0.4);
     ctx.lineTo(lipX - 5, -size * 0.4);
@@ -496,7 +507,7 @@ function renderRamp(ctx, x, y, size, direction) {
     const rampStartX = lipX - rampLength;
     
     const grad = ctx.createLinearGradient(rampStartX, 0, lipX, 0);
-    grad.addColorStop(0, '#1e1e24');
+    grad.addColorStop(0, roadColor);
     grad.addColorStop(1, '#666666');
     
     ctx.fillStyle = grad;
@@ -512,10 +523,10 @@ function renderRamp(ctx, x, y, size, direction) {
     ctx.restore();
 }
 
-function renderRampUp(ctx, x, y, size) { renderRamp(ctx, x, y, size, 'UP'); }
-function renderRampRight(ctx, x, y, size) { renderRamp(ctx, x, y, size, 'RIGHT'); }
-function renderRampDown(ctx, x, y, size) { renderRamp(ctx, x, y, size, 'DOWN'); }
-function renderRampLeft(ctx, x, y, size) { renderRamp(ctx, x, y, size, 'LEFT'); }
+function renderRampUp(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderRamp(ctx, x, y, size, 'UP', roadColor, wallColor); }
+function renderRampRight(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderRamp(ctx, x, y, size, 'RIGHT', roadColor, wallColor); }
+function renderRampDown(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderRamp(ctx, x, y, size, 'DOWN', roadColor, wallColor); }
+function renderRampLeft(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderRamp(ctx, x, y, size, 'LEFT', roadColor, wallColor); }
 
 
 
@@ -523,7 +534,7 @@ function renderRampLeft(ctx, x, y, size) { renderRamp(ctx, x, y, size, 'LEFT'); 
 // Teleporters
 // ========================================
 
-function renderTeleport(ctx, x, y, size, dir, pairInfo = null) {
+function renderTeleport(ctx, x, y, size, dir, pairInfo = null, roadColor = '#1e1e24', wallColor = '#cccccc') {
     ctx.save();
     ctx.translate(x + size/2, y + size/2);
     
@@ -532,12 +543,12 @@ function renderTeleport(ctx, x, y, size, dir, pairInfo = null) {
     else if (dir === 'LEFT') ctx.rotate(-Math.PI/2);
     
     // Draw the road from the bottom edge to the center, ending abruptly.
-    ctx.strokeStyle = '#cccccc';
+    ctx.strokeStyle = wallColor;
     ctx.lineCap = 'butt';
     ctx.lineWidth = size * 0.85;
     ctx.beginPath(); ctx.moveTo(0, size/2); ctx.lineTo(0, 0); ctx.stroke();
     
-    ctx.strokeStyle = '#1e1e24';
+    ctx.strokeStyle = roadColor;
     ctx.lineWidth = size * 0.8;
     ctx.beginPath(); ctx.moveTo(0, size/2); ctx.lineTo(0, 0); ctx.stroke();
     
@@ -579,12 +590,12 @@ function renderTeleport(ctx, x, y, size, dir, pairInfo = null) {
     ctx.restore();
 }
 
-function renderTeleportUp(ctx, x, y, size, pairInfo) { renderTeleport(ctx, x, y, size, 'UP', pairInfo); }
-function renderTeleportRight(ctx, x, y, size, pairInfo) { renderTeleport(ctx, x, y, size, 'RIGHT', pairInfo); }
-function renderTeleportDown(ctx, x, y, size, pairInfo) { renderTeleport(ctx, x, y, size, 'DOWN', pairInfo); }
-function renderTeleportLeft(ctx, x, y, size, pairInfo) { renderTeleport(ctx, x, y, size, 'LEFT', pairInfo); }
+function renderTeleportUp(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderTeleport(ctx, x, y, size, 'UP', pairInfo, roadColor, wallColor); }
+function renderTeleportRight(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderTeleport(ctx, x, y, size, 'RIGHT', pairInfo, roadColor, wallColor); }
+function renderTeleportDown(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderTeleport(ctx, x, y, size, 'DOWN', pairInfo, roadColor, wallColor); }
+function renderTeleportLeft(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderTeleport(ctx, x, y, size, 'LEFT', pairInfo, roadColor, wallColor); }
 
-function renderDeadEnd(ctx, x, y, size, dir) {
+function renderDeadEnd(ctx, x, y, size, dir, roadColor = '#1e1e24', wallColor = '#cccccc') {
     ctx.save();
     ctx.translate(x + size / 2, y + size / 2);
     let rot = 0;
@@ -599,7 +610,7 @@ function renderDeadEnd(ctx, x, y, size, dir) {
     ctx.lineTo(0, 0);
     ctx.lineWidth = size * 0.85;
     ctx.lineCap = 'butt';
-    ctx.strokeStyle = '#cccccc';
+    ctx.strokeStyle = wallColor;
     ctx.stroke();
 
     // 2. Road asphalt (exact match to drawRoadPath: 80% width #1e1e24)
@@ -608,7 +619,7 @@ function renderDeadEnd(ctx, x, y, size, dir) {
     ctx.lineTo(0, 0);
     ctx.lineWidth = size * 0.80;
     ctx.lineCap = 'butt';
-    ctx.strokeStyle = TILE_COLOR_ROAD;
+    ctx.strokeStyle = roadColor;
     ctx.stroke();
 
     // 3. Center line (exact match to drawRoadPath: 2px width, [15, 15] dash, #eebc1f)
@@ -661,10 +672,10 @@ function renderDeadEnd(ctx, x, y, size, dir) {
     ctx.restore();
 }
 
-function renderDeadEndUp(ctx, x, y, size) { renderDeadEnd(ctx, x, y, size, 'UP'); }
-function renderDeadEndRight(ctx, x, y, size) { renderDeadEnd(ctx, x, y, size, 'RIGHT'); }
-function renderDeadEndDown(ctx, x, y, size) { renderDeadEnd(ctx, x, y, size, 'DOWN'); }
-function renderDeadEndLeft(ctx, x, y, size) { renderDeadEnd(ctx, x, y, size, 'LEFT'); }
+function renderDeadEndUp(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderDeadEnd(ctx, x, y, size, 'UP', roadColor, wallColor); }
+function renderDeadEndRight(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderDeadEnd(ctx, x, y, size, 'RIGHT', roadColor, wallColor); }
+function renderDeadEndDown(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderDeadEnd(ctx, x, y, size, 'DOWN', roadColor, wallColor); }
+function renderDeadEndLeft(ctx, x, y, size, pairInfo, roadColor, wallColor) { renderDeadEnd(ctx, x, y, size, 'LEFT', roadColor, wallColor); }
 
 // ========================================
 // Start/Finish Line
@@ -724,6 +735,25 @@ const PORTAL_PALETTE = [
 ];
 
 class Track {
+    static getRoadColor(road) {
+        switch (road) {
+            case 'fast': return '#ffaa00';
+            case 'ice': return '#a0e6ff';
+            case 'puddle': return '#0066aa';
+            case 'rough': return '#5c4033';
+            default: return '#1e1e24';
+        }
+    }
+
+    static getWallColor(wall) {
+        switch (wall) {
+            case 'bouncy': return '#b026ff';
+            case 'slide': return '#00ffcc';
+            case 'repulsor': return '#a855f7';
+            default: return '#cccccc';
+        }
+    }
+
     constructor(cols = 16, rows = 12) {
         this.cols = cols;
         this.rows = rows;
@@ -732,10 +762,33 @@ class Track {
         this.portals = []; // Array of { c, r, pairId }
         this.checkpoints = [];
         this.startPos = { x: 0, y: 0, angle: 0 };
+        this.tileAttrs = {}; // Map "${c},${r}" -> { road: 'default', wall: 'default' }
+        this.autoCheckpoints = true;
+        this.customCheckpoints = []; // Array of { id, x1, y1, x2, y2 }
 
         this.cacheCanvas = null;
         this.cacheCtx = null;
         this.isDirty = true;
+    }
+
+    getTileAttrs(c, r) {
+        if (!this.tileAttrs) this.tileAttrs = {};
+        const key = `${c},${r}`;
+        return this.tileAttrs[key] || { road: 'default', wall: 'default' };
+    }
+
+    setTileAttrs(c, r, road, wall) {
+        if (!this.tileAttrs) this.tileAttrs = {};
+        const key = `${c},${r}`;
+        const current = this.tileAttrs[key] ? { ...this.tileAttrs[key] } : { road: 'default', wall: 'default' };
+        if (road !== undefined && road !== null) current.road = road;
+        if (wall !== undefined && wall !== null) current.wall = wall;
+        if (current.road === 'default' && current.wall === 'default') {
+            delete this.tileAttrs[key];
+        } else {
+            this.tileAttrs[key] = current;
+        }
+        this.markDirty();
     }
 
     markDirty() {
@@ -834,6 +887,10 @@ class Track {
         const oldId = this.grid[r * this.cols + c];
         this.grid[r * this.cols + c] = typeId;
         this.autoGrid[r * this.cols + c] = strokeId;
+
+        if (typeId === 0 && this.tileAttrs) {
+            delete this.tileAttrs[`${c},${r}`];
+        }
 
         const wasPortal = oldId >= 32 && oldId <= 35;
         const isPortal = typeId >= 32 && typeId <= 35;
@@ -1148,6 +1205,26 @@ class Track {
         this.startPos.y = sy;
         this.startPos.angle = sAngle;
 
+        // If manual checkpoints are enabled, use custom checkpoint lines!
+        if (this.autoCheckpoints === false) {
+            if (this.customCheckpoints && this.customCheckpoints.length > 0) {
+                this.checkpoints = this.customCheckpoints.map((cp, idx) => ({
+                    id: cp.id || (idx + 1),
+                    isLine: true,
+                    x1: cp.x1,
+                    y1: cp.y1,
+                    x2: cp.x2,
+                    y2: cp.y2,
+                    x: (cp.x1 + cp.x2) / 2,
+                    y: (cp.y1 + cp.y2) / 2,
+                    radius: 35
+                }));
+            } else {
+                this.checkpoints = [];
+            }
+            return;
+        }
+
         // 3. Trace the path (DFS to find a closed loop back to start)
         const stack = [{
             c: startC, r: startR, dir: currentDir,
@@ -1308,15 +1385,18 @@ class Track {
             for (let r = 0; r < this.rows; r++) {
                 for (let c = 0; c < this.cols; c++) {
                     const type = this.getTileType(c, r);
+                    const attrs = this.getTileAttrs(c, r);
+                    const roadColor = Track.getRoadColor(attrs.road);
+                    const wallColor = Track.getWallColor(attrs.wall);
                     if (type.id === TILE_TYPES.CROSSROAD_H_OVER.id) {
                         // Render ONLY the underpass (Vertical) in the base layer.
-                        renderStraightV(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
+                        renderStraightV(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, null, roadColor, wallColor);
                     } else if (type.id === TILE_TYPES.CROSSROAD_V_OVER.id) {
                         // Render ONLY the underpass (Horizontal) in the base layer.
-                        renderStraightH(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE);
+                        renderStraightH(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, null, roadColor, wallColor);
                     } else if (type.render) {
                         const pairInfo = (type.id >= 32 && type.id <= 35) ? this.getPortalInfo(c, r) : null;
-                        type.render(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, pairInfo);
+                        type.render(this.cacheCtx, c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, pairInfo, roadColor, wallColor);
                     }
                 }
             }
@@ -1325,6 +1405,56 @@ class Track {
 
         // Draw the cached track onto the main context (this prevents 1px anti-aliasing gaps between tiles)
         ctx.drawImage(this.cacheCanvas, 0, 0);
+
+        // Render custom checkpoint lines
+        if (!this.autoCheckpoints && this.customCheckpoints && this.customCheckpoints.length > 0) {
+            ctx.save();
+            for (let i = 0; i < this.customCheckpoints.length; i++) {
+                const cp = this.customCheckpoints[i];
+                // Glowing line
+                ctx.save();
+                ctx.shadowColor = '#00ffcc';
+                ctx.shadowBlur = 8;
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([8, 6]);
+                ctx.beginPath();
+                ctx.moveTo(cp.x1, cp.y1);
+                ctx.lineTo(cp.x2, cp.y2);
+                ctx.stroke();
+                ctx.restore();
+
+                // End posts
+                ctx.fillStyle = '#00ffcc';
+                ctx.beginPath(); ctx.arc(cp.x1, cp.y1, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(cp.x2, cp.y2, 5, 0, Math.PI * 2); ctx.fill();
+
+                // Midpoint badge
+                const midX = (cp.x1 + cp.x2) / 2;
+                const midY = (cp.y1 + cp.y2) / 2;
+                ctx.save();
+                ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const label = `CP ${i + 1}`;
+                const tw = ctx.measureText(label).width;
+                ctx.fillStyle = 'rgba(10, 14, 24, 0.9)';
+                ctx.strokeStyle = '#00ffcc';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                if (typeof ctx.roundRect === 'function') {
+                    ctx.roundRect(midX - tw/2 - 6, midY - 10, tw + 12, 20, 4);
+                } else {
+                    ctx.rect(midX - tw/2 - 6, midY - 10, tw + 12, 20);
+                }
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#00ffcc';
+                ctx.fillText(label, midX, midY + 1);
+                ctx.restore();
+            }
+            ctx.restore();
+        }
 
         if (inEditor) {
             // 2) Subtle cross-hatch pattern
@@ -1441,18 +1571,21 @@ class Track {
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 const type = this.getTileType(c, r);
+                const attrs = this.getTileAttrs(c, r);
+                const roadColor = Track.getRoadColor(attrs.road);
+                const wallColor = Track.getWallColor(attrs.wall);
                 if (type.id === TILE_TYPES.CROSSROAD_H_OVER.id) {
                     const x = c * TILE_SIZE;
                     const y = r * TILE_SIZE;
                     const size = TILE_SIZE;
                     
-                    renderStraightH(ctx, x, y, size);
+                    renderStraightH(ctx, x, y, size, null, roadColor, wallColor);
                 } else if (type.id === TILE_TYPES.CROSSROAD_V_OVER.id) {
                     const x = c * TILE_SIZE;
                     const y = r * TILE_SIZE;
                     const size = TILE_SIZE;
                     
-                    renderStraightV(ctx, x, y, size);
+                    renderStraightV(ctx, x, y, size, null, roadColor, wallColor);
                 }
             }
         }
@@ -1514,11 +1647,30 @@ class Track {
                     drawBottleneckCurveShape(ctx, px, py + TILE_SIZE, TILE_SIZE / 2, 3 * Math.PI / 2, 2 * Math.PI, TILE_SIZE, true);
                 } else if (type.id === TILE_TYPES.BOTTLENECK_CURVE_TL.id) {
                     drawBottleneckCurveShape(ctx, px, py, TILE_SIZE / 2, 0, Math.PI / 2, TILE_SIZE, true);
-                } else if (type.id === TILE_TYPES.CROSSROAD_H_OVER.id || type.id === TILE_TYPES.CROSSROAD_V_OVER.id || type.id === TILE_TYPES.INTERSECTION.id || (type.id >= TILE_TYPES.SPLIT_UP.id && type.id <= TILE_TYPES.SPLIT_LEFT.id)) {
-                    // Splits and Crossroads use the same open box collision
+                } else if (type.id === TILE_TYPES.CROSSROAD_H_OVER.id || type.id === TILE_TYPES.CROSSROAD_V_OVER.id || type.id === TILE_TYPES.INTERSECTION.id) {
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(px, py + TILE_SIZE * 0.1, TILE_SIZE, TILE_SIZE * 0.8);
                     ctx.fillRect(px + TILE_SIZE * 0.1, py, TILE_SIZE * 0.8, TILE_SIZE);
+                } else if (type.id === TILE_TYPES.SPLIT_UP.id) {
+                    const cx = px + TILE_SIZE / 2, cy = py + TILE_SIZE / 2;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(px, cy - TILE_SIZE * 0.4, TILE_SIZE, TILE_SIZE * 0.8); // Horizontal
+                    ctx.fillRect(cx - TILE_SIZE * 0.4, cy, TILE_SIZE * 0.8, TILE_SIZE * 0.5); // Down branch
+                } else if (type.id === TILE_TYPES.SPLIT_RIGHT.id) {
+                    const cx = px + TILE_SIZE / 2, cy = py + TILE_SIZE / 2;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(cx - TILE_SIZE * 0.4, py, TILE_SIZE * 0.8, TILE_SIZE); // Vertical
+                    ctx.fillRect(px, cy - TILE_SIZE * 0.4, TILE_SIZE * 0.5, TILE_SIZE * 0.8); // Left branch
+                } else if (type.id === TILE_TYPES.SPLIT_DOWN.id) {
+                    const cx = px + TILE_SIZE / 2, cy = py + TILE_SIZE / 2;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(px, cy - TILE_SIZE * 0.4, TILE_SIZE, TILE_SIZE * 0.8); // Horizontal
+                    ctx.fillRect(cx - TILE_SIZE * 0.4, py, TILE_SIZE * 0.8, TILE_SIZE * 0.5); // Up branch
+                } else if (type.id === TILE_TYPES.SPLIT_LEFT.id) {
+                    const cx = px + TILE_SIZE / 2, cy = py + TILE_SIZE / 2;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(cx - TILE_SIZE * 0.4, py, TILE_SIZE * 0.8, TILE_SIZE); // Vertical
+                    ctx.fillRect(cx, cy - TILE_SIZE * 0.4, TILE_SIZE * 0.5, TILE_SIZE * 0.8); // Right branch
                 } else if (type.id >= TILE_TYPES.RAMP_UP.id && type.id <= TILE_TYPES.RAMP_LEFT.id) {
                     // Ramps are just normal straights for collision
                     if (type.id === TILE_TYPES.RAMP_UP.id || type.id === TILE_TYPES.RAMP_DOWN.id) {
@@ -1625,7 +1777,10 @@ class Track {
             rows: this.rows,
             grid: Array.from(this.grid),
             autoGrid: Array.from(this.autoGrid),
-            portals: (this.portals || []).map(p => ({ c: p.c, r: p.r, pairId: p.pairId }))
+            portals: (this.portals || []).map(p => ({ c: p.c, r: p.r, pairId: p.pairId })),
+            tileAttrs: this.tileAttrs || {},
+            autoCheckpoints: this.autoCheckpoints !== false,
+            customCheckpoints: this.customCheckpoints || []
         });
     }
 
@@ -1641,6 +1796,9 @@ class Track {
             } else {
                 this.portals = [];
             }
+            this.tileAttrs = (data && data.tileAttrs && typeof data.tileAttrs === 'object') ? data.tileAttrs : {};
+            this.autoCheckpoints = data.autoCheckpoints !== false;
+            this.customCheckpoints = Array.isArray(data.customCheckpoints) ? data.customCheckpoints : [];
             this.sanitizePortals();
             this.computeCheckpoints();
         } catch (e) {
@@ -1658,7 +1816,10 @@ class Track {
             rows: this.rows,
             grid: Array.from(this.grid),
             autoGrid: Array.from(this.autoGrid),
-            portals: (this.portals || []).map(p => ({ c: p.c, r: p.r, pairId: p.pairId }))
+            portals: (this.portals || []).map(p => ({ c: p.c, r: p.r, pairId: p.pairId })),
+            tileAttrs: this.tileAttrs || {},
+            autoCheckpoints: this.autoCheckpoints !== false,
+            customCheckpoints: this.customCheckpoints || []
         };
         if (trackName) out.name = trackName;
         return JSON.stringify(out);
@@ -1740,6 +1901,18 @@ class Track {
                 track.portals = data.portals.map(p => ({ c: Number(p.c), r: Number(p.r), pairId: Number(p.pairId) }));
             }
             track.sanitizePortals();
+
+            if (data && data.tileAttrs && typeof data.tileAttrs === 'object') {
+                track.tileAttrs = data.tileAttrs;
+            } else {
+                track.tileAttrs = {};
+            }
+            track.autoCheckpoints = data.autoCheckpoints !== false;
+            if (data && Array.isArray(data.customCheckpoints)) {
+                track.customCheckpoints = data.customCheckpoints;
+            } else {
+                track.customCheckpoints = [];
+            }
 
             try {
                 track.computeCheckpoints();

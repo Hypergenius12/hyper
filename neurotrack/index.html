@@ -88,10 +88,50 @@
             <button class="btn-back">SAVE & EXIT</button>
         </div>
         <div class="editor-toolbar" style="pointer-events: auto;">
-            <div class="toolbar-title">COMPONENTS</div>
+            <div class="toolbar-title">TOOLS</div>
+            <div class="editor-tool-group" style="display: flex; gap: 4px; margin-bottom: 8px;">
+                <button id="tool-btn-place" class="tool-btn active" title="Place / Draw Track">✏️ PLACE</button>
+                <button id="tool-btn-select" class="tool-btn" title="Select & Edit Attributes">🎛️ EDIT</button>
+                <button id="tool-btn-checkpoint" class="tool-btn" title="Draw Manual Checkpoint Lines">🏁 GATE</button>
+            </div>
+
+            <div class="ctrl-row" style="margin-bottom: 6px; padding: 2px 0;">
+                <label style="font-size: 10px; font-weight: bold; color: #aaa;">AUTO CHECKPOINTS</label>
+                <input type="checkbox" id="editor-auto-checkpoints" class="ui-toggle" checked>
+            </div>
+            <div id="manual-checkpoint-controls" style="display: none; margin-bottom: 8px;">
+                <button id="btn-clear-checkpoints" class="ctrl-btn danger" style="width: 100%; font-size: 10px; padding: 4px;">CLEAR GATES</button>
+            </div>
+
+            <div id="editor-attribute-panel" style="display: none; margin-bottom: 8px; background: rgba(0,0,0,0.4); padding: 8px; border: 1px solid var(--dark); border-radius: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 10px; font-weight: bold; color: #fff;">ROAD ATTRIBUTE</span>
+                    <span id="active-road-label" style="font-size: 9px; color: #888;">DEFAULT</span>
+                </div>
+                <div class="attr-button-group road-attr-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-bottom: 8px;">
+                    <button class="attr-btn active" data-type="road" data-val="default">DEFAULT</button>
+                    <button class="attr-btn" data-type="road" data-val="fast" style="border-color: #ffaa00; color: #ffaa00;">FAST</button>
+                    <button class="attr-btn" data-type="road" data-val="ice" style="border-color: #a0e6ff; color: #a0e6ff;">ICE</button>
+                    <button class="attr-btn" data-type="road" data-val="puddle" style="border-color: #0066aa; color: #38bdf8;">PUDDLE</button>
+                    <button class="attr-btn" data-type="road" data-val="rough" style="border-color: #5c4033; color: #d4a373;">ROUGH</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-size: 10px; font-weight: bold; color: #fff;">WALL ATTRIBUTE</span>
+                    <span id="active-wall-label" style="font-size: 9px; color: #888;">CRASH</span>
+                </div>
+                <div class="attr-button-group wall-attr-group" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;">
+                    <button class="attr-btn active" data-type="wall" data-val="default">CRASH</button>
+                    <button class="attr-btn" data-type="wall" data-val="bouncy" style="border-color: #b026ff; color: #d946ef;">BOUNCE</button>
+                    <button class="attr-btn" data-type="wall" data-val="slide" style="border-color: #00ffcc; color: #00ffcc;">SLIDE</button>
+                    <button class="attr-btn" data-type="wall" data-val="repulsor" style="border-color: #a855f7; color: #c084fc;">REPULSE</button>
+                </div>
+                <div id="selection-info" style="font-size: 9px; color: #888; margin-top: 6px; text-align: center;">0 tiles selected</div>
+            </div>
+
+            <div class="toolbar-title" style="margin-top: 6px;">COMPONENTS</div>
             <div id="editor-palette" class="palette"></div>
             
-            <div class="toolbar-title" style="margin-top: 15px;">TRACK SETTINGS</div>
+            <div class="toolbar-title" style="margin-top: 10px;">TRACK SETTINGS</div>
             <input type="text" id="editor-track-name" class="text-input" placeholder="Track Name" style="width: 100%; text-align: center; margin-bottom: 10px;">
             <div class="ctrl-buttons" style="gap: 5px;">
                 <button id="btn-save-track" class="ctrl-btn accent" style="flex: 1;">SAVE</button>
@@ -105,9 +145,10 @@
             </div>
 
             <div class="editor-hint">
-                <p>L-CLICK → PLACE</p>
-                <p>R-CLICK → ERASE</p>
-                <p>SHIFT → ROTATE</p>
+                <p>L-CLICK → PLACE / EDIT</p>
+                <p>R-CLICK TRACK → ERASE</p>
+                <p>R-CLICK EMPTY → PAN</p>
+                <p>SHIFT → ROTATE TILE</p>
             </div>
         </div>
     </div>
@@ -122,7 +163,22 @@
                 <div class="stat-box">ALIVE <span id="alive-count">0</span></div>
                 <div class="stat-box">TIME <span id="gen-timer">0/15</span></div>
             </div>
-            <button class="btn-back">MENU</button>
+            <div style="display: flex; gap: 6px;">
+                <button id="btn-toggle-chart" class="ctrl-btn" style="padding: 6px 12px; font-size: 11px;">📈 CHART: ON</button>
+                <button class="btn-back">MENU</button>
+            </div>
+        </div>
+
+        <div id="train-chart-container" style="position: absolute; bottom: 20px; left: 20px; background: rgba(10, 14, 24, 0.92); border: 1px solid rgba(0, 255, 204, 0.3); border-radius: 6px; padding: 10px; pointer-events: auto; z-index: 10; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 15px;">
+                <span style="font-size: 11px; font-weight: bold; color: #fff; letter-spacing: 0.5px;">TRAINING TELEMETRY</span>
+                <div style="display: flex; gap: 8px; font-size: 9px; font-weight: bold;">
+                    <span style="color: #22c55e;">● TOP FIT</span>
+                    <span style="color: #38bdf8;">● AVG FIT</span>
+                    <span style="color: #eab308;">● LAP DROP</span>
+                </div>
+            </div>
+            <canvas id="train-fitness-chart" width="320" height="130" style="display: block; background: rgba(0,0,0,0.4); border-radius: 4px;"></canvas>
         </div>
 
         <div class="train-panel">

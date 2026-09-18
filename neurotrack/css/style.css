@@ -136,11 +136,62 @@ h1 {
 .editor-toolbar {
     position: absolute; left: 0;
     top: 42px; bottom: 0;
-    width: 260px;
+    width: 270px;
     background: var(--panel);
     border-right: 3px solid var(--white);
     padding: 1rem;
     display: flex; flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.editor-toolbar::-webkit-scrollbar { width: 4px; }
+.editor-toolbar::-webkit-scrollbar-thumb { background: var(--red); }
+
+.tool-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--dark);
+    color: var(--gray);
+    padding: 6px 4px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    text-align: center;
+}
+.tool-btn:hover {
+    border-color: var(--white);
+    color: var(--white);
+}
+.tool-btn.active {
+    background: var(--white);
+    color: var(--bg);
+    border-color: var(--white);
+    font-weight: bold;
+}
+
+.attr-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--dark);
+    color: var(--gray);
+    padding: 5px 2px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    border-radius: 2px;
+    transition: all 0.1s;
+    text-transform: uppercase;
+}
+.attr-btn:hover {
+    background: rgba(255,255,255,0.15);
+}
+.attr-btn.active {
+    background: rgba(255,255,255,0.25);
+    font-weight: bold;
+    box-shadow: 0 0 6px currentColor;
 }
 
 .toolbar-title {
@@ -154,7 +205,7 @@ h1 {
 
 .palette {
     display: flex; flex-direction: column; gap: 4px;
-    overflow-y: auto; flex: 1;
+    overflow-y: auto; min-height: 180px; max-height: 320px;
 }
 .palette::-webkit-scrollbar { width: 4px; }
 .palette::-webkit-scrollbar-thumb { background: var(--red); }
@@ -183,7 +234,7 @@ h1 {
 }
 
 .editor-hint {
-    margin-top: auto; padding-top: 0.5rem;
+    margin-top: 10px; padding-top: 0.5rem;
     border-top: 1px solid var(--dark);
     font-size: 0.7rem; color: var(--gray);
     line-height: 1.6;

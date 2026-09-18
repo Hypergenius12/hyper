@@ -41,6 +41,7 @@ class Car {
         this.bestLap = Infinity;
         this.totalTime = 0;
         this.started = false;
+        this.stoppedTime = 0;
 
         // Sensors (for AI)
         this.sensors = [];
@@ -57,10 +58,15 @@ class Car {
         this.friction = 1.8;
         this.turnRate = 3.2;
         this.offTrackPenalty = 0.92;
+        this.repulsorGlowTimer = 0;
     }
 
     update(dt, keys, collisionGrid, sensorGrid) {
         if (!this.alive) return;
+        if (this.repulsorGlowTimer > 0) this.repulsorGlowTimer -= dt;
+
+        this.prevX = this.x;
+        this.prevY = this.y;
 
         this.isAccelerating = false;
         this.isTurning = false;
@@ -76,26 +82,29 @@ class Car {
 
         if (typeof currentTrack !== 'undefined' && currentTrack && typeof TILE_TYPES !== 'undefined') {
             centerTileId = currentTrack.getTile(centerCol, centerRow);
+            const tileAttrs = typeof currentTrack.getTileAttrs === 'function'
+                ? currentTrack.getTileAttrs(centerCol, centerRow)
+                : { road: 'default', wall: 'default' };
             
-            // Ice Physics
-            if (centerTileId >= TILE_TYPES.ICE_STRAIGHT_V.id && centerTileId <= TILE_TYPES.ICE_CURVE_TL.id) {
+            // Ice Physics (attribute or legacy tile)
+            if (tileAttrs.road === 'ice' || (centerTileId >= TILE_TYPES.ICE_STRAIGHT_V.id && centerTileId <= TILE_TYPES.ICE_CURVE_TL.id)) {
                 currentTurnRate = this.turnRate * 0.4; // 40% turning ability (down from 100%)
                 currentAccel = this.acceleration * 0.5; // Slippery acceleration
             }
-            // Rough Physics
-            if (centerTileId >= TILE_TYPES.ROUGH_STRAIGHT_V.id && centerTileId <= TILE_TYPES.ROUGH_CURVE_TL.id) {
+            // Rough Physics (attribute or legacy tile)
+            if (tileAttrs.road === 'rough' || (centerTileId >= TILE_TYPES.ROUGH_STRAIGHT_V.id && centerTileId <= TILE_TYPES.ROUGH_CURVE_TL.id)) {
                 currentMaxSpeed = this.maxSpeed * 0.4;
                 currentAccel = this.acceleration * 0.4;
                 this.speed *= (1 - 3.0 * dt); // Active slowdown drag, framerate independent
             }
-            // Puddle Physics
-            if (centerTileId >= TILE_TYPES.PUDDLE_STRAIGHT_V.id && centerTileId <= TILE_TYPES.PUDDLE_CURVE_TL.id) {
+            // Puddle Physics (attribute or legacy tile)
+            if (tileAttrs.road === 'puddle' || (centerTileId >= TILE_TYPES.PUDDLE_STRAIGHT_V.id && centerTileId <= TILE_TYPES.PUDDLE_CURVE_TL.id)) {
                 currentTurnRate = 0; // No steering
                 currentAccel = 0; // No accelerating
                 currentBrakeForce = 0; // No braking
             }
-            // Unlimited Speed (Fast) Physics
-            if (centerTileId >= TILE_TYPES.FAST_STRAIGHT_V.id && centerTileId <= TILE_TYPES.FAST_CURVE_TL.id) {
+            // Unlimited Speed (Fast) Physics (attribute or legacy tile)
+            if (tileAttrs.road === 'fast' || (centerTileId >= TILE_TYPES.FAST_STRAIGHT_V.id && centerTileId <= TILE_TYPES.FAST_CURVE_TL.id)) {
                 currentMaxSpeed = this.maxSpeed * 2.5; // Huge speed limit increase
             }
         }
@@ -115,14 +124,18 @@ class Car {
 
             const outputs = this.brain.feedforward(inputs);
 
-            // Map outputs to allow reaching 100% force while maintaining analog control
-            // Multiply by 1.2 to allow reaching 1.0 even if sigmoid output is ~0.85
-            const accelForce = Math.min(1, outputs[0] * 1.2);
-            const brakeForce = Math.min(1, outputs[1] * 1.2);
+            // Decoupled throttle and brake: mutually exclusive so they don't fight each other
+            let netThrottle = 0;
+            let netBrake = 0;
+            if (outputs[0] >= outputs[1]) {
+                netThrottle = Math.min(1, (outputs[0] - outputs[1] * 0.5) * 1.4);
+            } else if (outputs[1] > outputs[0] + 0.08) {
+                netBrake = Math.min(1, (outputs[1] - outputs[0]) * 1.4);
+            }
             
             // For steering, subtract left from right, then amplify so they can turn sharply if needed
             let steer = outputs[3] - outputs[2];
-            steer = Math.max(-1, Math.min(1, steer * 1.5));
+            steer = Math.max(-1, Math.min(1, steer * 1.6));
 
             // Store recurrent memory for next frame
             for (let i = 0; i < this.memory.length; i++) {
@@ -130,16 +143,23 @@ class Car {
             }
 
             if (!this.airborne) {
-                this.speed += currentAccel * accelForce * dt;
-                this.speed -= currentBrakeForce * brakeForce * dt;
+                if (netThrottle > 0) this.speed += currentAccel * netThrottle * dt;
+                if (netBrake > 0) {
+                    if (this.speed > 0) {
+                        this.speed = Math.max(0, this.speed - currentBrakeForce * netBrake * dt);
+                    } else {
+                        this.speed = Math.max(-currentMaxSpeed * 0.25, this.speed - (currentBrakeForce * 0.3) * netBrake * dt);
+                    }
+                }
             }
-            if (accelForce > 0.1 || brakeForce > 0.1) {
+            if (netThrottle > 0.05 || netBrake > 0.05) {
                 this.started = true;
-                if (accelForce > 0.1 && !this.airborne) this.isAccelerating = true;
+                if (netThrottle > 0.05 && !this.airborne) this.isAccelerating = true;
             }
 
-            if (Math.abs(this.speed) > 0.1 && !this.airborne) {
-                const dir = this.speed > 0 ? 1 : -1;
+            if (!this.airborne) {
+                // Allow AI to rotate in place when stopped or forward (dir=1), or reverse (dir=-1)
+                const dir = this.speed >= 0 ? 1 : -1;
                 if (Math.abs(steer) > 0.05) this.isTurning = true;
                 this.angle += currentTurnRate * steer * dt * dir;
             }
@@ -269,6 +289,8 @@ class Car {
 
         const prevX = this.x;
         const prevY = this.y;
+        this.prevX = prevX;
+        this.prevY = prevY;
 
         if (this.vx === undefined) {
             this.vx = Math.cos(this.angle) * this.speed;
@@ -361,78 +383,209 @@ class Car {
                 }
                 
                 const centerCheck = this.isPointOnTrack(this.x, this.y, collisionGrid);
-                
-                if (offCount >= 1) {
-                    this.speed *= this.offTrackPenalty;
-                }
-                if (centerCheck === false) {
-                        const isBouncy = (centerTileId >= TILE_TYPES.BOUNCY_STRAIGHT_V.id && centerTileId <= TILE_TYPES.BOUNCY_CURVE_TL.id);
-                        if (isBouncy) {
-            // Revert position to prevent getting stuck in wall
-            this.x = prevX;
-            this.y = prevY;
-            if (offCount >= 1) this.speed /= this.offTrackPenalty; // Revert friction
+                const isSlide = (typeof currentTrack !== 'undefined' && currentTrack) ? this.isSlideContact(currentTrack) : false;
+                const isRepulsor = (typeof currentTrack !== 'undefined' && currentTrack) ? this.isRepulsorContact(currentTrack) : false;
 
-            // Apply bounce penalty for AI
-            if (this.brain) {
-                this.accumulatedWallPenalty += 50;
-            }
-
-            // Vector reflection based on wall type
-            let nx = 0, ny = 0; // Normal vector
-            if (centerTileId === TILE_TYPES.BOUNCY_STRAIGHT_V.id) {
-                nx = 1; ny = 0; 
-            } else if (centerTileId === TILE_TYPES.BOUNCY_STRAIGHT_H.id) {
-                nx = 0; ny = 1; 
-            } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_TL.id) {
-                nx = 0.707; ny = 0.707; 
-            } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_TR.id) {
-                nx = -0.707; ny = 0.707; 
-            } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_BL.id) {
-                nx = 0.707; ny = -0.707; 
-            } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_BR.id) {
-                nx = -0.707; ny = -0.707; 
-            } else {
-                nx = -Math.cos(this.angle);
-                ny = -Math.sin(this.angle);
-            }
-
-            // Incoming velocity vector
-            const vx = Math.cos(this.angle) * this.speed;
-            const vy = Math.sin(this.angle) * this.speed;
-
-            // Dot product (v . n)
-            const dotProduct = vx * nx + vy * ny;
-
-            // Reflected velocity: v_new = v - 2(v . n)n
-            let vxNew = vx;
-            let vyNew = vy;
-            
-            // Only reflect if we are moving towards the plane (or if we don't care, but avoiding double-bounces is good)
-            if (dotProduct > 0) {
-                // n is pointing away from us, v.n > 0 means we are moving in the same direction as n (towards the wall if n points into the wall)
-                vxNew = vx - 2 * dotProduct * nx;
-                vyNew = vy - 2 * dotProduct * ny;
-            } else if (dotProduct < 0) {
-                vxNew = vx - 2 * dotProduct * nx;
-                vyNew = vy - 2 * dotProduct * ny;
-            }
-
-            // Set new angle and speed (bounce multiplier)
-            this.angle = Math.atan2(vyNew, vxNew);
-            this.speed = Math.min(Math.sqrt(vxNew * vxNew + vyNew * vyNew) * 1.5, this.maxSpeed * 1.2);
-            
-            // Nudge the car slightly forward along the new angle to prevent getting stuck in the same collision pixel
-            this.x += Math.cos(this.angle) * 2;
-            this.y += Math.sin(this.angle) * 2;
-        } else {
-            this.speed = 0;
-            if (this.alive && !this.brain && typeof playCrashSound === 'function') {
-                playCrashSound();
-            }
-            this.alive = false;
-        }
+                if (isRepulsor) {
+                    // REPULSOR WALL: Magnetic cushion forcefield and non-lethal reflection!
+                    let minWallDist = 999;
+                    if (this.sensors && this.sensors.length > 0) {
+                        for (const s of this.sensors) {
+                            if (s.dist < minWallDist) minWallDist = s.dist;
+                        }
                     }
+
+                    const inProximity = minWallDist < 25 || offCount >= 1 || centerCheck === false;
+                    if (inProximity) {
+                        const norm = this.getTrackNormal(this.x, this.y, collisionGrid);
+                        
+                        // 1. Proximity magnetic repulsion force pushing away from the wall
+                        const proximityFactor = Math.max(0, 1 - (minWallDist / 25));
+                        const repulseMag = 750 * (proximityFactor > 0 ? proximityFactor : 1.0);
+                        this.vx += norm.nx * repulseMag * dt;
+                        this.vy += norm.ny * repulseMag * dt;
+                        this.speed = Math.hypot(this.vx, this.vy);
+                        this.velocityAngle = Math.atan2(this.vy, this.vx);
+
+                        // 2. Direct impact / penetration handling
+                        if (offCount >= 1 || centerCheck === false) {
+                            if (centerCheck === false) {
+                                this.x = prevX + norm.nx * 3;
+                                this.y = prevY + norm.ny * 3;
+                            }
+                            for (let step = 0; step < 4; step++) {
+                                let anyOff = false;
+                                for (const c of this.getCorners()) {
+                                    if (!this.isPointOnTrack(c.x, c.y, collisionGrid)) {
+                                        anyOff = true;
+                                        break;
+                                    }
+                                }
+                                if (anyOff) {
+                                    this.x += norm.nx * 2.5;
+                                    this.y += norm.ny * 2.5;
+                                } else {
+                                    break;
+                                }
+                            }
+
+                            // Elastic rebound along normal with 0.85 restitution
+                            const dot = this.vx * norm.nx + this.vy * norm.ny;
+                            if (dot < 0) {
+                                this.vx = (this.vx - 1.85 * dot * norm.nx);
+                                this.vy = (this.vy - 1.85 * dot * norm.ny);
+                                this.speed = Math.min(this.maxSpeed * 1.1, Math.hypot(this.vx, this.vy));
+                                this.angle = Math.atan2(this.vy, this.vx);
+                                this.velocityAngle = this.angle;
+                            }
+                            this.repulsorGlowTimer = 0.25; // Trigger forcefield visual flash
+                        }
+                        this.alive = true; // Never die on repulsor wall!
+                    }
+                } else if (isSlide) {
+                    // SLIDE WALL: NEVER SLOW DOWN! Maintain full momentum and glide along wall
+                    if (offCount >= 1 || centerCheck === false) {
+                        const norm = this.getTrackNormal(this.x, this.y, collisionGrid);
+                        let tx = -norm.ny, ty = norm.nx;
+                        const fwdX = Math.cos(this.angle);
+                        const fwdY = Math.sin(this.angle);
+                        if (fwdX * tx + fwdY * ty < 0) {
+                            tx = -tx;
+                            ty = -ty;
+                        }
+
+                        // Repel from wall into the track
+                        if (centerCheck === false) {
+                            this.x = prevX + norm.nx * 2;
+                            this.y = prevY + norm.ny * 2;
+                        }
+                        for (let step = 0; step < 4; step++) {
+                            let anyOff = false;
+                            for (const c of this.getCorners()) {
+                                if (!this.isPointOnTrack(c.x, c.y, collisionGrid)) {
+                                    anyOff = true;
+                                    break;
+                                }
+                            }
+                            if (anyOff) {
+                                this.x += norm.nx * 2;
+                                this.y += norm.ny * 2;
+                            } else {
+                                break;
+                            }
+                        }
+
+                        // Align angle to tangent
+                        const targetAngle = Math.atan2(ty, tx);
+                        let angleDiff = targetAngle - this.angle;
+                        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                        this.angle += angleDiff * Math.min(1, 16 * dt);
+
+                        // Maintain full forward momentum without speed penalties
+                        const curSpeed = Math.max(Math.abs(this.speed), Math.hypot(this.vx, this.vy));
+                        this.speed = Math.max(curSpeed, 20);
+                        this.vx = Math.cos(this.angle) * this.speed;
+                        this.vy = Math.sin(this.angle) * this.speed;
+                        this.velocityAngle = this.angle;
+                        this.alive = true;
+                    }
+                } else {
+                    if (offCount >= 1) {
+                        this.speed *= this.offTrackPenalty;
+                    }
+                }
+
+                if (centerCheck === false && !isSlide && !isRepulsor) {
+                    let checkCol = Math.floor(this.x / 100);
+                    let checkRow = Math.floor(this.y / 100);
+                    let tileAttrs = (typeof currentTrack !== 'undefined' && currentTrack && typeof currentTrack.getTileAttrs === 'function') 
+                        ? currentTrack.getTileAttrs(checkCol, checkRow) : null;
+                    if (!tileAttrs || (tileAttrs.wall === 'default' && currentTrack.getTile(checkCol, checkRow) === 0)) {
+                        const pCol = Math.floor(prevX / 100);
+                        const pRow = Math.floor(prevY / 100);
+                        const pAttrs = (typeof currentTrack !== 'undefined' && currentTrack && typeof currentTrack.getTileAttrs === 'function')
+                            ? currentTrack.getTileAttrs(pCol, pRow) : null;
+                        if (pAttrs && pAttrs.wall !== 'default') {
+                            tileAttrs = pAttrs;
+                            checkCol = pCol;
+                            checkRow = pRow;
+                        }
+                    }
+                    const wallAttr = tileAttrs ? tileAttrs.wall : 'default';
+                    const isBouncy = (wallAttr === 'bouncy') || (centerTileId >= TILE_TYPES.BOUNCY_STRAIGHT_V.id && centerTileId <= TILE_TYPES.BOUNCY_CURVE_TL.id);
+
+                    if (isBouncy) {
+                        // Revert position to prevent getting stuck in wall
+                        this.x = prevX;
+                        this.y = prevY;
+                        if (offCount >= 1) this.speed /= this.offTrackPenalty; // Revert friction
+
+                        // Apply bounce penalty for AI
+                        if (this.brain) {
+                            this.accumulatedWallPenalty += 50;
+                        }
+
+                        // Vector reflection based on wall type
+                        let nx = 0, ny = 0; // Normal vector
+                        if (centerTileId === TILE_TYPES.BOUNCY_STRAIGHT_V.id) {
+                            nx = 1; ny = 0; 
+                        } else if (centerTileId === TILE_TYPES.BOUNCY_STRAIGHT_H.id) {
+                            nx = 0; ny = 1; 
+                        } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_TR.id) {
+                            nx = -0.707; ny = 0.707; 
+                        } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_BR.id) {
+                            nx = -0.707; ny = -0.707; 
+                        } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_BL.id) {
+                            nx = 0.707; ny = -0.707; 
+                        } else if (centerTileId === TILE_TYPES.BOUNCY_CURVE_TL.id) {
+                            nx = 0.707; ny = 0.707; 
+                        } else {
+                            const canX = this.isPointOnTrack(this.x + Math.cos(this.angle) * 6, prevY, collisionGrid);
+                            const canY = this.isPointOnTrack(prevX, this.y + Math.sin(this.angle) * 6, collisionGrid);
+                            if (canX && !canY) {
+                                nx = 0; ny = Math.sin(this.angle) > 0 ? -1 : 1;
+                            } else if (canY && !canX) {
+                                nx = Math.cos(this.angle) > 0 ? -1 : 1; ny = 0;
+                            } else {
+                                nx = -Math.cos(this.angle);
+                                ny = -Math.sin(this.angle);
+                            }
+                        }
+
+                        // Incoming velocity vector
+                        const vx = Math.cos(this.angle) * this.speed;
+                        const vy = Math.sin(this.angle) * this.speed;
+
+                        // Dot product (v . n)
+                        const dotProduct = vx * nx + vy * ny;
+
+                        // Reflected velocity: v_new = v - 2(v . n)n
+                        let vxNew = vx;
+                        let vyNew = vy;
+                        
+                        if (dotProduct > 0) {
+                            vxNew = vx - 2 * dotProduct * nx;
+                            vyNew = vy - 2 * dotProduct * ny;
+                        } else if (dotProduct < 0) {
+                            vxNew = vx - 2 * dotProduct * nx;
+                            vyNew = vy - 2 * dotProduct * ny;
+                        }
+
+                        // Set new angle and speed (bounce multiplier)
+                        this.angle = Math.atan2(vyNew, vxNew);
+                        this.speed = Math.min(Math.sqrt(vxNew * vxNew + vyNew * vyNew) * 1.5, this.maxSpeed * 1.2);
+                        
+                        this.x += Math.cos(this.angle) * 2;
+                        this.y += Math.sin(this.angle) * 2;
+                    } else {
+                        this.speed = 0;
+                        if (this.alive && !this.brain && typeof playCrashSound === 'function') {
+                            playCrashSound();
+                        }
+                        this.alive = false;
+                    }
+                }
                 }
             }
         if (this.started) {
@@ -461,8 +614,25 @@ class Car {
             }
         }
         
+        let targetVelocityBonus = 0;
+        if (typeof currentTrack !== 'undefined' && currentTrack && currentTrack.checkpoints && currentTrack.checkpoints.length) {
+            const targetIndex = this.checkpointIndex % currentTrack.checkpoints.length;
+            const targetCp = currentTrack.checkpoints[targetIndex];
+            if (targetCp) {
+                const tdx = targetCp.x - this.x;
+                const tdy = targetCp.y - this.y;
+                const tdist = Math.hypot(tdx, tdy);
+                if (tdist > 1) {
+                    const nx = tdx / tdist;
+                    const ny = tdy / tdist;
+                    const forwardVelocity = (this.vx * nx + this.vy * ny);
+                    targetVelocityBonus = Math.max(0, forwardVelocity / this.maxSpeed) * 1.5;
+                }
+            }
+        }
+
         const checkpointScore = (this.totalCheckpoints + this.checkpointIndex) * 10 + progress * 10;
-        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.5;
+        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.5 + targetVelocityBonus;
         const survivalBonus = Math.min(this.totalTime * 0.02, 1.0); // capped at 1.0
         
         // Prioritize speed of completion: Massive bonus for completing a lap, scaled by how fast they did it!
@@ -474,10 +644,14 @@ class Car {
         // Ensure penalty is initialized
         if (typeof this.accumulatedWallPenalty === 'undefined') this.accumulatedWallPenalty = 0;
         
-        // Wall scraping penalty
+        // Wall scraping penalty: only penalize low-speed grinding or wall stalling, not fast apex clipping
         if (this.sensors && this.sensors.length > 0) {
             for (const s of this.sensors) {
-                if (s.dist < 15) this.accumulatedWallPenalty += (15 - s.dist) * 0.05 * dt;
+                if (s.dist < 14) {
+                    const severity = (14 - s.dist);
+                    const speedFactor = Math.max(0, 1 - (Math.abs(this.speed) / 140));
+                    this.accumulatedWallPenalty += severity * speedFactor * 0.08 * dt;
+                }
             }
         }
         
@@ -488,8 +662,15 @@ class Car {
         
         this.fitness = this.baseFitness - this.accumulatedWallPenalty;
         
-        if (this.brain && this.speed <= 10 && this.started && this.totalTime > 1.5) {
-            this.alive = false; // Kill car if it's crawling/stuck/reversing for too long
+        if (this.brain && this.started) {
+            if (Math.abs(this.speed) <= 10) {
+                this.stoppedTime = (this.stoppedTime || 0) + dt;
+                if (this.stoppedTime > 1.5) {
+                    this.alive = false; // Kill car if stopped continuously for > 1.5s
+                }
+            } else {
+                this.stoppedTime = 0;
+            }
         }
     }
 
@@ -524,6 +705,112 @@ class Car {
         const data = collisionGrid.data;
         // Track is drawn in white (255,255,255), grass is black
         return data[index] > 200 && data[index + 1] > 200 && data[index + 2] > 200;
+    }
+
+    isSlideContact(currentTrack) {
+        if (!currentTrack || typeof currentTrack.getTileAttrs !== 'function') return false;
+        const cCol = Math.floor(this.x / 100);
+        const cRow = Math.floor(this.y / 100);
+        const cur = currentTrack.getTileAttrs(cCol, cRow);
+        if (cur && cur.wall === 'slide') return true;
+
+        if (this.prevX !== undefined && this.prevY !== undefined) {
+            const pCol = Math.floor(this.prevX / 100);
+            const pRow = Math.floor(this.prevY / 100);
+            const prev = currentTrack.getTileAttrs(pCol, pRow);
+            if (prev && prev.wall === 'slide') return true;
+        }
+
+        for (const c of this.getCorners()) {
+            const col = Math.floor(c.x / 100);
+            const row = Math.floor(c.y / 100);
+            const attrs = currentTrack.getTileAttrs(col, row);
+            if (attrs && attrs.wall === 'slide') return true;
+        }
+
+        if (this.sensors && this.sensors.length > 0) {
+            for (const s of this.sensors) {
+                if (s.dist < 30) {
+                    const hx = Math.floor((this.x + Math.cos(s.angle) * s.dist) / 100);
+                    const hy = Math.floor((this.y + Math.sin(s.angle) * s.dist) / 100);
+                    const sAttrs = currentTrack.getTileAttrs(hx, hy);
+                    if (sAttrs && sAttrs.wall === 'slide') return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    isRepulsorContact(currentTrack) {
+        if (!currentTrack || typeof currentTrack.getTileAttrs !== 'function') return false;
+        const cCol = Math.floor(this.x / 100);
+        const cRow = Math.floor(this.y / 100);
+        const cur = currentTrack.getTileAttrs(cCol, cRow);
+        if (cur && cur.wall === 'repulsor') return true;
+
+        if (this.prevX !== undefined && this.prevY !== undefined) {
+            const pCol = Math.floor(this.prevX / 100);
+            const pRow = Math.floor(this.prevY / 100);
+            const prev = currentTrack.getTileAttrs(pCol, pRow);
+            if (prev && prev.wall === 'repulsor') return true;
+        }
+
+        for (const c of this.getCorners()) {
+            const col = Math.floor(c.x / 100);
+            const row = Math.floor(c.y / 100);
+            const attrs = currentTrack.getTileAttrs(col, row);
+            if (attrs && attrs.wall === 'repulsor') return true;
+        }
+
+        if (this.sensors && this.sensors.length > 0) {
+            for (const s of this.sensors) {
+                if (s.dist < 30) {
+                    const hx = Math.floor((this.x + Math.cos(s.angle) * s.dist) / 100);
+                    const hy = Math.floor((this.y + Math.sin(s.angle) * s.dist) / 100);
+                    const sAttrs = currentTrack.getTileAttrs(hx, hy);
+                    if (sAttrs && sAttrs.wall === 'repulsor') return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    getTrackNormal(px, py, collisionGrid) {
+        let sampleX = px;
+        let sampleY = py;
+        if (typeof this.getCorners === 'function') {
+            for (const c of this.getCorners()) {
+                if (!this.isPointOnTrack(c.x, c.y, collisionGrid)) {
+                    sampleX = c.x;
+                    sampleY = c.y;
+                    break;
+                }
+            }
+        }
+
+        const step = 8;
+        let gx = 0, gy = 0;
+        const rOn = this.isPointOnTrack(sampleX + step, sampleY, collisionGrid);
+        const lOn = this.isPointOnTrack(sampleX - step, sampleY, collisionGrid);
+        if (rOn && !lOn) gx = 1;
+        else if (!rOn && lOn) gx = -1;
+
+        const dOn = this.isPointOnTrack(sampleX, sampleY + step, collisionGrid);
+        const uOn = this.isPointOnTrack(sampleX, sampleY - step, collisionGrid);
+        if (dOn && !uOn) gy = 1;
+        else if (!dOn && uOn) gy = -1;
+
+        let len = Math.hypot(gx, gy);
+        if (len > 0.001) {
+            return { nx: gx / len, ny: gy / len };
+        }
+        if (this.prevX !== undefined && this.prevY !== undefined) {
+            const dx = this.prevX - px;
+            const dy = this.prevY - py;
+            len = Math.hypot(dx, dy);
+            if (len > 0.001) return { nx: dx / len, ny: dy / len };
+        }
+        return { nx: -Math.cos(this.angle), ny: -Math.sin(this.angle) };
     }
 
     castSensors(collisionGrid) {
@@ -568,6 +855,24 @@ class Car {
         
         if (!this.recentCheckpoints) this.recentCheckpoints = [];
 
+        function segmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+            function ccw(ax, ay, bx, by, cx, cy) {
+                return (cy - ay) * (bx - ax) > (by - ay) * (cx - ax);
+            }
+            return (ccw(x1, y1, x3, y3, x4, y4) !== ccw(x2, y2, x3, y3, x4, y4)) &&
+                   (ccw(x1, y1, x2, y2, x3, y3) !== ccw(x1, y1, x2, y2, x4, y4));
+        }
+
+        function distToSegmentSquared(px, py, x1, y1, x2, y2) {
+            const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+            if (l2 === 0) return (px - x1) * (px - x1) + (py - y1) * (py - y1);
+            let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            const nx = x1 + t * (x2 - x1);
+            const ny = y1 + t * (y2 - y1);
+            return (px - nx) * (px - nx) + (py - ny) * (py - ny);
+        }
+
         // Limit lookahead to 100, but never more than half the track to prevent wrap-around exploits.
         // Lookahead is high so that AI can find legit grass shortcuts.
         const LOOKAHEAD = Math.min(100, Math.max(1, Math.floor(checkpoints.length / 2)));
@@ -579,11 +884,19 @@ class Car {
             const cp = checkpoints[targetIndex];
             if (!cp) continue;
             
-            const dx = this.x - cp.x;
-            const dy = this.y - cp.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            let hit = false;
+            if (cp.isLine) {
+                const prevX = (typeof this.prevX !== 'undefined') ? this.prevX : this.x;
+                const prevY = (typeof this.prevY !== 'undefined') ? this.prevY : this.y;
+                hit = segmentsIntersect(prevX, prevY, this.x, this.y, cp.x1, cp.y1, cp.x2, cp.y2) ||
+                      (distToSegmentSquared(this.x, this.y, cp.x1, cp.y1, cp.x2, cp.y2) < 25 * 25);
+            } else {
+                const dx = this.x - cp.x;
+                const dy = this.y - cp.y;
+                hit = (dx * dx + dy * dy) < (cp.radius * cp.radius);
+            }
             
-            if (dist < cp.radius) {
+            if (hit) {
                 // Prevent hitting a checkpoint if it occupies the exact same physical coordinates 
                 // as ANY of the last 5 checkpoints we recently hit.
                 // This fixes the crossroad overlapping bug where cars jumped ahead 50 checkpoints
@@ -650,6 +963,18 @@ class Car {
             ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
         }
 
+        if (this.repulsorGlowTimer > 0) {
+            ctx.save();
+            ctx.strokeStyle = '#c084fc';
+            ctx.shadowColor = '#a855f7';
+            ctx.shadowBlur = 15;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.width * 0.75, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         ctx.restore();
     }
 
@@ -705,6 +1030,7 @@ class Car {
         this.bestLap = Infinity;
         this.totalTime = 0;
         this.started = false;
+        this.stoppedTime = 0;
         this.sensors = [];
         this.crossroadAxis = null;
         this.memory = [];

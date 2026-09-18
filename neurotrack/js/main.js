@@ -181,6 +181,15 @@ let isPainting = false;
 let paintTileType = 0;
 let lastPaintPos = { col: -1, row: -1 };
 
+let editorMode = 'place'; // 'place', 'select', 'checkpoint'
+let selectedTiles = new Set(); // Set of "c,r" strings
+let selectedRoadAttr = 'default';
+let selectedWallAttr = 'default';
+let isMarquee = false;
+let marqueeStart = null;
+let marqueeEnd = null;
+let checkpointDrawing = null; // { x1, y1, x2, y2 }
+
 let editorHistory = [];
 let editorRedoHistory = [];
 
@@ -189,13 +198,100 @@ function saveEditorState() {
     const state = {
         grid: new Uint8Array(currentTrack.grid),
         autoGrid: new Uint32Array(currentTrack.autoGrid),
-        portals: JSON.parse(JSON.stringify(currentTrack.portals || []))
+        portals: JSON.parse(JSON.stringify(currentTrack.portals || [])),
+        tileAttrs: JSON.parse(JSON.stringify(currentTrack.tileAttrs || {})),
+        autoCheckpoints: currentTrack.autoCheckpoints !== false,
+        customCheckpoints: JSON.parse(JSON.stringify(currentTrack.customCheckpoints || []))
     };
     editorHistory.push(state);
     if (editorHistory.length > 50) editorHistory.shift();
     editorRedoHistory = [];
 }
 window.saveEditorState = saveEditorState;
+
+function updateSelectionUI() {
+    const count = selectedTiles ? selectedTiles.size : 0;
+    const infoEl = document.getElementById('selection-info');
+    if (infoEl) {
+        infoEl.textContent = `${count} tile${count === 1 ? '' : 's'} selected`;
+    }
+}
+window.updateSelectionUI = updateSelectionUI;
+
+function syncEditorUIWithTrack() {
+    if (!currentTrack) return;
+    const autoCpEl = document.getElementById('editor-auto-checkpoints');
+    if (autoCpEl) {
+        autoCpEl.checked = currentTrack.autoCheckpoints !== false;
+    }
+    const manualCpControls = document.getElementById('manual-checkpoint-controls');
+    if (manualCpControls) {
+        manualCpControls.style.display = (currentTrack.autoCheckpoints === false) ? 'block' : 'none';
+    }
+    updateSelectionUI();
+}
+window.syncEditorUIWithTrack = syncEditorUIWithTrack;
+
+function setEditorMode(mode) {
+    editorMode = mode;
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById('tool-btn-' + mode);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    const attrPanel = document.getElementById('editor-attribute-panel');
+    if (attrPanel) {
+        attrPanel.style.display = (mode === 'select') ? 'block' : 'none';
+    }
+
+    const palette = document.getElementById('editor-palette');
+    if (palette) {
+        palette.style.opacity = (mode === 'place') ? '1' : '0.4';
+        palette.style.pointerEvents = (mode === 'place') ? 'auto' : 'none';
+    }
+
+    if (mode === 'checkpoint') {
+        if (currentTrack && currentTrack.autoCheckpoints !== false) {
+            saveEditorState();
+            currentTrack.autoCheckpoints = false;
+            const autoCpEl = document.getElementById('editor-auto-checkpoints');
+            if (autoCpEl) autoCpEl.checked = false;
+            const manualCpControls = document.getElementById('manual-checkpoint-controls');
+            if (manualCpControls) manualCpControls.style.display = 'block';
+            currentTrack.computeCheckpoints();
+            currentTrack.markDirty();
+        }
+    }
+}
+window.setEditorMode = setEditorMode;
+
+function selectAttribute(type, val) {
+    if (type === 'road') {
+        selectedRoadAttr = val;
+        document.querySelectorAll('.road-attr-group .attr-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-val') === val);
+        });
+        const lbl = document.getElementById('active-road-label');
+        if (lbl) lbl.textContent = val.toUpperCase();
+    } else if (type === 'wall') {
+        selectedWallAttr = val;
+        document.querySelectorAll('.wall-attr-group .attr-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-val') === val);
+        });
+        const lbl = document.getElementById('active-wall-label');
+        if (lbl) lbl.textContent = (val === 'default' ? 'CRASH' : val.toUpperCase());
+    }
+
+    if (selectedTiles && selectedTiles.size > 0 && currentTrack) {
+        saveEditorState();
+        for (const key of selectedTiles) {
+            const [c, r] = key.split(',').map(Number);
+            currentTrack.setTileAttrs(c, r, selectedRoadAttr, selectedWallAttr);
+        }
+        currentTrack.markDirty();
+        if (collisionCanvas) currentTrack.renderCollisionCanvas(collisionCanvas);
+    }
+}
+window.selectAttribute = selectAttribute;
 
 function init() {
     canvas = document.getElementById('game-canvas');
@@ -369,6 +465,8 @@ function loadTrack(name) {
     if (name !== currentTrackName) {
         geneticAlgo = null;
         bestTrainLap = Infinity;
+        trainTelemetry = [];
+        renderTrainTelemetryChart();
         const lapEl = document.getElementById('best-train-lap');
         if (lapEl) lapEl.textContent = '--';
         const fitEl = document.getElementById('best-fitness');
@@ -400,6 +498,8 @@ function loadTrack(name) {
         select.value = name;
     }
     loadTrackRecords(name);
+    if (selectedTiles) selectedTiles.clear();
+    syncEditorUIWithTrack();
 }
 
 function resize() {
@@ -440,7 +540,10 @@ function setupInput() {
                 const currentStateObj = {
                     grid: new Uint8Array(currentTrack.grid),
                     autoGrid: new Uint32Array(currentTrack.autoGrid),
-                    portals: JSON.parse(JSON.stringify(currentTrack.portals || []))
+                    portals: JSON.parse(JSON.stringify(currentTrack.portals || [])),
+                    tileAttrs: JSON.parse(JSON.stringify(currentTrack.tileAttrs || {})),
+                    autoCheckpoints: currentTrack.autoCheckpoints !== false,
+                    customCheckpoints: JSON.parse(JSON.stringify(currentTrack.customCheckpoints || []))
                 };
                 editorRedoHistory.push(currentStateObj);
                 
@@ -448,10 +551,14 @@ function setupInput() {
                 currentTrack.grid.set(prevState.grid);
                 currentTrack.autoGrid.set(prevState.autoGrid);
                 currentTrack.portals = JSON.parse(JSON.stringify(prevState.portals || []));
+                currentTrack.tileAttrs = JSON.parse(JSON.stringify(prevState.tileAttrs || {}));
+                currentTrack.autoCheckpoints = prevState.autoCheckpoints !== false;
+                currentTrack.customCheckpoints = JSON.parse(JSON.stringify(prevState.customCheckpoints || []));
                 currentTrack.sanitizePortals();
                 currentTrack.computeCheckpoints();
                 currentTrack.markDirty();
                 currentTrack.renderCollisionCanvas(collisionCanvas);
+                syncEditorUIWithTrack();
                 updateLimits();
             }
         }
@@ -460,7 +567,10 @@ function setupInput() {
                 const currentStateObj = {
                     grid: new Uint8Array(currentTrack.grid),
                     autoGrid: new Uint32Array(currentTrack.autoGrid),
-                    portals: JSON.parse(JSON.stringify(currentTrack.portals || []))
+                    portals: JSON.parse(JSON.stringify(currentTrack.portals || [])),
+                    tileAttrs: JSON.parse(JSON.stringify(currentTrack.tileAttrs || {})),
+                    autoCheckpoints: currentTrack.autoCheckpoints !== false,
+                    customCheckpoints: JSON.parse(JSON.stringify(currentTrack.customCheckpoints || []))
                 };
                 editorHistory.push(currentStateObj);
                 
@@ -468,10 +578,14 @@ function setupInput() {
                 currentTrack.grid.set(nextState.grid);
                 currentTrack.autoGrid.set(nextState.autoGrid);
                 currentTrack.portals = JSON.parse(JSON.stringify(nextState.portals || []));
+                currentTrack.tileAttrs = JSON.parse(JSON.stringify(nextState.tileAttrs || {}));
+                currentTrack.autoCheckpoints = nextState.autoCheckpoints !== false;
+                currentTrack.customCheckpoints = JSON.parse(JSON.stringify(nextState.customCheckpoints || []));
                 currentTrack.sanitizePortals();
                 currentTrack.computeCheckpoints();
                 currentTrack.markDirty();
                 currentTrack.renderCollisionCanvas(collisionCanvas);
+                syncEditorUIWithTrack();
                 updateLimits();
             }
         }
@@ -567,27 +681,73 @@ function setupInput() {
 
     canvas.addEventListener('mousedown', e => {
         if (currentState === GAME_STATES.EDITOR) {
-            if (e.button === 0) {
-                const worldPos = camera.screenToWorld(e.clientX, e.clientY, canvas);
-                const col = Math.floor(worldPos.x / TILE_SIZE);
-                const row = Math.floor(worldPos.y / TILE_SIZE);
-                isPainting = true; 
-                paintTileType = editorSelectedTile;
-                lastPaintPos = { col, row };
-                lastAutoDrawDir = { dx: 0, dy: 0 };
-                if (paintTileType === 99) {
-                    currentStrokeId++;
+            const worldPos = camera.screenToWorld(e.clientX, e.clientY, canvas);
+            const col = Math.floor(worldPos.x / TILE_SIZE);
+            const row = Math.floor(worldPos.y / TILE_SIZE);
+            const hasTile = (col >= 0 && col < currentTrack.cols && row >= 0 && row < currentTrack.rows && currentTrack.getTile(col, row) !== 0);
+
+            // Right-click: if clicking an existing track tile, delete it immediately.
+            // If clicking on empty space, pan the camera!
+            if (e.button === 2) {
+                if (hasTile) {
+                    saveEditorState();
+                    applyPaint(col, row, 0);
+                    currentTrack.computeCheckpoints();
+                    currentTrack.markDirty();
+                    currentTrack.renderCollisionCanvas(collisionCanvas);
+                    selectedTiles.delete(`${col},${row}`);
+                    updateSelectionUI();
+                    return;
+                } else {
+                    isPanning = true;
+                    manualCamera = true;
+                    lastPanPos = { x: e.clientX, y: e.clientY };
+                    return;
                 }
-                
-                saveEditorState();
-                
-                applyPaint(col, row);
+            }
+
+            // Middle click: always pan
+            if (e.button === 1) {
+                isPanning = true;
+                manualCamera = true;
+                lastPanPos = { x: e.clientX, y: e.clientY };
                 return;
+            }
+
+            // Left click:
+            if (e.button === 0) {
+                if (editorMode === 'place') {
+                    isPainting = true; 
+                    paintTileType = editorSelectedTile;
+                    lastPaintPos = { col, row };
+                    lastAutoDrawDir = { dx: 0, dy: 0 };
+                    if (paintTileType === 99) {
+                        currentStrokeId++;
+                    }
+                    saveEditorState();
+                    applyPaint(col, row);
+                    if (paintTileType !== 0 && (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default')) {
+                        currentTrack.setTileAttrs(col, row, selectedRoadAttr, selectedWallAttr);
+                        currentTrack.markDirty();
+                    }
+                    return;
+                }
+
+                if (editorMode === 'select') {
+                    isMarquee = true;
+                    marqueeStart = { x: worldPos.x, y: worldPos.y, clientX: e.clientX, clientY: e.clientY };
+                    marqueeEnd = { x: worldPos.x, y: worldPos.y };
+                    return;
+                }
+
+                if (editorMode === 'checkpoint') {
+                    checkpointDrawing = { x1: worldPos.x, y1: worldPos.y, x2: worldPos.x, y2: worldPos.y };
+                    return;
+                }
             }
         }
         
-        if (currentState === GAME_STATES.TRAIN || currentState === GAME_STATES.EDITOR) {
-            if (currentState === GAME_STATES.EDITOR && e.button !== 1 && e.button !== 2) return; // Editor pans on middle or right click
+        if (currentState === GAME_STATES.TRAIN) {
             isPanning = true;
             manualCamera = true;
             lastPanPos = { x: e.clientX, y: e.clientY };
@@ -599,38 +759,55 @@ function setupInput() {
             const worldPos = camera.screenToWorld(e.clientX, e.clientY, canvas);
             hoverCol = Math.floor(worldPos.x / TILE_SIZE);
             hoverRow = Math.floor(worldPos.y / TILE_SIZE);
-        }
-        
-        if (currentState === GAME_STATES.EDITOR && isPainting) {
-            const worldPos = camera.screenToWorld(e.clientX, e.clientY, canvas);
-            const col = Math.floor(worldPos.x / TILE_SIZE);
-            const row = Math.floor(worldPos.y / TILE_SIZE);
-            
-            if (lastPaintPos) {
-                // Orthogonal line algorithm to ensure connected tiles
-                let cx = lastPaintPos.col;
-                let cy = lastPaintPos.row;
+
+            if (isPainting && editorMode === 'place') {
+                const col = Math.floor(worldPos.x / TILE_SIZE);
+                const row = Math.floor(worldPos.y / TILE_SIZE);
                 
-                while (cx !== col || cy !== row) {
-                    // Step in the direction of the largest gap
-                    if (Math.abs(col - cx) > Math.abs(row - cy)) {
-                        let step = Math.sign(col - cx);
-                        cx += step;
-                        lastAutoDrawDir = { dx: step, dy: 0 };
-                    } else {
-                        let step = Math.sign(row - cy);
-                        cy += step;
-                        lastAutoDrawDir = { dx: 0, dy: step };
+                if (lastPaintPos) {
+                    // Orthogonal line algorithm to ensure connected tiles
+                    let cx = lastPaintPos.col;
+                    let cy = lastPaintPos.row;
+                    
+                    while (cx !== col || cy !== row) {
+                        // Step in the direction of the largest gap
+                        if (Math.abs(col - cx) > Math.abs(row - cy)) {
+                            let step = Math.sign(col - cx);
+                            cx += step;
+                            lastAutoDrawDir = { dx: step, dy: 0 };
+                        } else {
+                            let step = Math.sign(row - cy);
+                            cy += step;
+                            lastAutoDrawDir = { dx: 0, dy: step };
+                        }
+                        applyPaint(cx, cy);
+                        if (paintTileType !== 0 && (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default')) {
+                            currentTrack.setTileAttrs(cx, cy, selectedRoadAttr, selectedWallAttr);
+                        }
                     }
-                    applyPaint(cx, cy);
+                } else {
+                    lastAutoDrawDir = { dx: 0, dy: 0 };
+                    applyPaint(col, row);
+                    if (paintTileType !== 0 && (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default')) {
+                        currentTrack.setTileAttrs(col, row, selectedRoadAttr, selectedWallAttr);
+                    }
                 }
-            } else {
-                lastAutoDrawDir = { dx: 0, dy: 0 };
-                applyPaint(col, row);
+                lastPaintPos = { col, row };
+                return;
             }
-            lastPaintPos = { col, row };
-            return;
+
+            if (isMarquee && marqueeStart) {
+                marqueeEnd = { x: worldPos.x, y: worldPos.y };
+                return;
+            }
+
+            if (checkpointDrawing) {
+                checkpointDrawing.x2 = worldPos.x;
+                checkpointDrawing.y2 = worldPos.y;
+                return;
+            }
         }
+
         if (isPanning) {
             const dx = (e.clientX - lastPanPos.x) / camera.zoom;
             const dy = (e.clientY - lastPanPos.y) / camera.zoom;
@@ -640,12 +817,90 @@ function setupInput() {
         }
     });
     
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mouseup', e => {
         if (isPainting) { 
             isPainting = false; 
             lastPaintPos = null;
             currentTrack.renderCollisionCanvas(collisionCanvas); 
         }
+
+        if (isMarquee && marqueeStart && marqueeEnd) {
+            const dragDist = Math.hypot(e.clientX - marqueeStart.clientX, e.clientY - marqueeStart.clientY);
+            if (dragDist < 6) {
+                // Single click selection
+                const c = Math.floor(marqueeStart.x / TILE_SIZE);
+                const r = Math.floor(marqueeStart.y / TILE_SIZE);
+                if (c >= 0 && c < currentTrack.cols && r >= 0 && r < currentTrack.rows && currentTrack.getTile(c, r) !== 0) {
+                    saveEditorState();
+                    selectedTiles.clear();
+                    selectedTiles.add(`${c},${r}`);
+                    currentTrack.setTileAttrs(c, r, selectedRoadAttr, selectedWallAttr);
+                    currentTrack.markDirty();
+                    currentTrack.renderCollisionCanvas(collisionCanvas);
+                } else {
+                    selectedTiles.clear();
+                }
+            } else {
+                // Drag marquee selection
+                const minX = Math.min(marqueeStart.x, marqueeEnd.x);
+                const maxX = Math.max(marqueeStart.x, marqueeEnd.x);
+                const minY = Math.min(marqueeStart.y, marqueeEnd.y);
+                const maxY = Math.max(marqueeStart.y, marqueeEnd.y);
+
+                const minC = Math.max(0, Math.floor(minX / TILE_SIZE));
+                const maxC = Math.min(currentTrack.cols - 1, Math.floor(maxX / TILE_SIZE));
+                const minR = Math.max(0, Math.floor(minY / TILE_SIZE));
+                const maxR = Math.min(currentTrack.rows - 1, Math.floor(maxY / TILE_SIZE));
+
+                let changed = false;
+                selectedTiles.clear();
+                for (let c = minC; c <= maxC; c++) {
+                    for (let r = minR; r <= maxR; r++) {
+                        if (currentTrack.getTile(c, r) !== 0) {
+                            if (!changed) {
+                                saveEditorState();
+                                changed = true;
+                            }
+                            selectedTiles.add(`${c},${r}`);
+                            currentTrack.setTileAttrs(c, r, selectedRoadAttr, selectedWallAttr);
+                        }
+                    }
+                }
+                if (changed) {
+                    currentTrack.markDirty();
+                    currentTrack.renderCollisionCanvas(collisionCanvas);
+                }
+            }
+            isMarquee = false;
+            marqueeStart = null;
+            marqueeEnd = null;
+            updateSelectionUI();
+        }
+
+        if (checkpointDrawing) {
+            const len = Math.hypot(checkpointDrawing.x2 - checkpointDrawing.x1, checkpointDrawing.y2 - checkpointDrawing.y1);
+            if (len >= 20) {
+                saveEditorState();
+                if (!currentTrack.customCheckpoints) currentTrack.customCheckpoints = [];
+                currentTrack.autoCheckpoints = false;
+                const autoCpEl = document.getElementById('editor-auto-checkpoints');
+                if (autoCpEl) autoCpEl.checked = false;
+                const manualCpControls = document.getElementById('manual-checkpoint-controls');
+                if (manualCpControls) manualCpControls.style.display = 'block';
+
+                currentTrack.customCheckpoints.push({
+                    id: currentTrack.customCheckpoints.length + 1,
+                    x1: checkpointDrawing.x1,
+                    y1: checkpointDrawing.y1,
+                    x2: checkpointDrawing.x2,
+                    y2: checkpointDrawing.y2
+                });
+                currentTrack.computeCheckpoints();
+                currentTrack.markDirty();
+            }
+            checkpointDrawing = null;
+        }
+
         if (isPanning) { isPanning = false; }
     });
     
@@ -883,17 +1138,7 @@ function setupUI() {
         [24, 25, 26, 27], // SPLIT
         [28, 29, 30, 31], // RAMP
         [32, 33, 34, 35], // TELEPORT
-        [36, 37], // ROUGH STRAIGHT
-        [38, 39, 40, 41], // ROUGH CURVE
-        [42, 43], // ICE STRAIGHT
-        [44, 45, 46, 47], // ICE CURVE
         [48], // INTERSECTION
-        [49, 50], // BOUNCY STRAIGHT
-        [51, 52, 53, 54], // BOUNCY CURVE
-        [55, 56], // PUDDLE STRAIGHT
-        [57, 58, 59, 60], // PUDDLE CURVE
-        [61, 62], // FAST STRAIGHT
-        [63, 64, 65, 66], // FAST CURVE
         [68, 69, 70, 71] // DEAD END
     ];
     window.TILE_FAMILIES = TILE_FAMILIES; // For limits check
@@ -901,10 +1146,7 @@ function setupUI() {
     const friendlyNames = {
         0: '⌫ Eraser', 99: '✨ Auto-Draw', 1: '│ Straight', 3: '╰ Curve', 7: '▶ Start', 10: '▶ Curved Start', 9: '┼ Crossroad', 
         14: '─ Bottleneck', 16: '▲ Boost', 20: '╰ Bottleneck Curve', 24: '┴ Split', 28: '▲ Ramp',
-        32: '▲ Teleport', 36: '⌇ Rough Straight', 38: '⌇ Rough Curve', 42: '❆ Ice Straight', 44: '❆ Ice Curve',
-        48: '✥ Intersection', 49: '⤧ Bouncy Straight', 51: '⤧ Bouncy Curve',
-        55: '⌇ Puddle Straight', 57: '⌇ Puddle Curve', 61: '▶ Fast Straight', 63: '▶ Fast Curve',
-        68: '⛔ Dead End'
+        32: '▲ Teleport', 48: '✥ Intersection', 68: '⛔ Dead End'
     };
 
     for (const family of TILE_FAMILIES) {
@@ -929,6 +1171,7 @@ function setupUI() {
 
         btn.onclick = () => {
             if (btn.disabled) return;
+            setEditorMode('place');
             document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             if (!family.includes(editorSelectedTile)) {
@@ -937,6 +1180,54 @@ function setupUI() {
         };
         palette.appendChild(btn);
     }
+
+    // Editor tools
+    const toolPlaceBtn = document.getElementById('tool-btn-place');
+    if (toolPlaceBtn) toolPlaceBtn.onclick = () => setEditorMode('place');
+    const toolSelectBtn = document.getElementById('tool-btn-select');
+    if (toolSelectBtn) toolSelectBtn.onclick = () => setEditorMode('select');
+    const toolCpBtn = document.getElementById('tool-btn-checkpoint');
+    if (toolCpBtn) toolCpBtn.onclick = () => setEditorMode('checkpoint');
+
+    // Auto Checkpoints toggle
+    const autoCpEl = document.getElementById('editor-auto-checkpoints');
+    if (autoCpEl) {
+        autoCpEl.onchange = e => {
+            if (!currentTrack) return;
+            saveEditorState();
+            currentTrack.autoCheckpoints = e.target.checked;
+            const manualCpControls = document.getElementById('manual-checkpoint-controls');
+            if (manualCpControls) {
+                manualCpControls.style.display = currentTrack.autoCheckpoints ? 'none' : 'block';
+            }
+            if (currentTrack.autoCheckpoints && editorMode === 'checkpoint') {
+                setEditorMode('place');
+            }
+            currentTrack.computeCheckpoints();
+            currentTrack.markDirty();
+        };
+    }
+
+    const btnClearCheckpoints = document.getElementById('btn-clear-checkpoints');
+    if (btnClearCheckpoints) {
+        btnClearCheckpoints.onclick = () => {
+            if (!currentTrack) return;
+            saveEditorState();
+            currentTrack.customCheckpoints = [];
+            currentTrack.computeCheckpoints();
+            currentTrack.markDirty();
+            customAlert('Manual gates cleared.');
+        };
+    }
+
+    // Attribute buttons
+    document.querySelectorAll('.attr-btn').forEach(btn => {
+        btn.onclick = () => {
+            const type = btn.getAttribute('data-type');
+            const val = btn.getAttribute('data-val');
+            selectAttribute(type, val);
+        };
+    });
 
     // Train panel sliders
     setupSlider('train-population', 'train-pop-val', v => v);
@@ -1018,6 +1309,8 @@ document.getElementById('btn-garage').addEventListener('click', () => {
     document.getElementById('btn-reset-training').onclick = () => {
         bestTrainLap = Infinity;
         trainTimer = 0;
+        trainTelemetry = [];
+        renderTrainTelemetryChart();
         if (geneticAlgo) {
             geneticAlgo.initialize();
             geneticAlgo.bestBrain = null;
@@ -1055,6 +1348,18 @@ document.getElementById('btn-garage').addEventListener('click', () => {
         showSensors = !showSensors; 
         sensorBtn.innerText = 'SENSORS: ' + (showSensors ? 'ON' : 'OFF');
     };
+
+    const btnToggleChart = document.getElementById('btn-toggle-chart');
+    if (btnToggleChart) {
+        btnToggleChart.onclick = () => {
+            showTrainChart = !showTrainChart;
+            const chartContainer = document.getElementById('train-chart-container');
+            if (chartContainer) {
+                chartContainer.style.display = showTrainChart ? 'block' : 'none';
+            }
+            btnToggleChart.textContent = showTrainChart ? '📈 CHART: ON' : '📈 CHART: OFF';
+        };
+    }
 
     const volumeSlider = document.getElementById('menu-volume');
     if (volumeSlider) {
@@ -1252,7 +1557,178 @@ function startEditorMode() {
     camera.targetZoom = Math.min(scaleX, scaleY) * 0.85;
     camera.zoom = camera.targetZoom;
     switchState(GAME_STATES.EDITOR);
+    setEditorMode('place');
+    syncEditorUIWithTrack();
 }
+
+let trainTelemetry = [];
+window.trainTelemetry = trainTelemetry;
+let showTrainChart = true;
+window.showTrainChart = showTrainChart;
+
+function renderTrainTelemetryChart() {
+    const chartCanvas = document.getElementById('train-fitness-chart');
+    if (!chartCanvas) return;
+    const chartCtx = chartCanvas.getContext('2d');
+    if (!chartCtx) return;
+
+    const w = chartCanvas.width;
+    const h = chartCanvas.height;
+
+    // Clear background
+    chartCtx.fillStyle = '#0a0e18';
+    chartCtx.fillRect(0, 0, w, h);
+
+    const padLeft = 32;
+    const padRight = 36;
+    const padTop = 14;
+    const padBottom = 20;
+    const plotW = w - padLeft - padRight;
+    const plotH = h - padTop - padBottom;
+
+    // Draw subtle grid lines
+    chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    chartCtx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = padTop + (plotH / 4) * i;
+        chartCtx.beginPath();
+        chartCtx.moveTo(padLeft, y);
+        chartCtx.lineTo(w - padRight, y);
+        chartCtx.stroke();
+    }
+
+    const teleData = (window.trainTelemetry && window.trainTelemetry.length) ? window.trainTelemetry : trainTelemetry;
+
+    if (!teleData || teleData.length === 0) {
+        chartCtx.fillStyle = '#64748b';
+        chartCtx.font = '10px "Segoe UI", Arial, sans-serif';
+        chartCtx.textAlign = 'center';
+        chartCtx.fillText('Awaiting Generation 1 telemetry...', w / 2, h / 2 + 4);
+        return;
+    }
+
+    const n = teleData.length;
+
+    // Range for Fitness
+    let maxFit = 50;
+    for (const d of teleData) {
+        if (d.topFitness > maxFit) maxFit = d.topFitness;
+    }
+    maxFit = Math.ceil(maxFit * 1.1);
+
+    // Range for Lap Times
+    const validLaps = teleData.filter(d => d.bestLap !== null && d.bestLap !== undefined && d.bestLap < Infinity).map(d => d.bestLap);
+    let minLap = 0, maxLap = 0;
+    if (validLaps.length > 0) {
+        minLap = Math.min(...validLaps);
+        maxLap = Math.max(...validLaps);
+        if (minLap === maxLap) {
+            minLap = Math.max(0, minLap - 3);
+            maxLap += 3;
+        }
+    }
+
+    // Y Axis labels (Left: Fitness in green)
+    chartCtx.fillStyle = '#22c55e';
+    chartCtx.font = '9px monospace';
+    chartCtx.textAlign = 'right';
+    chartCtx.fillText(Math.round(maxFit), padLeft - 4, padTop + 8);
+    chartCtx.fillText(Math.round(maxFit / 2), padLeft - 4, padTop + plotH / 2 + 3);
+    chartCtx.fillText('0', padLeft - 4, padTop + plotH);
+
+    // Y Axis labels (Right: Lap Record in yellow)
+    if (validLaps.length > 0) {
+        chartCtx.fillStyle = '#eab308';
+        chartCtx.textAlign = 'left';
+        chartCtx.fillText(maxLap.toFixed(1) + 's', w - padRight + 4, padTop + 8);
+        chartCtx.fillText(minLap.toFixed(1) + 's', w - padRight + 4, padTop + plotH);
+    }
+
+    // X Axis labels (Generations)
+    chartCtx.fillStyle = '#64748b';
+    chartCtx.textAlign = 'center';
+    chartCtx.fillText('G' + (teleData[0].gen || 1), padLeft, h - 5);
+    const lastGen = teleData[n - 1].gen || n;
+    chartCtx.fillText('G' + lastGen, w - padRight, h - 5);
+
+    const getX = (i) => {
+        if (n <= 1) return padLeft + plotW / 2;
+        return padLeft + (i / (n - 1)) * plotW;
+    };
+    const getFitY = (fit) => {
+        const clamped = Math.max(0, Math.min(maxFit, fit));
+        return padTop + plotH - (clamped / maxFit) * plotH;
+    };
+    const getLapY = (lap) => {
+        if (maxLap === minLap) return padTop + plotH / 2;
+        return padTop + ((lap - minLap) / (maxLap - minLap)) * plotH;
+    };
+
+    // 1) Draw Average Fitness (Blue line)
+    chartCtx.beginPath();
+    for (let i = 0; i < n; i++) {
+        const x = getX(i);
+        const y = getFitY(teleData[i].avgFitness);
+        if (i === 0) chartCtx.moveTo(x, y);
+        else chartCtx.lineTo(x, y);
+    }
+    chartCtx.strokeStyle = '#38bdf8';
+    chartCtx.lineWidth = 1.8;
+    chartCtx.stroke();
+
+    // 2) Draw Top Fitness (Green line)
+    chartCtx.beginPath();
+    for (let i = 0; i < n; i++) {
+        const x = getX(i);
+        const y = getFitY(teleData[i].topFitness);
+        if (i === 0) chartCtx.moveTo(x, y);
+        else chartCtx.lineTo(x, y);
+    }
+    chartCtx.strokeStyle = '#22c55e';
+    chartCtx.lineWidth = 2.2;
+    chartCtx.stroke();
+
+    // 3) Draw Lap Record Drop Timeline (Yellow dashed line with drop markers)
+    if (validLaps.length > 0) {
+        chartCtx.beginPath();
+        let started = false;
+        for (let i = 0; i < n; i++) {
+            const lap = teleData[i].bestLap;
+            if (lap !== null && lap !== undefined && lap < Infinity) {
+                const x = getX(i);
+                const y = getLapY(lap);
+                if (!started) {
+                    chartCtx.moveTo(x, y);
+                    started = true;
+                } else {
+                    chartCtx.lineTo(x, y);
+                }
+            }
+        }
+        chartCtx.strokeStyle = '#eab308';
+        chartCtx.lineWidth = 2;
+        chartCtx.setLineDash([4, 3]);
+        chartCtx.stroke();
+        chartCtx.setLineDash([]);
+
+        // Record drop dots
+        for (let i = 0; i < n; i++) {
+            const lap = teleData[i].bestLap;
+            if (lap !== null && lap !== undefined && lap < Infinity) {
+                const prevLap = i > 0 ? teleData[i - 1].bestLap : null;
+                if (!prevLap || lap < prevLap) {
+                    const x = getX(i);
+                    const y = getLapY(lap);
+                    chartCtx.fillStyle = '#eab308';
+                    chartCtx.beginPath();
+                    chartCtx.arc(x, y, 3.5, 0, Math.PI * 2);
+                    chartCtx.fill();
+                }
+            }
+        }
+    }
+}
+window.renderTrainTelemetryChart = renderTrainTelemetryChart;
 
 function startTrainMode() {
     const validity = currentTrack.isValid();
@@ -1327,6 +1803,7 @@ function startTrainMode() {
 
     camera.targetZoom = 0.9;
     switchState(GAME_STATES.TRAIN);
+    renderTrainTelemetryChart();
 }
 
 function endGeneration() {
@@ -1348,6 +1825,21 @@ function endGeneration() {
     const evaluateData = aiCars.map(c => ({ fitness: c.fitness, bestLap: c.bestLap }));
     geneticAlgo.evaluate(evaluateData);
     saveBestBrain(true);
+
+    // Record training telemetry for mini-chart
+    const fitnesses = aiCars.map(c => c.fitness || 0);
+    const topFit = fitnesses.length > 0 ? Math.max(...fitnesses) : 0;
+    const avgFit = fitnesses.length > 0 ? (fitnesses.reduce((a, b) => a + b, 0) / fitnesses.length) : 0;
+    const currentBestLap = (bestTrainLap < Infinity) ? bestTrainLap : (geneticAlgo.allTimeBestLap < Infinity ? geneticAlgo.allTimeBestLap : null);
+    trainTelemetry.push({
+        gen: geneticAlgo.generation || 1,
+        topFitness: Number(topFit.toFixed(1)),
+        avgFitness: Number(avgFit.toFixed(1)),
+        bestLap: currentBestLap ? Number(currentBestLap.toFixed(2)) : null
+    });
+    if (trainTelemetry.length > 100) trainTelemetry.shift();
+    renderTrainTelemetryChart();
+
     geneticAlgo.evolve();
     trainTimer = 0;
     spawnAICars();
@@ -1407,13 +1899,66 @@ function gameLoop(time) {
     
     camera.applyTransform(ctx, canvas);
 
-    if (currentState === GAME_STATES.EDITOR && hoverCol !== -1 && hoverRow !== -1 && editorSelectedTile !== 99 && editorSelectedTile !== 0) {
-        ctx.globalAlpha = 0.5;
-        const t = Object.values(TILE_TYPES).find(t => t.id === editorSelectedTile);
-        if (t && t.render) {
-            t.render(ctx, hoverCol * TILE_SIZE, hoverRow * TILE_SIZE, TILE_SIZE);
+    if (currentState === GAME_STATES.EDITOR) {
+        // 1. Hover tile preview in place mode
+        if (editorMode === 'place' && hoverCol !== -1 && hoverRow !== -1 && editorSelectedTile !== 99 && editorSelectedTile !== 0) {
+            ctx.globalAlpha = 0.5;
+            const t = Object.values(TILE_TYPES).find(t => t.id === editorSelectedTile);
+            if (t && t.render) {
+                const roadColor = Track.getRoadColor(selectedRoadAttr);
+                const wallColor = Track.getWallColor(selectedWallAttr);
+                t.render(ctx, hoverCol * TILE_SIZE, hoverRow * TILE_SIZE, TILE_SIZE, null, roadColor, wallColor);
+            }
+            ctx.globalAlpha = 1.0;
         }
-        ctx.globalAlpha = 1.0;
+
+        // 2. Selected tiles highlight in select mode
+        if (selectedTiles && selectedTiles.size > 0) {
+            ctx.save();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#00ffcc';
+            ctx.setLineDash([4, 4]);
+            for (const key of selectedTiles) {
+                const [c, r] = key.split(',').map(Number);
+                ctx.fillStyle = 'rgba(0, 255, 204, 0.15)';
+                ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                ctx.strokeRect(c * TILE_SIZE + 1.5, r * TILE_SIZE + 1.5, TILE_SIZE - 3, TILE_SIZE - 3);
+            }
+            ctx.restore();
+        }
+
+        // 3. Marquee drag box
+        if (isMarquee && marqueeStart && marqueeEnd) {
+            const minX = Math.min(marqueeStart.x, marqueeEnd.x);
+            const minY = Math.min(marqueeStart.y, marqueeEnd.y);
+            const bw = Math.abs(marqueeEnd.x - marqueeStart.x);
+            const bh = Math.abs(marqueeEnd.y - marqueeStart.y);
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 255, 204, 0.2)';
+            ctx.fillRect(minX, minY, bw, bh);
+            ctx.strokeStyle = '#00ffcc';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 2]);
+            ctx.strokeRect(minX, minY, bw, bh);
+            ctx.restore();
+        }
+
+        // 4. Checkpoint gate drawing live guide line
+        if (checkpointDrawing) {
+            ctx.save();
+            ctx.strokeStyle = '#00ffcc';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 6]);
+            ctx.beginPath();
+            ctx.moveTo(checkpointDrawing.x1, checkpointDrawing.y1);
+            ctx.lineTo(checkpointDrawing.x2, checkpointDrawing.y2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#00ffcc';
+            ctx.beginPath(); ctx.arc(checkpointDrawing.x1, checkpointDrawing.y1, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(checkpointDrawing.x2, checkpointDrawing.y2, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
     }
     
     camera.restore(ctx);

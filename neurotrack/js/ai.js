@@ -86,9 +86,14 @@ class NeuralNetwork {
       }
       offset += numWeights;
 
-      // Biases initialized to 0
+      // Biases initialized: throttle (output neuron 0) gets a positive forward exploration bias (+0.75)
+      const isOutputLayer = (i === this.layerSizes.length - 2);
       for (let b = 0; b < fanOut; b++) {
-        this.weights[offset + b] = 0;
+        if (isOutputLayer && b === 0) {
+          this.weights[offset + b] = 0.75;
+        } else {
+          this.weights[offset + b] = 0;
+        }
       }
       offset += fanOut;
     }
@@ -165,8 +170,12 @@ class NeuralNetwork {
   mutate(rate, strength) {
     for (let i = 0; i < this.weights.length; i++) {
       if (Math.random() < rate) {
-        // Box-Muller transform for Gaussian random number
-        this.weights[i] += NeuralNetwork._gaussianRandom() * strength;
+        // 5% chance of exploratory reset, 95% Gaussian perturbation
+        if (Math.random() < 0.05) {
+          this.weights[i] = (Math.random() * 2 - 1) * strength;
+        } else {
+          this.weights[i] += NeuralNetwork._gaussianRandom() * strength;
+        }
       }
     }
   }
@@ -399,10 +408,7 @@ class GeneticAlgorithm {
       });
     }
 
-    // --- Inject fresh random brains to maintain diversity ---
-    let randomCount = Math.max(1, Math.floor(popSize * 0.1));
-    
-    // Stagnation detection: if fitness hasn't improved much in 20 generations, inject controlled diversity
+    // Stagnation detection: if fitness hasn't improved in 8 generations, trigger adaptive hyper-mutation
     if (!this.stagnationGen) this.stagnationGen = 0;
     if (!this.lastBestFitness) this.lastBestFitness = 0;
     
@@ -413,12 +419,13 @@ class GeneticAlgorithm {
         this.stagnationGen++;
     }
 
-    if (this.stagnationGen > 20) {
-        // Controlled diversity injection (20% of population) to escape local minima without destroying learning
-        randomCount = Math.floor(popSize * 0.2);
-        this.stagnationGen = 0;
-    }
+    // Adaptive hyper-mutation factor when stagnant to explore fresh cornering lines
+    const stagnationFactor = this.stagnationGen > 8 ? Math.min(2.5, 1.0 + ((this.stagnationGen - 8) / 8)) : 1.0;
+    const effectiveMutRate = Math.min(0.45, this.mutationRate * stagnationFactor);
+    const effectiveMutStrength = Math.min(0.70, this.mutationStrength * stagnationFactor);
 
+    // Controlled fresh injection (5% of population)
+    let randomCount = Math.max(1, Math.floor(popSize * 0.05));
     for (let i = 0; i < randomCount && nextGen.length < popSize; i++) {
       nextGen.push({
         brain: new NeuralNetwork(this.layerSizes),
@@ -427,7 +434,7 @@ class GeneticAlgorithm {
       });
     }
 
-    // --- Fill the rest via selection + crossover + mutation ---
+    // --- Fill the rest via selection + crossover + adaptive mutation ---
     while (nextGen.length < popSize) {
       const parentA = this._selectParent();
       const parentB = this._selectParent();
@@ -435,13 +442,13 @@ class GeneticAlgorithm {
       // Real crossover: combine weights from both parents
       const [child1, child2] = parentA.brain.crossover(parentB.brain);
 
-      // Mutate the children
-      child1.mutate(this.mutationRate, this.mutationStrength);
+      // Mutate the children with adaptive parameters
+      child1.mutate(effectiveMutRate, effectiveMutStrength);
       if (nextGen.length < popSize) {
         nextGen.push({ brain: child1, fitness: 0, bestLap: Infinity });
       }
 
-      child2.mutate(this.mutationRate, this.mutationStrength);
+      child2.mutate(effectiveMutRate, effectiveMutStrength);
       if (nextGen.length < popSize) {
         nextGen.push({ brain: child2, fitness: 0, bestLap: Infinity });
       }
