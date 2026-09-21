@@ -387,61 +387,87 @@ class Car {
                 const isRepulsor = (typeof currentTrack !== 'undefined' && currentTrack) ? this.isRepulsorContact(currentTrack) : false;
 
                 if (isRepulsor) {
-                    // REPULSOR WALL: Magnetic cushion forcefield and non-lethal reflection!
+                    // REPULSOR WALL: Smooth magnetic guide — car is gently steered toward track center.
+                    // NO bouncing. The wall acts like a curved magnetic rail.
+
+                    // --- Find reliable "toward open track" direction ---
+                    // Sample at multiple radii and directions to get a robust gradient
+                    let gx = 0, gy = 0;
+                    const angles = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4];
+                    for (const r of [16, 28, 40]) {
+                        for (const a of angles) {
+                            const sx = this.x + Math.cos(a) * r;
+                            const sy = this.y + Math.sin(a) * r;
+                            if (this.isPointOnTrack(sx, sy, collisionGrid)) {
+                                gx += Math.cos(a);
+                                gy += Math.sin(a);
+                            }
+                        }
+                    }
+                    let glen = Math.hypot(gx, gy);
+                    // Fall back to prev-position direction if gradient is degenerate
+                    if (glen < 0.01) {
+                        gx = prevX - this.x; gy = prevY - this.y;
+                        glen = Math.hypot(gx, gy) || 1;
+                    }
+                    const inNx = gx / glen; // points TOWARD open track
+                    const inNy = gy / glen;
+
+                    // --- Proximity push: constant gentle inward force when near wall ---
                     let minWallDist = 999;
                     if (this.sensors && this.sensors.length > 0) {
                         for (const s of this.sensors) {
                             if (s.dist < minWallDist) minWallDist = s.dist;
                         }
                     }
-
-                    const inProximity = minWallDist < 25 || offCount >= 1 || centerCheck === false;
-                    if (inProximity) {
-                        const norm = this.getTrackNormal(this.x, this.y, collisionGrid);
-
-                        // 1. Proximity magnetic repulsion force pushing away from the wall
-                        const proximityFactor = Math.max(0, 1 - (minWallDist / 25));
-                        const repulseMag = 750 * (proximityFactor > 0 ? proximityFactor : 1.0);
-                        this.vx += norm.nx * repulseMag * dt;
-                        this.vy += norm.ny * repulseMag * dt;
-
-                        // 2. Direct impact / penetration handling — MAGNETIC, not bounce
-                        if (offCount >= 1 || centerCheck === false) {
-                            // Push position back onto track
-                            if (centerCheck === false) {
-                                this.x = prevX + norm.nx * 3;
-                                this.y = prevY + norm.ny * 3;
-                            }
-                            for (let step = 0; step < 4; step++) {
-                                let anyOff = false;
-                                for (const c of this.getCorners()) {
-                                    if (!this.isPointOnTrack(c.x, c.y, collisionGrid)) {
-                                        anyOff = true;
-                                        break;
-                                    }
-                                }
-                                if (anyOff) {
-                                    this.x += norm.nx * 2.5;
-                                    this.y += norm.ny * 2.5;
-                                } else {
-                                    break;
-                                }
-                            }
-
-                            // Magnetic absorption: cancel velocity INTO the wall, keep tangential speed.
-                            // This gives a smooth magnetic deflection, NOT a bounce.
-                            const dotIntoWall = this.vx * (-norm.nx) + this.vy * (-norm.ny);
-                            if (dotIntoWall > 0) {
-                                // Remove the wall-penetrating component
-                                this.vx += norm.nx * dotIntoWall * 0.9;
-                                this.vy += norm.ny * dotIntoWall * 0.9;
-                            }
-                            this.speed = Math.hypot(this.vx, this.vy);
-                            this.velocityAngle = Math.atan2(this.vy, this.vx);
-                            this.repulsorGlowTimer = 0.25; // Trigger forcefield visual flash
-                        }
-                        this.alive = true; // Never die on repulsor wall!
+                    if (minWallDist < 40) {
+                        const strength = 1200 * Math.max(0, 1 - minWallDist / 40);
+                        this.vx += inNx * strength * dt;
+                        this.vy += inNy * strength * dt;
                     }
+
+                    // --- Hard wall contact: redirect velocity, NO bounce ---
+                    if (offCount >= 1 || centerCheck === false) {
+                        // Push position back onto track
+                        for (let step = 0; step < 8; step++) {
+                            let anyOff = false;
+                            for (const c of this.getCorners()) {
+                                if (!this.isPointOnTrack(c.x, c.y, collisionGrid)) {
+                                    anyOff = true; break;
+                                }
+                            }
+                            if (anyOff) {
+                                this.x += inNx * 3;
+                                this.y += inNy * 3;
+                            } else break;
+                        }
+
+                        // Kill the velocity component going INTO the wall entirely.
+                        // Keep ALL tangential speed — the car slides along the wall.
+                        const dotInto = this.vx * (-inNx) + this.vy * (-inNy);
+                        if (dotInto > 0) {
+                            this.vx += inNx * dotInto; // fully remove wall-penetrating component
+                            this.vy += inNy * dotInto;
+                        }
+
+                        // Add a strong inward nudge so the car curves back in immediately
+                        const currentSpd = Math.hypot(this.vx, this.vy);
+                        this.vx += inNx * currentSpd * 0.35;
+                        this.vy += inNy * currentSpd * 0.35;
+
+                        // Re-normalize to original speed so the car doesn't slow down
+                        const newSpd = Math.hypot(this.vx, this.vy);
+                        if (newSpd > 0.01) {
+                            const scale = currentSpd / newSpd;
+                            this.vx *= scale;
+                            this.vy *= scale;
+                        }
+
+                        this.speed = Math.hypot(this.vx, this.vy);
+                        this.velocityAngle = Math.atan2(this.vy, this.vx);
+                        this.repulsorGlowTimer = 0.3;
+                    }
+                    this.alive = true; // Never die on repulsor wall!
                 } else if (isSlide) {
                     // SLIDE WALL: NEVER SLOW DOWN! Maintain full momentum and glide along wall
                     if (offCount >= 1 || centerCheck === false) {
