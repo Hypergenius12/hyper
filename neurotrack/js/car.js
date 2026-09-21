@@ -398,17 +398,16 @@ class Car {
                     const inProximity = minWallDist < 25 || offCount >= 1 || centerCheck === false;
                     if (inProximity) {
                         const norm = this.getTrackNormal(this.x, this.y, collisionGrid);
-                        
+
                         // 1. Proximity magnetic repulsion force pushing away from the wall
                         const proximityFactor = Math.max(0, 1 - (minWallDist / 25));
                         const repulseMag = 750 * (proximityFactor > 0 ? proximityFactor : 1.0);
                         this.vx += norm.nx * repulseMag * dt;
                         this.vy += norm.ny * repulseMag * dt;
-                        this.speed = Math.hypot(this.vx, this.vy);
-                        this.velocityAngle = Math.atan2(this.vy, this.vx);
 
-                        // 2. Direct impact / penetration handling
+                        // 2. Direct impact / penetration handling — MAGNETIC, not bounce
                         if (offCount >= 1 || centerCheck === false) {
+                            // Push position back onto track
                             if (centerCheck === false) {
                                 this.x = prevX + norm.nx * 3;
                                 this.y = prevY + norm.ny * 3;
@@ -429,15 +428,16 @@ class Car {
                                 }
                             }
 
-                            // Elastic rebound along normal with 0.85 restitution
-                            const dot = this.vx * norm.nx + this.vy * norm.ny;
-                            if (dot < 0) {
-                                this.vx = (this.vx - 1.85 * dot * norm.nx);
-                                this.vy = (this.vy - 1.85 * dot * norm.ny);
-                                this.speed = Math.min(this.maxSpeed * 1.1, Math.hypot(this.vx, this.vy));
-                                this.angle = Math.atan2(this.vy, this.vx);
-                                this.velocityAngle = this.angle;
+                            // Magnetic absorption: cancel velocity INTO the wall, keep tangential speed.
+                            // This gives a smooth magnetic deflection, NOT a bounce.
+                            const dotIntoWall = this.vx * (-norm.nx) + this.vy * (-norm.ny);
+                            if (dotIntoWall > 0) {
+                                // Remove the wall-penetrating component
+                                this.vx += norm.nx * dotIntoWall * 0.9;
+                                this.vy += norm.ny * dotIntoWall * 0.9;
                             }
+                            this.speed = Math.hypot(this.vx, this.vy);
+                            this.velocityAngle = Math.atan2(this.vy, this.vx);
                             this.repulsorGlowTimer = 0.25; // Trigger forcefield visual flash
                         }
                         this.alive = true; // Never die on repulsor wall!
@@ -965,8 +965,8 @@ class Car {
 
         if (this.repulsorGlowTimer > 0) {
             ctx.save();
-            ctx.strokeStyle = '#c084fc';
-            ctx.shadowColor = '#a855f7';
+            ctx.strokeStyle = '#fb923c';
+            ctx.shadowColor = '#f97316';
             ctx.shadowBlur = 15;
             ctx.lineWidth = 2.5;
             ctx.beginPath();

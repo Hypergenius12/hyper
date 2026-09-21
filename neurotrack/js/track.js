@@ -407,39 +407,20 @@ function drawSplitTile(ctx, cx, cy, size, rotAngle, roadColor = '#1e1e24', wallC
     ctx.rotate(rotAngle);
 
     const s2 = size / 2;
-    const rw = (size * 0.80) / 2; // 40px
+    const hw = (size * 0.85) / 2; // 42.5px
+    const rw = (size * 0.80) / 2; // 40.0px
 
-    // 1) Fill the road surface
+    // 1) Fill walls background across full junction width (matching size * 0.85 of all tracks)
+    ctx.fillStyle = wallColor;
+    ctx.fillRect(-s2, -hw, size, hw * 2);    // Horizontal outer wall bar
+    ctx.fillRect(-hw, -hw, hw * 2, s2 + hw); // Down branch outer wall bar
+
+    // 2) Fill road surface on top (leaving exact 2.5px walls matching size * 0.80 of all tracks)
     ctx.fillStyle = roadColor;
-    ctx.fillRect(-s2 - 0.5, -rw, size + 1, rw * 2); // Horizontal main branch
-    ctx.fillRect(-rw, -rw, rw * 2, s2 + rw + 0.5);   // Down branch
+    ctx.fillRect(-s2 - 0.5, -rw, size + 1, rw * 2); // Horizontal road
+    ctx.fillRect(-rw, -rw, rw * 2, s2 + rw + 0.5);   // Down branch road
 
-    // 2) Stroke standard walls with uniform 2.5px thickness matching all tracks
-    ctx.strokeStyle = wallColor;
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = 'butt';
-
-    // Top outer wall along the closed edge
-    ctx.beginPath();
-    ctx.moveTo(-s2, -rw);
-    ctx.lineTo(s2, -rw);
-    ctx.stroke();
-
-    // Bottom-left inner corner wall
-    ctx.beginPath();
-    ctx.moveTo(-s2, rw);
-    ctx.lineTo(-rw, rw);
-    ctx.lineTo(-rw, s2);
-    ctx.stroke();
-
-    // Bottom-right inner corner wall
-    ctx.beginPath();
-    ctx.moveTo(s2, rw);
-    ctx.lineTo(rw, rw);
-    ctx.lineTo(rw, s2);
-    ctx.stroke();
-
-    // Centerline dashes
+    // 3) Centerline dashes
     ctx.beginPath();
     ctx.moveTo(-s2, 0); ctx.lineTo(s2, 0);
     ctx.moveTo(0, 0); ctx.lineTo(0, s2);
@@ -749,7 +730,7 @@ class Track {
         switch (wall) {
             case 'bouncy': return '#b026ff';
             case 'slide': return '#00ffcc';
-            case 'repulsor': return '#a855f7';
+            case 'repulsor': return '#f97316';
             default: return '#cccccc';
         }
     }
@@ -1049,27 +1030,26 @@ class Track {
         // Find if this tile already had ports open in these directions
         const oldPorts = type.ports || [false, false, false, false];
 
-        // Check neighbors that have ports pointing to this tile, or are auto-drawn WITH THE SAME STROKE ID
+        // Check neighbors that have ports pointing to this tile ONLY.
+        // We deliberately ignore sameStroke here — tiles drawn closely together
+        // should only connect when there is a real port match, not just because
+        // they share a stroke, which was causing wrong tile types when drawing fast.
         let nUp = false, nRight = false, nDown = false, nLeft = false;
         if (r > 0) {
             let t = this.getTileType(c, r - 1);
-            let sameStroke = this.isAuto(c, r - 1) && (!strokeId || this.getStrokeId(c, r - 1) === strokeId);
-            if ((t.id !== 0 && t.ports[2]) || sameStroke) nUp = true;
+            if (t.id !== 0 && t.ports[2]) nUp = true;
         }
         if (c < this.cols - 1) {
             let t = this.getTileType(c + 1, r);
-            let sameStroke = this.isAuto(c + 1, r) && (!strokeId || this.getStrokeId(c + 1, r) === strokeId);
-            if ((t.id !== 0 && t.ports[3]) || sameStroke) nRight = true;
+            if (t.id !== 0 && t.ports[3]) nRight = true;
         }
         if (r < this.rows - 1) {
             let t = this.getTileType(c, r + 1);
-            let sameStroke = this.isAuto(c, r + 1) && (!strokeId || this.getStrokeId(c, r + 1) === strokeId);
-            if ((t.id !== 0 && t.ports[0]) || sameStroke) nDown = true;
+            if (t.id !== 0 && t.ports[0]) nDown = true;
         }
         if (c > 0) {
             let t = this.getTileType(c - 1, r);
-            let sameStroke = this.isAuto(c - 1, r) && (!strokeId || this.getStrokeId(c - 1, r) === strokeId);
-            if ((t.id !== 0 && t.ports[1]) || sameStroke) nLeft = true;
+            if (t.id !== 0 && t.ports[1]) nLeft = true;
         }
 
         // Filter based on preferred movement direction to prioritize straights

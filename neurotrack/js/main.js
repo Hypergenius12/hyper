@@ -656,6 +656,13 @@ function setupInput() {
             const wasEmpty = currentTrack.getTile(c, r) === 0;
             const newId = activeTile === 99 ? (wasEmpty ? TILE_TYPES.STRAIGHT_H.id : currentTrack.getTile(c, r)) : 0;
             currentTrack.setTile(c, r, newId, activeTile === 99 ? currentStrokeId : 0);
+            // First pass: resolve neighbors so their ports are up to date
+            currentTrack.autoResolveTile(c, r - 1, 0, 0, currentStrokeId);
+            currentTrack.autoResolveTile(c + 1, r, 0, 0, currentStrokeId);
+            currentTrack.autoResolveTile(c, r + 1, 0, 0, currentStrokeId);
+            currentTrack.autoResolveTile(c - 1, r, 0, 0, currentStrokeId);
+            // Second pass: re-resolve the placed tile now that neighbors have correct ports,
+            // then re-resolve neighbors one more time for consistency
             currentTrack.autoResolveTile(c, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy, currentStrokeId);
             currentTrack.autoResolveTile(c, r - 1, 0, 0, currentStrokeId);
             currentTrack.autoResolveTile(c + 1, r, 0, 0, currentStrokeId);
@@ -1145,7 +1152,7 @@ function setupUI() {
 
     const friendlyNames = {
         0: '⌫ Eraser', 99: '✨ Auto-Draw', 1: '│ Straight', 3: '╰ Curve', 7: '▶ Start', 10: '▶ Curved Start', 9: '┼ Crossroad', 
-        14: '─ Bottleneck', 16: '▲ Boost', 20: '╰ Bottleneck Curve', 24: '┴ Split', 28: '▲ Ramp',
+        14: '─ Bottleneck', 16: '▲ Boost', 20: '╰ Bottleneck Curve', 24: '┬ Split', 28: '▲ Ramp',
         32: '▲ Teleport', 48: '✥ Intersection', 68: '⛔ Dead End'
     };
 
