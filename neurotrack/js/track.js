@@ -1018,6 +1018,62 @@ class Track {
         return Object.values(TILE_TYPES).find(t => t.id === id) || TILE_TYPES.EMPTY;
     }
 
+    static getTileForPorts(p1, p2) {
+        if (p1 === undefined || p1 === null || p1 < 0) p1 = (p2 !== undefined && p2 >= 0) ? (p2 + 2) % 4 : 1;
+        if (p2 === undefined || p2 === null || p2 < 0) p2 = (p1 !== undefined && p1 >= 0) ? (p1 + 2) % 4 : 3;
+        const min = Math.min(p1, p2);
+        const max = Math.max(p1, p2);
+        if (min === 0 && max === 2) return TILE_TYPES.STRAIGHT_V.id;
+        if (min === 1 && max === 3) return TILE_TYPES.STRAIGHT_H.id;
+        if (min === 0 && max === 1) return TILE_TYPES.CURVE_TR.id;
+        if (min === 1 && max === 2) return TILE_TYPES.CURVE_BR.id;
+        if (min === 2 && max === 3) return TILE_TYPES.CURVE_BL.id;
+        if (min === 0 && max === 3) return TILE_TYPES.CURVE_TL.id;
+        return (min === 0 || min === 2) ? TILE_TYPES.STRAIGHT_V.id : TILE_TYPES.STRAIGHT_H.id;
+    }
+
+    getOpenNeighborPorts(c, r, ignoreC = -1, ignoreR = -1) {
+        const open = [];
+        // Up neighbor (c, r - 1): has ports[2] (pointing DOWN)
+        if (r > 0 && !(c === ignoreC && r - 1 === ignoreR)) {
+            const t = this.getTileType(c, r - 1);
+            if (t.id !== 0 && t.ports && t.ports[2]) open.push(0); // entered from UP
+        }
+        // Right neighbor (c + 1, r): has ports[3] (pointing LEFT)
+        if (c < this.cols - 1 && !(c + 1 === ignoreC && r === ignoreR)) {
+            const t = this.getTileType(c + 1, r);
+            if (t.id !== 0 && t.ports && t.ports[3]) open.push(1); // entered from RIGHT
+        }
+        // Down neighbor (c, r + 1): has ports[0] (pointing UP)
+        if (r < this.rows - 1 && !(c === ignoreC && r + 1 === ignoreR)) {
+            const t = this.getTileType(c, r + 1);
+            if (t.id !== 0 && t.ports && t.ports[0]) open.push(2); // entered from DOWN
+        }
+        // Left neighbor (c - 1, r): has ports[1] (pointing RIGHT)
+        if (c > 0 && !(c - 1 === ignoreC && r === ignoreR)) {
+            const t = this.getTileType(c - 1, r);
+            if (t.id !== 0 && t.ports && t.ports[1]) open.push(3); // entered from LEFT
+        }
+        return open;
+    }
+
+    getCrossingTileId(existingId, p1, p2) {
+        if (!existingId || existingId === 0) return null;
+        const isHorizontalStroke = (p1 === 1 && p2 === 3) || (p1 === 3 && p2 === 1);
+        const isVerticalStroke = (p1 === 0 && p2 === 2) || (p1 === 2 && p2 === 0);
+        
+        const isExistingH = (existingId === TILE_TYPES.STRAIGHT_H.id || existingId === TILE_TYPES.BOOST_LEFT.id || existingId === TILE_TYPES.BOOST_RIGHT.id);
+        const isExistingV = (existingId === TILE_TYPES.STRAIGHT_V.id || existingId === TILE_TYPES.BOOST_UP.id || existingId === TILE_TYPES.BOOST_DOWN.id);
+        
+        if (isExistingH && isVerticalStroke) {
+            return TILE_TYPES.CROSSROAD_H_OVER.id;
+        }
+        if (isExistingV && isHorizontalStroke) {
+            return TILE_TYPES.CROSSROAD_V_OVER.id;
+        }
+        return null;
+    }
+
     autoResolveTile(c, r, prefDx = 0, prefDy = 0, strokeId = 0) {
         if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return;
         if (!this.isAuto(c, r)) return; // Only modify auto-drawn tiles
@@ -1027,66 +1083,34 @@ class Track {
         
         const type = this.getTileType(c, r);
         if (type.isStart) return; // Don't overwrite Start tiles
-        // Find if this tile already had ports open in these directions
-        const oldPorts = type.ports || [false, false, false, false];
 
-        // Check neighbors that have ports pointing to this tile ONLY.
-        // We deliberately ignore sameStroke here — tiles drawn closely together
-        // should only connect when there is a real port match, not just because
-        // they share a stroke, which was causing wrong tile types when drawing fast.
-        let nUp = false, nRight = false, nDown = false, nLeft = false;
-        if (r > 0) {
-            let t = this.getTileType(c, r - 1);
-            if (t.id !== 0 && t.ports[2]) nUp = true;
-        }
-        if (c < this.cols - 1) {
-            let t = this.getTileType(c + 1, r);
-            if (t.id !== 0 && t.ports[3]) nRight = true;
-        }
-        if (r < this.rows - 1) {
-            let t = this.getTileType(c, r + 1);
-            if (t.id !== 0 && t.ports[0]) nDown = true;
-        }
-        if (c > 0) {
-            let t = this.getTileType(c - 1, r);
-            if (t.id !== 0 && t.ports[1]) nLeft = true;
-        }
+        const openPorts = this.getOpenNeighborPorts(c, r);
+        let bestMatch = null;
 
-        // Filter based on preferred movement direction to prioritize straights
-        // Only ignore a direction if the tile didn't already have a connection there!
-        if (Math.abs(prefDx) > 0) {
-            if (!oldPorts[0]) nUp = false;
-            if (!oldPorts[2]) nDown = false;
-        } else if (Math.abs(prefDy) > 0) {
-            if (!oldPorts[3]) nLeft = false;
-            if (!oldPorts[1]) nRight = false;
-        }
-
-        let bestMatch = TILE_TYPES.STRAIGHT_H;
-        const connections = (nUp ? 1 : 0) + (nRight ? 1 : 0) + (nDown ? 1 : 0) + (nLeft ? 1 : 0);
-
-        if (connections === 4) {
+        if (openPorts.length >= 4) {
             bestMatch = TILE_TYPES.CROSSROAD_H_OVER;
-        } else if (connections === 3) {
-            if (nUp && nDown) bestMatch = TILE_TYPES.STRAIGHT_V;
-            else if (nLeft && nRight) bestMatch = TILE_TYPES.STRAIGHT_H;
-            else if (nUp && nRight) bestMatch = TILE_TYPES.CURVE_TR;
-            else if (nDown && nRight) bestMatch = TILE_TYPES.CURVE_BR;
-            else if (nDown && nLeft) bestMatch = TILE_TYPES.CURVE_BL;
-            else if (nUp && nLeft) bestMatch = TILE_TYPES.CURVE_TL;
-        } else if (connections === 2) {
-            if (nUp && nDown) bestMatch = TILE_TYPES.STRAIGHT_V;
-            else if (nLeft && nRight) bestMatch = TILE_TYPES.STRAIGHT_H;
-            else if (nUp && nRight) bestMatch = TILE_TYPES.CURVE_TR;
-            else if (nDown && nRight) bestMatch = TILE_TYPES.CURVE_BR;
-            else if (nDown && nLeft) bestMatch = TILE_TYPES.CURVE_BL;
-            else if (nUp && nLeft) bestMatch = TILE_TYPES.CURVE_TL;
-        } else if (connections === 1) {
-            if (nUp || nDown) bestMatch = TILE_TYPES.STRAIGHT_V;
-            else if (nLeft || nRight) bestMatch = TILE_TYPES.STRAIGHT_H;
+        } else if (openPorts.length === 3) {
+            if (!openPorts.includes(0)) bestMatch = TILE_TYPES.SPLIT_DOWN;
+            else if (!openPorts.includes(1)) bestMatch = TILE_TYPES.SPLIT_LEFT;
+            else if (!openPorts.includes(2)) bestMatch = TILE_TYPES.SPLIT_UP;
+            else if (!openPorts.includes(3)) bestMatch = TILE_TYPES.SPLIT_RIGHT;
+        } else if (openPorts.length === 2) {
+            const tileId = Track.getTileForPorts(openPorts[0], openPorts[1]);
+            const match = Object.values(TILE_TYPES).find(t => t.id === tileId);
+            if (match) bestMatch = match;
+        } else if (openPorts.length === 1) {
+            const p = openPorts[0];
+            const tileId = Track.getTileForPorts(p, (p + 2) % 4);
+            const match = Object.values(TILE_TYPES).find(t => t.id === tileId);
+            if (match) bestMatch = match;
+        } else {
+            if (Math.abs(prefDy) > 0) bestMatch = TILE_TYPES.STRAIGHT_V;
+            else bestMatch = TILE_TYPES.STRAIGHT_H;
         }
 
-        this.setTile(c, r, bestMatch.id, strokeId || 1);
+        if (bestMatch) {
+            this.setTile(c, r, bestMatch.id, strokeId || 1);
+        }
     }
 
     computeCheckpoints() {

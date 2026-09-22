@@ -189,6 +189,7 @@ let isMarquee = false;
 let marqueeStart = null;
 let marqueeEnd = null;
 let checkpointDrawing = null; // { x1, y1, x2, y2 }
+let autoDrawPath = []; // Path of tiles drawn in current stroke
 
 let editorHistory = [];
 let editorRedoHistory = [];
@@ -290,8 +291,99 @@ function selectAttribute(type, val) {
         currentTrack.markDirty();
         if (collisionCanvas) currentTrack.renderCollisionCanvas(collisionCanvas);
     }
+    saveSession();
 }
 window.selectAttribute = selectAttribute;
+
+function saveSession() {
+    if (!currentTrack) return;
+    try {
+        const session = {
+            trackName: currentTrackName || 'Default Oval',
+            cols: currentTrack.cols,
+            rows: currentTrack.rows,
+            trackGrid: Array.from(currentTrack.grid),
+            autoGrid: currentTrack.autoGrid ? Array.from(currentTrack.autoGrid) : null,
+            portals: currentTrack.portals || [],
+            tileAttrs: currentTrack.tileAttrs || {},
+            selectedRoadAttr: selectedRoadAttr || 'default',
+            selectedWallAttr: selectedWallAttr || 'default'
+        };
+        if (typeof bestBotCar !== 'undefined' && bestBotCar && bestBotCar.brain) {
+            session.bestBrain = bestBotCar.brain.serialize();
+        }
+        localStorage.setItem('neurotrack_session', JSON.stringify(session));
+    } catch (e) {
+        console.warn("Failed to save session", e);
+    }
+}
+window.saveSession = saveSession;
+
+function restoreSession() {
+    const prevSession = localStorage.getItem('neurotrack_session');
+    if (!prevSession) return false;
+    try {
+        const session = JSON.parse(prevSession);
+        if (!session || !session.trackGrid) return false;
+
+        const trackName = session.trackName || currentTrackName;
+        currentTrackName = trackName;
+
+        const cols = session.cols || (session.trackGrid.length === 768 ? 32 : 16);
+        const rows = session.rows || (session.trackGrid.length === 768 ? 24 : 12);
+
+        currentTrack = new Track(cols, rows);
+        currentTrack.name = trackName;
+        currentTrack.grid.set(session.trackGrid);
+        if (session.autoGrid && currentTrack.autoGrid && session.autoGrid.length === currentTrack.autoGrid.length) {
+            currentTrack.autoGrid.set(session.autoGrid);
+        }
+        if (Array.isArray(session.portals)) {
+            currentTrack.portals = session.portals;
+        }
+        if (session.tileAttrs && typeof session.tileAttrs === 'object') {
+            currentTrack.tileAttrs = JSON.parse(JSON.stringify(session.tileAttrs));
+        } else {
+            currentTrack.tileAttrs = {};
+        }
+
+        currentTrack.sanitizePortals();
+        currentTrack.computeCheckpoints();
+        currentTrack.markDirty();
+        if (collisionCanvas) currentTrack.renderCollisionCanvas(collisionCanvas);
+        if (sensorCanvas && typeof currentTrack.renderSensorCanvas === 'function') {
+            currentTrack.renderSensorCanvas(sensorCanvas);
+        }
+
+        if (session.selectedRoadAttr) {
+            selectAttribute('road', session.selectedRoadAttr);
+        }
+        if (session.selectedWallAttr) {
+            selectAttribute('wall', session.selectedWallAttr);
+        }
+
+        const editorName = document.getElementById('editor-track-name');
+        if (editorName && trackName) {
+            editorName.value = (trackName === 'Default Oval' || trackName === 'Figure Eight' || trackName === 'Dead End Track') ? 'My Custom Track' : trackName;
+        }
+        const select = document.getElementById('track-select');
+        if (select && trackName) {
+            select.value = trackName;
+        }
+
+        loadTrackRecords(trackName);
+
+        if (session.bestBrain) {
+            const restoredBrain = NeuralNetwork.deserialize(session.bestBrain);
+            bestBotCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startAngle, true);
+            bestBotCar.brain = restoredBrain;
+        }
+        return true;
+    } catch (e) {
+        console.error("Failed to restore session", e);
+        return false;
+    }
+}
 
 function init() {
     canvas = document.getElementById('game-canvas');
@@ -304,7 +396,9 @@ function init() {
 
     camera = new Camera();
     loadCustomTracks();
-    loadTrack(currentTrackName);
+    if (!restoreSession()) {
+        loadTrack(currentTrackName);
+    }
 
     setupInput();
     setupUI();
@@ -325,62 +419,8 @@ function init() {
     requestAnimationFrame(gameLoop);
 
     // Auto-save session
-    window.addEventListener('beforeunload', () => {
-        if (currentTrack) {
-            const session = {
-                trackGrid: Array.from(currentTrack.grid),
-                portals: currentTrack.portals || []
-            };
-            if (currentTrack.autoGrid) {
-                session.autoGrid = Array.from(currentTrack.autoGrid);
-            }
-            if (typeof bestBotCar !== 'undefined' && bestBotCar && bestBotCar.brain) {
-                session.bestBrain = bestBotCar.brain.serialize();
-            }
-            localStorage.setItem('neurotrack_session', JSON.stringify(session));
-        }
-    });
-
-    const prevSession = localStorage.getItem('neurotrack_session');
-    if (prevSession) {
-        setTimeout(() => {
-            try {
-                const session = JSON.parse(prevSession);
-                if (session.trackGrid && session.trackGrid.length === currentTrack.grid.length) {
-                    currentTrack.grid.set(session.trackGrid);
-                    if (currentTrack.autoGrid) {
-                        if (session.autoGrid && session.autoGrid.length === currentTrack.autoGrid.length) {
-                            currentTrack.autoGrid.set(session.autoGrid);
-                        } else {
-                            currentTrack.autoGrid.fill(0);
-                        }
-                    }
-                    if (Array.isArray(session.portals)) {
-                        currentTrack.portals = session.portals;
-                    }
-                    currentTrack.sanitizePortals();
-                    currentTrack.computeCheckpoints();
-                    currentTrack.markDirty();
-                    currentTrack.renderCollisionCanvas(collisionCanvas);
-                    const cCtx = collisionCanvas.getContext('2d');
-                    collisionGrid = { width: collisionCanvas.width, height: collisionCanvas.height, data: cCtx.getImageData(0, 0, collisionCanvas.width, collisionCanvas.height).data };
-                    
-                    if (typeof currentTrack.renderSensorCanvas === 'function') {
-                        currentTrack.renderSensorCanvas(sensorCanvas);
-                        const sCtx = sensorCanvas.getContext('2d');
-                        sensorGrid = { width: sensorCanvas.width, height: sensorCanvas.height, data: sCtx.getImageData(0, 0, sensorCanvas.width, sensorCanvas.height).data };
-                    }
-                }
-                if (session.bestBrain) {
-                    const restoredBrain = NeuralNetwork.deserialize(session.bestBrain);
-                    bestBotCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startAngle, true);
-                    bestBotCar.brain = restoredBrain;
-                }
-            } catch (e) {
-                console.error("Failed to restore session", e);
-            }
-        }, 100);
-    }
+    window.addEventListener('beforeunload', saveSession);
+    window.addEventListener('pagehide', saveSession);
 }
 
 // ========================================
@@ -500,6 +540,7 @@ function loadTrack(name) {
     loadTrackRecords(name);
     if (selectedTiles) selectedTiles.clear();
     syncEditorUIWithTrack();
+    saveSession();
 }
 
 function resize() {
@@ -652,17 +693,13 @@ function setupInput() {
             return;
         }
 
-        if (activeTile === 99 || activeTile === 0) {
-            const wasEmpty = currentTrack.getTile(c, r) === 0;
-            const newId = activeTile === 99 ? (wasEmpty ? TILE_TYPES.STRAIGHT_H.id : currentTrack.getTile(c, r)) : 0;
-            currentTrack.setTile(c, r, newId, activeTile === 99 ? currentStrokeId : 0);
-            // First pass: resolve neighbors so their ports are up to date
+        if (activeTile === 0) {
+            currentTrack.setTile(c, r, 0);
             currentTrack.autoResolveTile(c, r - 1, 0, 0, currentStrokeId);
             currentTrack.autoResolveTile(c + 1, r, 0, 0, currentStrokeId);
             currentTrack.autoResolveTile(c, r + 1, 0, 0, currentStrokeId);
             currentTrack.autoResolveTile(c - 1, r, 0, 0, currentStrokeId);
-            // Second pass: re-resolve the placed tile now that neighbors have correct ports,
-            // then re-resolve neighbors one more time for consistency
+        } else if (activeTile === 99) {
             currentTrack.autoResolveTile(c, r, lastAutoDrawDir.dx, lastAutoDrawDir.dy, currentStrokeId);
             currentTrack.autoResolveTile(c, r - 1, 0, 0, currentStrokeId);
             currentTrack.autoResolveTile(c + 1, r, 0, 0, currentStrokeId);
@@ -704,6 +741,7 @@ function setupInput() {
                     currentTrack.renderCollisionCanvas(collisionCanvas);
                     selectedTiles.delete(`${col},${row}`);
                     updateSelectionUI();
+                    saveSession();
                     return;
                 } else {
                     isPanning = true;
@@ -728,10 +766,41 @@ function setupInput() {
                     paintTileType = editorSelectedTile;
                     lastPaintPos = { col, row };
                     lastAutoDrawDir = { dx: 0, dy: 0 };
+                    saveEditorState();
+
                     if (paintTileType === 99) {
                         currentStrokeId++;
+                        autoDrawPath = [];
+
+                        const openNeighbors = currentTrack.getOpenNeighborPorts(col, row);
+                        let inPort = -1;
+                        let outPort = -1;
+                        let tileId = TILE_TYPES.STRAIGHT_H.id;
+
+                        if (openNeighbors.length >= 2) {
+                            inPort = openNeighbors[0];
+                            outPort = openNeighbors[1];
+                            tileId = Track.getTileForPorts(inPort, outPort);
+                        } else if (openNeighbors.length === 1) {
+                            inPort = openNeighbors[0];
+                            outPort = (inPort + 2) % 4;
+                            tileId = Track.getTileForPorts(inPort, outPort);
+                        }
+
+                        const existing = currentTrack.getTile(col, row);
+                        const crossId = currentTrack.getCrossingTileId(existing, inPort, outPort);
+                        if (crossId) tileId = crossId;
+
+                        const finalId = currentTrack.getTileType(col, row).isStart ? existing : tileId;
+                        currentTrack.setTile(col, row, finalId, currentStrokeId);
+                        if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
+                            currentTrack.setTileAttrs(col, row, selectedRoadAttr, selectedWallAttr);
+                        }
+                        autoDrawPath.push({ c: col, r: row, inPort, outPort });
+                        currentTrack.markDirty();
+                        return;
                     }
-                    saveEditorState();
+
                     applyPaint(col, row);
                     if (paintTileType !== 0 && (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default')) {
                         currentTrack.setTileAttrs(col, row, selectedRoadAttr, selectedWallAttr);
@@ -770,14 +839,110 @@ function setupInput() {
             if (isPainting && editorMode === 'place') {
                 const col = Math.floor(worldPos.x / TILE_SIZE);
                 const row = Math.floor(worldPos.y / TILE_SIZE);
-                
+
+                if (paintTileType === 99) {
+                    if (!lastPaintPos) lastPaintPos = { col, row };
+                    let cx = lastPaintPos.col;
+                    let cy = lastPaintPos.row;
+
+                    while (cx !== col || cy !== row) {
+                        let stepX = 0, stepY = 0;
+                        if (Math.abs(col - cx) > Math.abs(row - cy)) {
+                            stepX = Math.sign(col - cx);
+                            cx += stepX;
+                            lastAutoDrawDir = { dx: stepX, dy: 0 };
+                        } else {
+                            stepY = Math.sign(row - cy);
+                            cy += stepY;
+                            lastAutoDrawDir = { dx: 0, dy: stepY };
+                        }
+
+                        if (cx < 0 || cx >= currentTrack.cols || cy < 0 || cy >= currentTrack.rows) break;
+
+                        const prevIdx = autoDrawPath.length - 1;
+                        const prevNode = autoDrawPath[prevIdx];
+                        if (prevNode && prevNode.c === cx && prevNode.r === cy) continue;
+
+                        // Direction leaving prevNode towards (cx, cy)
+                        let exitPortFromPrev = -1;
+                        if (stepX === 1) exitPortFromPrev = 1; // RIGHT
+                        else if (stepX === -1) exitPortFromPrev = 3; // LEFT
+                        else if (stepY === 1) exitPortFromPrev = 2; // DOWN
+                        else if (stepY === -1) exitPortFromPrev = 0; // UP
+
+                        const entryPortOfCurr = (exitPortFromPrev + 2) % 4;
+
+                        // Update prevNode with exitPort and resolve its tile
+                        if (prevNode) {
+                            prevNode.outPort = exitPortFromPrev;
+                            if (prevNode.inPort === -1) {
+                                prevNode.inPort = (prevNode.outPort + 2) % 4;
+                            }
+                            if (!currentTrack.getTileType(prevNode.c, prevNode.r).isStart) {
+                                const prevExisting = currentTrack.getTile(prevNode.c, prevNode.r);
+                                const crossId = currentTrack.getCrossingTileId(prevExisting, prevNode.inPort, prevNode.outPort);
+                                const resolvedPrevId = crossId || Track.getTileForPorts(prevNode.inPort, prevNode.outPort);
+                                currentTrack.setTile(prevNode.c, prevNode.r, resolvedPrevId, currentStrokeId);
+                                if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
+                                    currentTrack.setTileAttrs(prevNode.c, prevNode.r, selectedRoadAttr, selectedWallAttr);
+                                }
+                            }
+                        }
+
+                        // Check open ports ahead of currNode
+                        const openAhead = currentTrack.getOpenNeighborPorts(cx, cy, prevNode ? prevNode.c : -1, prevNode ? prevNode.r : -1);
+                        let currOutPort = -1;
+                        if (openAhead.length > 0) {
+                            const forwardPort = (stepX === 1) ? 1 : (stepX === -1) ? 3 : (stepY === 1) ? 2 : 0;
+                            if (openAhead.includes(forwardPort)) {
+                                currOutPort = forwardPort;
+                            } else {
+                                currOutPort = openAhead[0];
+                            }
+                        } else {
+                            currOutPort = (entryPortOfCurr + 2) % 4;
+                        }
+
+                        // Check if loop closed back to autoDrawPath[0]
+                        if (autoDrawPath.length > 2 && autoDrawPath[0].c === cx && autoDrawPath[0].r === cy) {
+                            const startNode = autoDrawPath[0];
+                            startNode.inPort = entryPortOfCurr;
+                            if (!currentTrack.getTileType(startNode.c, startNode.r).isStart) {
+                                const loopStartTile = Track.getTileForPorts(startNode.inPort, startNode.outPort);
+                                currentTrack.setTile(startNode.c, startNode.r, loopStartTile, currentStrokeId);
+                                if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
+                                    currentTrack.setTileAttrs(startNode.c, startNode.r, selectedRoadAttr, selectedWallAttr);
+                                }
+                            }
+                        } else {
+                            if (!currentTrack.getTileType(cx, cy).isStart) {
+                                const currExisting = currentTrack.getTile(cx, cy);
+                                const crossId = currentTrack.getCrossingTileId(currExisting, entryPortOfCurr, currOutPort);
+                                const resolvedCurrId = crossId || Track.getTileForPorts(entryPortOfCurr, currOutPort);
+                                currentTrack.setTile(cx, cy, resolvedCurrId, currentStrokeId);
+                                if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
+                                    currentTrack.setTileAttrs(cx, cy, selectedRoadAttr, selectedWallAttr);
+                                }
+                            }
+                            autoDrawPath.push({
+                                c: cx,
+                                r: cy,
+                                inPort: entryPortOfCurr,
+                                outPort: currOutPort
+                            });
+                        }
+                    }
+                    lastPaintPos = { col, row };
+                    currentTrack.markDirty();
+                    return;
+                }
+
+                // Normal tile painting
                 if (lastPaintPos) {
-                    // Orthogonal line algorithm to ensure connected tiles
                     let cx = lastPaintPos.col;
                     let cy = lastPaintPos.row;
                     
                     while (cx !== col || cy !== row) {
-                        // Step in the direction of the largest gap
                         if (Math.abs(col - cx) > Math.abs(row - cy)) {
                             let step = Math.sign(col - cx);
                             cx += step;
@@ -828,7 +993,30 @@ function setupInput() {
         if (isPainting) { 
             isPainting = false; 
             lastPaintPos = null;
-            currentTrack.renderCollisionCanvas(collisionCanvas); 
+
+            if (paintTileType === 99 && autoDrawPath.length > 0) {
+                const headNode = autoDrawPath[autoDrawPath.length - 1];
+                const prevNode = autoDrawPath.length > 1 ? autoDrawPath[autoDrawPath.length - 2] : null;
+
+                // Check if headNode has any open neighbors to connect to
+                const openAroundHead = currentTrack.getOpenNeighborPorts(headNode.c, headNode.r, prevNode ? prevNode.c : -1, prevNode ? prevNode.r : -1);
+                if (openAroundHead.length > 0) {
+                    headNode.outPort = openAroundHead[0];
+                    if (!currentTrack.getTileType(headNode.c, headNode.r).isStart) {
+                        const headTileId = Track.getTileForPorts(headNode.inPort, headNode.outPort);
+                        currentTrack.setTile(headNode.c, headNode.r, headTileId, currentStrokeId);
+                        if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
+                            currentTrack.setTileAttrs(headNode.c, headNode.r, selectedRoadAttr, selectedWallAttr);
+                        }
+                    }
+                }
+                autoDrawPath = [];
+            }
+
+            currentTrack.computeCheckpoints();
+            currentTrack.markDirty();
+            if (collisionCanvas) currentTrack.renderCollisionCanvas(collisionCanvas); 
+            saveSession();
         }
 
         if (isMarquee && marqueeStart && marqueeEnd) {
@@ -973,6 +1161,7 @@ function setupUI() {
             currentTrackName = name;
             loadTrackRecords(name);
             updateTrackSelectUI();
+            saveSession();
             customAlert("Track and AI saved successfully!");
         };
     }
