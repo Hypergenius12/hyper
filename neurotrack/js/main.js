@@ -45,6 +45,9 @@ Object.defineProperty(window, 'bestBotCar', { get: () => bestBotCar, set: v => {
 Object.defineProperty(window, 'currentState', { get: () => currentState, set: v => { currentState = v; }, configurable: true });
 Object.defineProperty(window, 'trainRunning', { get: () => trainRunning, set: v => { trainRunning = v; }, configurable: true });
 Object.defineProperty(window, 'trackPersonalBest', { get: () => trackPersonalBest, set: v => { trackPersonalBest = v; }, configurable: true });
+Object.defineProperty(window, 'camera', { get: () => camera, set: v => { camera = v; }, configurable: true });
+Object.defineProperty(window, 'editorSelectedTile', { get: () => editorSelectedTile, set: v => { editorSelectedTile = v; }, configurable: true });
+Object.defineProperty(window, 'editorMode', { get: () => editorMode, set: v => { editorMode = v; }, configurable: true });
 let showSensors = true;
 let manualCamera = false;
 let isWatchingReplay = false;
@@ -190,6 +193,20 @@ let marqueeStart = null;
 let marqueeEnd = null;
 let checkpointDrawing = null; // { x1, y1, x2, y2 }
 let autoDrawPath = []; // Path of tiles drawn in current stroke
+let originalTiles = new Map(); // Maps "c,r" -> tileId before current stroke
+
+function getBaseTileForIntersection(c, r) {
+    const key = `${c},${r}`;
+    const orig = originalTiles.has(key) ? originalTiles.get(key) : (currentTrack ? currentTrack.getTile(c, r) : 0);
+    if (Track.isStraightOrIntersection(orig)) {
+        return orig;
+    }
+    const current = currentTrack ? currentTrack.getTile(c, r) : 0;
+    if (Track.isStraightOrIntersection(current)) {
+        return current;
+    }
+    return orig;
+}
 
 let editorHistory = [];
 let editorRedoHistory = [];
@@ -771,32 +788,42 @@ function setupInput() {
                     if (paintTileType === 99) {
                         currentStrokeId++;
                         autoDrawPath = [];
+                        originalTiles = new Map();
 
-                        const openNeighbors = currentTrack.getOpenNeighborPorts(col, row);
+                        const key = `${col},${row}`;
+                        const existing = currentTrack.getTile(col, row);
+                        originalTiles.set(key, existing);
+
                         let inPort = -1;
                         let outPort = -1;
-                        let tileId = TILE_TYPES.STRAIGHT_H.id;
 
-                        if (openNeighbors.length >= 2) {
-                            inPort = openNeighbors[0];
-                            outPort = openNeighbors[1];
-                            tileId = Track.getTileForPorts(inPort, outPort);
-                        } else if (openNeighbors.length === 1) {
-                            inPort = openNeighbors[0];
-                            outPort = (inPort + 2) % 4;
-                            tileId = Track.getTileForPorts(inPort, outPort);
+                        if (Track.isStraightOrIntersection(existing)) {
+                            // Starting stroke on an existing straight or intersection:
+                            // Keep existing tile for now until drag direction is known.
+                            autoDrawPath.push({ c: col, r: row, inPort: -1, outPort: -1, isStartNode: true });
+                        } else if (!currentTrack.getTileType(col, row).isStart) {
+                            const openNeighbors = currentTrack.getOpenNeighborPorts(col, row);
+                            let tileId = TILE_TYPES.STRAIGHT_H.id;
+
+                            if (openNeighbors.length >= 2) {
+                                inPort = openNeighbors[0];
+                                outPort = openNeighbors[1];
+                                tileId = Track.getTileForPorts(inPort, outPort);
+                            } else if (openNeighbors.length === 1) {
+                                inPort = openNeighbors[0];
+                                outPort = (inPort + 2) % 4;
+                                tileId = Track.getTileForPorts(inPort, outPort);
+                            }
+
+                            currentTrack.setTile(col, row, tileId, currentStrokeId);
+                            if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
+                                currentTrack.setTileAttrs(col, row, selectedRoadAttr, selectedWallAttr);
+                            }
+                            autoDrawPath.push({ c: col, r: row, inPort, outPort, isStartNode: true });
+                        } else {
+                            autoDrawPath.push({ c: col, r: row, inPort: -1, outPort: -1, isStartNode: true });
                         }
 
-                        const existing = currentTrack.getTile(col, row);
-                        const crossId = currentTrack.getCrossingTileId(existing, inPort, outPort);
-                        if (crossId) tileId = crossId;
-
-                        const finalId = currentTrack.getTileType(col, row).isStart ? existing : tileId;
-                        currentTrack.setTile(col, row, finalId, currentStrokeId);
-                        if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
-                            currentTrack.setTileAttrs(col, row, selectedRoadAttr, selectedWallAttr);
-                        }
-                        autoDrawPath.push({ c: col, r: row, inPort, outPort });
                         currentTrack.markDirty();
                         return;
                     }
@@ -875,13 +902,28 @@ function setupInput() {
                         // Update prevNode with exitPort and resolve its tile
                         if (prevNode) {
                             prevNode.outPort = exitPortFromPrev;
-                            if (prevNode.inPort === -1) {
-                                prevNode.inPort = (prevNode.outPort + 2) % 4;
-                            }
+                            const prevBaseId = getBaseTileForIntersection(prevNode.c, prevNode.r);
+
                             if (!currentTrack.getTileType(prevNode.c, prevNode.r).isStart) {
-                                const prevExisting = currentTrack.getTile(prevNode.c, prevNode.r);
-                                const crossId = currentTrack.getCrossingTileId(prevExisting, prevNode.inPort, prevNode.outPort);
-                                const resolvedPrevId = crossId || Track.getTileForPorts(prevNode.inPort, prevNode.outPort);
+                                let resolvedPrevId;
+                                if (prevNode.isStartNode) {
+                                    if (Track.isStraightOrIntersection(prevBaseId)) {
+                                        // Dragging out of an existing straight or intersection tile:
+                                        resolvedPrevId = Track.getIntersectionTile(prevBaseId, [prevNode.outPort]);
+                                    } else {
+                                        if (prevNode.inPort === -1) {
+                                            prevNode.inPort = (prevNode.outPort + 2) % 4;
+                                        }
+                                        resolvedPrevId = Track.getTileForPorts(prevNode.inPort, prevNode.outPort);
+                                    }
+                                } else {
+                                    if (Track.isStraightOrIntersection(prevBaseId)) {
+                                        resolvedPrevId = Track.getIntersectionTile(prevBaseId, [prevNode.inPort, prevNode.outPort]);
+                                    } else {
+                                        resolvedPrevId = Track.getTileForPorts(prevNode.inPort, prevNode.outPort);
+                                    }
+                                }
+
                                 currentTrack.setTile(prevNode.c, prevNode.r, resolvedPrevId, currentStrokeId);
                                 if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
                                     currentTrack.setTileAttrs(prevNode.c, prevNode.r, selectedRoadAttr, selectedWallAttr);
@@ -889,26 +931,25 @@ function setupInput() {
                             }
                         }
 
-                        // Check open ports ahead of currNode
-                        const openAhead = currentTrack.getOpenNeighborPorts(cx, cy, prevNode ? prevNode.c : -1, prevNode ? prevNode.r : -1);
-                        let currOutPort = -1;
-                        if (openAhead.length > 0) {
-                            const forwardPort = (stepX === 1) ? 1 : (stepX === -1) ? 3 : (stepY === 1) ? 2 : 0;
-                            if (openAhead.includes(forwardPort)) {
-                                currOutPort = forwardPort;
-                            } else {
-                                currOutPort = openAhead[0];
-                            }
-                        } else {
-                            currOutPort = (entryPortOfCurr + 2) % 4;
+                        // Record current cell in originalTiles before modifying
+                        const currKey = `${cx},${cy}`;
+                        if (!originalTiles.has(currKey)) {
+                            originalTiles.set(currKey, currentTrack.getTile(cx, cy));
                         }
+                        const currBaseId = getBaseTileForIntersection(cx, cy);
 
                         // Check if loop closed back to autoDrawPath[0]
                         if (autoDrawPath.length > 2 && autoDrawPath[0].c === cx && autoDrawPath[0].r === cy) {
                             const startNode = autoDrawPath[0];
                             startNode.inPort = entryPortOfCurr;
+                            const startBaseId = getBaseTileForIntersection(startNode.c, startNode.r);
                             if (!currentTrack.getTileType(startNode.c, startNode.r).isStart) {
-                                const loopStartTile = Track.getTileForPorts(startNode.inPort, startNode.outPort);
+                                let loopStartTile;
+                                if (Track.isStraightOrIntersection(startBaseId)) {
+                                    loopStartTile = Track.getIntersectionTile(startBaseId, [startNode.inPort, startNode.outPort]);
+                                } else {
+                                    loopStartTile = Track.getTileForPorts(startNode.inPort, startNode.outPort);
+                                }
                                 currentTrack.setTile(startNode.c, startNode.r, loopStartTile, currentStrokeId);
                                 if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
                                     currentTrack.setTileAttrs(startNode.c, startNode.r, selectedRoadAttr, selectedWallAttr);
@@ -916,19 +957,38 @@ function setupInput() {
                             }
                         } else {
                             if (!currentTrack.getTileType(cx, cy).isStart) {
-                                const currExisting = currentTrack.getTile(cx, cy);
-                                const crossId = currentTrack.getCrossingTileId(currExisting, entryPortOfCurr, currOutPort);
-                                const resolvedCurrId = crossId || Track.getTileForPorts(entryPortOfCurr, currOutPort);
+                                let resolvedCurrId;
+                                if (Track.isStraightOrIntersection(currBaseId)) {
+                                    // Dragging into a straight or intersection block:
+                                    // Resolve as 3-way or 4-way intersection based on entry port!
+                                    resolvedCurrId = Track.getIntersectionTile(currBaseId, [entryPortOfCurr]);
+                                } else {
+                                    const openAhead = currentTrack.getOpenNeighborPorts(cx, cy, prevNode ? prevNode.c : -1, prevNode ? prevNode.r : -1);
+                                    let currOutPort = -1;
+                                    if (openAhead.length > 0) {
+                                        const forwardPort = (stepX === 1) ? 1 : (stepX === -1) ? 3 : (stepY === 1) ? 2 : 0;
+                                        if (openAhead.includes(forwardPort)) {
+                                            currOutPort = forwardPort;
+                                        } else {
+                                            currOutPort = openAhead[0];
+                                        }
+                                    } else {
+                                        currOutPort = (entryPortOfCurr + 2) % 4;
+                                    }
+                                    resolvedCurrId = Track.getTileForPorts(entryPortOfCurr, currOutPort);
+                                }
+
                                 currentTrack.setTile(cx, cy, resolvedCurrId, currentStrokeId);
                                 if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
                                     currentTrack.setTileAttrs(cx, cy, selectedRoadAttr, selectedWallAttr);
                                 }
                             }
+
                             autoDrawPath.push({
                                 c: cx,
                                 r: cy,
                                 inPort: entryPortOfCurr,
-                                outPort: currOutPort
+                                outPort: -1
                             });
                         }
                     }
@@ -997,20 +1057,32 @@ function setupInput() {
             if (paintTileType === 99 && autoDrawPath.length > 0) {
                 const headNode = autoDrawPath[autoDrawPath.length - 1];
                 const prevNode = autoDrawPath.length > 1 ? autoDrawPath[autoDrawPath.length - 2] : null;
+                const headBaseId = getBaseTileForIntersection(headNode.c, headNode.r);
 
-                // Check if headNode has any open neighbors to connect to
-                const openAroundHead = currentTrack.getOpenNeighborPorts(headNode.c, headNode.r, prevNode ? prevNode.c : -1, prevNode ? prevNode.r : -1);
-                if (openAroundHead.length > 0) {
-                    headNode.outPort = openAroundHead[0];
-                    if (!currentTrack.getTileType(headNode.c, headNode.r).isStart) {
-                        const headTileId = Track.getTileForPorts(headNode.inPort, headNode.outPort);
-                        currentTrack.setTile(headNode.c, headNode.r, headTileId, currentStrokeId);
-                        if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
-                            currentTrack.setTileAttrs(headNode.c, headNode.r, selectedRoadAttr, selectedWallAttr);
+                if (!currentTrack.getTileType(headNode.c, headNode.r).isStart) {
+                    if (Track.isStraightOrIntersection(headBaseId)) {
+                        if (headNode.inPort !== -1) {
+                            const finalTileId = Track.getIntersectionTile(headBaseId, [headNode.inPort]);
+                            currentTrack.setTile(headNode.c, headNode.r, finalTileId, currentStrokeId);
+                            if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
+                                currentTrack.setTileAttrs(headNode.c, headNode.r, selectedRoadAttr, selectedWallAttr);
+                            }
+                        }
+                    } else if (headNode.inPort !== -1) {
+                        // Check if headNode has any open neighbors to connect to
+                        const openAroundHead = currentTrack.getOpenNeighborPorts(headNode.c, headNode.r, prevNode ? prevNode.c : -1, prevNode ? prevNode.r : -1);
+                        if (openAroundHead.length > 0) {
+                            headNode.outPort = openAroundHead[0];
+                            const headTileId = Track.getTileForPorts(headNode.inPort, headNode.outPort);
+                            currentTrack.setTile(headNode.c, headNode.r, headTileId, currentStrokeId);
+                            if (selectedRoadAttr !== 'default' || selectedWallAttr !== 'default') {
+                                currentTrack.setTileAttrs(headNode.c, headNode.r, selectedRoadAttr, selectedWallAttr);
+                            }
                         }
                     }
                 }
                 autoDrawPath = [];
+                originalTiles = new Map();
             }
 
             currentTrack.computeCheckpoints();

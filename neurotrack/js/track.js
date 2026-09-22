@@ -1057,19 +1057,85 @@ class Track {
         return open;
     }
 
-    getCrossingTileId(existingId, p1, p2) {
-        if (!existingId || existingId === 0) return null;
-        const isHorizontalStroke = (p1 === 1 && p2 === 3) || (p1 === 3 && p2 === 1);
-        const isVerticalStroke = (p1 === 0 && p2 === 2) || (p1 === 2 && p2 === 0);
-        
-        const isExistingH = (existingId === TILE_TYPES.STRAIGHT_H.id || existingId === TILE_TYPES.BOOST_LEFT.id || existingId === TILE_TYPES.BOOST_RIGHT.id);
-        const isExistingV = (existingId === TILE_TYPES.STRAIGHT_V.id || existingId === TILE_TYPES.BOOST_UP.id || existingId === TILE_TYPES.BOOST_DOWN.id);
-        
-        if (isExistingH && isVerticalStroke) {
+    static isStraightOrIntersection(id) {
+        if (!id || id === 0) return false;
+        if (id === 1 || id === 2) return true; // Straight V, H
+        if (id >= 16 && id <= 19) return true; // Boost
+        if (id === 36 || id === 37) return true; // Rough
+        if (id === 42 || id === 43) return true; // Ice
+        if (id === 49 || id === 50) return true; // Bouncy
+        if (id === 55 || id === 56) return true; // Puddle
+        if (id === 61 || id === 62) return true; // Fast
+        if (id >= 24 && id <= 27) return true; // Splits (3-way)
+        if (id === 9 || id === 67 || id === 48) return true; // Crossroads (4-way)
+        return false;
+    }
+
+    static getIntersectionTile(existingId, incomingPorts = []) {
+        if (!existingId || existingId === 0) {
+            if (incomingPorts.length >= 2) return Track.getTileForPorts(incomingPorts[0], incomingPorts[1]);
+            if (incomingPorts.length === 1) return Track.getTileForPorts(incomingPorts[0], (incomingPorts[0] + 2) % 4);
+            return TILE_TYPES.STRAIGHT_H.id;
+        }
+
+        const type = Object.values(TILE_TYPES).find(t => t.id === existingId);
+        if (!type || type.isStart) return existingId;
+
+        const existingPorts = (type.ports || [0, 0, 0, 0]).map(p => Boolean(p));
+        const combined = [...existingPorts];
+
+        for (const p of incomingPorts) {
+            if (p >= 0 && p <= 3) combined[p] = true;
+        }
+
+        const count = combined.filter(Boolean).length;
+
+        // 4-way intersection / Crossroad
+        if (count >= 4) {
+            if (existingId === TILE_TYPES.STRAIGHT_V.id || 
+                existingId === TILE_TYPES.BOOST_UP.id || 
+                existingId === TILE_TYPES.BOOST_DOWN.id || 
+                existingId === TILE_TYPES.CROSSROAD_V_OVER.id ||
+                existingId === TILE_TYPES.SPLIT_RIGHT.id ||
+                existingId === TILE_TYPES.SPLIT_LEFT.id) {
+                return TILE_TYPES.CROSSROAD_V_OVER.id;
+            }
             return TILE_TYPES.CROSSROAD_H_OVER.id;
         }
-        if (isExistingV && isHorizontalStroke) {
-            return TILE_TYPES.CROSSROAD_V_OVER.id;
+
+        // 3-way intersection (T-split)
+        if (count === 3) {
+            if (!combined[0]) return TILE_TYPES.SPLIT_UP.id;    // ports [0, 1, 1, 1] (Right, Bottom, Left)
+            if (!combined[1]) return TILE_TYPES.SPLIT_RIGHT.id; // ports [1, 0, 1, 1] (Top, Bottom, Left)
+            if (!combined[2]) return TILE_TYPES.SPLIT_DOWN.id;  // ports [1, 1, 0, 1] (Top, Right, Left)
+            if (!combined[3]) return TILE_TYPES.SPLIT_LEFT.id;  // ports [1, 1, 1, 0] (Top, Right, Bottom)
+        }
+
+        // 2-way connection
+        if (count === 2) {
+            const active = [];
+            for (let i = 0; i < 4; i++) {
+                if (combined[i]) active.push(i);
+            }
+            return Track.getTileForPorts(active[0], active[1]);
+        }
+
+        // 1-way
+        if (count === 1) {
+            const p = combined.indexOf(true);
+            return Track.getTileForPorts(p, (p + 2) % 4);
+        }
+
+        return existingId;
+    }
+
+    getCrossingTileId(existingId, p1, p2) {
+        if (!existingId || existingId === 0) return null;
+        if (Track.isStraightOrIntersection(existingId)) {
+            const ports = [];
+            if (p1 >= 0 && p1 <= 3) ports.push(p1);
+            if (p2 >= 0 && p2 <= 3) ports.push(p2);
+            return Track.getIntersectionTile(existingId, ports);
         }
         return null;
     }
