@@ -1436,14 +1436,6 @@ class Track {
                     radius: 45
                 });
             }
-            // Add the start position again as the final checkpoint to complete the loop
-            if (foundPath) {
-                this.checkpoints.push({
-                    x: this.startPos ? this.startPos.x : (finalPath[0].c * TILE_SIZE + TILE_SIZE / 2),
-                    y: this.startPos ? this.startPos.y : (finalPath[0].r * TILE_SIZE + TILE_SIZE / 2),
-                    radius: 45
-                });
-            }
         }
     }
 

@@ -34,7 +34,9 @@ class Car {
 
         // Lap / timing
         this.fitness = 0;
-        this.checkpointIndex = 0;
+        this.checkpointIndex = (typeof currentTrack !== 'undefined' && currentTrack && currentTrack.checkpoints && currentTrack.checkpoints.length > 1) ? 1 : 0;
+        this.checkpointsInLap = 0;
+        this.recentCheckpoints = [];
         this.totalCheckpoints = 0;
         this.lapCount = 0;
         this.lapTime = 0;
@@ -586,8 +588,8 @@ class Car {
             const cp = currentTrack.checkpoints[targetIndex];
             
             let prevCp = null;
-            if (this.totalCheckpoints === 0 && this.checkpointIndex === 0) {
-                prevCp = currentTrack.startPos;
+            if (this.totalCheckpoints === 0 && (this.checkpointsInLap || 0) === 0 && this.checkpointIndex === 0) {
+                prevCp = currentTrack.startPos || currentTrack.checkpoints[0];
             } else {
                 let pIdx = (this.checkpointIndex - 1 + currentTrack.checkpoints.length) % currentTrack.checkpoints.length;
                 prevCp = currentTrack.checkpoints[pIdx];
@@ -617,7 +619,10 @@ class Car {
             }
         }
 
-        const checkpointScore = (this.totalCheckpoints + this.checkpointIndex) * 10 + progress * 10;
+        const currentLapProgress = (this.checkpointIndex === 0 && (this.checkpointsInLap || 0) > 0 && typeof currentTrack !== 'undefined' && currentTrack && currentTrack.checkpoints && currentTrack.checkpoints.length > 0)
+            ? currentTrack.checkpoints.length
+            : this.checkpointIndex;
+        const checkpointScore = (this.totalCheckpoints + currentLapProgress) * 10 + progress * 10;
         const speedBonus = this.isTurning
             ? (targetVelocityBonus * 0.2) // During cornering, reward heading toward the checkpoint without penalizing safe cornering speed
             : (Math.max(0, this.speed / this.maxSpeed) * 0.15 + (targetVelocityBonus * 0.2));
@@ -625,7 +630,7 @@ class Car {
         
         // Prioritize speed of completion: Massive bonus for completing a lap, scaled by how fast they did it!
         const lapBonus = this.lapCount * 10000;
-        const lapTimePenalty = this.bestLap > 0 ? (1000 / this.bestLap) : 0;
+        const lapTimePenalty = (this.bestLap > 0 && this.bestLap !== Infinity) ? (1000 / this.bestLap) : 0;
         
         let newFitness = checkpointScore + speedBonus + survivalBonus + lapBonus + lapTimePenalty;
         
@@ -830,14 +835,24 @@ class Car {
             return (px - nx) * (px - nx) + (py - ny) * (py - ny);
         }
 
-        // Limit lookahead to 100, but never more than half the track to prevent wrap-around exploits.
-        // Lookahead is high so that AI can find legit grass shortcuts.
-        const LOOKAHEAD = Math.min(100, Math.max(1, Math.floor(checkpoints.length / 2)));
-        let hitCheckpoint = false;
-        
+        if (!checkpoints || checkpoints.length === 0) return;
+        const totalCp = checkpoints.length;
+        if (this.checkpointIndex >= totalCp) {
+            this.checkpointIndex = this.checkpointIndex % totalCp;
+        }
+
+        const isLineMode = checkpoints.some(cp => cp.isLine);
+
+        // Strict sequential progression:
+        // - Manual gate mode (lines): strict 1-by-1 (LOOKAHEAD = 1).
+        // - Tiny tracks (< 4 checkpoints): strict 1-by-1 (LOOKAHEAD = 1).
+        // - When targeting finish line (checkpointIndex === 0): strictly 1 (LOOKAHEAD = 1), must cross finish line.
+        // - Auto tile tracks (circles): max lookahead of 2 (target and target+1) allowing apex cutting,
+        //   while strictly preventing cutting across parallel lanes, hairpins, or loops.
+        const LOOKAHEAD = (isLineMode || totalCp < 4 || this.checkpointIndex === 0) ? 1 : 2;
+
         for (let i = 0; i < LOOKAHEAD; i++) {
-            const checkIndex = this.checkpointIndex + i;
-            const targetIndex = checkIndex % checkpoints.length;
+            const targetIndex = (this.checkpointIndex + i) % totalCp;
             const cp = checkpoints[targetIndex];
             if (!cp) continue;
             
@@ -855,35 +870,50 @@ class Car {
             
             if (hit) {
                 // Prevent hitting a checkpoint if it occupies the exact same physical coordinates 
-                // as ANY of the last 5 checkpoints we recently hit.
-                // This fixes the crossroad overlapping bug where cars jumped ahead 50 checkpoints
-                // just because they were physically standing in the crossroad tile while progressing 
-                // through the underpass.
+                // as ANY of the last 5 checkpoints we recently hit (e.g. crossroad underpass/overpass).
                 let isOverlap = false;
-                for (const recent of this.recentCheckpoints) {
-                    if (recent.x === cp.x && recent.y === cp.y) {
-                        isOverlap = true;
-                        break;
+                if (!cp.isLine && this.recentCheckpoints) {
+                    for (const recent of this.recentCheckpoints) {
+                        if (recent.x === cp.x && recent.y === cp.y) {
+                            isOverlap = true;
+                            break;
+                        }
                     }
                 }
                 
                 if (isOverlap) continue;
                 
-                // Record this physical location in history
+                if (!this.recentCheckpoints) this.recentCheckpoints = [];
                 this.recentCheckpoints.push({x: cp.x, y: cp.y});
                 if (this.recentCheckpoints.length > 5) {
                     this.recentCheckpoints.shift();
                 }
 
-                this.checkpointIndex += (i + 1);
-                
-                if (this.checkpointIndex >= checkpoints.length) {
-                    // Completed a lap
-                    this.lapCount++;
-                    this.totalCheckpoints += checkpoints.length;
-                    if (this.lapTime < this.bestLap) this.bestLap = this.lapTime;
-                    this.lapTime = 0;
-                    this.checkpointIndex = this.checkpointIndex % checkpoints.length;
+                const advance = i + 1;
+                this.checkpointsInLap = (this.checkpointsInLap || 0) + advance;
+
+                // Did we hit the finish line (targetIndex === 0)?
+                // Note: checkpoints[0] is the Start/Finish line.
+                if (targetIndex === 0) {
+                    const minRequired = isLineMode
+                        ? Math.max(1, totalCp)
+                        : Math.max(2, Math.floor(totalCp * 0.70));
+
+                    if (this.checkpointsInLap >= minRequired && this.lapTime >= 1.0) {
+                        // Legitimate lap completed!
+                        this.lapCount++;
+                        this.totalCheckpoints += totalCp;
+                        if (this.lapTime < this.bestLap) this.bestLap = this.lapTime;
+                        this.lapTime = 0;
+                        this.checkpointsInLap = 0;
+                        this.checkpointIndex = (totalCp > 1) ? 1 : 0;
+                    } else {
+                        // Premature trigger without visiting track checkpoints or during spawn
+                        this.checkpointIndex = (totalCp > 1) ? 1 : 0;
+                        this.checkpointsInLap = 0;
+                    }
+                } else {
+                    this.checkpointIndex = (targetIndex + 1) % totalCp;
                 }
                 
                 break; // We hit one, stop looking further ahead
@@ -971,7 +1001,9 @@ class Car {
         this.fitness = 0;
         this.baseFitness = 0;
         this.accumulatedWallPenalty = 0;
-        this.checkpointIndex = 0;
+        this.checkpointIndex = (typeof currentTrack !== 'undefined' && currentTrack && currentTrack.checkpoints && currentTrack.checkpoints.length > 1) ? 1 : 0;
+        this.checkpointsInLap = 0;
+        this.recentCheckpoints = [];
         this.totalCheckpoints = 0;
         this.lapCount = 0;
         this.lapTime = 0;
