@@ -163,18 +163,20 @@
                 <div class="stat-box">TIME <span id="gen-timer">0/15</span></div>
             </div>
             <div style="display: flex; gap: 6px;">
+                <button id="btn-clear-chart-top" class="ctrl-btn" style="padding: 6px 12px; font-size: 11px;">🗑️ CLEAR GRAPH</button>
                 <button id="btn-toggle-chart" class="ctrl-btn" style="padding: 6px 12px; font-size: 11px;">📈 CHART: ON</button>
                 <button class="btn-back">MENU</button>
             </div>
         </div>
 
         <div id="train-chart-container" style="position: absolute; bottom: 20px; left: 20px; background: rgba(10, 14, 24, 0.92); border: 1px solid rgba(0, 255, 204, 0.3); border-radius: 6px; padding: 10px; pointer-events: auto; z-index: 10; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 10px;">
                 <span style="font-size: 11px; font-weight: bold; color: #fff; letter-spacing: 0.5px;">TRAINING TELEMETRY</span>
-                <div style="display: flex; gap: 8px; font-size: 9px; font-weight: bold;">
+                <div style="display: flex; gap: 8px; align-items: center; font-size: 9px; font-weight: bold;">
                     <span style="color: #22c55e;">● TOP FIT</span>
                     <span style="color: #38bdf8;">● AVG FIT</span>
                     <span style="color: #eab308;">● LAP DROP</span>
+                    <button id="btn-clear-chart" class="ctrl-btn danger" style="padding: 2px 7px; font-size: 9px; border-radius: 3px; line-height: 1.2;">CLEAR</button>
                 </div>
             </div>
             <canvas id="train-fitness-chart" width="320" height="130" style="display: block; background: rgba(0,0,0,0.4); border-radius: 4px;"></canvas>
@@ -183,61 +185,105 @@
         <div class="train-panel">
             <div class="toolbar-title">EVOLUTION CONTROLS</div>
 
-            <div class="ctrl-group">
-                <div class="ctrl-row">
-                    <label>POPULATION <span class="help-icon" data-tooltip="How many cars are simulated per generation. Higher numbers find better solutions faster but use more CPU.">?</span></label><span id="train-pop-val">50</span>
-                    <input type="range" id="train-population" min="10" max="500" value="50" step="10">
+            <div class="train-tabs">
+                <button id="tab-train-general" class="train-tab-btn active">GENERAL</button>
+                <button id="tab-train-advanced" class="train-tab-btn">ADVANCED</button>
+            </div>
+
+            <!-- GENERAL TAB CONTENT -->
+            <div id="train-tab-content-general" class="train-tab-content">
+                <div class="ctrl-group">
+                    <div class="ctrl-row">
+                        <label>POPULATION <span class="help-icon" data-tooltip="How many cars are simulated per generation. Higher numbers find better solutions faster but use more CPU.">?</span></label><span id="train-pop-val">50</span>
+                        <input type="range" id="train-population" min="10" max="500" value="50" step="10">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>MUTATION RATE <span class="help-icon" data-tooltip="The chance (percentage) that an offspring's brain gets mutated.">?</span></label><span id="train-mut-val">10%</span>
+                        <input type="range" id="train-mutation" min="1" max="100" value="10">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>MUTATION STRENGTH <span class="help-icon" data-tooltip="How extreme the mutations are. Low = fine-tuning, High = chaotic changes.">?</span></label><span id="train-str-val">30%</span>
+                        <input type="range" id="train-strength" min="1" max="100" value="30">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>ELITISM <span class="help-icon" data-tooltip="The percentage of top-performing cars preserved identically into the next generation.">?</span></label><span id="train-eli-val">10%</span>
+                        <input type="range" id="train-elitism" min="1" max="50" value="10">
+                    </div>
                 </div>
-                <div class="ctrl-row">
-                    <label>MUTATION RATE <span class="help-icon" data-tooltip="The chance (percentage) that an offspring's brain gets mutated.">?</span></label><span id="train-mut-val">10%</span>
-                    <input type="range" id="train-mutation" min="1" max="100" value="10">
-                </div>
-                <div class="ctrl-row">
-                    <label>MUTATION STRENGTH <span class="help-icon" data-tooltip="How extreme the mutations are. Low = fine-tuning, High = chaotic changes.">?</span></label><span id="train-str-val">30%</span>
-                    <input type="range" id="train-strength" min="1" max="100" value="30">
-                </div>
-                <div class="ctrl-row">
-                    <label>ELITISM <span class="help-icon" data-tooltip="The percentage of top-performing cars preserved identically into the next generation.">?</span></label><span id="train-eli-val">10%</span>
-                    <input type="range" id="train-elitism" min="1" max="50" value="10">
+
+                <div class="ctrl-group">
+                    <div class="ctrl-row">
+                        <label>SENSORS <span class="help-icon" data-tooltip="Number of distance raycasts the car uses to see track walls. Must be an odd number.">?</span></label><span id="train-sen-val">7</span>
+                        <input type="range" id="train-sensors" min="3" max="31" value="7" step="2">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>TIME LIMIT <span class="help-icon" data-tooltip="Maximum seconds a generation will run before forcibly ending and breeding the next generation.">?</span></label><span id="train-tl-val">15s</span>
+                        <input type="range" id="train-timelimit" min="5" max="220" value="15" step="1">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>INFINITY TIME <span class="help-icon" data-tooltip="If on, generation runs until 75% of cars are dead, bypassing the time limit.">?</span></label>
+                        <input type="checkbox" id="train-timelimit-inf" class="ui-toggle">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>SPEED</label><span id="train-spd-val">1x</span>
+                        <input type="range" id="train-speed" min="1" max="50" value="1">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>MAX SPEED</label><span id="car-max-spd-val">380</span>
+                        <input type="range" id="car-max-speed" min="30" max="600" value="380" step="10">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>TURN SPD</label><span id="car-turn-spd-val">4.0</span>
+                        <input type="range" id="car-turn-speed" min="1.0" max="6.0" value="4.0" step="0.1">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>ACCEL</label><span id="car-accel-val">420</span>
+                        <input type="range" id="car-accel" min="200" max="800" value="420" step="10">
+                    </div>
+                    <div class="ctrl-row" style="margin-top: 10px;">
+                        <label>DRIFTING</label>
+                        <input type="checkbox" id="train-drift" class="ui-toggle">
+                    </div>
                 </div>
             </div>
 
-            <div class="ctrl-group">
-                <div class="ctrl-row">
-                    <label>SENSORS <span class="help-icon" data-tooltip="Number of distance raycasts the car uses to see track walls. Must be an odd number.">?</span></label><span id="train-sen-val">7</span>
-                    <input type="range" id="train-sensors" min="3" max="31" value="7" step="2">
+            <!-- ADVANCED TAB CONTENT -->
+            <div id="train-tab-content-advanced" class="train-tab-content" style="display: none;">
+                <div class="ctrl-group">
+                    <div class="train-subheading">NEURAL NETWORK</div>
+                    <div class="ctrl-row">
+                        <label>HIDDEN LAYERS <span class="help-icon" data-tooltip="Comma-separated list defining the neural network architecture. e.g. 8,6 means two hidden layers of 8 and 6 neurons.">?</span></label>
+                        <input type="text" id="train-hidden" value="8,6" class="text-input">
+                    </div>
                 </div>
-                <div class="ctrl-row">
-                    <label>HIDDEN LAYERS <span class="help-icon" data-tooltip="Comma-separated list defining the neural network architecture. e.g. 8,6 means two hidden layers of 8 and 6 neurons.">?</span></label>
-                    <input type="text" id="train-hidden" value="8,6" class="text-input">
-                </div>
-                <div class="ctrl-row">
-                    <label>TIME LIMIT <span class="help-icon" data-tooltip="Maximum seconds a generation will run before forcibly ending and breeding the next generation.">?</span></label><span id="train-tl-val">15s</span>
-                    <input type="range" id="train-timelimit" min="5" max="220" value="15" step="1">
-                </div>
-                <div class="ctrl-row">
-                    <label>INFINITY TIME <span class="help-icon" data-tooltip="If on, generation runs until 75% of cars are dead, bypassing the time limit.">?</span></label>
-                    <input type="checkbox" id="train-timelimit-inf" class="ui-toggle">
-                </div>
-                <div class="ctrl-row">
-                    <label>SPEED</label><span id="train-spd-val">1x</span>
-                    <input type="range" id="train-speed" min="1" max="50" value="1">
-                </div>
-                <div class="ctrl-row">
-                    <label>MAX SPEED</label><span id="car-max-spd-val">380</span>
-                    <input type="range" id="car-max-speed" min="30" max="600" value="380" step="10">
-                </div>
-                <div class="ctrl-row">
-                    <label>TURN SPD</label><span id="car-turn-spd-val">4.0</span>
-                    <input type="range" id="car-turn-speed" min="1.0" max="6.0" value="4.0" step="0.1">
-                </div>
-                <div class="ctrl-row">
-                    <label>ACCEL</label><span id="car-accel-val">420</span>
-                    <input type="range" id="car-accel" min="200" max="800" value="420" step="10">
-                </div>
-                <div class="ctrl-row" style="margin-top: 10px;">
-                    <label>DRIFTING</label>
-                    <input type="checkbox" id="train-drift" class="ui-toggle">
+
+                <div class="ctrl-group">
+                    <div class="train-subheading">POINTS & REWARDS</div>
+                    <div class="ctrl-row">
+                        <label>CHECKPOINT PTS <span class="help-icon" data-tooltip="Points awarded each time a car reaches the next sequential checkpoint.">?</span></label><span id="reward-cp-val">10 pts</span>
+                        <input type="range" id="reward-checkpoint" min="0" max="50" value="10" step="1">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>LAP BONUS <span class="help-icon" data-tooltip="Massive bonus awarded when a car completes a legitimate lap.">?</span></label><span id="reward-lap-val">10000</span>
+                        <input type="range" id="reward-lap" min="0" max="50000" value="10000" step="1000">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>SPEED REWARD <span class="help-icon" data-tooltip="Reward multiplier for driving at high speed towards target checkpoints.">?</span></label><span id="reward-spd-val">1.0x</span>
+                        <input type="range" id="reward-speed" min="0" max="5.0" value="1.0" step="0.1">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>WALL PENALTY <span class="help-icon" data-tooltip="Penalty multiplier when cars brush or scrape against walls. Higher values train safer lines.">?</span></label><span id="reward-wall-val">1.0x</span>
+                        <input type="range" id="reward-wall" min="0" max="5.0" value="1.0" step="0.1">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>SURVIVAL BONUS <span class="help-icon" data-tooltip="Gradual bonus for staying alive and not crashing over time.">?</span></label><span id="reward-surv-val">1.0x</span>
+                        <input type="range" id="reward-survival" min="0" max="5.0" value="1.0" step="0.1">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>IDLE TIMEOUT <span class="help-icon" data-tooltip="Seconds of zero motion before a motionless car is disqualified.">?</span></label><span id="reward-idle-val">3.5s</span>
+                        <input type="range" id="reward-idle" min="1.0" max="10.0" value="3.5" step="0.5">
+                    </div>
+                    <button id="btn-reset-rewards" class="ctrl-btn" style="width: 100%; margin-top: 6px; font-size: 10px; padding: 5px;">RESET REWARDS DEFAULTS</button>
                 </div>
             </div>
 
@@ -291,12 +337,12 @@
         </div>
     </div>
 
-    <script src="js/camera.js?v=36"></script>
-    <script src="js/track.js?v=36"></script>
-    <script src="js/sfx.js?v=36"></script>
-    <script src="js/car.js?v=36"></script>
-    <script src="js/ai.js?v=36"></script>
-    <script src="js/main.js?v=36"></script>
+    <script src="js/camera.js?v=37"></script>
+    <script src="js/track.js?v=37"></script>
+    <script src="js/sfx.js?v=37"></script>
+    <script src="js/car.js?v=37"></script>
+    <script src="js/ai.js?v=37"></script>
+    <script src="js/main.js?v=37"></script>
     <script type="module" src="../js/tracker.js"></script>
 
     <!-- ==================== CUSTOM MODALS ==================== -->

@@ -1516,6 +1516,113 @@ function setupUI() {
         };
     });
 
+    // Train panel tabs
+    const tabGeneral = document.getElementById('tab-train-general');
+    const tabAdvanced = document.getElementById('tab-train-advanced');
+    const contentGeneral = document.getElementById('train-tab-content-general');
+    const contentAdvanced = document.getElementById('train-tab-content-advanced');
+
+    if (tabGeneral && tabAdvanced && contentGeneral && contentAdvanced) {
+        tabGeneral.addEventListener('click', () => {
+            tabGeneral.classList.add('active');
+            tabAdvanced.classList.remove('active');
+            contentGeneral.style.display = 'flex';
+            contentAdvanced.style.display = 'none';
+        });
+        tabAdvanced.addEventListener('click', () => {
+            tabAdvanced.classList.add('active');
+            tabGeneral.classList.remove('active');
+            contentAdvanced.style.display = 'flex';
+            contentGeneral.style.display = 'none';
+        });
+    }
+
+    // Points & Rewards Configuration
+    window.fitnessRewards = {
+        checkpointReward: 10,
+        lapReward: 10000,
+        speedReward: 1.0,
+        wallPenalty: 1.0,
+        survivalReward: 1.0,
+        idleTimeout: 3.5
+    };
+
+    function updateFitnessRewardsFromUI() {
+        const cp = parseFloat(document.getElementById('reward-checkpoint')?.value);
+        const lap = parseFloat(document.getElementById('reward-lap')?.value);
+        const spd = parseFloat(document.getElementById('reward-speed')?.value);
+        const wall = parseFloat(document.getElementById('reward-wall')?.value);
+        const surv = parseFloat(document.getElementById('reward-survival')?.value);
+        const idle = parseFloat(document.getElementById('reward-idle')?.value);
+
+        window.fitnessRewards = {
+            checkpointReward: isNaN(cp) ? 10 : cp,
+            lapReward: isNaN(lap) ? 10000 : lap,
+            speedReward: isNaN(spd) ? 1.0 : spd,
+            wallPenalty: isNaN(wall) ? 1.0 : wall,
+            survivalReward: isNaN(surv) ? 1.0 : surv,
+            idleTimeout: isNaN(idle) ? 3.5 : idle
+        };
+        try {
+            localStorage.setItem('neurotrack_rewards', JSON.stringify(window.fitnessRewards));
+        } catch (e) {}
+    }
+
+    setupSlider('reward-checkpoint', 'reward-cp-val', v => v + ' pts');
+    setupSlider('reward-lap', 'reward-lap-val', v => v);
+    setupSlider('reward-speed', 'reward-spd-val', v => parseFloat(v).toFixed(1) + 'x');
+    setupSlider('reward-wall', 'reward-wall-val', v => parseFloat(v).toFixed(1) + 'x');
+    setupSlider('reward-survival', 'reward-surv-val', v => parseFloat(v).toFixed(1) + 'x');
+    setupSlider('reward-idle', 'reward-idle-val', v => parseFloat(v).toFixed(1) + 's');
+
+    ['reward-checkpoint', 'reward-lap', 'reward-speed', 'reward-wall', 'reward-survival', 'reward-idle'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateFitnessRewardsFromUI);
+    });
+
+    const btnResetRewards = document.getElementById('btn-reset-rewards');
+    if (btnResetRewards) {
+        btnResetRewards.addEventListener('click', () => {
+            const defaults = {
+                'reward-checkpoint': 10,
+                'reward-lap': 10000,
+                'reward-speed': 1.0,
+                'reward-wall': 1.0,
+                'reward-survival': 1.0,
+                'reward-idle': 3.5
+            };
+            for (const [id, val] of Object.entries(defaults)) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = val;
+                    el.dispatchEvent(new Event('input'));
+                }
+            }
+            updateFitnessRewardsFromUI();
+            customAlert('Points & rewards reset to defaults.');
+        });
+    }
+
+    // Restore saved rewards from localStorage
+    try {
+        const savedRewards = localStorage.getItem('neurotrack_rewards');
+        if (savedRewards) {
+            const parsed = JSON.parse(savedRewards);
+            if (parsed) {
+                Object.assign(window.fitnessRewards, parsed);
+                if (document.getElementById('reward-checkpoint')) document.getElementById('reward-checkpoint').value = window.fitnessRewards.checkpointReward;
+                if (document.getElementById('reward-lap')) document.getElementById('reward-lap').value = window.fitnessRewards.lapReward;
+                if (document.getElementById('reward-speed')) document.getElementById('reward-speed').value = window.fitnessRewards.speedReward;
+                if (document.getElementById('reward-wall')) document.getElementById('reward-wall').value = window.fitnessRewards.wallPenalty;
+                if (document.getElementById('reward-survival')) document.getElementById('reward-survival').value = window.fitnessRewards.survivalReward;
+                if (document.getElementById('reward-idle')) document.getElementById('reward-idle').value = window.fitnessRewards.idleTimeout;
+                ['reward-checkpoint', 'reward-lap', 'reward-speed', 'reward-wall', 'reward-survival', 'reward-idle'].forEach(id => {
+                    document.getElementById(id)?.dispatchEvent(new Event('input'));
+                });
+            }
+        }
+    } catch (e) {}
+
     // Train panel sliders
     setupSlider('train-population', 'train-pop-val', v => v);
     setupSlider('train-mutation', 'train-mut-val', v => v + '%');
@@ -1649,6 +1756,16 @@ document.getElementById('btn-garage').addEventListener('click', () => {
         };
     }
 
+    function clearTelemetryGraph() {
+        trainTelemetry = [];
+        window.trainTelemetry = [];
+        renderTrainTelemetryChart();
+    }
+    const btnClearChart = document.getElementById('btn-clear-chart');
+    if (btnClearChart) btnClearChart.onclick = clearTelemetryGraph;
+    const btnClearChartTop = document.getElementById('btn-clear-chart-top');
+    if (btnClearChartTop) btnClearChartTop.onclick = clearTelemetryGraph;
+
     const volumeSlider = document.getElementById('menu-volume');
     if (volumeSlider) {
         volumeSlider.addEventListener('input', (e) => {
@@ -1688,7 +1805,8 @@ function exportBrain() {
         'car-max-speed': document.getElementById('car-max-speed')?.value,
         'car-turn-speed': document.getElementById('car-turn-speed')?.value,
         'car-accel': document.getElementById('car-accel')?.value,
-        'train-drift': document.getElementById('train-drift')?.checked
+        'train-drift': document.getElementById('train-drift')?.checked,
+        'fitnessRewards': window.fitnessRewards
     };
     
     // Bundle the entire population
@@ -1733,6 +1851,18 @@ function importBrain() {
                                 el.dispatchEvent(new Event('input')); // trigger labels to update
                             }
                         }
+                    }
+                    if (data.settings.fitnessRewards) {
+                        Object.assign(window.fitnessRewards, data.settings.fitnessRewards);
+                        if (document.getElementById('reward-checkpoint')) document.getElementById('reward-checkpoint').value = window.fitnessRewards.checkpointReward;
+                        if (document.getElementById('reward-lap')) document.getElementById('reward-lap').value = window.fitnessRewards.lapReward;
+                        if (document.getElementById('reward-speed')) document.getElementById('reward-speed').value = window.fitnessRewards.speedReward;
+                        if (document.getElementById('reward-wall')) document.getElementById('reward-wall').value = window.fitnessRewards.wallPenalty;
+                        if (document.getElementById('reward-survival')) document.getElementById('reward-survival').value = window.fitnessRewards.survivalReward;
+                        if (document.getElementById('reward-idle')) document.getElementById('reward-idle').value = window.fitnessRewards.idleTimeout;
+                        ['reward-checkpoint', 'reward-lap', 'reward-speed', 'reward-wall', 'reward-survival', 'reward-idle'].forEach(id => {
+                            document.getElementById(id)?.dispatchEvent(new Event('input'));
+                        });
                     }
                 }
                 

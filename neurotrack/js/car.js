@@ -619,17 +619,26 @@ class Car {
             }
         }
 
+        const rewards = (typeof window !== 'undefined' && window.fitnessRewards) ? window.fitnessRewards : null;
+        const cpWeight = (rewards && rewards.checkpointReward !== undefined) ? rewards.checkpointReward : 10;
+        const lapWeight = (rewards && rewards.lapReward !== undefined) ? rewards.lapReward : 10000;
+        const spdMult = (rewards && rewards.speedReward !== undefined) ? rewards.speedReward : 1.0;
+        const wallMult = (rewards && rewards.wallPenalty !== undefined) ? rewards.wallPenalty : 1.0;
+        const survMult = (rewards && rewards.survivalReward !== undefined) ? rewards.survivalReward : 1.0;
+        const idleLimit = (rewards && rewards.idleTimeout !== undefined) ? rewards.idleTimeout : 3.5;
+
         const currentLapProgress = (this.checkpointIndex === 0 && (this.checkpointsInLap || 0) > 0 && typeof currentTrack !== 'undefined' && currentTrack && currentTrack.checkpoints && currentTrack.checkpoints.length > 0)
             ? currentTrack.checkpoints.length
             : this.checkpointIndex;
-        const checkpointScore = (this.totalCheckpoints + currentLapProgress) * 10 + progress * 10;
-        const speedBonus = this.isTurning
+        const checkpointScore = (this.totalCheckpoints + currentLapProgress) * cpWeight + progress * cpWeight;
+        const rawSpeedBonus = this.isTurning
             ? (targetVelocityBonus * 0.2) // During cornering, reward heading toward the checkpoint without penalizing safe cornering speed
             : (Math.max(0, this.speed / this.maxSpeed) * 0.15 + (targetVelocityBonus * 0.2));
-        const survivalBonus = Math.min(this.totalTime * 0.02, 1.0); // capped at 1.0
+        const speedBonus = rawSpeedBonus * spdMult;
+        const survivalBonus = Math.min(this.totalTime * 0.02, 1.0) * survMult; // capped at 1.0 * survMult
         
         // Prioritize speed of completion: Massive bonus for completing a lap, scaled by how fast they did it!
-        const lapBonus = this.lapCount * 10000;
+        const lapBonus = this.lapCount * lapWeight;
         const lapTimePenalty = (this.bestLap > 0 && this.bestLap !== Infinity) ? (1000 / this.bestLap) : 0;
         
         let newFitness = checkpointScore + speedBonus + survivalBonus + lapBonus + lapTimePenalty;
@@ -638,11 +647,11 @@ class Car {
         if (typeof this.accumulatedWallPenalty === 'undefined') this.accumulatedWallPenalty = 0;
         
         // Wall scraping penalty
-        if (this.sensors && this.sensors.length > 0) {
+        if (this.sensors && this.sensors.length > 0 && wallMult > 0) {
             for (const s of this.sensors) {
                 if (s.dist < 15) {
                     const severity = (15 - s.dist);
-                    this.accumulatedWallPenalty += severity * 0.15 * dt;
+                    this.accumulatedWallPenalty += severity * 0.15 * dt * wallMult;
                 }
             }
         }
@@ -659,9 +668,8 @@ class Car {
             // Cars are allowed to slow down to navigate corners without dying!
             if (Math.abs(this.speed) < 1.0) {
                 this.stoppedTime = (this.stoppedTime || 0) + dt;
-                // If completely motionless for > 3.5 seconds, retire the car to avoid hanging generations.
-                // Do NOT add a wall penalty — slowing down or stopping is not a wall crash!
-                if (this.stoppedTime > 3.5) {
+                // If completely motionless for > idleLimit seconds, retire the car to avoid hanging generations.
+                if (this.stoppedTime > idleLimit) {
                     this.alive = false;
                 }
             } else {
