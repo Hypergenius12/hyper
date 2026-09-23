@@ -197,15 +197,29 @@ let originalTiles = new Map(); // Maps "c,r" -> tileId before current stroke
 
 function getBaseTileForIntersection(c, r) {
     const key = `${c},${r}`;
-    const orig = originalTiles.has(key) ? originalTiles.get(key) : (currentTrack ? currentTrack.getTile(c, r) : 0);
-    if (Track.isStraightOrIntersection(orig)) {
-        return orig;
+    if (originalTiles.has(key)) {
+        const orig = originalTiles.get(key);
+        if (Track.isStraightOrIntersection(orig)) {
+            return orig;
+        }
     }
-    const current = currentTrack ? currentTrack.getTile(c, r) : 0;
-    if (Track.isStraightOrIntersection(current)) {
-        return current;
+
+    // Check if this cell was already drawn earlier in the current stroke (self-intersection, e.g. figure-8)
+    if (typeof autoDrawPath !== 'undefined' && autoDrawPath.length > 2) {
+        const currentTailIdx = autoDrawPath.length - 1;
+        const earlierIdx = autoDrawPath.findIndex((n, idx) => 
+            idx > 0 && idx < currentTailIdx - 1 && n.c === c && n.r === r && n.inPort !== -1 && n.outPort !== -1
+        );
+        if (earlierIdx !== -1) {
+            const earlierNode = autoDrawPath[earlierIdx];
+            const earlierTileId = Track.getTileForPorts(earlierNode.inPort, earlierNode.outPort);
+            if (Track.isStraightOrIntersection(earlierTileId)) {
+                return earlierTileId;
+            }
+        }
     }
-    return orig;
+
+    return 0;
 }
 
 let editorHistory = [];
