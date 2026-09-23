@@ -1811,7 +1811,7 @@ function startPlayMode() {
     playerCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#00ffff');
     
     playerCar.maxSpeed = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
-    playerCar.turnRate = parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2;
+    playerCar.turnRate = parseFloat(document.getElementById('car-turn-speed')?.value) || 4.0;
     playerCar.acceleration = parseFloat(document.getElementById('car-accel')?.value) || 420;
 
     playerCar.bestLap = trackPersonalBest;
@@ -2130,7 +2130,7 @@ function spawnAICars() {
         : parseInt(document.getElementById('train-sensors')?.value) || 7;
         
     const maxSpd = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
-    const tSpd = parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2;
+    const tSpd = parseFloat(document.getElementById('car-turn-speed')?.value) || 4.0;
     const accel = parseFloat(document.getElementById('car-accel')?.value) || 420;
 
     const brains = geneticAlgo.getBrains ? geneticAlgo.getBrains() : geneticAlgo.population.map(p => p.brain);
@@ -2380,7 +2380,7 @@ function update(rawDt) {
                 const deadCount = aiCars.length - aliveCount;
                 if (deadCount / aiCars.length > 0.75) allDead = true;
             } else {
-                if (trainTimer >= trainTimeLimit) allDead = true;
+                if (trainTimer >= trainTimeLimit || aliveCount === 0) allDead = true;
             }
 
             if (allDead) {
@@ -2512,7 +2512,7 @@ function saveBestBrain(quiet = false) {
     // Preserve physics tuning settings so the bot always drives with the exact physics it was trained on
     data.settings = {
         maxSpeed: parseFloat(document.getElementById('car-max-speed')?.value) || 380,
-        turnRate: parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2,
+        turnRate: parseFloat(document.getElementById('car-turn-speed')?.value) || 4.0,
         acceleration: parseFloat(document.getElementById('car-accel')?.value) || 420,
         drift: document.getElementById('train-drift')?.checked || false
     };
@@ -2602,7 +2602,7 @@ function watchBestReplay() {
             sensorCount: geneticAlgo.sensorCount,
             settings: {
                 maxSpeed: parseFloat(document.getElementById('car-max-speed')?.value) || 380,
-                turnRate: parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2,
+                turnRate: parseFloat(document.getElementById('car-turn-speed')?.value) || 4.0,
                 acceleration: parseFloat(document.getElementById('car-accel')?.value) || 420
             }
         };
@@ -2617,7 +2617,7 @@ function watchBestReplay() {
                     sensorCount: car.sensorCount || (geneticAlgo ? geneticAlgo.sensorCount : 7),
                     settings: {
                         maxSpeed: car.maxSpeed || 380,
-                        turnRate: car.turnRate || 3.2,
+                        turnRate: car.turnRate || 4.0,
                         acceleration: car.acceleration || 420
                     }
                 };
@@ -2665,7 +2665,7 @@ function watchBestReplay() {
     
     // Copy settings so they drive identically
     replayCar.maxSpeed = (bestChoice.settings && bestChoice.settings.maxSpeed) ? bestChoice.settings.maxSpeed : (parseFloat(document.getElementById('car-max-speed')?.value) || 380);
-    replayCar.turnRate = (bestChoice.settings && bestChoice.settings.turnRate) ? bestChoice.settings.turnRate : (parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2);
+    replayCar.turnRate = (bestChoice.settings && bestChoice.settings.turnRate) ? bestChoice.settings.turnRate : (parseFloat(document.getElementById('car-turn-speed')?.value) || 4.0);
     replayCar.acceleration = (bestChoice.settings && bestChoice.settings.acceleration) ? bestChoice.settings.acceleration : (parseFloat(document.getElementById('car-accel')?.value) || 420);
 }
 
@@ -2685,7 +2685,7 @@ function startRaceMode() {
             sensorCount: geneticAlgo.sensorCount,
             settings: {
                 maxSpeed: parseFloat(document.getElementById('car-max-speed')?.value) || 380,
-                turnRate: parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2,
+                turnRate: parseFloat(document.getElementById('car-turn-speed')?.value) || 4.0,
                 acceleration: parseFloat(document.getElementById('car-accel')?.value) || 420
             }
         };
@@ -2700,7 +2700,7 @@ function startRaceMode() {
                     sensorCount: car.sensorCount || (geneticAlgo ? geneticAlgo.sensorCount : 7),
                     settings: {
                         maxSpeed: car.maxSpeed || 380,
-                        turnRate: car.turnRate || 3.2,
+                        turnRate: car.turnRate || 4.0,
                         acceleration: car.acceleration || 420
                     }
                 };
@@ -2748,7 +2748,7 @@ function startRaceMode() {
 
     playerCar = new Car(currentTrack.startPos.x, currentTrack.startPos.y, currentTrack.startPos.angle, '#00ffff');
     playerCar.maxSpeed = parseFloat(document.getElementById('car-max-speed')?.value) || 380;
-    playerCar.turnRate = parseFloat(document.getElementById('car-turn-speed')?.value) || 3.2;
+    playerCar.turnRate = parseFloat(document.getElementById('car-turn-speed')?.value) || 4.0;
     playerCar.acceleration = parseFloat(document.getElementById('car-accel')?.value) || 420;
 
     // Calculate exact sensor count matching the neural network architecture

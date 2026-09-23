@@ -57,7 +57,7 @@ class Car {
         this.acceleration = 420;
         this.brakeForce = 320;
         this.friction = 1.8;
-        this.turnRate = 3.2;
+        this.turnRate = 4.0;
         this.offTrackPenalty = 0.92;
     }
 
@@ -123,18 +123,15 @@ class Car {
 
             const outputs = this.brain.feedforward(inputs);
 
-            // Decoupled throttle and brake: mutually exclusive so they don't fight each other
-            let netThrottle = 0;
-            let netBrake = 0;
-            if (outputs[0] >= outputs[1]) {
-                netThrottle = Math.min(1, (outputs[0] - outputs[1] * 0.5) * 1.4);
-            } else if (outputs[1] > outputs[0]) {
-                netBrake = Math.min(1, (outputs[1] - outputs[0]) * 1.5);
-            }
+            // Smooth analog throttle and brake: cars are allowed to slow down for corners
+            const rawThrottle = Math.min(1, outputs[0] * 1.2);
+            const rawBrake = Math.min(1, outputs[1] * 1.2);
+            const netThrottle = Math.max(0, rawThrottle - rawBrake);
+            const netBrake = Math.max(0, rawBrake - rawThrottle);
             
             // For steering, subtract left from right, then amplify so they can turn sharply if needed
             let steer = outputs[3] - outputs[2];
-            steer = Math.max(-1, Math.min(1, steer * 1.6));
+            steer = Math.max(-1, Math.min(1, steer * 1.7));
 
             // Store recurrent memory for next frame
             for (let i = 0; i < this.memory.length; i++) {
@@ -142,22 +139,23 @@ class Car {
             }
 
             if (!this.airborne) {
-                if (netThrottle > 0) this.speed += currentAccel * netThrottle * dt;
+                if (netThrottle > 0) {
+                    this.speed += currentAccel * netThrottle * dt;
+                }
                 if (netBrake > 0) {
-                    if (this.speed > 0) {
-                        this.speed = Math.max(0, this.speed - currentBrakeForce * netBrake * dt);
-                    } else {
-                        this.speed = Math.max(-currentMaxSpeed * 0.25, this.speed - (currentBrakeForce * 0.3) * netBrake * dt);
-                    }
+                    // AI braking slows the car down smoothly without flipping into reverse
+                    this.speed = Math.max(0, this.speed - currentBrakeForce * netBrake * dt);
                 }
             }
             if (netThrottle > 0.05 || netBrake > 0.05) {
                 this.started = true;
-                if (netThrottle > 0.05 && !this.airborne) this.isAccelerating = true;
+            }
+            if (netThrottle > 0.05 && !this.airborne) {
+                this.isAccelerating = true;
             }
 
             if (!this.airborne) {
-                // Allow AI to rotate in place when stopped or forward (dir=1), or reverse (dir=-1)
+                // Allow AI to steer smoothly (dir=1 for forward or stopped, dir=-1 for reverse)
                 const dir = this.speed >= 0 ? 1 : -1;
                 if (Math.abs(steer) > 0.05) this.isTurning = true;
                 this.angle += currentTurnRate * steer * dt * dir;
@@ -268,8 +266,8 @@ class Car {
             }
         }
 
-        // Friction: Apply full friction when coasting, minimal drag when accelerating
-        let currentFriction = this.isAccelerating ? (this.friction * 0.1) : this.friction;
+        // Friction: Smooth scaling so cars can cruise at intermediate and lower speeds
+        let currentFriction = this.isAccelerating ? (this.friction * 0.45) : this.friction;
         
         if (typeof currentTrack !== 'undefined' && currentTrack && typeof TILE_TYPES !== 'undefined') {
             if (centerTileId >= TILE_TYPES.PUDDLE_STRAIGHT_V.id && centerTileId <= TILE_TYPES.PUDDLE_CURVE_TL.id) {
@@ -606,13 +604,14 @@ class Car {
         this.fitness = Math.max(0, this.baseFitness - this.accumulatedWallPenalty);
         
         if (this.brain && this.started) {
-            if (Math.abs(this.speed) <= 10) {
+            // Only count if completely motionless (< 1 px/s).
+            // Cars are allowed to slow down to navigate corners without dying!
+            if (Math.abs(this.speed) < 1.0) {
                 this.stoppedTime = (this.stoppedTime || 0) + dt;
-                if (this.stoppedTime > 1.5) {
-                    this.alive = false; // Kill car if stopped continuously for > 1.5s
-                    this.crashed = true;
-                    this.accumulatedWallPenalty += 20;
-                    this.fitness = Math.max(0, this.baseFitness - this.accumulatedWallPenalty);
+                // If completely motionless for > 3.5 seconds, retire the car to avoid hanging generations.
+                // Do NOT add a wall penalty — slowing down or stopping is not a wall crash!
+                if (this.stoppedTime > 3.5) {
+                    this.alive = false;
                 }
             } else {
                 this.stoppedTime = 0;
