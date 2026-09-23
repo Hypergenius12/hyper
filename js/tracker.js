@@ -127,12 +127,7 @@ window.loadLeaderboard = loadLeaderboard;
 document.addEventListener('keyup', (e) => {
     if (e.key === 'L' && e.shiftKey && username === 'hypergenius12') {
         window.hyperShowAllUsers = !window.hyperShowAllUsers;
-        let mode = 'overall';
-        const tabProjects = document.getElementById('tab-projects');
-        if (tabProjects && tabProjects.style.background !== 'transparent' && tabProjects.style.background !== '') {
-            mode = 'projects';
-        }
-        loadLeaderboard(mode);
+        loadLeaderboard();
     }
 });
 
@@ -203,7 +198,7 @@ if (isHome) {
                     isTemp = false;
                     
                     modal.classList.remove('active');
-                    loadLeaderboard('overall'); // refresh leaderboard
+                    loadLeaderboard(); // refresh leaderboard
                 }
             } catch (err) {
                 console.error("Firebase Auth/DB Error:", err);
@@ -238,139 +233,51 @@ if (username) {
 // --- Leaderboard Rendering ---
 let cachedUsers = null;
 
-async function loadLeaderboard(mode = 'overall', subProject = null) {
+async function loadLeaderboard() {
     const lbContent = document.getElementById('lb-content');
     if (!lbContent) return;
 
     lbContent.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 2rem;">Loading data...</div>';
     try {
-        if (mode === 'overall') {
-            const q = query(collection(db, 'users'), orderBy('totalTime', 'desc'), limit(200));
-            const querySnapshot = await getDocs(q);
-            let users = [];
-            querySnapshot.forEach(d => users.push(d.data()));
-            cachedUsers = users;
+        const q = query(collection(db, 'users'), orderBy('totalTime', 'desc'), limit(200));
+        const querySnapshot = await getDocs(q);
+        let users = [];
+        querySnapshot.forEach(d => users.push(d.data()));
+        cachedUsers = users;
 
-            lbContent.innerHTML = '';
-            let rank = 1;
-            users.forEach((u) => {
-                // Spoofing Protection: Ignore users with > 365 days of playtime
-                if (u.totalTime > 31536000) return;
-                
-                // Hide users with < 15s of playtime unless hyperShowAllUsers is true
-                if (u.totalTime < 15 && !window.hyperShowAllUsers) return;
-                
-                // Hide opted out users
-                if (u.optOut) return;
-                
-                let medal = rank === 1 ? '[1]' : rank === 2 ? '[2]' : rank === 3 ? '[3]' : `[${rank}]`;
-                let isMe = username && u.username.toLowerCase() === username.toLowerCase();
-                let bg = isMe ? '#22c55e' : 'transparent';
-                let color = isMe ? '#000' : 'inherit';
-                let border = '1px solid #333';
-                
-                let displayUsername = u.username;
-                if (displayUsername.startsWith('user_')) {
-                    displayUsername = 'User #' + displayUsername.substring(5);
-                }
-                
-                lbContent.innerHTML += `
-                    <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
-                        <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
-                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${sanitizeHTML(censorName(displayUsername))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
-                        <span style="font-family: monospace;">${formatTime(u.totalTime)}</span>
-                    </div>
-                `;
-                rank++;
-            });
-            if (users.length === 0) lbContent.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 2rem;">No users yet.</div>';
-
-        } else if (mode === 'projects') {
-            if (!cachedUsers) {
-                const q = query(collection(db, 'users'), orderBy('totalTime', 'desc'), limit(200));
-                const snap = await getDocs(q);
-                cachedUsers = [];
-                snap.forEach(d => cachedUsers.push(d.data()));
-            }
-
-            let projectNames = new Set(Object.keys(PROJECT_NAMES).filter(k => k !== 'paths'));
-            cachedUsers.forEach(u => {
-                if (u.projects) {
-                    Object.keys(u.projects).forEach(p => {
-                        if (p !== 'Home' && p !== 'paths' && p.toLowerCase() !== 'hyper') projectNames.add(p);
-                    });
-                }
-            });
-            let pList = Array.from(projectNames).sort();
-
-            if (pList.length === 0) {
-                lbContent.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 2rem;">No project data yet. Play a game first!</div>';
-                return;
-            }
-
-            let activeProj = subProject || pList[0];
-
-            let tabsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #333; font-family: monospace; text-transform: uppercase;">`;
-            pList.forEach(p => {
-                let isActive = p === activeProj;
-                let displayName = getDisplayProjectName(p);
-                let btnText = isActive ? `[${displayName}]` : displayName;
-                let bg = isActive ? '#22c55e' : 'transparent';
-                let color = isActive ? '#000' : 'var(--text-color)';
-                let border = isActive ? '1px solid #22c55e' : '1px solid #333';
-                let hoverColor = isActive ? '#000' : '#fff';
-                tabsHtml += `<button onclick="window.loadSubProject('${p.replace(/'/g, "\\'")}')" style="white-space: nowrap; padding: 0.5rem 1rem; border: ${border}; border-radius: 0; background: ${bg}; color: ${color}; cursor: pointer; font-family: monospace; font-weight: bold; letter-spacing: 1px; transition: all 0.2s;" onmouseover="this.style.borderColor='${isActive ? '#22c55e' : '#fff'}'; this.style.color='${hoverColor}';" onmouseout="this.style.borderColor='${isActive ? '#22c55e' : '#333'}'; this.style.color='${color}';">${btnText}</button>`;
-            });
-            tabsHtml += `</div><div id="sub-lb-content"><div style="text-align:center; opacity:0.5; font-family: monospace;">LOADING ${getDisplayProjectName(activeProj)}...</div></div>`;
+        lbContent.innerHTML = '';
+        let rank = 1;
+        users.forEach((u) => {
+            // Spoofing Protection: Ignore users with > 365 days of playtime
+            if (u.totalTime > 31536000) return;
             
-            lbContent.innerHTML = tabsHtml;
-
-            try {
-                const qp = query(collection(db, 'users'), orderBy(`projects.${activeProj}`, 'desc'), limit(100));
-                const snapP = await getDocs(qp);
-                let pUsers = [];
-                snapP.forEach(d => pUsers.push(d.data()));
-
-                let subContent = document.getElementById('sub-lb-content');
-                subContent.innerHTML = '';
-                let rank = 1;
-                pUsers.forEach((u) => {
-                    let timeVal = u.projects[activeProj];
-                    if (!timeVal || timeVal > 31536000) return; // Spoofing protection
-                    
-                    // Hide users with < 15s of playtime unless hyperShowAllUsers is true
-                    if (timeVal < 15 && !window.hyperShowAllUsers) return;
-                    
-                    // Hide opted out users
-                    if (u.optOut) return;
-
-                    let medal = rank === 1 ? '[1]' : rank === 2 ? '[2]' : rank === 3 ? '[3]' : `[${rank}]`;
-                    let isMe = username && u.username.toLowerCase() === username.toLowerCase();
-                    let bg = isMe ? '#22c55e' : 'transparent';
-                    let color = isMe ? '#000' : 'inherit';
-                    let border = '1px solid #333';
-                    
-                    let displayUsername = u.username;
-                    if (displayUsername.startsWith('user_')) {
-                        displayUsername = 'User #' + displayUsername.substring(5);
-                    }
-                    
-                    subContent.innerHTML += `
-                        <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
-                            <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
-                            <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${sanitizeHTML(censorName(displayUsername))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
-                            <span style="font-family: monospace;">${formatTime(timeVal)}</span>
-                        </div>
-                    `;
-                    rank++;
-                });
-                if (pUsers.length === 0) subContent.innerHTML = '<div style="text-align:center; opacity:0.5;">No data for this project.</div>';
-
-            } catch(e) {
-                document.getElementById('sub-lb-content').innerHTML = `<div style="text-align:center; color:#ef4444; padding: 1rem;">Firestore requires an automatic index for this project. Check your console.</div>`;
-                console.error(e);
+            // Hide users with < 15s of playtime unless hyperShowAllUsers is true
+            if (u.totalTime < 15 && !window.hyperShowAllUsers) return;
+            
+            // Hide opted out users
+            if (u.optOut) return;
+            
+            let medal = rank === 1 ? '[1]' : rank === 2 ? '[2]' : rank === 3 ? '[3]' : `[${rank}]`;
+            let isMe = username && u.username.toLowerCase() === username.toLowerCase();
+            let bg = isMe ? '#22c55e' : 'transparent';
+            let color = isMe ? '#000' : 'inherit';
+            let border = '1px solid #333';
+            
+            let displayUsername = u.username;
+            if (displayUsername.startsWith('user_')) {
+                displayUsername = 'User #' + displayUsername.substring(5);
             }
-        }
+            
+            lbContent.innerHTML += `
+                <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
+                    <span style="font-weight: bold; width: 40px; text-align: center;">${medal}</span>
+                    <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}">${sanitizeHTML(censorName(displayUsername))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 4px;">&lt;YOU&gt;</span>' : ''}</span>
+                    <span style="font-family: monospace;">${formatTime(u.totalTime)}</span>
+                </div>
+            `;
+            rank++;
+        });
+        if (users.length === 0) lbContent.innerHTML = '<div style="text-align:center; opacity:0.5; padding: 2rem;">No users yet.</div>';
 
     } catch (e) {
         lbContent.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Error loading leaderboard.</div>';
@@ -378,36 +285,13 @@ async function loadLeaderboard(mode = 'overall', subProject = null) {
     }
 }
 
-// Global exposure for the onclick handler
-window.loadSubProject = function(p) {
-    loadLeaderboard('projects', p);
+// Global exposure
+window.loadSubProject = function() {
+    loadLeaderboard();
 };
 
 if (isHome) {
-    const tabOverall = document.getElementById('tab-overall');
-    const tabProjects = document.getElementById('tab-projects');
-
-    if (tabOverall) {
-        tabOverall.style.borderRadius = '0';
-        tabOverall.style.fontFamily = 'monospace';
-        tabOverall.style.textTransform = 'uppercase';
-        tabProjects.style.borderRadius = '0';
-        tabProjects.style.fontFamily = 'monospace';
-        tabProjects.style.textTransform = 'uppercase';
-
-        tabOverall.addEventListener('click', () => {
-            tabOverall.style.background = '#fff'; tabOverall.style.color = '#000'; tabOverall.style.border = '1px solid #fff';
-            tabProjects.style.background = 'transparent'; tabProjects.style.color = 'var(--text-color)'; tabProjects.style.border = '1px solid #333';
-            loadLeaderboard('overall');
-        });
-        tabProjects.addEventListener('click', () => {
-            tabProjects.style.background = '#fff'; tabProjects.style.color = '#000'; tabProjects.style.border = '1px solid #fff';
-            tabOverall.style.background = 'transparent'; tabOverall.style.color = 'var(--text-color)'; tabOverall.style.border = '1px solid #333';
-            loadLeaderboard('projects');
-        });
-        
-        tabOverall.click(); // trigger initial styling
-    }
+    loadLeaderboard();
 
     const toggleBtn = document.getElementById('tracking-toggle-btn');
     if (toggleBtn) {
@@ -434,7 +318,7 @@ if (isHome) {
                 } catch(e) {}
             }
             updateProfileBadge();
-            loadLeaderboard('overall');
+            loadLeaderboard();
         });
     }
 
