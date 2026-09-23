@@ -45,8 +45,9 @@ class Car {
 
         // Sensors (for AI)
         this.sensors = [];
-        this.sensorLength = 200;
+        this.sensorLength = 280;
         this.sensorCount = 7;
+        this.crashed = false;
 
         // Neural network brain (null for human player)
         this.brain = null;
@@ -58,12 +59,10 @@ class Car {
         this.friction = 1.8;
         this.turnRate = 3.2;
         this.offTrackPenalty = 0.92;
-        this.repulsorGlowTimer = 0;
     }
 
     update(dt, keys, collisionGrid, sensorGrid) {
         if (!this.alive) return;
-        if (this.repulsorGlowTimer > 0) this.repulsorGlowTimer -= dt;
 
         this.prevX = this.x;
         this.prevY = this.y;
@@ -129,8 +128,8 @@ class Car {
             let netBrake = 0;
             if (outputs[0] >= outputs[1]) {
                 netThrottle = Math.min(1, (outputs[0] - outputs[1] * 0.5) * 1.4);
-            } else if (outputs[1] > outputs[0] + 0.08) {
-                netBrake = Math.min(1, (outputs[1] - outputs[0]) * 1.4);
+            } else if (outputs[1] > outputs[0]) {
+                netBrake = Math.min(1, (outputs[1] - outputs[0]) * 1.5);
             }
             
             // For steering, subtract left from right, then amplify so they can turn sharply if needed
@@ -384,91 +383,8 @@ class Car {
                 
                 const centerCheck = this.isPointOnTrack(this.x, this.y, collisionGrid);
                 const isSlide = (typeof currentTrack !== 'undefined' && currentTrack) ? this.isSlideContact(currentTrack) : false;
-                const isRepulsor = (typeof currentTrack !== 'undefined' && currentTrack) ? this.isRepulsorContact(currentTrack) : false;
 
-                if (isRepulsor) {
-                    // REPULSOR WALL: Smooth magnetic guide — car is gently steered toward track center.
-                    // NO bouncing. The wall acts like a curved magnetic rail.
-
-                    // --- Find reliable "toward open track" direction ---
-                    // Sample at multiple radii and directions to get a robust gradient
-                    let gx = 0, gy = 0;
-                    const angles = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4];
-                    for (const r of [16, 28, 40]) {
-                        for (const a of angles) {
-                            const sx = this.x + Math.cos(a) * r;
-                            const sy = this.y + Math.sin(a) * r;
-                            if (this.isPointOnTrack(sx, sy, collisionGrid)) {
-                                gx += Math.cos(a);
-                                gy += Math.sin(a);
-                            }
-                        }
-                    }
-                    let glen = Math.hypot(gx, gy);
-                    // Fall back to prev-position direction if gradient is degenerate
-                    if (glen < 0.01) {
-                        gx = prevX - this.x; gy = prevY - this.y;
-                        glen = Math.hypot(gx, gy) || 1;
-                    }
-                    const inNx = gx / glen; // points TOWARD open track
-                    const inNy = gy / glen;
-
-                    // --- Proximity push: constant gentle inward force when near wall ---
-                    let minWallDist = 999;
-                    if (this.sensors && this.sensors.length > 0) {
-                        for (const s of this.sensors) {
-                            if (s.dist < minWallDist) minWallDist = s.dist;
-                        }
-                    }
-                    if (minWallDist < 40) {
-                        const strength = 1200 * Math.max(0, 1 - minWallDist / 40);
-                        this.vx += inNx * strength * dt;
-                        this.vy += inNy * strength * dt;
-                    }
-
-                    // --- Hard wall contact: redirect velocity, NO bounce ---
-                    if (offCount >= 1 || centerCheck === false) {
-                        // Push position back onto track
-                        for (let step = 0; step < 8; step++) {
-                            let anyOff = false;
-                            for (const c of this.getCorners()) {
-                                if (!this.isPointOnTrack(c.x, c.y, collisionGrid)) {
-                                    anyOff = true; break;
-                                }
-                            }
-                            if (anyOff) {
-                                this.x += inNx * 3;
-                                this.y += inNy * 3;
-                            } else break;
-                        }
-
-                        // Kill the velocity component going INTO the wall entirely.
-                        // Keep ALL tangential speed — the car slides along the wall.
-                        const dotInto = this.vx * (-inNx) + this.vy * (-inNy);
-                        if (dotInto > 0) {
-                            this.vx += inNx * dotInto; // fully remove wall-penetrating component
-                            this.vy += inNy * dotInto;
-                        }
-
-                        // Add a strong inward nudge so the car curves back in immediately
-                        const currentSpd = Math.hypot(this.vx, this.vy);
-                        this.vx += inNx * currentSpd * 0.35;
-                        this.vy += inNy * currentSpd * 0.35;
-
-                        // Re-normalize to original speed so the car doesn't slow down
-                        const newSpd = Math.hypot(this.vx, this.vy);
-                        if (newSpd > 0.01) {
-                            const scale = currentSpd / newSpd;
-                            this.vx *= scale;
-                            this.vy *= scale;
-                        }
-
-                        this.speed = Math.hypot(this.vx, this.vy);
-                        this.velocityAngle = Math.atan2(this.vy, this.vx);
-                        this.repulsorGlowTimer = 0.3;
-                    }
-                    this.alive = true; // Never die on repulsor wall!
-                } else if (isSlide) {
+                if (isSlide) {
                     // SLIDE WALL: NEVER SLOW DOWN! Maintain full momentum and glide along wall
                     if (offCount >= 1 || centerCheck === false) {
                         const norm = this.getTrackNormal(this.x, this.y, collisionGrid);
@@ -522,7 +438,7 @@ class Car {
                     }
                 }
 
-                if (centerCheck === false && !isSlide && !isRepulsor) {
+                if (centerCheck === false && !isSlide) {
                     let checkCol = Math.floor(this.x / 100);
                     let checkRow = Math.floor(this.y / 100);
                     let tileAttrs = (typeof currentTrack !== 'undefined' && currentTrack && typeof currentTrack.getTileAttrs === 'function') 
@@ -610,6 +526,8 @@ class Car {
                             playCrashSound();
                         }
                         this.alive = false;
+                        this.crashed = true;
+                        this.accumulatedWallPenalty = (this.accumulatedWallPenalty || 0) + 20;
                     }
                 }
                 }
@@ -658,7 +576,7 @@ class Car {
         }
 
         const checkpointScore = (this.totalCheckpoints + this.checkpointIndex) * 10 + progress * 10;
-        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.5 + targetVelocityBonus;
+        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.15 + (targetVelocityBonus * 0.2);
         const survivalBonus = Math.min(this.totalTime * 0.02, 1.0); // capped at 1.0
         
         // Prioritize speed of completion: Massive bonus for completing a lap, scaled by how fast they did it!
@@ -670,13 +588,12 @@ class Car {
         // Ensure penalty is initialized
         if (typeof this.accumulatedWallPenalty === 'undefined') this.accumulatedWallPenalty = 0;
         
-        // Wall scraping penalty: only penalize low-speed grinding or wall stalling, not fast apex clipping
+        // Wall scraping penalty
         if (this.sensors && this.sensors.length > 0) {
             for (const s of this.sensors) {
-                if (s.dist < 14) {
-                    const severity = (14 - s.dist);
-                    const speedFactor = Math.max(0, 1 - (Math.abs(this.speed) / 140));
-                    this.accumulatedWallPenalty += severity * speedFactor * 0.08 * dt;
+                if (s.dist < 15) {
+                    const severity = (15 - s.dist);
+                    this.accumulatedWallPenalty += severity * 0.15 * dt;
                 }
             }
         }
@@ -686,13 +603,16 @@ class Car {
             this.baseFitness = newFitness;
         }
         
-        this.fitness = this.baseFitness - this.accumulatedWallPenalty;
+        this.fitness = Math.max(0, this.baseFitness - this.accumulatedWallPenalty);
         
         if (this.brain && this.started) {
             if (Math.abs(this.speed) <= 10) {
                 this.stoppedTime = (this.stoppedTime || 0) + dt;
                 if (this.stoppedTime > 1.5) {
                     this.alive = false; // Kill car if stopped continuously for > 1.5s
+                    this.crashed = true;
+                    this.accumulatedWallPenalty += 20;
+                    this.fitness = Math.max(0, this.baseFitness - this.accumulatedWallPenalty);
                 }
             } else {
                 this.stoppedTime = 0;
@@ -761,40 +681,6 @@ class Car {
                     const hy = Math.floor((this.y + Math.sin(s.angle) * s.dist) / 100);
                     const sAttrs = currentTrack.getTileAttrs(hx, hy);
                     if (sAttrs && sAttrs.wall === 'slide') return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    isRepulsorContact(currentTrack) {
-        if (!currentTrack || typeof currentTrack.getTileAttrs !== 'function') return false;
-        const cCol = Math.floor(this.x / 100);
-        const cRow = Math.floor(this.y / 100);
-        const cur = currentTrack.getTileAttrs(cCol, cRow);
-        if (cur && cur.wall === 'repulsor') return true;
-
-        if (this.prevX !== undefined && this.prevY !== undefined) {
-            const pCol = Math.floor(this.prevX / 100);
-            const pRow = Math.floor(this.prevY / 100);
-            const prev = currentTrack.getTileAttrs(pCol, pRow);
-            if (prev && prev.wall === 'repulsor') return true;
-        }
-
-        for (const c of this.getCorners()) {
-            const col = Math.floor(c.x / 100);
-            const row = Math.floor(c.y / 100);
-            const attrs = currentTrack.getTileAttrs(col, row);
-            if (attrs && attrs.wall === 'repulsor') return true;
-        }
-
-        if (this.sensors && this.sensors.length > 0) {
-            for (const s of this.sensors) {
-                if (s.dist < 30) {
-                    const hx = Math.floor((this.x + Math.cos(s.angle) * s.dist) / 100);
-                    const hy = Math.floor((this.y + Math.sin(s.angle) * s.dist) / 100);
-                    const sAttrs = currentTrack.getTileAttrs(hx, hy);
-                    if (sAttrs && sAttrs.wall === 'repulsor') return true;
                 }
             }
         }
@@ -989,18 +875,6 @@ class Car {
             ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
         }
 
-        if (this.repulsorGlowTimer > 0) {
-            ctx.save();
-            ctx.strokeStyle = '#fb923c';
-            ctx.shadowColor = '#f97316';
-            ctx.shadowBlur = 15;
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.width * 0.75, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
-        }
-
         ctx.restore();
     }
 
@@ -1048,7 +922,10 @@ class Car {
         this.angle = angle;
         this.speed = 0;
         this.alive = true;
+        this.crashed = false;
         this.fitness = 0;
+        this.baseFitness = 0;
+        this.accumulatedWallPenalty = 0;
         this.checkpointIndex = 0;
         this.totalCheckpoints = 0;
         this.lapCount = 0;

@@ -360,6 +360,11 @@ function restoreSession() {
         }
         if (session.tileAttrs && typeof session.tileAttrs === 'object') {
             currentTrack.tileAttrs = JSON.parse(JSON.stringify(session.tileAttrs));
+            for (const key in currentTrack.tileAttrs) {
+                if (currentTrack.tileAttrs[key] && currentTrack.tileAttrs[key].wall === 'repulsor') {
+                    currentTrack.tileAttrs[key].wall = 'default';
+                }
+            }
         } else {
             currentTrack.tileAttrs = {};
         }
@@ -376,7 +381,7 @@ function restoreSession() {
             selectAttribute('road', session.selectedRoadAttr);
         }
         if (session.selectedWallAttr) {
-            selectAttribute('wall', session.selectedWallAttr);
+            selectAttribute('wall', session.selectedWallAttr === 'repulsor' ? 'default' : session.selectedWallAttr);
         }
 
         const editorName = document.getElementById('editor-track-name');
@@ -1579,6 +1584,7 @@ document.getElementById('btn-garage').addEventListener('click', () => {
         trainTimer = 0;
         trainTelemetry = [];
         renderTrainTelemetryChart();
+        localStorage.removeItem('neurotrack_brain_' + currentTrackName);
         if (geneticAlgo) {
             geneticAlgo.initialize();
             geneticAlgo.bestBrain = null;

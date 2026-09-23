@@ -89,8 +89,14 @@ class NeuralNetwork {
       // Biases initialized: throttle (output neuron 0) gets a positive forward exploration bias (+0.75)
       const isOutputLayer = (i === this.layerSizes.length - 2);
       for (let b = 0; b < fanOut; b++) {
-        if (isOutputLayer && b === 0) {
-          this.weights[offset + b] = 0.75;
+        if (isOutputLayer) {
+          if (b === 0) {
+            this.weights[offset + b] = 0.75;
+          } else if (b === 2 || b === 3) {
+            this.weights[offset + b] = (Math.random() * 2 - 1) * 0.3;
+          } else {
+            this.weights[offset + b] = 0;
+          }
         } else {
           this.weights[offset + b] = 0;
         }
@@ -408,24 +414,24 @@ class GeneticAlgorithm {
       });
     }
 
-    // Stagnation detection: if fitness hasn't improved in 8 generations, trigger adaptive hyper-mutation
+    // Stagnation detection: reset on any true improvement
     if (!this.stagnationGen) this.stagnationGen = 0;
     if (!this.lastBestFitness) this.lastBestFitness = 0;
     
-    if (this.bestFitness > this.lastBestFitness + 1.0) {
+    if (this.bestFitness > this.lastBestFitness + 0.05) {
         this.lastBestFitness = this.bestFitness;
         this.stagnationGen = 0;
     } else {
         this.stagnationGen++;
     }
 
-    // Adaptive hyper-mutation factor when stagnant to explore fresh cornering lines
-    const stagnationFactor = this.stagnationGen > 8 ? Math.min(2.5, 1.0 + ((this.stagnationGen - 8) / 8)) : 1.0;
-    const effectiveMutRate = Math.min(0.45, this.mutationRate * stagnationFactor);
-    const effectiveMutStrength = Math.min(0.70, this.mutationStrength * stagnationFactor);
+    // Adaptive mutation: gentle ramp without shredding learned cornering lines
+    const stagnationFactor = this.stagnationGen > 6 ? Math.min(1.8, 1.0 + ((this.stagnationGen - 6) / 6)) : 1.0;
+    const effectiveMutRate = Math.min(0.22, this.mutationRate * stagnationFactor);
+    const effectiveMutStrength = Math.min(0.35, this.mutationStrength * stagnationFactor);
 
-    // Controlled fresh injection (5% of population)
-    let randomCount = Math.max(1, Math.floor(popSize * 0.05));
+    // Controlled fresh injection (4% of population)
+    let randomCount = Math.max(1, Math.floor(popSize * 0.04));
     for (let i = 0; i < randomCount && nextGen.length < popSize; i++) {
       nextGen.push({
         brain: new NeuralNetwork(this.layerSizes),
@@ -470,11 +476,13 @@ class GeneticAlgorithm {
    */
   _selectParent() {
     const pop = this.population;
-    const tournamentSize = 4;
+    // Selection pool focuses on top 40% performers to prevent breeding from early crashers
+    const poolSize = Math.max(2, Math.floor(pop.length * 0.4));
+    const tournamentSize = 3;
     let best = null;
 
     for (let i = 0; i < tournamentSize; i++) {
-      const idx = Math.floor(Math.random() * pop.length);
+      const idx = Math.floor(Math.random() * poolSize);
       const contender = pop[idx];
       if (!best || isBetterCandidate(contender, best)) {
         best = contender;

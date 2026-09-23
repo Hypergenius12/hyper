@@ -730,7 +730,6 @@ class Track {
         switch (wall) {
             case 'bouncy': return '#b026ff';
             case 'slide': return '#00ffcc';
-            case 'repulsor': return '#f97316';
             default: return '#cccccc';
         }
     }
