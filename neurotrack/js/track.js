@@ -1200,7 +1200,7 @@ class Track {
                 for (let c = 0; c < this.cols; c++) {
                     const type = this.getTileType(c, r);
                     if (type.id !== 0) {
-                        this.checkpoints.push({ x: c * TILE_SIZE + TILE_SIZE / 2, y: r * TILE_SIZE + TILE_SIZE / 2, radius: TILE_SIZE * 0.85 });
+                        this.checkpoints.push({ x: c * TILE_SIZE + TILE_SIZE / 2, y: r * TILE_SIZE + TILE_SIZE / 2, radius: 45 });
                     }
                 }
             }
@@ -1408,18 +1408,40 @@ class Track {
         const finalPath = foundPath || longestPath;
         if (finalPath.length > 0) {
             for (const pt of finalPath) {
+                const type = this.getTileType(pt.c, pt.r);
+                let cpX = pt.c * TILE_SIZE + TILE_SIZE / 2;
+                let cpY = pt.r * TILE_SIZE + TILE_SIZE / 2;
+
+                // On curves, place checkpoint at the apex along the road centerline
+                if (type && type.ports) {
+                    const [top, right, bottom, left] = type.ports;
+                    if (top && right && !bottom && !left) { // TR
+                        cpX = pt.c * TILE_SIZE + 65;
+                        cpY = pt.r * TILE_SIZE + 35;
+                    } else if (!top && right && bottom && !left) { // BR
+                        cpX = pt.c * TILE_SIZE + 65;
+                        cpY = pt.r * TILE_SIZE + 65;
+                    } else if (!top && !right && bottom && left) { // BL
+                        cpX = pt.c * TILE_SIZE + 35;
+                        cpY = pt.r * TILE_SIZE + 65;
+                    } else if (top && !right && !bottom && left) { // TL
+                        cpX = pt.c * TILE_SIZE + 35;
+                        cpY = pt.r * TILE_SIZE + 35;
+                    }
+                }
+
                 this.checkpoints.push({
-                    x: pt.c * TILE_SIZE + TILE_SIZE / 2,
-                    y: pt.r * TILE_SIZE + TILE_SIZE / 2,
-                    radius: TILE_SIZE * 0.85
+                    x: cpX,
+                    y: cpY,
+                    radius: 45
                 });
             }
-            // Add the start line again as the final checkpoint to complete the loop
+            // Add the start position again as the final checkpoint to complete the loop
             if (foundPath) {
                 this.checkpoints.push({
-                    x: finalPath[0].c * TILE_SIZE + TILE_SIZE / 2,
-                    y: finalPath[0].r * TILE_SIZE + TILE_SIZE / 2,
-                    radius: TILE_SIZE * 0.85
+                    x: this.startPos ? this.startPos.x : (finalPath[0].c * TILE_SIZE + TILE_SIZE / 2),
+                    y: this.startPos ? this.startPos.y : (finalPath[0].r * TILE_SIZE + TILE_SIZE / 2),
+                    radius: 45
                 });
             }
         }

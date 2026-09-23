@@ -2175,6 +2175,7 @@ function spawnAICars() {
         car.maxSpeed = maxSpd;
         car.turnRate = tSpd;
         car.acceleration = accel;
+        car.brakeForce = 650;
         car.brain = brains[i];
     }
 }

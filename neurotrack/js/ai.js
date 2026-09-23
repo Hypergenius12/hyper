@@ -92,6 +92,8 @@ class NeuralNetwork {
         if (isOutputLayer) {
           if (b === 0) {
             this.weights[offset + b] = 0.75;
+          } else if (b === 1) {
+            this.weights[offset + b] = -0.3; // Brake slightly below threshold so cars start moving
           } else if (b === 2 || b === 3) {
             this.weights[offset + b] = (Math.random() * 2 - 1) * 0.3;
           } else {

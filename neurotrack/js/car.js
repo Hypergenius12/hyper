@@ -55,7 +55,7 @@ class Car {
         // Physics tuning
         this.maxSpeed = 380;
         this.acceleration = 420;
-        this.brakeForce = 320;
+        this.brakeForce = 650;
         this.friction = 1.8;
         this.turnRate = 4.0;
         this.offTrackPenalty = 0.92;
@@ -124,14 +124,47 @@ class Car {
             const outputs = this.brain.feedforward(inputs);
 
             // Smooth analog throttle and brake: cars are allowed to slow down for corners
-            const rawThrottle = Math.min(1, outputs[0] * 1.2);
-            const rawBrake = Math.min(1, outputs[1] * 1.2);
-            const netThrottle = Math.max(0, rawThrottle - rawBrake);
-            const netBrake = Math.max(0, rawBrake - rawThrottle);
+            // outputs[0]: throttle, outputs[1]: brake
+            const throttleIntent = Math.min(1, Math.max(0, (outputs[0] - 0.25) / 0.55));
+            const brakeIntent = Math.min(1, Math.max(0, (outputs[1] - 0.35) / 0.5));
             
+            // Decoupled throttle & brake: braking directly releases throttle for high braking authority
+            let netThrottle = throttleIntent * Math.max(0, 1 - brakeIntent * 1.5);
+            let netBrake = brakeIntent;
+
             // For steering, subtract left from right, then amplify so they can turn sharply if needed
             let steer = outputs[3] - outputs[2];
             steer = Math.max(-1, Math.min(1, steer * 1.7));
+
+            // Safe cornering speed: standard curve centerline radius is 50 px.
+            // With angular rate currentTurnRate, the centripetal limit without running wide is vSafe = 50 * currentTurnRate.
+            const vSafe = 50 * currentTurnRate;
+
+            // 1. Anticipatory corner entry braking:
+            // If the road ahead ends in a wall/turn within braking distance, brake before entering the corner
+            if (this.sensors && this.sensors[3] && !this.airborne) {
+                const frontDist = this.sensors[3].dist;
+                if (this.speed > vSafe && frontDist < 160) {
+                    const requiredBrakingDist = ((this.speed * this.speed) - (vSafe * vSafe)) / (2 * currentBrakeForce);
+                    if (frontDist < requiredBrakingDist + 40) {
+                        const urgency = Math.min(1, (requiredBrakingDist + 40 - frontDist) / 50);
+                        netBrake = Math.max(netBrake, urgency);
+                        netThrottle *= Math.max(0, 1 - urgency * 2.0);
+                    }
+                }
+            }
+
+            // 2. Corner speed management & tire scrub:
+            // When steering sharply into a turn, bleed excess speed above vSafe so the car turns tightly without sliding into outer walls
+            const absSteer = Math.abs(steer);
+            if (absSteer > 0.15 && !this.airborne) {
+                if (this.speed > vSafe) {
+                    const excess = this.speed - vSafe;
+                    const cornerBrakeDecel = Math.min(excess, currentBrakeForce * dt * Math.pow(absSteer, 1.2));
+                    this.speed -= cornerBrakeDecel;
+                    netThrottle *= Math.max(0, 1 - (excess / 100));
+                }
+            }
 
             // Store recurrent memory for next frame
             for (let i = 0; i < this.memory.length; i++) {
@@ -179,6 +212,15 @@ class Car {
                 const dir = this.speed > 0 ? 1 : -1;
                 if (keys.left) { this.angle -= currentTurnRate * dt * dir; this.isTurning = true; }
                 if (keys.right) { this.angle += currentTurnRate * dt * dir; this.isTurning = true; }
+                
+                // Human cornering scrub: turning sharply bleeds excess speed above safe cornering limit
+                if (keys.left || keys.right) {
+                    const vSafe = 50 * currentTurnRate;
+                    if (this.speed > vSafe) {
+                        const excess = this.speed - vSafe;
+                        this.speed -= Math.min(excess, (currentBrakeForce * 0.4) * dt);
+                    }
+                }
             }
         }
 
@@ -519,13 +561,15 @@ class Car {
                         this.x += Math.cos(this.angle) * 2;
                         this.y += Math.sin(this.angle) * 2;
                     } else {
+                        const crashSpeed = Math.abs(this.speed);
                         this.speed = 0;
                         if (this.alive && !this.brain && typeof playCrashSound === 'function') {
                             playCrashSound();
                         }
                         this.alive = false;
                         this.crashed = true;
-                        this.accumulatedWallPenalty = (this.accumulatedWallPenalty || 0) + 20;
+                        const speedRatio = Math.min(1, crashSpeed / this.maxSpeed);
+                        this.accumulatedWallPenalty = (this.accumulatedWallPenalty || 0) + 25 + speedRatio * 35;
                     }
                 }
                 }
@@ -574,7 +618,9 @@ class Car {
         }
 
         const checkpointScore = (this.totalCheckpoints + this.checkpointIndex) * 10 + progress * 10;
-        const speedBonus = Math.max(0, this.speed / this.maxSpeed) * 0.15 + (targetVelocityBonus * 0.2);
+        const speedBonus = this.isTurning
+            ? (targetVelocityBonus * 0.2) // During cornering, reward heading toward the checkpoint without penalizing safe cornering speed
+            : (Math.max(0, this.speed / this.maxSpeed) * 0.15 + (targetVelocityBonus * 0.2));
         const survivalBonus = Math.min(this.totalTime * 0.02, 1.0); // capped at 1.0
         
         // Prioritize speed of completion: Massive bonus for completing a lap, scaled by how fast they did it!
