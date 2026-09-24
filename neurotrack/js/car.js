@@ -135,10 +135,11 @@ class Car {
             const netThrottle = throttleIntent * Math.max(0.12, 1 - brakeIntent * 0.88);
             const netBrake = brakeIntent;
 
-            // Steering with rate-limited smoothing to eliminate glitchy twitching
-            const rawSteer = Math.max(-1, Math.min(1, (outputs[3] - outputs[2]) * 1.6));
+            // Steering authority: map moderate neural intent (~0.35 difference) to full steering lock (1.0)
+            // so bots have agile turning authority for sharp corners without understeering into walls
+            const rawSteer = Math.max(-1, Math.min(1, (outputs[3] - outputs[2]) / 0.35));
             if (this.smoothSteer === undefined) this.smoothSteer = 0;
-            this.smoothSteer += (rawSteer - this.smoothSteer) * Math.min(1, 16 * dt);
+            this.smoothSteer += (rawSteer - this.smoothSteer) * Math.min(1, 14 * dt);
             const steer = this.smoothSteer;
 
             // Store recurrent memory for next frame
@@ -157,13 +158,13 @@ class Car {
                     // Only if facing an obstacle at point-blank range (< 45px) does speed floor drop to avoid a crash.
                     const frontSensor = (this.sensors && this.sensors.length > 3) ? this.sensors[Math.floor(this.sensors.length / 2)] : null;
                     const frontDist = frontSensor ? frontSensor.dist : 280;
-                    let speedFloor = 150;
-                    if (frontDist < 45) {
-                        speedFloor = Math.max(0, (frontDist - 15) * 5);
+                    let speedFloor = 160;
+                    if (frontDist < 50) {
+                        speedFloor = Math.max(0, (frontDist - 15) * 4.5);
                     }
 
                     if (this.speed > speedFloor) {
-                        const decelRate = 320; // Smooth, controllable braking deceleration (not 650 slam)
+                        const decelRate = 340; // Smooth, controllable braking deceleration
                         const decel = Math.min(this.speed - speedFloor, decelRate * netBrake * dt);
                         this.speed -= decel;
                     }
@@ -187,10 +188,12 @@ class Car {
             if (!this.airborne) {
                 // Physical steering: steering effectiveness scales with speed at low velocity,
                 // preventing glitchy spinning in place when almost stopped
-                const speedSteerFactor = Math.min(1.0, Math.max(0.2, Math.abs(this.speed) / 50));
+                const speedSteerFactor = Math.min(1.0, Math.max(0.18, Math.abs(this.speed) / 50));
                 const dir = this.speed >= 0 ? 1 : -1;
                 if (Math.abs(steer) > 0.05) this.isTurning = true;
                 this.angle += currentTurnRate * steer * speedSteerFactor * dt * dir;
+                while (this.angle > Math.PI) this.angle -= Math.PI * 2;
+                while (this.angle < -Math.PI) this.angle += Math.PI * 2;
             }
 
             // Prevent boolean key overrides
@@ -211,6 +214,8 @@ class Car {
                 const dir = this.speed > 0 ? 1 : -1;
                 if (keys.left) { this.angle -= currentTurnRate * dt * dir; this.isTurning = true; }
                 if (keys.right) { this.angle += currentTurnRate * dt * dir; this.isTurning = true; }
+                while (this.angle > Math.PI) this.angle -= Math.PI * 2;
+                while (this.angle < -Math.PI) this.angle += Math.PI * 2;
                 
                 // Human cornering scrub: turning sharply bleeds excess speed above safe cornering limit
                 if (keys.left || keys.right) {
@@ -473,7 +478,15 @@ class Car {
                     }
                 } else {
                     if (offCount >= 1) {
-                        this.speed *= Math.pow(this.offTrackPenalty, dt * 60);
+                        // Dynamic apex & grass friction:
+                        // If car center is on the road (centerCheck === true), clipping curbs with 1 or 2 corners
+                        // is normal racing line apexing — applies mild scrub (0.992 / 0.985) instead of choking the car dead.
+                        // Only when 3+ corners are off track does heavy grass friction apply (0.94).
+                        let frictionFactor = 0.94;
+                        if (centerCheck === true) {
+                            frictionFactor = (offCount === 1) ? 0.992 : 0.985;
+                        }
+                        this.speed *= Math.pow(frictionFactor, dt * 60);
                     }
                 }
 
