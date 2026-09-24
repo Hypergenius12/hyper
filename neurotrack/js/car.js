@@ -125,10 +125,14 @@ class Car {
 
             const outputs = this.brain.feedforward(inputs);
 
-            // Analog throttle, brake, and steering governed directly by neural network outputs:
+            // High-performance racing throttle & braking:
             // outputs[0]: throttle intent, outputs[1]: brake intent
-            const netThrottle = Math.max(0, outputs[0] - outputs[1]);
-            const netBrake = Math.max(0, outputs[1] - outputs[0]);
+            // Scale throttle so forward output (>= 0.65) delivers 100% full racing acceleration
+            const rawThrottle = Math.min(1, Math.max(0, (outputs[0] - 0.2) / 0.45));
+            // Brake triggers when neuron 1 is actively excited (> 0.45)
+            const rawBrake = Math.min(1, Math.max(0, (outputs[1] - 0.45) / 0.4));
+            const netThrottle = rawThrottle * Math.max(0, 1 - rawBrake * 1.5);
+            const netBrake = rawBrake;
 
             // For steering, subtract left from right, amplified for agile cornering
             let steer = Math.max(-1, Math.min(1, (outputs[3] - outputs[2]) * 1.8));
