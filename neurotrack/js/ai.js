@@ -86,17 +86,17 @@ class NeuralNetwork {
       }
       offset += numWeights;
 
-      // Biases initialized: throttle (output neuron 0) gets positive forward drive (+1.0),
-      // brake (output neuron 1) gets negative bias (-0.8) so cars drive forward from Gen 0
+      // Biases initialized: throttle (output neuron 0) gets positive forward drive (+0.8),
+      // brake (output neuron 1) gets negative bias (-0.8) so cars drive forward smoothly from Gen 0
       const isOutputLayer = (i === this.layerSizes.length - 2);
       for (let b = 0; b < fanOut; b++) {
         if (isOutputLayer) {
           if (b === 0) {
-            this.weights[offset + b] = 1.0;
+            this.weights[offset + b] = 0.8;
           } else if (b === 1) {
             this.weights[offset + b] = -0.8;
           } else if (b === 2 || b === 3) {
-            this.weights[offset + b] = (Math.random() * 2 - 1) * 0.3;
+            this.weights[offset + b] = (Math.random() * 2 - 1) * 0.15;
           } else {
             this.weights[offset + b] = 0;
           }

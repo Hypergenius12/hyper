@@ -60,6 +60,7 @@ class Car {
         this.brakeForce = 650;
         this.friction = 1.8;
         this.turnRate = 4.0;
+        this.smoothSteer = 0;
         this.offTrackPenalty = 0.92;
     }
 
@@ -125,17 +126,20 @@ class Car {
 
             const outputs = this.brain.feedforward(inputs);
 
-            // High-performance racing throttle & braking:
-            // outputs[0]: throttle intent, outputs[1]: brake intent
-            // Scale throttle so forward output (>= 0.65) delivers 100% full racing acceleration
-            const rawThrottle = Math.min(1, Math.max(0, (outputs[0] - 0.2) / 0.45));
-            // Brake triggers when neuron 1 is actively excited (> 0.45)
-            const rawBrake = Math.min(1, Math.max(0, (outputs[1] - 0.45) / 0.4));
-            const netThrottle = rawThrottle * Math.max(0, 1 - rawBrake * 1.5);
-            const netBrake = rawBrake;
+            // Smooth analog throttle, brake, and steering from neural network:
+            // outputs[0]: throttle, outputs[1]: brake
+            const throttleIntent = Math.min(1, Math.max(0, (outputs[0] - 0.15) / 0.65));
+            const brakeIntent = Math.min(1, Math.max(0, (outputs[1] - 0.35) / 0.55));
 
-            // For steering, subtract left from right, amplified for agile cornering
-            let steer = Math.max(-1, Math.min(1, (outputs[3] - outputs[2]) * 1.8));
+            // Throttle maintains positive baseline power even when modulating brakes for corners
+            const netThrottle = throttleIntent * Math.max(0.12, 1 - brakeIntent * 0.88);
+            const netBrake = brakeIntent;
+
+            // Steering with rate-limited smoothing to eliminate glitchy twitching
+            const rawSteer = Math.max(-1, Math.min(1, (outputs[3] - outputs[2]) * 1.6));
+            if (this.smoothSteer === undefined) this.smoothSteer = 0;
+            this.smoothSteer += (rawSteer - this.smoothSteer) * Math.min(1, 16 * dt);
+            const steer = this.smoothSteer;
 
             // Store recurrent memory for next frame
             for (let i = 0; i < this.memory.length; i++) {
@@ -147,8 +151,30 @@ class Car {
                     this.speed += currentAccel * netThrottle * dt;
                 }
                 if (netBrake > 0) {
-                    // AI braking slows the car down smoothly without flipping into reverse
-                    this.speed = Math.max(0, this.speed - currentBrakeForce * netBrake * dt);
+                    // Safe cornering speed floor:
+                    // When slowing down for turns, AI smoothly sheds speed down to safe cornering speed (~150-180 px/s)
+                    // instead of slamming down to a dead stop ("almost stopped").
+                    // Only if facing an obstacle at point-blank range (< 45px) does speed floor drop to avoid a crash.
+                    const frontSensor = (this.sensors && this.sensors.length > 3) ? this.sensors[Math.floor(this.sensors.length / 2)] : null;
+                    const frontDist = frontSensor ? frontSensor.dist : 280;
+                    let speedFloor = 150;
+                    if (frontDist < 45) {
+                        speedFloor = Math.max(0, (frontDist - 15) * 5);
+                    }
+
+                    if (this.speed > speedFloor) {
+                        const decelRate = 320; // Smooth, controllable braking deceleration (not 650 slam)
+                        const decel = Math.min(this.speed - speedFloor, decelRate * netBrake * dt);
+                        this.speed -= decel;
+                    }
+                }
+
+                // Cornering scrub: turning sharply naturally bleeds excess speed above safe cornering limit (vSafe ~ 180-200 px/s)
+                // But never slows the car below vSafe!
+                const vSafe = 45 * currentTurnRate;
+                if (Math.abs(steer) > 0.15 && this.speed > vSafe) {
+                    const excess = this.speed - vSafe;
+                    this.speed -= Math.min(excess, 220 * dt * Math.abs(steer));
                 }
             }
             if (netThrottle > 0.05 || netBrake > 0.05) {
@@ -159,10 +185,12 @@ class Car {
             }
 
             if (!this.airborne) {
-                // Allow AI to steer smoothly (dir=1 for forward or stopped, dir=-1 for reverse)
+                // Physical steering: steering effectiveness scales with speed at low velocity,
+                // preventing glitchy spinning in place when almost stopped
+                const speedSteerFactor = Math.min(1.0, Math.max(0.2, Math.abs(this.speed) / 50));
                 const dir = this.speed >= 0 ? 1 : -1;
                 if (Math.abs(steer) > 0.05) this.isTurning = true;
-                this.angle += currentTurnRate * steer * dt * dir;
+                this.angle += currentTurnRate * steer * speedSteerFactor * dt * dir;
             }
 
             // Prevent boolean key overrides
@@ -994,6 +1022,7 @@ class Car {
         this.sensorLength = (typeof window !== 'undefined' && window.fitnessRewards && window.fitnessRewards.sensorRange) ? window.fitnessRewards.sensorRange : 280;
         this.crossroadAxis = null;
         this.memory = [];
+        this.smoothSteer = 0;
     }
 }
 
