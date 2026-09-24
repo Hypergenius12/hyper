@@ -1,39 +1,22 @@
 :root {
     --bg-main: #141416;
-    --bg-darker: #0d0d0f;
-    --bg-panel: #1e1e24;
-    --bg-panel-header: #26262e;
+    --bg-panel: #24242a;
+    --bg-panel-header: #1c1c22;
     --bg-card: #282832;
-    --border-color: #323240;
-    --border-highlight: #454558;
-    --text-primary: #f4f4f6;
-    --text-secondary: #9494a8;
-    --text-muted: #646478;
+    --border-color: #121216;
+    --border-highlight: #424250;
+    --text-primary: #f2f2f5;
+    --text-secondary: #9a9ab0;
     
-    /* GarageBand / Pro Synth Accents */
-    --accent: #ff6b00; /* Signature Analog Warmth */
-    --accent-hover: #ff8533;
-    --accent-glow: rgba(255, 107, 0, 0.4);
-    --accent-secondary: #00d2ff;
-    --accent-secondary-glow: rgba(0, 210, 255, 0.35);
-    --danger: #ff334b;
-    --success: #10b981;
-    --warning: #f59e0b;
+    /* Dynamic Pro Synth Accents */
+    --accent: #00c3ff;
+    --danger: #ff3b4e;
+    --success: #00cc66;
     
-    /* LCD & Meter Colors */
-    --lcd-bg: #091310;
-    --lcd-text: #22c55e;
-    --lcd-glow: rgba(34, 197, 94, 0.5);
-    --lcd-amber: #f59e0b;
+    --radius-md: 4px;
+    --radius-lg: 7px;
     
-    --radius-sm: 4px;
-    --radius-md: 6px;
-    --radius-lg: 10px;
-    --radius-xl: 14px;
-    
-    --transition-fast: 0.15s ease;
-    --shadow-knob: 0 4px 8px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25);
-    --shadow-panel: 0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+    --transition-fast: 0.12s ease;
 }
 
 * {
@@ -46,222 +29,149 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: var(--bg-main);
     background-image: 
-        radial-gradient(circle at 50% 0%, rgba(255, 107, 0, 0.05) 0%, transparent 60%),
-        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-    background-size: 100% 100%, 20px 20px, 20px 20px;
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 65%),
+        radial-gradient(#282830 1px, transparent 1px);
+    background-size: 100% 100%, 8px 8px;
     color: var(--text-primary);
     min-height: 100vh;
-    height: 100vh;
     overflow: hidden;
     user-select: none;
 }
 
-/* Glass & Rack Panel Styling */
+/* 3D Hardware Rack Panels */
 .glass-panel {
-    background: var(--bg-panel);
-    border: 1px solid var(--border-color);
+    background: linear-gradient(180deg, #26262e 0%, #1c1c22 100%);
+    border-top: 1px solid #444452;
+    border-left: 1px solid #363642;
+    border-right: 1px solid #141418;
+    border-bottom: 3px solid #0d0d12;
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-panel);
-    position: relative;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 .app-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    padding: 0.6rem;
-    gap: 0.6rem;
+    padding: 0.5rem;
+    gap: 0.5rem;
 }
 
-/* ==========================================================================
-   1. STUDIO HEADER & TRANSPORT BAR (GARAGEBAND STYLE)
-   ========================================================================== */
+/* Header */
 header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 1rem;
-    background: linear-gradient(180deg, #2b2b36 0%, #1c1c24 100%);
-    border: 1px solid var(--border-color);
+    padding: 0.5rem 0.8rem;
     border-radius: var(--radius-lg);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
-    min-height: 56px;
-    gap: 1rem;
+    background: linear-gradient(180deg, #2a2a34 0%, #1c1c22 100%);
+    gap: 0.5rem;
 }
 
 .logo {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 800;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
     color: var(--text-primary);
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
     white-space: nowrap;
-}
-
-.logo-badge {
-    background: var(--accent);
-    color: #fff;
-    padding: 0.15rem 0.45rem;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 900;
-    letter-spacing: 1px;
-    box-shadow: 0 0 10px var(--accent-glow);
+    flex-shrink: 0;
 }
 
 .logo i {
     color: var(--accent);
-    filter: drop-shadow(0 0 6px var(--accent-glow));
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 60%, transparent));
 }
 
-/* Transport Controls & GarageBand Central LCD Screen */
-.transport-container {
+.global-controls, .export-controls {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
-    flex: 1;
-    justify-content: center;
-    max-width: 800px;
+    gap: 0.35rem;
+    flex-shrink: 0;
 }
 
-.lcd-display {
-    background: var(--lcd-bg);
-    border: 1px solid #1a3a28;
-    border-radius: var(--radius-md);
-    padding: 0.35rem 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 1.2rem;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.8), 0 0 12px rgba(34, 197, 94, 0.1);
-    font-family: 'JetBrains Mono', monospace, Consolas;
-}
-
-.lcd-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.lcd-label {
-    font-size: 0.6rem;
-    color: #3b8256;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 700;
-}
-
-.lcd-value {
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: var(--lcd-text);
-    text-shadow: 0 0 8px var(--lcd-glow);
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-}
-
-/* Master VU Meter */
-.vu-meter-container {
-    display: flex;
-    gap: 3px;
-    height: 18px;
-    align-items: flex-end;
-    background: #050a08;
-    padding: 2px;
-    border-radius: 2px;
-    border: 1px solid #14281e;
-}
-
-.vu-bar {
-    width: 6px;
-    height: 100%;
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 1px;
-}
-
-.vu-segment {
-    width: 100%;
-    height: 2px;
-    background: #14281e;
-    border-radius: 1px;
-    transition: background 0.05s ease;
-}
-
-.vu-segment.active-green { background: #22c55e; box-shadow: 0 0 4px rgba(34, 197, 94, 0.8); }
-.vu-segment.active-yellow { background: #f59e0b; box-shadow: 0 0 4px rgba(245, 158, 11, 0.8); }
-.vu-segment.active-red { background: #ef4444; box-shadow: 0 0 4px rgba(239, 68, 68, 0.8); }
-
-/* Buttons & Hardware Stompboxes */
+/* 3D Hardware Push Buttons */
 .btn {
-    background: linear-gradient(180deg, #3a3a48 0%, #252530 100%);
-    border: 1px solid #48485a;
-    border-bottom: 2px solid #181820;
+    background: linear-gradient(180deg, #444452 0%, #30303c 45%, #22222a 100%);
+    border-top: 1px solid #58586a;
+    border-left: 1px solid #4a4a58;
+    border-right: 1px solid #16161c;
+    border-bottom: 3px solid #0e0e12;
     color: var(--text-primary);
-    padding: 0.45rem 0.9rem;
+    padding: 0.4rem 0.75rem;
     border-radius: var(--radius-md);
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     cursor: pointer;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.18);
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.35rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9);
     transition: all var(--transition-fast);
     white-space: nowrap;
 }
 
 .btn:hover {
-    background: linear-gradient(180deg, #444456 0%, #2c2c3a 100%);
-    border-color: #58586e;
-    color: #fff;
+    background: linear-gradient(180deg, #4e4e5e 0%, #383846 45%, #282832 100%);
+    border-top-color: #6a6a7e;
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    box-shadow: 0 5px 8px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.25);
+    color: #fff;
 }
 
 .btn:active {
-    background: linear-gradient(180deg, #202028 0%, #2a2a36 100%);
-    border-top: 2px solid #14141a;
-    border-bottom: 1px solid #48485a;
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.6);
-    transform: translateY(1px);
+    background: linear-gradient(180deg, #1e1e24 0%, #282832 100%);
+    border-top: 2px solid #0e0e12;
+    border-bottom: 1px solid #4a4a58;
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.8);
+    transform: translateY(2px);
 }
 
+/* 3D Primary Button (Dynamic Theme Gradient) */
 .btn.primary {
-    background: linear-gradient(180deg, var(--accent-hover) 0%, var(--accent) 100%);
-    border: 1px solid #ffa366;
-    border-bottom: 2px solid #b34700;
-    color: #fff;
-    box-shadow: 0 4px 12px var(--accent-glow);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--accent) 75%, #ffffff 25%) 0%,
+        var(--accent) 50%,
+        color-mix(in srgb, var(--accent) 70%, #000000 30%) 100%
+    );
+    border-top: 1px solid color-mix(in srgb, var(--accent) 55%, #ffffff 45%);
+    border-left: 1px solid color-mix(in srgb, var(--accent) 65%, #ffffff 35%);
+    border-right: 1px solid color-mix(in srgb, var(--accent) 65%, #000000 35%);
+    border-bottom: 3px solid color-mix(in srgb, var(--accent) 45%, #000000 55%);
+    color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 1px 1px rgba(255,255,255,0.3);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 
 .btn.primary:hover {
-    background: linear-gradient(180deg, #ffa366 0%, var(--accent-hover) 100%);
-    box-shadow: 0 6px 16px rgba(255, 107, 0, 0.6);
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--accent) 85%, #ffffff 15%) 0%,
+        color-mix(in srgb, var(--accent) 90%, #ffffff 10%) 50%,
+        color-mix(in srgb, var(--accent) 80%, #000000 20%) 100%
+    );
+    box-shadow: 0 6px 12px rgba(0,0,0,0.6), 0 0 18px color-mix(in srgb, var(--accent) 55%, transparent), inset 0 1px 1px rgba(255,255,255,0.4);
+    transform: translateY(-1px);
 }
 
-.btn.play-btn {
-    min-width: 80px;
-    justify-content: center;
-    background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-    border-color: #4ade80;
-    border-bottom-color: #14532d;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
-}
-
-.btn.play-btn.playing {
-    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-    border-color: #fcd34d;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+.btn.primary:active {
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--accent) 60%, #000000 40%) 0%,
+        var(--accent) 100%
+    );
+    border-top: 2px solid color-mix(in srgb, var(--accent) 35%, #000000 65%);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 65%, #ffffff 35%);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.8);
+    transform: translateY(2px);
 }
 
 .btn.small {
@@ -271,211 +181,72 @@ header {
 
 .btn.icon-btn {
     padding: 0.4rem;
-    width: 32px;
-    height: 32px;
-    justify-content: center;
     border-radius: var(--radius-md);
+    width: 34px;
+    height: 34px;
+    justify-content: center;
 }
 
-.global-controls, .export-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-
-/* ==========================================================================
-   2. WORKSPACE LAYOUT (3-COLUMN DAW)
-   ========================================================================== */
+/* Workspace */
 .workspace {
     display: grid;
-    grid-template-columns: 280px 1fr 300px;
-    gap: 0.6rem;
+    grid-template-columns: 280px 1fr 320px;
+    gap: 0.5rem;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
 }
 
+/* Panels */
 section {
+    border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
 .panel-header {
-    background: var(--bg-panel-header);
-    padding: 0.5rem 0.8rem;
-    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(180deg, #22222a 0%, #181820 100%);
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid #101016;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 4px rgba(0,0,0,0.3);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-top-left-radius: var(--radius-lg);
-    border-top-right-radius: var(--radius-lg);
 }
 
 .panel-header h2 {
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-size: 0.85rem;
+    font-weight: 800;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 1px;
-    display: flex;
-    align-items: center;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* Center Panel */
+.center-panel {
     gap: 0.5rem;
-}
-
-/* ==========================================================================
-   3. LEFT PANEL: TRACK / LAYER STRIP (DAW STYLE)
-   ========================================================================== */
-.tracks-panel {
-    background: var(--bg-panel);
-}
-
-.tracks-list {
-    flex: 1;
+    background: transparent;
+    border: none;
     overflow-y: auto;
-    padding: 0.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    padding-right: 0.3rem;
 }
 
-.track-item {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-left: 4px solid var(--accent);
+/* 3D CRT Oscilloscope Screen */
+.visualizer-container {
+    height: 180px;
     border-radius: var(--radius-md);
-    padding: 0.6rem 0.8rem;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    transition: all var(--transition-fast);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
-
-.track-item:hover {
-    background: #30303c;
-    border-color: var(--border-highlight);
-    transform: translateX(2px);
-}
-
-.track-item.active {
-    background: #343444;
-    border-color: var(--accent);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-
-.track-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.track-title-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    overflow: hidden;
-}
-
-.track-icon {
-    font-size: 0.85rem;
-    color: var(--accent);
-}
-
-.track-name {
-    font-weight: 700;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.track-actions {
-    display: flex;
-    gap: 0.25rem;
-}
-
-.track-btn {
-    background: #20202a;
-    border: 1px solid #363644;
-    color: var(--text-muted);
-    cursor: pointer;
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 800;
+    background: #08080c;
+    border-top: 2px solid #101016;
+    border-left: 2px solid #101016;
+    border-right: 2px solid #282834;
+    border-bottom: 2px solid #343444;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.95), 0 4px 10px rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition-fast);
-}
-
-.track-btn:hover {
-    color: var(--text-primary);
-    background: #363644;
-    border-color: #505064;
-}
-
-.track-btn.mute.active { 
-    color: #fff; 
-    background: var(--danger); 
-    border-color: #ff6677;
-    box-shadow: 0 0 8px rgba(255, 51, 75, 0.6); 
-}
-
-.track-btn.solo.active { 
-    color: #000; 
-    background: var(--warning); 
-    border-color: #fde047;
-    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); 
-}
-
-.track-btn.mutate:hover {
-    color: #fff;
-    background: var(--accent-secondary);
-    border-color: #67e8f9;
-}
-
-.track-btn.delete:hover { 
-    color: #fff; 
-    background: var(--danger); 
-}
-
-/* ==========================================================================
-   4. CENTER PANEL: OSCILLOSCOPE, HARDWARE SYNTH RACK & KEYBOARD
-   ========================================================================== */
-.center-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
+    padding: 0;
     overflow: hidden;
-    min-height: 0;
-}
-
-/* Master CRT Oscilloscope Bezel */
-.visualizer-container {
-    height: 150px;
-    min-height: 150px;
-    border-radius: var(--radius-lg);
-    background: #080a0c;
-    border: 2px solid #20242c;
-    box-shadow: inset 0 0 24px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.5);
-    position: relative;
-    overflow: hidden;
-}
-
-.visualizer-container::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-    background-size: 100% 4px, 6px 100%;
-    pointer-events: none;
-    z-index: 5;
-    opacity: 0.7;
 }
 
 #master-visualizer {
@@ -485,16 +256,17 @@ section {
     cursor: pointer;
 }
 
-/* Modular Hardware Synth Rack */
+/* 3D Synth Editor Rack */
 .editor-container {
     flex: 1;
-    border-radius: var(--radius-lg);
-    background: linear-gradient(180deg, #1c1c24 0%, #15151c 100%);
-    border: 1px solid var(--border-color);
-    padding: 0.8rem;
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #22222a 0%, #1a1a20 100%);
+    border: 1px solid #141418;
+    border-top: 1px solid #363644;
+    padding: 1.2rem;
     overflow-y: auto;
     position: relative;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
 }
 
 .empty-state {
@@ -503,93 +275,185 @@ section {
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 .empty-state i {
-    font-size: 2.8rem;
-    margin-bottom: 0.6rem;
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
     color: var(--accent);
-    opacity: 0.5;
+    opacity: 0.6;
 }
 
-/* Hardware Modular Section Blocks */
-.editor-section {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 0.8rem;
-    margin-bottom: 0.8rem;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    position: relative;
-}
-
-.editor-section-header {
+/* Tracks List */
+.tracks-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.8rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-
-.editor-section h3 {
-    font-size: 0.75rem;
-    font-weight: 800;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.4rem;
 }
 
-.editor-section h3 i {
-    color: var(--accent);
+.track-item {
+    background: linear-gradient(180deg, #30303c 0%, #24242e 100%);
+    border-top: 1px solid #444454;
+    border-left: 4px solid var(--accent);
+    border-right: 1px solid #16161e;
+    border-bottom: 2px solid #0e0e14;
+    border-radius: var(--radius-md);
+    padding: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    transition: all var(--transition-fast);
+}
+
+.track-item:hover {
+    background: linear-gradient(180deg, #383846 0%, #2a2a36 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.track-item.active {
+    background: linear-gradient(180deg, #3c3c4a 0%, #2c2c38 100%);
+    border-color: var(--accent);
+    border-left: 4px solid var(--accent);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 10px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.track-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.track-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.track-actions {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.track-btn {
+    background: linear-gradient(180deg, #3c3c4a 0%, #262630 100%);
+    border-top: 1px solid #4e4e5e;
+    border-left: 1px solid #444454;
+    border-right: 1px solid #16161e;
+    border-bottom: 2px solid #0e0e14;
+    color: var(--text-secondary);
+    cursor: pointer;
+    width: 26px;
+    height: 26px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    transition: all var(--transition-fast);
+}
+
+.track-btn:hover {
+    color: #fff;
+    border-top-color: #646478;
+}
+
+.track-btn.active.mute { 
+    color: #fff; 
+    background: linear-gradient(180deg, #ff5566 0%, #cc2233 100%); 
+    border-top-color: #ff8899; 
+    border-bottom-color: #77111a; 
+    box-shadow: 0 0 10px rgba(255, 59, 78, 0.7); 
+}
+
+.track-btn.active.solo { 
+    color: #000; 
+    background: linear-gradient(180deg, #ffcc33 0%, #e6a800 100%); 
+    border-top-color: #ffe066; 
+    border-bottom-color: #805c00; 
+    box-shadow: 0 0 10px rgba(255, 204, 51, 0.7); 
+}
+
+.track-btn.delete:hover { 
+    color: #fff; 
+    background: linear-gradient(180deg, #ff5566 0%, #cc2233 100%); 
+}
+
+/* 3D Modular Sections */
+.editor-section {
+    background: linear-gradient(180deg, #282832 0%, #1e1e26 100%);
+    border-top: 1px solid #3c3c4c;
+    border-left: 1px solid #343442;
+    border-right: 1px solid #14141a;
+    border-bottom: 2px solid #101016;
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 1.2rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.editor-section h3 {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 
 .control-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 1rem;
-    align-items: flex-start;
+    grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+    gap: 1.2rem;
 }
 
 .control-group {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.4rem;
     text-align: center;
 }
 
 .control-label {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 700;
     color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
+/* 3D LCD Value Display */
 .val-display {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', monospace, Consolas;
     font-size: 0.75rem;
     font-weight: 700;
     color: var(--accent);
-    background: #101016;
-    padding: 0.15rem 0.45rem;
-    border-radius: 4px;
-    border: 1px solid #282834;
-    min-width: 50px;
+    background: #0a0a0f;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    border: 1px solid #181824;
+    border-bottom: 1px solid #2e2e3e;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.9);
+    text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
+    min-width: 55px;
     text-align: center;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.6);
 }
 
-/* Custom Hardware Faders & Range Sliders */
+/* 3D Range Faders */
 input[type=range] {
     -webkit-appearance: none;
     width: 100%;
@@ -605,243 +469,79 @@ input[type=range]::-webkit-slider-runnable-track {
     width: 100%;
     height: 6px;
     cursor: pointer;
-    background: #121218;
-    border: 1px solid #2c2c3a;
+    background: #0d0d12;
+    border: 1px solid #1e1e28;
+    border-bottom: 1px solid #343444;
     border-radius: 3px;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.8);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.06);
 }
 
 input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    height: 18px;
-    width: 14px;
-    border-radius: 3px;
-    background: linear-gradient(180deg, #eeeeee 0%, #a0a0a0 100%);
-    border: 1px solid #ffffff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 1px 0 #fff;
+    height: 20px;
+    width: 12px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #6e6e80 0%, #3e3e4a 45%, #24242e 100%);
+    border-top: 1px solid #9a9ab2;
+    border-left: 1px solid #84849a;
+    border-right: 1px solid #181820;
+    border-bottom: 2px solid #0e0e14;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.3);
     cursor: pointer;
-    margin-top: -6px;
-    transition: transform var(--transition-fast), background var(--transition-fast);
+    margin-top: -7px;
+    transition: transform var(--transition-fast), border-color var(--transition-fast);
 }
 
 input[type=range]:hover::-webkit-slider-thumb {
-    background: linear-gradient(180deg, #ffffff 0%, var(--accent) 100%);
-    box-shadow: 0 0 10px var(--accent-glow);
-    transform: scale(1.1);
+    background: linear-gradient(180deg, #84849a 0%, #4e4e5e 45%, #2e2e3a 100%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.8), 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
+    transform: scale(1.08);
 }
 
-/* Hardware Select Dropdown */
+/* 3D Hardware Select Dropdown */
 select {
-    background: linear-gradient(180deg, #252530 0%, #1a1a22 100%);
+    background: linear-gradient(180deg, #30303c 0%, #202028 100%);
     color: var(--text-primary);
-    border: 1px solid #3c3c4e;
-    padding: 0.4rem 0.6rem;
+    border-top: 1px solid #484858;
+    border-left: 1px solid #3c3c4a;
+    border-right: 1px solid #16161e;
+    border-bottom: 2px solid #0e0e14;
+    padding: 0.45rem 0.6rem;
     border-radius: var(--radius-md);
     font-family: inherit;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 600;
     outline: none;
     width: 100%;
     cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 select:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 8px var(--accent-glow);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
-/* Dynamic ADSR & Filter Graphics */
-.graph-preview-canvas {
-    width: 100%;
-    height: 64px;
-    background: #0d0d12;
-    border: 1px solid #242432;
-    border-radius: var(--radius-sm);
-    display: block;
-    margin-bottom: 0.6rem;
-}
-
-/* ==========================================================================
-   5. INTERACTIVE ON-SCREEN PIANO KEYBOARD (GARAGEBAND SIGNATURE)
-   ========================================================================== */
-.piano-keyboard-dock {
-    background: linear-gradient(180deg, #24242e 0%, #15151b 100%);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 0.5rem 0.8rem;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.piano-dock-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.piano-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.piano-keybed {
-    position: relative;
-    display: flex;
-    height: 100px;
-    background: #111116;
-    border-radius: 6px;
-    padding: 3px 3px 0 3px;
-    border: 2px solid #202028;
-    box-shadow: inset 0 4px 12px rgba(0,0,0,0.8);
-    user-select: none;
-    overflow: hidden;
-}
-
-.white-key {
-    flex: 1;
-    height: 100%;
-    background: linear-gradient(180deg, #ffffff 0%, #e2e2e8 90%, #cfcfd6 100%);
-    border: 1px solid #b0b0b8;
-    border-top: none;
-    border-radius: 0 0 5px 5px;
-    cursor: pointer;
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: center;
-    padding-bottom: 6px;
-    box-shadow: 0 4px 4px rgba(0,0,0,0.3), inset 0 -1px 2px rgba(0,0,0,0.2);
-    transition: all 0.05s ease;
-}
-
-.white-key:hover {
-    background: linear-gradient(180deg, #ffffff 0%, #f0f0f5 100%);
-}
-
-.white-key.active, .white-key:active {
-    background: linear-gradient(180deg, #ffe5cc 0%, var(--accent-hover) 100%);
-    box-shadow: inset 0 4px 8px rgba(0,0,0,0.5), 0 0 12px var(--accent-glow);
-    transform: translateY(2px);
-    color: #fff;
-}
-
-.black-key {
-    width: 6.5%;
-    height: 62%;
-    background: linear-gradient(180deg, #33333e 0%, #14141a 100%);
-    border: 1px solid #000;
-    border-radius: 0 0 4px 4px;
-    position: absolute;
-    z-index: 2;
-    cursor: pointer;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.2);
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: center;
-    padding-bottom: 4px;
-    transition: all 0.05s ease;
-}
-
-.black-key.active, .black-key:active {
-    background: linear-gradient(180deg, #553311 0%, var(--accent) 100%);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 0 12px var(--accent-glow);
-    transform: translateY(2px);
-}
-
-.key-label {
-    font-size: 0.65rem;
-    font-weight: 800;
-    font-family: 'JetBrains Mono', monospace;
-    color: #555566;
-    pointer-events: none;
-}
-
-.black-key .key-label {
-    color: #aaaaaa;
-}
-
-.white-key.active .key-label, .black-key.active .key-label {
-    color: #ffffff;
-    text-shadow: 0 0 4px rgba(0,0,0,0.8);
-}
-
-/* ==========================================================================
-   6. 16-STEP MATRIX SEQUENCER
-   ========================================================================== */
-.sequencer-panel {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 0.8rem;
-    margin-top: 0.6rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
-
-.seq-grid-wrapper {
-    display: grid;
-    grid-template-columns: 50px repeat(16, 1fr);
-    gap: 3px;
-    background: #0d0d12;
-    padding: 6px;
-    border-radius: var(--radius-sm);
-    border: 1px solid #242432;
-    overflow-x: auto;
-}
-
-.seq-cell {
-    height: 18px;
-    background: #181822;
-    border: 1px solid #2a2a38;
-    border-radius: 2px;
-    cursor: pointer;
-    transition: all 0.08s ease;
-}
-
-.seq-cell:hover {
-    border-color: var(--accent);
-    background: #252536;
-}
-
-.seq-cell.active {
-    background: var(--accent);
-    border-color: #ffaa66;
-    box-shadow: 0 0 8px var(--accent-glow);
-}
-
-/* 4/4 Rhythm markers */
-.seq-cell:nth-child(4n + 2) {
-    border-left: 2px solid #444458;
-}
-
-/* ==========================================================================
-   7. RIGHT PANEL: WAVE EDITOR LAB
-   ========================================================================== */
-.tools-panel {
-    background: var(--bg-panel);
-}
-
+/* Drawer Container */
 .drawer-container {
-    padding: 0.8rem;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.8rem;
     flex: 1;
 }
 
 #drawer-canvas {
     width: 100%;
+    height: auto;
     aspect-ratio: 3/2;
-    background: #0b0c10;
-    border: 2px solid #222630;
+    background: #0a0a0f;
+    border-top: 2px solid #101016;
+    border-left: 2px solid #101016;
+    border-right: 2px solid #2c2c3a;
+    border-bottom: 2px solid #383848;
     border-radius: var(--radius-md);
-    box-shadow: inset 0 0 16px rgba(0,0,0,0.8);
+    box-shadow: inset 0 0 16px rgba(0,0,0,0.9);
     cursor: crosshair;
     display: block;
 }
@@ -849,7 +549,7 @@ select:focus {
 .drawer-controls {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.4rem;
+    gap: 0.5rem;
 }
 
 .drawer-controls select {
@@ -858,20 +558,46 @@ select:focus {
 
 .preset-waves {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.5rem;
     justify-content: center;
-    padding-top: 0.6rem;
-    border-top: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid #1a1a22;
 }
 
-/* ==========================================================================
-   8. MODALS & UTILITIES
-   ========================================================================== */
+/* Keyboard Guide Dock */
+.keyboard-guide {
+    background: linear-gradient(180deg, #282832 0%, #1e1e26 100%);
+    border-top: 1px solid #3c3c4c;
+    border-left: 1px solid #343442;
+    border-right: 1px solid #14141a;
+    border-bottom: 2px solid #101016;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #101014;
+}
+::-webkit-scrollbar-thumb {
+    background: #343442;
+    border: 2px solid #101014;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
+/* Overlay */
 .overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(6px);
     z-index: 1000;
     display: flex;
     flex-direction: column;
@@ -883,31 +609,27 @@ select:focus {
 .overlay.hidden { display: none; }
 
 .spinner {
-    width: 48px; height: 48px;
-    border: 4px solid #2e2e3e;
+    width: 44px; height: 44px;
+    border: 3px solid #2a2a36;
     border-radius: 50%;
     border-top-color: var(--accent);
-    animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
-    box-shadow: 0 0 20px var(--accent-glow);
+    animation: spin 0.9s linear infinite;
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+/* Tooltip */
+.info-tooltip {
+    display: inline-block;
+    margin-left: 0.3rem;
+    color: var(--text-secondary);
+    cursor: help;
+    font-size: 0.8rem;
 }
-::-webkit-scrollbar-track {
-    background: #121218;
-}
-::-webkit-scrollbar-thumb {
-    background: #363648;
-    border-radius: 4px;
-    border: 2px solid #121218;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: var(--accent);
+
+.info-tooltip:hover {
+    color: var(--accent);
 }
