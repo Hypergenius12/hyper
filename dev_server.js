@@ -100,8 +100,20 @@ function createStaticServer(rootDir, port) {
     return server;
 }
 
+process.on('uncaughtException', (err) => {
+    console.error('[Process UncaughtException]:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[Process UnhandledRejection]:', reason);
+});
+
 const hyperRoot = path.resolve(__dirname);
 const slopcraftRoot = path.resolve(__dirname, 'slopcraft 3D');
 
 createStaticServer(hyperRoot, 8000);
 createStaticServer(slopcraftRoot, 8060);
+
+// Keep-alive timer to prevent event loop starvation in background processes
+setInterval(() => {}, 1000 * 60 * 60);
+
