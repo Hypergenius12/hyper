@@ -314,6 +314,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const editorHTML = `
             ${oscControls}
             <div class="editor-section">
+                <h3>Voice & Playability (Portamento / Glide)</h3>
+                <div class="control-grid">
+                    <div class="control-group">
+                        <label class="control-label">Voice Mode <i class="fa-solid fa-circle-info info-tooltip" title="Polyphonic plays multiple notes simultaneously. Monophonic retriggers envelope per note with pitch glide. Legato glides pitch smoothly without retriggering attack."></i></label>
+                        <select id="edit-voiceMode">
+                            <option value="poly" ${track.voiceMode==='poly'?'selected':''}>Polyphonic (Poly)</option>
+                            <option value="mono" ${track.voiceMode==='mono'?'selected':''}>Monophonic (Mono Lead)</option>
+                            <option value="legato" ${track.voiceMode==='legato'?'selected':''}>Legato (Glide Lead)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Glide Time (Portamento) <i class="fa-solid fa-circle-info info-tooltip" title="Time taken to glide pitch between notes in Mono and Legato modes (0ms = instantaneous)"></i></label>
+                        <input type="range" id="edit-glideTime" min="0" max="1" step="0.005" value="${track.glideTime}">
+                        <span class="val-display">${Math.round(track.glideTime * 1000)} ms</span>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Velocity Sensitivity <i class="fa-solid fa-circle-info info-tooltip" title="How dynamically strike velocity from MIDI keyboards alters note volume"></i></label>
+                        <input type="range" id="edit-velocitySensitivity" min="0" max="1" step="0.01" value="${track.velocitySensitivity}">
+                        <span class="val-display">${Math.round(track.velocitySensitivity * 100)}%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="editor-section">
                 <h3>Envelope (ADSR)</h3>
                 <div class="control-grid">
                     <div class="control-group">
@@ -442,7 +466,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const val = isFloat ? parseFloat(e.target.value) : e.target.value;
                 track[prop] = val;
                 if (e.target.nextElementSibling && e.target.nextElementSibling.classList && (e.target.nextElementSibling.classList.contains('val') || e.target.nextElementSibling.classList.contains('val-display'))) {
-                    e.target.nextElementSibling.innerText = e.target.value + (id.includes('freq') || id.includes('Freq') ? ' Hz' : id.includes('detune') ? ' cents' : id.includes('attack')||id.includes('decay')||id.includes('release')||id.includes('delayTime') ? 's' : '');
+                    if (id === 'edit-glideTime') {
+                        e.target.nextElementSibling.innerText = Math.round(val * 1000) + ' ms';
+                    } else if (id === 'edit-velocitySensitivity') {
+                        e.target.nextElementSibling.innerText = Math.round(val * 100) + '%';
+                    } else {
+                        e.target.nextElementSibling.innerText = e.target.value + (id.includes('freq') || id.includes('Freq') ? ' Hz' : id.includes('detune') ? ' cents' : id.includes('attack')||id.includes('decay')||id.includes('release')||id.includes('delayTime') ? 's' : '');
+                    }
                 }
                 track.updateNodes();
                 // Real-time update for parameters attached directly to the source
@@ -462,6 +492,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         
+        bindInput('edit-voiceMode', 'voiceMode', false);
+        bindInput('edit-glideTime', 'glideTime');
+        bindInput('edit-velocitySensitivity', 'velocitySensitivity');
+
         bindInput('edit-waveType', 'waveType', false);
         bindInput('edit-freq', 'frequency');
         bindInput('edit-detune', 'detune');
@@ -686,10 +720,215 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 const track = audioEngine.getTrack(selectedTrackId);
-                track.stop(audioEngine.ctx.currentTime, freq);
+                if (track) track.stop(audioEngine.ctx.currentTime, freq);
             }
         }
     });
+
+    // ==========================================
+    // Web MIDI API System (Plug & Play Hardware Keyboards)
+    // ==========================================
+    let midiAccess = null;
+    let isSustainPedalDown = false;
+    let sustainHeldNotes = []; // Notes held down by sustain pedal
+    let midiLedTimer = null;
+
+    function flashMIDILed() {
+        const led = document.getElementById('midi-led');
+        if (!led) return;
+        led.classList.add('active');
+        clearTimeout(midiLedTimer);
+        midiLedTimer = setTimeout(() => {
+            led.classList.remove('active');
+        }, 80);
+    }
+
+    function updateMIDIStatus() {
+        const textEl = document.getElementById('midi-status-text');
+        const ledEl = document.getElementById('midi-led');
+        if (!textEl || !ledEl) return;
+
+        if (!midiAccess) {
+            textEl.innerText = 'MIDI: Unavailable';
+            ledEl.className = 'midi-led disabled';
+            return;
+        }
+
+        const inputs = Array.from(midiAccess.inputs.values());
+        if (inputs.length === 0) {
+            textEl.innerText = 'MIDI: Plug & Play Ready';
+            ledEl.className = 'midi-led';
+        } else if (inputs.length === 1) {
+            const name = inputs[0].name || 'Hardware Synth';
+            textEl.innerText = `MIDI: ${name.length > 16 ? name.substring(0, 14) + '...' : name}`;
+            ledEl.className = 'midi-led connected';
+        } else {
+            textEl.innerText = `MIDI: ${inputs.length} Connected`;
+            ledEl.className = 'midi-led connected';
+        }
+    }
+
+    function handleMIDIMessage(event) {
+        if (!event.data || event.data.length < 2) return;
+        
+        const statusByte = event.data[0];
+        const command = statusByte >> 4;
+        const channel = statusByte & 0xF;
+        const data1 = event.data[1];
+        const data2 = event.data.length > 2 ? event.data[2] : 0;
+
+        const track = audioEngine.getTrack(selectedTrackId) || audioEngine.tracks[0];
+        if (!track) return;
+
+        // Ensure AudioContext is running
+        if (audioEngine.ctx.state === 'suspended') {
+            audioEngine.ctx.resume();
+        }
+
+        const now = audioEngine.ctx.currentTime;
+
+        // Note On (command 9 = 0x90) with velocity > 0
+        if (command === 9 && data2 > 0) {
+            const noteNumber = data1;
+            const velocity = data2 / 127.0; // 0.0 to 1.0
+            const freq = 440 * Math.pow(2, (noteNumber - 69) / 12);
+            
+            flashMIDILed();
+            track.play(now, freq, velocity);
+        }
+        // Note Off (command 8 = 0x80) or Note On with velocity 0
+        else if (command === 8 || (command === 9 && data2 === 0)) {
+            const noteNumber = data1;
+            const freq = 440 * Math.pow(2, (noteNumber - 69) / 12);
+
+            flashMIDILed();
+            if (isSustainPedalDown) {
+                // Sustain pedal is holding notes
+                if (!sustainHeldNotes.some(n => Math.abs(n.freq - freq) < 0.01)) {
+                    sustainHeldNotes.push({ freq, trackId: track.id });
+                }
+            } else {
+                track.stop(now, freq);
+            }
+        }
+        // Control Change (command 11 = 0xB0)
+        else if (command === 11) {
+            const ccNumber = data1;
+            const ccValue = data2;
+
+            flashMIDILed();
+
+            // CC 1: Modulation Wheel
+            if (ccNumber === 1) {
+                const norm = ccValue / 127.0;
+                track.lfoDepth = norm * 100.0;
+                track.updateNodes();
+                const lfoSlider = document.getElementById('edit-lfoDepth');
+                if (lfoSlider && selectedTrackId === track.id) {
+                    lfoSlider.value = Math.round(track.lfoDepth);
+                    if (lfoSlider.nextElementSibling) lfoSlider.nextElementSibling.innerText = Math.round(track.lfoDepth);
+                }
+            }
+            // CC 64: Sustain / Damper Pedal
+            else if (ccNumber === 64) {
+                const sustainState = ccValue >= 64;
+                if (!sustainState && isSustainPedalDown) {
+                    // Sustain pedal released: terminate all sustained notes
+                    sustainHeldNotes.forEach(item => {
+                        const targetTrack = audioEngine.getTrack(item.trackId) || track;
+                        if (targetTrack) targetTrack.stop(now, item.freq);
+                    });
+                    sustainHeldNotes = [];
+                }
+                isSustainPedalDown = sustainState;
+            }
+            // CC 7: Channel Volume
+            else if (ccNumber === 7) {
+                const gainVal = (ccValue / 127.0) * 2.0;
+                track.gain = gainVal;
+                track.updateNodes();
+                const gainSlider = document.getElementById('edit-gain');
+                if (gainSlider && selectedTrackId === track.id) {
+                    gainSlider.value = gainVal.toFixed(2);
+                    if (gainSlider.nextElementSibling) gainSlider.nextElementSibling.innerText = gainVal.toFixed(2);
+                }
+            }
+            // CC 74: Filter Cutoff / Brightness
+            else if (ccNumber === 74) {
+                const cutoff = 20 + Math.pow(ccValue / 127.0, 2) * 19980;
+                track.filterFreq = Math.round(cutoff);
+                track.updateNodes();
+                const cutoffSlider = document.getElementById('edit-filterFreq');
+                if (cutoffSlider && selectedTrackId === track.id) {
+                    cutoffSlider.value = Math.round(track.filterFreq);
+                    if (cutoffSlider.nextElementSibling) cutoffSlider.nextElementSibling.innerText = Math.round(track.filterFreq) + ' Hz';
+                }
+            }
+            // CC 71: Filter Resonance (Q)
+            else if (ccNumber === 71) {
+                const res = 0.1 + (ccValue / 127.0) * 30.0;
+                track.filterQ = parseFloat(res.toFixed(1));
+                track.updateNodes();
+                const qSlider = document.getElementById('edit-filterQ');
+                if (qSlider && selectedTrackId === track.id) {
+                    qSlider.value = track.filterQ;
+                    if (qSlider.nextElementSibling) qSlider.nextElementSibling.innerText = track.filterQ;
+                }
+            }
+        }
+        // Pitch Bend (command 14 = 0xE0)
+        else if (command === 14) {
+            const lsb = data1;
+            const msb = data2;
+            const bendVal = (msb << 7) | lsb; // 0 to 16383, 8192 center
+            const normBend = (bendVal - 8192) / 8192.0; // -1.0 to +1.0
+            const bendCents = normBend * 200.0; // +/- 200 cents (2 semitones)
+            
+            flashMIDILed();
+            track.setPitchBend(bendCents);
+        }
+    }
+
+    function setupMIDIListeners() {
+        if (!midiAccess) return;
+        
+        for (const input of midiAccess.inputs.values()) {
+            input.onmidimessage = handleMIDIMessage;
+        }
+
+        midiAccess.onstatechange = (e) => {
+            if (e.port && e.port.type === 'input') {
+                if (e.port.state === 'connected') {
+                    e.port.onmidimessage = handleMIDIMessage;
+                }
+            }
+            updateMIDIStatus();
+        };
+
+        updateMIDIStatus();
+    }
+
+    async function initWebMIDI() {
+        const textEl = document.getElementById('midi-status-text');
+        const ledEl = document.getElementById('midi-led');
+
+        if (!navigator.requestMIDIAccess) {
+            if (textEl) textEl.innerText = 'MIDI: Not Supported';
+            if (ledEl) ledEl.className = 'midi-led disabled';
+            return;
+        }
+
+        try {
+            midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+            setupMIDIListeners();
+        } catch (err) {
+            console.warn('Web MIDI access rejected or unavailable:', err);
+            if (textEl) textEl.innerText = 'MIDI: Blocked';
+            if (ledEl) ledEl.className = 'midi-led disabled';
+        }
+    }
+
+    initWebMIDI();
 
     // 7. Drawer Application
     document.getElementById('btn-drawer-apply').addEventListener('click', () => {

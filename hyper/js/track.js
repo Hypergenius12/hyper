@@ -52,6 +52,14 @@ class Track {
         // Chorus
         this.chorusMix = 0; // 0 to 1
         
+        // Voice Mode & Playability (Portamento / Glide / Velocity)
+        this.voiceMode = 'poly'; // 'poly', 'mono', 'legato'
+        this.glideTime = 0.05; // seconds (0 to 1.0s)
+        this.velocitySensitivity = 1.0; // 0 to 1.0
+        this.pitchBend = 0; // cents (-200 to +200)
+        this.heldNotes = []; // Stack of held notes for Mono/Legato [{ freq, velocity, time }]
+        this.currentMonoVoice = null; // Active voice in Mono/Legato mode
+        
         // Audio Nodes
         this.filterNode = this.ctx.createBiquadFilter();
         
@@ -171,6 +179,7 @@ class Track {
         this.lfoRate = clamp(jitter(this.lfoRate, 2), 0.1, 20);
         this.fmDepth = clamp(jitter(this.fmDepth, 100), 0, 1000);
         this.distortionAmount = clamp(jitter(this.distortionAmount, 10), 0, 100);
+        this.glideTime = clamp(jitter(this.glideTime, 0.05), 0, 1);
         
         this.updateNodes();
     }
@@ -185,6 +194,9 @@ class Track {
             panY: this.panY,
             panZ: this.panZ,
             waveType: this.waveType,
+            voiceMode: this.voiceMode,
+            glideTime: this.glideTime,
+            velocitySensitivity: this.velocitySensitivity,
             attack: this.attack,
             decay: this.decay,
             sustain: this.sustain,
@@ -207,6 +219,9 @@ class Track {
     
     fromJSON(data) {
         Object.assign(this, data);
+        if (this.voiceMode === undefined) this.voiceMode = 'poly';
+        if (this.glideTime === undefined) this.glideTime = 0.05;
+        if (this.velocitySensitivity === undefined) this.velocitySensitivity = 1.0;
         this.updateNodes();
     }
 
@@ -241,6 +256,26 @@ class Track {
         
         this.reverbWetNode.gain.value = this.reverbMix;
         this.reverbDryNode.gain.value = 1 - this.reverbMix;
+
+        // Update real-time pitch bend on active sources
+        if (this.activeSources && this.activeSources.length > 0) {
+            this.activeSources.forEach(({ source }) => {
+                if (source && source.detune) {
+                    source.detune.setValueAtTime(this.detune + this.pitchBend, this.ctx.currentTime);
+                }
+            });
+        }
+    }
+
+    setPitchBend(cents) {
+        this.pitchBend = cents;
+        if (this.activeSources && this.activeSources.length > 0) {
+            this.activeSources.forEach(({ source }) => {
+                if (source && source.detune) {
+                    source.detune.setValueAtTime(this.detune + this.pitchBend, this.ctx.currentTime);
+                }
+            });
+        }
     }
     
     connect(destination) {
@@ -251,11 +286,16 @@ class Track {
     disconnect() {
         this.gainNode.disconnect();
     }
-    
-    play(time, freqOverride = null) {
+
+    _calculateVelocityGain(velocity) {
+        const vel = Math.max(0, Math.min(1, typeof velocity === 'number' ? velocity : 1.0));
+        // Exponential velocity curve blended with sensitivity
+        const scaledCurve = Math.pow(vel, 1.4);
+        return scaledCurve * this.velocitySensitivity + (1.0 - this.velocitySensitivity);
+    }
+
+    _createVoice(time, targetFreq, velGain) {
         let source;
-        const targetFreq = freqOverride !== null ? freqOverride : this.frequency;
-        
         if (this.type === 'oscillator') {
             source = this.ctx.createOscillator();
             if (this.waveType === 'custom' && this.customWave) {
@@ -264,53 +304,46 @@ class Track {
                 source.type = this.waveType;
             }
             source.frequency.value = targetFreq;
-            source.detune.value = this.detune;
+            source.detune.value = this.detune + this.pitchBend;
         } else if (this.type === 'buffer' && this.buffer) {
             source = this.ctx.createBufferSource();
             source.buffer = this.buffer;
-            source.detune.value = this.detune;
+            source.detune.value = this.detune + this.pitchBend;
             source.playbackRate.value = targetFreq / 440;
         } else {
-            return;
+            return null;
         }
-        
+
         const envGain = this.ctx.createGain();
         envGain.gain.setValueAtTime(0, time);
-        envGain.gain.linearRampToValueAtTime(1, time + this.attack);
-        envGain.gain.linearRampToValueAtTime(this.sustain, time + this.attack + this.decay);
-        
+        envGain.gain.linearRampToValueAtTime(velGain, time + Math.max(0.001, this.attack));
+        envGain.gain.linearRampToValueAtTime(velGain * this.sustain, time + Math.max(0.001, this.attack) + Math.max(0.001, this.decay));
+
         source.connect(envGain);
         envGain.connect(this.filterNode);
-        
+
         // Setup LFO
         let lfoOsc = null;
         let lfoGain = null;
-        
         if (this.lfoTarget !== 'none' && this.lfoDepth > 0) {
             lfoOsc = this.ctx.createOscillator();
             lfoOsc.type = 'sine';
             lfoOsc.frequency.value = this.lfoRate;
-            
             lfoGain = this.ctx.createGain();
-            
             if (this.lfoTarget === 'pitch') {
-                // Pitch LFO depth usually ranges 0 to 1000 cents
                 lfoGain.gain.value = this.lfoDepth * 10;
                 if (source.detune) {
                     lfoOsc.connect(lfoGain);
                     lfoGain.connect(source.detune);
                 }
             } else if (this.lfoTarget === 'filter') {
-                // Filter LFO depth modulates frequency around cutoff
-                lfoGain.gain.value = this.lfoDepth * 50; // up to 5000Hz variation
+                lfoGain.gain.value = this.lfoDepth * 50;
                 lfoOsc.connect(lfoGain);
                 lfoGain.connect(this.filterNode.frequency);
             }
-            
             lfoOsc.start(time);
         }
-        
-        
+
         // FM Modulator
         let fmOsc = null;
         let fmGain = null;
@@ -318,49 +351,207 @@ class Track {
             fmOsc = this.ctx.createOscillator();
             fmOsc.type = 'sine';
             fmOsc.frequency.value = targetFreq * this.fmRatio;
-            
             fmGain = this.ctx.createGain();
             fmGain.gain.value = this.fmDepth * 10;
-            
             fmOsc.connect(fmGain);
             fmGain.connect(source.frequency);
             fmOsc.start(time);
         }
 
         source.start(time);
-        
-        const sourceObj = { source, envGain, lfoOsc, fmOsc, freq: targetFreq };
-        this.activeSources.push(sourceObj);
-        return sourceObj;
+
+        return {
+            source,
+            envGain,
+            lfoOsc,
+            lfoGain,
+            fmOsc,
+            fmGain,
+            freq: targetFreq,
+            currentFreq: targetFreq,
+            velGain,
+            startTime: time
+        };
+    }
+    
+    play(time, freqOverride = null, velocity = 1.0) {
+        const targetFreq = freqOverride !== null ? freqOverride : this.frequency;
+        const velGain = this._calculateVelocityGain(velocity);
+
+        // --- POLYPHONIC MODE ---
+        if (this.voiceMode === 'poly') {
+            const voice = this._createVoice(time, targetFreq, velGain);
+            if (voice) {
+                this.activeSources.push(voice);
+            }
+            return voice;
+        }
+
+        // --- MONOPHONIC & LEGATO MODES ---
+        // Push note to held stack (remove previous duplicate if any)
+        this.heldNotes = this.heldNotes.filter(n => Math.abs(n.freq - targetFreq) > 0.01);
+        this.heldNotes.push({ freq: targetFreq, velocity, velGain, time });
+
+        if (this.currentMonoVoice && this.currentMonoVoice.source) {
+            const voice = this.currentMonoVoice;
+            const prevFreq = voice.currentFreq || voice.freq;
+            const glideDur = Math.max(0.001, this.glideTime);
+
+            // 1. Portamento / Glide Pitch Transition
+            if (voice.source.frequency) {
+                voice.source.frequency.cancelScheduledValues(time);
+                voice.source.frequency.setValueAtTime(prevFreq, time);
+                if (this.glideTime > 0.002) {
+                    voice.source.frequency.exponentialRampToValueAtTime(Math.max(10, targetFreq), time + glideDur);
+                } else {
+                    voice.source.frequency.setValueAtTime(targetFreq, time);
+                }
+            } else if (voice.source.playbackRate) {
+                // For sample buffers
+                voice.source.playbackRate.cancelScheduledValues(time);
+                voice.source.playbackRate.setValueAtTime(prevFreq / 440, time);
+                if (this.glideTime > 0.002) {
+                    voice.source.playbackRate.exponentialRampToValueAtTime(Math.max(0.01, targetFreq / 440), time + glideDur);
+                } else {
+                    voice.source.playbackRate.setValueAtTime(targetFreq / 440, time);
+                }
+            }
+
+            // Glide FM modulator frequency if present
+            if (voice.fmOsc) {
+                voice.fmOsc.frequency.cancelScheduledValues(time);
+                voice.fmOsc.frequency.setValueAtTime(prevFreq * this.fmRatio, time);
+                if (this.glideTime > 0.002) {
+                    voice.fmOsc.frequency.exponentialRampToValueAtTime(Math.max(10, targetFreq * this.fmRatio), time + glideDur);
+                } else {
+                    voice.fmOsc.frequency.setValueAtTime(targetFreq * this.fmRatio, time);
+                }
+            }
+
+            voice.currentFreq = targetFreq;
+            voice.velGain = velGain;
+
+            // 2. Envelope Handling: Mono vs Legato
+            if (this.voiceMode === 'mono') {
+                // Mono: Retrigger ADSR envelope on every note
+                const curVal = voice.envGain.gain.value;
+                voice.envGain.gain.cancelScheduledValues(time);
+                voice.envGain.gain.setValueAtTime(curVal, time);
+                voice.envGain.gain.linearRampToValueAtTime(velGain, time + Math.max(0.001, this.attack));
+                voice.envGain.gain.linearRampToValueAtTime(velGain * this.sustain, time + Math.max(0.001, this.attack) + Math.max(0.001, this.decay));
+            } else if (this.voiceMode === 'legato') {
+                // Legato: Do NOT retrigger attack envelope! Smoothly adjust sustain level to new velocity
+                voice.envGain.gain.cancelScheduledValues(time);
+                voice.envGain.gain.linearRampToValueAtTime(velGain * this.sustain, time + 0.02);
+            }
+
+            return voice;
+        } else {
+            // No active mono voice running: trigger fresh attack
+            const voice = this._createVoice(time, targetFreq, velGain);
+            if (voice) {
+                this.currentMonoVoice = voice;
+                this.activeSources = [voice];
+            }
+            return voice;
+        }
     }
     
     stop(time, freqOverride = null) {
-        const toStop = [];
-        this.activeSources = this.activeSources.filter(srcObj => {
-            const { source, envGain, lfoOsc, fmOsc, freq } = srcObj;
-            if (freqOverride === null || freq === freqOverride) {
-                envGain.gain.cancelScheduledValues(time);
-                // Only set value if time is very close to now, else we don't know the exact value at 'time'
-                // Actually it's safer to just linear ramp to 0 from the current value
-                envGain.gain.setValueAtTime(envGain.gain.value, this.ctx.currentTime);
-                envGain.gain.linearRampToValueAtTime(0, time + this.release);
-                source.stop(time + this.release);
-                if (lfoOsc) lfoOsc.stop(time + this.release);
-                if (fmOsc) fmOsc.stop(time + this.release);
-                
-                toStop.push(srcObj);
-                return false; // Remove from active sources array
+        // --- POLYPHONIC MODE ---
+        if (this.voiceMode === 'poly') {
+            const rel = Math.max(0.001, this.release);
+            this.activeSources = this.activeSources.filter(srcObj => {
+                const { source, envGain, lfoOsc, fmOsc, freq } = srcObj;
+                if (freqOverride === null || Math.abs(freq - freqOverride) < 0.01) {
+                    envGain.gain.cancelScheduledValues(time);
+                    envGain.gain.setValueAtTime(envGain.gain.value, this.ctx.currentTime);
+                    envGain.gain.linearRampToValueAtTime(0, time + rel);
+                    source.stop(time + rel);
+                    if (lfoOsc) lfoOsc.stop(time + rel);
+                    if (fmOsc) fmOsc.stop(time + rel);
+                    return false;
+                }
+                return true;
+            });
+            return;
+        }
+
+        // --- MONOPHONIC & LEGATO MODES ---
+        if (freqOverride !== null) {
+            this.heldNotes = this.heldNotes.filter(n => Math.abs(n.freq - freqOverride) > 0.01);
+        } else {
+            this.heldNotes = [];
+        }
+
+        if (this.heldNotes.length > 0) {
+            // Keys are still held down: glide back to most recent held note (last-note priority)
+            const priorNote = this.heldNotes[this.heldNotes.length - 1];
+            if (this.currentMonoVoice && this.currentMonoVoice.source) {
+                const voice = this.currentMonoVoice;
+                const prevFreq = voice.currentFreq || voice.freq;
+                const targetFreq = priorNote.freq;
+                const glideDur = Math.max(0.001, this.glideTime);
+
+                if (voice.source.frequency) {
+                    voice.source.frequency.cancelScheduledValues(time);
+                    voice.source.frequency.setValueAtTime(prevFreq, time);
+                    if (this.glideTime > 0.002) {
+                        voice.source.frequency.exponentialRampToValueAtTime(Math.max(10, targetFreq), time + glideDur);
+                    } else {
+                        voice.source.frequency.setValueAtTime(targetFreq, time);
+                    }
+                } else if (voice.source.playbackRate) {
+                    voice.source.playbackRate.cancelScheduledValues(time);
+                    voice.source.playbackRate.setValueAtTime(prevFreq / 440, time);
+                    if (this.glideTime > 0.002) {
+                        voice.source.playbackRate.exponentialRampToValueAtTime(Math.max(0.01, targetFreq / 440), time + glideDur);
+                    } else {
+                        voice.source.playbackRate.setValueAtTime(targetFreq / 440, time);
+                    }
+                }
+
+                if (voice.fmOsc) {
+                    voice.fmOsc.frequency.cancelScheduledValues(time);
+                    voice.fmOsc.frequency.setValueAtTime(prevFreq * this.fmRatio, time);
+                    if (this.glideTime > 0.002) {
+                        voice.fmOsc.frequency.exponentialRampToValueAtTime(Math.max(10, targetFreq * this.fmRatio), time + glideDur);
+                    } else {
+                        voice.fmOsc.frequency.setValueAtTime(targetFreq * this.fmRatio, time);
+                    }
+                }
+
+                voice.currentFreq = targetFreq;
+                voice.velGain = priorNote.velGain;
+
+                if (this.voiceMode === 'mono') {
+                    // Retrigger envelope when falling back to held note in mono
+                    const curVal = voice.envGain.gain.value;
+                    voice.envGain.gain.cancelScheduledValues(time);
+                    voice.envGain.gain.setValueAtTime(curVal, time);
+                    voice.envGain.gain.linearRampToValueAtTime(priorNote.velGain, time + Math.max(0.001, this.attack));
+                    voice.envGain.gain.linearRampToValueAtTime(priorNote.velGain * this.sustain, time + Math.max(0.001, this.attack) + Math.max(0.001, this.decay));
+                } else if (this.voiceMode === 'legato') {
+                    // Legato: smoothly sustain prior note
+                    voice.envGain.gain.cancelScheduledValues(time);
+                    voice.envGain.gain.linearRampToValueAtTime(priorNote.velGain * this.sustain, time + 0.02);
+                }
             }
-            return true;
-        });
-        
-        // Wait! We actually DO want to remove it from activeSources immediately so we don't double stop it,
-        // BUT the visualizer checks `activeSources.length > 0`.
-        // To fix the visualizer, we can add a `stoppingSources` array, or just accept it.
-        // The problem is Arpeggiator calls track.play() and then track.stop(time_in_future).
-        // Since it's removed immediately, the next arpeggiator step's `if(lastArpFreq) track.stop()` 
-        // does nothing (which is fine! it was already scheduled to stop).
-        // Why wasn't arp working? 
+        } else {
+            // No keys held: Release envelope to 0 and terminate mono voice
+            if (this.currentMonoVoice) {
+                const { source, envGain, lfoOsc, fmOsc } = this.currentMonoVoice;
+                const rel = Math.max(0.001, this.release);
+                envGain.gain.cancelScheduledValues(time);
+                envGain.gain.setValueAtTime(envGain.gain.value, this.ctx.currentTime);
+                envGain.gain.linearRampToValueAtTime(0, time + rel);
+                source.stop(time + rel);
+                if (lfoOsc) lfoOsc.stop(time + rel);
+                if (fmOsc) fmOsc.stop(time + rel);
+                this.currentMonoVoice = null;
+                this.activeSources = [];
+            }
+        }
     }
     
     // For Exporting
@@ -482,7 +673,7 @@ class Track {
         if (this.fmDepth > 0 && this.type === 'oscillator') {
             fmOsc = this.ctx.createOscillator();
             fmOsc.type = 'sine';
-            fmOsc.frequency.value = targetFreq * this.fmRatio;
+            fmOsc.frequency.value = this.frequency * this.fmRatio;
             
             fmGain = this.ctx.createGain();
             fmGain.gain.value = this.fmDepth * 10;
