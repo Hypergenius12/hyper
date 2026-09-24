@@ -255,6 +255,26 @@
                         <label>HIDDEN LAYERS <span class="help-icon" data-tooltip="Comma-separated list defining the neural network architecture. e.g. 8,6 means two hidden layers of 8 and 6 neurons.">?</span></label>
                         <input type="text" id="train-hidden" value="8,6" class="text-input">
                     </div>
+                    <div class="ctrl-row">
+                        <label>SENSOR RANGE <span class="help-icon" data-tooltip="Distance raycasts can see ahead. Longer range allows cars to spot corners earlier.">?</span></label><span id="train-sen-range-val">280px</span>
+                        <input type="range" id="train-sensor-range" min="150" max="450" value="280" step="10">
+                    </div>
+                </div>
+
+                <div class="ctrl-group">
+                    <div class="train-subheading">CORNERING & HANDLING</div>
+                    <div class="ctrl-row">
+                        <label>APEX CLEARANCE <span class="help-icon" data-tooltip="Pushes corner checkpoints outward from the inside curb to prevent cars from grazing the inner wall.">?</span></label><span id="apex-clearance-val">8px</span>
+                        <input type="range" id="apex-clearance" min="0" max="15" value="8" step="1">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>CORNER SLOWDOWN <span class="help-icon" data-tooltip="How much cars slow down when a bumper grazes the curb or grass. Lower = less speed lost when cornering close.">?</span></label><span id="corner-slowdown-val">8%</span>
+                        <input type="range" id="corner-slowdown" min="0" max="20" value="8" step="1">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>GRAZE PENALTY <span class="help-icon" data-tooltip="Fitness penalty when clipping curbs/grass. Higher values train AI to steer clear of inside edges.">?</span></label><span id="corner-graze-pen-val">1.0x</span>
+                        <input type="range" id="corner-graze-pen" min="0" max="5.0" value="1.0" step="0.1">
+                    </div>
                 </div>
 
                 <div class="ctrl-group">
@@ -283,7 +303,7 @@
                         <label>IDLE TIMEOUT <span class="help-icon" data-tooltip="Seconds of zero motion before a motionless car is disqualified.">?</span></label><span id="reward-idle-val">3.5s</span>
                         <input type="range" id="reward-idle" min="1.0" max="10.0" value="3.5" step="0.5">
                     </div>
-                    <button id="btn-reset-rewards" class="ctrl-btn" style="width: 100%; margin-top: 6px; font-size: 10px; padding: 5px;">RESET REWARDS DEFAULTS</button>
+                    <button id="btn-reset-rewards" class="ctrl-btn" style="width: 100%; margin-top: 6px; font-size: 10px; padding: 5px;">RESET ADVANCED DEFAULTS</button>
                 </div>
             </div>
 
@@ -337,12 +357,12 @@
         </div>
     </div>
 
-    <script src="js/camera.js?v=37"></script>
-    <script src="js/track.js?v=37"></script>
-    <script src="js/sfx.js?v=37"></script>
-    <script src="js/car.js?v=37"></script>
-    <script src="js/ai.js?v=37"></script>
-    <script src="js/main.js?v=37"></script>
+    <script src="js/camera.js?v=38"></script>
+    <script src="js/track.js?v=38"></script>
+    <script src="js/sfx.js?v=38"></script>
+    <script src="js/car.js?v=38"></script>
+    <script src="js/ai.js?v=38"></script>
+    <script src="js/main.js?v=38"></script>
     <script type="module" src="../js/tracker.js"></script>
 
     <!-- ==================== CUSTOM MODALS ==================== -->

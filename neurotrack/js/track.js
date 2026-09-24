@@ -1412,21 +1412,23 @@ class Track {
                 let cpX = pt.c * TILE_SIZE + TILE_SIZE / 2;
                 let cpY = pt.r * TILE_SIZE + TILE_SIZE / 2;
 
-                // On curves, place checkpoint at the apex along the road centerline
+                // On curves, place checkpoint at the apex along the road centerline with safe apex clearance
                 if (type && type.ports) {
+                    const clearance = (typeof window !== 'undefined' && window.fitnessRewards && window.fitnessRewards.apexClearance !== undefined)
+                        ? window.fitnessRewards.apexClearance : 8;
                     const [top, right, bottom, left] = type.ports;
                     if (top && right && !bottom && !left) { // TR
-                        cpX = pt.c * TILE_SIZE + 65;
-                        cpY = pt.r * TILE_SIZE + 35;
+                        cpX = pt.c * TILE_SIZE + (65 - clearance);
+                        cpY = pt.r * TILE_SIZE + (35 + clearance);
                     } else if (!top && right && bottom && !left) { // BR
-                        cpX = pt.c * TILE_SIZE + 65;
-                        cpY = pt.r * TILE_SIZE + 65;
+                        cpX = pt.c * TILE_SIZE + (65 - clearance);
+                        cpY = pt.r * TILE_SIZE + (65 - clearance);
                     } else if (!top && !right && bottom && left) { // BL
-                        cpX = pt.c * TILE_SIZE + 35;
-                        cpY = pt.r * TILE_SIZE + 65;
+                        cpX = pt.c * TILE_SIZE + (35 + clearance);
+                        cpY = pt.r * TILE_SIZE + (65 - clearance);
                     } else if (top && !right && !bottom && left) { // TL
-                        cpX = pt.c * TILE_SIZE + 35;
-                        cpY = pt.r * TILE_SIZE + 35;
+                        cpX = pt.c * TILE_SIZE + (35 + clearance);
+                        cpY = pt.r * TILE_SIZE + (35 + clearance);
                     }
                 }
 

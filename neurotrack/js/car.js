@@ -47,7 +47,7 @@ class Car {
 
         // Sensors (for AI)
         this.sensors = [];
-        this.sensorLength = 280;
+        this.sensorLength = (typeof window !== 'undefined' && window.fitnessRewards && window.fitnessRewards.sensorRange) ? window.fitnessRewards.sensorRange : 280;
         this.sensorCount = 7;
         this.crashed = false;
 
@@ -476,7 +476,18 @@ class Car {
                     }
                 } else {
                     if (offCount >= 1) {
-                        this.speed *= this.offTrackPenalty;
+                        const slowdownRate = (typeof window !== 'undefined' && window.fitnessRewards && window.fitnessRewards.cornerSlowdown !== undefined)
+                            ? window.fitnessRewards.cornerSlowdown : 0.08;
+                        const frictionFactor = Math.pow(Math.max(0.70, 1.0 - slowdownRate), dt * 60);
+                        this.speed *= frictionFactor;
+
+                        if (this.brain) {
+                            const grazePenalty = (typeof window !== 'undefined' && window.fitnessRewards && window.fitnessRewards.cornerGrazePenalty !== undefined)
+                                ? window.fitnessRewards.cornerGrazePenalty : 1.0;
+                            if (grazePenalty > 0) {
+                                this.accumulatedWallPenalty = (this.accumulatedWallPenalty || 0) + grazePenalty * 8.0 * dt;
+                            }
+                        }
                     }
                 }
 
@@ -1020,6 +1031,7 @@ class Car {
         this.started = false;
         this.stoppedTime = 0;
         this.sensors = [];
+        this.sensorLength = (typeof window !== 'undefined' && window.fitnessRewards && window.fitnessRewards.sensorRange) ? window.fitnessRewards.sensorRange : 280;
         this.crossroadAxis = null;
         this.memory = [];
     }
