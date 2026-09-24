@@ -1412,30 +1412,29 @@ class Track {
                 let cpX = pt.c * TILE_SIZE + TILE_SIZE / 2;
                 let cpY = pt.r * TILE_SIZE + TILE_SIZE / 2;
 
-                // On curves, place checkpoint at the apex along the road centerline with safe apex clearance
+                // On curves, place checkpoint along the true road centerline
                 if (type && type.ports) {
-                    const clearance = (typeof window !== 'undefined' && window.fitnessRewards && window.fitnessRewards.apexClearance !== undefined)
-                        ? window.fitnessRewards.apexClearance : 8;
                     const [top, right, bottom, left] = type.ports;
                     if (top && right && !bottom && !left) { // TR
-                        cpX = pt.c * TILE_SIZE + (65 - clearance);
-                        cpY = pt.r * TILE_SIZE + (35 + clearance);
+                        cpX = pt.c * TILE_SIZE + 65;
+                        cpY = pt.r * TILE_SIZE + 35;
                     } else if (!top && right && bottom && !left) { // BR
-                        cpX = pt.c * TILE_SIZE + (65 - clearance);
-                        cpY = pt.r * TILE_SIZE + (65 - clearance);
+                        cpX = pt.c * TILE_SIZE + 65;
+                        cpY = pt.r * TILE_SIZE + 65;
                     } else if (!top && !right && bottom && left) { // BL
-                        cpX = pt.c * TILE_SIZE + (35 + clearance);
-                        cpY = pt.r * TILE_SIZE + (65 - clearance);
+                        cpX = pt.c * TILE_SIZE + 35;
+                        cpY = pt.r * TILE_SIZE + 65;
                     } else if (top && !right && !bottom && left) { // TL
-                        cpX = pt.c * TILE_SIZE + (35 + clearance);
-                        cpY = pt.r * TILE_SIZE + (35 + clearance);
+                        cpX = pt.c * TILE_SIZE + 35;
+                        cpY = pt.r * TILE_SIZE + 35;
                     }
                 }
 
+                // Generous radius ensures cars can take wide lines, apex cuts, or center lines without missing
                 this.checkpoints.push({
                     x: cpX,
                     y: cpY,
-                    radius: 45
+                    radius: 55
                 });
             }
         }

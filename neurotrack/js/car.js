@@ -125,48 +125,13 @@ class Car {
 
             const outputs = this.brain.feedforward(inputs);
 
-            // Smooth analog throttle and brake: cars are allowed to slow down for corners
-            // outputs[0]: throttle, outputs[1]: brake
-            const throttleIntent = Math.min(1, Math.max(0, (outputs[0] - 0.25) / 0.55));
-            const brakeIntent = Math.min(1, Math.max(0, (outputs[1] - 0.35) / 0.5));
-            
-            // Decoupled throttle & brake: braking directly releases throttle for high braking authority
-            let netThrottle = throttleIntent * Math.max(0, 1 - brakeIntent * 1.5);
-            let netBrake = brakeIntent;
+            // Analog throttle, brake, and steering governed directly by neural network outputs:
+            // outputs[0]: throttle intent, outputs[1]: brake intent
+            const netThrottle = Math.max(0, outputs[0] - outputs[1]);
+            const netBrake = Math.max(0, outputs[1] - outputs[0]);
 
-            // For steering, subtract left from right, then amplify so they can turn sharply if needed
-            let steer = outputs[3] - outputs[2];
-            steer = Math.max(-1, Math.min(1, steer * 1.7));
-
-            // Safe cornering speed: standard curve centerline radius is 50 px.
-            // With angular rate currentTurnRate, the centripetal limit without running wide is vSafe = 50 * currentTurnRate.
-            const vSafe = 50 * currentTurnRate;
-
-            // 1. Anticipatory corner entry braking:
-            // If the road ahead ends in a wall/turn within braking distance, brake before entering the corner
-            if (this.sensors && this.sensors[3] && !this.airborne) {
-                const frontDist = this.sensors[3].dist;
-                if (this.speed > vSafe && frontDist < 160) {
-                    const requiredBrakingDist = ((this.speed * this.speed) - (vSafe * vSafe)) / (2 * currentBrakeForce);
-                    if (frontDist < requiredBrakingDist + 40) {
-                        const urgency = Math.min(1, (requiredBrakingDist + 40 - frontDist) / 50);
-                        netBrake = Math.max(netBrake, urgency);
-                        netThrottle *= Math.max(0, 1 - urgency * 2.0);
-                    }
-                }
-            }
-
-            // 2. Corner speed management & tire scrub:
-            // When steering sharply into a turn, bleed excess speed above vSafe so the car turns tightly without sliding into outer walls
-            const absSteer = Math.abs(steer);
-            if (absSteer > 0.15 && !this.airborne) {
-                if (this.speed > vSafe) {
-                    const excess = this.speed - vSafe;
-                    const cornerBrakeDecel = Math.min(excess, currentBrakeForce * dt * Math.pow(absSteer, 1.2));
-                    this.speed -= cornerBrakeDecel;
-                    netThrottle *= Math.max(0, 1 - (excess / 100));
-                }
-            }
+            // For steering, subtract left from right, amplified for agile cornering
+            let steer = Math.max(-1, Math.min(1, (outputs[3] - outputs[2]) * 1.8));
 
             // Store recurrent memory for next frame
             for (let i = 0; i < this.memory.length; i++) {
@@ -476,18 +441,7 @@ class Car {
                     }
                 } else {
                     if (offCount >= 1) {
-                        const slowdownRate = (typeof window !== 'undefined' && window.fitnessRewards && window.fitnessRewards.cornerSlowdown !== undefined)
-                            ? window.fitnessRewards.cornerSlowdown : 0.08;
-                        const frictionFactor = Math.pow(Math.max(0.70, 1.0 - slowdownRate), dt * 60);
-                        this.speed *= frictionFactor;
-
-                        if (this.brain) {
-                            const grazePenalty = (typeof window !== 'undefined' && window.fitnessRewards && window.fitnessRewards.cornerGrazePenalty !== undefined)
-                                ? window.fitnessRewards.cornerGrazePenalty : 1.0;
-                            if (grazePenalty > 0) {
-                                this.accumulatedWallPenalty = (this.accumulatedWallPenalty || 0) + grazePenalty * 8.0 * dt;
-                            }
-                        }
+                        this.speed *= Math.pow(this.offTrackPenalty, dt * 60);
                     }
                 }
 
@@ -594,6 +548,7 @@ class Car {
         
         // Calculate progress to next checkpoint for a smooth fitness gradient
         let progress = 0;
+        let targetVelocityBonus = 0;
         if (typeof currentTrack !== 'undefined' && currentTrack && currentTrack.checkpoints && currentTrack.checkpoints.length) {
             const targetIndex = this.checkpointIndex % currentTrack.checkpoints.length;
             const cp = currentTrack.checkpoints[targetIndex];
@@ -607,25 +562,26 @@ class Car {
             }
             
             if (cp && prevCp) {
-                const totalDist = Math.hypot(cp.x - prevCp.x, cp.y - prevCp.y) || 1;
-                const currentDist = Math.hypot(this.x - cp.x, this.y - cp.y);
-                progress = Math.max(0, Math.min(1, 1 - (currentDist / totalDist)));
-            }
-        }
-        
-        let targetVelocityBonus = 0;
-        if (typeof currentTrack !== 'undefined' && currentTrack && currentTrack.checkpoints && currentTrack.checkpoints.length) {
-            const targetIndex = this.checkpointIndex % currentTrack.checkpoints.length;
-            const targetCp = currentTrack.checkpoints[targetIndex];
-            if (targetCp) {
-                const tdx = targetCp.x - this.x;
-                const tdy = targetCp.y - this.y;
-                const tdist = Math.hypot(tdx, tdy);
-                if (tdist > 1) {
-                    const nx = tdx / tdist;
-                    const ny = tdy / tdist;
+                const segX = cp.x - prevCp.x;
+                const segY = cp.y - prevCp.y;
+                const segLenSq = segX * segX + segY * segY;
+                if (segLenSq > 1) {
+                    // Vector projection along track segment:
+                    // Cars taking wide racing lines or center lines advance down the track identically without penalty
+                    const carX = this.x - prevCp.x;
+                    const carY = this.y - prevCp.y;
+                    const proj = (carX * segX + carY * segY) / segLenSq;
+                    progress = Math.max(0, Math.min(1, proj));
+
+                    // Forward velocity along track direction:
+                    const segLen = Math.sqrt(segLenSq);
+                    const nx = segX / segLen;
+                    const ny = segY / segLen;
                     const forwardVelocity = (this.vx * nx + this.vy * ny);
                     targetVelocityBonus = Math.max(0, forwardVelocity / this.maxSpeed) * 1.5;
+                } else {
+                    const currentDist = Math.hypot(this.x - cp.x, this.y - cp.y);
+                    progress = Math.max(0, Math.min(1, 1 - (currentDist / 100)));
                 }
             }
         }

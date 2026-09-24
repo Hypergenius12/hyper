@@ -1545,10 +1545,7 @@ function setupUI() {
         wallPenalty: 1.0,
         survivalReward: 1.0,
         idleTimeout: 3.5,
-        sensorRange: 280,
-        apexClearance: 8,
-        cornerSlowdown: 0.08,
-        cornerGrazePenalty: 1.0
+        sensorRange: 280
     };
 
     function updateFitnessRewardsFromUI() {
@@ -1559,9 +1556,6 @@ function setupUI() {
         const surv = parseFloat(document.getElementById('reward-survival')?.value);
         const idle = parseFloat(document.getElementById('reward-idle')?.value);
         const senRange = parseFloat(document.getElementById('train-sensor-range')?.value);
-        const apex = parseFloat(document.getElementById('apex-clearance')?.value);
-        const slowdown = parseFloat(document.getElementById('corner-slowdown')?.value);
-        const graze = parseFloat(document.getElementById('corner-graze-pen')?.value);
 
         window.fitnessRewards = {
             checkpointReward: isNaN(cp) ? 10 : cp,
@@ -1570,10 +1564,7 @@ function setupUI() {
             wallPenalty: isNaN(wall) ? 1.0 : wall,
             survivalReward: isNaN(surv) ? 1.0 : surv,
             idleTimeout: isNaN(idle) ? 3.5 : idle,
-            sensorRange: isNaN(senRange) ? 280 : senRange,
-            apexClearance: isNaN(apex) ? 8 : apex,
-            cornerSlowdown: isNaN(slowdown) ? 0.08 : (slowdown / 100),
-            cornerGrazePenalty: isNaN(graze) ? 1.0 : graze
+            sensorRange: isNaN(senRange) ? 280 : senRange
         };
 
         if (typeof aiCars !== 'undefined' && Array.isArray(aiCars)) {
@@ -1584,9 +1575,6 @@ function setupUI() {
         }
         if (typeof bestBotCar !== 'undefined' && bestBotCar) {
             bestBotCar.sensorLength = window.fitnessRewards.sensorRange;
-        }
-        if (typeof currentTrack !== 'undefined' && currentTrack && typeof currentTrack.computeCheckpoints === 'function') {
-            currentTrack.computeCheckpoints();
         }
 
         try {
@@ -1601,12 +1589,9 @@ function setupUI() {
     setupSlider('reward-survival', 'reward-surv-val', v => parseFloat(v).toFixed(1) + 'x');
     setupSlider('reward-idle', 'reward-idle-val', v => parseFloat(v).toFixed(1) + 's');
     setupSlider('train-sensor-range', 'train-sen-range-val', v => v + 'px');
-    setupSlider('apex-clearance', 'apex-clearance-val', v => v + 'px');
-    setupSlider('corner-slowdown', 'corner-slowdown-val', v => v + '%');
-    setupSlider('corner-graze-pen', 'corner-graze-pen-val', v => parseFloat(v).toFixed(1) + 'x');
 
     ['reward-checkpoint', 'reward-lap', 'reward-speed', 'reward-wall', 'reward-survival', 'reward-idle',
-     'train-sensor-range', 'apex-clearance', 'corner-slowdown', 'corner-graze-pen'].forEach(id => {
+     'train-sensor-range'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateFitnessRewardsFromUI);
     });
@@ -1621,10 +1606,7 @@ function setupUI() {
                 'reward-wall': 1.0,
                 'reward-survival': 1.0,
                 'reward-idle': 3.5,
-                'train-sensor-range': 280,
-                'apex-clearance': 8,
-                'corner-slowdown': 8,
-                'corner-graze-pen': 1.0
+                'train-sensor-range': 280
             };
             for (const [id, val] of Object.entries(defaults)) {
                 const el = document.getElementById(id);
@@ -1654,17 +1636,8 @@ function setupUI() {
                 if (document.getElementById('train-sensor-range') && window.fitnessRewards.sensorRange !== undefined) {
                     document.getElementById('train-sensor-range').value = window.fitnessRewards.sensorRange;
                 }
-                if (document.getElementById('apex-clearance') && window.fitnessRewards.apexClearance !== undefined) {
-                    document.getElementById('apex-clearance').value = window.fitnessRewards.apexClearance;
-                }
-                if (document.getElementById('corner-slowdown') && window.fitnessRewards.cornerSlowdown !== undefined) {
-                    document.getElementById('corner-slowdown').value = Math.round(window.fitnessRewards.cornerSlowdown * 100);
-                }
-                if (document.getElementById('corner-graze-pen') && window.fitnessRewards.cornerGrazePenalty !== undefined) {
-                    document.getElementById('corner-graze-pen').value = window.fitnessRewards.cornerGrazePenalty;
-                }
                 ['reward-checkpoint', 'reward-lap', 'reward-speed', 'reward-wall', 'reward-survival', 'reward-idle',
-                 'train-sensor-range', 'apex-clearance', 'corner-slowdown', 'corner-graze-pen'].forEach(id => {
+                 'train-sensor-range'].forEach(id => {
                     document.getElementById(id)?.dispatchEvent(new Event('input'));
                 });
             }
