@@ -2294,7 +2294,7 @@ export async function createTextureAtlas(useMinecraft = false) {
                             const tCanvas = document.createElement('canvas');
                             tCanvas.width = TEX_SIZE; tCanvas.height = TEX_SIZE;
                             const tCtx = tCanvas.getContext('2d');
-                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
                             
                             // Determine tint color
                             let tint = '#79c05a'; // default grass
@@ -2323,11 +2323,31 @@ export async function createTextureAtlas(useMinecraft = false) {
                             
                             // Restore alpha channel using destination-in
                             tCtx.globalCompositeOperation = 'destination-in';
-                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
                             
-                            ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                            ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
                         } else {
-                            ctx.drawImage(img, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                            ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                        }
+                        
+                        // If animated strip, save it to animatedFrames and clear the old procedural canvas
+                        if (img.height > TEX_SIZE) {
+                            const frameInfo = animatedFrames.find(f => f.x === entry.col * TEX_SIZE && f.y === entry.row * TEX_SIZE);
+                            if (frameInfo) {
+                                frameInfo.isMC = true;
+                                frameInfo.img = img;
+                                frameInfo.frames = img.height / TEX_SIZE;
+                                frameInfo.tint = requiresTint ? tint : null;
+                            } else {
+                                animatedFrames.push({
+                                    x: entry.col * TEX_SIZE,
+                                    y: entry.row * TEX_SIZE,
+                                    isMC: true,
+                                    img: img,
+                                    frames: img.height / TEX_SIZE,
+                                    tint: requiresTint ? tint : null
+                                });
+                            }
                         }
                     }
                 }));
@@ -2356,8 +2376,8 @@ export async function createTextureAtlas(useMinecraft = false) {
         const entry = map[faceKey] || map.side || map.top;
         
         // Add a tiny inset (0.1px) to prevent texture bleeding / 1px gaps
-        const epU = (1.0 / atlasW) * 0.1;
-        const epV = (1.0 / atlasH) * 0.1;
+        const epU = (1.0 / atlasW) * 0.49;
+        const epV = (1.0 / atlasH) * 0.49;
         
         return {
             u: entry.col * uUnit + epU,
@@ -2447,18 +2467,49 @@ export async function createTextureAtlas(useMinecraft = false) {
 
     function updateAnimatedTextures(time) {
         if (animatedFrames.length === 0) return;
-        // Slow down update rate to prevent constant GPU texture upload lag
-        const shift = Math.floor(time * 0.001) % TEX_SIZE;
-        if (texture.userData.lastShift === shift) return;
-        texture.userData.lastShift = shift;
-
+        const shift = Math.floor(time * 0.05) % TEX_SIZE;
+        let didUpdate = false;
+        
         for (const frame of animatedFrames) {
-            tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            tmpCtx.drawImage(frame.canvas, 0, shift);
-            tmpCtx.drawImage(frame.canvas, 0, shift - TEX_SIZE);
-            ctx.drawImage(tmp, frame.x, frame.y);
+            if (frame.isMC) {
+                const totalFrames = frame.frames || 1;
+                const currentFrame = Math.floor(time / 100) % totalFrames;
+                if (frame.lastFrame === currentFrame) continue;
+                frame.lastFrame = currentFrame;
+                
+                ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                ctx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                
+                // If it requires tint, multiply tint color over it
+                if (frame.tint) {
+                    tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                    tmpCtx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                    tmpCtx.globalCompositeOperation = 'multiply';
+                    tmpCtx.fillStyle = frame.tint;
+                    tmpCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+                    // Restore alpha
+                    tmpCtx.globalCompositeOperation = 'destination-in';
+                    tmpCtx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                    tmpCtx.globalCompositeOperation = 'source-over';
+                    
+                    ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                    ctx.drawImage(tmp, 0, 0, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                }
+                
+                didUpdate = true;
+            } else {
+                if (texture.userData.lastShift === shift) continue;
+                tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                tmpCtx.drawImage(frame.canvas, 0, shift);
+                tmpCtx.drawImage(frame.canvas, 0, shift - TEX_SIZE);
+                ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                ctx.drawImage(tmp, frame.x, frame.y);
+                didUpdate = true;
+            }
         }
-        texture.needsUpdate = true;
+        
+        texture.userData.lastShift = shift;
+        if (didUpdate) texture.needsUpdate = true;
     }
 
     return { texture, getUV, atlasW, atlasH, totalRows, getBlockIcon, updateAnimatedTextures };
