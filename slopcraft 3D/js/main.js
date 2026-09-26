@@ -1366,7 +1366,7 @@ class Game {
                 const footstepInterval = this.input.keys.sprint ? 0.3 : 0.45;
                 if (this.footstepTimer >= footstepInterval) {
                     this.footstepTimer = 0;
-                    const blockUnder = this.chunkManager.getBlock(Math.floor(this.player.position.x), Math.floor(this.player.position.y - 0.1), Math.floor(this.player.position.z));
+                    const blockUnder = this.world.getBlock(Math.floor(this.player.position.x), Math.floor(this.player.position.y - 0.1), Math.floor(this.player.position.z));
                     this.audio.playFootstep(blockUnder);
                 }
             } else {
@@ -1471,7 +1471,11 @@ class Game {
         this.particles.update(dt);
         this.torchSystem.update(dt, this.engine.camera.position);
         this.cloudSystem.update(dt, this.engine.camera.position);
+        const prevHealth = this.player.health;
         this.entityManager.update(dt, this.world, this.player.position, this.player.inventory, this.player, this.lighting.timeOfDay, this.currentDimension);
+        if (this.player.health < prevHealth) {
+            this.audio.playHurt(this.player.position);
+        }
 
         // Process mob spell casting
         for (const mob of this.entityManager.mobs) {
