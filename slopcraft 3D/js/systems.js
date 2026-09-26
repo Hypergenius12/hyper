@@ -1924,7 +1924,7 @@ export class MeteorShowerSystem {
 
             if (hit) {
                 this.particles.emit(m.mesh.position, 'explosion', 30, 0xff4400);
-                this.audio.playHit(); // pseudo explosion sound
+                this.audio.playExplode();
                 
                 // Carve crater
                 const radius = 2 + Math.floor(Math.random() * 2);

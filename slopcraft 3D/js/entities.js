@@ -205,6 +205,7 @@ export class Player {
         const blockIn = world.getBlock(this.position.x, this.position.y + 0.1, this.position.z);
         const blockProps = getBlockProperties(blockIn);
         const inWater = blockProps && (blockProps.isLiquid || blockProps.isWaterlogged) && blockIn !== BLOCKS.LAVA;
+        this.inWater = inWater;
         const inLava = blockIn === BLOCKS.LAVA;
         const inFire = blockIn === BLOCKS.FIRE;
         const onLadder = blockIn === BLOCKS.LADDER;

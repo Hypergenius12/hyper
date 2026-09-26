@@ -1076,7 +1076,7 @@ class Game {
                     this.audio.playHit();
                 } else if (hit.blockType === window.BLOCKS.TNT) {
                     this.igniteTNT(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
-                    this.audio.playHit(); // Play fizz sound ideally
+                    this.audio.playFizz();
                 } else if (hit.face) {
                     const nx = hit.blockPos.x + hit.face.x;
                     const ny = hit.blockPos.y + hit.face.y;
@@ -1092,7 +1092,7 @@ class Game {
 
             if (hit.hit && hit.blockType === window.BLOCKS.CHEST_BLOCK) {
                 // Open Chest
-                this.audio.playClick(); // Or a specific chest open sound
+                this.audio.playChestOpen();
                 const key = `${hit.blockPos.x},${hit.blockPos.y},${hit.blockPos.z}`;
                 const visual = this.chestVisuals.get(key);
                 if (visual) visual.isOpen = true;
@@ -1129,8 +1129,6 @@ class Game {
                 return;
             }
             if (hit.hit && hit.blockType === window.BLOCKS.DUNGEON_DOOR) {
-                this.audio.playClick();
-                
                 const key = `${hit.blockPos.x},${hit.blockPos.y},${hit.blockPos.z}`;
                 const keyLower = `${hit.blockPos.x},${hit.blockPos.y - 1},${hit.blockPos.z}`;
                 
@@ -1139,6 +1137,8 @@ class Game {
                 
                 if (door) {
                     door.isOpen = !door.isOpen;
+                    if (door.isOpen) this.audio.playDoorOpen(hit.blockPos);
+                    else this.audio.playDoorClose(hit.blockPos);
                     const targetRotation = door.isOpen ? Math.PI / 2 : 0;
                     door.mesh.rotation.y = door.baseRotationY + targetRotation;
                 }
@@ -1152,7 +1152,7 @@ class Game {
                 if (this.player.mana < this.player.maxMana) {
                     this.player.mana += 20;
                     if (this.player.mana > this.player.maxMana) this.player.mana = this.player.maxMana;
-                    this.audio.playHit(); // Magical sound 
+                    if (localStorage.getItem('slopcraft_mc_textures') === 'true') this.audio.playMC('random/levelup', 0.6); else this.audio.playHit(); 
                     
                     // Consume bookshelf? Or let it be reusable? Let's make it reusable but with a tiny cooldown maybe? 
                     // No cooldown mentioned. 
@@ -1366,8 +1366,12 @@ class Game {
                 const footstepInterval = this.input.keys.sprint ? 0.3 : 0.45;
                 if (this.footstepTimer >= footstepInterval) {
                     this.footstepTimer = 0;
-                    const blockUnder = this.world.getBlock(Math.floor(this.player.position.x), Math.floor(this.player.position.y - 0.1), Math.floor(this.player.position.z));
-                    this.audio.playFootstep(blockUnder);
+                    if (this.player.inWater) {
+                        this.audio.playSwim();
+                    } else {
+                        const blockUnder = this.world.getBlock(Math.floor(this.player.position.x), Math.floor(this.player.position.y - 0.1), Math.floor(this.player.position.z));
+                        this.audio.playFootstep(blockUnder);
+                    }
                 }
             } else {
                 this.footstepTimer = 0.45; // trigger immediately next step
@@ -1398,7 +1402,7 @@ class Game {
                 const spawnPos = findSafeSpawn(this.planetParams, this.currentDimension);
                 this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
                 this.player.velocity.set(0, 0, 0);
-                this.audio.playHit();
+                if (localStorage.getItem('slopcraft_mc_textures') === 'true') this.audio.playMC('random/levelup', 0.6); else this.audio.playCast();
             }
         }
 
@@ -1836,7 +1840,7 @@ class Game {
             const ry = Math.random() * 1.5;
             const rz = (Math.random() - 0.5) * 0.8;
             this.particles.emit(this.player.position.clone().add(new THREE.Vector3(rx, ry, rz)), 'magic', 1, 0xff5500);
-            if (Math.random() < 0.1) this.audio.playHit(); // small sizzle sound
+            if (Math.random() < 0.1) this.audio.playFizz();
         }
 
         // Update particles
@@ -2201,7 +2205,7 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
 
         // Effects
         this.particles.emit(new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5), 'explosion', 50, 0xffaa00);
-        this.audio.playHit(); // Ideally an explosion sound
+        this.audio.playExplode();
     }
 
     tryLightPortal(startX, startY, startZ) {
