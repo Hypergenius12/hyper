@@ -15,7 +15,7 @@ export class AudioManager {
         if (this.ctx) return;
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = 0.3;
+        this.masterGain.gain.value = 1.0;
         this.masterGain.connect(this.ctx.destination);
     }
 
@@ -25,7 +25,7 @@ export class AudioManager {
         
         this.mcCache[path] = (async () => {
             try {
-                const res = await fetch(`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/sounds/${path}.ogg`);
+                const res = await fetch(`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/sounds/${path}.ogg`);
                 if (!res.ok) throw new Error("HTTP error");
                 const arrayBuffer = await res.arrayBuffer();
                 const audioBuffer = await new Promise((resolve, reject) => {
@@ -42,7 +42,7 @@ export class AudioManager {
     
     async playMC(path, vol=1.0, position=null) {
         this._ensureContext();
-        if (this.ctx.state === 'suspended') this.ctx.resume();
+        if (this.ctx.state === 'suspended') await this.ctx.resume();
         const buffer = await this._loadMCFile(path);
         if (!buffer) return false;
         
@@ -166,79 +166,98 @@ export class AudioManager {
 
     playBreak(blockType) {
         const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
-        if (useMC) {
-            const v = Math.floor(Math.random() * 4) + 1;
+        
+        const doFallback = () => {
             if ([BLOCKS.STONE, BLOCKS.COBBLESTONE, BLOCKS.IRON_ORE, BLOCKS.GOLD_ORE, BLOCKS.CRYSTAL_ORE, BLOCKS.MANA_ORE, BLOCKS.OBSIDIAN, BLOCKS.DUNGEON_BRICK, BLOCKS.BEDROCK, BLOCKS.ALIEN_STONE].includes(blockType)) {
-                this.playMC(`dig/stone${v}`, 0.6); return;
+                this.playNoise(0.2, 0.4);
+                this.playTone(80, 'triangle', 0.1, 0.5, -40);
             } else if ([BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.PORTAL_FRAME, BLOCKS.ACACIA_WOOD].includes(blockType)) {
-                this.playMC(`dig/wood${v}`, 0.6); return;
+                this.playNoise(0.1, 0.2);
+                this.playTone(200, 'square', 0.05, 0.3, -50);
             } else if ([BLOCKS.SAND, BLOCKS.GRAVEL, BLOCKS.RED_SAND, BLOCKS.DIRT, BLOCKS.GRASS].includes(blockType)) {
-                this.playMC(`dig/grass${v}`, 0.6); return;
+                this.playNoise(0.15, 0.2);
             } else if ([BLOCKS.GLASS, BLOCKS.ICE, BLOCKS.ALIEN_CRYSTAL].includes(blockType)) {
-                this.playMC(`dig/glass${v}`, 0.6); return;
+                this.playNoise(0.1, 0.3);
+                this.playTone(800, 'sine', 0.05, 0.4, -200);
+            } else {
+                this.playNoise(0.15, 0.3);
+                this.playTone(150, 'square', 0.05, 0.2, -50);
             }
-            this.playMC(`dig/stone${v}`, 0.6); return;
-        }
+        };
 
-        if ([BLOCKS.STONE, BLOCKS.COBBLESTONE, BLOCKS.IRON_ORE, BLOCKS.GOLD_ORE, BLOCKS.CRYSTAL_ORE, BLOCKS.MANA_ORE, BLOCKS.OBSIDIAN, BLOCKS.DUNGEON_BRICK, BLOCKS.BEDROCK, BLOCKS.ALIEN_STONE].includes(blockType)) {
-            // Deep rocky crunch
-            this.playNoise(0.2, 0.4);
-            this.playTone(80, 'triangle', 0.1, 0.5, -40);
-        } else if ([BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.PORTAL_FRAME, BLOCKS.ACACIA_WOOD].includes(blockType)) {
-            // Wood crack
-            this.playNoise(0.1, 0.2);
-            this.playTone(200, 'square', 0.05, 0.3, -50);
-        } else if ([BLOCKS.SAND, BLOCKS.GRAVEL, BLOCKS.RED_SAND, BLOCKS.DIRT, BLOCKS.GRASS].includes(blockType)) {
-            // Soft sandy dig
-            this.playNoise(0.15, 0.2);
-        } else if ([BLOCKS.GLASS, BLOCKS.ICE, BLOCKS.ALIEN_CRYSTAL].includes(blockType)) {
-            // Glass shatter
-            this.playNoise(0.1, 0.3);
-            this.playTone(800, 'sine', 0.05, 0.4, -200);
-        } else {
-            // Default generic break
-            this.playNoise(0.15, 0.3);
-        }
-    }
-
-    playPlace(blockType) {
-        const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
         if (useMC) {
             const v = Math.floor(Math.random() * 4) + 1;
-            if ([BLOCKS.STONE, BLOCKS.COBBLESTONE, BLOCKS.IRON_ORE, BLOCKS.GOLD_ORE, BLOCKS.CRYSTAL_ORE, BLOCKS.MANA_ORE, BLOCKS.OBSIDIAN, BLOCKS.DUNGEON_BRICK, BLOCKS.ALIEN_STONE].includes(blockType)) {
-                this.playMC(`dig/stone${v}`, 0.6); return;
-            } else if ([BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.PORTAL_FRAME, BLOCKS.ACACIA_WOOD].includes(blockType)) {
-                this.playMC(`dig/wood${v}`, 0.6); return;
-            } else if ([BLOCKS.SAND, BLOCKS.GRAVEL, BLOCKS.RED_SAND, BLOCKS.DIRT, BLOCKS.GRASS].includes(blockType)) {
-                this.playMC(`dig/grass${v}`, 0.6); return;
-            }
-            this.playMC(`dig/stone${v}`, 0.6); return;
+            let path = `dig/stone${v}`;
+            if ([BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.PORTAL_FRAME, BLOCKS.ACACIA_WOOD].includes(blockType)) path = `dig/wood${v}`;
+            else if ([BLOCKS.SAND, BLOCKS.GRAVEL, BLOCKS.RED_SAND, BLOCKS.DIRT, BLOCKS.GRASS].includes(blockType)) path = `dig/grass${v}`;
+            else if ([BLOCKS.GLASS, BLOCKS.ICE, BLOCKS.ALIEN_CRYSTAL].includes(blockType)) path = `dig/glass${v}`;
+            
+            this.playMC(path, 0.6).then(s => { if(!s) doFallback(); });
+            return;
         }
-
-        if ([BLOCKS.STONE, BLOCKS.COBBLESTONE, BLOCKS.IRON_ORE, BLOCKS.GOLD_ORE, BLOCKS.CRYSTAL_ORE, BLOCKS.MANA_ORE, BLOCKS.OBSIDIAN, BLOCKS.DUNGEON_BRICK, BLOCKS.ALIEN_STONE].includes(blockType)) {
-            this.playTone(100, 'triangle', 0.1, 0.4, -20);
-        } else if ([BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.PORTAL_FRAME, BLOCKS.ACACIA_WOOD].includes(blockType)) {
-            this.playTone(180, 'square', 0.08, 0.3, -30);
-        } else if ([BLOCKS.SAND, BLOCKS.GRAVEL, BLOCKS.RED_SAND, BLOCKS.DIRT, BLOCKS.GRASS].includes(blockType)) {
-            this.playNoise(0.08, 0.15);
-        } else {
-            this.playTone(150, 'triangle', 0.1, 0.3, -50);
-        }
+        doFallback();
     }
 
-    playHit(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') === 'true') {
-            this.playMC('damage/hit1', 0.7, position); return;
+    playPlace(blockType, position) {
+        const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+        
+        const doFallback = () => {
+            if ([BLOCKS.STONE, BLOCKS.COBBLESTONE].includes(blockType)) {
+                this.playNoise(0.1, 0.3, position);
+            } else if ([BLOCKS.WOOD, BLOCKS.PLANKS].includes(blockType)) {
+                this.playNoise(0.05, 0.2, position);
+                this.playTone(150, 'square', 0.05, 0.2, -30, position);
+            } else {
+                this.playNoise(0.1, 0.2, position);
+            }
+        };
+
+        if (useMC) {
+            const v = Math.floor(Math.random() * 4) + 1;
+            let path = `dig/stone${v}`;
+            if ([BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.PORTAL_FRAME, BLOCKS.ACACIA_WOOD].includes(blockType)) path = `dig/wood${v}`;
+            else if ([BLOCKS.SAND, BLOCKS.GRAVEL, BLOCKS.RED_SAND, BLOCKS.DIRT, BLOCKS.GRASS].includes(blockType)) path = `dig/grass${v}`;
+            else if ([BLOCKS.GLASS, BLOCKS.ICE, BLOCKS.ALIEN_CRYSTAL].includes(blockType)) path = `dig/glass${v}`;
+            
+            this.playMC(path, 0.6, position).then(s => { if(!s) doFallback(); });
+            return;
         }
-        this.playNoise(0.12, 0.4, position);
-        this.playTone(200, 'square', 0.1, 0.3, -100, position);
+        doFallback();
+    }
+
+    playHit(position) {
+        const doFallback = () => {
+            this.playNoise(0.05, 0.4, position);
+            this.playTone(300, 'square', 0.05, 0.2, -100, position);
+        };
+        if (localStorage.getItem('slopcraft_mc_textures') === 'true') {
+            this.playMC('damage/hit1', 0.7, position).then(s => { if(!s) doFallback(); });
+            return;
+        }
+        doFallback();
+    }
+
+    playHurt(position) {
+        const doFallback = () => {
+            this.playTone(400, 'sawtooth', 0.2, 0.4, -200, position);
+            this.playNoise(0.1, 0.5, position);
+        };
+        if (localStorage.getItem('slopcraft_mc_textures') === 'true') {
+            this.playMC('damage/hit2', 0.7, position).then(s => { if(!s) doFallback(); });
+            return;
+        }
+        doFallback();
     }
 
     playClick() {
+        const doFallback = () => {
+            this.playTone(800, 'sine', 0.05, 0.2);
+        };
         if (localStorage.getItem('slopcraft_mc_textures') === 'true') {
-            this.playMC('random/click', 0.7); return;
+            this.playMC('random/click', 0.7).then(s => { if(!s) doFallback(); });
+            return;
         }
-        this.playTone(800, 'sine', 0.05, 0.2);
+        doFallback();
     }
 
     playCast(position = null) {

@@ -2020,7 +2020,7 @@ function hasFaceVariants(blockType) {
 // For uniform blocks, store 1 texture and use the same UV for all faces
 
 
-const MINECRAFT_ASSETS_BASE = "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/";
+const MINECRAFT_ASSETS_BASE = "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/textures/";
 
 const MC_TEXTURE_MAP = {
     [BLOCKS.GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
@@ -2079,8 +2079,8 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.CHERRY_LOG]: { top: 'cherry_log_top', side: 'cherry_log', bottom: 'cherry_log_top' },
     [BLOCKS.CHERRY_LEAVES]: 'cherry_leaves',
     [BLOCKS.PINK_PETALS]: 'pink_petals',
-    [BLOCKS.AUTUMN_WOOD]: { top: 'spruce_log_top', side: 'spruce_log', bottom: 'spruce_log_top' },
-    [BLOCKS.AUTUMN_LEAVES]: 'spruce_leaves',
+    [BLOCKS.AUTUMN_WOOD]: { top: 'pale_oak_log_top', side: 'pale_oak_log', bottom: 'pale_oak_log_top' },
+    [BLOCKS.AUTUMN_LEAVES]: 'pale_oak_leaves',
     [BLOCKS.FALLEN_LEAVES]: 'podzol_top',
     [BLOCKS.GLOW_STEM]: 'crimson_stem',
     [BLOCKS.GLOW_LEAVES]: 'shroomlight',
@@ -2147,7 +2147,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.SEASHELL_2]: 'nautilus_shell',
     [BLOCKS.SEASHELL_3]: 'scute',
     [BLOCKS.LILY_PAD]: 'lily_pad',
-    [BLOCKS.ALGAE]: 'lily_pad',
+    [BLOCKS.ALGAE]: 'seagrass',
     [BLOCKS.RED_KELP]: 'kelp',
     [BLOCKS.BROWN_KELP]: 'kelp_plant',
     [BLOCKS.QUICKSOIL]: 'sand',
