@@ -213,7 +213,7 @@ export class GameEngine {
 
         // Color management
         this._renderer.outputColorSpace = THREE.SRGBColorSpace;
-        this._renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this._renderer.toneMapping = THREE.NoToneMapping;
 
         this.resize();
         window.addEventListener('resize', () => this.resize());

@@ -179,6 +179,7 @@ class Game {
         this.composer = new EffectComposer(this.engine.renderer, renderTarget);
         this.composer.addPass(this.renderPass);
         this.composer.addPass(this.bokehPass);
+        this.bokehPass.enabled = localStorage.getItem('slopcraft_blur') !== 'false';
         this.outputPass = new OutputPass();
         this.composer.addPass(this.outputPass);
 
@@ -2312,6 +2313,25 @@ const initGame = () => {
         pauseMcToggle.checked = useMC;
         pauseMcToggle.addEventListener('change', (e) => localStorage.setItem('slopcraft_mc_textures', e.target.checked));
     }
+
+    const startBlurToggle = document.getElementById('start-blur-toggle');
+    const pauseBlurToggle = document.getElementById('pause-blur-toggle');
+    const useBlur = localStorage.getItem('slopcraft_blur') !== 'false'; // default true
+    if (startBlurToggle) {
+        startBlurToggle.checked = useBlur;
+        startBlurToggle.addEventListener('change', (e) => {
+            localStorage.setItem('slopcraft_blur', e.target.checked);
+            if (window.game && window.game.bokehPass) window.game.bokehPass.enabled = e.target.checked;
+        });
+    }
+    if (pauseBlurToggle) {
+        pauseBlurToggle.checked = useBlur;
+        pauseBlurToggle.addEventListener('change', (e) => {
+            localStorage.setItem('slopcraft_blur', e.target.checked);
+            if (window.game && window.game.bokehPass) window.game.bokehPass.enabled = e.target.checked;
+        });
+    }
+
 
     if (startBtn) {
         startBtn.onclick = () => {

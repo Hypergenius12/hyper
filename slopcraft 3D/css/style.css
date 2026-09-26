@@ -434,12 +434,11 @@ canvas#game-canvas {
     transition: none;
 }
 .menu-btn:hover {
-    background: #a8a8a8;
-    box-shadow: inset 2px 2px 0px 0px #ffffff, inset -2px -2px 0px 0px #555555;
+    background: #2a2a3a;
+    border-color: #555566;
 }
 .menu-btn:active {
-    box-shadow: inset 2px 2px 0px 0px #555555, inset -2px -2px 0px 0px #ffffff;
-    background: #c6c6c6;
+    background: #0f0f15;
 }
 .menu-btn.primary {
     background: var(--accent-dim);
@@ -568,28 +567,30 @@ canvas#game-canvas {
 }
 
 .inv-slot {
-    width: 44px;
-    height: 44px;
-    background: #8b8b8b;
-    border: 2px solid;
-    border-color: #373737 #ffffff #ffffff #373737;
-    position: relative;
+    width: 48px;
+    height: 48px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid var(--border-subtle);
+    border-radius: 0;
     cursor: pointer;
-    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 /* Style the first 9 slots as the hotbar */
 .inventory-grid .inv-slot:nth-child(-n+9) {
+    background: rgba(20, 20, 30, 0.8);
+    border-color: rgba(255, 255, 255, 0.3);
     margin-bottom: 8px;
 }
 .inv-slot:hover {
-    background: #9d9d9d;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #ffffff;
 }
 .inv-slot.selected {
-    border: 2px solid #ffffff;
-    box-shadow: inset 0 0 0 2px #c6c6c6;
+    border-color: var(--accent-bright);
+    background: rgba(255, 255, 255, 0.2);
 }
 .inv-slot canvas {
     width: 32px;
@@ -1022,28 +1023,4 @@ canvas#game-canvas {
     }
     .title-voxel { font-size: 40px; letter-spacing: 10px; }
     .title-odyssey { font-size: 18px; letter-spacing: 12px; }
-}
-
-
-/* Minecraft UI Text Overrides */
-.inv-wrapper, .window-panel, .crafting-col {
-    color: #3f3f3f !important;
-}
-.inv-wrapper div, .window-panel div {
-    color: #3f3f3f !important;
-    text-shadow: none !important;
-    opacity: 1 !important;
-}
-.inv-wrapper .item-count, #geometric-hotbar .item-count {
-    color: white !important;
-    text-shadow: 1px 1px 0 #000 !important;
-}
-.crafting-col button {
-    background: #c6c6c6 !important;
-    border: 2px solid #000 !important;
-    color: #000 !important;
-    box-shadow: inset 2px 2px 0px 0px #ffffff, inset -2px -2px 0px 0px #555555 !important;
-}
-.crafting-col button:active {
-    box-shadow: inset 2px 2px 0px 0px #555555, inset -2px -2px 0px 0px #ffffff !important;
 }
