@@ -548,6 +548,8 @@ export class Chunk {
         geometry.addGroup(groupOffset, transparentIndexCount, 4); groupOffset += transparentIndexCount;
         geometry.addGroup(groupOffset, glowOpaqueIndexCount, 5); groupOffset += glowOpaqueIndexCount;
         geometry.addGroup(groupOffset, glowTransparentIndexCount, 6); groupOffset += glowTransparentIndexCount;
+        geometry.addGroup(groupOffset, slightGlowOpaqueIndexCount, 7); groupOffset += slightGlowOpaqueIndexCount;
+        geometry.addGroup(groupOffset, slightGlowTransparentIndexCount, 8); groupOffset += slightGlowTransparentIndexCount;
 
         geometry.setAttribute('position', new THREE.BufferAttribute(_positions.slice(0, posCount), 3));
         geometry.setAttribute('normal', new THREE.BufferAttribute(_normals.slice(0, posCount), 3));
