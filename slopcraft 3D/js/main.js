@@ -966,7 +966,11 @@ class Game {
                 this.heldItemMesh.position.set(0.4, -0.1, -0.8);
                 this.heldItemMesh.rotation.x = Math.PI / 4;
             } else {
-                const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype);
+                const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype, (c) => {
+                    if (this.heldItemMesh && this.heldItemMesh.material && this.heldItemMesh.material.map) {
+                        this.heldItemMesh.material.map.needsUpdate = true;
+                    }
+                });
                 const tex = new THREE.CanvasTexture(iconCanvas);
                 tex.magFilter = THREE.NearestFilter;
                 tex.minFilter = THREE.NearestFilter;

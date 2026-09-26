@@ -1734,7 +1734,10 @@ class UISystem {
                 const iconCanvas = this.atlas.getBlockIcon(def.subtype);
                 dataURL = iconCanvas.toDataURL();
             } else {
-                const iconCanvas = generateItemTexture(def.type, def.subtype);
+                const iconCanvas = generateItemTexture(def.type, def.subtype, (c) => {
+                    const elImg = el.querySelector('img');
+                    if (elImg) elImg.src = c.toDataURL();
+                });
                 dataURL = iconCanvas.toDataURL();
             }
             
