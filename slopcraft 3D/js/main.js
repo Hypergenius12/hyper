@@ -1259,7 +1259,7 @@ class Game {
             } else if (slot && slot.item.type === 'food') {
                 if (this.player.health < this.player.maxHealth) {
                     this.player.health = Math.min(this.player.maxHealth, this.player.health + (slot.item.data.heal || 10));
-                    this.audio.playHit();
+                    this.audio.playEat();
                     this.particles.emit(this.player.position, 'explosion', 10, 0x33cc33);
                     slot.count--;
                     if (slot.count <= 0) {
@@ -1366,7 +1366,8 @@ class Game {
                 const footstepInterval = this.input.keys.sprint ? 0.3 : 0.45;
                 if (this.footstepTimer >= footstepInterval) {
                     this.footstepTimer = 0;
-                    this.audio.playFootstep();
+                    const blockUnder = this.chunkManager.getBlock(Math.floor(this.player.position.x), Math.floor(this.player.position.y - 0.1), Math.floor(this.player.position.z));
+                    this.audio.playFootstep(blockUnder);
                 }
             } else {
                 this.footstepTimer = 0.45; // trigger immediately next step

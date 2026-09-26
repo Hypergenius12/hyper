@@ -156,12 +156,35 @@ export class AudioManager {
     }
 
     playFootstep(blockType) {
-        // Subtle noise
-        this.playNoise(0.05, 0.1);
+        const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+        const doFallback = () => {
+            this.playNoise(0.05, 0.1);
+        };
+        if (useMC) {
+            const v = Math.floor(Math.random() * 4) + 1;
+            let path = `step/stone${v}`;
+            if ([BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.PORTAL_FRAME, BLOCKS.ACACIA_WOOD].includes(blockType)) path = `step/wood${v}`;
+            else if ([BLOCKS.SAND, BLOCKS.RED_SAND].includes(blockType)) path = `step/sand${v}`;
+            else if ([BLOCKS.GRAVEL].includes(blockType)) path = `step/gravel${v}`;
+            else if ([BLOCKS.DIRT, BLOCKS.GRASS].includes(blockType)) path = `step/grass${v}`;
+            else if ([BLOCKS.SNOW].includes(blockType)) path = `step/snow${v}`;
+            
+            this.playMC(path, 0.4).then(s => { if(!s) doFallback(); });
+            return;
+        }
+        doFallback();
     }
 
     playWaterSplash() {
-        this.playNoise(0.3, 0.4);
+        const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+        const doFallback = () => {
+            this.playNoise(0.3, 0.4);
+        };
+        if (useMC) {
+            this.playMC('random/splash', 0.6).then(s => { if(!s) doFallback(); });
+            return;
+        }
+        doFallback();
     }
 
     playBreak(blockType) {
@@ -249,6 +272,20 @@ export class AudioManager {
         doFallback();
     }
 
+    playEat(position = null) {
+        const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+        const doFallback = () => {
+            this.playNoise(0.2, 0.4, position);
+            this.playTone(300, 'square', 0.1, 0.3, -50, position);
+        };
+        if (useMC) {
+            const v = Math.floor(Math.random() * 3) + 1;
+            this.playMC(`random/eat${v}`, 0.7, position).then(s => { if(!s) doFallback(); });
+            return;
+        }
+        doFallback();
+    }
+
     playClick() {
         const doFallback = () => {
             this.playTone(800, 'sine', 0.05, 0.2);
@@ -264,11 +301,5 @@ export class AudioManager {
         this.playTone(600, 'sine', 0.3, 0.3, 400, position);
     }
 
-    playHurt(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') === 'true') {
-            this.playMC('damage/hit2', 0.7, position); return;
-        }
-        this.playNoise(0.2, 0.6, position);
-        this.playTone(100, 'sawtooth', 0.2, 0.4, -50, position);
-    }
+
 }

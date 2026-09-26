@@ -1378,10 +1378,11 @@ class UISystem {
             [B.AUTUMN_WOOD]: { block: B.AUTUMN_PLANKS, name: 'Autumn Planks' },
             [B.PALM_WOOD]: { block: B.PALM_PLANKS, name: 'Palm Planks' },
             [B.PINE_WOOD]: { block: B.PINE_PLANKS, name: 'Pine Planks' },
-            [B.CRIMSON_STEM]: { block: B.CRIMSON_PLANKS, name: 'Crimson Planks' }
+            [B.CRIMSON_STEM]: { block: B.CRIMSON_PLANKS, name: 'Crimson Planks' },
+            [B.DARK_OAK_WOOD]: { block: B.DARK_OAK_PLANKS, name: 'Dark Oak Planks' }
         };
         const woodType = s.find(x => x !== null && woodToPlankMap[x]);
-        const isPlank = (t) => [B.PLANKS, B.ACACIA_PLANKS, B.CHERRY_PLANKS, B.AUTUMN_PLANKS, B.PALM_PLANKS, B.PINE_PLANKS, B.CRIMSON_PLANKS].includes(t);
+        const isPlank = (t) => [B.PLANKS, B.ACACIA_PLANKS, B.CHERRY_PLANKS, B.AUTUMN_PLANKS, B.PALM_PLANKS, B.PINE_PLANKS, B.CRIMSON_PLANKS, B.DARK_OAK_PLANKS].includes(t);
         const countAnyPlank = s.filter(x => x !== null && isPlank(x)).length;
         const matchesMat = (t, expected) => expected === B.PLANKS ? isPlank(t) : t === expected;
 

@@ -153,7 +153,10 @@ export const BLOCKS = {
     QUICKSOIL: 187,
     HOLYSTONE: 188,
     ENCHANTED_AETHER_LOG: 189,
-    ENCHANTED_AETHER_LEAVES: 190
+    ENCHANTED_AETHER_LEAVES: 190,
+    DARK_OAK_WOOD: 191,
+    DARK_OAK_LEAVES: 192,
+    DARK_OAK_PLANKS: 193
 };
 
 // Block properties
@@ -859,6 +862,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
         case BLOCKS.PINE_WOOD:
+        case BLOCKS.DARK_OAK_WOOD:
             // Bark (dark brown with vertical striations)
             fillBase(ctx, 60, 40, 20);
             addNoise(ctx, rng, 15);
@@ -868,6 +872,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
         case BLOCKS.PINE_LEAVES:
+        case BLOCKS.DARK_OAK_LEAVES:
             // Dark green dense needles
             fillBase(ctx, 20, 60, 30);
             addNoise(ctx, rng, 20);
@@ -1155,6 +1160,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             drawPlanks(ctx, rng, 200, 170, 120, 'rgba(150, 120, 80, 0.7)', 'rgba(170, 140, 90, 0.5)');
             break;
         case BLOCKS.PINE_PLANKS:
+        case BLOCKS.DARK_OAK_PLANKS:
             drawPlanks(ctx, rng, 110, 80, 50, 'rgba(70, 50, 30, 0.7)', 'rgba(90, 60, 40, 0.5)');
             break;
         case BLOCKS.CRIMSON_PLANKS:
@@ -2011,7 +2017,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
 }
 function hasFaceVariants(blockType) {
     return [
-        BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD,
+        BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD, BLOCKS.DARK_OAK_WOOD,
         BLOCKS.BOOKSHELF, BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS
     ].includes(blockType);
 }
@@ -2081,6 +2087,9 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.PINK_PETALS]: 'pink_petals',
     [BLOCKS.AUTUMN_WOOD]: { top: 'pale_oak_log_top', side: 'pale_oak_log', bottom: 'pale_oak_log_top' },
     [BLOCKS.AUTUMN_LEAVES]: 'pale_oak_leaves',
+    [BLOCKS.DARK_OAK_WOOD]: { top: 'dark_oak_log_top', side: 'dark_oak_log', bottom: 'dark_oak_log_top' },
+    [BLOCKS.DARK_OAK_LEAVES]: 'dark_oak_leaves',
+    [BLOCKS.DARK_OAK_PLANKS]: 'dark_oak_planks',
     [BLOCKS.FALLEN_LEAVES]: 'podzol_top',
     [BLOCKS.GLOW_STEM]: 'crimson_stem',
     [BLOCKS.GLOW_LEAVES]: 'shroomlight',

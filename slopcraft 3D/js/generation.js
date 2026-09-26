@@ -947,7 +947,7 @@ function generateTree(blocks, x, y, z, biome, rng) {
     else if (biome.isGlow) { trunkType = BLOCKS.GLOW_STEM; leafType = BLOCKS.GLOW_LEAVES; }
     else if (biome.isOasis) { trunkType = BLOCKS.PALM_WOOD; leafType = BLOCKS.PALM_LEAVES; }
     else if (isPine) { trunkType = BLOCKS.PINE_WOOD; leafType = BLOCKS.PINE_LEAVES; }
-    else if (isDark) { trunkType = BLOCKS.WOOD; leafType = BLOCKS.PINE_LEAVES; }
+    else if (isDark) { trunkType = BLOCKS.DARK_OAK_WOOD; leafType = BLOCKS.DARK_OAK_LEAVES; }
     
     // Height generation
     let height = 4 + Math.floor(rng() * 3);
@@ -960,11 +960,12 @@ function generateTree(blocks, x, y, z, biome, rng) {
     // Trunk generation
     if (isJungle || isDark) {
         // Massive 2x2 trunk for jungle and dark forest
-        for (let i = 0; i < height; i++) {
-            safeSetBlock(blocks, x, y + i, z, trunkType);
-            safeSetBlock(blocks, x+1, y + i, z, trunkType);
-            safeSetBlock(blocks, x, y + i, z+1, trunkType);
-            safeSetBlock(blocks, x+1, y + i, z+1, trunkType);
+        for (let i = -2; i < height; i++) {
+            const onlyAir = i < 0;
+            safeSetBlock(blocks, x, y + i, z, trunkType, onlyAir);
+            safeSetBlock(blocks, x+1, y + i, z, trunkType, onlyAir);
+            safeSetBlock(blocks, x, y + i, z+1, trunkType, onlyAir);
+            safeSetBlock(blocks, x+1, y + i, z+1, trunkType, onlyAir);
         }
     } else {
         // Normal 1x1 trunk
