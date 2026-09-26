@@ -153,7 +153,7 @@ class Game {
         // UI start is handled in window.onload
     }
 
-    start() {
+    async start() {
         if (this.hasStarted) return;
         this.hasStarted = true;
         
@@ -193,7 +193,12 @@ class Game {
         this.input.init(canvas);
 
         // Generate textures
-        this.atlas = createTextureAtlas();
+        
+        const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+        this.atlas = await createTextureAtlas(useMC);
+        document.getElementById('start-mc-textures-toggle').checked = useMC;
+        document.getElementById('pause-mc-textures-toggle').checked = useMC;
+
 
         // Seed: use typed value or generate random
         const seedInput = document.getElementById('seed-input');
@@ -2296,6 +2301,18 @@ const initGame = () => {
     const game = new Game();
     window.game = game;
     const startBtn = document.getElementById('btn-new-game');
+    const startMcToggle = document.getElementById('start-mc-textures-toggle');
+    const pauseMcToggle = document.getElementById('pause-mc-textures-toggle');
+    const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+    if (startMcToggle) {
+        startMcToggle.checked = useMC;
+        startMcToggle.addEventListener('change', (e) => localStorage.setItem('slopcraft_mc_textures', e.target.checked));
+    }
+    if (pauseMcToggle) {
+        pauseMcToggle.checked = useMC;
+        pauseMcToggle.addEventListener('change', (e) => localStorage.setItem('slopcraft_mc_textures', e.target.checked));
+    }
+
     if (startBtn) {
         startBtn.onclick = () => {
             document.getElementById('start-screen').classList.add('hidden');

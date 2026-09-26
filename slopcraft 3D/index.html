@@ -37,6 +37,11 @@
                 <input id="seed-input" type="text" placeholder="(random)" maxlength="40"
                     style="background: rgba(0,0,0,0.5); border: 1px solid #664422; color: #eeddbb; padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; border-radius: 6px; width: 200px; outline: none;"/>
             </div>
+            <div style="margin: 10px 0; display: flex; align-items: center; gap: 10px; justify-content: center;">
+                <label style="color: #aa8866; font-family: 'Comic Sans MS'; font-size: 1rem; cursor: pointer;">
+                    <input type="checkbox" id="start-mc-textures-toggle"> Use default Minecraft textures
+                </label>
+            </div>
             <div class="start-actions">
                 <button id="btn-new-game" class="menu-btn primary">New Game</button>
             </div>
@@ -57,6 +62,11 @@
                 <div style="margin: 20px 0; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
                     <label style="display: block; color: white; margin-bottom: 10px; font-family: 'Outfit';">Field of View: <span id="fov-val">75</span></label>
                     <input type="range" id="fov-slider" min="30" max="120" value="75" style="width: 100%; cursor: pointer;">
+                </div>
+                <div style="margin: 10px 0; background: rgba(0,0,0,0.5); padding: 16px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <label style="display: block; color: white; cursor: pointer; font-family: 'Outfit';">
+                        <input type="checkbox" id="pause-mc-textures-toggle"> Use Minecraft Textures (Requires Restart)
+                    </label>
                 </div>
                 <div style="margin: 10px 0; background: rgba(0,0,0,0.5); padding: 16px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px;">
                     <span style="color: rgba(255,255,255,0.7); font-family: 'Outfit'; font-size: 0.9rem;">World Seed:</span>
@@ -280,6 +290,7 @@
         }
     }
     </script>
+    <script type="module" src="js/main.js?v=35"></script>
     <script type="module" src="js/main.js?v=35"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>

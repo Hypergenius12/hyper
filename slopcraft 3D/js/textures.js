@@ -175,8 +175,8 @@ const BLOCK_PROPS = {
     [BLOCKS.OBSIDIAN]:      { name: 'Obsidian',       health: 15, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.CRAFTING_TABLE]:{ name: 'Crafting Table', health: 4, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.GLOWSTONE]:     { name: 'Glowstone',      health: 4, transparent: false, emissive: 1.0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_BRICK]: { name: 'Dungeon Brick',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_FLOOR]: { name: 'Dungeon Floor',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+      health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+      health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.MUSHROOM_STEM]: { name: 'Mushroom Stem',  health: 3, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.MUSHROOM_CAP]:  { name: 'Mushroom Cap',   health: 2, transparent: false, emissive: 0.2, solid: true, drops: null },
     [BLOCKS.ALIEN_STONE]:   { name: 'Alien Stone',    health: 8, transparent: false, emissive: 0.1, solid: true, drops: null },
@@ -224,19 +224,19 @@ const BLOCK_PROPS = {
     [BLOCKS.GLOW_STEM]:     { name: 'Glow Stem',      health: 4, transparent: false, emissive: 0.2, solid: true, drops: null },
     [BLOCKS.GLOW_LEAVES]:   { name: 'Glow Leaves',    health: 1, transparent: true,  emissive: 0.5, solid: true, drops: null },
     [BLOCKS.GLOW_SHROOM]:   { name: 'Glow Shroom',    health: 1, transparent: true,  emissive: 0.8, solid: false, isCross: true, drops: null },
-    [BLOCKS.PALM_WOOD]:     { name: 'Palm Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.PALM_LEAVES]:   { name: 'Palm Leaves',    health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
+          health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+        health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.OASIS_FERN]:    { name: 'Oasis Fern',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
-    [BLOCKS.DUNGEON_FIRE_BRICK]: { name: 'Fire Brick', health: 12, transparent: false, emissive: 0.1, solid: true, drops: null },
-    [BLOCKS.DUNGEON_FIRE_FLOOR]: { name: 'Fire Floor', health: 12, transparent: false, emissive: 0.2, solid: true, drops: null },
-    [BLOCKS.DUNGEON_ICE_BRICK]:  { name: 'Ice Brick',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_ICE_FLOOR]:  { name: 'Ice Floor',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_JUNGLE_BRICK]:{name: 'Jungle Brick',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_JUNGLE_FLOOR]:{name: 'Jungle Floor',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_DESERT_BRICK]:{name: 'Desert Brick',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_DESERT_FLOOR]:{name: 'Desert Floor',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_UNDEAD_BRICK]:{name: 'Undead Brick',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_UNDEAD_FLOOR]:{name: 'Undead Floor',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+     health: 12, transparent: false, emissive: 0.1, solid: true, drops: null },
+     health: 12, transparent: false, emissive: 0.2, solid: true, drops: null },
+      health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+      health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DUNGEON_DOOR]:  { name: 'Dungeon Door',   health: 5, transparent: true, emissive: 0, solid: true, drops: BLOCKS.DUNGEON_DOOR },
     [BLOCKS.BOSS_SPAWNER]:  { name: 'Boss Spawner',   health: Infinity, transparent: true, emissive: 0, solid: false, drops: null },
     [BLOCKS.COAL_ORE]:      { name: 'Coal Ore',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
@@ -278,7 +278,7 @@ const BLOCK_PROPS = {
     [BLOCKS.ACACIA_PLANKS]: { name: 'Acacia Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.CHERRY_PLANKS]: { name: 'Cherry Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.AUTUMN_PLANKS]: { name: 'Autumn Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.PALM_PLANKS]:   { name: 'Palm Planks',    health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+        health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.PINE_PLANKS]:   { name: 'Pine Planks',    health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.CRIMSON_PLANKS]:{ name: 'Crimson Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.SUGARCANE]:     { name: 'Sugarcane',      health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.SUGARCANE, flammable: true },
@@ -2018,7 +2018,178 @@ function hasFaceVariants(blockType) {
 
 // Build the atlas: for face-variant blocks, store 3 rows (top, side, bottom)
 // For uniform blocks, store 1 texture and use the same UV for all faces
-export function createTextureAtlas() {
+
+const MINECRAFT_ASSETS_BASE = "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.16.5/assets/minecraft/textures/";
+
+const MC_TEXTURE_MAP = {
+    [BLOCKS.GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
+    [BLOCKS.DIRT]: 'dirt',
+    [BLOCKS.STONE]: 'stone',
+    [BLOCKS.SAND]: 'sand',
+    [BLOCKS.WATER]: 'water_flow',
+    [BLOCKS.WOOD]: { top: 'oak_log_top', side: 'oak_log', bottom: 'oak_log_top' },
+    [BLOCKS.LEAVES]: 'oak_leaves',
+    [BLOCKS.PLANKS]: 'oak_planks',
+    [BLOCKS.COBBLESTONE]: 'cobblestone',
+    [BLOCKS.IRON_ORE]: 'iron_ore',
+    [BLOCKS.GOLD_ORE]: 'gold_ore',
+    [BLOCKS.CRYSTAL_ORE]: 'diamond_ore',
+    [BLOCKS.MANA_ORE]: 'lapis_ore',
+    [BLOCKS.OBSIDIAN]: 'obsidian',
+    [BLOCKS.GLOWSTONE]: 'glowstone',
+    
+    
+    [BLOCKS.MUSHROOM_STEM]: 'mushroom_stem',
+    [BLOCKS.MUSHROOM_CAP]: 'red_mushroom_block',
+    [BLOCKS.ALIEN_STONE]: 'end_stone',
+    [BLOCKS.ALIEN_GRASS]: { top: 'mycelium_top', side: 'mycelium_side', bottom: 'end_stone' },
+    [BLOCKS.ALIEN_CRYSTAL]: 'purpur_block',
+    [BLOCKS.SNOW]: 'snow',
+    [BLOCKS.ICE]: 'ice',
+    [BLOCKS.LAVA]: 'lava_flow',
+    [BLOCKS.PORTAL_FRAME]: 'end_portal_frame_side',
+    [BLOCKS.PORTAL]: 'nether_portal',
+    [BLOCKS.BEDROCK]: 'bedrock',
+    [BLOCKS.GRAVEL]: 'gravel',
+    [BLOCKS.CLAY]: 'clay',
+    [BLOCKS.GLASS]: 'glass',
+    [BLOCKS.TORCH]: 'torch',
+    [BLOCKS.SANDSTONE]: { top: 'sandstone_top', side: 'sandstone', bottom: 'sandstone_bottom' },
+    [BLOCKS.RED_SAND]: 'red_sand',
+    [BLOCKS.TERRACOTTA]: 'terracotta',
+    [BLOCKS.DEAD_BUSH]: 'dead_bush',
+    [BLOCKS.ALIEN_TALL_GRASS]: 'crimson_roots',
+    [BLOCKS.SAVANNA_GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
+    [BLOCKS.ACACIA_WOOD]: { top: 'acacia_log_top', side: 'acacia_log', bottom: 'acacia_log_top' },
+    [BLOCKS.ACACIA_LEAVES]: 'acacia_leaves',
+    [BLOCKS.MUD]: 'podzol_top',
+    [BLOCKS.SWAMP_GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
+    [BLOCKS.SWAMP_WATER]: 'water_flow',
+    [BLOCKS.ALIEN_SPORE_STEM]: 'warped_stem',
+    [BLOCKS.ALIEN_SPORE_BLOCK]: 'warped_wart_block',
+    [BLOCKS.VINES]: 'vine',
+    [BLOCKS.TALL_GRASS]: 'tall_grass_top',
+    [BLOCKS.RED_FLOWER]: 'poppy',
+    [BLOCKS.CACTUS]: { top: 'cactus_top', side: 'cactus_side', bottom: 'cactus_bottom' },
+    [BLOCKS.BLUE_FLOWER]: 'cornflower',
+    [BLOCKS.YELLOW_FLOWER]: 'dandelion',
+    [BLOCKS.FERN]: 'fern',
+    [BLOCKS.WHITE_FLOWER]: 'lily_of_the_valley',
+    [BLOCKS.PURPLE_FLOWER]: 'allium',
+    [BLOCKS.ORANGE_FLOWER]: 'orange_tulip',
+    [BLOCKS.CHERRY_LOG]: { top: 'cherry_log_top', side: 'cherry_log', bottom: 'cherry_log_top' },
+    [BLOCKS.CHERRY_LEAVES]: 'cherry_leaves',
+    [BLOCKS.PINK_PETALS]: 'pink_petals',
+    [BLOCKS.AUTUMN_WOOD]: { top: 'spruce_log_top', side: 'spruce_log', bottom: 'spruce_log_top' },
+    [BLOCKS.AUTUMN_LEAVES]: 'spruce_leaves',
+    [BLOCKS.FALLEN_LEAVES]: 'podzol_top',
+    [BLOCKS.GLOW_STEM]: 'crimson_stem',
+    [BLOCKS.GLOW_LEAVES]: 'shroomlight',
+    [BLOCKS.GLOW_SHROOM]: 'red_mushroom',
+     side: 'jungle_log', bottom: 'jungle_log_top' },
+    
+    [BLOCKS.OASIS_FERN]: 'large_fern_top',
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    [BLOCKS.DUNGEON_DOOR]: 'iron_door_top',
+    [BLOCKS.BOSS_SPAWNER]: 'spawner',
+    [BLOCKS.COAL_ORE]: 'coal_ore',
+    [BLOCKS.DIAMOND_ORE]: 'diamond_ore',
+    [BLOCKS.STONE_BRICKS]: 'stone_bricks',
+    [BLOCKS.BRICKS]: 'bricks',
+    [BLOCKS.BOOKSHELF]: 'bookshelf',
+    [BLOCKS.MOSSY_COBBLESTONE]: 'mossy_cobblestone',
+    [BLOCKS.CHEST_BLOCK]: { top: 'crafting_table_top', side: 'crafting_table_side', bottom: 'oak_planks', front: 'crafting_table_front' },
+    [BLOCKS.LADDER]: 'ladder',
+    [BLOCKS.IRON_BLOCK]: 'iron_block',
+    [BLOCKS.GOLD_BLOCK]: 'gold_block',
+    [BLOCKS.DIAMOND_BLOCK]: 'diamond_block',
+    [BLOCKS.WOOL]: 'white_wool',
+    [BLOCKS.FURNACE]: { top: 'furnace_top', side: 'furnace_side', bottom: 'furnace_top', front: 'furnace_front' },
+    [BLOCKS.NETHERRACK]: 'netherrack',
+    [BLOCKS.SOUL_SAND]: 'soul_sand',
+    [BLOCKS.NETHER_BRICKS]: 'nether_bricks',
+    [BLOCKS.CRIMSON_NYLIUM]: { top: 'crimson_nylium', side: 'crimson_nylium_side', bottom: 'netherrack' },
+    [BLOCKS.CRIMSON_STEM]: { top: 'crimson_stem_top', side: 'crimson_stem', bottom: 'crimson_stem_top' },
+    [BLOCKS.CRIMSON_LEAVES]: 'crimson_roots',
+    [BLOCKS.NETHER_WART_BLOCK]: 'nether_wart_block',
+    [BLOCKS.TUBE_CORAL]: 'tube_coral',
+    [BLOCKS.BRAIN_CORAL]: 'brain_coral',
+    [BLOCKS.FIRE_CORAL]: 'fire_coral',
+    [BLOCKS.HORN_CORAL]: 'horn_coral',
+    [BLOCKS.PINE_WOOD]: { top: 'spruce_log_top', side: 'spruce_log', bottom: 'spruce_log_top' },
+    [BLOCKS.PINE_LEAVES]: 'spruce_leaves',
+    [BLOCKS.ACACIA_PLANKS]: 'acacia_planks',
+    [BLOCKS.CHERRY_PLANKS]: 'cherry_planks',
+    [BLOCKS.AUTUMN_PLANKS]: 'spruce_planks',
+    
+    [BLOCKS.PINE_PLANKS]: 'spruce_planks',
+    [BLOCKS.CRIMSON_PLANKS]: 'crimson_planks',
+    [BLOCKS.SUGARCANE]: 'sugar_cane',
+    [BLOCKS.FIRE]: 'fire_0',
+    [BLOCKS.TNT]: { top: 'tnt_top', side: 'tnt_side', bottom: 'tnt_bottom' },
+    [BLOCKS.CRAFTING_TABLE]: { top: 'crafting_table_top', side: 'crafting_table_side', bottom: 'oak_planks', front: 'crafting_table_front' },
+    [BLOCKS.AETHER_STONE]: 'end_stone',
+    [BLOCKS.AETHER_DIRT]: 'end_stone_bricks',
+    [BLOCKS.AETHER_GRASS]: { top: 'end_stone', side: 'end_stone_bricks', bottom: 'end_stone_bricks' },
+    [BLOCKS.AETHER_WOOD]: { top: 'quartz_pillar_top', side: 'quartz_pillar', bottom: 'quartz_pillar_top' },
+    [BLOCKS.AETHER_LEAVES]: 'cyan_wool',
+    [BLOCKS.AETHER_PORTAL]: 'end_gateway_beam',
+    [BLOCKS.AETHER_CLOUD]: 'white_wool',
+    [BLOCKS.AETHER_TALL_GRASS]: 'end_rod',
+    [BLOCKS.AETHER_FLOWER]: 'chorus_flower',
+    [BLOCKS.AETHER_CRYSTAL]: 'sea_lantern',
+    [BLOCKS.CAVERN_STONE]: 'andesite',
+    [BLOCKS.CAVERN_DIRT]: 'dirt',
+    [BLOCKS.CAVERN_PORTAL]: 'obsidian',
+    [BLOCKS.MAGMA_STONE]: 'magma_block',
+    [BLOCKS.HIGHLANDS_STONE]: 'diorite',
+    [BLOCKS.HIGHLANDS_DIRT]: 'dirt',
+    [BLOCKS.HIGHLANDS_GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
+    [BLOCKS.HIGHLANDS_PORTAL]: 'emerald_block',
+    [BLOCKS.SEAGRASS]: 'seagrass',
+    [BLOCKS.KELP]: 'kelp',
+    [BLOCKS.BUBBLE_CORAL]: 'bubble_coral',
+    [BLOCKS.SEASHELL_1]: 'bone_block_top',
+    [BLOCKS.SEASHELL_2]: 'nautilus_shell',
+    [BLOCKS.SEASHELL_3]: 'scute',
+    [BLOCKS.LILY_PAD]: 'lily_pad',
+    [BLOCKS.ALGAE]: 'lily_pad',
+    [BLOCKS.RED_KELP]: 'crimson_roots',
+    [BLOCKS.BROWN_KELP]: 'weeping_vines',
+    [BLOCKS.QUICKSOIL]: 'sand',
+    [BLOCKS.HOLYSTONE]: 'end_stone_bricks',
+    [BLOCKS.ENCHANTED_AETHER_LOG]: { top: 'purpur_pillar_top', side: 'purpur_pillar', bottom: 'purpur_pillar_top' },
+    [BLOCKS.ENCHANTED_AETHER_LEAVES]: 'purple_stained_glass'
+};
+
+function loadMinecraftTexture(name) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+            // Some names might be items instead of blocks
+            const altImg = new Image();
+            altImg.crossOrigin = 'anonymous';
+            altImg.onload = () => resolve(altImg);
+            altImg.onerror = () => resolve(null);
+            altImg.src = MINECRAFT_ASSETS_BASE + 'item/' + name + '.png';
+        };
+        img.src = MINECRAFT_ASSETS_BASE + 'block/' + name + '.png';
+    });
+}
+
+
+export async function createTextureAtlas(useMinecraft = false) {
     // Calculate atlas layout
     // Each block gets at most 3 faces (top, side, bottom)
     // We lay them out linearly
@@ -2084,6 +2255,33 @@ export function createTextureAtlas() {
                 canvas: fCanvas
             });
         }
+    }
+
+    // Fetch Minecraft textures if enabled
+    if (useMinecraft) {
+        const promises = [];
+        for (const entry of entries) {
+            const bt = entry.blockType;
+            let mcName = MC_TEXTURE_MAP[bt];
+            if (!mcName) continue;
+            
+            let texName;
+            if (typeof mcName === 'string') {
+                texName = mcName;
+            } else {
+                texName = mcName[entry.face] || mcName['side'];
+            }
+            
+            if (texName) {
+                promises.push(loadMinecraftTexture(texName).then(img => {
+                    if (img) {
+                        ctx.clearRect(entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                        ctx.drawImage(img, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                    }
+                }));
+            }
+        }
+        await Promise.all(promises);
     }
 
     const texture = new THREE.CanvasTexture(canvas);
