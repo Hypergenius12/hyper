@@ -195,7 +195,7 @@ class Game {
 
         // Generate textures
         
-        const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+        const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
         this.atlas = await createTextureAtlas(useMC);
         document.getElementById('start-mc-textures-toggle').checked = useMC;
         document.getElementById('pause-mc-textures-toggle').checked = useMC;
@@ -1169,7 +1169,7 @@ class Game {
                 if (this.player.mana < this.player.maxMana) {
                     this.player.mana += 20;
                     if (this.player.mana > this.player.maxMana) this.player.mana = this.player.maxMana;
-                    if (localStorage.getItem('slopcraft_mc_textures') === 'true') this.audio.playMC('random/levelup', 0.6); else this.audio.playHit(); 
+                    if (localStorage.getItem('slopcraft_mc_textures') !== 'false') this.audio.playMC('random/levelup', 0.6); else this.audio.playHit(); 
                     
                     // Consume bookshelf? Or let it be reusable? Let's make it reusable but with a tiny cooldown maybe? 
                     // No cooldown mentioned. 
@@ -1419,7 +1419,7 @@ class Game {
                 const spawnPos = findSafeSpawn(this.planetParams, this.currentDimension);
                 this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
                 this.player.velocity.set(0, 0, 0);
-                if (localStorage.getItem('slopcraft_mc_textures') === 'true') this.audio.playMC('random/levelup', 0.6); else this.audio.playCast();
+                if (localStorage.getItem('slopcraft_mc_textures') !== 'false') this.audio.playMC('random/levelup', 0.6); else this.audio.playCast();
             }
         }
 
@@ -2330,7 +2330,7 @@ const initGame = () => {
     const startBtn = document.getElementById('btn-new-game');
     const startMcToggle = document.getElementById('start-mc-textures-toggle');
     const pauseMcToggle = document.getElementById('pause-mc-textures-toggle');
-    const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+    const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
     if (startMcToggle) {
         startMcToggle.checked = useMC;
         startMcToggle.addEventListener('change', (e) => localStorage.setItem('slopcraft_mc_textures', e.target.checked));

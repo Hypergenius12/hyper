@@ -2579,7 +2579,7 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     // Clear transparent
     ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
 
-    const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+    const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
     if (useMC) {
         const mcName = MC_ITEM_MAP[itemSubtype];
         if (mcName) {
