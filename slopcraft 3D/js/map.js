@@ -1,5 +1,5 @@
 import { getBiomeParams, getColumnInfo } from './generation.js';
-import { createNoise2D } from './noise.js';
+import { createNoise2D, seededRandom } from './noise.js';
 
 export class BiomeMap {
     constructor(game) {
@@ -298,6 +298,97 @@ export class BiomeMap {
                 
                 this.ctx.fillStyle = color;
                 this.ctx.fillRect(x, z, sampleSize, sampleSize);
+            }
+        }
+        
+        // Draw structure markers (houses & nether portals) - replicate generation RNG
+        if (this.game.currentDimension === 'overworld') {
+            const params = this.getGenerationParams();
+            if (params) {
+                // Only draw markers at a reasonable zoom level
+                const iconSize = Math.max(6, Math.min(14, this.zoom * 8));
+                
+                // Scan the visible world area in ~32-block steps (chunk-like grid)
+                const step = 16;
+                const viewLeft   = Math.floor((this.offsetX - (w/2) / this.zoom) / step) * step;
+                const viewRight  = Math.ceil((this.offsetX  + (w/2) / this.zoom) / step) * step;
+                const viewTop    = Math.floor((this.offsetZ - (h/2) / this.zoom) / step) * step;
+                const viewBottom = Math.ceil((this.offsetZ  + (h/2) / this.zoom) / step) * step;
+
+                for (let wx = viewLeft; wx <= viewRight; wx += step) {
+                    for (let wz = viewTop; wz <= viewBottom; wz += step) {
+                        const floraRng = seededRandom(params.seed + wx * 7777 + wz);
+                        const r = floraRng();
+
+                        let structType = null;
+                        if (r < 0.00002) structType = 'nether';
+                        else if (r < 0.00005) structType = 'cabin';
+
+                        if (!structType) continue;
+
+                        const sx = w / 2 + (wx - this.offsetX) * this.zoom;
+                        const sz = h / 2 + (wz - this.offsetZ) * this.zoom;
+
+                        // Skip if offscreen
+                        if (sx < -iconSize || sx > w + iconSize || sz < -iconSize || sz > h + iconSize) continue;
+
+                        const half = iconSize / 2;
+
+                        if (structType === 'nether') {
+                            // Purple portal icon
+                            this.ctx.fillStyle = 'rgba(130,0,220,0.9)';
+                            this.ctx.strokeStyle = '#fff';
+                            this.ctx.lineWidth = 1.5;
+                            this.ctx.beginPath();
+                            this.ctx.roundRect(sx - half * 0.6, sz - half, half * 1.2, iconSize, 2);
+                            this.ctx.fill();
+                            this.ctx.stroke();
+                            // Label
+                            if (this.zoom >= 2) {
+                                this.ctx.fillStyle = '#fff';
+                                this.ctx.font = `bold ${Math.floor(iconSize * 0.7)}px sans-serif`;
+                                this.ctx.textAlign = 'center';
+                                this.ctx.fillText('🔮', sx, sz + iconSize * 0.9);
+                            }
+                        } else {
+                            // House icon
+                            this.ctx.fillStyle = 'rgba(180,120,60,0.9)';
+                            this.ctx.strokeStyle = '#fff';
+                            this.ctx.lineWidth = 1.5;
+                            // Body
+                            this.ctx.fillRect(sx - half * 0.8, sz, half * 1.6, half);
+                            this.ctx.strokeRect(sx - half * 0.8, sz, half * 1.6, half);
+                            // Roof
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(sx - half, sz);
+                            this.ctx.lineTo(sx, sz - half);
+                            this.ctx.lineTo(sx + half, sz);
+                            this.ctx.closePath();
+                            this.ctx.fillStyle = 'rgba(200,80,50,0.95)';
+                            this.ctx.fill();
+                            this.ctx.stroke();
+                        }
+                    }
+                }
+
+                // Legend
+                if (this.zoom >= 0.4) {
+                    const lx = 12, ly = h - 50;
+                    this.ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                    this.ctx.fillRect(lx - 4, ly - 14, 130, 44);
+                    // House legend
+                    this.ctx.fillStyle = 'rgba(200,80,50,0.95)';
+                    this.ctx.fillRect(lx, ly, 10, 10);
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.font = '11px sans-serif';
+                    this.ctx.textAlign = 'left';
+                    this.ctx.fillText('House', lx + 14, ly + 9);
+                    // Portal legend
+                    this.ctx.fillStyle = 'rgba(130,0,220,0.9)';
+                    this.ctx.fillRect(lx, ly + 16, 10, 10);
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.fillText('Nether Portal', lx + 14, ly + 25);
+                }
             }
         }
         
