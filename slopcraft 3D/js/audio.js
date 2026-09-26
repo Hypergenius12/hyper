@@ -19,29 +19,32 @@ export class AudioManager {
         this.masterGain.connect(this.ctx.destination);
     }
 
-    async _loadMCFile(path) {
+    _loadMCFile(path) {
         if (!this.mcCache) this.mcCache = {};
         if (this.mcCache[path]) return this.mcCache[path];
-        if (this.mcCache[path] === 'loading') return null; // Avoid spamming
-        this.mcCache[path] = 'loading';
         
-        try {
-            const res = await fetch(`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/sounds/${path}.ogg`);
-            const arrayBuffer = await res.arrayBuffer();
-            const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
-            this.mcCache[path] = audioBuffer;
-            return audioBuffer;
-        } catch (e) {
-            this.mcCache[path] = null;
-            return null;
-        }
+        this.mcCache[path] = (async () => {
+            try {
+                const res = await fetch(`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/sounds/${path}.ogg`);
+                if (!res.ok) throw new Error("HTTP error");
+                const arrayBuffer = await res.arrayBuffer();
+                const audioBuffer = await new Promise((resolve, reject) => {
+                    this.ctx.decodeAudioData(arrayBuffer, resolve, reject);
+                });
+                return audioBuffer;
+            } catch (e) {
+                return null;
+            }
+        })();
+        
+        return this.mcCache[path];
     }
     
     async playMC(path, vol=1.0, position=null) {
         this._ensureContext();
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const buffer = await this._loadMCFile(path);
-        if (!buffer || buffer === 'loading') return false;
+        if (!buffer) return false;
         
         const source = this.ctx.createBufferSource();
         source.buffer = buffer;
