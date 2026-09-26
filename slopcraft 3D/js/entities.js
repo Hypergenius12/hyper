@@ -2270,7 +2270,7 @@ export class ItemEntity {
                 const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
                 this.mesh = new THREE.Sprite(mat);
                 this.mesh.scale.set(0.4, 0.4, 0.4);
-            } else {            } else {
+            } else {
                 const geo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
                 const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 }); // generic item color
                 this.mesh = new THREE.Mesh(geo, mat);
