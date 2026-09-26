@@ -325,6 +325,8 @@ export class Chunk {
         let transparentIndexCount = 0;
         let glowOpaqueIndexCount = 0;
         let glowTransparentIndexCount = 0;
+        let slightGlowOpaqueIndexCount = 0;
+        let slightGlowTransparentIndexCount = 0;
 
         let vertexCount = 0;
 
@@ -488,17 +490,23 @@ export class Chunk {
                                 if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER || currentBlockType === BLOCKS.LAVA) {
                                     _waterIndices[waterIndexCount++] = vertexCount; _waterIndices[waterIndexCount++] = vertexCount + 1; _waterIndices[waterIndexCount++] = vertexCount + 2;
                                     _waterIndices[waterIndexCount++] = vertexCount; _waterIndices[waterIndexCount++] = vertexCount + 2; _waterIndices[waterIndexCount++] = vertexCount + 3;
-                                } else if (currentProps.emissive > 0) {
+                                } else if (currentProps.emissive >= 0.8) {
                                     _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 1; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 2;
                                     _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 2; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 3;
+                                } else if (currentProps.emissive > 0) {
+                                    _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount; _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount + 1; _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount + 2;
+                                    _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount; _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount + 2; _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount + 3;
                                 } else {
                                     _transparentIndices[transparentIndexCount++] = vertexCount; _transparentIndices[transparentIndexCount++] = vertexCount + 1; _transparentIndices[transparentIndexCount++] = vertexCount + 2;
                                     _transparentIndices[transparentIndexCount++] = vertexCount; _transparentIndices[transparentIndexCount++] = vertexCount + 2; _transparentIndices[transparentIndexCount++] = vertexCount + 3;
                                 }
                             } else {
-                                if (currentProps.emissive > 0) {
+                                if (currentProps.emissive >= 0.8) {
                                     _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 1; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 2;
                                     _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 2; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 3;
+                                } else if (currentProps.emissive > 0) {
+                                    _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount; _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount + 1; _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount + 2;
+                                    _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount; _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount + 2; _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount + 3;
                                 } else {
                                     _opaqueIndices[opaqueIndexCount++] = vertexCount; _opaqueIndices[opaqueIndexCount++] = vertexCount + 1; _opaqueIndices[opaqueIndexCount++] = vertexCount + 2;
                                     _opaqueIndices[opaqueIndexCount++] = vertexCount; _opaqueIndices[opaqueIndexCount++] = vertexCount + 2; _opaqueIndices[opaqueIndexCount++] = vertexCount + 3;
@@ -514,7 +522,7 @@ export class Chunk {
         const geometry = new THREE.BufferGeometry();
         
         // Merge indices into one big index array
-        const totalIndices = opaqueIndexCount + crossIndexCount + glowCrossIndexCount + waterIndexCount + transparentIndexCount + glowOpaqueIndexCount + glowTransparentIndexCount;
+        const totalIndices = opaqueIndexCount + crossIndexCount + glowCrossIndexCount + waterIndexCount + transparentIndexCount + glowOpaqueIndexCount + glowTransparentIndexCount + slightGlowOpaqueIndexCount + slightGlowTransparentIndexCount;
         const allIndices = new Uint32Array(totalIndices);
         
         let offset = 0;
@@ -525,6 +533,8 @@ export class Chunk {
         allIndices.set(_transparentIndices.subarray(0, transparentIndexCount), offset); offset += transparentIndexCount;
         allIndices.set(_glowOpaqueIndices.subarray(0, glowOpaqueIndexCount), offset); offset += glowOpaqueIndexCount;
         allIndices.set(_glowTransparentIndices.subarray(0, glowTransparentIndexCount), offset); offset += glowTransparentIndexCount;
+        allIndices.set(_slightGlowOpaqueIndices.subarray(0, slightGlowOpaqueIndexCount), offset); offset += slightGlowOpaqueIndexCount;
+        allIndices.set(_slightGlowTransparentIndices.subarray(0, slightGlowTransparentIndexCount), offset); offset += slightGlowTransparentIndexCount;
 
         geometry.setIndex(new THREE.BufferAttribute(allIndices, 1));
 
@@ -726,7 +736,29 @@ export class World {
             emissiveIntensity: 2.0,
             shininess: 0
         });
-        this.sharedMaterials = [matOpaque, matCross, matGlowCross, matWater, matTransparent, matGlowOpaque, matGlowTransparent];
+        const matSlightGlowOpaque = new THREE.MeshPhongMaterial({
+            map: textureAtlas.texture,
+            vertexColors: true,
+            transparent: false,
+            side: THREE.FrontSide,
+            emissive: new THREE.Color(0xffffff),
+            emissiveMap: textureAtlas.texture,
+            emissiveIntensity: 0.2,
+            shininess: 0, specular: new THREE.Color(0x000000)
+        });
+        const matSlightGlowTransparent = new THREE.MeshPhongMaterial({
+            map: textureAtlas.texture,
+            vertexColors: true,
+            transparent: true,
+            alphaTest: 0.5,
+            side: THREE.DoubleSide,
+            emissive: new THREE.Color(0xffffff),
+            emissiveMap: textureAtlas.texture,
+            emissiveIntensity: 0.2,
+            shininess: 0, specular: new THREE.Color(0x000000)
+        });
+        this.sharedMaterials = [matOpaque, matCross, matGlowCross, matWater, matTransparent, matGlowOpaque, matGlowTransparent, matSlightGlowOpaque, matSlightGlowTransparent];
+
 
         // Chunk queues to avoid stuttering
         this.chunksToGenerate = [];
