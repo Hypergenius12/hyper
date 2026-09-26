@@ -666,8 +666,8 @@ export class World {
             vertexColors: true,
             transparent: false,
             side: THREE.FrontSide, // Massive performance gain for opaque blocks
-            shininess: 2,
-            specular: new THREE.Color(0x111111)
+            shininess: 0,
+            specular: new THREE.Color(0x000000)
         });
         const matCross = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
@@ -713,8 +713,7 @@ export class World {
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
             emissiveIntensity: 2.0,
-            shininess: 5,
-            specular: new THREE.Color(0x333333)
+            shininess: 0, specular: new THREE.Color(0x000000)
         });
         const matGlowTransparent = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
@@ -725,7 +724,7 @@ export class World {
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
             emissiveIntensity: 2.0,
-            shininess: 5
+            shininess: 0
         });
         this.sharedMaterials = [matOpaque, matCross, matGlowCross, matWater, matTransparent, matGlowOpaque, matGlowTransparent];
 

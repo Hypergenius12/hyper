@@ -77,18 +77,18 @@ export class LightingSystem {
         // 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 1.0 = midnight
         const states = [
             // Midnight - slightly brighter so you can see without torches
-            { t: 0.0, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 },
-            { t: 0.2, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 },
+            { t: 0.0, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.3, hemi: 0.6 },
+            { t: 0.2, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.3, hemi: 0.6 },
             // Sunrise - pink/orange horizon, light blue top
-            { t: 0.25, amb: new THREE.Color(0x8a6b52), bg: new THREE.Color(0xffa65a), top: new THREE.Color(0x82a6ff), sun: 0.8, moon: 0.2, hemi: 0.8 },
+            { t: 0.25, amb: new THREE.Color(0x8a6b52), bg: new THREE.Color(0xffa65a), top: new THREE.Color(0x82a6ff), sun: 0.4, moon: 0.1, hemi: 0.8 },
             // Day - bright Minecraft blue, high ambient light for soft shadows
-            { t: 0.3, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 1.5, moon: 0.0, hemi: 1.2 },
-            { t: 0.7, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 1.5, moon: 0.0, hemi: 1.2 },
+            { t: 0.3, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 0.5, moon: 0.0, hemi: 1.1 },
+            { t: 0.7, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 0.5, moon: 0.0, hemi: 1.1 },
             // Sunset - orange/red horizon
-            { t: 0.75, amb: new THREE.Color(0x8a5050), bg: new THREE.Color(0xff5a5a), top: new THREE.Color(0x5a82f2), sun: 0.8, moon: 0.2, hemi: 0.8 },
+            { t: 0.75, amb: new THREE.Color(0x8a5050), bg: new THREE.Color(0xff5a5a), top: new THREE.Color(0x5a82f2), sun: 0.4, moon: 0.1, hemi: 0.8 },
             // Night
-            { t: 0.8, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 },
-            { t: 1.0, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 }
+            { t: 0.8, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.3, hemi: 0.6 },
+            { t: 1.0, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.3, hemi: 0.6 }
         ];
 
         for (let i = 0; i < states.length - 1; i++) {
@@ -316,7 +316,7 @@ export class TorchLightSystem {
                 const flicker = Math.sin(t * 7.3) * 0.15
                               + Math.sin(t * 13.7) * 0.08
                               + Math.sin(t * 23.1) * 0.04;
-                light.intensity = 20.0 * (1 + flicker);
+                light.intensity = 8.0 * (1 + flicker);
                 
                 const r = 1.0;
                 const g = 0.38 + flicker * 0.15;
