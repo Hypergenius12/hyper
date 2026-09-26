@@ -2458,8 +2458,7 @@ export class Mob {
             if (this.burnTickTimer <= 0) {
                 this.health -= 2;
                 this.burnTickTimer = 1.0;
-                this._updateHealthBar();
-                if (this.health <= 0) {
+                                if (this.health <= 0) {
                     this.alive = false;
                 }
             }
@@ -2471,8 +2470,7 @@ export class Mob {
             if (this.poisonTickTimer <= 0) {
                 this.health -= 1; // 1 damage per half second
                 this.poisonTickTimer = 0.5;
-                this._updateHealthBar();
-                if (this.health <= 0) {
+                                if (this.health <= 0) {
                     this.alive = false;
                 }
                 // Tint green temporarily
