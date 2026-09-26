@@ -1,0 +1,204 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Press+Start+2P&display=swap');
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #87CEEB; /* fallback sky color */
+    font-family: 'Fredoka One', cursive;
+    user-select: none;
+}
+
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+#ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255, 255, 255, 1);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    text-shadow: 2px 2px 0px black;
+    pointer-events: none;
+    display: none;
+}
+
+/* Sharp Low Poly Theme styling */
+.menu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    pointer-events: auto;
+    transition: opacity 0.3s;
+    z-index: 10;
+}
+
+.menu-panel {
+    background-color: #2b3a4a;
+    padding: 40px 60px;
+    border: 6px solid #1a252f;
+    box-shadow: 12px 12px 0px rgba(0,0,0,0.5);
+    text-align: center;
+    /* Sharp edges */
+    border-radius: 0px;
+    position: relative;
+}
+
+/* Geometric corner cut effect using pseudo elements */
+.menu-panel::before {
+    content: '';
+    position: absolute;
+    top: -6px; right: -6px; bottom: -6px; left: -6px;
+    border: 4px solid #4a6582;
+    pointer-events: none;
+}
+
+.menu h1 { 
+    margin-top: 0; 
+    font-size: 4rem; 
+    text-transform: uppercase;
+    color: #f1c40f;
+    text-shadow: 4px 4px 0px #d35400, 8px 8px 0px #000;
+    margin-bottom: 20px;
+    letter-spacing: 4px;
+}
+
+.menu h2 {
+    margin-top: 0;
+    font-size: 3rem;
+    color: #e74c3c;
+    text-shadow: 4px 4px 0px #c0392b, 8px 8px 0px #000;
+}
+
+.menu p {
+    font-size: 1.2rem;
+    color: #ecf0f1;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 0px #000;
+}
+
+.controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px 30px;
+    text-align: left;
+    background: #1a252f;
+    padding: 25px;
+    margin-bottom: 35px;
+    border: 4px solid #0f161c;
+}
+
+.controls-grid span {
+    color: #3498db;
+    text-shadow: 2px 2px 0px #000;
+}
+
+.btn {
+    background-color: #27ae60;
+    border: 4px solid #145b32;
+    border-radius: 0;
+    color: white;
+    padding: 15px 40px;
+    font-size: 1.5rem;
+    font-family: 'Fredoka One', cursive;
+    cursor: pointer;
+    box-shadow: 6px 6px 0px #000;
+    text-transform: uppercase;
+    transition: transform 0.1s, box-shadow 0.1s;
+    text-shadow: 2px 2px 0px #000;
+}
+
+.btn:hover {
+    background-color: #2ecc71;
+    transform: translate(-2px, -2px);
+    box-shadow: 8px 8px 0px #000;
+}
+
+.btn:active {
+    transform: translate(4px, 4px);
+    box-shadow: 2px 2px 0px #000;
+}
+
+#pause-menu {
+    display: none;
+}
+
+@keyframes caustics {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+}
+#underwater-overlay {
+    background-image: radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at bottom right, rgba(255,255,255,0.1) 0%, transparent 50%);
+    background-size: 200% 200%;
+    animation: caustics 10s ease-in-out infinite;
+    mix-blend-mode: overlay;
+    box-shadow: inset 0 0 100px rgba(0, 100, 150, 0.8);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 50, 150, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 5;
+}
+
+/* Settings sliders */
+.settings-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 350px;
+    text-align: left;
+    background: #1a252f;
+    padding: 15px;
+    border: 4px solid #0f161c;
+}
+.settings-group label {
+    font-size: 1.2rem;
+    color: #ecf0f1;
+    text-shadow: 2px 2px 0px #000;
+}
+input[type=range] {
+    -webkit-appearance: none;
+    width: 150px;
+    background: #34495e;
+    height: 15px;
+    border: 3px solid #000;
+    border-radius: 0;
+    outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 25px;
+    height: 30px;
+    border-radius: 0;
+    background: #f1c40f;
+    border: 3px solid #000;
+    cursor: pointer;
+    box-shadow: 3px 3px 0px #000;
+}

@@ -705,26 +705,26 @@ class UISystem {
                 const iconCanvas = this.atlas.getBlockIcon(slot.item.subtype);
                 const dataURL = iconCanvas.toDataURL();
                 inner = `<img src="${dataURL}" class="item-icon" draggable="false" />`;
-            } else if (slot.item.type === 'wand') {
-                const cvs = generateItemTexture('wand', slot.item.subtype || 'wand_basic');
-                inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
-            } else if (slot.item.type === 'spell') {
-                const cvs = generateItemTexture('spell', slot.item.data.spell.element || 'spell_basic');
-                inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
-            } else if (slot.item.type === 'material') {
-                const cvs = generateItemTexture('material', slot.item.subtype);
-                inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
-            } else if (slot.item.type === 'equipment') {
-                const cvs = generateItemTexture('equipment', slot.item.subtype);
-                inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
-            } else if (slot.item.type === 'modifier') {
-                const cvs = generateItemTexture('modifier', slot.item.subtype);
-                inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
-            } else if (slot.item.type === 'food') {
-                const cvs = generateItemTexture('food', slot.item.subtype);
-                inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
             } else {
-                inner = `<div style="text-align:center; line-height:100%;">${slot.item.name.substring(0,2).toUpperCase()}</div>`;
+                let cvs;
+                const updateImg = (canvas) => {
+                    if (el._cacheKey === cacheKey) {
+                        const img = el.querySelector('img.item-icon');
+                        if (img) img.src = canvas.toDataURL();
+                    }
+                };
+                if (slot.item.type === 'wand') cvs = generateItemTexture('wand', slot.item.subtype || 'wand_basic', updateImg);
+                else if (slot.item.type === 'spell') cvs = generateItemTexture('spell', slot.item.data.spell.element || 'spell_basic', updateImg);
+                else if (slot.item.type === 'material') cvs = generateItemTexture('material', slot.item.subtype, updateImg);
+                else if (slot.item.type === 'equipment') cvs = generateItemTexture('equipment', slot.item.subtype, updateImg);
+                else if (slot.item.type === 'modifier') cvs = generateItemTexture('modifier', slot.item.subtype, updateImg);
+                else if (slot.item.type === 'food') cvs = generateItemTexture('food', slot.item.subtype, updateImg);
+                
+                if (cvs) {
+                    inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
+                } else {
+                    inner = `<div style="text-align:center; line-height:100%;">${slot.item.name.substring(0,2).toUpperCase()}</div>`;
+                }
             }
             if (slot.count > 1) inner += `<span class="item-count">${slot.count}</span>`;
             el.innerHTML = inner;

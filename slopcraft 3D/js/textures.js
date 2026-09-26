@@ -2019,6 +2019,7 @@ function hasFaceVariants(blockType) {
 // Build the atlas: for face-variant blocks, store 3 rows (top, side, bottom)
 // For uniform blocks, store 1 texture and use the same UV for all faces
 
+
 const MINECRAFT_ASSETS_BASE = "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.16.5/assets/minecraft/textures/";
 
 const MC_TEXTURE_MAP = {
@@ -2147,8 +2148,8 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.SEASHELL_3]: 'scute',
     [BLOCKS.LILY_PAD]: 'lily_pad',
     [BLOCKS.ALGAE]: 'lily_pad',
-    [BLOCKS.RED_KELP]: 'crimson_roots',
-    [BLOCKS.BROWN_KELP]: 'weeping_vines',
+    [BLOCKS.RED_KELP]: 'kelp',
+    [BLOCKS.BROWN_KELP]: 'kelp_plant',
     [BLOCKS.QUICKSOIL]: 'sand',
     [BLOCKS.HOLYSTONE]: 'end_stone_bricks',
     [BLOCKS.ENCHANTED_AETHER_LOG]: { top: 'purpur_pillar_top', side: 'purpur_pillar', bottom: 'purpur_pillar_top' },
@@ -2259,7 +2260,39 @@ export async function createTextureAtlas(useMinecraft = false) {
                 promises.push(loadMinecraftTexture(texName).then(img => {
                     if (img) {
                         ctx.clearRect(entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
-                        ctx.drawImage(img, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                        
+                        // Tint grass, leaves, and water
+                        const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || texName === 'water_flow' || texName === 'vine' || texName.includes('tall_grass') || texName === 'fern' || texName === 'lily_pad');
+                        
+                        if (requiresTint) {
+                            // Draw the image first to a temporary canvas so we can tint it
+                            const tCanvas = document.createElement('canvas');
+                            tCanvas.width = TEX_SIZE; tCanvas.height = TEX_SIZE;
+                            const tCtx = tCanvas.getContext('2d');
+                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                            
+                            // Determine tint color
+                            let tint = '#55ff55'; // default vibrant green
+                            if (texName === 'water_flow') tint = '#3f76e4';
+                            else if (bt === BLOCKS.SWAMP_GRASS || bt === BLOCKS.AUTUMN_LEAVES) tint = '#8a9947';
+                            else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
+                            else if (bt === BLOCKS.PINE_LEAVES) tint = '#3d6e4b';
+                            else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffb7c5';
+                            else if (texName.includes('leaves')) tint = '#48b518';
+                            else tint = '#79c05a'; // grass default
+                            
+                            tCtx.globalCompositeOperation = 'multiply';
+                            tCtx.fillStyle = tint;
+                            tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+                            
+                            // Restore alpha channel using destination-in
+                            tCtx.globalCompositeOperation = 'destination-in';
+                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                            
+                            ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                        } else {
+                            ctx.drawImage(img, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                        }
                     }
                 }));
             }
@@ -2392,7 +2425,26 @@ export async function createTextureAtlas(useMinecraft = false) {
 // ----------------------------------------------------
 // Procedural Item Pixel Art Generator
 // ----------------------------------------------------
-export function generateItemTexture(itemType, itemSubtype) {
+
+const MC_ITEM_MAP = {
+    'iron_ingot': 'iron_ingot',
+    'gold_ingot': 'gold_ingot',
+    'diamond': 'diamond',
+    'coal': 'coal',
+    'mana_crystal': 'lapis_lazuli',
+    'boss': 'nether_star',
+    'stick': 'stick',
+    'wand_basic': 'stick',
+    'wand_fire': 'blaze_rod',
+    'wand_ice': 'prismarine_shard',
+    'wood': 'oak_log',
+    'stone': 'cobblestone',
+    'apple': 'apple',
+    'bread': 'bread',
+    'cooked_beef': 'cooked_beef'
+};
+
+export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     const TEX_SIZE = 16;
     const canvas = document.createElement('canvas');
     canvas.width = TEX_SIZE;
@@ -2401,6 +2453,21 @@ export function generateItemTexture(itemType, itemSubtype) {
     
     // Clear transparent
     ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+
+    const useMC = localStorage.getItem('slopcraft_mc_textures') === 'true';
+    if (useMC) {
+        const mcName = MC_ITEM_MAP[itemSubtype];
+        if (mcName) {
+            loadMinecraftTexture(mcName).then(img => {
+                if (img) {
+                    ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                    ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                    if (onLoaded) onLoaded(canvas);
+                }
+            });
+        }
+    }
+
 
     const palettes = {
         'wood': { c: '#8d6e63', d: '#5d4037', h: '#a1887f' },

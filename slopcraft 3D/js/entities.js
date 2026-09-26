@@ -2240,22 +2240,29 @@ export class ItemEntity {
                 this.mesh.scale.set(0.4, 0.4, 0.4);
             } else if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'wand' || this.item.type === 'spell' || this.item.type === 'modifier' || this.item.type === 'food') {
                 let cvs;
+                let tex;
+                const updateTex = (canvas) => {
+                    if (tex) {
+                        tex.image = canvas;
+                        tex.needsUpdate = true;
+                    }
+                };
                 if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'food') {
-                    cvs = generateItemTexture(this.item.type, this.item.subtype);
+                    cvs = generateItemTexture(this.item.type, this.item.subtype, updateTex);
                 } else if (this.item.type === 'wand') {
-                    cvs = generateItemTexture('wand', this.item.subtype || 'wand_basic');
+                    cvs = generateItemTexture('wand', this.item.subtype || 'wand_basic', updateTex);
                 } else if (this.item.type === 'spell') {
-                    cvs = generateItemTexture('spell', this.item.data.spell.element || 'spell_basic');
+                    cvs = generateItemTexture('spell', this.item.data.spell.element || 'spell_basic', updateTex);
                 } else if (this.item.type === 'modifier') {
-                    cvs = generateItemTexture('modifier', this.item.subtype);
+                    cvs = generateItemTexture('modifier', this.item.subtype, updateTex);
                 }
-                const tex = new THREE.CanvasTexture(cvs);
+                tex = new THREE.CanvasTexture(cvs);
                 tex.magFilter = THREE.NearestFilter;
                 tex.colorSpace = THREE.SRGBColorSpace;
                 const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
                 this.mesh = new THREE.Sprite(mat);
                 this.mesh.scale.set(0.4, 0.4, 0.4);
-            } else {
+            } else {            } else {
                 const geo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
                 const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 }); // generic item color
                 this.mesh = new THREE.Mesh(geo, mat);

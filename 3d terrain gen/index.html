@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyWorld - 3D Exploration</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simplex-noise@2.4.0/simplex-noise.min.js"></script>
+</head>
+<body>
+    <div id="ui">
+        <div id="crosshair">+</div>
+        
+        <div id="home-menu" class="menu">
+            <div class="menu-panel">
+                <h1>PolyWorld</h1>
+                <p>A procedural low-poly exploration game.</p>
+                
+                <div class="controls-grid">
+                    <div><span>W A S D</span></div><div>Move / Swim</div>
+                    <div><span>Mouse</span></div><div>Look Around</div>
+                    <div><span>Space</span></div><div>Jump / Swim Up</div>
+                    <div><span>Shift</span></div><div>Crouch / Dive</div>
+                    <div><span>Ctrl</span></div><div>Sprint</div>
+                </div>
+                
+                <button id="start-btn" class="btn">Play Game</button>
+            </div>
+        </div>
+
+        <div id="pause-menu" class="menu">
+            <div class="menu-panel">
+                <h2>Game Paused</h2>
+                <div style="height:20px"></div>
+                
+                <div class="settings-group">
+                    <label>Master Volume</label>
+                    <input type="range" id="vol-slider" min="0" max="1" step="0.01" value="0.5">
+                </div>
+                
+                <div class="settings-group" style="margin-bottom: 40px;">
+                    <label>Render Distance</label>
+                    <input type="range" id="dist-slider" min="3" max="8" step="1" value="5">
+                </div>
+                
+                <button id="resume-btn" class="btn">Resume</button>
+            </div>
+        </div>
+        
+        <div id="underwater-overlay"></div>
+    </div>
+    
+    <script src="js/textureGen.js?v=36"></script>
+    <script src="js/noise.js?v=36"></script>
+    <script src="js/water.js?v=36"></script>
+    <script src="js/props.js?v=36"></script>
+    <script src="js/terrain.js?v=36"></script>
+    <script src="js/world.js?v=36"></script>
+    <script src="js/fish.js?v=36"></script>
+    <script src="js/audio.js?v=36"></script>
+    <script src="js/player.js?v=36"></script>
+    <script src="js/caves.js?v=36"></script>
+    <script src="js/sky.js?v=36"></script>
+    <script src="js/petals.js?v=36"></script>
+    <script src="js/main.js?v=36"></script>
+</body>
+</html>

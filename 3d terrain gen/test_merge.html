@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html><body><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/simplex-noise@2.4.0/simplex-noise.min.js"></script>
+<script>
+window.onerror = function(e) { console.error("CRASH:", e); fetch('http://localhost:8011/crash?err='+encodeURIComponent(e)); }
+</script>
+<script src="js/textureGen.js"></script>
+<script src="js/noise.js"></script>
+<script src="js/props.js"></script>
+<script>
+try {
+  let scene = new THREE.Scene();
+  let vertexGrid = [{x: 0, y: 30, z: 0}];
+  let props = generatePropsForChunk(0, 0, scene, vertexGrid);
+  fetch('http://localhost:8011/success');
+} catch(e) {
+  fetch('http://localhost:8011/crash?err='+encodeURIComponent(e.message));
+}
+</script>
+</body></html>
