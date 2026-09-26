@@ -321,8 +321,8 @@ export class BiomeMap {
                         const r = floraRng();
 
                         let structType = null;
-                        if (r < 0.00002) structType = 'nether';
-                        else if (r < 0.00005) structType = 'cabin';
+                        if (r < 0.00008) structType = 'nether';
+                        else if (r < 0.00013) structType = 'cabin';
 
                         if (!structType) continue;
 
