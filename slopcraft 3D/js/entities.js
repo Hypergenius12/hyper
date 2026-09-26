@@ -395,7 +395,15 @@ function createMobMaterial(color, emissive = 0x000000, emissiveIntensity = 0) {
 const mobTextureCache = {};
 function getMobMaterial(type) {
     if (!mobTextureCache[type]) {
-        const tex = new THREE.CanvasTexture(generateMobTexture(type));
+        let tex;
+        const updateTex = (canvas) => {
+            if (tex) {
+                tex.image = canvas;
+                tex.needsUpdate = true;
+            }
+        };
+        const cvs = generateMobTexture(type, updateTex);
+        tex = new THREE.CanvasTexture(cvs);
         tex.magFilter = THREE.NearestFilter;
         tex.minFilter = THREE.NearestFilter;
         mobTextureCache[type] = new THREE.MeshLambertMaterial({ map: tex });
