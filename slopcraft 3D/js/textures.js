@@ -85,6 +85,7 @@ export const BLOCKS = {
     DUNGEON_UNDEAD_BRICK: 74,
     DUNGEON_UNDEAD_FLOOR: 75,
     DUNGEON_DOOR: 76,
+    DUNGEON_DOOR_TOP: 194,
     BOSS_SPAWNER: 77,
     COAL_ORE: 78,
     DIAMOND_ORE: 79,
@@ -241,6 +242,7 @@ const BLOCK_PROPS = {
     [BLOCKS.DUNGEON_UNDEAD_BRICK]:{name: 'Undead Brick',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DUNGEON_UNDEAD_FLOOR]:{name: 'Undead Floor',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DUNGEON_DOOR]:  { name: 'Dungeon Door',   health: 5, transparent: true, emissive: 0, solid: true, drops: BLOCKS.DUNGEON_DOOR },
+    [BLOCKS.DUNGEON_DOOR_TOP]:  { name: 'Dungeon Door Top', health: 5, transparent: true, emissive: 0, solid: true, drops: null },
     [BLOCKS.BOSS_SPAWNER]:  { name: 'Boss Spawner',   health: Infinity, transparent: true, emissive: 0, solid: false, drops: null },
     [BLOCKS.COAL_ORE]:      { name: 'Coal Ore',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DIAMOND_ORE]:   { name: 'Diamond Ore',    health: 10, transparent: false, emissive: 0.2, solid: true, drops: null },
@@ -717,6 +719,15 @@ function generateBlockTexture(ctx, blockType, face, rng) {
         case BLOCKS.DUNGEON_UNDEAD_FLOOR:
             fillBase(ctx, 35, 35, 40); addNoise(ctx, rng, 10);
             ctx.fillStyle = 'rgba(15,15,20,0.6)'; ctx.fillRect(0,0,TEX_SIZE,1); ctx.fillRect(0,8,TEX_SIZE,1); ctx.fillRect(0,0,1,TEX_SIZE); ctx.fillRect(8,0,1,TEX_SIZE);
+            break;
+        case BLOCKS.DUNGEON_DOOR_TOP:
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(0,0,16,16);
+            ctx.fillStyle = '#111';
+            ctx.fillRect(2,2,4,4);
+            ctx.fillRect(10,2,4,4);
+            ctx.fillRect(2,10,4,4);
+            ctx.fillRect(10,10,4,4);
             break;
         case BLOCKS.DUNGEON_DOOR:
             fillBase(ctx, 40, 40, 45); // Dark stone base
@@ -2044,6 +2055,8 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.MANA_ORE]: 'lapis_ore',
     [BLOCKS.OBSIDIAN]: 'obsidian',
     [BLOCKS.GLOWSTONE]: 'glowstone',
+    [BLOCKS.DUNGEON_DOOR]: 'oak_door_bottom',
+    [BLOCKS.DUNGEON_DOOR_TOP]: 'oak_door_top',
     [BLOCKS.MUSHROOM_STEM]: 'mushroom_stem',
     [BLOCKS.MUSHROOM_CAP]: 'red_mushroom_block',
     [BLOCKS.ALIEN_STONE]: 'end_stone',

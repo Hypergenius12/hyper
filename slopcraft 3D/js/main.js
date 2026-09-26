@@ -614,33 +614,46 @@ class Game {
         // Create door geometry (1 block high)
         const doorGeom = new THREE.BoxGeometry(1, 1, 0.125).toNonIndexed();
         
-        // Build material from texture atlas
-        const uvInfo = this.atlas.getUV(window.BLOCKS.DUNGEON_DOOR);
+        // Create materials from texture atlas
+        const uvInfoBot = this.atlas.getUV(window.BLOCKS.DUNGEON_DOOR);
+        const uvInfoTop = this.atlas.getUV(window.BLOCKS.DUNGEON_DOOR_TOP);
         
-        // Map the UVs correctly so the door texture maps cleanly to the 1x1 face
-        const uvs = doorGeom.attributes.uv.array;
+        const doorGeomBot = doorGeom.clone();
+        const doorGeomTop = doorGeom.clone();
+
+        const uvsBot = doorGeomBot.attributes.uv.array;
         for (let i = 0; i < 6; i++) {
             for (let v = 0; v < 6; v++) {
-                const baseU = uvs[i * 12 + v * 2];
-                const baseV = uvs[i * 12 + v * 2 + 1];
-                uvs[i * 12 + v * 2] = uvInfo.u + baseU * uvInfo.uSize;
-                uvs[i * 12 + v * 2 + 1] = uvInfo.v + baseV * uvInfo.vSize;
+                const baseU = uvsBot[i * 12 + v * 2];
+                const baseV = uvsBot[i * 12 + v * 2 + 1];
+                uvsBot[i * 12 + v * 2] = uvInfoBot.u + baseU * uvInfoBot.uSize;
+                uvsBot[i * 12 + v * 2 + 1] = uvInfoBot.v + baseV * uvInfoBot.vSize;
+            }
+        }
+        
+        const uvsTop = doorGeomTop.attributes.uv.array;
+        for (let i = 0; i < 6; i++) {
+            for (let v = 0; v < 6; v++) {
+                const baseU = uvsTop[i * 12 + v * 2];
+                const baseV = uvsTop[i * 12 + v * 2 + 1];
+                uvsTop[i * 12 + v * 2] = uvInfoTop.u + baseU * uvInfoTop.uSize;
+                uvsTop[i * 12 + v * 2 + 1] = uvInfoTop.v + baseV * uvInfoTop.vSize;
             }
         }
         
         const mat = new THREE.MeshLambertMaterial({ 
             map: this.atlas.texture, 
-            transparent: false, 
+            transparent: true, 
             alphaTest: 0.5,
             side: THREE.DoubleSide
         });
         
-        // Pivot point should be on the edge, not center
-        doorGeom.translate(0.5, 0.5, 0); 
+        doorGeomBot.translate(0.5, 0.5, 0); 
+        doorGeomTop.translate(0.5, 0.5, 0); 
         
         const doorGroup = new THREE.Group();
-        const meshBot = new THREE.Mesh(doorGeom, mat);
-        const meshTop = new THREE.Mesh(doorGeom, mat);
+        const meshBot = new THREE.Mesh(doorGeomBot, mat);
+        const meshTop = new THREE.Mesh(doorGeomTop, mat);
         meshTop.position.y = 1;
         
         doorGroup.add(meshBot);
