@@ -3274,23 +3274,6 @@ export function generateSpellTexture(element) {
 }
 
 
-const MC_MOB_MAP = {
-    'COW': 'cow/cow',
-    'PIG': 'pig/pig',
-    'ZOMBIE': 'zombie/zombie',
-    'SKELETON': 'skeleton/skeleton',
-    'SHEEP': 'sheep/sheep',
-    'SLIME': 'slime/slime',
-    'SPIDER': 'spider/spider',
-    'CHICKEN': 'chicken',
-    'WOLF': 'wolf/wolf',
-    'ENDERMAN': 'enderman/enderman',
-    'COD': 'fish/cod',
-    'TROPICAL_FISH': 'fish/tropical_a',
-    'TURTLE': 'turtle/big_sea_turtle',
-    'PIGLIN_BRUISER': 'piglin/piglin_brute'
-};
-
 export function generateMobTexture(mobType, onLoaded) {
     const canvas = document.createElement('canvas');
     canvas.width = 32;
