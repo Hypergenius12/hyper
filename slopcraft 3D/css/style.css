@@ -418,16 +418,426 @@ canvas#game-canvas {
 
 /* Buttons */
 .menu-btn {
-    background: #c6c6c6;
-    color: #000;
-    border: 2px solid #000;
-    box-shadow: inset 2px 2px 0px 0px #ffffff, inset -2px -2px 0px 0px #555555;
-    padding: 10px 20px;
-    font-size: 1.1rem;
-    font-family: 'Minecraft', 'JetBrains Mono', monospace;
-    cursor: pointer;
-    text-shadow: none;
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    margin-bottom: 8px;
+    background: #1a1a24;
+    border: 2px solid #333344;
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 15px;
+    font-weight: bold;
     border-radius: 0;
+    cursor: pointer;
+    text-align: center;
+    transition: none;
+}
+.menu-btn:hover {
+    background: #a8a8a8;
+    box-shadow: inset 2px 2px 0px 0px #ffffff, inset -2px -2px 0px 0px #555555;
+}
+.menu-btn:active {
+    box-shadow: inset 2px 2px 0px 0px #555555, inset -2px -2px 0px 0px #ffffff;
+    background: #c6c6c6;
+}
+.menu-btn.primary {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: white;
+}
+.menu-btn.primary:hover {
+    background: var(--accent);
+}
+.menu-btn.danger {
+    color: var(--danger);
+    border-color: rgba(255, 68, 68, 0.2);
+}
+.menu-btn.danger:hover {
+    background: rgba(255, 68, 68, 0.1);
+    border-color: var(--danger);
+}
+
+/* ============================================
+   Start Screen
+   ============================================ */
+
+#start-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #05050d 0%, #0d0d20 50%, #120825 100%);
+}
+
+.start-content {
+    text-align: center;
+}
+
+.game-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.title-voxel {
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: 16px;
+    background: linear-gradient(135deg, var(--accent-bright), #e0aaff, var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 30px rgba(124, 92, 255, 0.3));
+}
+.title-odyssey {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 20px;
+    color: var(--text-secondary);
+    margin-top: -4px;
+}
+
+.subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    letter-spacing: 2px;
+    margin-bottom: 40px;
+}
+
+.start-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 30px;
+}
+.start-actions .menu-btn {
+    width: 240px;
+}
+
+.seed-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.seed-input-row label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.seed-input-row input,
+#planet-seed-input {
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    border-radius: 8px;
+    outline: none;
+    width: 180px;
+    transition: border-color 0.15s;
+}
+.seed-input-row input:focus,
+#planet-seed-input:focus {
+    border-color: var(--accent);
+}
+
+.start-hint {
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+}
+
+/* ============================================
+   Inventory
+   ============================================ */
+
+.inventory-layout {
+    display: flex;
+    gap: 24px;
+}
+
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 48px);
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.inv-slot {
+    width: 44px;
+    height: 44px;
+    background: #8b8b8b;
+    border: 2px solid;
+    border-color: #373737 #ffffff #ffffff #373737;
+    position: relative;
+    cursor: pointer;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* Style the first 9 slots as the hotbar */
+.inventory-grid .inv-slot:nth-child(-n+9) {
+    margin-bottom: 8px;
+}
+.inv-slot:hover {
+    background: #9d9d9d;
+}
+.inv-slot.selected {
+    border: 2px solid #ffffff;
+    box-shadow: inset 0 0 0 2px #c6c6c6;
+}
+.inv-slot canvas {
+    width: 32px;
+    height: 32px;
+    image-rendering: pixelated;
+}
+.inv-slot .inv-count {
+    position: absolute;
+    bottom: 1px;
+    right: 3px;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: white;
+    text-shadow: 1px 1px 2px black;
+}
+
+.item-detail {
+    min-width: 180px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+}
+.item-detail h3 {
+    font-size: 16px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+.item-detail p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+#item-detail-stats {
+    margin-top: 10px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+}
+#item-detail-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 6px;
+}
+#item-detail-actions .menu-btn {
+    width: auto;
+    padding: 6px 14px;
+    font-size: 12px;
+    margin: 0;
+}
+
+/* ============================================
+   Spell Configurator
+   ============================================ */
+
+.spell-config-layout {
+    display: flex;
+    gap: 20px;
+}
+
+.wand-panel, .spell-edit-panel, .spell-library {
+    flex: 1;
+    min-width: 0;
+}
+.wand-panel {
+    flex: 0.8;
+}
+.spell-library {
+    flex: 0.9;
+}
+
+.spell-config-layout h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--accent-bright);
+}
+.spell-config-layout h4 {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 12px 0 8px;
+}
+
+.stat-list {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+.spell-slot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.spell-slot {
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid var(--border-subtle);
+    border-radius: 0;
+    cursor: pointer;
+    font-size: 13px;
+    transition: none;
+}
+.spell-slot:hover { border-color: #ffffff; }
+.spell-slot.active {
+    border-color: var(--accent-bright);
+    background: rgba(124, 92, 255, 0.2);
+}
+.spell-slot.empty {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.modifier-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.modifier-tag {
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 20px;
+    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.modifier-tag:hover {
+    border-color: var(--danger);
+    background: rgba(255, 68, 68, 0.08);
+}
+.modifier-tag.rarity-common { border-color: rgba(176,176,176,0.3); }
+.modifier-tag.rarity-uncommon { border-color: rgba(68,221,102,0.3); color: var(--rarity-uncommon); }
+.modifier-tag.rarity-rare { border-color: rgba(68,136,255,0.3); color: var(--rarity-rare); }
+.modifier-tag.rarity-epic { border-color: rgba(170,68,255,0.3); color: var(--rarity-epic); }
+.modifier-tag.rarity-legendary { border-color: rgba(255,170,34,0.3); color: var(--rarity-legendary); }
+
+.spell-preview {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+}
+.preview-stat {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+.preview-stat span {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.item-scroll-list {
+    max-height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 4px;
+}
+.item-scroll-list::-webkit-scrollbar {
+    width: 4px;
+}
+.item-scroll-list::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+}
+
+.scroll-item {
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.15s;
+}
+.scroll-item:hover {
+    background: rgba(124, 92, 255, 0.06);
+    border-color: var(--accent);
+}
+.scroll-item .item-name { font-weight: 500; }
+.scroll-item .item-type { color: var(--text-dim); font-size: 11px; }
+
+.empty-state {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 13px;
+    text-align: center;
+    padding: 16px;
+}
+
+/* ============================================
+   Settings
+   ============================================ */
+
+.settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.setting-row label {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+.setting-row input[type="range"] {
+    flex: 1.2;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    outline: none;
+}
+.setting-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--accent-bright);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(124, 92, 255, 0.3);
+}
+.setting-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
 }
 .setting-val {
     font-size: 12px;
@@ -613,6 +1023,7 @@ canvas#game-canvas {
     .title-voxel { font-size: 40px; letter-spacing: 10px; }
     .title-odyssey { font-size: 18px; letter-spacing: 12px; }
 }
+
 
 /* Minecraft UI Text Overrides */
 .inv-wrapper, .window-panel, .crafting-col {
