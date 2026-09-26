@@ -1573,7 +1573,7 @@ function carveRoomInChunk(blocks, cx, cz, room) {
 
 export function generatePortalStructure(blocks, x, y, z, rng, type = 'nether') {
     let frame1, frame2, base;
-    if (type === 'nether') { frame1 = BLOCKS.OBSIDIAN; frame2 = BLOCKS.PORTAL_FRAME; base = BLOCKS.NETHERRACK; }
+    if (type === 'nether') { frame1 = BLOCKS.OBSIDIAN; frame2 = BLOCKS.CRYING_OBSIDIAN; base = BLOCKS.NETHERRACK; }
     else if (type === 'aether') { frame1 = BLOCKS.GLOWSTONE; frame2 = BLOCKS.AETHER_STONE; base = BLOCKS.AETHER_DIRT; }
     else if (type === 'cavern') { frame1 = BLOCKS.DIRT; frame2 = BLOCKS.GRASS; base = BLOCKS.STONE; }
     else if (type === 'highlands') { frame1 = BLOCKS.STONE; frame2 = BLOCKS.COBBLESTONE; base = BLOCKS.DIRT; }

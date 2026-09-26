@@ -157,7 +157,8 @@ export const BLOCKS = {
     ENCHANTED_AETHER_LEAVES: 190,
     DARK_OAK_WOOD: 191,
     DARK_OAK_LEAVES: 192,
-    DARK_OAK_PLANKS: 193
+    DARK_OAK_PLANKS: 193,
+    CRYING_OBSIDIAN: 195
 };
 
 // Block properties
@@ -296,6 +297,7 @@ const BLOCK_PROPS = {
     [BLOCKS.DARK_OAK_WOOD]: { name: 'Dark Oak Wood',  health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.DARK_OAK_LEAVES]: { name: 'Dark Oak Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.DARK_OAK_PLANKS]: { name: 'Dark Oak Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.CRYING_OBSIDIAN]: { name: 'Crying Obsidian', health: 15, transparent: false, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.AETHER_LEAVES]: { name: 'Aether Leaves',  health: 1, transparent: true, emissive: 0.2, solid: true, drops: null, flammable: true },
     [BLOCKS.AETHER_PORTAL]: { name: 'Aether Portal',  health: 0, transparent: true, emissive: 1.0, solid: false, drops: null },
     [BLOCKS.AETHER_CLOUD]:  { name: 'Aether Cloud',   health: 1, transparent: true, emissive: 0.5, solid: true, drops: null },
@@ -1396,24 +1398,44 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addPixels(ctx, rng, 'rgba(40, 100, 30, 0.6)', 20);
             break;
         case BLOCKS.CHEST_BLOCK:
-            if (face === 'top' || face === 'bottom') {
-                fillBase(ctx, 140, 90, 40);
-                addNoise(ctx, rng, 10);
-                ctx.strokeStyle = 'rgba(60, 40, 15, 0.8)';
-                ctx.strokeRect(1, 1, 14, 14);
+            if (face === 'top') {
+                // Oak plank top with iron band
+                fillBase(ctx, 140, 100, 50);
+                addNoise(ctx, rng, 8);
+                ctx.fillStyle = 'rgba(60,40,10,0.9)';
+                ctx.fillRect(0, 7, 16, 2); // horizontal band
+                ctx.fillRect(7, 0, 2, 16); // vertical band
+                ctx.fillStyle = '#888';
+                ctx.fillRect(7, 7, 2, 2); // iron buckle center
+            } else if (face === 'bottom') {
+                fillBase(ctx, 130, 90, 40);
+                addNoise(ctx, rng, 8);
+                ctx.fillStyle = 'rgba(60,40,10,0.7)';
+                ctx.fillRect(0, 7, 16, 2);
+                ctx.fillRect(7, 0, 2, 16);
+            } else if (face === 'front') {
+                // Front face: wood planks + latch + lock
+                fillBase(ctx, 160, 110, 55);
+                addNoise(ctx, rng, 8);
+                ctx.fillStyle = 'rgba(50,30,5,0.85)';
+                ctx.fillRect(0, 9, 16, 2); // lid split line
+                ctx.fillRect(1, 1, 14, 1); // top trim
+                ctx.fillRect(1, 14, 14, 1); // bottom trim
+                // Iron latch
+                ctx.fillStyle = '#999';
+                ctx.fillRect(6, 8, 4, 3);
+                ctx.fillStyle = '#aaa';
+                ctx.fillRect(7, 9, 2, 1);
+                ctx.fillStyle = '#555';
+                ctx.fillRect(7, 10, 2, 1);
             } else {
-                fillBase(ctx, 160, 110, 50);
-                addNoise(ctx, rng, 10);
-                ctx.strokeStyle = 'rgba(60, 40, 15, 0.8)';
-                ctx.strokeRect(1, 1, 14, 14);
-                
-                if (face === 'front') {
-                    // latch only on front
-                    ctx.fillStyle = '#111';
-                    ctx.fillRect(7, 4, 2, 4);
-                    ctx.fillStyle = '#ccc';
-                    ctx.fillRect(7, 5, 2, 1);
-                }
+                // Side / back faces: wood planks + iron band
+                fillBase(ctx, 155, 108, 52);
+                addNoise(ctx, rng, 8);
+                ctx.fillStyle = 'rgba(50,30,5,0.85)';
+                ctx.fillRect(0, 9, 16, 2); // lid line
+                ctx.fillRect(1, 1, 14, 1);
+                ctx.fillRect(1, 14, 14, 1);
             }
             break;
         case BLOCKS.LADDER:
@@ -2057,6 +2079,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.CRYSTAL_ORE]: 'diamond_ore',
     [BLOCKS.MANA_ORE]: 'lapis_ore',
     [BLOCKS.OBSIDIAN]: 'obsidian',
+    [BLOCKS.CRYING_OBSIDIAN]: 'crying_obsidian',
     [BLOCKS.GLOWSTONE]: 'glowstone',
     [BLOCKS.DUNGEON_DOOR]: 'oak_door_bottom',
     [BLOCKS.DUNGEON_DOOR_TOP]: 'oak_door_top',
@@ -2117,7 +2140,6 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.BRICKS]: 'bricks',
     [BLOCKS.BOOKSHELF]: 'bookshelf',
     [BLOCKS.MOSSY_COBBLESTONE]: 'mossy_cobblestone',
-    [BLOCKS.CHEST_BLOCK]: { top: 'crafting_table_top', side: 'crafting_table_side', bottom: 'oak_planks', front: 'crafting_table_front' },
     [BLOCKS.LADDER]: 'ladder',
     [BLOCKS.IRON_BLOCK]: 'iron_block',
     [BLOCKS.GOLD_BLOCK]: 'gold_block',
