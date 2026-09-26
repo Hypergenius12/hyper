@@ -262,6 +262,8 @@ const _waterIndices = new Uint32Array(MAX_INDICES);
 const _transparentIndices = new Uint32Array(MAX_INDICES);
 const _glowOpaqueIndices = new Uint32Array(MAX_INDICES);
 const _glowTransparentIndices = new Uint32Array(MAX_INDICES);
+const _slightGlowOpaqueIndices = new Uint32Array(MAX_INDICES);
+const _slightGlowTransparentIndices = new Uint32Array(MAX_INDICES);
 
 
 const _meshPool = [];

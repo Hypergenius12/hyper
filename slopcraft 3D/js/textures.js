@@ -2020,7 +2020,7 @@ function hasFaceVariants(blockType) {
 // For uniform blocks, store 1 texture and use the same UV for all faces
 
 
-const MINECRAFT_ASSETS_BASE = "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.16.5/assets/minecraft/textures/";
+const MINECRAFT_ASSETS_BASE = "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/textures/";
 
 const MC_TEXTURE_MAP = {
     [BLOCKS.GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },

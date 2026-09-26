@@ -26,7 +26,7 @@ export class AudioManager {
         this.mcCache[path] = 'loading';
         
         try {
-            const res = await fetch(`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.16.5/assets/minecraft/sounds/${path}.ogg`);
+            const res = await fetch(`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.4/assets/minecraft/sounds/${path}.ogg`);
             const arrayBuffer = await res.arrayBuffer();
             const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
             this.mcCache[path] = audioBuffer;
