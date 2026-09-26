@@ -2152,7 +2152,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.AETHER_GRASS]: { top: 'end_stone', side: 'end_stone_bricks', bottom: 'end_stone_bricks' },
     [BLOCKS.AETHER_WOOD]: { top: 'quartz_pillar_top', side: 'quartz_pillar', bottom: 'quartz_pillar_top' },
     [BLOCKS.AETHER_LEAVES]: 'cyan_wool',
-    [BLOCKS.AETHER_PORTAL]: 'end_gateway_beam',
+    [BLOCKS.AETHER_PORTAL]: 'entity/end_gateway_beam',
     [BLOCKS.AETHER_CLOUD]: 'white_wool',
     [BLOCKS.AETHER_TALL_GRASS]: 'end_rod',
     [BLOCKS.AETHER_FLOWER]: 'chorus_flower',
@@ -2160,7 +2160,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.CAVERN_STONE]: 'andesite',
     [BLOCKS.CAVERN_DIRT]: 'dirt',
     [BLOCKS.CAVERN_PORTAL]: 'obsidian',
-    [BLOCKS.MAGMA_STONE]: 'magma_block',
+    [BLOCKS.MAGMA_STONE]: 'magma',
     [BLOCKS.HIGHLANDS_STONE]: 'diorite',
     [BLOCKS.HIGHLANDS_DIRT]: 'dirt',
     [BLOCKS.HIGHLANDS_GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
@@ -2169,8 +2169,8 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.KELP]: 'kelp',
     [BLOCKS.BUBBLE_CORAL]: 'bubble_coral',
     [BLOCKS.SEASHELL_1]: 'bone_block_top',
-    [BLOCKS.SEASHELL_2]: 'nautilus_shell',
-    [BLOCKS.SEASHELL_3]: 'scute',
+    [BLOCKS.SEASHELL_2]: 'item/nautilus_shell',
+    [BLOCKS.SEASHELL_3]: 'item/turtle_scute',
     [BLOCKS.LILY_PAD]: 'lily_pad',
     [BLOCKS.ALGAE]: 'seagrass',
     [BLOCKS.RED_KELP]: 'kelp',
@@ -2194,7 +2194,8 @@ function loadMinecraftTexture(name) {
             altImg.onerror = () => resolve(null);
             altImg.src = MINECRAFT_ASSETS_BASE + 'item/' + name + '.png';
         };
-        img.src = MINECRAFT_ASSETS_BASE + 'block/' + name + '.png';
+        if (name.includes('/')) img.src = MINECRAFT_ASSETS_BASE + name + '.png';
+        else img.src = MINECRAFT_ASSETS_BASE + 'block/' + name + '.png';
     });
 }
 
@@ -2289,6 +2290,7 @@ export async function createTextureAtlas(useMinecraft = false) {
                         // Tint grass, leaves, and water
                         const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || texName === 'water_flow' || texName === 'vine' || texName.includes('tall_grass') || texName === 'fern' || texName === 'lily_pad');
                         
+                        let tintColor = null;
                         if (requiresTint) {
                             // Draw the image first to a temporary canvas so we can tint it
                             const tCanvas = document.createElement('canvas');
@@ -2318,6 +2320,7 @@ export async function createTextureAtlas(useMinecraft = false) {
                             }
                             
                             tCtx.globalCompositeOperation = 'multiply';
+                            tintColor = tint;
                             tCtx.fillStyle = tint;
                             tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
                             
@@ -2337,7 +2340,7 @@ export async function createTextureAtlas(useMinecraft = false) {
                                 frameInfo.isMC = true;
                                 frameInfo.img = img;
                                 frameInfo.frames = img.height / TEX_SIZE;
-                                frameInfo.tint = requiresTint ? tint : null;
+                                frameInfo.tint = requiresTint ? tintColor : null;
                             } else {
                                 animatedFrames.push({
                                     x: entry.col * TEX_SIZE,
@@ -2345,7 +2348,7 @@ export async function createTextureAtlas(useMinecraft = false) {
                                     isMC: true,
                                     img: img,
                                     frames: img.height / TEX_SIZE,
-                                    tint: requiresTint ? tint : null
+                                    tint: requiresTint ? tintColor : null
                                 });
                             }
                         }
