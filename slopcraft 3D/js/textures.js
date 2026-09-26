@@ -175,8 +175,8 @@ const BLOCK_PROPS = {
     [BLOCKS.OBSIDIAN]:      { name: 'Obsidian',       health: 15, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.CRAFTING_TABLE]:{ name: 'Crafting Table', health: 4, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.GLOWSTONE]:     { name: 'Glowstone',      health: 4, transparent: false, emissive: 1.0, solid: true, drops: null },
-      health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-      health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_BRICK]: { name: 'Dungeon Brick',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_FLOOR]: { name: 'Dungeon Floor',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.MUSHROOM_STEM]: { name: 'Mushroom Stem',  health: 3, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.MUSHROOM_CAP]:  { name: 'Mushroom Cap',   health: 2, transparent: false, emissive: 0.2, solid: true, drops: null },
     [BLOCKS.ALIEN_STONE]:   { name: 'Alien Stone',    health: 8, transparent: false, emissive: 0.1, solid: true, drops: null },
@@ -224,19 +224,19 @@ const BLOCK_PROPS = {
     [BLOCKS.GLOW_STEM]:     { name: 'Glow Stem',      health: 4, transparent: false, emissive: 0.2, solid: true, drops: null },
     [BLOCKS.GLOW_LEAVES]:   { name: 'Glow Leaves',    health: 1, transparent: true,  emissive: 0.5, solid: true, drops: null },
     [BLOCKS.GLOW_SHROOM]:   { name: 'Glow Shroom',    health: 1, transparent: true,  emissive: 0.8, solid: false, isCross: true, drops: null },
-          health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-        health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.PALM_WOOD]:     { name: 'Palm Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.PALM_LEAVES]:   { name: 'Palm Leaves',    health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.OASIS_FERN]:    { name: 'Oasis Fern',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
-     health: 12, transparent: false, emissive: 0.1, solid: true, drops: null },
-     health: 12, transparent: false, emissive: 0.2, solid: true, drops: null },
-      health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-      health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_FIRE_BRICK]: { name: 'Fire Brick', health: 12, transparent: false, emissive: 0.1, solid: true, drops: null },
+    [BLOCKS.DUNGEON_FIRE_FLOOR]: { name: 'Fire Floor', health: 12, transparent: false, emissive: 0.2, solid: true, drops: null },
+    [BLOCKS.DUNGEON_ICE_BRICK]:  { name: 'Ice Brick',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_ICE_FLOOR]:  { name: 'Ice Floor',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_JUNGLE_BRICK]:{name: 'Jungle Brick',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_JUNGLE_FLOOR]:{name: 'Jungle Floor',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_DESERT_BRICK]:{name: 'Desert Brick',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_DESERT_FLOOR]:{name: 'Desert Floor',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_UNDEAD_BRICK]:{name: 'Undead Brick',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_UNDEAD_FLOOR]:{name: 'Undead Floor',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DUNGEON_DOOR]:  { name: 'Dungeon Door',   health: 5, transparent: true, emissive: 0, solid: true, drops: BLOCKS.DUNGEON_DOOR },
     [BLOCKS.BOSS_SPAWNER]:  { name: 'Boss Spawner',   health: Infinity, transparent: true, emissive: 0, solid: false, drops: null },
     [BLOCKS.COAL_ORE]:      { name: 'Coal Ore',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
@@ -278,7 +278,7 @@ const BLOCK_PROPS = {
     [BLOCKS.ACACIA_PLANKS]: { name: 'Acacia Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.CHERRY_PLANKS]: { name: 'Cherry Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.AUTUMN_PLANKS]: { name: 'Autumn Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-        health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.PALM_PLANKS]:   { name: 'Palm Planks',    health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.PINE_PLANKS]:   { name: 'Pine Planks',    health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.CRIMSON_PLANKS]:{ name: 'Crimson Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.SUGARCANE]:     { name: 'Sugarcane',      health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.SUGARCANE, flammable: true },
@@ -2037,8 +2037,6 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.MANA_ORE]: 'lapis_ore',
     [BLOCKS.OBSIDIAN]: 'obsidian',
     [BLOCKS.GLOWSTONE]: 'glowstone',
-    
-    
     [BLOCKS.MUSHROOM_STEM]: 'mushroom_stem',
     [BLOCKS.MUSHROOM_CAP]: 'red_mushroom_block',
     [BLOCKS.ALIEN_STONE]: 'end_stone',
@@ -2086,20 +2084,6 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.GLOW_STEM]: 'crimson_stem',
     [BLOCKS.GLOW_LEAVES]: 'shroomlight',
     [BLOCKS.GLOW_SHROOM]: 'red_mushroom',
-     side: 'jungle_log', bottom: 'jungle_log_top' },
-    
-    [BLOCKS.OASIS_FERN]: 'large_fern_top',
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    [BLOCKS.DUNGEON_DOOR]: 'iron_door_top',
     [BLOCKS.BOSS_SPAWNER]: 'spawner',
     [BLOCKS.COAL_ORE]: 'coal_ore',
     [BLOCKS.DIAMOND_ORE]: 'diamond_ore',
@@ -2130,7 +2114,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.ACACIA_PLANKS]: 'acacia_planks',
     [BLOCKS.CHERRY_PLANKS]: 'cherry_planks',
     [BLOCKS.AUTUMN_PLANKS]: 'spruce_planks',
-    
+    [BLOCKS.PALM_PLANKS]: 'jungle_planks',
     [BLOCKS.PINE_PLANKS]: 'spruce_planks',
     [BLOCKS.CRIMSON_PLANKS]: 'crimson_planks',
     [BLOCKS.SUGARCANE]: 'sugar_cane',
@@ -2187,7 +2171,6 @@ function loadMinecraftTexture(name) {
         img.src = MINECRAFT_ASSETS_BASE + 'block/' + name + '.png';
     });
 }
-
 
 export async function createTextureAtlas(useMinecraft = false) {
     // Calculate atlas layout
