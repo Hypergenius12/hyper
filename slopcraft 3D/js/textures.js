@@ -2156,6 +2156,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.STONE_BRICKS]: 'stone_bricks',
     [BLOCKS.BRICKS]: 'bricks',
     [BLOCKS.BOOKSHELF]: { top: 'oak_planks', bottom: 'oak_planks', side: 'bookshelf', front: 'bookshelf' },
+    [BLOCKS.CHEST_BLOCK]: { top: 'chest://top', bottom: 'chest://bottom', side: 'chest://side', front: 'chest://front' },
     [BLOCKS.MOSSY_COBBLESTONE]: 'mossy_cobblestone',
     [BLOCKS.LADDER]: 'ladder',
     [BLOCKS.IRON_BLOCK]: 'iron_block',
@@ -2220,7 +2221,51 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.ENCHANTED_AETHER_LEAVES]: 'aether://crystal_leaves'
 };
 
+let _mcChestPromise = null;
+function loadMinecraftChestTexture(face) {
+    if (!_mcChestPromise) {
+        _mcChestPromise = new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/textures/entity/chest/normal.png';
+        });
+    }
+    return _mcChestPromise.then(img => {
+        if (!img) return null;
+        const c = document.createElement('canvas');
+        c.width = TEX_SIZE; c.height = TEX_SIZE;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        if (face === 'top') {
+            // Lid top: (14, 0, 14, 14)
+            ctx.drawImage(img, 14, 0, 14, 14, 0, 0, TEX_SIZE, TEX_SIZE);
+        } else if (face === 'bottom') {
+            // Base bottom: (28, 19, 14, 14)
+            ctx.drawImage(img, 28, 19, 14, 14, 0, 0, TEX_SIZE, TEX_SIZE);
+        } else if (face === 'side') {
+            // Lid side (0, 14, 14, 5) -> top 5px
+            ctx.drawImage(img, 0, 14, 14, 5, 0, 0, TEX_SIZE, 5);
+            // Base side (0, 33, 14, 10) -> bottom 11px
+            ctx.drawImage(img, 0, 33, 14, 10, 0, 5, TEX_SIZE, 11);
+        } else if (face === 'front') {
+            // Lid front (14, 14, 14, 5)
+            ctx.drawImage(img, 14, 14, 14, 5, 0, 0, TEX_SIZE, 5);
+            // Base front (14, 33, 14, 10)
+            ctx.drawImage(img, 14, 33, 14, 10, 0, 5, TEX_SIZE, 11);
+            // Latch (1, 1, 2, 4) at center (x: 7, y: 3)
+            ctx.drawImage(img, 1, 1, 2, 4, 7, 3, 2, 5);
+        }
+        return c;
+    });
+}
+
 function loadMinecraftTexture(name) {
+    if (name.startsWith('chest://')) {
+        return loadMinecraftChestTexture(name.slice(8));
+    }
     return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -2609,6 +2654,26 @@ const MC_ITEM_MAP = {
     'axe_iron': 'iron_axe',
     'axe_gold': 'golden_axe',
     'axe_diamond': 'diamond_axe',
+    'shovel_wood': 'wooden_shovel',
+    'shovel_stone': 'stone_shovel',
+    'shovel_iron': 'iron_shovel',
+    'shovel_gold': 'golden_shovel',
+    'shovel_diamond': 'diamond_shovel',
+    'wood_shovel': 'wooden_shovel',
+    'stone_shovel': 'stone_shovel',
+    'iron_shovel': 'iron_shovel',
+    'gold_shovel': 'golden_shovel',
+    'diamond_shovel': 'diamond_shovel',
+    'raw_beef': 'beef',
+    'raw_porkchop': 'porkchop',
+    'raw_chicken': 'chicken',
+    'raw_mutton': 'mutton',
+    'cooked_porkchop': 'cooked_porkchop',
+    'cooked_chicken': 'cooked_chicken',
+    'cooked_mutton': 'cooked_mutton',
+    'raw_iron': 'raw_iron',
+    'raw_gold': 'raw_gold',
+    'ender_pearl': 'ender_pearl',
     'helmet_iron': 'iron_helmet',
     'chest_iron': 'iron_chestplate',
     'legs_iron': 'iron_leggings',
@@ -2856,6 +2921,25 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "  OSSO          ",
                 "   OO           ",
                 "                ",
+                "                "
+            ];
+        } else if (itemSubtype.includes('shovel')) {
+            shape = [
+                "            OO  ",
+                "           OHHDO",
+                "          OHCCDO",
+                "          ODDDO ",
+                "         OSSO   ",
+                "        OSSO    ",
+                "       OSSO     ",
+                "      OSSO      ",
+                "     OSSO       ",
+                "    OSSO        ",
+                "   OSSO         ",
+                "  OSSO          ",
+                " OSSO           ",
+                " OSO            ",
+                "  O             ",
                 "                "
             ];
         } else if (itemSubtype.includes('head')) {

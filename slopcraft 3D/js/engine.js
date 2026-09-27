@@ -457,6 +457,24 @@ export class Chunk {
                         }
                     }
 
+                    let liquidTopY = 1.0;
+                    if (currentProps.isLiquid) {
+                        const blockAbove = (y + 1 < CHUNK_HEIGHT) ? this.getBlock(x, y + 1, z) : getBlockOptimized(wx, y + 1, wz);
+                        const aboveProps = getBlockProperties(blockAbove);
+                        if (!aboveProps.isLiquid) {
+                            const curData = this.data[(y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x];
+                            const isLava = (currentBlockType === BLOCKS.LAVA);
+                            const maxLevel = isLava ? 3 : 7;
+                            if (curData === 0) {
+                                liquidTopY = 0.88; // 14/16 height for liquid source block
+                            } else if (curData === 8) {
+                                liquidTopY = 1.0; // Falling column
+                            } else {
+                                liquidTopY = 0.18 + (curData / maxLevel) * 0.70; // Flowing levels (0.28 to 0.88)
+                            }
+                        }
+                    }
+
                     for (const face of FACES) {
                         const nx = x + face.dir[0];
                         const ny = y + face.dir[1];
@@ -482,17 +500,56 @@ export class Chunk {
 
                         const bothLiquids = currentProps.isLiquid && effectiveNeighborProps.isLiquid;
 
-                        // Render face if neighbor is transparent (and not the same transparent block, like water or leaves)
-                        if (effectiveNeighborType === BLOCKS.AIR || (effectiveNeighborProps.transparent && currentBlockType !== effectiveNeighborType && !bothLiquids)) {
+                        let shouldRenderFace = false;
+                        if (currentBlockType === BLOCKS.CACTUS) {
+                            if (face.name === 'top' || face.name === 'bottom') {
+                                shouldRenderFace = (effectiveNeighborType === BLOCKS.AIR || effectiveNeighborProps.transparent);
+                            } else {
+                                // Cactus sides are inset 1/16th, visible unless touching another cactus
+                                shouldRenderFace = (effectiveNeighborType !== BLOCKS.CACTUS);
+                            }
+                        } else if (bothLiquids) {
+                            if (face.name !== 'top' && face.name !== 'bottom' && currentBlockType === effectiveNeighborType) {
+                                let nData = 0;
+                                if (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE && ny >= 0 && ny < CHUNK_HEIGHT) {
+                                    nData = this.data[(ny * CHUNK_SIZE * CHUNK_SIZE) + (nz * CHUNK_SIZE) + nx];
+                                }
+                                const isLava = (currentBlockType === BLOCKS.LAVA);
+                                const maxLevel = isLava ? 3 : 7;
+                                const nTop = (nData === 0) ? 0.88 : (nData === 8 ? 1.0 : (0.18 + (nData / maxLevel) * 0.70));
+                                if (liquidTopY > nTop + 0.05) {
+                                    shouldRenderFace = true;
+                                }
+                            } else if (currentBlockType !== effectiveNeighborType) {
+                                shouldRenderFace = true;
+                            }
+                        } else {
+                            shouldRenderFace = (effectiveNeighborType === BLOCKS.AIR || (effectiveNeighborProps.transparent && currentBlockType !== effectiveNeighborType));
+                        }
 
+                        // Render face if visible
+                        if (shouldRenderFace) {
                             const uvInfo = atlas.getUV(currentBlockType, face.name);
 
                             // 4 vertices per face
                             for (let i = 0; i < 4; i++) {
                                 const v = face.v[i];
-                                _positions[posCount++] = x + v[0];
-                                _positions[posCount++] = y + v[1];
-                                _positions[posCount++] = z + v[2];
+                                let vx = x + v[0];
+                                let vy = y + v[1];
+                                let vz = z + v[2];
+
+                                if (currentProps.isLiquid) {
+                                    if (v[1] === 1) vy = y + liquidTopY;
+                                } else if (currentBlockType === BLOCKS.CACTUS) {
+                                    if (v[0] === 0) vx = x + 0.0625;
+                                    else if (v[0] === 1) vx = x + 0.9375;
+                                    if (v[2] === 0) vz = z + 0.0625;
+                                    else if (v[2] === 1) vz = z + 0.9375;
+                                }
+
+                                _positions[posCount++] = vx;
+                                _positions[posCount++] = vy;
+                                _positions[posCount++] = vz;
                                 
                                 _normals[posCount - 3] = face.dir[0];
                                 _normals[posCount - 2] = face.dir[1];

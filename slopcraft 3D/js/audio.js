@@ -339,5 +339,16 @@ export class AudioManager {
         } else this.playTone(600, 'sine', 0.3, 0.3, 400, position);
     }
 
-
+    playPortalTravel(position = null) {
+        const doFallback = () => {
+            this.playTone(180, 'sine', 1.2, 0.4, 60, position);
+            this.playTone(90, 'triangle', 1.4, 0.5, -30, position);
+            this.playNoise(0.8, 0.25, position);
+        };
+        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
+            this.playMC('portal/travel', 0.85, position).then(s => { if (!s) doFallback(); });
+            return;
+        }
+        doFallback();
+    }
 }

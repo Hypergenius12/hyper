@@ -153,7 +153,7 @@ export class Player {
         // Creative mode movement speed boost
         if (keys._creativeMode) {
             if (flying) {
-                speedMult *= 2.2; // Fast cruising speed when flying
+                speedMult *= (keys.sprint ? 5.5 : 4.0); // Super fast cruising speed when flying
             } else {
                 speedMult *= 1.6; // Ground running boost
             }

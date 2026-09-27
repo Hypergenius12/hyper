@@ -306,8 +306,8 @@ class Game {
             
             // Ore blocks drop material items instead of themselves
             const ORE_DROPS = {
-                [BLOCKS.IRON_ORE]:    { subtype: 'iron_ingot', name: 'Iron Ingot' },
-                [BLOCKS.GOLD_ORE]:    { subtype: 'gold_ingot', name: 'Gold Ingot' },
+                [BLOCKS.IRON_ORE]:    { subtype: 'raw_iron', name: 'Raw Iron' },
+                [BLOCKS.GOLD_ORE]:    { subtype: 'raw_gold', name: 'Raw Gold' },
                 [BLOCKS.CRYSTAL_ORE]: { subtype: 'diamond', name: 'Diamond' },
                 [BLOCKS.DIAMOND_ORE]: { subtype: 'diamond', name: 'Diamond' },
                 [BLOCKS.MANA_ORE]:    { subtype: 'mana_crystal', name: 'Mana Crystal' },
@@ -698,6 +698,13 @@ class Game {
                 if (subtype === window.BLOCKS.MANA_ORE) matSubtype = 'mana_crystal';
                 return { type: 'material', subtype: matSubtype, name: matSubtype.replace('_', ' '), stackable: true, maxStack: 64, id: `mat_${matSubtype}` };
             }
+            // Raw ore smelting (from mining drops)
+            if (type === 'material' && subtype === 'raw_iron') {
+                return { type: 'material', subtype: 'iron_ingot', name: 'Iron Ingot', stackable: true, maxStack: 64, id: 'mat_iron_ingot' };
+            }
+            if (type === 'material' && subtype === 'raw_gold') {
+                return { type: 'material', subtype: 'gold_ingot', name: 'Gold Ingot', stackable: true, maxStack: 64, id: 'mat_gold_ingot' };
+            }
             if (type === 'block' && subtype === window.BLOCKS.SAND) {
                 return { type: 'block', subtype: window.BLOCKS.GLASS, name: 'Glass', stackable: true, maxStack: 64, id: `block_${window.BLOCKS.GLASS}` };
             }
@@ -1040,7 +1047,7 @@ class Game {
                     mineMult = slot.item.data.equipData.mineSpeed;
                 }
                 
-                const breakTime = ((blockProps.health || 1) * 0.1) / mineMult;
+                const breakTime = this.input.creativeMode ? 0.001 : (((blockProps.health || 1) * 0.1) / mineMult);
                 
                 this.miningOverlay.visible = true;
                 this.miningOverlay.position.set(hit.blockPos.x + 0.5, hit.blockPos.y + 0.5, hit.blockPos.z + 0.5);
@@ -1515,16 +1522,16 @@ class Game {
         const pBlock = this.world.getBlock(pbx, pby, pbz);
         if (pBlock === BLOCKS.PORTAL && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'nether' ? 'overworld' : 'nether');
-            this.audio.playHit();
+            this.audio.playPortalTravel();
         } else if (pBlock === window.BLOCKS.AETHER_PORTAL && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'aether' ? 'overworld' : 'aether');
-            this.audio.playHit();
+            this.audio.playPortalTravel();
         } else if (pBlock === window.BLOCKS.CAVERN_PORTAL && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'caverns' ? 'overworld' : 'caverns');
-            this.audio.playHit();
+            this.audio.playPortalTravel();
         } else if (pBlock === window.BLOCKS.HIGHLANDS_PORTAL && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'highlands' ? 'overworld' : 'highlands');
-            this.audio.playHit();
+            this.audio.playPortalTravel();
         }
         
         const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'caverns' ? generateCavernsChunk : (this.currentDimension === 'highlands' ? generateHighlandsChunk : generateChunkTerrain)));
@@ -1728,6 +1735,16 @@ class Game {
                 pos.z += (Math.random() - 0.5) * 20;
                 pos.y += Math.random() * 5;
                 this.particles.emit(pos, 'leaf', 1, 0x00ffcc);
+            } else if (biome.name === 'Forest' || biome.name === 'Dark Forest' || biome.jungleFlora) {
+                // Dappled forest leaves — gentle green leaves drifting down
+                if (Math.random() < 0.4) {
+                    const pos = this.player.position.clone();
+                    pos.x += (Math.random() - 0.5) * 24;
+                    pos.z += (Math.random() - 0.5) * 24;
+                    pos.y += 5 + Math.random() * 8;
+                    const colors = [0x228B22, 0x2E8B57, 0x3CB371, 0x6B8E23, 0x556B2F];
+                    this.particles.emit(pos, 'leaf', 1, colors[Math.floor(Math.random() * colors.length)]);
+                }
             }
         }
 

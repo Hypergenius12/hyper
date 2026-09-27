@@ -501,12 +501,27 @@ class UISystem {
         }
     }
 
-    toggle() {
-        if (!this.isOpen && this.chestPos) {
-            // Can't just toggle inventory if chest is open without closing chest
-            this.toggleChest(null, null, null, null, null);
+    closeChest() {
+        if (this.chestPos) {
+            if (this.onChestClose) this.onChestClose();
+            this.chestPos = null;
+            this.chestInventory = null;
+            this.onChestClose = null;
+            if (this.elements.chestPanel) this.elements.chestPanel.classList.add('hidden');
         }
+    }
 
+    closeFurnace() {
+        if (this.furnacePos) {
+            if (this.onFurnaceClose) this.onFurnaceClose();
+            this.furnacePos = null;
+            this.furnaceData = null;
+            this.onFurnaceClose = null;
+            if (this.elements.furnacePanel) this.elements.furnacePanel.classList.add('hidden');
+        }
+    }
+
+    toggle() {
         this.isOpen = !this.isOpen;
         this.is3x3Crafting = false; // normal inventory gets 2x2
         this._updateCraftingUILayout();
@@ -533,22 +548,9 @@ class UISystem {
             }
             this._matchRecipe();
             
-            // Close chest if open
-            if (this.chestPos) {
-                if (this.onChestClose) this.onChestClose();
-                this.chestPos = null;
-                this.chestInventory = null;
-                this.onChestClose = null;
-                this.elements.chestPanel.classList.add('hidden');
-            }
-            // Close furnace if open
-            if (this.furnacePos) {
-                if (this.onFurnaceClose) this.onFurnaceClose();
-                this.furnacePos = null;
-                this.furnaceData = null;
-                this.onFurnaceClose = null;
-                this.elements.furnacePanel.classList.add('hidden');
-            }
+            // Safely close chest & furnace
+            this.closeChest();
+            this.closeFurnace();
         }
     }
 
@@ -560,19 +562,20 @@ class UISystem {
         this._updateCraftingUILayout();
         
         // Hide other panels if any
-        this.elements.chestPanel.classList.add('hidden');
-        this.elements.furnacePanel.classList.add('hidden');
+        this.closeChest();
+        this.closeFurnace();
         this.elements.wandConfigPanel.classList.add('hidden');
         this.elements.craftingPanel.classList.remove('hidden');
-        
-        // We can hook up an onClose if needed, but closing inventory resets it
     }
 
     toggleChest(x, y, z, inventory, onClose) {
         if (this.chestPos && this.chestPos.x === x && this.chestPos.y === y && this.chestPos.z === z) {
-            this.toggle(); // Close it
+            this.closeChest();
+            if (this.isOpen) this.toggle(); // Close inventory UI
             return;
         }
+
+        this.closeFurnace();
 
         if (!this.isOpen) {
             this.toggle(); // Open UI
@@ -586,9 +589,12 @@ class UISystem {
 
     toggleFurnace(x, y, z, data, onClose) {
         if (this.furnacePos && this.furnacePos.x === x && this.furnacePos.y === y && this.furnacePos.z === z) {
-            this.toggle(); // Close it
+            this.closeFurnace();
+            if (this.isOpen) this.toggle(); // Close UI
             return;
         }
+
+        this.closeChest();
 
         if (!this.isOpen) {
             this.toggle();
@@ -599,7 +605,6 @@ class UISystem {
         this.onFurnaceClose = onClose;
         this.elements.furnacePanel.classList.remove('hidden');
     }
-
 
     toggleCreative(atlas) {
         this.atlas = atlas;
@@ -614,7 +619,8 @@ class UISystem {
             return;
         }
         // Close any other open panel first
-        if (this.chestPos) this.toggleChest(null, null, null, null, null);
+        this.closeChest();
+        this.closeFurnace();
         this.isCreativeOpen = true;
         this.isOpen = true;
         this._renderCreativeInventory();
@@ -739,6 +745,7 @@ class UISystem {
             { type: 'equipment', subtype: 'shovel_wood',     name: 'Wooden Shovel' },
             { type: 'equipment', subtype: 'shovel_stone',    name: 'Stone Shovel' },
             { type: 'equipment', subtype: 'shovel_iron',     name: 'Iron Shovel' },
+            { type: 'equipment', subtype: 'shovel_gold',     name: 'Golden Shovel' },
             { type: 'equipment', subtype: 'shovel_diamond',  name: 'Diamond Shovel' },
             { type: 'equipment', subtype: 'helmet_iron',     name: 'Iron Helmet' },
             { type: 'equipment', subtype: 'chest_iron',      name: 'Iron Chestplate' },
@@ -752,14 +759,21 @@ class UISystem {
             { type: 'equipment', subtype: 'chest_diamond',   name: 'Diamond Chestplate' },
             { type: 'equipment', subtype: 'legs_diamond',    name: 'Diamond Leggings' },
             { type: 'equipment', subtype: 'boots_diamond',   name: 'Diamond Boots' },
+            { type: 'material',  subtype: 'raw_iron',        name: 'Raw Iron' },
+            { type: 'material',  subtype: 'raw_gold',        name: 'Raw Gold' },
             { type: 'material',  subtype: 'iron_ingot',      name: 'Iron Ingot' },
             { type: 'material',  subtype: 'gold_ingot',      name: 'Gold Ingot' },
             { type: 'material',  subtype: 'diamond',         name: 'Diamond' },
             { type: 'material',  subtype: 'coal',            name: 'Coal' },
+            { type: 'material',  subtype: 'ender_pearl',     name: 'Ender Pearl' },
+            { type: 'food',      subtype: 'raw_beef',        name: 'Raw Beef' },
+            { type: 'food',      subtype: 'cooked_beef',     name: 'Steak' },
+            { type: 'food',      subtype: 'raw_porkchop',    name: 'Raw Porkchop' },
+            { type: 'food',      subtype: 'cooked_porkchop', name: 'Cooked Porkchop' },
+            { type: 'food',      subtype: 'raw_chicken',     name: 'Raw Chicken' },
+            { type: 'food',      subtype: 'cooked_chicken',  name: 'Cooked Chicken' },
             { type: 'food',      subtype: 'apple',           name: 'Apple' },
             { type: 'food',      subtype: 'bread',           name: 'Bread' },
-            { type: 'food',      subtype: 'cooked_beef',     name: 'Steak' },
-            { type: 'material',  subtype: 'ender_pearl',     name: 'Ender Pearl' },
         ];
 
         // Render equipment/item slots synchronously using the already-imported generateItemTexture
