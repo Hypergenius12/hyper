@@ -1403,24 +1403,24 @@ function carveRoomInChunk(blocks, cx, cz, room) {
 
                     if (dx <= rw && dz <= rd) {
                         if (dx === 0 && dz === 0) {
-                            // Exact center column: place door
-                            if (wy === minY + 1 || wy === minY + 2) {
-                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR);
-                            } else if (wy > minY + 2 && wy <= minY + 3) {
-                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR); // Headroom above door
-                            } else if (wy === minY) {
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS);
+                            // Exact center column: force-place door (overwrite wall blocks)
+                            if (wy === minY) {
+                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
+                            } else if (wy === minY + 1) {
+                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR, false); // door bottom
+                            } else if (wy === minY + 2) {
+                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR, false); // door top
                             } else {
-                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
+                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR, false); // headroom / wall above
                             }
                         } else {
-                            // Sides of the doorway (carve air)
-                            if (wy > minY && wy <= minY + 3) {
-                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR);
-                            } else if (wy === minY) {
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS);
+                            // Sides of the doorway — force-carve air through walls
+                            if (wy === minY) {
+                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
+                            } else if (wy >= minY + 1 && wy <= minY + 3) {
+                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR, false); // open passage
                             } else if (wy === minY + 4) {
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.wall : BLOCKS.STONE_BRICKS);
+                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.wall : BLOCKS.STONE_BRICKS, false);
                             }
                         }
                     }
