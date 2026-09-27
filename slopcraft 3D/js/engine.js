@@ -143,7 +143,23 @@ export class InputManager {
             case 'KeyS': case 'ArrowDown': this.keys.backward = true; break;
             case 'KeyA': case 'ArrowLeft': this.keys.left = true; break;
             case 'KeyD': case 'ArrowRight': this.keys.right = true; break;
-            case 'Space': this.keys.jump = true; break;
+            case 'Space':
+                this.keys.jump = true;
+                if (this.creativeMode) {
+                    const now = Date.now();
+                    if (now - this._lastSpaceTime < 300) {
+                        this._creativeFlying = !this._creativeFlying;
+                        const toast = document.getElementById('creative-toast');
+                        if (toast) {
+                            toast.textContent = this._creativeFlying ? '✈ Flying ON' : '✈ Flying OFF';
+                            toast.classList.remove('hidden');
+                            clearTimeout(this._toastTimer);
+                            this._toastTimer = setTimeout(() => toast.classList.add('hidden'), 1500);
+                        }
+                    }
+                    this._lastSpaceTime = now;
+                }
+                break;
             case 'ShiftLeft': case 'ShiftRight': this.keys.crouch = true; break;
             case 'ControlLeft': case 'ControlRight': this.keys.sprint = true; break;
 

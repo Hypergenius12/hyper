@@ -1412,6 +1412,7 @@ class Game {
                 this.player.jumpSpeed = 8.0;
             }
             
+            this.input.keys._creativeFlying = this.input.creativeMode && this.input._creativeFlying;
             this.player.update(dt, this.input.keys, this.input.mouse, this.world);
             this.handleInput(dt);
 

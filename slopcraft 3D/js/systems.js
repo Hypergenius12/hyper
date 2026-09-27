@@ -632,42 +632,69 @@ class UISystem {
         const panel = document.getElementById('creative-items-grid');
         if (!panel) return;
         panel.innerHTML = '';
-        // All placeable/solid-ish blocks grouped sensibly, skip AIR, PORTAL, BOSS_SPAWNER, internal blocks
-        const skip = new Set([0,5,25,27,28,111,119,126,131,76,77,194]);
-        const BLOCKS = window.BLOCKS_REF;
+
+        const BLOCKS = window.BLOCKS_REF || window.BLOCKS;
         if (!BLOCKS) return;
+
+        // Skip AIR and internal invisible blocks
+        const skip = new Set([0, 27, 77, 119, 126, 131, 194]);
         const entries = Object.entries(BLOCKS)
-            .filter(([name, id]) => !skip.has(id) && id > 0 && id < 250)
+            .filter(([name, id]) => !skip.has(id) && typeof id === 'number')
             .sort((a,b) => a[1] - b[1]);
 
         for (const [name, id] of entries) {
             const slot = document.createElement('div');
             slot.className = 'inv-slot creative-item-slot';
-            slot.title = name.replace(/_/g,' ');
+            const readableName = name.replace(/_/g,' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+            slot.title = readableName;
             slot.dataset.blockId = id;
+            slot.dataset.blockName = readableName;
 
             if (this.atlas) {
                 try {
-                    const icon = this.atlas.getBlockIcon(name);
+                    // Pass numeric block id so getBlockProperties and uvMap resolve correctly!
+                    const icon = this.atlas.getBlockIcon(id);
                     if (icon) {
                         const img = document.createElement('img');
                         img.src = icon.toDataURL();
                         img.className = 'item-icon';
                         img.style.imageRendering = 'pixelated';
-                        img.style.width = '100%'; img.style.height = '100%';
+                        img.style.width = '100%'; 
+                        img.style.height = '100%';
                         img.draggable = false;
                         slot.appendChild(img);
                     }
-                } catch(e) {}
+                } catch(e) {
+                    console.warn('Failed to render icon for block', name, id, e);
+                }
             }
 
-            // Click to pick up one stack
+            // Hover tooltip
+            slot.onmouseenter = (e) => {
+                if (this.dragState.isDragging || !this.isOpen) return;
+                const html = `<strong style="color:#7c5cff; font-size:16px;">${readableName}</strong><br/><span style="color:#aaa;">Block (ID: ${id})</span>`;
+                this.elements.tooltip.innerHTML = html;
+                this.elements.tooltip.classList.remove('hidden');
+                this.elements.tooltip.style.left = (e.clientX + 15) + 'px';
+                this.elements.tooltip.style.top = (e.clientY + 15) + 'px';
+            };
+            slot.onmouseleave = () => {
+                this.elements.tooltip.classList.add('hidden');
+            };
+
+            // Click / drag to take stack of 64
             slot.onmousedown = (e) => {
                 if (e.button !== 0) return;
                 e.preventDefault();
-                // Give player 64 of this block
                 const fakeSlot = {
-                    item: { type: 'block', subtype: name, name: name.replace(/_/g,' '), id: 'block_'+id, stackable: true, maxStack: 64 },
+                    item: { 
+                        type: 'block', 
+                        subtype: id, // numeric ID matching game standard
+                        name: readableName, 
+                        id: 'block_' + id, 
+                        stackable: true, 
+                        maxStack: 64 
+                    },
                     count: 64
                 };
                 this.dragState.isDragging = true;
@@ -680,6 +707,7 @@ class UISystem {
                 this.elements.dragIcon.classList.remove('hidden');
                 this.renderSlotItem(this.elements.dragIcon, fakeSlot);
                 this.updateDragIconPos(e.clientX, e.clientY);
+                this.elements.tooltip.classList.add('hidden');
             };
 
             panel.appendChild(slot);

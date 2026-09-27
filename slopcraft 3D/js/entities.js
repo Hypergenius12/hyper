@@ -146,6 +146,9 @@ export class Player {
             if (boots.item.data.equipData.speedMult) speedMult = boots.item.data.equipData.speedMult;
             if (boots.item.data.equipData.flying) flying = true;
         }
+        if (keys._creativeFlying) {
+            flying = true;
+        }
 
         // Apply speed bonus
         speedMult *= this.speedMult;
@@ -240,7 +243,10 @@ export class Player {
         let drag = (inWater || inLava) ? 6 : 10;
         let jumpForce = (inWater || inLava) ? 3.5 : 9;
         
-        if (onLadder) {
+        if (flying) {
+            gravity = 0; // Zero gravity when flying
+            drag = 12;   // Stop floating drift
+        } else if (onLadder) {
             gravity = 0; // Cancel gravity on ladder
             drag = 15; // Higher drag so you stop quickly
         }
@@ -265,11 +271,16 @@ export class Player {
             } else {
                 this.velocity.y -= this.velocity.y * drag * dt; // Stop vertical movement if not climbing
             }
+        } else if (flying) {
+            if (keys.jump) {
+                this.velocity.y = 12;
+            } else if (keys.crouch) {
+                this.velocity.y = -12;
+            } else {
+                this.velocity.y -= this.velocity.y * drag * dt;
+            }
         } else if (keys.jump) {
-            if (flying) {
-                this.velocity.y += 35 * dt;
-                if (this.velocity.y > 10) this.velocity.y = 10; // Cap fly speed
-            } else if (this.grounded) {
+            if (this.grounded) {
                 this.velocity.y = this.jumpSpeed; // Normal jump force for regular ground
                 this.grounded = false;
             } else if (inWater || inLava) {
