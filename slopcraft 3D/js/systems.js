@@ -621,11 +621,11 @@ class UISystem {
         document.getElementById('creative-inventory-panel').classList.remove('hidden');
         document.getElementById('geometric-ui').classList.remove('hidden');
         // Also show the player's own inventory and hotbar
-        document.getElementById('main-inventory-grid').style.display = '';
-        document.getElementById('inv-hotbar-grid').style.display = '';
         document.getElementById('crafting-panel').classList.add('hidden');
-        this._renderInventory(this.currentPlayer);
-        this._renderHotbar(this.currentPlayer);
+        if (this.currentPlayer) {
+            this.renderGrid(this.elements.mainGrid, this.currentPlayer.inventory.slots.slice(9, 36), 9, this.currentPlayer, 'inventory');
+            this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+        }
     }
 
     _renderCreativeInventory() {

@@ -112,19 +112,17 @@ export class InputManager {
                 this.keySequence = '';
                 console.log("Dev Mode Unlocked! Press 'U' to toggle.");
             }
-            if (this.keySequence.endsWith('creative')) {
-                this.creativeMode = !this.creativeMode;
-                this.keySequence = '';
-                this._creativeFlying = false;
-                console.log('Creative mode ' + (this.creativeMode ? 'ON' : 'OFF'));
-                // Show toast
-                const toast = document.getElementById('creative-toast');
-                if (toast) {
-                    toast.textContent = this.creativeMode ? '✦ Creative Mode Enabled' : '✦ Creative Mode Disabled';
-                    toast.classList.remove('hidden');
-                    clearTimeout(this._toastTimer);
-                    this._toastTimer = setTimeout(() => toast.classList.add('hidden'), 2500);
-                }
+
+        if (e.key.toLowerCase() === 'c' && !this._menuKeysDown.creative) {
+            this._menuKeysDown.creative = true;
+            this.creativeMode = !this.creativeMode;
+            this._creativeFlying = false;
+            const toast = document.getElementById('creative-toast');
+            if (toast) {
+                toast.textContent = this.creativeMode ? '✦ Creative Mode ON' : '✦ Creative Mode OFF';
+                toast.classList.remove('hidden');
+                clearTimeout(this._toastTimer);
+                this._toastTimer = setTimeout(() => toast.classList.add('hidden'), 2000);
             }
         } else if (e.key.toLowerCase() === 'u') {
             if (!this._menuKeysDown.devMode) {
