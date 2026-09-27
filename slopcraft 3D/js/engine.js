@@ -22,6 +22,9 @@ export class InputManager {
         this.canvas = null;
         this.keySequence = '';
         this.devModeUnlocked = false;
+        this.creativeMode = false;
+        this._lastSpaceTime = 0;
+        this._creativeFlying = false;
     }
 
     init(canvas) {
@@ -101,13 +104,27 @@ export class InputManager {
         // Dev Mode sequence tracking
         if (!this.devModeUnlocked) {
             this.keySequence += e.key.toLowerCase();
-            if (this.keySequence.length > 6) {
-                this.keySequence = this.keySequence.substring(this.keySequence.length - 6);
+            if (this.keySequence.length > 10) {
+                this.keySequence = this.keySequence.substring(this.keySequence.length - 10);
             }
             if (this.keySequence.endsWith('1001')) {
                 this.devModeUnlocked = true;
                 this.keySequence = '';
                 console.log("Dev Mode Unlocked! Press 'U' to toggle.");
+            }
+            if (this.keySequence.endsWith('creative')) {
+                this.creativeMode = !this.creativeMode;
+                this.keySequence = '';
+                this._creativeFlying = false;
+                console.log('Creative mode ' + (this.creativeMode ? 'ON' : 'OFF'));
+                // Show toast
+                const toast = document.getElementById('creative-toast');
+                if (toast) {
+                    toast.textContent = this.creativeMode ? '✦ Creative Mode Enabled' : '✦ Creative Mode Disabled';
+                    toast.classList.remove('hidden');
+                    clearTimeout(this._toastTimer);
+                    this._toastTimer = setTimeout(() => toast.classList.add('hidden'), 2500);
+                }
             }
         } else if (e.key.toLowerCase() === 'u') {
             if (!this._menuKeysDown.devMode) {

@@ -284,6 +284,16 @@
     
     <!-- Dragging Item Icon -->
     <div id="drag-item-icon" class="hidden"></div>
+    <!-- Creative Inventory Panel -->
+    <div id="creative-inventory-panel" class="hidden" style="position:fixed;top:50%;right:20px;transform:translateY(-50%);background:rgba(10,10,20,0.97);border:1px solid rgba(124,92,255,0.4);border-radius:12px;padding:16px;z-index:2000;width:400px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 0 30px rgba(100,60,255,0.3);">
+      <div style="color:white;font-weight:bold;font-size:1rem;margin-bottom:10px;letter-spacing:2px;opacity:0.8;display:flex;justify-content:space-between;align-items:center;">
+        <span>✦ CREATIVE INVENTORY</span>
+        <span style="font-size:0.7rem;opacity:0.5;">Drag to inventory or hotbar</span>
+      </div>
+      <input id="creative-search" placeholder="Search blocks…" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:white;padding:6px 10px;border-radius:6px;margin-bottom:10px;font-family:monospace;font-size:0.85rem;width:100%;box-sizing:border-box;" />
+      <div id="creative-items-grid" style="display:grid;grid-template-columns:repeat(7,52px);gap:6px;overflow-y:auto;max-height:60vh;padding-right:4px;"></div>
+    </div>
+    <div id="creative-toast" class="hidden" style="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:8px 20px;border-radius:8px;font-family:monospace;font-size:14px;z-index:9999;border:1px solid rgba(255,255,255,0.2);pointer-events:none;"></div>
 
     <!-- Geometric hotbar -->
     <div id="geometric-hotbar" class="hidden">
@@ -300,8 +310,8 @@
         }
     }
     </script>
-    <script type="module" src="js/main.js?v=67"></script>
-    <script type="module" src="js/main.js?v=67"></script>
+    <script type="module" src="js/main.js?v=68"></script>
+    <script type="module" src="js/main.js?v=68"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>
 </body>

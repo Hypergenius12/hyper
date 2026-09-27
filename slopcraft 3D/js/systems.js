@@ -480,6 +480,7 @@ class UISystem {
         };
 
         this.currentPlayer = null;
+        this.isCreativeOpen = false;
 
         document.addEventListener('mousemove', (e) => this.onMouseMove(e));
         document.addEventListener('mouseup', (e) => this.onMouseUp(e));
@@ -599,6 +600,91 @@ class UISystem {
         this.elements.furnacePanel.classList.remove('hidden');
     }
 
+
+    toggleCreative(atlas) {
+        this.atlas = atlas;
+        if (this.isCreativeOpen) {
+            // Close creative
+            this.isCreativeOpen = false;
+            this.isOpen = false;
+            document.getElementById('creative-inventory-panel').classList.add('hidden');
+            document.getElementById('geometric-ui').classList.add('hidden');
+            this.elements.tooltip.classList.add('hidden');
+            if (this.dragState.isDragging) this.cancelDrag();
+            return;
+        }
+        // Close any other open panel first
+        if (this.chestPos) this.toggleChest(null, null, null, null, null);
+        this.isCreativeOpen = true;
+        this.isOpen = true;
+        this._renderCreativeInventory();
+        document.getElementById('creative-inventory-panel').classList.remove('hidden');
+        document.getElementById('geometric-ui').classList.remove('hidden');
+        // Also show the player's own inventory and hotbar
+        document.getElementById('main-inventory-grid').style.display = '';
+        document.getElementById('inv-hotbar-grid').style.display = '';
+        document.getElementById('crafting-panel').classList.add('hidden');
+        this._renderInventory(this.currentPlayer);
+        this._renderHotbar(this.currentPlayer);
+    }
+
+    _renderCreativeInventory() {
+        const panel = document.getElementById('creative-items-grid');
+        if (!panel) return;
+        panel.innerHTML = '';
+        // All placeable/solid-ish blocks grouped sensibly, skip AIR, PORTAL, BOSS_SPAWNER, internal blocks
+        const skip = new Set([0,5,25,27,28,111,119,126,131,76,77,194]);
+        const BLOCKS = window.BLOCKS_REF;
+        if (!BLOCKS) return;
+        const entries = Object.entries(BLOCKS)
+            .filter(([name, id]) => !skip.has(id) && id > 0 && id < 250)
+            .sort((a,b) => a[1] - b[1]);
+
+        for (const [name, id] of entries) {
+            const slot = document.createElement('div');
+            slot.className = 'inv-slot creative-item-slot';
+            slot.title = name.replace(/_/g,' ');
+            slot.dataset.blockId = id;
+
+            if (this.atlas) {
+                try {
+                    const icon = this.atlas.getBlockIcon(name);
+                    if (icon) {
+                        const img = document.createElement('img');
+                        img.src = icon.toDataURL();
+                        img.className = 'item-icon';
+                        img.style.imageRendering = 'pixelated';
+                        img.style.width = '100%'; img.style.height = '100%';
+                        img.draggable = false;
+                        slot.appendChild(img);
+                    }
+                } catch(e) {}
+            }
+
+            // Click to pick up one stack
+            slot.onmousedown = (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                // Give player 64 of this block
+                const fakeSlot = {
+                    item: { type: 'block', subtype: name, name: name.replace(/_/g,' '), id: 'block_'+id, stackable: true, maxStack: 64 },
+                    count: 64
+                };
+                this.dragState.isDragging = true;
+                this.dragState.sourceType = 'creative';
+                this.dragState.sourceIndex = -1;
+                this.dragState.itemData = fakeSlot;
+                this.dragState.isSplit = false;
+                this.dragState.offsetX = 0;
+                this.dragState.offsetY = 0;
+                this.elements.dragIcon.classList.remove('hidden');
+                this.renderSlotItem(this.elements.dragIcon, fakeSlot);
+                this.updateDragIconPos(e.clientX, e.clientY);
+            };
+
+            panel.appendChild(slot);
+        }
+    }
 
     updateHUD(player, fps, atlas) {
         if (!player) return;
@@ -1956,3 +2042,18 @@ export class MeteorShowerSystem {
         }
     }
 }
+
+// ─── Creative search wired up via event delegation ───
+document.addEventListener('DOMContentLoaded', () => {
+    const search = document.getElementById('creative-search');
+    if (search) {
+        search.addEventListener('input', () => {
+            const q = search.value.toLowerCase();
+            const slots = document.querySelectorAll('.creative-item-slot');
+            slots.forEach(s => {
+                const name = (s.title || '').toLowerCase();
+                s.style.display = (!q || name.includes(q)) ? '' : 'none';
+            });
+        });
+    }
+});

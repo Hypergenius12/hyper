@@ -287,3 +287,23 @@
 .crafting-output:hover {
     background: rgba(124, 92, 255, 0.25);
 }
+
+/* Creative inventory slots */
+.creative-item-slot {
+    width: 52px;
+    height: 52px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    cursor: grab;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+    user-select: none;
+}
+.creative-item-slot:hover {
+    background: rgba(124,92,255,0.25);
+    border-color: rgba(124,92,255,0.6);
+}

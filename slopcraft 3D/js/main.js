@@ -342,6 +342,7 @@ class Game {
 
         // Expose BLOCKS globally for UISystem recipe matching
         window.BLOCKS = BLOCKS;
+        window.BLOCKS_REF = BLOCKS;
 
         // Systems
         this.lighting = new LightingSystem(this.engine.scene);
@@ -1316,11 +1317,20 @@ class Game {
         }
 
         if (this.input.menuKeys.inventory) {
-            this.ui.toggle();
-            if (this.ui.isOpen) {
-                if (this.input.isPointerLocked()) document.exitPointerLock();
+            if (this.input.creativeMode) {
+                this.ui.toggleCreative(this.atlas);
+                if (this.ui.isOpen) {
+                    if (this.input.isPointerLocked()) document.exitPointerLock();
+                } else {
+                    this.input.requestPointerLock();
+                }
             } else {
-                this.input.requestPointerLock();
+                this.ui.toggle();
+                if (this.ui.isOpen) {
+                    if (this.input.isPointerLocked()) document.exitPointerLock();
+                } else {
+                    this.input.requestPointerLock();
+                }
             }
         }
 
