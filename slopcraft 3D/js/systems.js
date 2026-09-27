@@ -759,6 +759,7 @@ class UISystem {
             { type: 'food',      subtype: 'apple',           name: 'Apple' },
             { type: 'food',      subtype: 'bread',           name: 'Bread' },
             { type: 'food',      subtype: 'cooked_beef',     name: 'Steak' },
+            { type: 'material',  subtype: 'ender_pearl',     name: 'Ender Pearl' },
         ];
 
         // Render equipment/item slots synchronously using the already-imported generateItemTexture

@@ -1079,7 +1079,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         case BLOCKS.TALL_GRASS:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            ctx.fillStyle = '#3ca02d'; // Mid green
+            ctx.fillStyle = '#5ac43c'; // Bright mid green
             // Blade 1
             ctx.fillRect(4, 15, 1, 1); ctx.fillRect(4, 14, 1, 1);
             ctx.fillRect(3, 13, 1, 1); ctx.fillRect(3, 12, 1, 1);
@@ -1092,11 +1092,11 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillRect(12, 13, 1, 1); ctx.fillRect(12, 12, 1, 1);
             ctx.fillRect(13, 11, 1, 1);
             // Highlights
-            ctx.fillStyle = '#55c044';
+            ctx.fillStyle = '#80df60';
             ctx.fillRect(8, 11, 1, 1); ctx.fillRect(8, 14, 1, 1);
             ctx.fillRect(3, 12, 1, 1); ctx.fillRect(12, 12, 1, 1);
             // Shadows
-            ctx.fillStyle = '#2e8020';
+            ctx.fillStyle = '#3e9a2a';
             ctx.fillRect(7, 14, 1, 2); ctx.fillRect(8, 15, 1, 1);
             ctx.fillRect(4, 15, 1, 1); ctx.fillRect(11, 15, 1, 1);
             break;
@@ -1135,7 +1135,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         case BLOCKS.FERN:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            ctx.fillStyle = '#3ca02d'; // Base green
+            ctx.fillStyle = '#5ac43c'; // Bright green
             // Central stem
             ctx.fillRect(7, 8, 2, 8);
             // Fronds left
@@ -1149,14 +1149,14 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillRect(9, 14, 2, 1);
             ctx.fillRect(11, 13, 1, 1);
             // Highlight
-            ctx.fillStyle = '#55c044';
+            ctx.fillStyle = '#80df60';
             ctx.fillRect(7, 8, 1, 8); // Stem highlight
             ctx.fillRect(6, 10, 1, 1);
             ctx.fillRect(4, 9, 1, 1);
             ctx.fillRect(10, 11, 1, 1);
             ctx.fillRect(12, 10, 1, 1);
             // Shadows
-            ctx.fillStyle = '#2e8020';
+            ctx.fillStyle = '#3e9a2a';
             ctx.fillRect(8, 10, 1, 6); // Inner stem shadow
             ctx.fillRect(5, 14, 2, 1); ctx.fillRect(9, 15, 2, 1);
             break;
@@ -2069,8 +2069,8 @@ function generateBlockTexture(ctx, blockType, face, rng) {
 function hasFaceVariants(blockType) {
     return [
         BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD, BLOCKS.DARK_OAK_WOOD,
-        BLOCKS.BOOKSHELF, BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS,
-        BLOCKS.CACTUS, BLOCKS.SANDSTONE
+        BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS,
+        BLOCKS.CACTUS, BLOCKS.SANDSTONE, BLOCKS.BOOKSHELF
     ].includes(blockType);
 }
 
@@ -2108,7 +2108,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.SNOW]: 'snow',
     [BLOCKS.ICE]: 'ice',
     [BLOCKS.LAVA]: 'lava_flow',
-    [BLOCKS.PORTAL_FRAME]: { top: 'end_portal_frame_top', side: 'end_portal_frame_side', bottom: 'end_stone', front: 'end_portal_frame_eye' },
+    [BLOCKS.PORTAL_FRAME]: { top: 'end_portal_frame_top', side: 'end_portal_frame_side', bottom: 'end_stone' },
     [BLOCKS.PORTAL]: 'nether_portal',
     [BLOCKS.BEDROCK]: 'bedrock',
     [BLOCKS.GRAVEL]: 'gravel',
@@ -2155,7 +2155,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.DIAMOND_ORE]: 'diamond_ore',
     [BLOCKS.STONE_BRICKS]: 'stone_bricks',
     [BLOCKS.BRICKS]: 'bricks',
-    [BLOCKS.BOOKSHELF]: 'bookshelf',
+    [BLOCKS.BOOKSHELF]: { top: 'oak_planks', bottom: 'oak_planks', side: 'bookshelf', front: 'bookshelf' },
     [BLOCKS.MOSSY_COBBLESTONE]: 'mossy_cobblestone',
     [BLOCKS.LADDER]: 'ladder',
     [BLOCKS.IRON_BLOCK]: 'iron_block',
@@ -2348,7 +2348,7 @@ export async function createTextureAtlas(useMinecraft = false) {
                             tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
                             
                             // Determine tint color
-                            let tint = '#79c05a'; // default grass
+                            let tint = '#8ee066'; // default grass (brightened)
                             
                             if (texName === 'water_flow') {
                                 if (bt === BLOCKS.SWAMP_WATER) tint = '#4c6559';
@@ -2356,15 +2356,16 @@ export async function createTextureAtlas(useMinecraft = false) {
                             }
                             else if (bt === BLOCKS.SWAMP_GRASS) tint = '#6a7039';
                             else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
-                            else if (bt === BLOCKS.HIGHLANDS_GRASS) tint = '#507a32'; // Dark forest style
+                            else if (bt === BLOCKS.HIGHLANDS_GRASS) tint = '#659c40';
                             else if (bt === BLOCKS.AETHER_GRASS) tint = '#b3ffb3';
                             
                             else if (texName.includes('leaves') || texName === 'vine' || texName === 'fern' || texName.includes('tall_grass') || texName === 'lily_pad') {
                                 if (bt === BLOCKS.ACACIA_LEAVES) tint = '#aea42a'; // Savanna leaves
-                                else if (bt === BLOCKS.PINE_LEAVES) tint = '#3d6e4b'; // Taiga/Pine
-                                else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#507a32'; // Dark Forest leaves
+                                else if (bt === BLOCKS.PINE_LEAVES) tint = '#4f855f'; // Taiga/Pine
+                                else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#659c40'; // Dark Forest leaves
                                 else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff'; // Don't heavily tint cherry leaves, Minecraft cherry leaves are intrinsically pink
-                                else tint = '#59ae30'; // default leaves
+                                else if (texName === 'fern' || texName.includes('tall_grass')) tint = '#70c942'; // bright vibrant ferns and tall grass
+                                else tint = '#6fc042'; // default leaves
                             }
                             
                             tCtx.globalCompositeOperation = 'multiply';
@@ -2377,6 +2378,10 @@ export async function createTextureAtlas(useMinecraft = false) {
                             tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
                             
                             ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
+                        } else if (texName === 'end_portal_frame_side') {
+                            // Vanilla MC end_portal_frame_side has 3 empty rows at top because frame in MC is 13/16 height.
+                            // Slopcraft blocks are full 16x16 cubes, so stretch the non-empty 13 rows across all 16 rows.
+                            ctx.drawImage(img, 0, 3, TEX_SIZE, 13, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         } else {
                             ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         }
@@ -3388,6 +3393,27 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
             "       OO       ",
             "                "
         ];
+    } else if (itemSubtype === 'ender_pearl') {
+        // Draw ender pearl as a glowing teal orb directly
+        const cx2 = TEX_SIZE / 2, cy2 = TEX_SIZE / 2, r2 = TEX_SIZE / 2 - 1;
+        const grad = ctx.createRadialGradient(cx2 - 2, cy2 - 2, 1, cx2, cy2, r2);
+        grad.addColorStop(0, '#aaffee');
+        grad.addColorStop(0.3, '#44ccaa');
+        grad.addColorStop(0.7, '#117755');
+        grad.addColorStop(1, '#002211');
+        ctx.beginPath();
+        ctx.arc(cx2, cy2, r2, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        // Swirl marks
+        ctx.strokeStyle = 'rgba(100,255,200,0.4)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.ellipse(cx2, cy2, r2 * 0.6, r2 * 0.3, 0.5, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(cx2, cy2, r2 * 0.3, r2 * 0.6, -0.5, 0, Math.PI * 2); ctx.stroke();
+        // Outline
+        ctx.beginPath(); ctx.arc(cx2, cy2, r2, 0, Math.PI * 2);
+        ctx.strokeStyle = '#003322'; ctx.lineWidth = 1; ctx.stroke();
+        return canvas;
     }
 
     if (shape.length > 0) {

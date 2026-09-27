@@ -147,6 +147,7 @@ class Game {
         this.lastFpsTime = performance.now();
         this.breakTimer = 0;
         this.primedTNT = [];
+        this.thrownPearls = [];
         this.isPaused = false;
         
         this._boundLoop = this.loop.bind(this);
@@ -319,8 +320,9 @@ class Game {
                 matItem.maxStack = 64;
                 this.entityManager.spawnItem(matItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
             } else {
-                const dropType = props.drops !== undefined && props.drops !== null ? props.drops : oldType;
-                if (dropType !== BLOCKS.AIR) {
+                // drops: null = drop nothing; drops: 0 (AIR) = drop nothing; drops: undefined = drop self
+                const dropType = (props.drops === undefined) ? oldType : props.drops;
+                if (dropType !== null && dropType !== BLOCKS.AIR) {
                     this.entityManager.spawnItem(Item.blockItem(dropType, getBlockName(dropType)), 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
                 }
             }
@@ -550,6 +552,7 @@ class Game {
                         { item: new Item('material', 'diamond', {}, 'Diamond'), maxCount: 2, chance: 0.2 },
                         { item: new Item('material', 'mana_crystal', {}, 'Mana Crystal'), maxCount: 6, chance: 0.5 },
                         { item: Item.equipmentItem('sword_iron', { damage: 8 }, 'Iron Sword'), maxCount: 1, chance: 0.2 },
+                        { item: new Item('material', 'ender_pearl', {}, 'Ender Pearl', true, 16), maxCount: 2, chance: 0.15 },
                     ];
                 } else {
                     lootTable = [
@@ -1088,6 +1091,29 @@ class Game {
         if (this.input.mouse.rightClick) {
             const slot = this.player.inventory.slots[this.player.selectedSlot];
 
+            // Ender Pearl throw
+            if (slot && slot.item.subtype === 'ender_pearl') {
+                const cam = this.engine.camera;
+                const dir = new THREE.Vector3();
+                cam.getWorldDirection(dir);
+                const pearlGeom = new THREE.SphereGeometry(0.15, 8, 8);
+                const pearlMat = new THREE.MeshPhongMaterial({ color: 0x22cc88, emissive: 0x115544, shininess: 80 });
+                const pearlMesh = new THREE.Mesh(pearlGeom, pearlMat);
+                pearlMesh.position.copy(this.player.position).add(new THREE.Vector3(0, 1.5, 0));
+                this.engine.scene.add(pearlMesh);
+                this.thrownPearls.push({
+                    mesh: pearlMesh,
+                    velocity: dir.clone().multiplyScalar(28).add(new THREE.Vector3(0, 6, 0)),
+                    age: 0
+                });
+                // Consume one pearl
+                slot.count--;
+                if (slot.count <= 0) this.player.inventory.slots[this.player.selectedSlot] = null;
+                if (this.audio && this.audio.playHit) this.audio.playHit();
+                this.input.mouse.rightClick = false;
+                return;
+            }
+
             if (slot && slot.item.subtype === 'flint_and_steel' && hit.hit) {
                 // If clicked on Obsidian/Glowstone/etc, try to light a portal first
                 let portalLit = false;
@@ -1101,17 +1127,29 @@ class Game {
                         this.igniteTNT(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                         this.audio.playFizz();
                     } else if (hit.face) {
-                        const nx = hit.blockPos.x + hit.face.x;
-                        const ny = hit.blockPos.y + hit.face.y;
-                        const nz = hit.blockPos.z + hit.face.z;
-                        const targetBlock = this.world.getBlock(nx, ny, nz);
-                        // Can light fire in air, on top of any non-liquid block (not water/swamp water)
-                        if (targetBlock === window.BLOCKS.AIR) {
-                            const belowBlock = this.world.getBlock(nx, ny - 1, nz);
-                            if (belowBlock !== window.BLOCKS.WATER && belowBlock !== window.BLOCKS.SWAMP_WATER) {
-                                this.world.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                        const bx = hit.blockPos.x, by = hit.blockPos.y, bz = hit.blockPos.z;
+                        const nx = bx + hit.face.x;
+                        const ny = by + hit.face.y;
+                        const nz = bz + hit.face.z;
+                        const clickedBlock = hit.blockType;
+                        const faceBlock = this.world.getBlock(nx, ny, nz);
+                        // Place fire on the face-adjacent air block if possible
+                        if (faceBlock === window.BLOCKS.AIR &&
+                            this.world.getBlock(nx, ny - 1, nz) !== window.BLOCKS.WATER &&
+                            this.world.getBlock(nx, ny - 1, nz) !== window.BLOCKS.SWAMP_WATER) {
+                            this.world.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                            this.audio.playHit();
+                            this.particles.emit({x: nx + 0.5, y: ny + 0.5, z: nz + 0.5}, 'fire', 8, 0xff5500);
+                        }
+                        // Additionally, if the clicked block itself is flammable, set fire on top of it too
+                        const clickedProps = window.getBlockProperties ? window.getBlockProperties(clickedBlock) : null;
+                        const isFlammable = clickedProps && clickedProps.flammable;
+                        if (isFlammable) {
+                            const topBlock = this.world.getBlock(bx, by + 1, bz);
+                            if (topBlock === window.BLOCKS.AIR) {
+                                this.world.setBlock(bx, by + 1, bz, window.BLOCKS.FIRE);
                                 this.audio.playHit();
-                                this.particles.emit({x: nx + 0.5, y: ny + 0.5, z: nz + 0.5}, 'fire', 8, 0xff5500);
+                                this.particles.emit({x: bx + 0.5, y: by + 1.5, z: bz + 0.5}, 'fire', 12, 0xff5500);
                             }
                         }
                     }
@@ -1558,6 +1596,56 @@ class Game {
                     tnt.mat.dispose();
                     this.primedTNT.splice(i, 1);
                     this.explodeTNT(tnt.x, tnt.y, tnt.z);
+                }
+            }
+        }
+        // Update thrown ender pearls
+        if (this.thrownPearls && this.thrownPearls.length > 0) {
+            for (let i = this.thrownPearls.length - 1; i >= 0; i--) {
+                const pearl = this.thrownPearls[i];
+                pearl.age += dt;
+                // Apply gravity
+                pearl.velocity.y -= 22 * dt;
+                // Move
+                pearl.mesh.position.x += pearl.velocity.x * dt;
+                pearl.mesh.position.y += pearl.velocity.y * dt;
+                pearl.mesh.position.z += pearl.velocity.z * dt;
+                // Trail particles
+                if (this.particles && Math.random() < 0.4) {
+                    this.particles.emit(pearl.mesh.position.clone(), 'magic', 1, 0x22cc88);
+                }
+                // Check block collision
+                const px = Math.floor(pearl.mesh.position.x);
+                const py = Math.floor(pearl.mesh.position.y);
+                const pz = Math.floor(pearl.mesh.position.z);
+                const block = this.world.getBlock(px, py, pz);
+                const hitBlock = block !== window.BLOCKS.AIR && block !== window.BLOCKS.WATER && block !== window.BLOCKS.SWAMP_WATER && block !== window.BLOCKS.FIRE;
+                if (hitBlock || pearl.age > 10) {
+                    if (hitBlock) {
+                        // Teleport player to landing position
+                        const landX = pearl.mesh.position.x;
+                        const landZ = pearl.mesh.position.z;
+                        // Find safe Y (top of block)
+                        let landY = py + 1;
+                        for (let ty = py + 3; ty >= py - 1; ty--) {
+                            if (this.world.getBlock(px, ty, pz) !== window.BLOCKS.AIR) {
+                                landY = ty + 1;
+                                break;
+                            }
+                        }
+                        this.player.position.set(landX, landY, landZ);
+                        this.player.velocity.set(0, 0, 0);
+                        // Take 2 damage from pearl teleport (like Minecraft)
+                        this.player.takeDamage(2);
+                        // Effects
+                        this.particles.emit(this.player.position.clone(), 'magic', 30, 0x22cc88);
+                        if (this.audio && this.audio.playHit) this.audio.playHit();
+                    }
+                    // Clean up
+                    this.engine.scene.remove(pearl.mesh);
+                    pearl.mesh.geometry.dispose();
+                    pearl.mesh.material.dispose();
+                    this.thrownPearls.splice(i, 1);
                 }
             }
         }
@@ -2272,8 +2360,9 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
         if (this.atlas && tntSideUV && tntTopUV && tntBotUV) {
             const uvAttr = geom.attributes.uv;
             const setFaceUV = (faceIdx, uvInfo) => {
-                const u0 = uvInfo.u0, v0 = uvInfo.v0, u1 = uvInfo.u1, v1 = uvInfo.v1;
-                // 4 vertices per face, 2 triangles: [0,1], [2,3], [4,5], [6,7]
+                // getUV returns { u, v, uSize, vSize }
+                const u0 = uvInfo.u, v0 = uvInfo.v;
+                const u1 = uvInfo.u + uvInfo.uSize, v1 = uvInfo.v + uvInfo.vSize;
                 const base = faceIdx * 8;
                 uvAttr.array[base + 0] = u0; uvAttr.array[base + 1] = v1;
                 uvAttr.array[base + 2] = u1; uvAttr.array[base + 3] = v1;

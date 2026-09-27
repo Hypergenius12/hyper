@@ -3076,6 +3076,11 @@ export class EntityManager {
                     } else {
                         this.spawnItem(Item.equipmentItem('boss_axe', { mineSpeed: 5.0 }, 'Super Mine Axe', 'Mines blocks instantly.'), 1, mob.position.clone());
                     }
+                    // Boss always drops ender pearls
+                    const pearlItem = new Item('material', 'ender_pearl', {}, 'Ender Pearl');
+                    pearlItem.stackable = true;
+                    pearlItem.maxStack = 16;
+                    this.spawnItem(pearlItem, 2 + Math.floor(Math.random() * 3), mob.position.clone().add(new THREE.Vector3(0.5, 0.5, 0)));
                 }
 
                 mob.justDied = false;
