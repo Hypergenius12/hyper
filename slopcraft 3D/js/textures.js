@@ -1397,47 +1397,63 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addPixels(ctx, rng, 'rgba(60, 120, 40, 0.8)', 25);
             addPixels(ctx, rng, 'rgba(40, 100, 30, 0.6)', 20);
             break;
-        case BLOCKS.CHEST_BLOCK:
+        case BLOCKS.CHEST_BLOCK: {
+            // Warm oak plank base
+            fillBase(ctx, 168, 114, 58);
+            // Draw planks as vertical grain lines
+            ctx.fillStyle = 'rgba(100,60,20,0.25)';
+            for (let px = 3; px < 16; px += 4) ctx.fillRect(px, 0, 1, 16);
+            // Trim border
+            ctx.fillStyle = 'rgba(60,35,8,0.9)';
+            ctx.fillRect(0, 0, 16, 1);
+            ctx.fillRect(0, 15, 16, 1);
+            ctx.fillRect(0, 0, 1, 16);
+            ctx.fillRect(15, 0, 1, 16);
             if (face === 'top') {
-                // Oak plank top with iron band
-                fillBase(ctx, 140, 100, 50);
-                addNoise(ctx, rng, 8);
-                ctx.fillStyle = 'rgba(60,40,10,0.9)';
-                ctx.fillRect(0, 7, 16, 2); // horizontal band
-                ctx.fillRect(7, 0, 2, 16); // vertical band
-                ctx.fillStyle = '#888';
-                ctx.fillRect(7, 7, 2, 2); // iron buckle center
-            } else if (face === 'bottom') {
-                fillBase(ctx, 130, 90, 40);
-                addNoise(ctx, rng, 8);
-                ctx.fillStyle = 'rgba(60,40,10,0.7)';
+                // Iron cross-bands
+                ctx.fillStyle = 'rgba(55,45,35,0.85)';
                 ctx.fillRect(0, 7, 16, 2);
                 ctx.fillRect(7, 0, 2, 16);
-            } else if (face === 'front') {
-                // Front face: wood planks + latch + lock
-                fillBase(ctx, 160, 110, 55);
-                addNoise(ctx, rng, 8);
-                ctx.fillStyle = 'rgba(50,30,5,0.85)';
-                ctx.fillRect(0, 9, 16, 2); // lid split line
-                ctx.fillRect(1, 1, 14, 1); // top trim
-                ctx.fillRect(1, 14, 14, 1); // bottom trim
-                // Iron latch
-                ctx.fillStyle = '#999';
-                ctx.fillRect(6, 8, 4, 3);
+                // Central iron buckle
                 ctx.fillStyle = '#aaa';
+                ctx.fillRect(7, 7, 2, 2);
+                ctx.fillStyle = '#ccc';
+                ctx.fillRect(7, 7, 1, 1);
+            } else if (face === 'front') {
+                // Lid split line
+                ctx.fillStyle = 'rgba(55,35,8,0.9)';
+                ctx.fillRect(1, 8, 14, 1);
+                // Iron corner studs (top-left, top-right of lid)
+                ctx.fillStyle = '#888';
+                ctx.fillRect(1, 1, 2, 2);
+                ctx.fillRect(13, 1, 2, 2);
+                // Iron latch background
+                ctx.fillStyle = '#777';
+                ctx.fillRect(6, 7, 4, 4);
+                // Latch face
+                ctx.fillStyle = '#bbb';
+                ctx.fillRect(7, 8, 2, 2);
+                ctx.fillStyle = '#999';
                 ctx.fillRect(7, 9, 2, 1);
-                ctx.fillStyle = '#555';
-                ctx.fillRect(7, 10, 2, 1);
+                // Keyhole dot
+                ctx.fillStyle = '#333';
+                ctx.fillRect(7, 9, 1, 1);
+            } else if (face === 'bottom') {
+                ctx.fillStyle = 'rgba(55,35,8,0.7)';
+                ctx.fillRect(0, 7, 16, 1);
+                ctx.fillRect(7, 0, 1, 16);
+                ctx.fillStyle = '#888';
+                ctx.fillRect(7, 7, 1, 1);
             } else {
-                // Side / back faces: wood planks + iron band
-                fillBase(ctx, 155, 108, 52);
-                addNoise(ctx, rng, 8);
-                ctx.fillStyle = 'rgba(50,30,5,0.85)';
-                ctx.fillRect(0, 9, 16, 2); // lid line
-                ctx.fillRect(1, 1, 14, 1);
-                ctx.fillRect(1, 14, 14, 1);
+                // Side: horizontal lid band only
+                ctx.fillStyle = 'rgba(55,35,8,0.85)';
+                ctx.fillRect(1, 8, 14, 1);
+                ctx.fillStyle = '#888';
+                ctx.fillRect(1, 1, 2, 2);
+                ctx.fillRect(13, 1, 2, 2);
             }
             break;
+        }
         case BLOCKS.LADDER:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
             ctx.fillStyle = 'rgb(120, 80, 40)';
@@ -2591,7 +2607,23 @@ const MC_ITEM_MAP = {
     'flint_and_steel': 'flint_and_steel'
 };
 
+// Global cache: subtype -> data URL (populated once MC texture loads)
+const _itemTextureCache = new Map();
+
 export function generateItemTexture(itemType, itemSubtype, onLoaded) {
+    // If already cached, return immediately and fire callback synchronously
+    if (_itemTextureCache.has(itemSubtype)) {
+        const cached = _itemTextureCache.get(itemSubtype);
+        const canvas = document.createElement('canvas');
+        canvas.width = 16; canvas.height = 16;
+        const img = new Image();
+        img.onload = () => {
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            if (onLoaded) onLoaded(canvas);
+        };
+        img.src = cached;
+        // Still return the procedural version synchronously as placeholder
+    }
     const TEX_SIZE = 16;
     const canvas = document.createElement('canvas');
     canvas.width = TEX_SIZE;
@@ -2609,6 +2641,7 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 if (img) {
                     ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
                     ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                    _itemTextureCache.set(itemSubtype, canvas.toDataURL());
                     if (onLoaded) onLoaded(canvas);
                 }
             });

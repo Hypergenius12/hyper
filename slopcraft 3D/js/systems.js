@@ -704,7 +704,7 @@ class UISystem {
                 // Use the 3D isometric icon canvas
                 const iconCanvas = this.atlas.getBlockIcon(slot.item.subtype);
                 const dataURL = iconCanvas.toDataURL();
-                inner = `<img src="${dataURL}" class="item-icon" draggable="false" />`;
+                inner = `<img src="${dataURL}" class="item-icon" draggable="false" style="image-rendering:pixelated;width:100%;height:100%;" />`;
             } else {
                 let cvs;
                 const updateImg = (canvas) => {
