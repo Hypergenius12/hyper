@@ -1070,7 +1070,7 @@ class UISystem {
         }
 
         const standardTypes = ['inventory', 'crafting', 'chest', 'furnace', 'wand'];
-        if (standardTypes.includes(srcType) && standardTypes.includes(targetType)) {
+        if ((standardTypes.includes(srcType) || srcType === 'creative') && standardTypes.includes(targetType)) {
             if ((targetType === 'furnace' && targetIndex === 2) || targetType === 'crafting_output') {
                 // Cannot drop into output slots
                 this.cancelDrag();
@@ -1100,6 +1100,7 @@ class UISystem {
                 return null;
             };
             const setListSlot = (lType, idx, val) => {
+                if (lType === 'creative') return; // Endless creative source, discard swaps
                 if (lType === 'inventory') inv[idx] = val;
                 else if (lType === 'crafting') this.craftingSlots[idx] = val;
                 else if (lType === 'chest') this.chestInventory[idx] = val;
@@ -1158,8 +1159,10 @@ class UISystem {
                     if (s) s.count += itemData.count;
                     else setListSlot(srcType, srcIndex, itemData);
                 } else {
+                    if (srcType !== 'creative') {
                     setListSlot(srcType, srcIndex, targetSlot);
-                    setListSlot(targetType, targetIndex, itemData);
+                }
+                setListSlot(targetType, targetIndex, itemData);
                 }
             }
             

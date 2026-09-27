@@ -1413,6 +1413,7 @@ class Game {
             }
             
             this.input.keys._creativeFlying = this.input.creativeMode && this.input._creativeFlying;
+            this.input.keys._creativeMode = this.input.creativeMode;
             this.player.update(dt, this.input.keys, this.input.mouse, this.world);
             this.handleInput(dt);
 
