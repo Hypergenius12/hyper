@@ -2185,10 +2185,10 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.FIRE]: 'fire_0',
     [BLOCKS.TNT]: { top: 'tnt_top', side: 'tnt_side', bottom: 'tnt_bottom' },
     [BLOCKS.CRAFTING_TABLE]: { top: 'crafting_table_top', side: 'crafting_table_side', bottom: 'oak_planks', front: 'crafting_table_front' },
-    [BLOCKS.AETHER_STONE]: 'end_stone',
-    [BLOCKS.AETHER_DIRT]: 'end_stone_bricks',
-    [BLOCKS.AETHER_GRASS]: { top: 'aether://aether_grass_block_top', side: 'aether://aether_grass_block_side', bottom: 'aether://aether_grass_block_top' },
-    [BLOCKS.AETHER_WOOD]: { top: 'quartz_pillar_top', side: 'quartz_pillar', bottom: 'quartz_pillar_top' },
+    [BLOCKS.AETHER_STONE]: 'aether://holystone',
+    [BLOCKS.AETHER_DIRT]: 'aether://aether_dirt',
+    [BLOCKS.AETHER_GRASS]: { top: 'aether://aether_grass_block_top', side: 'aether://aether_grass_block_side', bottom: 'aether://aether_dirt' },
+    [BLOCKS.AETHER_WOOD]: { top: 'aether://skyroot_log_top', side: 'aether://skyroot_log', bottom: 'aether://skyroot_log_top' },
     [BLOCKS.AETHER_LEAVES]: 'aether://golden_oak_leaves',
     [BLOCKS.AETHER_PORTAL]: 'entity/end_gateway_beam',
     [BLOCKS.AETHER_CLOUD]: 'white_wool',
@@ -2213,10 +2213,10 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.ALGAE]: 'seagrass',
     [BLOCKS.RED_KELP]: 'kelp',
     [BLOCKS.BROWN_KELP]: 'kelp_plant',
-    [BLOCKS.QUICKSOIL]: 'sand',
-    [BLOCKS.HOLYSTONE]: 'end_stone_bricks',
-    [BLOCKS.ENCHANTED_AETHER_LOG]: { top: 'purpur_pillar_top', side: 'purpur_pillar', bottom: 'purpur_pillar_top' },
-    [BLOCKS.ENCHANTED_AETHER_LEAVES]: 'purple_stained_glass'
+    [BLOCKS.QUICKSOIL]: 'aether://quicksoil',
+    [BLOCKS.HOLYSTONE]: 'aether://holystone',
+    [BLOCKS.ENCHANTED_AETHER_LOG]: { top: 'aether://golden_oak_log', side: 'aether://golden_oak_log', bottom: 'aether://golden_oak_log' },
+    [BLOCKS.ENCHANTED_AETHER_LEAVES]: 'aether://crystal_leaves'
 };
 
 function loadMinecraftTexture(name) {
@@ -2233,7 +2233,12 @@ function loadMinecraftTexture(name) {
             altImg.src = MINECRAFT_ASSETS_BASE + 'item/' + name + '.png';
         };
         if (name.startsWith('aether://')) {
-            img.src = AETHER_ASSETS_BASE + name.slice(9) + '.png';
+            const rawName = name.slice(9);
+            if (rawName === 'aether_dirt') {
+                img.src = 'https://raw.githubusercontent.com/The-Aether-Team/The-Aether/1.21.1-develop/src/main/resources/packs/classic_base/assets/aether/textures/block/natural/aether_dirt.png';
+            } else {
+                img.src = AETHER_ASSETS_BASE + rawName + '.png';
+            }
         } else if (name.includes('/')) {
             img.src = MINECRAFT_ASSETS_BASE + name + '.png';
         } else {
@@ -2358,7 +2363,6 @@ export async function createTextureAtlas(useMinecraft = false) {
                                 else if (bt === BLOCKS.PINE_LEAVES) tint = '#3d6e4b'; // Taiga/Pine
                                 else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#507a32'; // Dark Forest leaves
                                 else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff'; // Don't heavily tint cherry leaves, Minecraft cherry leaves are intrinsically pink
-                                else if (bt === BLOCKS.AETHER_LEAVES) tint = '#b3ffb3';
                                 else tint = '#59ae30'; // default leaves
                             }
                             

@@ -101,6 +101,14 @@ export class InputManager {
     }
 
     onKeyDown(e) {
+        // If the user is typing in an input field (like creative search), ignore game hotkeys!
+        const activeTag = document.activeElement ? document.activeElement.tagName : '';
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+            if (e.code === 'Escape') {
+                document.activeElement.blur();
+            }
+            return;
+        }
         // Dev Mode sequence tracking
         if (!this.devModeUnlocked) {
             this.keySequence += e.key.toLowerCase();
@@ -115,7 +123,7 @@ export class InputManager {
         }
 
         // C key: toggle creative mode
-        if (e.key.toLowerCase() === 'c' && !this._menuKeysDown.creative) {
+        if ((e.code === 'KeyC' || e.key.toLowerCase() === 'c') && !this._menuKeysDown.creative) {
             this._menuKeysDown.creative = true;
             this.creativeMode = !this.creativeMode;
             this._creativeFlying = false;
@@ -217,6 +225,7 @@ export class InputManager {
             case 'F3': case 'ControlLeft': case 'ControlRight': this._menuKeysDown.debug = false; break;
             case 'KeyQ': this._menuKeysDown.dropItem = false; break;
             case 'KeyU': this._menuKeysDown.devMode = false; break;
+            case 'KeyC': this._menuKeysDown.creative = false; break;
         }
     }
 }
