@@ -2069,7 +2069,8 @@ function generateBlockTexture(ctx, blockType, face, rng) {
 function hasFaceVariants(blockType) {
     return [
         BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD, BLOCKS.DARK_OAK_WOOD,
-        BLOCKS.BOOKSHELF, BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS
+        BLOCKS.BOOKSHELF, BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS,
+        BLOCKS.CACTUS, BLOCKS.SANDSTONE
     ].includes(blockType);
 }
 
@@ -2107,7 +2108,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.SNOW]: 'snow',
     [BLOCKS.ICE]: 'ice',
     [BLOCKS.LAVA]: 'lava_flow',
-    [BLOCKS.PORTAL_FRAME]: 'end_portal_frame_side',
+    [BLOCKS.PORTAL_FRAME]: { top: 'end_portal_frame_top', side: 'end_portal_frame_side', bottom: 'end_stone', front: 'end_portal_frame_eye' },
     [BLOCKS.PORTAL]: 'nether_portal',
     [BLOCKS.BEDROCK]: 'bedrock',
     [BLOCKS.GRAVEL]: 'gravel',
@@ -2472,7 +2473,9 @@ export async function createTextureAtlas(useMinecraft = false) {
         // Generate 3 faces from atlas
         const top = getFaceCanvas('top');
         const side1 = getFaceCanvas('side');
-        const side2 = getFaceCanvas('side');
+        // For blocks with a distinct front face (chest, furnace, etc.), show it on the right face of the icon
+        const hasFront = uvMap[blockType] && uvMap[blockType]['front'];
+        const side2 = getFaceCanvas(hasFront ? 'front' : 'side');
 
         // Darken faces for 3D effect
         const s2Ctx = side2.getContext('2d');

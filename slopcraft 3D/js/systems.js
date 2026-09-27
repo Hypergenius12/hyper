@@ -712,6 +712,118 @@ class UISystem {
 
             panel.appendChild(slot);
         }
+
+        // --- Equipment / Items Section ---
+        const sep = document.createElement('div');
+        sep.style.cssText = 'width:100%; padding:6px 0 2px 0; color:#aaa; font-size:11px; font-weight:bold; text-align:center; border-top:1px solid #444; margin-top:6px; grid-column:1/-1;';
+        sep.textContent = '— Items & Equipment —';
+        panel.appendChild(sep);
+
+        const equipItems = [
+            { type: 'equipment', subtype: 'flint_and_steel', name: 'Flint and Steel' },
+            { type: 'equipment', subtype: 'sword_wood',      name: 'Wooden Sword' },
+            { type: 'equipment', subtype: 'sword_stone',     name: 'Stone Sword' },
+            { type: 'equipment', subtype: 'sword_iron',      name: 'Iron Sword' },
+            { type: 'equipment', subtype: 'sword_gold',      name: 'Golden Sword' },
+            { type: 'equipment', subtype: 'sword_diamond',   name: 'Diamond Sword' },
+            { type: 'equipment', subtype: 'pickaxe_wood',    name: 'Wooden Pickaxe' },
+            { type: 'equipment', subtype: 'pickaxe_stone',   name: 'Stone Pickaxe' },
+            { type: 'equipment', subtype: 'pickaxe_iron',    name: 'Iron Pickaxe' },
+            { type: 'equipment', subtype: 'pickaxe_gold',    name: 'Golden Pickaxe' },
+            { type: 'equipment', subtype: 'pickaxe_diamond', name: 'Diamond Pickaxe' },
+            { type: 'equipment', subtype: 'axe_wood',        name: 'Wooden Axe' },
+            { type: 'equipment', subtype: 'axe_stone',       name: 'Stone Axe' },
+            { type: 'equipment', subtype: 'axe_iron',        name: 'Iron Axe' },
+            { type: 'equipment', subtype: 'axe_gold',        name: 'Golden Axe' },
+            { type: 'equipment', subtype: 'axe_diamond',     name: 'Diamond Axe' },
+            { type: 'equipment', subtype: 'shovel_wood',     name: 'Wooden Shovel' },
+            { type: 'equipment', subtype: 'shovel_stone',    name: 'Stone Shovel' },
+            { type: 'equipment', subtype: 'shovel_iron',     name: 'Iron Shovel' },
+            { type: 'equipment', subtype: 'shovel_diamond',  name: 'Diamond Shovel' },
+            { type: 'equipment', subtype: 'helmet_iron',     name: 'Iron Helmet' },
+            { type: 'equipment', subtype: 'chest_iron',      name: 'Iron Chestplate' },
+            { type: 'equipment', subtype: 'legs_iron',       name: 'Iron Leggings' },
+            { type: 'equipment', subtype: 'boots_iron',      name: 'Iron Boots' },
+            { type: 'equipment', subtype: 'helmet_gold',     name: 'Golden Helmet' },
+            { type: 'equipment', subtype: 'chest_gold',      name: 'Golden Chestplate' },
+            { type: 'equipment', subtype: 'legs_gold',       name: 'Golden Leggings' },
+            { type: 'equipment', subtype: 'boots_gold',      name: 'Golden Boots' },
+            { type: 'equipment', subtype: 'helmet_diamond',  name: 'Diamond Helmet' },
+            { type: 'equipment', subtype: 'chest_diamond',   name: 'Diamond Chestplate' },
+            { type: 'equipment', subtype: 'legs_diamond',    name: 'Diamond Leggings' },
+            { type: 'equipment', subtype: 'boots_diamond',   name: 'Diamond Boots' },
+            { type: 'material',  subtype: 'iron_ingot',      name: 'Iron Ingot' },
+            { type: 'material',  subtype: 'gold_ingot',      name: 'Gold Ingot' },
+            { type: 'material',  subtype: 'diamond',         name: 'Diamond' },
+            { type: 'material',  subtype: 'coal',            name: 'Coal' },
+            { type: 'food',      subtype: 'apple',           name: 'Apple' },
+            { type: 'food',      subtype: 'bread',           name: 'Bread' },
+            { type: 'food',      subtype: 'cooked_beef',     name: 'Steak' },
+        ];
+
+        // Render equipment/item slots synchronously using the already-imported generateItemTexture
+        for (const itm of equipItems) {
+            const slot = document.createElement('div');
+            slot.className = 'inv-slot creative-item-slot';
+            slot.title = itm.name;
+            slot.dataset.itemType = itm.type;
+            slot.dataset.itemSubtype = itm.subtype;
+            slot.dataset.itemName = itm.name;
+
+            const cvs = generateItemTexture(itm.type, itm.subtype, (updatedCvs) => {
+                const existing = slot.querySelector('img');
+                if (existing) existing.src = updatedCvs.toDataURL();
+            });
+            const img = document.createElement('img');
+            img.src = cvs.toDataURL();
+            img.className = 'item-icon';
+            img.style.imageRendering = 'pixelated';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.draggable = false;
+            slot.appendChild(img);
+
+            slot.onmouseenter = (e) => {
+                if (this.dragState.isDragging || !this.isOpen) return;
+                const html = `<strong style="color:#7c5cff; font-size:16px;">${itm.name}</strong><br/><span style="color:#aaa;">${itm.type.charAt(0).toUpperCase() + itm.type.slice(1)}</span>`;
+                this.elements.tooltip.innerHTML = html;
+                this.elements.tooltip.classList.remove('hidden');
+                this.elements.tooltip.style.left = (e.clientX + 15) + 'px';
+                this.elements.tooltip.style.top  = (e.clientY + 15) + 'px';
+            };
+            slot.onmouseleave = () => this.elements.tooltip.classList.add('hidden');
+
+            slot.onmousedown = (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                const fakeSlot = {
+                    item: {
+                        type: itm.type,
+                        subtype: itm.subtype,
+                        name: itm.name,
+                        id: `${itm.type}_${itm.subtype}_${Date.now()}`,
+                        stackable: itm.type === 'material' || itm.type === 'food',
+                        maxStack: (itm.type === 'material' || itm.type === 'food') ? 64 : 1,
+                        data: itm.type === 'equipment' ? { equipData: { damage: 0, durability: 999 } } : {},
+                        description: ''
+                    },
+                    count: (itm.type === 'material' || itm.type === 'food') ? 64 : 1
+                };
+                this.dragState.isDragging = true;
+                this.dragState.sourceType = 'creative';
+                this.dragState.sourceIndex = -1;
+                this.dragState.itemData = fakeSlot;
+                this.dragState.isSplit = false;
+                this.dragState.offsetX = 0;
+                this.dragState.offsetY = 0;
+                this.elements.dragIcon.classList.remove('hidden');
+                this.renderSlotItem(this.elements.dragIcon, fakeSlot);
+                this.updateDragIconPos(e.clientX, e.clientY);
+                this.elements.tooltip.classList.add('hidden');
+            };
+
+            panel.appendChild(slot);
+        }
     }
 
     updateHUD(player, fps, atlas) {
