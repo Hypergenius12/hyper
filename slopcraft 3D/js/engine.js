@@ -748,7 +748,7 @@ export class World {
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
-            opacity: 0.8,
+            opacity: 0.88, // slightly more opaque water
             side: THREE.DoubleSide,
             shininess: 80,
             specular: new THREE.Color(0x4488bb)
@@ -1353,7 +1353,7 @@ export class World {
 
         if (dt) {
             this.tickTimer += dt;
-            if (this.tickTimer >= 1.2) { // tick every 1.2s
+            if (this.tickTimer >= 0.5) { // tick every 0.5s for responsive fire and burning
                 this.tickTimer = 0;
                 this.tickFluids();
                 this.tickRandomBlocks();
@@ -1362,13 +1362,9 @@ export class World {
     }
 
     isFlammable(block) {
-        return block === window.BLOCKS.WOOD || block === window.BLOCKS.LEAVES || block === window.BLOCKS.PLANKS || 
-               block === window.BLOCKS.ACACIA_WOOD || block === window.BLOCKS.ACACIA_LEAVES || block === window.BLOCKS.ACACIA_PLANKS ||
-               block === window.BLOCKS.CHERRY_WOOD || block === window.BLOCKS.CHERRY_LEAVES || block === window.BLOCKS.CHERRY_PLANKS ||
-               block === window.BLOCKS.AUTUMN_WOOD || block === window.BLOCKS.AUTUMN_LEAVES || block === window.BLOCKS.AUTUMN_PLANKS ||
-               block === window.BLOCKS.PALM_WOOD || block === window.BLOCKS.PALM_LEAVES || block === window.BLOCKS.PALM_PLANKS ||
-               block === window.BLOCKS.PINE_WOOD || block === window.BLOCKS.PINE_LEAVES || block === window.BLOCKS.PINE_PLANKS ||
-               block === window.BLOCKS.WOOL || block === window.BLOCKS.TALL_GRASS || block === window.BLOCKS.DEAD_BUSH;
+        if (!block || block === window.BLOCKS.AIR) return false;
+        const props = getBlockProperties(block);
+        return (props && props.flammable === true) || block === window.BLOCKS.TNT;
     }
 
     tickRandomBlocks() {
@@ -1376,7 +1372,7 @@ export class World {
         for (const chunk of this.chunks.values()) {
             if (!chunk.blocks || chunk.blocks[0] === undefined) continue;
             
-            for (let i = 0; i < 96; i++) {
+            for (let i = 0; i < 160; i++) {
                 const rx = Math.floor(Math.random() * 16);
                 const ry = Math.floor(Math.random() * CHUNK_HEIGHT);
                 const rz = Math.floor(Math.random() * 16);
@@ -1457,15 +1453,22 @@ export class World {
                         }
                     }
                     
-                    // 3. Destroy adjacent flammable blocks (burn them up)
-                    if (Math.random() < 0.2) {
-                        dirs.sort(() => Math.random() - 0.5); // shuffle
-                        for (const [dx, dy, dz] of dirs) {
-                            const nx = wx + dx, ny = wy + dy, nz = wz + dz;
-                            if (this.isFlammable(this.getBlock(nx, ny, nz))) {
+                    // 3. Destroy adjacent flammable blocks (burn them up over time) or ignite TNT
+                    dirs.sort(() => Math.random() - 0.5);
+                    for (const [dx, dy, dz] of dirs) {
+                        const nx = wx + dx, ny = wy + dy, nz = wz + dz;
+                        const adjBlock = this.getBlock(nx, ny, nz);
+                        if (adjBlock === window.BLOCKS.TNT) {
+                            if (window.game && window.game.igniteTNT) {
+                                window.game.igniteTNT(nx, ny, nz);
+                            } else {
                                 this.setBlock(nx, ny, nz, window.BLOCKS.AIR);
-                                break; // Only burn one at a time
                             }
+                            break;
+                        } else if (this.isFlammable(adjBlock) && Math.random() < 0.45) {
+                            // Turn burned block into fire or air!
+                            this.setBlock(nx, ny, nz, Math.random() < 0.6 ? window.BLOCKS.FIRE : window.BLOCKS.AIR);
+                            break;
                         }
                     }
                     
@@ -1474,9 +1477,20 @@ export class World {
                         this.setBlock(wx, wy, wz, window.BLOCKS.AIR);
                     }
                 } else if (block === window.BLOCKS.LAVA) {
-                    // Lava has a chance to light nearby blocks on fire
-                    if (Math.random() < 0.1) {
-                        const wx = chunk.cx * 16 + rx;
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    // Check immediate neighbors for TNT!
+                    const dirs6 = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+                    for (const [dx, dy, dz] of dirs6) {
+                        const nx = wx + dx, ny = wy + dy, nz = wz + dz;
+                        if (this.getBlock(nx, ny, nz) === window.BLOCKS.TNT) {
+                            if (window.game && window.game.igniteTNT) {
+                                window.game.igniteTNT(nx, ny, nz);
+                            }
+                        }
+                    }
+                    if (Math.random() < 0.25) {
                         const wy = ry;
                         const wz = chunk.cz * 16 + rz;
                         

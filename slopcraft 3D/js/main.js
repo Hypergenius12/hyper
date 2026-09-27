@@ -146,6 +146,7 @@ class Game {
         this.frames = 0;
         this.lastFpsTime = performance.now();
         this.breakTimer = 0;
+        this.primedTNT = [];
         this.isPaused = false;
         
         this._boundLoop = this.loop.bind(this);
@@ -1088,20 +1089,31 @@ class Game {
             const slot = this.player.inventory.slots[this.player.selectedSlot];
 
             if (slot && slot.item.subtype === 'flint_and_steel' && hit.hit) {
-                // If clicked on Obsidian, Glowstone, Dirt, Stone, or Cobblestone, try to light a portal
-                if (hit.blockType === window.BLOCKS.OBSIDIAN || hit.blockType === window.BLOCKS.GLOWSTONE || hit.blockType === window.BLOCKS.DIRT || hit.blockType === window.BLOCKS.GRASS || hit.blockType === window.BLOCKS.STONE || hit.blockType === window.BLOCKS.COBBLESTONE) {
-                    this.tryLightPortal(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
-                    this.audio.playHit();
-                } else if (hit.blockType === window.BLOCKS.TNT) {
-                    this.igniteTNT(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
-                    this.audio.playFizz();
-                } else if (hit.face) {
-                    const nx = hit.blockPos.x + hit.face.x;
-                    const ny = hit.blockPos.y + hit.face.y;
-                    const nz = hit.blockPos.z + hit.face.z;
-                    if (this.world.getBlock(nx, ny, nz) === window.BLOCKS.AIR) {
-                        this.world.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
-                        this.audio.playHit();
+                // If clicked on Obsidian/Glowstone/etc, try to light a portal first
+                let portalLit = false;
+                if (hit.blockType === window.BLOCKS.OBSIDIAN || hit.blockType === window.BLOCKS.GLOWSTONE || hit.blockType === window.BLOCKS.PORTAL_FRAME) {
+                    portalLit = this.tryLightPortal(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    if (portalLit) this.audio.playHit();
+                }
+
+                if (!portalLit) {
+                    if (hit.blockType === window.BLOCKS.TNT) {
+                        this.igniteTNT(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                        this.audio.playFizz();
+                    } else if (hit.face) {
+                        const nx = hit.blockPos.x + hit.face.x;
+                        const ny = hit.blockPos.y + hit.face.y;
+                        const nz = hit.blockPos.z + hit.face.z;
+                        const targetBlock = this.world.getBlock(nx, ny, nz);
+                        // Can light fire in air, on top of any non-liquid block (not water/swamp water)
+                        if (targetBlock === window.BLOCKS.AIR) {
+                            const belowBlock = this.world.getBlock(nx, ny - 1, nz);
+                            if (belowBlock !== window.BLOCKS.WATER && belowBlock !== window.BLOCKS.SWAMP_WATER) {
+                                this.world.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                                this.audio.playHit();
+                                this.particles.emit({x: nx + 0.5, y: ny + 0.5, z: nz + 0.5}, 'fire', 8, 0xff5500);
+                            }
+                        }
                     }
                 }
                 this.input.mouse.rightClick = false;
@@ -1502,6 +1514,53 @@ class Game {
             }
         }
         this.particles.update(dt);
+
+        // Update Primed TNT entities
+        if (this.primedTNT && this.primedTNT.length > 0) {
+            for (let i = this.primedTNT.length - 1; i >= 0; i--) {
+                const tnt = this.primedTNT[i];
+                tnt.fuse -= dt;
+
+                // Physics: apply gravity and vertical velocity
+                tnt.velY -= 15 * dt;
+                tnt.y += tnt.velY * dt;
+                
+                // Collision with floor below
+                const floorY = Math.floor(tnt.y - 0.45);
+                const blockBelow = this.world.getBlock(Math.floor(tnt.x), floorY, Math.floor(tnt.z));
+                if (blockBelow !== window.BLOCKS.AIR && blockBelow !== window.BLOCKS.WATER) {
+                    tnt.y = floorY + 1 + 0.49;
+                    tnt.velY = 0;
+                }
+                tnt.mesh.position.set(tnt.x, tnt.y, tnt.z);
+
+                // Flashing white fuse animation!
+                // Frequency increases as fuse gets closer to 0
+                const flashFreq = 3 + (1 - tnt.fuse / tnt.maxFuse) * 15;
+                const flash = Math.sin(tnt.fuse * flashFreq * Math.PI) > 0;
+                if (flash) {
+                    tnt.mat.emissive.setHex(0xffffff);
+                    tnt.mesh.scale.set(1.08, 1.08, 1.08); // Slight swell
+                } else {
+                    tnt.mat.emissive.setHex(0x000000);
+                    tnt.mesh.scale.set(1.0, 1.0, 1.0);
+                }
+
+                // Smoke puff while ticking
+                if (Math.random() < dt * 6) {
+                    this.particles.emit(new THREE.Vector3(tnt.x, tnt.y + 0.5, tnt.z), 'smoke', 2, 0xcccccc);
+                }
+
+                if (tnt.fuse <= 0) {
+                    // Detonate!
+                    this.engine.scene.remove(tnt.mesh);
+                    tnt.mesh.geometry.dispose();
+                    tnt.mat.dispose();
+                    this.primedTNT.splice(i, 1);
+                    this.explodeTNT(tnt.x, tnt.y, tnt.z);
+                }
+            }
+        }
         this.torchSystem.update(dt, this.engine.camera.position);
         this.cloudSystem.update(dt, this.engine.camera.position);
         const prevHealth = this.player.health;
@@ -2189,52 +2248,125 @@ Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Re
     }
 
     igniteTNT(x, y, z) {
-        // Replace TNT with air
+        // Prevent double ignition of the same block
+        const key = `${x},${y},${z}`;
+        if (this.world.getBlock(x, y, z) !== window.BLOCKS.TNT) return;
+
+        // Remove the block from the voxel world
         this.world.setBlock(x, y, z, window.BLOCKS.AIR);
-        // Spawn some smoke to show it's lit
-        this.particles.emit({x: x + 0.5, y: y + 1, z: z + 0.5}, 'smoke', 5, 0xaaaaaa);
-        
-        // Wait 2 seconds then explode
-        setTimeout(() => {
-            this.explodeTNT(x, y, z);
-        }, 2000);
+
+        // Spawn a 3D Primed TNT mesh that flashes white like real Minecraft
+        const geom = new THREE.BoxGeometry(0.98, 0.98, 0.98);
+        const tntTopUV = this.atlas ? this.atlas.getUV(window.BLOCKS.TNT, 'top') : null;
+        const tntSideUV = this.atlas ? this.atlas.getUV(window.BLOCKS.TNT, 'side') : null;
+        const tntBotUV = this.atlas ? this.atlas.getUV(window.BLOCKS.TNT, 'bottom') : null;
+
+        // Use Phong material with flashing white emissive
+        const mat = new THREE.MeshPhongMaterial({
+            map: this.atlas ? this.atlas.texture : null,
+            emissive: new THREE.Color(0x000000),
+            shininess: 0
+        });
+
+        // Set UVs for the BoxGeometry
+        if (this.atlas && tntSideUV && tntTopUV && tntBotUV) {
+            const uvAttr = geom.attributes.uv;
+            const setFaceUV = (faceIdx, uvInfo) => {
+                const u0 = uvInfo.u0, v0 = uvInfo.v0, u1 = uvInfo.u1, v1 = uvInfo.v1;
+                // 4 vertices per face, 2 triangles: [0,1], [2,3], [4,5], [6,7]
+                const base = faceIdx * 8;
+                uvAttr.array[base + 0] = u0; uvAttr.array[base + 1] = v1;
+                uvAttr.array[base + 2] = u1; uvAttr.array[base + 3] = v1;
+                uvAttr.array[base + 4] = u0; uvAttr.array[base + 5] = v0;
+                uvAttr.array[base + 6] = u1; uvAttr.array[base + 7] = v0;
+            };
+            setFaceUV(0, tntSideUV); // right (+X)
+            setFaceUV(1, tntSideUV); // left (-X)
+            setFaceUV(2, tntTopUV);  // top (+Y)
+            setFaceUV(3, tntBotUV);  // bottom (-Y)
+            setFaceUV(4, tntSideUV); // front (+Z)
+            setFaceUV(5, tntSideUV); // back (-Z)
+            uvAttr.needsUpdate = true;
+        }
+
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+        this.engine.scene.add(mesh);
+
+        // Sound effect
+        if (this.audio && this.audio.playFizz) this.audio.playFizz();
+
+        // Primed TNT object with fuse countdown and jump velocity
+        const primed = {
+            mesh,
+            mat,
+            fuse: 3.2, // 3.2 seconds
+            maxFuse: 3.2,
+            velY: 3.5, // slight pop up
+            x: x + 0.5,
+            y: y + 0.5,
+            z: z + 0.5
+        };
+        this.primedTNT.push(primed);
     }
 
     explodeTNT(x, y, z) {
-        const radius = 3;
-        for (let ix = x - radius; ix <= x + radius; ix++) {
-            for (let iy = y - radius; iy <= y + radius; iy++) {
-                for (let iz = z - radius; iz <= z + radius; iz++) {
+        const radius = 4; // Expanded destruction radius
+        const radiusSq = radius * radius;
+        const blockAIR = window.BLOCKS.AIR;
+        const blockBEDROCK = window.BLOCKS.BEDROCK;
+        const blockWATER = window.BLOCKS.WATER;
+
+        for (let ix = Math.floor(x - radius); ix <= Math.ceil(x + radius); ix++) {
+            for (let iy = Math.floor(y - radius); iy <= Math.ceil(y + radius); iy++) {
+                for (let iz = Math.floor(z - radius); iz <= Math.ceil(z + radius); iz++) {
                     const distSq = (ix - x) ** 2 + (iy - y) ** 2 + (iz - z) ** 2;
-                    if (distSq <= radius ** 2) {
+                    if (distSq <= radiusSq) {
                         const block = this.world.getBlock(ix, iy, iz);
-                        if (block !== window.BLOCKS.AIR && block !== window.BLOCKS.BEDROCK && block !== window.BLOCKS.WATER) {
-                            this.world.setBlock(ix, iy, iz, window.BLOCKS.AIR);
+                        if (block !== blockAIR && block !== blockBEDROCK && block !== blockWATER) {
+                            if (block === window.BLOCKS.TNT) {
+                                // Chain reaction!
+                                this.igniteTNT(ix, iy, iz);
+                            } else {
+                                this.world.setBlock(ix, iy, iz, blockAIR);
+                                // Spawn block debris particles
+                                if (Math.random() < 0.2) {
+                                    this.particles.emit(new THREE.Vector3(ix + 0.5, iy + 0.5, iz + 0.5), 'block_break', 1, 0x888888);
+                                }
+                            }
                         }
                     }
                 }
             }
         }
         
-        // Damage nearby entities
-        for (const [id, entity] of this.entities.entries()) {
-            const dist = entity.mesh.position.distanceTo(new THREE.Vector3(x, y, z));
-            if (dist < radius + 2) {
-                // Damage falls off over distance, max 40 damage
-                const dmg = Math.floor(40 * (1 - dist / (radius + 2)));
-                this.damageEntity(entity, dmg);
+        // Damage nearby entities (mobs & bosses)
+        for (const mob of this.entityManager.mobs) {
+            const dist = mob.position.distanceTo(new THREE.Vector3(x, y, z));
+            if (dist < radius + 2.5) {
+                const dmg = Math.floor(65 * (1 - dist / (radius + 2.5)));
+                mob.health -= dmg;
+                // Knockback
+                const knockDir = mob.position.clone().sub(new THREE.Vector3(x, y, z)).normalize();
+                mob.velocity.add(knockDir.multiplyScalar(14));
+                this.particles.emit(mob.position, 'blood', 6, 0xff0000);
             }
         }
-        // Also damage player
-        const pDist = this.player.camera.position.distanceTo(new THREE.Vector3(x, y, z));
-        if (pDist < radius + 2) {
-            const dmg = Math.floor(40 * (1 - pDist / (radius + 2)));
+
+        // Damage player
+        const pDist = this.player.position.distanceTo(new THREE.Vector3(x, y, z));
+        if (pDist < radius + 3.0) {
+            const dmg = Math.floor(65 * (1 - pDist / (radius + 3.0)));
             this.player.takeDamage(dmg);
+            // Knockback player
+            const knockDir = this.player.position.clone().sub(new THREE.Vector3(x, y, z)).normalize();
+            this.player.velocity.add(knockDir.multiplyScalar(15));
         }
 
-        // Effects
-        this.particles.emit(new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5), 'explosion', 50, 0xffaa00);
-        this.audio.playExplode();
+        // Spectacular visual effects
+        this.particles.emit(new THREE.Vector3(x, y, z), 'explosion', 70, 0xffaa00);
+        this.particles.emit(new THREE.Vector3(x, y + 0.5, z), 'smoke', 25, 0x444444);
+        if (this.audio && this.audio.playExplode) this.audio.playExplode();
     }
 
     tryLightPortal(startX, startY, startZ) {

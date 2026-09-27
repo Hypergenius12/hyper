@@ -189,7 +189,7 @@ const BLOCK_PROPS = {
     [BLOCKS.ALIEN_CRYSTAL]: { name: 'Alien Crystal',  health: 10, transparent: true, emissive: 0.8, solid: true, drops: null },
     [BLOCKS.SNOW]:          { name: 'Snow',           health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.ICE]:           { name: 'Ice',            health: 3, transparent: true,  emissive: 0, solid: true, drops: null },
-    [BLOCKS.LAVA]:          { name: 'Lava',           health: 0, transparent: true,  emissive: 1.0, solid: false, isLiquid: true, drops: null },
+    [BLOCKS.LAVA]:          { name: 'Lava',           health: 0, transparent: false, emissive: 1.0, solid: false, isLiquid: true, drops: null },
     [BLOCKS.PORTAL_FRAME]:  { name: 'Portal Frame',   health: 20, transparent: false, emissive: 0.4, solid: true, drops: null },
     [BLOCKS.PORTAL]:        { name: 'Portal',         health: 0, transparent: true,  emissive: 1.0, solid: false, drops: null },
     [BLOCKS.BEDROCK]:       { name: 'Bedrock',        health: Infinity, transparent: false, emissive: 0, solid: true, drops: null },
