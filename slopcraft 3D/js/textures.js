@@ -1735,11 +1735,10 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
         case BLOCKS.CRIMSON_LEAVES:
-            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            ctx.fillStyle = 'rgba(150, 0, 0, 0.9)';
-            for(let i=0; i<80; i++) {
-                ctx.fillRect(Math.floor(rng()*16), Math.floor(rng()*16), 2, 2);
-            }
+            fillBase(ctx, 120, 5, 5);
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, 'rgba(180, 20, 20, 0.7)', 30);
+            addPixels(ctx, rng, 'rgba(60, 0, 0, 0.6)', 20);
             break;
         case BLOCKS.NETHER_WART_BLOCK:
             fillBase(ctx, 110, 0, 0);
@@ -2167,7 +2166,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.NETHER_BRICKS]: 'nether_bricks',
     [BLOCKS.CRIMSON_NYLIUM]: { top: 'crimson_nylium', side: 'crimson_nylium_side', bottom: 'netherrack' },
     [BLOCKS.CRIMSON_STEM]: { top: 'crimson_stem_top', side: 'crimson_stem', bottom: 'crimson_stem_top' },
-    [BLOCKS.CRIMSON_LEAVES]: 'crimson_roots',
+    [BLOCKS.CRIMSON_LEAVES]: 'nether_wart_block',
     [BLOCKS.NETHER_WART_BLOCK]: 'nether_wart_block',
     [BLOCKS.TUBE_CORAL]: 'tube_coral',
     [BLOCKS.BRAIN_CORAL]: 'brain_coral',
