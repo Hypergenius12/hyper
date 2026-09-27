@@ -112,7 +112,9 @@ export class InputManager {
                 this.keySequence = '';
                 console.log("Dev Mode Unlocked! Press 'U' to toggle.");
             }
+        }
 
+        // C key: toggle creative mode
         if (e.key.toLowerCase() === 'c' && !this._menuKeysDown.creative) {
             this._menuKeysDown.creative = true;
             this.creativeMode = !this.creativeMode;
@@ -124,7 +126,9 @@ export class InputManager {
                 clearTimeout(this._toastTimer);
                 this._toastTimer = setTimeout(() => toast.classList.add('hidden'), 2000);
             }
-        } else if (e.key.toLowerCase() === 'u') {
+        }
+
+        if (e.key.toLowerCase() === 'u') {
             if (!this._menuKeysDown.devMode) {
                 this.menuKeys.devMode = true;
                 this._menuKeysDown.devMode = true;
@@ -142,7 +146,6 @@ export class InputManager {
             case 'Space': this.keys.jump = true; break;
             case 'ShiftLeft': case 'ShiftRight': this.keys.crouch = true; break;
             case 'ControlLeft': case 'ControlRight': this.keys.sprint = true; break;
-            case 'KeyC': this.keys.crouch = true; break;
 
             case 'Tab':
             case 'KeyI':
@@ -189,7 +192,6 @@ export class InputManager {
             case 'Space': this.keys.jump = false; break;
             case 'ShiftLeft': case 'ShiftRight': this.keys.crouch = false; break;
             case 'ControlLeft': case 'ControlRight': this.keys.sprint = false; break;
-            case 'KeyC': this.keys.crouch = false; break;
 
             case 'Tab': case 'KeyI': case 'KeyE': this._menuKeysDown.inventory = false; break;
             case 'KeyF': this._menuKeysDown.spellConfig = false; break;
