@@ -2078,6 +2078,7 @@ function hasFaceVariants(blockType) {
 
 
 const MINECRAFT_ASSETS_BASE = "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/textures/";
+const AETHER_ASSETS_BASE = "https://raw.githubusercontent.com/The-Aether-Team/The-Aether/1.21.1-develop/src/main/resources/assets/aether/textures/block/natural/";
 
 const MC_TEXTURE_MAP = {
     [BLOCKS.GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
@@ -2186,13 +2187,13 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.CRAFTING_TABLE]: { top: 'crafting_table_top', side: 'crafting_table_side', bottom: 'oak_planks', front: 'crafting_table_front' },
     [BLOCKS.AETHER_STONE]: 'end_stone',
     [BLOCKS.AETHER_DIRT]: 'end_stone_bricks',
-    [BLOCKS.AETHER_GRASS]: { top: 'end_stone', side: 'end_stone_bricks', bottom: 'end_stone_bricks' },
+    [BLOCKS.AETHER_GRASS]: { top: 'aether://aether_grass_block_top', side: 'aether://aether_grass_block_side', bottom: 'aether://aether_grass_block_top' },
     [BLOCKS.AETHER_WOOD]: { top: 'quartz_pillar_top', side: 'quartz_pillar', bottom: 'quartz_pillar_top' },
-    [BLOCKS.AETHER_LEAVES]: 'cyan_wool',
+    [BLOCKS.AETHER_LEAVES]: 'aether://golden_oak_leaves',
     [BLOCKS.AETHER_PORTAL]: 'entity/end_gateway_beam',
     [BLOCKS.AETHER_CLOUD]: 'white_wool',
-    [BLOCKS.AETHER_TALL_GRASS]: 'end_rod',
-    [BLOCKS.AETHER_FLOWER]: 'chorus_flower',
+    [BLOCKS.AETHER_TALL_GRASS]: 'aether://skyroot_leaves',
+    [BLOCKS.AETHER_FLOWER]: 'aether://white_flower',
     [BLOCKS.AETHER_CRYSTAL]: 'sea_lantern',
     [BLOCKS.CAVERN_STONE]: 'andesite',
     [BLOCKS.CAVERN_DIRT]: 'dirt',
@@ -2231,8 +2232,13 @@ function loadMinecraftTexture(name) {
             altImg.onerror = () => resolve(null);
             altImg.src = MINECRAFT_ASSETS_BASE + 'item/' + name + '.png';
         };
-        if (name.includes('/')) img.src = MINECRAFT_ASSETS_BASE + name + '.png';
-        else img.src = MINECRAFT_ASSETS_BASE + 'block/' + name + '.png';
+        if (name.startsWith('aether://')) {
+            img.src = AETHER_ASSETS_BASE + name.slice(9) + '.png';
+        } else if (name.includes('/')) {
+            img.src = MINECRAFT_ASSETS_BASE + name + '.png';
+        } else {
+            img.src = MINECRAFT_ASSETS_BASE + 'block/' + name + '.png';
+        }
     });
 }
 
