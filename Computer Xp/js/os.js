@@ -22,6 +22,30 @@ try {     localStorage.setItem('xp_wallpaper', 'none');
 
 /* Window Management, Desktop Icon Dragging, Settings, Sort Menus and Boot Sequence */
 
+function updateTaskbarClock() {
+    let clockEl = document.getElementById('clock');
+    if (!clockEl) return;
+    let now = new Date();
+    let timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (clockEl.innerText !== timeStr) {
+        clockEl.innerText = timeStr;
+    }
+    let dateStr = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    if (clockEl.title !== dateStr) {
+        clockEl.title = dateStr;
+    }
+}
+window.updateTaskbarClock = updateTaskbarClock;
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        updateTaskbarClock();
+        setInterval(updateTaskbarClock, 1000);
+    });
+} else {
+    updateTaskbarClock();
+    setInterval(updateTaskbarClock, 1000);
+}
+
 window.currentZIndex = 1000; 
 let activeWindows = {};
 window.activeWindows = activeWindows;
@@ -1665,42 +1689,6 @@ window.cascadeWindows = function() {
     });
 };
 
-window.tileWindowsHorizontal = function() {
-    let windows = getTilingWindows();
-    if (windows.length === 0) return;
-    let availW = window.innerWidth;
-    let availH = window.innerHeight - 30;
-    let count = windows.length;
-    let hEach = Math.floor(availH / count);
-
-    windows.forEach((win, idx) => {
-        win.classList.remove('maximized');
-        win.style.left = '0px';
-        win.style.top = (idx * hEach) + 'px';
-        win.style.width = availW + 'px';
-        win.style.height = hEach + 'px';
-        window.bringToFront(win);
-    });
-};
-
-window.tileWindowsVertical = function() {
-    let windows = getTilingWindows();
-    if (windows.length === 0) return;
-    let availW = window.innerWidth;
-    let availH = window.innerHeight - 30;
-    let count = windows.length;
-    let wEach = Math.floor(availW / count);
-
-    windows.forEach((win, idx) => {
-        win.classList.remove('maximized');
-        win.style.top = '0px';
-        win.style.left = (idx * wEach) + 'px';
-        win.style.width = wEach + 'px';
-        win.style.height = availH + 'px';
-        window.bringToFront(win);
-    });
-};
-
 window.addEventListener('DOMContentLoaded', () => {
     try {
         let qlPref = localStorage.getItem('xp_quick_launch_enabled');
@@ -1909,201 +1897,6 @@ window.dragIconAbsolute = function(e, elmnt) {
         };
     });
 
-    document.onmouseup = function() {
-        document.onmouseup = null;
-        document.onmousemove = null;
-        if (dragged && typeof window.resolvePath === 'function') {
-            let gridStep = typeof window.getGridStep === 'function' ? window.getGridStep() : 85;
-            originalPositions.forEach(obj => {
-                let p = obj.el.getAttribute('data-path');
-                let n = obj.el.getAttribute('data-name');
-                if(p && n) {
-                    let dir = window.resolvePath(p);
-                    if(dir && dir[n]) {
-                        let finalLeft = parseInt(obj.el.style.left) || obj.startLeft;
-                        let finalTop = parseInt(obj.el.style.top) || obj.startTop;
-                        if (typeof window.gridAlign !== 'undefined' && window.gridAlign) {
-                            dir[n].x = Math.max(10, Math.round((finalLeft - 10) / gridStep) * gridStep + 10);
-                            dir[n].y = Math.max(10, Math.round((finalTop - 10) / gridStep) * gridStep + 10);
-                        } else {
-                            dir[n].x = finalLeft;
-                            dir[n].y = finalTop;
-                        }
-                    }
-                }
-            });
-            if(typeof window.saveFileSystem === 'function') window.saveFileSystem();
-            if(typeof window.renderDesktop === 'function') window.renderDesktop();
-        }
-    };
-    
-    document.onmousemove = function(e) {
-        e = e || window.event;
-        e.preventDefault(); 
-        dragged = true;
-        
-        let deltaX = e.clientX - startMouseX;
-        let deltaY = e.clientY - startMouseY;
-        
-        originalPositions.forEach(obj => {
-            let newLeft = obj.startLeft + deltaX;
-            let newTop = obj.startTop + deltaY;
-            
-            if(newLeft < 0) newLeft = 0;
-            if(newTop < 0) newTop = 0;
-            
-            obj.el.style.left = newLeft + "px";
-            obj.el.style.top = newTop + "px";
-        });
-    };
-
-};
-/* --- DRAG AND DROP INTEGRATION --- */
-window.allowDrop = function(ev) { ev.preventDefault(); };
-
-window.dropDesktop = function(ev) {
-    ev.preventDefault();
-    if (ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files.length > 0) {
-        let dPath = window.getDesktopPath ? window.getDesktopPath() : "C:\\Documents and Settings\\Administrator\\Desktop";
-        window.handleHostFilesImport(ev.dataTransfer.files, dPath, ev.clientX, ev.clientY);
-        return;
-    }
-    
-    let filesToDrop = window.draggedFiles && window.draggedFiles.length > 0 ? window.draggedFiles : (typeof draggedFile !== 'undefined' && draggedFile ? [draggedFile] : []);
-    
-    let hasChanges = false;
-    let dPath = window.getDesktopPath ? window.getDesktopPath() : "C:\\Documents and Settings\\Administrator\\Desktop";
-    let dDir = window.resolvePath(dPath);
-    
-    if (dDir) {
-        let offset = 0;
-        filesToDrop.forEach(f => {
-            if(f.source !== 'desktop') {
-                let sDir = window.resolvePath(f.path);
-                if(sDir && sDir[f.name]) {
-                    dDir[f.name] = sDir[f.name];
-                    dDir[f.name].x = ev.clientX - 20 + offset;
-                    dDir[f.name].y = ev.clientY - 20 + offset;
-                    delete sDir[f.name];
-                    hasChanges = true;
-                    offset += 20;
-                }
-            }
-        });
-        
-        if (hasChanges) {
-            window.saveFileSystem();
-            window.renderDesktop();
-            let uniquePaths = [...new Set(filesToDrop.map(f => f.path))];
-            if(uniquePaths.includes(window.currentPath)) window.renderExplorer(window.currentPath);
-        }
-    }
-};
-
-window.dropExplorer = function(ev) {
-    ev.preventDefault();
-    if (ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files.length > 0) {
-        let dPath = window.currentPath || "C:\\";
-        window.handleHostFilesImport(ev.dataTransfer.files, dPath);
-        return;
-    }
-    
-    let filesToDrop = window.draggedFiles && window.draggedFiles.length > 0 ? window.draggedFiles : (typeof draggedFile !== 'undefined' && draggedFile ? [draggedFile] : []);
-    let hasChanges = false;
-    let dDir = window.resolvePath(window.currentPath);
-    
-    if (dDir) {
-        let processDrop = () => {
-            filesToDrop.forEach(f => {
-                if (f.path !== window.currentPath) {
-                    let sDir = window.resolvePath(f.path);
-                    if(sDir && sDir[f.name]) {
-                        dDir[f.name] = sDir[f.name];
-                        delete dDir[f.name].x; 
-                        delete dDir[f.name].y;
-                        delete sDir[f.name];
-                        hasChanges = true;
-                    }
-                }
-            });
-            if (hasChanges) {
-                if(typeof window.saveFileSystem === 'function') window.saveFileSystem();
-                if(typeof window.renderDesktop === 'function') window.renderDesktop();
-                if(typeof window.renderExplorer === 'function') window.renderExplorer(window.currentPath);
-            }
-        };
-
-        if(typeof window.showExtractionDialog === 'function' && filesToDrop.length > 0) {
-            window.showExtractionDialog(filesToDrop[0].name + (filesToDrop.length > 1 ? ` and ${filesToDrop.length - 1} more` : ''), processDrop);
-        } else {
-            processDrop();
-        }
-    }
-};
-
-/* --- MENUS AND DISPLAY --- */
-window.showContextMenu = function(event, target) {
-    event.preventDefault();
-    window.contextMenuTarget = target;
-    
-    if(target === 'desktop' || target === 'folder') {
-        if(typeof window.xpClearSelection === 'function') window.xpClearSelection(target);
-        window.selectedFileContext = null;
-    }
-    
-    let deskMenu = document.getElementById('context-menu-desktop');
-    let fileMenu = document.getElementById('context-menu-file');
-    let regeditMenu = document.getElementById('context-menu-regedit');
-    if(deskMenu) deskMenu.style.display = 'none';
-    if(fileMenu) fileMenu.style.display = 'none';
-    if(regeditMenu) regeditMenu.style.display = 'none';
-    
-    let pinItem = document.getElementById('menu-item-pin');
-    let unpinItem = document.getElementById('menu-item-unpin');
-    if (pinItem) pinItem.style.display = 'none';
-    if (unpinItem) unpinItem.style.display = 'none';
-
-    if (window.selectedFileContext) {
-        let dir = window.resolvePath(window.selectedFileContext.path);
-        let item = dir ? dir[window.selectedFileContext.name] : null;
-        if (item && (item.type === 'exe' || item.type === 'folder' || window.selectedFileContext.name.toLowerCase().endsWith('.lnk'))) {
-            let identifier = window.selectedFileContext.path === window.getDesktopPath() ? window.selectedFileContext.name : window.selectedFileContext.path + '\\' + window.selectedFileContext.name;
-            let pinned = window.getPinnedApps();
-            let isPinned = pinned.some(p => (typeof p === 'string' && p === identifier) || (p.path === identifier) || (typeof p === 'string' && p === window.selectedFileContext.name));
-            if (isPinned) {
-                if (unpinItem) unpinItem.style.display = 'flex';
-            } else {
-                if (pinItem) pinItem.style.display = 'flex';
-            }
-        }
-    }
-    
-    let menu = window.selectedFileContext ? fileMenu : deskMenu;
-    if(menu) { 
-        menu.style.display = 'flex'; 
-        let mWidth = menu.offsetWidth;
-        let mHeight = menu.offsetHeight;
-        let posX = event.pageX;
-        let posY = event.pageY;
-        
-        // Prevent menu from going off screen or overlapping taskbar
-        if (posX + mWidth > window.innerWidth) posX = window.innerWidth - mWidth;
-        if (posY + mHeight > window.innerHeight - 40) posY = window.innerHeight - mHeight - 40;
-        if(p && n) window.selectedFileContext = {path: p, name: n};
-        window.draggedFiles = window.selectedFileContext ? [window.selectedFileContext] : [];
-    }
-
-    let selectedEls = Array.from(document.querySelectorAll('.desktop-icon.selected'));
-    
-    // Store original style left/top
-    let originalPositions = selectedEls.map(el => {
-        return {
-            el: el,
-            startLeft: parseInt(el.style.left) || el.offsetLeft,
-            startTop: parseInt(el.style.top) || el.offsetTop
-        };
-    });
-
     document.onmouseup = function(e) {
         document.onmouseup = null;
         document.onmousemove = null;
@@ -2137,7 +1930,7 @@ window.showContextMenu = function(event, target) {
             } else if (!handledAsDrop && dropTarget) {
                  let explorerContent = dropTarget.closest('.explorer-content');
                  if (explorerContent) {
-                      let folderPath = explorerContent.getAttribute('data-path');
+                      let folderPath = explorerContent.getAttribute('data-path') || window.currentPath;
                       if (folderPath && typeof window.dropIntoFolderIcon === 'function') {
                            window.dropIntoFolderIcon({preventDefault: ()=>{}, stopPropagation: ()=>{}}, folderPath);
                            handledAsDrop = true;
@@ -2219,7 +2012,6 @@ window.showContextMenu = function(event, target) {
             obj.el.style.top = newTop + "px";
         });
     };
-
 };
 /* --- DRAG AND DROP INTEGRATION --- */
 window.allowDrop = function(ev) { ev.preventDefault(); };
@@ -2315,9 +2107,11 @@ window.showContextMenu = function(event, target) {
     }
     
     let deskMenu = document.getElementById('context-menu-desktop');
+    let folderMenu = document.getElementById('context-menu-folder');
     let fileMenu = document.getElementById('context-menu-file');
     let regeditMenu = document.getElementById('context-menu-regedit');
     if(deskMenu) deskMenu.style.display = 'none';
+    if(folderMenu) folderMenu.style.display = 'none';
     if(fileMenu) fileMenu.style.display = 'none';
     if(regeditMenu) regeditMenu.style.display = 'none';
     
@@ -2341,11 +2135,11 @@ window.showContextMenu = function(event, target) {
         }
     }
     
-    let menu = window.selectedFileContext ? fileMenu : deskMenu;
+    let menu = window.selectedFileContext ? fileMenu : (target === 'folder' ? (folderMenu || deskMenu) : deskMenu);
     if(menu) { 
         menu.style.display = 'flex'; 
-        let mWidth = menu.offsetWidth;
-        let mHeight = menu.offsetHeight;
+        let mWidth = menu.offsetWidth || 160;
+        let mHeight = menu.offsetHeight || 150;
         let posX = event.pageX;
         let posY = event.pageY;
         

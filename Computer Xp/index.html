@@ -406,14 +406,22 @@
     
     <!-- Context Menu for Folder/Explorer -->
     <div id="context-menu-folder" class="context-menu-container"
-        style="display:none; position:absolute; z-index:9999; background:#fff; border:1px solid #ACA899; box-shadow:2px 2px 5px rgba(0,0,0,0.2); width:150px; flex-direction:column; padding:2px; font-family:Tahoma; font-size:11px;">
-        <div class="context-item" style="color:#aaa;">View</div>
-        <div class="context-item" style="color:#aaa;">&#x25A1;</div>
+        style="display:none; position:absolute; z-index:9999; background:#fff; border:1px solid #ACA899; box-shadow:2px 2px 5px rgba(0,0,0,0.2); width:160px; flex-direction:column; padding:2px; font-family:Tahoma; font-size:11px;">
         <div class="context-item" onclick="document.getElementById('context-menu-folder').style.display='none'; if(window.currentPath) window.renderExplorer(window.currentPath);">Refresh</div>
-        <div class="app-menu-divider"></div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="document.getElementById('context-menu-folder').style.display='none'; triggerPaste();">Paste (Ctrl+V)</div>
+        <div class="context-divider"></div>
+        <div class="context-item has-submenu">
+            New <span style="font-size: 8px; float:right;">&#x25B6;</span>
+            <div class="context-submenu">
+                <div class="context-item" onclick="document.getElementById('context-menu-folder').style.display='none'; createNew('folder')">Folder</div>
+                <div class="context-item" onclick="document.getElementById('context-menu-folder').style.display='none'; createNew('txt')">Text Document</div>
+            </div>
+        </div>
+        <div class="context-divider"></div>
         <div class="context-item" id="context-item-hidden-files" onclick="document.getElementById('context-menu-folder').style.display='none'; if(typeof window.toggleHiddenFiles === 'function') window.toggleHiddenFiles();">Show Hidden Files</div>
-        <div class="app-menu-divider"></div>
-        <div class="context-item" style="color:#aaa;">Properties</div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="document.getElementById('context-menu-folder').style.display='none'; if(typeof showFileProperties==='function') showFileProperties(); else openSettings();">Properties</div>
     </div>
     <div id="context-menu-file" class="context-menu-container"
         style="display:none; flex-direction:column; position:absolute; z-index:9999; background:#fff; border:1px solid #ACA899; box-shadow:2px 2px 5px rgba(0,0,0,0.2); padding:2px; min-width:150px; font-family:Tahoma; font-size:11px;">
@@ -493,8 +501,6 @@
         </div>
         <div class="context-divider"></div>
         <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof window.cascadeWindows==='function') window.cascadeWindows();">Cascade Windows</div>
-        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof window.tileWindowsHorizontal==='function') window.tileWindowsHorizontal();">Tile Windows Horizontally</div>
-        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof window.tileWindowsVertical==='function') window.tileWindowsVertical();">Tile Windows Vertically</div>
         <div class="context-item" id="taskbar-menu-show-desktop" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof window.toggleShowDesktop==='function') window.toggleShowDesktop();">Show the Desktop</div>
         <div class="context-divider"></div>
         <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof openProgram==='function') openProgram('taskmgr-window');">Task Manager</div>
@@ -2490,7 +2496,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
                 style="width:16px; height:16px; cursor:pointer; margin-right:8px;"
                 onclick="if(typeof openProgram === 'function') openProgram('defender-window')"
                 title="Windows Defender" onerror="this.style.display='none'">
-            <span id="clock" style="cursor:pointer;" ondblclick="if(typeof openDateTimeSettings==='function') openDateTimeSettings();" title=""></span>
+            <span id="clock" style="cursor:pointer; color:#ffffff; font-family:Tahoma,sans-serif; font-size:11px; padding:0 4px; display:inline-block; user-select:none; white-space:nowrap;" ondblclick="if(typeof openDateTimeSettings==='function') openDateTimeSettings();" title="">12:00 PM</span>
         </div>
     </div>
 
@@ -3880,7 +3886,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
     <script src="js/email.js?v=1781096102249"></script>
     <script src="js/help.js?v=2781525939149"></script>
     <script src="js/clipbook.js"></script>
-    <script src="js/filesystem.js?v=13"></script>
+    <script src="js/filesystem.js?v=14"></script>
     <script src="js/minesweeper.js"></script>
     <script src="js/solitaire.js"></script>
     <script src="js/checkers.js"></script>
@@ -3898,7 +3904,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
     <script src="js/cmd.js?v=12"></script>
     <script src="js/accounts.js"></script>
     <script src="js/unsaved.js?v=8"></script>
-    <script src="js/os.js?v=13"></script>
+    <script src="js/os.js?v=14"></script>
     <script src="js/store.js?v=12"></script>
     <script src="js/pinball.js"></script>
     <script src="js/photon.js"></script>

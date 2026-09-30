@@ -1044,8 +1044,15 @@ function executeFile(name, item, currentDir = "") {
     }
 
     if (item.type === 'folder' || (item.type === 'file' && item.extension === 'zip')) {
-        navHistory.push(window.currentPath);
-        window.renderExplorer(window.currentPath + "\\" + name);
+        let basePath = currentDir || window.currentPath || (window.getDesktopPath ? window.getDesktopPath() : "C:\\");
+        let newPath;
+        if (basePath === "C:\\" || basePath === "C:") {
+            newPath = "C:\\" + name;
+        } else {
+            newPath = basePath.replace(/\\+$/, "") + "\\" + name;
+        }
+        if (window.currentPath) navHistory.push(window.currentPath);
+        window.renderExplorer(newPath);
         if (typeof window.openProgram === 'function') window.openProgram('folder-window');
         if (typeof window.playSound === 'function') window.playSound('click');
     }
@@ -1165,58 +1172,89 @@ window.explorerGoBack = function () {
 }
 
 window.explorerGoUp = function () {
-    let parts = window.currentPath.split('\\');
+    if (!window.currentPath) return;
+    let parts = window.currentPath.split('\\').filter(p => p !== '');
     if (parts.length > 1) {
         parts.pop();
+        let parentPath = parts.join('\\') + (parts.length === 1 ? '\\' : '');
         navHistory.push(window.currentPath);
-        window.renderExplorer(parts.join('\\') + (parts.length === 1 ? "\\" : ""));
+        window.renderExplorer(parentPath);
         if (typeof window.playSound === 'function') window.playSound('click');
     }
-}
+};
 
 window.createNew = async function (type) {
-    let context = window.contextMenuTarget === 'desktop' ? (window.getDesktopPath ? window.getDesktopPath() : "C:\\Documents and Settings\\Administrator\\Desktop") : window.currentPath;
+    let context = window.contextMenuTarget === 'desktop' ? (window.getDesktopPath ? window.getDesktopPath() : "C:\\Documents and Settings\\Administrator\\Desktop") : (window.currentPath || (window.getDesktopPath ? window.getDesktopPath() : "C:\\"));
     let dir = window.resolvePath(context);
     if (!dir) return;
 
     if (type === 'folder') {
-        let name = await window.xpDialog("New Folder", "New Folder Name:", "prompt", "New Folder");
-        if (name && !dir[name]) {
-            dir[name] = { type: "folder", contents: {} };
-            window.saveFileSystem();
+        let defaultName = "New Folder";
+        if (dir[defaultName]) {
+            let i = 2;
+            while (dir[`New Folder (${i})`]) i++;
+            defaultName = `New Folder (${i})`;
+        }
+        let name = await window.xpDialog("New Folder", "New Folder Name:", "prompt", defaultName);
+        if (name) {
+            name = name.trim();
+            if (name) {
+                if (dir[name]) {
+                    let base = name;
+                    let i = 2;
+                    while (dir[`${base} (${i})`]) i++;
+                    name = `${base} (${i})`;
+                }
+                dir[name] = { type: "folder", contents: {} };
+                window.saveFileSystem();
+            }
         }
     } else if (type === 'txt') {
-        let name = await window.xpDialog("New Document", "New Text Document Name:", "prompt", "New Text Document.txt");
+        let defaultName = "New Text Document.txt";
+        if (dir[defaultName]) {
+            let i = 2;
+            while (dir[`New Text Document (${i}).txt`]) i++;
+            defaultName = `New Text Document (${i}).txt`;
+        }
+        let name = await window.xpDialog("New Document", "New Text Document Name:", "prompt", defaultName);
         if (name) {
-            if (!name.toLowerCase().endsWith('.txt')) name += '.txt';
-            if (!dir[name]) {
+            name = name.trim();
+            if (name) {
+                if (!name.toLowerCase().endsWith('.txt')) name += '.txt';
+                if (dir[name]) {
+                    let base = name.replace(/\.txt$/i, '');
+                    let i = 2;
+                    while (dir[`${base} (${i}).txt`]) i++;
+                    name = `${base} (${i}).txt`;
+                }
                 dir[name] = { type: "file", extension: "txt", content: "", icon: "txt" };
                 window.saveFileSystem();
             }
         }
     }
 
-    if (context.includes("Desktop")) window.renderDesktop();
+    if (context.includes("Desktop") || (window.getDesktopPath && context === window.getDesktopPath())) window.renderDesktop();
     if (context === window.currentPath) window.renderExplorer(context);
-}
+};
 
 function getSelectedFilesInfo() {
     let isDesktop = false;
-    let activeWinTitle = document.querySelector('.title-bar:not(.inactive)');
-    let activeWin = activeWinTitle ? activeWinTitle.closest('.window') : null;
-    if (!activeWin || activeWin.style.display === 'none') {
-        isDesktop = true;
-    }
-    
     let menuOpen = (document.getElementById('context-menu-desktop') && document.getElementById('context-menu-desktop').style.display === 'flex') || 
                    (document.getElementById('context-menu-folder') && document.getElementById('context-menu-folder').style.display === 'flex') ||
                    (document.getElementById('context-menu-file') && document.getElementById('context-menu-file').style.display === 'flex');
                    
     if (menuOpen) {
         isDesktop = window.contextMenuTarget === 'desktop';
+    } else {
+        let activeWinTitle = document.querySelector('.title-bar:not(.inactive)');
+        let activeWin = activeWinTitle ? activeWinTitle.closest('.window') : null;
+        if (!activeWin || activeWin.style.display === 'none' || activeWin.id !== 'folder-window') {
+            isDesktop = true;
+        }
     }
 
-    let context = isDesktop ? "C:\\Documents and Settings\\" + (window.currentAccount || 'Administrator') + "\\Desktop" : window.currentPath;
+    let defaultDesk = window.getDesktopPath ? window.getDesktopPath() : "C:\\Documents and Settings\\" + (window.currentAccount || 'Administrator') + "\\Desktop";
+    let context = isDesktop ? defaultDesk : (window.currentPath || defaultDesk);
     let selector = isDesktop ? '.desktop-icon.selected' : '#folder-window .file-icon.selected';
     
     let els = document.querySelectorAll(selector);
@@ -1288,21 +1326,22 @@ window.triggerPaste = function () {
     if (!window.fsClipboard || !window.fsClipboard.items || window.fsClipboard.items.length === 0) return;
     
     let isDesktop = false;
-    let activeWinTitle = document.querySelector('.title-bar:not(.inactive)');
-    let activeWin = activeWinTitle ? activeWinTitle.closest('.window') : null;
-    if (!activeWin || activeWin.style.display === 'none') {
-        isDesktop = true;
-    }
-    
     let menuOpen = (document.getElementById('context-menu-desktop') && document.getElementById('context-menu-desktop').style.display === 'flex') || 
                    (document.getElementById('context-menu-folder') && document.getElementById('context-menu-folder').style.display === 'flex') ||
                    (document.getElementById('context-menu-file') && document.getElementById('context-menu-file').style.display === 'flex');
                    
     if (menuOpen) {
         isDesktop = window.contextMenuTarget === 'desktop';
+    } else {
+        let activeWinTitle = document.querySelector('.title-bar:not(.inactive)');
+        let activeWin = activeWinTitle ? activeWinTitle.closest('.window') : null;
+        if (!activeWin || activeWin.style.display === 'none' || activeWin.id !== 'folder-window') {
+            isDesktop = true;
+        }
     }
 
-    let targetPath = isDesktop ? "C:\\Documents and Settings\\" + (window.currentAccount || 'Administrator') + "\\Desktop" : window.currentPath;
+    let defaultDesk = window.getDesktopPath ? window.getDesktopPath() : "C:\\Documents and Settings\\" + (window.currentAccount || 'Administrator') + "\\Desktop";
+    let targetPath = isDesktop ? defaultDesk : (window.currentPath || defaultDesk);
     let dir = window.resolvePath(targetPath);
 
     if (dir) {        window.fsClipboard.items.forEach(item => {

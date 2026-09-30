@@ -191,6 +191,19 @@ body.theme-classic button:active { border-color: #404040 #fff #fff #404040; }
     font-size: 11px; box-shadow: inset 1px 0 2px rgba(255,255,255,0.3);
 }
 
+#clock {
+    color: #ffffff;
+    font-family: Tahoma, sans-serif;
+    font-size: 11px;
+    font-weight: normal;
+    padding: 0 4px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    display: inline-block;
+    letter-spacing: 0.3px;
+}
+
 /* Start Menu */
 #start-menu {
     position: fixed; bottom: 30px; left: 0; width: 380px; background-color: #fff; border: 1px solid #003B91;
