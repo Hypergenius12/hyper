@@ -363,24 +363,69 @@ function fixPathsForUser(username) {
         }, 500);
     }
     // Inject WINDOWS files if missing
-            if(!window.fs["C:"].contents["WINDOWS"]) {
-                window.fs["C:"].contents["WINDOWS"] = { type: "folder", contents: { "system32": { type: "folder", contents: {} }, "Fonts": { type: "folder", contents: {} } } };
+            let winKey = Object.keys(window.fs["C:"].contents).find(k => k.toLowerCase() === 'windows');
+            if(!winKey) {
+                winKey = "WINDOWS";
+                window.fs["C:"].contents[winKey] = { type: "folder", contents: {} };
             }
-            let winDir = window.fs["C:"].contents["WINDOWS"].contents;
+            let winDir = window.fs["C:"].contents[winKey].contents;
             if(!winDir["system32"]) winDir["system32"] = { type: "folder", contents: {} };
+            if(!winDir["Fonts"]) winDir["Fonts"] = { type: "folder", icon: "fonts", contents: {} };
             let sys32 = winDir["system32"].contents;
             
-            winDir['regedit.exe'] = { type: 'exe', app: 'regedit-window', icon: 'regedit', hidden: true, system: true };
-            winDir['win.ini'] = { type: 'file', extension: 'ini', icon: 'txt', hidden: true, system: true, content: '[windows]\nrun=\nload=' };
+            winDir['regedit.exe'] = { type: 'exe', app: 'regedit-window', icon: 'regedit' };
+            winDir['win.ini'] = { type: 'file', extension: 'ini', icon: 'txt', content: '[windows]\nrun=\nload=' };
             
-            sys32['explorer.exe'] = { type: 'exe', app: 'folder-window', icon: 'folder', hidden: true, system: true };
-            sys32['run.exe'] = { type: 'exe', app: 'run-window', icon: 'run', hidden: true, system: true };
-            sys32['cmd.exe'] = { type: 'exe', app: 'cmd-window', icon: 'cmd', hidden: true, system: true };
-            sys32['notepad.exe'] = { type: 'exe', app: 'notepad-window', icon: 'notepad', hidden: true, system: true };
-            sys32['kernel32.dll'] = { type: 'file', extension: 'dll', icon: 'dll', hidden: true, system: true, content: 'DLL Binary Data' };
-            sys32['user32.dll'] = { type: 'file', extension: 'dll', icon: 'dll', hidden: true, system: true, content: 'DLL Binary Data' };
-            sys32['hal.dll'] = { type: 'file', extension: 'dll', icon: 'dll', hidden: true, system: true, content: 'DLL Binary Data' };
-            sys32['ntoskrnl.exe'] = { type: 'file', extension: 'exe', icon: 'exe', hidden: true, system: true, content: 'Kernel Binary' };
+            sys32['explorer.exe'] = { type: 'exe', app: 'folder-window', icon: 'computer' };
+            sys32['run.exe'] = { type: 'exe', app: 'run-window', icon: 'run' };
+            sys32['cmd.exe'] = { type: 'exe', app: 'cmd-window', icon: 'cmd' };
+            sys32['notepad.exe'] = { type: 'exe', app: 'notepad-window', icon: 'txt' };
+            sys32['calc.exe'] = { type: 'exe', app: 'calc-window', icon: 'calc' };
+            sys32['mspaint.exe'] = { type: 'exe', app: 'paint-window', icon: 'paint' };
+            sys32['taskmgr.exe'] = { type: 'exe', app: 'taskmgr-window', icon: 'taskmgr' };
+            sys32['regedit.exe'] = { type: 'exe', app: 'regedit-window', icon: 'regedit' };
+            sys32['sndrec32.exe'] = { type: 'exe', app: 'soundrecorder-window', icon: 'soundrecorder' };
+            sys32['cleanmgr.exe'] = { type: 'exe', app: 'settings-window', icon: 'settings' };
+            sys32['sol.exe'] = { type: 'exe', app: 'solitaire-window', icon: 'solitaire' };
+            sys32['winmine.exe'] = { type: 'exe', app: 'minesweeper-window', icon: 'mine' };
+            sys32['pinball.exe'] = { type: 'exe', app: 'pinball-window', icon: 'pinball' };
+            sys32['kernel32.dll'] = { type: 'file', extension: 'dll', icon: 'exe', content: 'MZ...' };
+            sys32['user32.dll'] = { type: 'file', extension: 'dll', icon: 'exe', content: 'MZ...' };
+            sys32['gdi32.dll'] = { type: 'file', extension: 'dll', icon: 'exe', content: 'MZ...' };
+            sys32['shell32.dll'] = { type: 'file', extension: 'dll', icon: 'exe', content: 'MZ...' };
+            sys32['win32k.sys'] = { type: 'file', extension: 'sys', icon: 'exe', content: '...' };
+
+            // Ensure Web & Wallpaper
+            if (!winDir["Web"] || !winDir["Web"].contents) winDir["Web"] = { type: "folder", icon: "folder", contents: {} };
+            if (!winDir["Web"].contents["Wallpaper"] || !winDir["Web"].contents["Wallpaper"].contents) {
+                winDir["Web"].contents["Wallpaper"] = { type: "folder", icon: "folder", contents: {} };
+            }
+            let wallDir = winDir["Web"].contents["Wallpaper"].contents;
+            let wallpapers = ["Bliss.bmp", "Autumn.jpg", "Azul.jpg", "Crystal.jpg", "Follow.jpg", "Friend.jpg", "Home.jpg", "Moon flower.jpg", "Peace.jpg", "Purple flower.jpg", "Radiance.jpg", "Red moon desert.jpg", "Ripple.jpg", "Stonehenge.jpg", "Tulips.jpg", "Wind.jpg"];
+            wallpapers.forEach(w => {
+                if (!wallDir[w]) {
+                    let ext = w.split('.').pop();
+                    wallDir[w] = { type: "file", extension: ext, content: "Windows XP Icons/bliss_bg.png", icon: "jpg" };
+                }
+            });
+
+            // Ensure Media (Sounds)
+            if (!winDir["Media"] || !winDir["Media"].contents) winDir["Media"] = { type: "folder", icon: "folder", contents: {} };
+            let mediaDir = winDir["Media"].contents;
+            let sounds = [
+                "Windows XP Startup.wav", "Windows XP Shutdown.wav", "Windows XP Logon Sound.wav", "Windows XP Logoff Sound.wav",
+                "Windows XP Error.wav", "Windows XP Critical Stop.wav", "Windows XP Exclamation.wav", "Windows XP Ding.wav",
+                "Windows XP Notify.wav", "Windows XP Balloon.wav", "Windows XP Recycle.wav", "Windows XP Minimize.wav",
+                "Windows XP Restore.wav", "Windows XP Menu Command.wav", "Windows XP Print complete.wav", "Windows XP Hardware Insert.wav",
+                "Windows XP Hardware Remove.wav", "Windows XP Hardware Fail.wav", "Windows XP Pop-up Blocked.wav", "Windows XP Battery Low.wav",
+                "Windows XP Battery Critical.wav", "Windows Navigation Start.wav", "Windows Information Bar.wav", "Windows Feed Discovered.wav",
+                "chimes.wav", "chord.wav", "ding.wav", "notify.wav", "recycle.wav", "ringin.wav", "ringout.wav", "start.wav", "tada.wav"
+            ];
+            sounds.forEach(s => {
+                if (!mediaDir[s]) {
+                    mediaDir[s] = { type: "file", extension: "wav", content: "XP sounds/" + s, icon: "wav" };
+                }
+            });
 
             // Ensure My Documents exists
             if(!ds[username].contents["My Documents"]) {

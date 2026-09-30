@@ -735,13 +735,15 @@ window.findStoreApp = function(query) {
     );
 };
 
+const DEFAULT_UNINSTALLED_APPS = ['checkers', 'reversi', 'hearts', 'spades', 'freecell', 'messenger', 'excel', 'remotedesktop', 'xptour'];
+
 // Storage for uninstalled apps
 window.getUninstalledApps = function() {
     try {
         let saved = localStorage.getItem('xp_uninstalled_apps');
-        if (saved) return JSON.parse(saved);
+        if (saved !== null) return JSON.parse(saved);
     } catch(e) {}
-    return [];
+    return [...DEFAULT_UNINSTALLED_APPS];
 };
 
 window.setUninstalledApps = function(list) {
@@ -759,7 +761,7 @@ window.isAppInstalled = function(app) {
 
     // Core non-removable system apps
     if (sApp && sApp.systemApp) return true;
-    if (appName === "Windows Explorer" || appName === "Control Panel" || appName === "Command Prompt" || appName === "Task Manager") return true;
+    if (appName === "Windows Explorer" || appName === "Control Panel" || appName === "Command Prompt" || appName === "Task Manager" || appName === "Registry Editor") return true;
 
     // Check uninstalled list
     let uninstalled = window.getUninstalledApps();
@@ -1105,8 +1107,8 @@ window.renderStore = function() {
         if (bannerSubtitle) bannerSubtitle.innerText = 'Find, review, and install certified software for Windows XP';
     } else {
         if (bannerIcon) bannerIcon.src = 'Windows XP Icons/Setup.png';
-        if (bannerTitle) bannerTitle.innerText = 'Add or Remove Programs';
-        if (bannerSubtitle) bannerSubtitle.innerText = 'Currently installed programs and software updates on this computer';
+        if (bannerTitle) bannerTitle.innerText = 'Currently Installed Programs';
+        if (bannerSubtitle) bannerSubtitle.innerText = 'To change a program or remove it from your computer, click Change/Remove.';
     }
 
     container.innerHTML = '';
@@ -1115,9 +1117,9 @@ window.renderStore = function() {
     STORE_APPS.forEach(app => {
         let isInst = window.isAppInstalled(app);
         if (storeCurrentTab === 'all') {
-            toShow.push(app); // Catalog shows all programs
-        } else if (storeCurrentTab === 'installed' && isInst) {
-            toShow.push(app);
+            if (!isInst) toShow.push(app); // Page 1: only uninstalled apps ready to install
+        } else if (storeCurrentTab === 'installed') {
+            if (isInst) toShow.push(app); // Page 2: installed apps to manage or remove
         }
     });
 

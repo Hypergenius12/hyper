@@ -333,28 +333,103 @@ var fs = {
                 }
             },
             "WINDOWS": {
-                  type: "folder",
-                  contents: {
-                      "Fonts": { type: "folder", icon: "fonts", contents: {
-                              "Arial.ttf": { type: "file", icon: "ttf" },
-                              "Tahoma.ttf": { type: "file", icon: "ttf" },
-                              "Comic Sans MS.ttf": { type: "file", icon: "ttf" },
-                              "Times New Roman.ttf": { type: "file", icon: "ttf" }
-                          }
-                      },
-                      "system32": {
+                type: "folder",
+                contents: {
+                    "Fonts": {
+                        type: "folder", icon: "fonts", contents: {
+                            "Arial.ttf": { type: "file", icon: "ttf" },
+                            "Tahoma.ttf": { type: "file", icon: "ttf" },
+                            "Comic Sans MS.ttf": { type: "file", icon: "ttf" },
+                            "Times New Roman.ttf": { type: "file", icon: "ttf" }
+                        }
+                    },
+                    "system32": {
                         type: "folder",
                         contents: {
                             "kernel32.dll": { type: "file", extension: "dll", content: "MZ...", icon: "exe" },
+                            "user32.dll": { type: "file", extension: "dll", content: "MZ...", icon: "exe" },
+                            "gdi32.dll": { type: "file", extension: "dll", content: "MZ...", icon: "exe" },
+                            "shell32.dll": { type: "file", extension: "dll", content: "MZ...", icon: "exe" },
                             "win32k.sys": { type: "file", extension: "sys", content: "...", icon: "exe" },
                             "notepad.exe": { type: "exe", app: "notepad-window", icon: "txt" },
-                            "explorer.exe": { type: "exe", app: "folder-window", icon: "computer" }
+                            "calc.exe": { type: "exe", app: "calc-window", icon: "calc" },
+                            "mspaint.exe": { type: "exe", app: "paint-window", icon: "paint" },
+                            "cmd.exe": { type: "exe", app: "cmd-window", icon: "cmd" },
+                            "taskmgr.exe": { type: "exe", app: "taskmgr-window", icon: "taskmgr" },
+                            "regedit.exe": { type: "exe", app: "regedit-window", icon: "regedit" },
+                            "sndrec32.exe": { type: "exe", app: "soundrecorder-window", icon: "soundrecorder" },
+                            "explorer.exe": { type: "exe", app: "folder-window", icon: "computer" },
+                            "cleanmgr.exe": { type: "exe", app: "settings-window", icon: "settings" },
+                            "sol.exe": { type: "exe", app: "solitaire-window", icon: "solitaire" },
+                            "winmine.exe": { type: "exe", app: "minesweeper-window", icon: "mine" },
+                            "pinball.exe": { type: "exe", app: "pinball-window", icon: "pinball" }
+                        }
+                    },
+                    "Web": {
+                        type: "folder",
+                        icon: "folder",
+                        contents: {
+                            "Wallpaper": {
+                                type: "folder",
+                                icon: "folder",
+                                contents: {
+                                    "Bliss.bmp": { type: "file", extension: "bmp", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Autumn.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Azul.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Crystal.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Follow.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Friend.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Home.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Moon flower.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Peace.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Purple flower.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Radiance.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Red moon desert.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Ripple.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Stonehenge.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Tulips.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
+                                    "Wind.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" }
+                                }
+                            }
                         }
                     },
                     "Media": {
                         type: "folder",
+                        icon: "folder",
                         contents: {
-                            "tada.wav": { type: "file", extension: "wav", content: "RIFF...", icon: "wav" }
+                            "Windows XP Startup.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Startup.wav", icon: "wav" },
+                            "Windows XP Shutdown.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Shutdown.wav", icon: "wav" },
+                            "Windows XP Logon Sound.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Logon Sound.wav", icon: "wav" },
+                            "Windows XP Logoff Sound.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Logoff Sound.wav", icon: "wav" },
+                            "Windows XP Error.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Error.wav", icon: "wav" },
+                            "Windows XP Critical Stop.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Critical Stop.wav", icon: "wav" },
+                            "Windows XP Exclamation.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Exclamation.wav", icon: "wav" },
+                            "Windows XP Ding.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Ding.wav", icon: "wav" },
+                            "Windows XP Notify.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Notify.wav", icon: "wav" },
+                            "Windows XP Balloon.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Balloon.wav", icon: "wav" },
+                            "Windows XP Recycle.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Recycle.wav", icon: "wav" },
+                            "Windows XP Minimize.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Minimize.wav", icon: "wav" },
+                            "Windows XP Restore.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Restore.wav", icon: "wav" },
+                            "Windows XP Menu Command.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Menu Command.wav", icon: "wav" },
+                            "Windows XP Print complete.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Print complete.wav", icon: "wav" },
+                            "Windows XP Hardware Insert.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Hardware Insert.wav", icon: "wav" },
+                            "Windows XP Hardware Remove.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Hardware Remove.wav", icon: "wav" },
+                            "Windows XP Hardware Fail.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Hardware Fail.wav", icon: "wav" },
+                            "Windows XP Pop-up Blocked.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Pop-up Blocked.wav", icon: "wav" },
+                            "Windows XP Battery Low.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Battery Low.wav", icon: "wav" },
+                            "Windows XP Battery Critical.wav": { type: "file", extension: "wav", content: "XP sounds/Windows XP Battery Critical.wav", icon: "wav" },
+                            "Windows Navigation Start.wav": { type: "file", extension: "wav", content: "XP sounds/Windows Navigation Start.wav", icon: "wav" },
+                            "Windows Information Bar.wav": { type: "file", extension: "wav", content: "XP sounds/Windows Information Bar.wav", icon: "wav" },
+                            "Windows Feed Discovered.wav": { type: "file", extension: "wav", content: "XP sounds/Windows Feed Discovered.wav", icon: "wav" },
+                            "chimes.wav": { type: "file", extension: "wav", content: "XP sounds/chimes.wav", icon: "wav" },
+                            "chord.wav": { type: "file", extension: "wav", content: "XP sounds/chord.wav", icon: "wav" },
+                            "ding.wav": { type: "file", extension: "wav", content: "XP sounds/ding.wav", icon: "wav" },
+                            "notify.wav": { type: "file", extension: "wav", content: "XP sounds/notify.wav", icon: "wav" },
+                            "recycle.wav": { type: "file", extension: "wav", content: "XP sounds/recycle.wav", icon: "wav" },
+                            "ringin.wav": { type: "file", extension: "wav", content: "XP sounds/ringin.wav", icon: "wav" },
+                            "ringout.wav": { type: "file", extension: "wav", content: "XP sounds/ringout.wav", icon: "wav" },
+                            "start.wav": { type: "file", extension: "wav", content: "XP sounds/start.wav", icon: "wav" },
+                            "tada.wav": { type: "file", extension: "wav", content: "XP sounds/tada.wav", icon: "wav" }
                         }
                     }
                 }
@@ -492,23 +567,111 @@ function loadFileSystem() {
                 } catch(e) {}
                 } catch(pe) { /* ignore */ }
 
-                // Auto-migrate Fonts
+                // Auto-migrate System folders (Fonts, system32, Web/Wallpaper, Media)
                 try {
-                    let winKey = Object.keys(fs["C:"].contents).find(k => k.toLowerCase() === 'windows'); let winDir = winKey ? fs["C:"].contents[winKey] : null;
-                    if (winDir && winDir.contents) {
-                        if (!winDir.contents["Fonts"]) {
-                            winDir.contents["Fonts"] = { type: "folder", icon: "fonts", contents: {} };
-                        } else {
-                            winDir.contents["Fonts"].icon = "fonts";
-                        }
-                        let fontsDir = winDir.contents["Fonts"].contents;
-                        let expectedFonts = ["Arial.ttf", "Tahoma.ttf", "Comic Sans MS.ttf", "Times New Roman.ttf", "Courier New.ttf", "Trebuchet MS.ttf", "Verdana.ttf", "Impact.ttf", "Georgia.ttf", "Lucida Console.ttf"];
-                        expectedFonts.forEach(font => {
-                            if (!fontsDir[font]) {
-                                fontsDir[font] = { type: "file", icon: "ttf" };
-                            }
-                        });
+                    let winKey = Object.keys(fs["C:"].contents).find(k => k.toLowerCase() === 'windows');
+                    if (!winKey) {
+                        winKey = "WINDOWS";
+                        fs["C:"].contents[winKey] = { type: "folder", contents: {} };
                     }
+                    let winDir = fs["C:"].contents[winKey];
+                    if (!winDir.contents) winDir.contents = {};
+
+                    // Fonts
+                    if (!winDir.contents["Fonts"]) {
+                        winDir.contents["Fonts"] = { type: "folder", icon: "fonts", contents: {} };
+                    } else {
+                        winDir.contents["Fonts"].icon = "fonts";
+                    }
+                    let fontsDir = winDir.contents["Fonts"].contents;
+                    let expectedFonts = ["Arial.ttf", "Tahoma.ttf", "Comic Sans MS.ttf", "Times New Roman.ttf", "Courier New.ttf", "Trebuchet MS.ttf", "Verdana.ttf", "Impact.ttf", "Georgia.ttf", "Lucida Console.ttf"];
+                    expectedFonts.forEach(font => {
+                        if (!fontsDir[font]) {
+                            fontsDir[font] = { type: "file", icon: "ttf" };
+                        }
+                    });
+
+                    // system32 executables
+                    let sys32Key = Object.keys(winDir.contents).find(k => k.toLowerCase() === 'system32');
+                    if (!sys32Key) {
+                        sys32Key = "system32";
+                        winDir.contents[sys32Key] = { type: "folder", contents: {} };
+                    }
+                    let sys32Dir = winDir.contents[sys32Key].contents;
+                    let sysExes = {
+                        "kernel32.dll": { type: "file", extension: "dll", content: "MZ...", icon: "exe" },
+                        "user32.dll": { type: "file", extension: "dll", content: "MZ...", icon: "exe" },
+                        "gdi32.dll": { type: "file", extension: "dll", content: "MZ...", icon: "exe" },
+                        "shell32.dll": { type: "file", extension: "dll", content: "MZ...", icon: "exe" },
+                        "win32k.sys": { type: "file", extension: "sys", content: "...", icon: "exe" },
+                        "notepad.exe": { type: "exe", app: "notepad-window", icon: "txt" },
+                        "calc.exe": { type: "exe", app: "calc-window", icon: "calc" },
+                        "mspaint.exe": { type: "exe", app: "paint-window", icon: "paint" },
+                        "cmd.exe": { type: "exe", app: "cmd-window", icon: "cmd" },
+                        "taskmgr.exe": { type: "exe", app: "taskmgr-window", icon: "taskmgr" },
+                        "regedit.exe": { type: "exe", app: "regedit-window", icon: "regedit" },
+                        "sndrec32.exe": { type: "exe", app: "soundrecorder-window", icon: "soundrecorder" },
+                        "explorer.exe": { type: "exe", app: "folder-window", icon: "computer" },
+                        "cleanmgr.exe": { type: "exe", app: "settings-window", icon: "settings" },
+                        "sol.exe": { type: "exe", app: "solitaire-window", icon: "solitaire" },
+                        "winmine.exe": { type: "exe", app: "minesweeper-window", icon: "mine" },
+                        "pinball.exe": { type: "exe", app: "pinball-window", icon: "pinball" }
+                    };
+                    for (let se in sysExes) {
+                        if (!sys32Dir[se]) sys32Dir[se] = sysExes[se];
+                    }
+
+                    // Web & Wallpaper
+                    if (!winDir.contents["Web"] || !winDir.contents["Web"].contents) {
+                        winDir.contents["Web"] = { type: "folder", icon: "folder", contents: {} };
+                    }
+                    if (!winDir.contents["Web"].contents["Wallpaper"] || !winDir.contents["Web"].contents["Wallpaper"].contents) {
+                        winDir.contents["Web"].contents["Wallpaper"] = { type: "folder", icon: "folder", contents: {} };
+                    }
+                    let wallDir = winDir.contents["Web"].contents["Wallpaper"].contents;
+                    let wallpapers = [
+                        { name: "Bliss.bmp", ext: "bmp" },
+                        { name: "Autumn.jpg", ext: "jpg" },
+                        { name: "Azul.jpg", ext: "jpg" },
+                        { name: "Crystal.jpg", ext: "jpg" },
+                        { name: "Follow.jpg", ext: "jpg" },
+                        { name: "Friend.jpg", ext: "jpg" },
+                        { name: "Home.jpg", ext: "jpg" },
+                        { name: "Moon flower.jpg", ext: "jpg" },
+                        { name: "Peace.jpg", ext: "jpg" },
+                        { name: "Purple flower.jpg", ext: "jpg" },
+                        { name: "Radiance.jpg", ext: "jpg" },
+                        { name: "Red moon desert.jpg", ext: "jpg" },
+                        { name: "Ripple.jpg", ext: "jpg" },
+                        { name: "Stonehenge.jpg", ext: "jpg" },
+                        { name: "Tulips.jpg", ext: "jpg" },
+                        { name: "Wind.jpg", ext: "jpg" }
+                    ];
+                    wallpapers.forEach(w => {
+                        if (!wallDir[w.name]) {
+                            wallDir[w.name] = { type: "file", extension: w.ext, content: "Windows XP Icons/bliss_bg.png", icon: "jpg" };
+                        }
+                    });
+
+                    // Media (Sounds)
+                    if (!winDir.contents["Media"] || !winDir.contents["Media"].contents) {
+                        winDir.contents["Media"] = { type: "folder", icon: "folder", contents: {} };
+                    }
+                    let mediaDir = winDir.contents["Media"].contents;
+                    let sounds = [
+                        "Windows XP Startup.wav", "Windows XP Shutdown.wav", "Windows XP Logon Sound.wav", "Windows XP Logoff Sound.wav",
+                        "Windows XP Error.wav", "Windows XP Critical Stop.wav", "Windows XP Exclamation.wav", "Windows XP Ding.wav",
+                        "Windows XP Notify.wav", "Windows XP Balloon.wav", "Windows XP Recycle.wav", "Windows XP Minimize.wav",
+                        "Windows XP Restore.wav", "Windows XP Menu Command.wav", "Windows XP Print complete.wav", "Windows XP Hardware Insert.wav",
+                        "Windows XP Hardware Remove.wav", "Windows XP Hardware Fail.wav", "Windows XP Pop-up Blocked.wav", "Windows XP Battery Low.wav",
+                        "Windows XP Battery Critical.wav", "Windows Navigation Start.wav", "Windows Information Bar.wav", "Windows Feed Discovered.wav",
+                        "chimes.wav", "chord.wav", "ding.wav", "notify.wav", "recycle.wav", "ringin.wav", "ringout.wav", "start.wav", "tada.wav"
+                    ];
+                    sounds.forEach(s => {
+                        if (!mediaDir[s]) {
+                            mediaDir[s] = { type: "file", extension: "wav", content: "XP sounds/" + s, icon: "wav" };
+                        }
+                    });
                 } catch(fe) { /* ignore */ }
 
                 for (let key in defaults) {
@@ -533,26 +696,31 @@ function bindSysIcons() {
 }
 
 window.resolvePath = function (path) {
+    if (!path) return null;
     let parts = path.split('\\').filter(p => p !== '');
     let curr = fs;
     for (let p of parts) {
-        if (curr[p]) {
-            if (curr[p].extension === 'zip' && curr[p]._zippedData) {
+        if (!curr || typeof curr !== 'object') return null;
+        let actualKey = curr[p] !== undefined ? p : Object.keys(curr).find(k => k.toLowerCase() === p.toLowerCase());
+        if (actualKey && curr[actualKey]) {
+            let node = curr[actualKey];
+            if (node.extension === 'zip' && node._zippedData) {
                 let temp = {};
-                temp[curr[p]._zippedName] = curr[p]._zippedData;
+                temp[node._zippedName] = node._zippedData;
                 curr = temp;
-            } else if (typeof curr[p].content === 'object' && curr[p].extension === 'zip') {
-                curr = curr[p].content;
-            } else if (typeof curr[p].content === 'string' && curr[p].extension === 'zip') {
-                try { curr = JSON.parse(curr[p].content); } catch(e) { curr = {}; }
+            } else if (typeof node.content === 'object' && node.extension === 'zip') {
+                curr = node.content;
+            } else if (typeof node.content === 'string' && node.extension === 'zip') {
+                try { curr = JSON.parse(node.content); } catch(e) { curr = {}; }
             } else {
-                curr = curr[p].contents || curr[p];
+                curr = node.contents !== undefined ? node.contents : node;
             }
+        } else {
+            return null;
         }
-        else return null;
     }
     return curr;
-}
+};
 
 window.triggerSearch = function () {
     if (typeof window.xpDialog === 'function') {

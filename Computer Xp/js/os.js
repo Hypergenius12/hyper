@@ -130,9 +130,30 @@ window.gridAlign = true;
             'tada': 'tada.wav'
         };
 
-        let file = soundMap[type] || 'Windows XP Default.wav';
+        let regSound = null;
+        if (typeof window.getRegistryValue === 'function') {
+            if (type === 'startup') regSound = window.getRegistryValue("HKEY_CURRENT_USER\\AppEvents\\Schemes\\Apps\\.Default\\SystemStart", "(Default)");
+            else if (type === 'shutdown') regSound = window.getRegistryValue("HKEY_CURRENT_USER\\AppEvents\\Schemes\\Apps\\.Default\\SystemExit", "(Default)");
+            else if (type === 'click' || type === 'navigate') regSound = window.getRegistryValue("HKEY_CURRENT_USER\\AppEvents\\Schemes\\Apps\\Explorer\\Navigating", "(Default)");
+            else if (type === 'recycle') regSound = window.getRegistryValue("HKEY_CURRENT_USER\\AppEvents\\Schemes\\Apps\\Explorer\\EmptyRecycleBin", "(Default)");
+            else if (type === 'balloon' || type === 'notify') regSound = window.getRegistryValue("HKEY_CURRENT_USER\\AppEvents\\Schemes\\Apps\\Explorer\\Notification", "(Default)");
+            else if (type === 'error' || type === 'critical') regSound = window.getRegistryValue("HKEY_CURRENT_USER\\AppEvents\\Schemes\\Apps\\.Default\\SystemHand", "(Default)");
+            else if (type === 'exclamation') regSound = window.getRegistryValue("HKEY_CURRENT_USER\\AppEvents\\Schemes\\Apps\\.Default\\SystemExclamation", "(Default)");
+            else if (type === 'ding') regSound = window.getRegistryValue("HKEY_CURRENT_USER\\AppEvents\\Schemes\\Apps\\.Default\\.Default", "(Default)");
+        }
+
+        let file = null;
+        if (regSound) {
+            let soundNode = window.resolvePath ? window.resolvePath(regSound) : null;
+            if (soundNode && soundNode.content) file = soundNode.content;
+            else if (regSound.includes('\\') || regSound.includes('/')) file = regSound.split(/[\\\/]/).pop();
+            else file = regSound;
+        }
+        if (!file) file = soundMap[type] || 'Windows XP Default.wav';
+        let src = file.startsWith('XP sounds/') || file.startsWith('http') || file.startsWith('data:') ? file : 'XP sounds/' + file;
+
         try {
-            let audio = new Audio('XP sounds/' + file);
+            let audio = new Audio(src);
             audio.volume = (window.sysVolume !== undefined ? window.sysVolume : 80) / 100;
             audio.play().catch(e => console.log('Audio playback prevented or error:', e));
         } catch (e) {
@@ -231,17 +252,18 @@ window.showDesktopTooltip = function(e, name) {
 window.switchPropTab = function(btn, tabName) {
     let win = btn.closest('.window');
     if(!win) return;
-    let tabs = ['general', 'details'];
-    tabs.forEach(t => {
-        let b = win.querySelector('#prop-tab-btn-' + t) || win.querySelector('[id^="prop-tab-btn-' + t + '"]');
-        let pane = win.querySelector('#prop-tab-' + t);
-        if(b) b.classList.remove('active');
-        if(pane) pane.style.display = 'none';
-    });
-    let actBtn = win.querySelector('#prop-tab-btn-' + tabName);
-    let actPane = win.querySelector('#prop-tab-' + tabName);
-    if(actBtn) actBtn.classList.add('active');
-    if(actPane) actPane.style.display = 'block';
+    let tabs = win.querySelectorAll('.tabs .tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    let paneGen = win.querySelector('#prop-tab-general') || win.querySelectorAll('.tabs + div > div')[0];
+    let paneDet = win.querySelector('#prop-tab-details') || win.querySelectorAll('.tabs + div > div')[1];
+    if (tabName === 'general') {
+        if (paneGen) paneGen.style.display = 'block';
+        if (paneDet) paneDet.style.display = 'none';
+    } else {
+        if (paneGen) paneGen.style.display = 'none';
+        if (paneDet) paneDet.style.display = 'block';
+    }
 };
 
 window.browsePropIcon = function() {
@@ -921,35 +943,88 @@ document.addEventListener('keydown', (e) => {
 
 window.browseRunDialog = function() {
     let runnables = [];
-    function traverse(node, path) {
+    let seenCmds = new Set();
+
+    function addRunnable(name, cmd, icon) {
+        let key = cmd.toLowerCase();
+        if (seenCmds.has(key)) return;
+        seenCmds.add(key);
+        runnables.push({ name: name, cmd: cmd, icon: icon || 'Windows XP Icons/Setup.png' });
+    }
+
+    // 1. All applications from ALL_START_APPS
+    if (typeof ALL_START_APPS !== 'undefined') {
+        const appExeMap = {
+            'ie': { exe: 'iexplore.exe', icon: 'Windows XP Icons/Internet Explorer 6.png' },
+            'outlook': { exe: 'msimn.exe', icon: 'Windows XP Icons/Outlook Express.png' },
+            'explorer': { exe: 'explorer.exe', icon: 'Windows XP Icons/Computer.png' },
+            'controlpanel': { exe: 'control.exe', icon: 'Windows XP Icons/Control Panel.png' },
+            'cmd': { exe: 'cmd.exe', icon: 'Windows XP Icons/Command Prompt.png' },
+            'sysinfo': { exe: 'msinfo32.exe', icon: 'Windows XP Icons/System Information.png' },
+            'notepad': { exe: 'notepad.exe', icon: 'Windows XP Icons/Notepad.png' },
+            'excel': { exe: 'excel.exe', icon: 'Windows XP Icons/Graph View.png' },
+            'wordpad': { exe: 'wordpad.exe', icon: 'Windows XP Icons/Wordpad.png' },
+            'paint': { exe: 'mspaint.exe', icon: 'Windows XP Icons/Paint.png' },
+            'calc': { exe: 'calc.exe', icon: 'Windows XP Icons/Calculator.png' },
+            'media': { exe: 'wmplayer.exe', icon: 'Windows XP Icons/media.png' },
+            'soundrecorder': { exe: 'sndrec32.exe', icon: 'Windows XP Icons/Volume.png' },
+            'store': { exe: 'catalog.exe', icon: 'Windows XP Icons/Windows Catalog.png' },
+            'charmap': { exe: 'charmap.exe', icon: 'Windows XP Icons/Charmap.png' },
+            'taskmgr': { exe: 'taskmgr.exe', icon: 'Windows XP Icons/Task Manager.png' },
+            'dataminer': { exe: 'dataminer.exe', icon: 'Windows XP Icons/Mouse.png' },
+            'tetris': { exe: 'tetris.exe', icon: 'Windows XP Icons/tetris.webp' },
+            'mine': { exe: 'winmine.exe', icon: 'Windows XP Icons/Minesweeper.png' },
+            'solitaire': { exe: 'sol.exe', icon: 'Windows XP Icons/Solitaire.png' },
+            'pinball': { exe: 'pinball.exe', icon: 'Windows XP Icons/Pinball.png' },
+            'photon': { exe: 'photon.exe', icon: 'Windows XP Icons/Display Properties.png' },
+            'hearts': { exe: 'mshearts.exe', icon: 'Windows XP Icons/Hearts.png' },
+            'freecell': { exe: 'freecell.exe', icon: 'Windows XP Icons/Freecell.png' },
+            'spades': { exe: 'spades.exe', icon: 'Windows XP Icons/Internet Spades.png' },
+            'defrag': { exe: 'dfrg.msc', icon: 'Windows XP Icons/Setup.png' },
+            'regedit': { exe: 'regedit.exe', icon: 'Windows XP Icons/Registry Editor.png' },
+            'messenger': { exe: 'msmsgs.exe', icon: 'Windows XP Icons/messenger.png' }
+        };
+
+        ALL_START_APPS.forEach(app => {
+            let info = appExeMap[app.id] || { exe: (app.id || 'app') + '.exe', icon: 'Windows XP Icons/Setup.png' };
+            addRunnable(app.name, info.exe, info.icon);
+        });
+    }
+
+    // 2. Traversal of system directories
+    function traverse(node, currentPath) {
         if (!node) return;
         if (node.type === 'folder' && node.contents) {
             for (let k in node.contents) {
-                traverse(node.contents[k], path + '\\\\' + k);
+                traverse(node.contents[k], currentPath + '\\' + k);
             }
-        } else if (node.type === 'exe' || (node.type === 'file' && node.app)) {
-            let name = path.split('\\\\').pop();
-            if (!name.toLowerCase().includes('dll')) {
-                runnables.push({ name: name, cmd: path });
+        } else if (node.type === 'exe' || (node.type === 'file' && (node.extension === 'exe' || node.extension === 'msc' || node.extension === 'cpl' || node.extension === 'bat'))) {
+            let name = currentPath.split('\\').pop();
+            if (!name.toLowerCase().endsWith('.dll') && !name.toLowerCase().endsWith('.sys')) {
+                let icon = (typeof window.getIconForExtension === 'function') ? window.getIconForExtension(name, node) : 'Windows XP Icons/Setup.png';
+                addRunnable(name, currentPath, icon);
             }
         }
     }
-    
-    let pfNode = window.resolvePath('C:\\\\Program Files');
-    if (pfNode) traverse(pfNode, 'C:\\\\Program Files');
-    
-    let winNode = window.resolvePath('C:\\\\Windows');
-    if (winNode) traverse(winNode, 'C:\\\\Windows');
-    
-    let html = '<div style="max-height: 250px; overflow-y: auto; text-align: left; padding: 5px; border: 1px solid #ACA899; background: white;">';
+
+    let pfNode = window.resolvePath('C:\\Program Files');
+    if (pfNode) traverse(pfNode, 'C:\\Program Files');
+
+    let winNode = window.resolvePath('C:\\WINDOWS');
+    if (winNode) traverse(winNode, 'C:\\WINDOWS');
+
+    // Sort alphabetically by name
+    runnables.sort((a,b) => a.name.localeCompare(b.name));
+
+    let html = '<div style="max-height: 260px; overflow-y: auto; text-align: left; padding: 2px; border: 2px inset #FFF; background: white; font-family: Tahoma; font-size: 11px;">';
     for (let r of runnables) {
-        let escapedCmd = r.cmd.replace(/\\/g, '\\\\');
-        html += `<div style="padding: 3px; cursor: pointer; border-bottom: 1px solid #eee;" onclick="document.getElementById('run-input').value = '${escapedCmd}'; document.getElementById('xp-dialog-overlay').style.display='none'; document.getElementById('xp-dialog').style.display='none';" onmouseover="this.style.background='#316AC5'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='black';">${r.name}</div>`;
+        let escapedCmd = r.cmd.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        html += `<div style="display: flex; align-items: center; gap: 8px; padding: 4px 6px; cursor: pointer; border-bottom: 1px solid #f0f0f0;" onclick="document.getElementById('run-input').value = '${escapedCmd}'; if (typeof window.closeDialog === 'function') window.closeDialog(true); else { let d = document.getElementById('xp-dialog'); if(d) d.style.display=\'none\'; let o = document.getElementById('xp-dialog-overlay'); if(o) o.style.display=\'none\'; }" onmouseover="this.style.background='#316AC5'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='black';"><img src="${r.icon}" style="width:16px; height:16px; image-rendering:pixelated; flex-shrink:0;"> <span style="font-weight:bold; white-space:nowrap;">${r.name}</span> <span style="color:#777; font-size:10px; margin-left:auto; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:180px;">${r.cmd}</span></div>`;
     }
     html += '</div>';
-    
-    if(typeof window.xpDialog === 'function') {
-        window.xpDialog('Browse Programs', 'Select a program or file to open:<br>' + html, 'info');
+
+    if (typeof window.xpDialog === 'function') {
+        window.xpDialog('Browse', 'Select a program or file to open in Run:<br><br>' + html, 'info');
     }
 };
 
@@ -957,6 +1032,7 @@ window.executeRunCmd = function() {
     let input = document.getElementById('run-input');
     if(!input) return;
     let rawCmd = input.value.trim();
+    if(!rawCmd) return;
     let cmd = rawCmd.toLowerCase();
     
     let mapping = {
@@ -964,58 +1040,76 @@ window.executeRunCmd = function() {
         'calc': 'calc-window',
         'notepad': 'notepad-window',
         'mspaint': 'paint-window',
+        'paint': 'paint-window',
+        'pbrush': 'paint-window',
         'explorer': 'folder-window',
         'taskmgr': 'taskmgr-window',
         'control': 'controlpanel-window',
         'winmine': 'minesweeper-window',
+        'mine': 'minesweeper-window',
         'sol': 'solitaire-window',
+        'solitaire': 'solitaire-window',
         'pinball': 'pinball-window',
         'msimn': 'email-window',
+        'outlook': 'email-window',
+        'mail': 'email-window',
         'msinfo32': 'sysinfo-window',
+        'sysinfo': 'sysinfo-window',
         'wordpad': 'wordpad-window',
         'write': 'wordpad-window',
         'iexplore': 'ie-window',
+        'ie': 'ie-window',
         'excel': 'excel-window',
         'charmap': 'charmap-window',
         'wmplayer': 'mediaplayer-window',
+        'wmp': 'mediaplayer-window',
         'sndrec32': 'soundrecorder-window',
+        'sndrec': 'soundrecorder-window',
         'regedit': 'regedit-window',
+        'regedt32': 'regedit-window',
         'photon': 'photon-window',
         'hearts': 'hearts-window',
+        'mshearts': 'hearts-window',
         'freecell': 'freecell-window',
-        'spades': 'spades-window'
+        'spades': 'spades-window',
+        'frontpage': 'frontpage-window',
+        'frontpg': 'frontpage-window',
+        'clipbook': 'clipbook-window',
+        'clipbrd': 'clipbook-window',
+        'defrag': 'defrag-window',
+        'dfrg.msc': 'defrag-window',
+        'tourxp': 'xptour-window',
+        'messenger': 'messenger-window',
+        'msmsgs': 'messenger-window',
+        'catalog': 'store-window',
+        'store': 'store-window',
+        'cleanmgr': 'settings-window'
     };
-    
-    function isAppInstalled(appName) {
-        if (!window.resolvePath) return true;
-        
-        let found = false;
-        function checkFolder(node) {
-            if (found || !node || node.type !== 'folder' || !node.contents) return;
-            
-            let match = Object.keys(node.contents).find(f => f.toLowerCase() === appName.toLowerCase() || f.toLowerCase() === appName.toLowerCase() + '.exe');
-            if (match) {
-                found = true;
-                return;
-            }
-            
-            for (let k in node.contents) {
-                checkFolder(node.contents[k]);
-                if (found) return;
-            }
-        }
 
-        let sys32 = window.resolvePath('C:\\Windows\\System32');
-        if (sys32) checkFolder(sys32);
-        if (found) return true;
+    // Close Run window cleanly
+    let runWin = document.getElementById('run-window') || document.getElementById('run-dialog');
+    if (runWin) runWin.style.display = 'none';
 
-        let win = window.resolvePath('C:\\Windows');
-        if (win) checkFolder(win);
-        if (found) return true;
-
-        let prog = window.resolvePath('C:\\Program Files');
-        if (prog) checkFolder(prog);
-        return found;
+    // Special Control Panel applets
+    if (cmd === 'timedate.cpl') {
+        if (typeof window.openSettings === 'function') window.openSettings('datetime');
+        return;
+    }
+    if (cmd === 'desk.cpl') {
+        if (typeof window.openSettings === 'function') window.openSettings('desktop');
+        return;
+    }
+    if (cmd === 'sysdm.cpl') {
+        if (typeof window.openSettings === 'function') window.openSettings('system');
+        return;
+    }
+    if (cmd === 'mmsys.cpl') {
+        if (typeof window.openSettings === 'function') window.openSettings('sounds');
+        return;
+    }
+    if (cmd === 'appwiz.cpl') {
+        if (typeof window.openSettings === 'function') window.openSettings('addremove');
+        return;
     }
 
     if (rawCmd.startsWith('http://') || rawCmd.startsWith('https://') || rawCmd.startsWith('www.')) {
@@ -1032,7 +1126,8 @@ window.executeRunCmd = function() {
         if (node) {
             if (node.type === 'folder' || node.type === 'drive') {
                 window.openProgram('folder-window');
-                window.navigateTo(rawCmd);
+                if (typeof window.navigateTo === 'function') window.navigateTo(rawCmd);
+                else if (typeof window.renderExplorer === 'function') window.renderExplorer(rawCmd);
             } else {
                 let parts = rawCmd.split('\\');
                 let fileName = parts.pop();
@@ -1044,15 +1139,11 @@ window.executeRunCmd = function() {
             window.xpDialog('Run', "Windows cannot find '" + rawCmd + "'. Make sure you typed the name correctly, and then try again.", 'error');
         }
     } else {
-        let cleanName = cmd.replace('.exe', '');
-        let targetApp = mapping[cleanName] || cleanName;
-        let isInst = typeof window.isAppInstalled === 'function' ? window.isAppInstalled(targetApp) : isAppInstalled(cleanName);
+        let cleanName = cmd.replace('.exe', '').replace('.msc', '').replace('.cpl', '');
+        let targetApp = mapping[cleanName] || mapping[cmd] || cleanName;
         
+        let isInst = typeof window.isAppInstalled === 'function' ? window.isAppInstalled(targetApp) : true;
         if (!isInst) {
-            let runWin1 = document.getElementById('run-window');
-            if (runWin1) runWin1.style.display = 'none';
-            let runWin2 = document.getElementById('run-dialog');
-            if (runWin2) runWin2.style.display = 'none';
             if (typeof window.openCatalogApp === 'function') {
                 window.openCatalogApp(targetApp);
                 return;
@@ -1061,22 +1152,22 @@ window.executeRunCmd = function() {
             return;
         }
 
-        if (mapping[cleanName]) {
-            window.openProgram(mapping[cleanName]);
-            if(cleanName === 'sol' && typeof window.solNewGame === 'function') window.solNewGame();
+        if (mapping[cleanName] || mapping[cmd]) {
+            let appWin = mapping[cleanName] || mapping[cmd];
+            window.openProgram(appWin);
+            if (cleanName === 'sol' || cleanName === 'solitaire') {
+                if (typeof window.solNewGame === 'function') window.solNewGame();
+            }
         } else {
             let fallbackApp = typeof ALL_START_APPS !== 'undefined' ? ALL_START_APPS.find(a => a.app.replace('-window', '') === cleanName || a.id === cleanName || (a.name && a.name.toLowerCase() === cleanName)) : null;
             if (fallbackApp) {
                 window.openProgram(fallbackApp.app);
-                if(fallbackApp.initFn && typeof window[fallbackApp.initFn] === 'function') window[fallbackApp.initFn]();
+                if (fallbackApp.initFn && typeof window[fallbackApp.initFn] === 'function') window[fallbackApp.initFn]();
             } else {
                 window.xpDialog('Run', "Windows cannot find '" + rawCmd + "'. Make sure you typed the name correctly, and then try again.", 'error');
             }
         }
     }
-    
-    let runWin = document.getElementById('run-dialog');
-    if(runWin) runWin.style.display = 'none';
 };
 
 let fileDialogCallback = null;
@@ -2289,54 +2380,135 @@ window.showFileProperties = function() {
         let newWin = baseWin.cloneNode(true);
         window.propWinCounter++;
         let winId = 'properties-window-' + window.propWinCounter;
+        let titleId = winId + '-title';
         newWin.id = winId;
         newWin.style.display = 'block';
         newWin.style.left = (200 + (index * 20)) + 'px';
         newWin.style.top = (150 + (index * 20)) + 'px';
 
         let titleBar = newWin.querySelector('.title-bar');
-        if (titleBar) titleBar.id = winId + '-title';
+        if (titleBar) titleBar.id = titleId;
+
+        let titleSpan = newWin.querySelector('#prop-title-text') || newWin.querySelector('.title-bar span');
+        if (titleSpan) titleSpan.innerText = displayName + ' Properties';
 
         let winBtns = newWin.querySelectorAll('.win-btn');
         winBtns.forEach(btn => {
-            if (btn.innerText === 'X') {
-                btn.onclick = () => { newWin.remove(); };
-            } else if (btn.innerText === '_') {
-                btn.onclick = () => { newWin.style.display = 'none'; };
-            }
+            btn.onclick = () => { newWin.remove(); };
         });
 
         let propIcon = newWin.querySelector('#prop-icon');
-        if(propIcon) { propIcon.id = ''; propIcon.src = icon || 'Windows XP Icons/TXT.png'; }
+        if(propIcon) { propIcon.src = icon || 'Windows XP Icons/TXT.png'; }
         
         let nameInput = newWin.querySelector('#prop-name-input');
-        if(nameInput) { nameInput.id = ''; nameInput.value = displayName; }
+        if(nameInput) { nameInput.value = displayName; }
         
         let typeEl = newWin.querySelector('#prop-type');
-        if(typeEl) { typeEl.id = ''; typeEl.innerText = fileType; }
+        if(typeEl) { typeEl.innerText = fileType; }
         
         let locEl = newWin.querySelector('#prop-location');
-        if(locEl) { locEl.id = ''; locEl.innerText = ctx.path; }
+        if(locEl) { locEl.innerText = ctx.path; }
         
         let sizeEl = newWin.querySelector('#prop-size');
-        if(sizeEl) { sizeEl.id = ''; sizeEl.innerText = size; }
+        if(sizeEl) { sizeEl.innerText = size; }
+
+        let sizeDiskEl = newWin.querySelector('#prop-size-disk');
+        if(sizeDiskEl) { sizeDiskEl.innerText = size; }
         
         let createdEl = newWin.querySelector('#prop-created');
-        if(createdEl) { createdEl.id = ''; createdEl.innerText = created; }
-        
+        if(createdEl) { createdEl.innerText = created; }
+
+        let readonlyCb = newWin.querySelector('#prop-attr-readonly');
+        if (readonlyCb) readonlyCb.checked = item.readOnly === true;
+
+        let hiddenCb = newWin.querySelector('#prop-attr-hidden');
+        if (hiddenCb) hiddenCb.checked = item.hidden === true;
+
+        // Details tab elements
+        let detName = newWin.querySelector('#prop-detail-name');
+        if (detName) detName.innerText = ctx.name;
+        let detType = newWin.querySelector('#prop-detail-type');
+        if (detType) detType.innerText = fileType;
+        let detExt = newWin.querySelector('#prop-detail-ext');
+        if (detExt) detExt.innerText = item.extension || (ctx.name.includes('.') ? ctx.name.split('.').pop() : 'none');
+        let detSize = newWin.querySelector('#prop-detail-size');
+        if (detSize) detSize.innerText = size;
+        let detIcon = newWin.querySelector('#prop-detail-icon');
+        if (detIcon) detIcon.innerText = item.icon || 'default';
+        let detTarget = newWin.querySelector('#prop-detail-target');
+        if (detTarget) detTarget.innerText = item.target || 'N/A';
+        let detContent = newWin.querySelector('#prop-detail-content');
+        if (detContent) detContent.innerText = typeof item.content === 'string' ? item.content.slice(0, 100) : 'N/A';
+
+        // Tab switching inside this window
+        let tabGenBtn = newWin.querySelector('#prop-tab-btn-general');
+        let tabDetBtn = newWin.querySelector('#prop-tab-btn-details');
+        let paneGen = newWin.querySelector('#prop-tab-general');
+        let paneDet = newWin.querySelector('#prop-tab-details');
+
+        if (tabGenBtn && tabDetBtn && paneGen && paneDet) {
+            tabGenBtn.onclick = () => {
+                tabGenBtn.classList.add('active');
+                tabDetBtn.classList.remove('active');
+                paneGen.style.display = 'block';
+                paneDet.style.display = 'none';
+            };
+            tabDetBtn.onclick = () => {
+                tabDetBtn.classList.add('active');
+                tabGenBtn.classList.remove('active');
+                paneDet.style.display = 'block';
+                paneGen.style.display = 'none';
+            };
+        }
+
+        function saveProperties(closeAfter) {
+            let currentDir = window.resolvePath(ctx.path);
+            if (currentDir && currentDir[ctx.name]) {
+                let targetItem = currentDir[ctx.name];
+                if (hiddenCb) targetItem.hidden = hiddenCb.checked;
+                if (readonlyCb) targetItem.readOnly = readonlyCb.checked;
+                let newN = nameInput ? nameInput.value.trim() : '';
+                if (newN && newN !== displayName) {
+                    let fullNewName = newN;
+                    if (targetItem.type === 'shortcut' && !fullNewName.toLowerCase().endsWith('.lnk')) fullNewName += '.lnk';
+                    else if (targetItem.extension && !fullNewName.includes('.')) fullNewName += '.' + targetItem.extension;
+                    if (!currentDir[fullNewName] || fullNewName === ctx.name) {
+                        currentDir[fullNewName] = targetItem;
+                        if (fullNewName !== ctx.name) {
+                            delete currentDir[ctx.name];
+                            ctx.name = fullNewName;
+                        }
+                    }
+                }
+                window.saveFileSystem();
+                if (ctx.path.includes("Desktop") && typeof window.renderDesktop === 'function') window.renderDesktop();
+                else if (typeof window.renderExplorer === 'function') window.renderExplorer(ctx.path);
+            }
+            if (closeAfter) newWin.remove();
+        }
+
         let buttons = newWin.querySelectorAll('button');
         buttons.forEach(btn => {
-            if(btn.innerText === 'OK' || btn.innerText === 'Cancel') {
-                btn.onclick = () => newWin.remove();
+            let txt = btn.innerText.trim();
+            if (txt === 'OK') btn.onclick = () => saveProperties(true);
+            else if (txt === 'Cancel') btn.onclick = () => newWin.remove();
+            else if (txt === 'Apply') btn.onclick = () => saveProperties(false);
+        });
+
+        // Clear duplicate IDs inside children, preserving newWin and titleBar
+        newWin.querySelectorAll('[id]').forEach(el => {
+            if (el !== newWin && el !== titleBar) {
+                el.removeAttribute('id');
             }
         });
-        
-        // Let's clear out all other IDs so we don't have duplicates
-        newWin.querySelectorAll('[id]').forEach(el => el.id = '');
-        
+
         document.body.appendChild(newWin);
-        if(typeof dragElement === 'function') dragElement(newWin);
-        if(typeof window.bringToFront === 'function') window.bringToFront(newWin);
+        if (typeof window.makeDraggable === 'function' && titleBar) {
+            window.makeDraggable(newWin, titleBar);
+        }
+        if (typeof window.bringToFront === 'function') {
+            window.bringToFront(newWin);
+        }
     });
 };
 

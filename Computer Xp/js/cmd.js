@@ -14,6 +14,7 @@ window.initCmd = function() {
     cmdCurrentDir = "C:\\Documents and Settings\\Administrator";
     cmdColor = { bg: '#000000', fg: '#C0C0C0' };
     applyCmdColor();
+    if (typeof window.cmdLoadProperties === 'function') window.cmdLoadProperties();
     
     cmdPrint("Microsoft Windows XP [Version 5.1.2600]");
     cmdPrint("(C) Copyright 1985-2001 Microsoft Corp.");
@@ -661,3 +662,229 @@ function cmdStart(args) {
         cmdPrint("Could not start \"" + rawName + "\".");
     }
 }
+
+// --- CMD Title Bar Menu & Properties Management ---
+
+let cmdConfig = {
+    fontType: 'Consolas', // 'Consolas' or 'Raster Fonts'
+    fontSize: 13,
+    bufferWidth: 80,
+    bufferHeight: 300,
+    windowWidth: 650,
+    windowHeight: 420
+};
+
+window.cmdLoadProperties = function() {
+    try {
+        let saved = localStorage.getItem('xp_cmd_config');
+        if (saved) {
+            cmdConfig = Object.assign(cmdConfig, JSON.parse(saved));
+        }
+    } catch(e) {}
+    cmdApplyStyling();
+};
+
+function cmdApplyStyling() {
+    let area = document.getElementById('cmd-content-area');
+    let input = document.getElementById('cmd-input');
+    let prompt = document.getElementById('cmd-prompt');
+    let win = document.getElementById('cmd-window');
+
+    if (area) {
+        if (cmdConfig.fontType === 'Raster Fonts') {
+            area.style.fontFamily = "'Terminal', 'Courier New', monospace";
+            area.style.letterSpacing = '0.5px';
+            area.style.fontWeight = 'bold';
+        } else {
+            area.style.fontFamily = "'Consolas', 'Courier New', monospace";
+            area.style.letterSpacing = 'normal';
+            area.style.fontWeight = 'normal';
+        }
+        area.style.fontSize = cmdConfig.fontSize + 'px';
+    }
+
+    if (input) {
+        input.style.fontFamily = 'inherit';
+        input.style.fontSize = 'inherit';
+        input.style.letterSpacing = 'inherit';
+        input.style.fontWeight = 'inherit';
+    }
+
+    if (prompt) {
+        prompt.style.fontFamily = 'inherit';
+        prompt.style.fontSize = 'inherit';
+        prompt.style.letterSpacing = 'inherit';
+        prompt.style.fontWeight = 'inherit';
+    }
+
+    if (win) {
+        if (cmdConfig.windowWidth) win.style.width = cmdConfig.windowWidth + 'px';
+        if (cmdConfig.windowHeight) win.style.height = cmdConfig.windowHeight + 'px';
+    }
+}
+
+window.cmdToggleTitleMenu = function(e) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    let menu = document.getElementById('cmd-title-menu');
+    if (!menu) return;
+    if (menu.style.display === 'block') {
+        cmdHideTitleMenu();
+    } else {
+        let titleBar = document.getElementById('cmd-window-title');
+        let rect = titleBar.getBoundingClientRect();
+        menu.style.left = rect.left + 'px';
+        menu.style.top = (rect.bottom) + 'px';
+        menu.style.display = 'block';
+        if (typeof window.bringToFront === 'function') window.bringToFront(menu);
+    }
+};
+
+window.cmdShowTitleMenu = function(e) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    let menu = document.getElementById('cmd-title-menu');
+    if (!menu) return;
+    menu.style.left = (e ? e.clientX : 50) + 'px';
+    menu.style.top = (e ? e.clientY : 50) + 'px';
+    menu.style.display = 'block';
+    if (typeof window.bringToFront === 'function') window.bringToFront(menu);
+};
+
+window.cmdHideTitleMenu = function() {
+    let menu = document.getElementById('cmd-title-menu');
+    if (menu) menu.style.display = 'none';
+};
+
+// Global click listener to close cmd-title-menu when clicking outside
+document.addEventListener('click', (e) => {
+    let menu = document.getElementById('cmd-title-menu');
+    if (menu && menu.style.display === 'block') {
+        if (!menu.contains(e.target) && e.target.id !== 'cmd-title-icon') {
+            cmdHideTitleMenu();
+        }
+    }
+});
+
+window.cmdOpenProperties = function() {
+    let dlg = document.getElementById('cmd-properties-dialog');
+    if (!dlg) return;
+
+    // Populate current values
+    let rConsolas = document.getElementById('cmd-font-consolas');
+    let rRaster = document.getElementById('cmd-font-raster');
+    if (cmdConfig.fontType === 'Raster Fonts') {
+        if (rRaster) rRaster.checked = true;
+    } else {
+        if (rConsolas) rConsolas.checked = true;
+    }
+
+    let sizeSelect = document.getElementById('cmd-font-size-select');
+    if (sizeSelect) sizeSelect.value = String(cmdConfig.fontSize);
+
+    let bufW = document.getElementById('cmd-buffer-width');
+    let bufH = document.getElementById('cmd-buffer-height');
+    let winW = document.getElementById('cmd-window-width');
+    let winH = document.getElementById('cmd-window-height');
+
+    if (bufW) bufW.value = cmdConfig.bufferWidth || 80;
+    if (bufH) bufH.value = cmdConfig.bufferHeight || 300;
+    if (winW) winW.value = cmdConfig.windowWidth || 650;
+    if (winH) winH.value = cmdConfig.windowHeight || 420;
+
+    cmdUpdateFontPreview();
+    cmdSwitchPropTab('font');
+
+    dlg.style.display = 'block';
+    if (typeof window.bringToFront === 'function') window.bringToFront(dlg);
+};
+
+window.cmdCloseProperties = function() {
+    let dlg = document.getElementById('cmd-properties-dialog');
+    if (dlg) dlg.style.display = 'none';
+};
+
+window.cmdSwitchPropTab = function(tab) {
+    let fontContent = document.getElementById('cmd-prop-content-font');
+    let layoutContent = document.getElementById('cmd-prop-content-layout');
+    let fontTabBtn = document.getElementById('cmd-prop-tab-font');
+    let layoutTabBtn = document.getElementById('cmd-prop-tab-layout');
+
+    if (tab === 'font') {
+        if (fontContent) fontContent.style.display = 'block';
+        if (layoutContent) layoutContent.style.display = 'none';
+        if (fontTabBtn) {
+            fontTabBtn.style.background = '#FFF';
+            fontTabBtn.style.borderTop = '2px solid #3A6EA5';
+            fontTabBtn.style.fontWeight = 'bold';
+        }
+        if (layoutTabBtn) {
+            layoutTabBtn.style.background = '#ECE9D8';
+            layoutTabBtn.style.borderTop = '1px solid #ACA899';
+            layoutTabBtn.style.fontWeight = 'normal';
+        }
+    } else {
+        if (fontContent) fontContent.style.display = 'none';
+        if (layoutContent) layoutContent.style.display = 'block';
+        if (fontTabBtn) {
+            fontTabBtn.style.background = '#ECE9D8';
+            fontTabBtn.style.borderTop = '1px solid #ACA899';
+            fontTabBtn.style.fontWeight = 'normal';
+        }
+        if (layoutTabBtn) {
+            layoutTabBtn.style.background = '#FFF';
+            layoutTabBtn.style.borderTop = '2px solid #3A6EA5';
+            layoutTabBtn.style.fontWeight = 'bold';
+        }
+    }
+};
+
+window.cmdUpdateFontPreview = function() {
+    let preview = document.getElementById('cmd-font-preview-box');
+    let rRaster = document.getElementById('cmd-font-raster');
+    let sizeSelect = document.getElementById('cmd-font-size-select');
+
+    let isRaster = rRaster && rRaster.checked;
+    let size = sizeSelect ? parseInt(sizeSelect.value) : 13;
+
+    if (preview) {
+        if (isRaster) {
+            preview.style.fontFamily = "'Terminal', 'Courier New', monospace";
+            preview.style.letterSpacing = '0.5px';
+            preview.style.fontWeight = 'bold';
+        } else {
+            preview.style.fontFamily = "'Consolas', 'Courier New', monospace";
+            preview.style.letterSpacing = 'normal';
+            preview.style.fontWeight = 'normal';
+        }
+        preview.style.fontSize = size + 'px';
+    }
+};
+
+window.cmdApplyProperties = function(closeAfter) {
+    let rRaster = document.getElementById('cmd-font-raster');
+    let sizeSelect = document.getElementById('cmd-font-size-select');
+    let bufW = document.getElementById('cmd-buffer-width');
+    let bufH = document.getElementById('cmd-buffer-height');
+    let winW = document.getElementById('cmd-window-width');
+    let winH = document.getElementById('cmd-window-height');
+
+    cmdConfig.fontType = (rRaster && rRaster.checked) ? 'Raster Fonts' : 'Consolas';
+    if (sizeSelect) cmdConfig.fontSize = parseInt(sizeSelect.value) || 13;
+    if (bufW) cmdConfig.bufferWidth = parseInt(bufW.value) || 80;
+    if (bufH) cmdConfig.bufferHeight = parseInt(bufH.value) || 300;
+    if (winW) cmdConfig.windowWidth = Math.max(350, parseInt(winW.value) || 650);
+    if (winH) cmdConfig.windowHeight = Math.max(200, parseInt(winH.value) || 420);
+
+    try {
+        localStorage.setItem('xp_cmd_config', JSON.stringify(cmdConfig));
+    } catch(e) {}
+
+    cmdApplyStyling();
+
+    if (typeof window.showBalloon === 'function') {
+        window.showBalloon("Command Prompt", `Properties updated: ${cmdConfig.fontType} (${cmdConfig.fontSize}pt), ${cmdConfig.windowWidth}x${cmdConfig.windowHeight}`);
+    }
+
+    if (closeAfter) {
+        cmdCloseProperties();
+    }
+};

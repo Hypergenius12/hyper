@@ -1,20 +1,34 @@
 (function() {
     'use strict';
 
-    
     let selectedKeyPath = null;
-
-    
+    let selectedValueName = null;
+    let expandedPaths = new Set(['']); // root always expanded
+    let lastFindQuery = '';
+    let findMatches = [];
+    let findIndex = -1;
 
     function initRegistry() {
-        if(typeof window.loadRegistry === 'function') window.loadRegistry();
+        if (typeof window.loadRegistry === 'function') window.loadRegistry();
         renderTree();
+        updateStatusBar();
+    }
+
+    function updateStatusBar() {
+        let sb = document.getElementById('regedit-statusbar');
+        if (!sb) return;
+        if (selectedKeyPath && selectedKeyPath.length > 0) {
+            sb.innerText = 'My Computer\\' + selectedKeyPath.join('\\');
+        } else {
+            sb.innerText = 'My Computer';
+        }
     }
 
     function getRegistryNode(pathArr) {
         let node = window.xpRegistry;
-        for(let i=0; i<pathArr.length; i++) {
-            if (node[pathArr[i]] && typeof node[pathArr[i]] === 'object' && !node[pathArr[i]].type) {
+        if (!pathArr || pathArr.length === 0) return node;
+        for (let i = 0; i < pathArr.length; i++) {
+            if (node && node[pathArr[i]] && typeof node[pathArr[i]] === 'object' && !node[pathArr[i]].type) {
                 node = node[pathArr[i]];
             } else {
                 return null;
@@ -22,9 +36,6 @@
         }
         return node;
     }
-
-    
-    let expandedPaths = new Set(['']); // root always expanded
 
     function renderTree(node = window.xpRegistry, container = document.getElementById('regedit-tree'), pathArr = []) {
         if (!container) return;
@@ -96,6 +107,7 @@
                 selectedValueName = null;
                 renderTree(window.xpRegistry, document.getElementById('regedit-tree'), []);
                 renderValues();
+                updateStatusBar();
             };
             
             li.ondblclick = (e) => {
@@ -106,6 +118,7 @@
                 }
                 renderTree(window.xpRegistry, document.getElementById('regedit-tree'), []);
                 renderValues();
+                updateStatusBar();
             };
             
             li.oncontextmenu = (e) => {
@@ -115,6 +128,7 @@
                 selectedValueName = null;
                 renderTree(window.xpRegistry, document.getElementById('regedit-tree'), []);
                 renderValues();
+                updateStatusBar();
                 
                 let menu = document.getElementById('context-menu-regedit');
                 if(menu) {
@@ -138,7 +152,6 @@
         container.appendChild(ul);
     }
 
-
     function renderValues() {
         let list = document.getElementById('regedit-values-list');
         if(!list) return;
@@ -150,17 +163,16 @@
         if(!node) return;
         
         // Add Default value
-        addValueRow('(Default)', 'REG_SZ', '(value not set)', true);
+        let defaultVal = node['(Default)'] ? node['(Default)'].data : '(value not set)';
+        addValueRow('(Default)', 'REG_SZ', defaultVal, true);
         
-        let vals = Object.keys(node).filter(k => typeof node[k] === 'object' && node[k].type);
+        let vals = Object.keys(node).filter(k => k !== '(Default)' && typeof node[k] === 'object' && node[k].type);
         vals.sort((a,b) => a.localeCompare(b));
         
         vals.forEach(k => {
             addValueRow(k, node[k].type, node[k].data, false);
         });
     }
-
-    let selectedValueName = null;
 
     function addValueRow(name, type, data, isDefault) {
         let list = document.getElementById('regedit-values-list');
@@ -180,7 +192,7 @@
         tdType.innerText = type;
         
         let tdData = document.createElement('td');
-        tdData.innerText = data;
+        tdData.innerText = data !== undefined ? String(data) : '';
         
         tr.appendChild(tdName);
         tr.appendChild(tdType);
@@ -206,18 +218,19 @@
             }
         };
         
-                tr.ondblclick = () => {
+        tr.ondblclick = () => {
             let pStr = selectedKeyPath.join('\\');
+            let currentVal = data === '(value not set)' ? '' : data;
             if(typeof window.xpDialog === 'function') {
-                window.xpDialog(`Edit ${type}`, `Value data for ${name}:`, 'prompt', data).then(newVal => {
-                    if (newVal !== null) {
+                window.xpDialog(`Edit ${type}`, `Value data for ${name}:`, 'prompt', currentVal).then(newVal => {
+                    if (newVal !== null && newVal !== undefined) {
                         window.setRegistryValue(pStr, name, type, newVal);
                         renderValues();
                     }
                 });
             } else {
-                let newVal = prompt(`Value data for ${name}:`, data);
-                if (newVal !== null) {
+                let newVal = prompt(`Value data for ${name}:`, currentVal);
+                if (newVal !== null && newVal !== undefined) {
                     window.setRegistryValue(pStr, name, type, newVal);
                     renderValues();
                 }
@@ -245,6 +258,7 @@
                 if(val && !node[val]) {
                     node[val] = {};
                     window.saveRegistry();
+                    expandedPaths.add(selectedKeyPath.join('\\'));
                     renderTree();
                 }
             });
@@ -257,10 +271,10 @@
         if(!node) return;
         
         if(typeof window.xpDialog === 'function') {
-            window.xpDialog("New String Value", "Enter value name:", "prompt", "New Value").then(val => {
+            window.xpDialog("New String Value", "Enter value name:", "prompt", "New Value #1").then(val => {
                 if(val && !node[val]) {
-                    node[val] = { type: 'REG_SZ', data: "" };
-                    window.saveRegistry();
+                    let pStr = selectedKeyPath.join('\\');
+                    window.setRegistryValue(pStr, val, 'REG_SZ', "");
                     renderValues();
                 }
             });
@@ -273,10 +287,10 @@
         if(!node) return;
         
         if(typeof window.xpDialog === 'function') {
-            window.xpDialog("New DWORD Value", "Enter value name:", "prompt", "New Value").then(val => {
+            window.xpDialog("New DWORD Value", "Enter value name:", "prompt", "New Value #1").then(val => {
                 if(val && !node[val]) {
-                    node[val] = { type: 'REG_DWORD', data: "0" };
-                    window.saveRegistry();
+                    let pStr = selectedKeyPath.join('\\');
+                    window.setRegistryValue(pStr, val, 'REG_DWORD', 0);
                     renderValues();
                 }
             });
@@ -306,12 +320,13 @@
                     window.saveRegistry();
                     renderTree();
                     renderValues();
+                    updateStatusBar();
                 }
             }
         }
     };
 
-        window.regeditRenameSelected = function() {
+    window.regeditRenameSelected = function() {
         if(selectedValueName && selectedValueName !== '(Default)') {
             if(typeof window.xpDialog === 'function') {
                 window.xpDialog("Rename Value", "Enter new name for value:", "prompt", selectedValueName).then(newVal => {
@@ -341,6 +356,7 @@
                             window.saveRegistry();
                             renderTree();
                             renderValues();
+                            updateStatusBar();
                         }
                     }
                 });
@@ -348,9 +364,125 @@
         }
     };
 
+    /* --- FIND IMPLEMENTATION --- */
+    window.regeditFind = function() {
+        if (typeof window.xpDialog === 'function') {
+            window.xpDialog('Find', 'Find what:', 'prompt', lastFindQuery).then(query => {
+                if (query) {
+                    lastFindQuery = query;
+                    performFind(query);
+                }
+            });
+        } else {
+            let query = prompt('Find what:', lastFindQuery);
+            if (query) {
+                lastFindQuery = query;
+                performFind(query);
+            }
+        }
+    };
+
+    window.regeditFindNext = function() {
+        if (!lastFindQuery) {
+            window.regeditFind();
+            return;
+        }
+        if (findMatches.length === 0) {
+            performFind(lastFindQuery);
+        } else {
+            findIndex = (findIndex + 1) % findMatches.length;
+            goToMatch(findMatches[findIndex]);
+        }
+    };
+
+    function performFind(query) {
+        let q = query.toLowerCase();
+        findMatches = [];
+        findIndex = -1;
+
+        function traverseKeys(node, path) {
+            let keys = Object.keys(node).filter(k => typeof node[k] === 'object' && !node[k].type);
+            for (let k of keys) {
+                let nextPath = [...path, k];
+                if (k.toLowerCase().includes(q)) {
+                    findMatches.push({ path: nextPath, valueName: null });
+                }
+                let subNode = node[k];
+                let vals = Object.keys(subNode).filter(vk => typeof subNode[vk] === 'object' && subNode[vk].type);
+                for (let vk of vals) {
+                    let vObj = subNode[vk];
+                    let valDataStr = String(vObj.data !== undefined ? vObj.data : '');
+                    if (vk.toLowerCase().includes(q) || valDataStr.toLowerCase().includes(q)) {
+                        findMatches.push({ path: nextPath, valueName: vk });
+                    }
+                }
+                traverseKeys(subNode, nextPath);
+            }
+        }
+
+        traverseKeys(window.xpRegistry, []);
+
+        if (findMatches.length === 0) {
+            if (typeof window.xpDialog === 'function') {
+                window.xpDialog('Registry Editor', `Finished searching through the registry. The search string '${query}' was not found.`, 'info');
+            } else {
+                alert(`Finished searching through the registry. The search string '${query}' was not found.`);
+            }
+            return;
+        }
+
+        findIndex = 0;
+        goToMatch(findMatches[0]);
+    }
+
+    function goToMatch(match) {
+        if (!match) return;
+        let running = [];
+        for (let p of match.path) {
+            running.push(p);
+            expandedPaths.add(running.join('\\'));
+        }
+        selectedKeyPath = match.path;
+        selectedValueName = match.valueName;
+        renderTree(window.xpRegistry, document.getElementById('regedit-tree'), []);
+        renderValues();
+        updateStatusBar();
+
+        if (match.valueName) {
+            setTimeout(() => {
+                let list = document.getElementById('regedit-values-list');
+                if (list) {
+                    let rows = list.querySelectorAll('tr');
+                    rows.forEach(r => {
+                        if (r.innerText.includes(match.valueName)) {
+                            r.scrollIntoView({ block: 'nearest' });
+                        }
+                    });
+                }
+            }, 50);
+        }
+    }
+
+    // Keyboard shortcut handler for Regedit
+    window.addEventListener('keydown', (e) => {
+        let regWin = document.getElementById('regedit-window');
+        if (!regWin || regWin.style.display === 'none') return;
+        let isFocused = document.activeElement && regWin.contains(document.activeElement);
+        let isActive = regWin.querySelector('.title-bar:not(.inactive)');
+        if (isFocused || isActive) {
+            if (e.ctrlKey && e.key.toLowerCase() === 'f') {
+                e.preventDefault();
+                window.regeditFind();
+            } else if (e.key === 'F3') {
+                e.preventDefault();
+                window.regeditFindNext();
+            }
+        }
+    });
+
     // Make sure init runs when window opens or at start
     setTimeout(() => {
         initRegistry();
-    }, 1000);
+    }, 500);
 
 })();
