@@ -1234,6 +1234,9 @@ function getSelectedFilesInfo() {
 }
 
 window.triggerCopy = function () {
+    document.querySelectorAll('.desktop-icon, #folder-window .file-icon').forEach(el => {
+        if (el.style.opacity === '0.5') el.style.opacity = '1';
+    });
     let items = getSelectedFilesInfo();
     if (items.length > 0) {
         window.fsClipboard = { items: [], action: 'copy' };
@@ -1254,6 +1257,9 @@ window.triggerCopy = function () {
 };
 
 window.triggerCutContextMenu = function () {
+    document.querySelectorAll('.desktop-icon, #folder-window .file-icon').forEach(el => {
+        if (el.style.opacity === '0.5') el.style.opacity = '1';
+    });
     let items = getSelectedFilesInfo();
     if (items.length > 0) {
         window.fsClipboard = { items: [], action: 'cut' };
@@ -1271,8 +1277,12 @@ window.triggerCutContextMenu = function () {
                 if (el) el.style.opacity = '0.5';
             }
         });
+        if (typeof window.showBalloon === 'function' && window.fsClipboard.items.length > 0) {
+            window.showBalloon("Explorer", "Cut " + window.fsClipboard.items.length + " item(s)");
+        }
     }
 };
+window.triggerCut = window.triggerCutContextMenu;
 
 window.triggerPaste = function () {
     if (!window.fsClipboard || !window.fsClipboard.items || window.fsClipboard.items.length === 0) return;
@@ -1532,6 +1542,7 @@ window.emptyRecycleBin = function () {
                     window.saveFileSystem();
                     window.renderDesktop();
                     if (window.currentPath === "C:\\RECYCLER") window.renderExplorer(window.currentPath);
+                    if (typeof window.playSound === 'function') window.playSound('recycle');
                     if (typeof window.showBalloon === 'function') window.showBalloon("Recycle Bin", "Emptied successfully.");
                 }
             });

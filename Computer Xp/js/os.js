@@ -99,7 +99,8 @@ window.gridAlign = true;
             'hw_fail': 'Windows XP Hardware Fail.wav',
             'popup_blocked': 'Windows XP Pop-up Blocked.wav',
             'menu': 'Windows XP Menu Command.wav',
-            'ding': 'ding.wav',
+            'ding': 'Windows XP Ding.wav',
+            'exclamation': 'Windows XP Exclamation.wav',
             'chimes': 'chimes.wav',
             'chord': 'chord.wav',
             'tada': 'tada.wav'
@@ -305,8 +306,8 @@ window.triggerFileOpen = function() {
     }
 };
 
-window.triggerCutContextMenu = function() {
-    if(typeof window.showBalloon === 'function') window.showBalloon('Notice', 'Cut functionality is not yet fully implemented. Try Copy.');
+window.triggerCut = function() {
+    if(typeof window.triggerCutContextMenu === 'function') window.triggerCutContextMenu();
 };
 
 window.triggerDeleteContextMenu = function() {
@@ -805,6 +806,13 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
+    // Win+D or Meta+D (Show Desktop)
+    if ((e.metaKey || e.key === 'Meta') && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        if (typeof window.toggleShowDesktop === 'function') window.toggleShowDesktop();
+        return;
+    }
+
     // F5 = refresh desktop
     if(e.key === 'F5') {
         e.preventDefault();
@@ -871,16 +879,10 @@ document.addEventListener('keydown', (e) => {
         else if (e.key === 'x' || e.key === 'X') {
             if (isDesktopFocused || isFolderFocused) {
                 e.preventDefault();
-                if(typeof window.triggerCopy === 'function') window.triggerCopy();
-                if(window.selectedFileContext) {
-                    let sfc = window.selectedFileContext;
-                    let dir = window.resolvePath(sfc.path);
-                    if(dir && dir[sfc.name]) {
-                        delete dir[sfc.name];
-                        window.saveFileSystem();
-                        if(sfc.path.includes('Desktop')) window.renderDesktop();
-                        if(sfc.path === window.currentPath) window.renderExplorer(window.currentPath);
-                    }
+                if(typeof window.triggerCutContextMenu === 'function') {
+                    window.triggerCutContextMenu();
+                } else if(typeof window.triggerCut === 'function') {
+                    window.triggerCut();
                 }
             }
         }
@@ -1309,10 +1311,14 @@ document.addEventListener("click", function(event) {
     let ctxF = document.getElementById("context-menu-file");
     let ctxR = document.getElementById("context-menu-regedit");
     let ctxS = document.getElementById("context-menu-startitem");
+    let ctxT = document.getElementById("context-menu-taskbar");
+    let ctxTBG = document.getElementById("context-menu-taskbar-bg");
     if(ctxD && !event.target.closest('.has-submenu')) ctxD.style.display = "none";
     if(ctxF && !event.target.closest('.has-submenu')) ctxF.style.display = "none";
     if(ctxR && !event.target.closest('.has-submenu')) ctxR.style.display = "none";
     if(ctxS && !event.target.closest('.has-submenu')) ctxS.style.display = "none";
+    if(ctxT && !event.target.closest('.has-submenu')) ctxT.style.display = "none";
+    if(ctxTBG && !event.target.closest('.has-submenu')) ctxTBG.style.display = "none";
     if(event.target.id === 'desktop' && typeof window.xpClearSelection === 'function' && !window.justFinishedLasso) window.xpClearSelection('desktop');
     if(event.target.id === 'explorer-content' && typeof window.xpClearSelection === 'function' && !window.justFinishedLasso) window.xpClearSelection('folder');
     document.querySelectorAll('.app-menu-dropdown').forEach(menu => menu.style.display = 'none');
@@ -1454,6 +1460,261 @@ window.maximizeWindow = function(id) {
     }
 };
 
+/* --- NOTIFICATION BALLOON SYSTEM --- */
+let balloonTimeout = null;
+let currentBalloonOnClick = null;
+
+window.hideBalloon = function() {
+    let balloon = document.getElementById('xp-balloon');
+    if (balloon) {
+        balloon.style.display = 'none';
+    }
+    if (balloonTimeout) {
+        clearTimeout(balloonTimeout);
+        balloonTimeout = null;
+    }
+    currentBalloonOnClick = null;
+};
+
+window.showBalloon = function(title, text, iconType, onClick, duration = 6000) {
+    let balloon = document.getElementById('xp-balloon');
+    if (!balloon) return;
+    
+    let titleEl = document.getElementById('balloon-title');
+    let textEl = document.getElementById('balloon-text');
+    let iconEl = document.getElementById('balloon-icon');
+    
+    if (titleEl) titleEl.innerText = title || 'Notification';
+    if (textEl) textEl.innerHTML = (text || '').replace(/\n/g, '<br>');
+    
+    if (iconEl) {
+        let iconSrc = 'Windows XP Icons/Information.png';
+        if (typeof iconType === 'string') {
+            if (iconType.includes('/')) iconSrc = iconType;
+            else if (iconType === 'error') iconSrc = 'Windows XP Icons/error.webp';
+            else if (iconType === 'warning') iconSrc = 'Windows XP Icons/Help.png';
+            else if (iconType === 'info') iconSrc = 'Windows XP Icons/Information.png';
+        } else if ((title || '').toLowerCase().includes('error')) {
+            iconSrc = 'Windows XP Icons/error.webp';
+        } else if ((title || '').toLowerCase().includes('risk') || (title || '').toLowerCase().includes('warning') || (title || '').toLowerCase().includes('alert')) {
+            iconSrc = 'Windows XP Icons/Help.png';
+        }
+        iconEl.src = iconSrc;
+    }
+    
+    currentBalloonOnClick = typeof onClick === 'function' ? onClick : null;
+    window.onBalloonClick = function() {
+        if (typeof currentBalloonOnClick === 'function') {
+            currentBalloonOnClick();
+        }
+        window.hideBalloon();
+    };
+    
+    balloon.style.display = 'block';
+    if (typeof window.playSound === 'function') {
+        window.playSound('balloon');
+    }
+    
+    if (balloonTimeout) clearTimeout(balloonTimeout);
+    if (duration > 0) {
+        balloonTimeout = setTimeout(() => {
+            window.hideBalloon();
+        }, duration);
+    }
+};
+
+/* --- SHOW DESKTOP & TASKBAR MANAGEMENT --- */
+let showDesktopHiddenWindows = [];
+
+window.toggleShowDesktop = function() {
+    let visibleWindows = [];
+    document.querySelectorAll('.window').forEach(win => {
+        if (win.style.display !== 'none' && !win.classList.contains('minimized') && win.id !== 'xp-dialog' && win.id !== 'properties-window') {
+            visibleWindows.push(win.id);
+        }
+    });
+
+    if (visibleWindows.length > 0) {
+        showDesktopHiddenWindows = visibleWindows;
+        visibleWindows.forEach(id => {
+            window.minimizeWindow(id);
+        });
+        updateTaskbarShowDesktopText(true);
+    } else if (showDesktopHiddenWindows.length > 0) {
+        let toRestore = [...showDesktopHiddenWindows];
+        showDesktopHiddenWindows = [];
+        toRestore.forEach(id => {
+            let win = document.getElementById(id);
+            if (win) {
+                window.openProgram(id);
+            }
+        });
+        updateTaskbarShowDesktopText(false);
+    }
+};
+
+function updateTaskbarShowDesktopText(showingDesktop) {
+    let desktopMenuItem = document.getElementById('taskbar-menu-show-desktop');
+    if (desktopMenuItem) {
+        desktopMenuItem.innerText = showingDesktop ? 'Show Open Windows' : 'Show the Desktop';
+    }
+}
+
+window.isTaskbarLocked = true;
+window.toggleLockTaskbar = function() {
+    window.isTaskbarLocked = !window.isTaskbarLocked;
+    try {
+        localStorage.setItem('xp_taskbar_locked', window.isTaskbarLocked ? 'true' : 'false');
+    } catch(e) {}
+};
+
+window.toggleQuickLaunch = function() {
+    let ql = document.getElementById('quick-launch');
+    if (!ql) return;
+    let isHidden = ql.style.display === 'none';
+    ql.style.display = isHidden ? 'flex' : 'none';
+    try {
+        localStorage.setItem('xp_quick_launch_enabled', isHidden ? 'true' : 'false');
+    } catch(e) {}
+};
+
+window.showTaskbarContextMenu = function(e, winId) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+
+    document.querySelectorAll('.context-menu-container, .app-menu-dropdown').forEach(m => m.style.display = 'none');
+
+    if (winId) {
+        let ctx = document.getElementById('context-menu-taskbar');
+        if (!ctx) return;
+        window.contextTaskbarWinId = winId;
+        let x = e ? e.clientX : 100;
+        let y = e ? e.clientY : 100;
+        ctx.style.display = 'flex';
+        let ctxH = ctx.offsetHeight || 120;
+        if(y + ctxH > window.innerHeight) y = window.innerHeight - ctxH - 5;
+        ctx.style.left = x + 'px';
+        ctx.style.top = y + 'px';
+        return;
+    }
+
+    if (e && e.target && typeof e.target.closest === 'function' && e.target.closest('.task-item')) return;
+
+    let menu = document.getElementById('context-menu-taskbar-bg');
+    if (!menu) return;
+
+    let qlCheck = document.getElementById('check-quicklaunch');
+    let qlBar = document.getElementById('quick-launch');
+    if (qlCheck) {
+        let isQlVisible = qlBar && qlBar.style.display !== 'none';
+        qlCheck.innerHTML = isQlVisible ? '&#10003;' : '&nbsp;';
+    }
+
+    let lockCheck = document.getElementById('check-lock-taskbar');
+    if (lockCheck) {
+        lockCheck.innerHTML = window.isTaskbarLocked !== false ? '&#10003;' : '&nbsp;';
+    }
+
+    let visibleCount = 0;
+    document.querySelectorAll('.window').forEach(win => {
+        if (win.style.display !== 'none' && !win.classList.contains('minimized') && win.id !== 'xp-dialog' && win.id !== 'properties-window') {
+            visibleCount++;
+        }
+    });
+    let showDesktopItem = document.getElementById('taskbar-menu-show-desktop');
+    if (showDesktopItem) {
+        showDesktopItem.innerText = (visibleCount === 0 && showDesktopHiddenWindows.length > 0) ? 'Show Open Windows' : 'Show the Desktop';
+    }
+
+    menu.style.display = 'flex';
+    let menuW = menu.offsetWidth || 180;
+    let menuH = menu.offsetHeight || 190;
+    let clientX = e && typeof e.clientX === 'number' ? e.clientX : window.innerWidth / 2;
+    let clientY = e && typeof e.clientY === 'number' ? e.clientY : window.innerHeight - 30;
+    let leftPos = Math.min(clientX, window.innerWidth - menuW - 5);
+    let topPos = Math.max(10, clientY - menuH - 4);
+    menu.style.left = leftPos + 'px';
+    menu.style.top = topPos + 'px';
+};
+
+function getTilingWindows() {
+    let list = [];
+    document.querySelectorAll('.window').forEach(win => {
+        if (win.style.display !== 'none' && !win.classList.contains('minimized') && win.id !== 'xp-dialog' && win.id !== 'properties-window') {
+            list.push(win);
+        }
+    });
+    return list;
+}
+
+window.cascadeWindows = function() {
+    let windows = getTilingWindows();
+    if (windows.length === 0) return;
+    let startX = 20, startY = 20;
+    let offset = 26;
+    let targetW = Math.min(window.innerWidth * 0.7, 600);
+    let targetH = Math.min((window.innerHeight - 30) * 0.7, 450);
+
+    windows.forEach((win, idx) => {
+        win.classList.remove('maximized');
+        win.style.width = targetW + 'px';
+        win.style.height = targetH + 'px';
+        win.style.left = (startX + (idx * offset) % Math.max(20, window.innerWidth - targetW - 20)) + 'px';
+        win.style.top = (startY + (idx * offset) % Math.max(20, window.innerHeight - 30 - targetH - 20)) + 'px';
+        window.bringToFront(win);
+    });
+};
+
+window.tileWindowsHorizontal = function() {
+    let windows = getTilingWindows();
+    if (windows.length === 0) return;
+    let availW = window.innerWidth;
+    let availH = window.innerHeight - 30;
+    let count = windows.length;
+    let hEach = Math.floor(availH / count);
+
+    windows.forEach((win, idx) => {
+        win.classList.remove('maximized');
+        win.style.left = '0px';
+        win.style.top = (idx * hEach) + 'px';
+        win.style.width = availW + 'px';
+        win.style.height = hEach + 'px';
+        window.bringToFront(win);
+    });
+};
+
+window.tileWindowsVertical = function() {
+    let windows = getTilingWindows();
+    if (windows.length === 0) return;
+    let availW = window.innerWidth;
+    let availH = window.innerHeight - 30;
+    let count = windows.length;
+    let wEach = Math.floor(availW / count);
+
+    windows.forEach((win, idx) => {
+        win.classList.remove('maximized');
+        win.style.top = '0px';
+        win.style.left = (idx * wEach) + 'px';
+        win.style.width = wEach + 'px';
+        win.style.height = availH + 'px';
+        window.bringToFront(win);
+    });
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+    try {
+        let qlPref = localStorage.getItem('xp_quick_launch_enabled');
+        if (qlPref === 'false') {
+            let ql = document.getElementById('quick-launch');
+            if (ql) ql.style.display = 'none';
+        }
+        let lockPref = localStorage.getItem('xp_taskbar_locked');
+        if (lockPref === 'false') {
+            window.isTaskbarLocked = false;
+        }
+    } catch(e) {}
+});
+
 /* --- CUSTOM XP ASYNC DIALOG SYSTEM --- */
 let dialogResolve = null;
 
@@ -1494,7 +1755,9 @@ window.xpDialog = function(title, text, type = 'info', defaultValue = '') {
         }
         // Play sounds for dialogs
         if(type === 'error' && typeof window.playSound === 'function') {
-            window.playSound('error');
+            window.playSound('critical');
+        } else if((type === 'confirm' || type === 'warning') && typeof window.playSound === 'function') {
+            window.playSound('exclamation');
         } else if(typeof window.playSound === 'function') {
             window.playSound('ding');
         }
@@ -4469,20 +4732,6 @@ window.toggleMediaPlayerCompact = function() {
     }
 };
 
-window.showTaskbarContextMenu = function(e, winId) {
-    e.preventDefault();
-    e.stopPropagation();
-    document.querySelectorAll('.context-menu-container').forEach(m => m.style.display = 'none');
-    let ctx = document.getElementById('context-menu-taskbar');
-    if (!ctx) return;
-    window.contextTaskbarWinId = winId;
-    let x = e.clientX;
-    let y = e.clientY;
-    ctx.style.display = 'flex';
-    if(y + ctx.offsetHeight > window.innerHeight) y = window.innerHeight - ctx.offsetHeight - 5;
-    ctx.style.left = x + 'px';
-    ctx.style.top = y + 'px';
-};
 window.toggleExplorerStatusBar = function() {
     let sb = document.getElementById('explorer-status-bar');
     let menus = document.querySelectorAll('.app-menu-item');
@@ -4502,6 +4751,7 @@ window.toggleExplorerStatusBar = function() {
 window.restoreWindow = function(id) {
     let win = document.getElementById(id);
     if(win) {
+        let wasMinimized = win.classList.contains('minimized');
         win.style.display = 'block';
         if(win.id === 'ie-window' || win.id === 'email-window' || win.id === 'email-compose-window' || win.id === 'email-read-window' || win.id === 'frontpage-window' || win.id === 'cmd-window') {
            win.style.display = 'flex';
@@ -4512,6 +4762,9 @@ window.restoreWindow = function(id) {
         
         let taskBtn = document.getElementById('task-' + id);
         if(taskBtn) taskBtn.classList.add('active');
+        if(wasMinimized && typeof window.playSound === 'function') {
+            window.playSound('restore');
+        }
     }
 };
 

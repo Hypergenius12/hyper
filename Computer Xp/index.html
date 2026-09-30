@@ -480,6 +480,31 @@
         <div class="context-item" style="font-weight:bold;" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar').style.display='none'; if(window.contextTaskbarWinId && typeof window.closeWindow==='function') window.closeWindow(window.contextTaskbarWinId);">Close</div>
     </div>
     
+    <!-- Taskbar Background Context Menu -->
+    <div id="context-menu-taskbar-bg" class="context-menu-container" style="display:none; flex-direction:column; position:absolute; z-index:999999; background:#fff; border:1px solid #ACA899; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); width: 180px; font-family:Tahoma; font-size:11px;">
+        <div class="context-item has-submenu" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Toolbars</span>
+            <span style="font-size: 8px;">&#x25B6;</span>
+            <div class="context-submenu">
+                <div class="context-item" onclick="event.stopPropagation(); if(typeof window.toggleQuickLaunch==='function') window.toggleQuickLaunch(); document.getElementById('context-menu-taskbar-bg').style.display='none';">
+                    <span class="menu-check" id="check-quicklaunch" style="display:inline-block; width:14px; text-align:center;">✓</span> Quick Launch
+                </div>
+            </div>
+        </div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof window.cascadeWindows==='function') window.cascadeWindows();">Cascade Windows</div>
+        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof window.tileWindowsHorizontal==='function') window.tileWindowsHorizontal();">Tile Windows Horizontally</div>
+        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof window.tileWindowsVertical==='function') window.tileWindowsVertical();">Tile Windows Vertically</div>
+        <div class="context-item" id="taskbar-menu-show-desktop" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof window.toggleShowDesktop==='function') window.toggleShowDesktop();">Show the Desktop</div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof openProgram==='function') openProgram('taskmgr-window');">Task Manager</div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="event.stopPropagation(); if(typeof window.toggleLockTaskbar==='function') window.toggleLockTaskbar(); document.getElementById('context-menu-taskbar-bg').style.display='none';">
+            <span class="menu-check" id="check-lock-taskbar" style="display:inline-block; width:14px; text-align:center;">✓</span> Lock the Taskbar
+        </div>
+        <div class="context-item" onclick="event.stopPropagation(); document.getElementById('context-menu-taskbar-bg').style.display='none'; if(typeof openSettings==='function') openSettings('taskbar'); else openProgram('settings-window');">Properties</div>
+    </div>
+    
     <!-- XP Tour Window -->
     <div id="xptour-window" class="window" style="width:800px; height:600px; display:none; background:#000; position:absolute; top:50px; left:50px; box-shadow: 2px 2px 10px rgba(0,0,0,0.5);" onmousedown="bringToFront(this)">
         <div class="title-bar" id="xptour-window-title">
@@ -2437,12 +2462,13 @@ Includes new multi-instance and Programmer view support!', 'info')">
         </div>
     </div>
 
-    <div class="taskbar">
+    <div class="taskbar" oncontextmenu="if(typeof showTaskbarContextMenu==='function'){showTaskbarContextMenu(event); return false;}">
         <div class="start-button" onclick="toggleStartMenu()">
             <img src="Windows XP Icons/main.webp" style="width:20px; height:20px; margin-right:5px;"
                 onerror="this.style.display='none'"> start
         </div>
         <div id="quick-launch" style="display:flex; align-items:center; gap:6px; padding:0 8px; border-right:1px solid #144491; margin-right:4px;">
+            <img src="Windows XP Icons/Desktop.png" style="width:16px; height:16px; cursor:pointer;" onclick="if(typeof toggleShowDesktop==='function') toggleShowDesktop();" title="Show Desktop">
             <img src="Windows XP Icons/Internet Explorer 6.png" style="width:16px; height:16px; cursor:pointer;" onclick="openProgram('ie-window')" title="Internet Explorer">
             <img src="Windows XP Icons/Windows Media Player 9.png" style="width:16px; height:16px; cursor:pointer;" onclick="openProgram('mediaplayer-window')" title="Windows Media Player">
             <img src="Windows XP Icons/Folder Closed.png" style="width:16px; height:16px; cursor:pointer;" onclick="openProgram('folder-window')" title="Windows Explorer">
@@ -2464,7 +2490,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
                 style="width:16px; height:16px; cursor:pointer; margin-right:8px;"
                 onclick="if(typeof openProgram === 'function') openProgram('defender-window')"
                 title="Windows Defender" onerror="this.style.display='none'">
-            <span id="clock" title=""></span>
+            <span id="clock" style="cursor:pointer;" ondblclick="if(typeof openDateTimeSettings==='function') openDateTimeSettings();" title=""></span>
         </div>
     </div>
 
@@ -2517,9 +2543,13 @@ Includes new multi-instance and Programmer view support!', 'info')">
         </div>
     </div>
 
-    <div id="xp-balloon">
-        <div class="close-btn" onclick="hideBalloon()">X</div>
-        <div id="balloon-title">System Alert</div>
+    <!-- Windows XP Notification Balloon -->
+    <div id="xp-balloon" style="cursor:pointer;" onclick="if(typeof window.onBalloonClick==='function') window.onBalloonClick();">
+        <div class="close-btn" onclick="event.stopPropagation(); if(typeof hideBalloon==='function') hideBalloon();" title="Close">✕</div>
+        <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+            <img id="balloon-icon" src="Windows XP Icons/Information.png" style="width:16px; height:16px;" onerror="this.src='Windows XP Icons/System Information.png'">
+            <div id="balloon-title">System Alert</div>
+        </div>
         <div id="balloon-text">This is a notification.</div>
     </div>
 
@@ -3850,7 +3880,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
     <script src="js/email.js?v=1781096102249"></script>
     <script src="js/help.js?v=2781525939149"></script>
     <script src="js/clipbook.js"></script>
-    <script src="js/filesystem.js?v=12"></script>
+    <script src="js/filesystem.js?v=13"></script>
     <script src="js/minesweeper.js"></script>
     <script src="js/solitaire.js"></script>
     <script src="js/checkers.js"></script>
@@ -3868,7 +3898,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
     <script src="js/cmd.js?v=12"></script>
     <script src="js/accounts.js"></script>
     <script src="js/unsaved.js?v=8"></script>
-    <script src="js/os.js?v=12"></script>
+    <script src="js/os.js?v=13"></script>
     <script src="js/store.js?v=12"></script>
     <script src="js/pinball.js"></script>
     <script src="js/photon.js"></script>
