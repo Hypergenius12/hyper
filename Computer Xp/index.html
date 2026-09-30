@@ -3679,26 +3679,29 @@ Includes new multi-instance and Programmer view support!', 'info')">
                 </div>
             </div>
         </div>
-        <div class="explorer-toolbar">
-            <div
-                style="padding: 5px; background: white; font-family: Tahoma; font-size: 24px; color: #3A6EA5; width:100%; border-bottom: 2px solid #ACA899;">
-                <img src="Windows XP Icons/Setup.png" style="vertical-align:middle; width:32px;"> Add or Remove Programs
+        <div class="explorer-toolbar" id="store-banner-bar" style="background:#FFF; border-bottom: 2px solid #ACA899; padding: 6px 12px;">
+            <div id="store-header-banner"
+                style="display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box;">
+                <img id="store-header-icon" src="Windows XP Icons/Windows Catalog.png" style="width:32px; height:32px; flex-shrink:0;">
+                <div style="flex:1;">
+                    <div id="store-header-title" style="font-family: Tahoma; font-size: 18px; font-weight: bold; color: #3A6EA5; line-height: 1.1;">Windows Catalog</div>
+                    <div id="store-header-subtitle" style="font-family: Tahoma; font-size: 11px; color: #555;">Find, review, and install certified software for Windows XP</div>
+                </div>
             </div>
         </div>
-        <div class="content" style="flex-direction:row; padding:0; background:#f0f0ed; height:100%; min-height:0; overflow:hidden;">
-            <div style="width: 130px; background:#6383b8; display:flex; flex-direction:column; padding:10px 0;">
+        <div class="content" style="flex-direction:row; padding:0; background:#ECE9D8; flex:1; min-height:0; overflow:hidden;">
+            <div style="width: 120px; background:#6383b8; display:flex; flex-direction:column; padding:10px 0; user-select:none; border-right:1px solid #5a7baf; flex-shrink:0;">
                 <div class="store-nav-btn active" id="store-nav-all" onclick="switchStoreTab('all')"
-                    style="padding:10px; color:white; font-family:Tahoma; font-size:11px; cursor:pointer; text-align:center; background:#436a99; box-shadow:inset 1px 1px 2px rgba(0,0,0,0.3);">
-                    <img src="Windows XP Icons/Setup.png" style="display:block; margin:0 auto 5px; width:32px;"><br>Add
-                    New<br>Programs
+                    style="padding:10px 6px; color:white; font-family:Tahoma; font-size:11px; cursor:pointer; text-align:center; background:#436a99; box-shadow:inset 1px 1px 2px rgba(0,0,0,0.3);">
+                    <img src="Windows XP Icons/Windows Catalog.png" style="display:block; margin:0 auto 5px; width:32px; height:32px;"><br>Windows<br>Catalog
                 </div>
                 <div class="store-nav-btn" id="store-nav-installed" onclick="switchStoreTab('installed')"
-                    style="padding:10px; color:white; font-family:Tahoma; font-size:11px; cursor:pointer; text-align:center;">
+                    style="padding:10px 6px; color:white; font-family:Tahoma; font-size:11px; cursor:pointer; text-align:center;">
                     <img src="Windows XP Icons/Recycle Bin (full).png"
-                        style="display:block; margin:0 auto 5px; width:32px;"><br>Change or<br>Remove
+                        style="display:block; margin:0 auto 5px; width:32px; height:32px;"><br>Change or<br>Remove
                 </div>
             </div>
-            <div style="flex:1; padding:15px; overflow-y:auto; background:#fff; border-left:2px solid #5a7baf;"
+            <div style="flex:1; padding:10px; overflow-y:auto; background:#ECE9D8; min-width:0; box-sizing:border-box;"
                 id="store-list-container">
                 <!-- Injected via store.js -->
             </div>
@@ -3847,7 +3850,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
     <script src="js/email.js?v=1781096102249"></script>
     <script src="js/help.js?v=2781525939149"></script>
     <script src="js/clipbook.js"></script>
-    <script src="js/filesystem.js?v=5"></script>
+    <script src="js/filesystem.js?v=12"></script>
     <script src="js/minesweeper.js"></script>
     <script src="js/solitaire.js"></script>
     <script src="js/checkers.js"></script>
@@ -3862,11 +3865,11 @@ Includes new multi-instance and Programmer view support!', 'info')">
     <script src="js/soundrecorder.js"></script>
     <script src="js/calc.js"></script>
     <script src="js/taskmgr.js"></script>
-    <script src="js/cmd.js"></script>
+    <script src="js/cmd.js?v=12"></script>
     <script src="js/accounts.js"></script>
     <script src="js/unsaved.js?v=8"></script>
-    <script src="js/os.js?v=6"></script>
-    <script src="js/store.js?v=3"></script>
+    <script src="js/os.js?v=12"></script>
+    <script src="js/store.js?v=12"></script>
     <script src="js/pinball.js"></script>
     <script src="js/photon.js"></script>
     <script src="js/charmap.js"></script>
@@ -3879,7 +3882,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
     <script src="js/remotedesktop.js"></script>
     <script src="js/defrag.js"></script>
     <script src="js/xptour.js"></script>
-    <script src="js/app_manager.js"></script>
+    <script src="js/app_manager.js?v=12"></script>
 
 
 

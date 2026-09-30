@@ -1078,6 +1078,12 @@ function executeFile(name, item, currentDir = "") {
         }
     }
     else if (item.type === 'exe' || (item.type === 'shortcut' && item.app)) {
+        if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled(item.app)) {
+            if (typeof window.openCatalogApp === 'function') {
+                window.openCatalogApp(item.app);
+                return;
+            }
+        }
         // Special initialization for certain apps
         if (item.app === 'cmd-window' && typeof window.initCmd === 'function') window.initCmd();
         if (item.app === 'taskmgr-window' && typeof window.openTaskManager === 'function') { window.openTaskManager(); return; }
@@ -1086,22 +1092,36 @@ function executeFile(name, item, currentDir = "") {
         if (typeof window.openProgram === 'function') window.openProgram(item.app, name);
     }
     else if (item.type === 'file' && (item.extension === 'html' || item.extension === 'htm')) {
-        if (typeof window.openFrontpageFile === 'function') {
-            if (window.isAppInstalled("Microsoft FrontPage")) {
-                window.openFrontpageFile(name, item.content, currentDir);
-            } else {
-                if (typeof window.xpDialog === 'function') window.xpDialog("Error", "No you can't do that. The associated program 'Microsoft FrontPage' has been deleted or uninstalled.", "error");
+        if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled("Microsoft FrontPage")) {
+            if (typeof window.openCatalogApp === 'function') {
+                window.openCatalogApp("Microsoft FrontPage");
+                return;
             }
+        }
+        if (typeof window.openFrontpageFile === 'function') {
+            window.openFrontpageFile(name, item.content, currentDir);
         } else if (typeof window.openIEFile === 'function') {
             window.openIEFile(name, item.content, currentDir);
         }
     }
     else if (item.type === 'file' && item.extension === 'txt') {
+        if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled("Notepad")) {
+            if (typeof window.openCatalogApp === 'function') {
+                window.openCatalogApp("Notepad");
+                return;
+            }
+        }
         if (typeof window.openNotepadFile === 'function') {
             window.openNotepadFile(name, item.content, currentDir);
         }
     }
     else if (item.type === 'file' && item.extension === 'xls') {
+        if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled("Microsoft Excel")) {
+            if (typeof window.openCatalogApp === 'function') {
+                window.openCatalogApp("Microsoft Excel");
+                return;
+            }
+        }
         if (typeof window.openProgram === 'function') window.openProgram('excel-window', name);
         setTimeout(() => {
             if(typeof window.excelOpenDirect === 'function') window.excelOpenDirect(name, item);
@@ -1111,12 +1131,14 @@ function executeFile(name, item, currentDir = "") {
         if (typeof window.openMediaPlayer === 'function') window.openMediaPlayer(name, item, currentDir);
     }
     else if (item.type === 'file' && (item.extension === 'jpg' || item.extension === 'png' || item.extension === 'bmp' || item.extension === 'gif' || item.extension === 'webp')) {
-        if (typeof window.openPhotonImage === 'function') {
-            if (window.isAppInstalled("Photon Picture Viewer")) {
-                window.openPhotonImage(name, item.content, currentDir);
-            } else {
-                if (typeof window.xpDialog === 'function') window.xpDialog("Error", "No you can't do that. The associated program 'Photon Picture Viewer' has been deleted or uninstalled.", "error");
+        if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled("Photon Picture Viewer")) {
+            if (typeof window.openCatalogApp === 'function') {
+                window.openCatalogApp("Photon Picture Viewer");
+                return;
             }
+        }
+        if (typeof window.openPhotonImage === 'function') {
+            window.openPhotonImage(name, item.content, currentDir);
         }
     }
 }

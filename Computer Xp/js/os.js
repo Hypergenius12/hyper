@@ -1019,8 +1019,18 @@ window.executeRunCmd = function() {
         }
     } else {
         let cleanName = cmd.replace('.exe', '');
+        let targetApp = mapping[cleanName] || cleanName;
+        let isInst = typeof window.isAppInstalled === 'function' ? window.isAppInstalled(targetApp) : isAppInstalled(cleanName);
         
-        if (!isAppInstalled(cleanName)) {
+        if (!isInst) {
+            let runWin1 = document.getElementById('run-window');
+            if (runWin1) runWin1.style.display = 'none';
+            let runWin2 = document.getElementById('run-dialog');
+            if (runWin2) runWin2.style.display = 'none';
+            if (typeof window.openCatalogApp === 'function') {
+                window.openCatalogApp(targetApp);
+                return;
+            }
             window.xpDialog('Run', "Windows cannot find '" + rawCmd + "'. Make sure you typed the name correctly, and then try again.", 'error');
             return;
         }
@@ -1322,6 +1332,14 @@ window.bringToFront = function(element) {
 };
 
 window.openProgram = function(id) {
+    if(id !== 'store-window' && typeof window.isAppInstalled === 'function') {
+        if(!window.isAppInstalled(id)) {
+            if(typeof window.openCatalogApp === 'function') {
+                window.openCatalogApp(id);
+                return;
+            }
+        }
+    }
     if(id === 'paint-window' && typeof window.initPaint === 'function') window.initPaint();
     if(id === 'defrag-window' && typeof window.initDefrag === 'function') window.initDefrag();
     if(id === 'xptour-window' && typeof window.initXpTour === 'function') window.initXpTour();
@@ -3464,10 +3482,14 @@ window.startMenuSearch = function(query, executeFirst) {
     allApps = allApps.concat(catApps);
     
     // Store apps
-    if (typeof STORE_APPS !== 'undefined' && typeof window.isAppInstalled === 'function') {
+    if (typeof STORE_APPS !== 'undefined') {
         STORE_APPS.forEach(app => {
-            if (window.isAppInstalled(app)) {
-                allApps.push({ name: app.name, icon: app.icon.startsWith('data:') || app.icon.includes('/') ? app.icon : ('Windows XP Icons/' + app.icon + '.png'), fn: `openProgram('${app.appId}'); toggleStartMenu();` });
+            let iconSrc = app.icon.startsWith('data:') || app.icon.includes('/') ? app.icon : ('Windows XP Icons/' + app.icon + '.png');
+            let isInst = typeof window.isAppInstalled === 'function' ? window.isAppInstalled(app) : true;
+            if (isInst) {
+                allApps.push({ name: app.name, icon: iconSrc, fn: `openProgram('${app.appId}'); toggleStartMenu();` });
+            } else {
+                allApps.push({ name: app.name, icon: iconSrc, uninstalled: true, fn: `if(typeof window.openCatalogApp==='function') window.openCatalogApp('${app.id}'); toggleStartMenu();` });
             }
         });
     }
@@ -3499,46 +3521,26 @@ window.startMenuSearch = function(query, executeFirst) {
         }
     }
 
-    // Filter using 'includes'      // Filter out ANY apps that are uninstalled or deleted
-      let finalApps = [];
-      if (typeof window.isAppInstalled === 'function') {
-          allApps.forEach(a => {
-              // Try to find app name to check. Some names in allApps differ slightly from isAppInstalled mapping.
-              let checkName = a.name;
-              
-              // Direct checks for apps added from STORE_APPS
-              let sApp;
-              if (typeof STORE_APPS !== 'undefined') {
-                  sApp = STORE_APPS.find(sa => sa.name.toLowerCase() === a.name.toLowerCase() || (a.fn && sa.appId && a.fn.includes(sa.appId)));
-              }
-              
-              if (sApp) {
-                  if (window.isAppInstalled(sApp.name)) finalApps.push(a);
-              } else {
-                  // Standard apps - we just ask isAppInstalled. If it returns true, we keep it.
-                  // It will return false if the exe is deleted (or if it's an unrecognized random desktop shortcut).
-                  // So we only filter out apps that are explicitly recognized by isAppInstalled mapping but return false.
-                  // Wait, if it's a random desktop shortcut that isn't in isAppInstalled mapping, isAppInstalled returns false.
-                  // So we must check if it's a KNOWN app.
-                  let knownAppNames = [
-                      'Notepad', 'WordPad', 'Paint', 'Calculator', 'Character Map', 'Sound Recorder', 'Clipboard Viewer',
-                      'Minesweeper', 'Solitaire', 'FreeCell', 'Hearts', 'Internet Spades', '3D Pinball', 'Disk Defragmenter',
-                      'System Information', 'Registry Editor', 'Task Manager', 'Command Prompt', 'Internet Explorer',
-                      'Outlook Express', 'Windows Media Player', 'Windows Messenger', 'Remote Desktop', 'Tour Windows XP',
-                      'Photon Picture Viewer', 'Control Panel', 'Printers and Faxes', 'Help and Support', 'Microsoft FrontPage', 'Microsoft Excel'
-                  ];
-                  
-                  let isKnown = knownAppNames.find(k => k.toLowerCase() === a.name.toLowerCase());
-                  if (isKnown) {
-                      if (window.isAppInstalled(isKnown)) finalApps.push(a);
-                  } else {
-                      // It's a custom shortcut or random file on desktop, just keep it.
-                      finalApps.push(a);
-                  }
-              }
-          });
-          allApps = finalApps;
-      }
+    // Process installed/uninstalled state for all apps
+    let finalApps = [];
+    if (typeof window.isAppInstalled === 'function') {
+        allApps.forEach(a => {
+            let sApp = typeof STORE_APPS !== 'undefined' 
+                ? STORE_APPS.find(sa => sa.name.toLowerCase() === a.name.toLowerCase() || (a.fn && sa.appId && a.fn.includes(sa.appId)))
+                : null;
+            
+            let checkTarget = sApp ? sApp : a.name;
+            let isInst = window.isAppInstalled(checkTarget);
+            
+            if (!isInst) {
+                a.uninstalled = true;
+                let targetId = sApp ? sApp.id : a.name;
+                a.fn = `if(typeof window.openCatalogApp==='function') window.openCatalogApp('${targetId}'); toggleStartMenu();`;
+            }
+            finalApps.push(a);
+        });
+        allApps = finalApps;
+    }
 
     let seen = new Set();
     let matches = [];
@@ -3562,8 +3564,8 @@ window.startMenuSearch = function(query, executeFirst) {
             let item = document.createElement('div');
             item.className = 'start-menu-item';
             item.setAttribute('onclick', app.fn);
-            item.innerHTML = `<img src="${app.icon}" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"><span>${app.name}</span>`;
-            resultsContainer.appendChild(item);
+            let uninstBadge = app.uninstalled ? '<span style="font-size:10px; color:#888; font-style:italic; margin-left:6px;">(Install from Catalog)</span>' : '';
+            item.innerHTML = `<img src="${app.icon}" class="sys-icon-small" style="margin-right:8px; ${app.uninstalled ? 'opacity:0.75;' : ''}" onerror="this.style.display='none'"><span>${app.name}${uninstBadge}</span>`;
         });
     }
 };

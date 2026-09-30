@@ -146,6 +146,12 @@ function processCmd(line) {
             else cmdPrint("BIOS is not accessible right now.");
             break;
         default:
+            let maybeApp = parts[0].toLowerCase().replace('.exe', '');
+            let appFound = typeof window.findStoreApp === 'function' ? window.findStoreApp(maybeApp) : null;
+            if (appFound) {
+                cmdStart([parts[0]]);
+                break;
+            }
             cmdPrint("'" + parts[0] + "' is not recognized as an internal or external command,");
             cmdPrint("operable program or batch file.");
             break;
@@ -609,21 +615,49 @@ function cmdFormat(args) {
 
 function cmdStart(args) {
     if(args.length === 0) { cmdPrint("The syntax of the command is incorrect."); return; }
-    let programName = args.join(' ').toLowerCase();
+    let rawName = args.join(' ').toLowerCase().replace('.exe', '');
+    
+    let sApp = typeof window.findStoreApp === 'function' ? window.findStoreApp(rawName) : null;
+    if (sApp) {
+        if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled(sApp)) {
+            cmdPrint("Program '" + sApp.name + "' is not installed. Opening Windows Catalog...");
+            if (typeof window.openCatalogApp === 'function') {
+                window.openCatalogApp(sApp.id);
+            }
+            return;
+        }
+        window.openProgram(sApp.appId);
+        cmdPrint("Started: " + sApp.name);
+        return;
+    }
     
     let mapping = {
         'notepad': 'notepad-window',
         'calc': 'calc-window',
         'mspaint': 'paint-window',
+        'paint': 'paint-window',
         'explorer': 'folder-window',
         'taskmgr': 'taskmgr-window',
-        'cmd': 'cmd-window'
+        'cmd': 'cmd-window',
+        'excel': 'excel-window',
+        'pinball': 'pinball-window',
+        'winmine': 'minesweeper-window',
+        'sol': 'solitaire-window',
+        'wordpad': 'wordpad-window'
     };
     
-    if(mapping[programName]) {
-        window.openProgram(mapping[programName]);
-        cmdPrint("Started: " + programName);
+    if(mapping[rawName]) {
+        let winId = mapping[rawName];
+        if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled(winId)) {
+            cmdPrint("Program is not installed. Opening Windows Catalog...");
+            if (typeof window.openCatalogApp === 'function') {
+                window.openCatalogApp(winId);
+            }
+            return;
+        }
+        window.openProgram(winId);
+        cmdPrint("Started: " + rawName);
     } else {
-        cmdPrint("Could not start \"" + programName + "\".");
+        cmdPrint("Could not start \"" + rawName + "\".");
     }
 }

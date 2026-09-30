@@ -142,17 +142,29 @@
                 'printers-window': 'Printers and Faxes',
                 'help-window': 'Help and Support',
                 'frontpage-window': 'Microsoft FrontPage',
-                'excel-window': 'Microsoft Excel'
+                'excel-window': 'Microsoft Excel',
+                'checkers-window': 'Internet Checkers',
+                'reversi-window': 'Internet Reversi',
+                'tetris-window': 'Tetris XP',
+                'main-window': 'Data Miner'
             };
             
             let appName = mapping[id];
             if (appName) {
                 if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled(appName)) {
-                    if(window.xpDialog) window.xpDialog("Error", "Windows cannot find the program. Make sure you typed the name correctly, and then try again.", "error");
+                    if (typeof window.openCatalogApp === 'function') {
+                        window.openCatalogApp(appName);
+                    } else if(window.xpDialog) {
+                        window.xpDialog("Error", "Windows cannot find the program. Make sure you typed the name correctly, and then try again.", "error");
+                    }
                     return;
                 }
                 if (typeof window.isAppInRecycler === 'function' && window.isAppInRecycler(appName)) {
-                    if(window.xpDialog) window.xpDialog("Error", "You need to restore the program from the Recycle Bin to use it.", "error");
+                    if (typeof window.openCatalogApp === 'function') {
+                        window.openCatalogApp(appName);
+                    } else if(window.xpDialog) {
+                        window.xpDialog("Error", "You need to restore the program from the Recycle Bin to use it.", "error");
+                    }
                     return;
                 }
             }
