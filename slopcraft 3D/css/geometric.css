@@ -1,8 +1,12 @@
-/* Geometric UI System */
+/* ============================================
+   SLOPCRAFT 3D — Vanilla Minecraft GUI Styles
+   ============================================ */
+
+/* Fullscreen GUI Overlay */
 #geometric-ui {
     position: fixed;
     top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0, 0, 0, 0.65);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -10,68 +14,86 @@
 }
 
 #geometric-ui.hidden {
-    display: none;
-}
-
-.inv-wrapper {
-    display: flex;
-    gap: 20px;
-    background: rgba(10, 10, 15, 0.9);
-    padding: 30px;
-    border: 2px solid #333;
-    box-shadow: 0 0 20px rgba(0,0,0,0.8);
-}
-
-.equipment-col {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.main-grid, .hotbar-grid {
-    display: grid;
-    grid-template-columns: repeat(9, 50px);
-    grid-template-rows: repeat(3, 50px);
-    gap: 5px;
-}
-
-.hotbar-grid {
-    grid-template-rows: 50px;
-}
-
-#geometric-hotbar {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(10, 10, 15, 0.8);
-    padding: 10px;
-    border: 2px solid #333;
-    z-index: 500;
-}
-
-#geometric-hotbar.hidden {
     display: none !important;
 }
 
-.inv-slot {
-    width: 50px;
-    height: 50px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid #444;
-    position: relative;
-    cursor: pointer;
+/* Authentic Vanilla Minecraft Container Window */
+.inv-wrapper {
+    display: flex;
+    gap: 16px;
+    background: var(--mc-gui-bg, #c6c6c6);
+    padding: 16px 20px;
+    border: 4px solid #c6c6c6;
+    border-top-color: #ffffff;
+    border-left-color: #ffffff;
+    border-right-color: #555555;
+    border-bottom-color: #555555;
+    box-shadow: inset 2px 2px 0 #dbdbdb, inset -2px -2px 0 #373737, 0 12px 35px rgba(0, 0, 0, 0.85);
+    font-family: 'Minecraftia', monospace, sans-serif;
+    color: #404040;
     box-sizing: border-box;
 }
 
+.mc-container-title {
+    font-family: 'Minecraftia', monospace, sans-serif;
+    font-size: 14px;
+    font-weight: normal;
+    color: #404040;
+    margin-bottom: 8px;
+    user-select: none;
+}
+
+/* Columns */
+.equipment-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 8px;
+    border-right: 2px solid #a0a0a0;
+}
+
+.main-inv-col {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Grids */
+.main-grid, .hotbar-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 40px);
+    grid-template-rows: repeat(3, 40px);
+    gap: 4px;
+}
+
+.hotbar-grid {
+    grid-template-rows: 40px;
+}
+
+/* Authentic 2px Inset Minecraft Item Slot */
+.inv-slot {
+    width: 40px;
+    height: 40px;
+    background: #8b8b8b;
+    border-top: 2px solid #373737;
+    border-left: 2px solid #373737;
+    border-right: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    position: relative;
+    cursor: pointer;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    image-rendering: pixelated;
+}
+
 .inv-slot:hover {
-    background: rgba(255,255,255,0.15);
-    border-color: #7c5cff;
+    background: #a4a4a4;
 }
 
 .inv-slot.active {
-    border: 2px solid #7c5cff;
-    background: rgba(124, 92, 255, 0.2);
+    outline: 2px solid #ffffff;
+    outline-offset: -1px;
 }
 
 .armor-slot::after {
@@ -79,8 +101,9 @@
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    color: rgba(255,255,255,0.2);
-    font-size: 10px;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 8px;
+    font-family: 'Minecraftia', sans-serif;
     pointer-events: none;
     text-transform: uppercase;
 }
@@ -89,104 +112,252 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+    image-rendering: pixelated;
+    pointer-events: none;
 }
 
 .item-count {
     position: absolute;
     bottom: 2px;
-    right: 4px;
-    color: white;
-    font-size: 12px;
-    font-family: var(--font-mono);
-    text-shadow: 1px 1px 0 #000;
+    right: 3px;
+    color: #ffffff;
+    font-size: 13px;
+    font-family: 'Minecraftia', monospace, sans-serif;
+    text-shadow: 2px 2px 0 #3f3f3f;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
 }
 
-#pause-screen {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0,0,0,0.8);
+/* Crafting Column */
+.crafting-col {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
+    flex-direction: column;
+    padding-left: 14px;
+    border-left: 2px solid #a0a0a0;
+    min-width: 150px;
 }
 
-#pause-screen.hidden {
-    display: none;
+.crafting-col.hidden {
+    display: none !important;
 }
 
-#drag-item-icon {
-    image-rendering: pixelated;
-    position: fixed;
-    pointer-events: none;
-    z-index: 3000;
-    width: 50px; height: 50px;
-    transform: translate(-50%, -50%);
+.crafting-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 40px);
+    grid-template-rows: repeat(2, 40px);
+    gap: 4px;
 }
 
-#drag-item-icon.hidden {
-    display: none;
+.crafting-output {
+    width: 50px;
+    height: 50px;
+    background: #8b8b8b;
+    border-top: 3px solid #373737;
+    border-left: 3px solid #373737;
+    border-right: 3px solid #ffffff;
+    border-bottom: 3px solid #ffffff;
 }
 
-#item-tooltip {
-    position: fixed;
-    pointer-events: none;
-    z-index: 2500;
-    background: rgba(10, 10, 15, 0.95);
-    border: 1px solid #7c5cff;
-    padding: 10px;
-    color: white;
-    font-family: var(--font-mono);
-    font-size: 14px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    max-width: 250px;
+.crafting-output:hover {
+    background: #a4a4a4;
 }
 
-#item-tooltip.hidden {
-    display: none;
-}
-
+/* Wand Config Column */
 .wand-config-col {
     display: flex;
     flex-direction: column;
-    padding-left: 20px;
-    border-left: 1px solid #444;
+    padding-left: 14px;
+    border-left: 2px solid #a0a0a0;
 }
 
 .wand-config-col.hidden {
-    display: none;
+    display: none !important;
 }
 
 .wand-slots-grid .inv-slot {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: rgba(124, 92, 255, 0.1);
-    border: 2px solid #7c5cff;
+    width: 44px;
+    height: 44px;
+    background: #7a7a9a;
 }
 
 /* ============================================
-   Crosshair
+   HUD (In-Game Overlay)
    ============================================ */
+
+/* Hotbar Frame */
+#geometric-hotbar {
+    position: fixed;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 364px;
+    height: 44px;
+    background-image: url('../assets/mc/hud/hotbar.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    box-sizing: border-box;
+    z-index: 500;
+}
+
+#geometric-hotbar.hidden {
+    display: none !important;
+}
+
+#main-hotbar-grid {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+}
+
+#main-hotbar-grid .inv-slot {
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+#main-hotbar-grid .inv-slot:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Hotbar Active Selection Frame */
+#mc-hotbar-selector {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    top: -2px;
+    left: -2px;
+    background-image: url('../assets/mc/hud/hotbar_selector.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    pointer-events: none;
+    transition: left 0.05s ease-out;
+    z-index: 10;
+}
+
+/* Stacked HUD Status Bars (Hearts, Armor, Mana) */
+#mc-hud-container {
+    position: fixed;
+    bottom: 58px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 364px;
+    z-index: 500;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+#mc-hud-container.hidden {
+    display: none !important;
+}
+
+/* Blue Mana Bar (Repurposed XP Bar) */
+#mc-mana-bar-container {
+    position: relative;
+    width: 364px;
+    height: 10px;
+    background-image: url('../assets/mc/mana_bar_bg.png');
+    background-size: 364px 10px;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+}
+
+#mc-mana-fill {
+    width: 100%;
+    height: 100%;
+    background-image: url('../assets/mc/mana_bar_fill.png');
+    background-size: 364px 10px;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    transition: width 0.1s linear;
+}
+
+#mc-mana-text {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: -15px;
+    left: 0;
+    font-family: 'Minecraftia', monospace, sans-serif;
+    font-size: 13px;
+    color: #55ffff;
+    text-shadow:
+        1px 1px 0 #000,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        0 2px 0 #000;
+    letter-spacing: 1px;
+    user-select: none;
+}
+
+/* Health Hearts Row */
+#mc-health-bar {
+    display: flex;
+    flex-direction: row;
+    gap: 1px;
+    height: 18px;
+}
+
+.mc-heart {
+    width: 18px;
+    height: 18px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+}
+
+/* Armor Bar Row */
+#mc-armor-bar {
+    display: flex;
+    flex-direction: row;
+    gap: 1px;
+    height: 18px;
+}
+
+#mc-armor-bar.hidden {
+    display: none !important;
+}
+
+.mc-armor {
+    width: 18px;
+    height: 18px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+}
+
+/* Crosshair */
 #crosshair {
     position: fixed;
-    top: 50%; left: 50%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
     z-index: 50;
     pointer-events: none;
+    width: 32px;
+    height: 32px;
+    background-image: url('../assets/mc/hud/crosshair.png');
+    background-size: 100% 100%;
+    image-rendering: pixelated;
+    mix-blend-mode: difference;
 }
-.ch { position: absolute; background: rgba(255,255,255,0.8); }
-.ch-h { width: 20px; height: 2px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-.ch-v { width: 2px; height: 20px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-.ch-dot { width: 4px; height: 4px; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.9); }
 
-/* ============================================
-   Damage Flash
-   ============================================ */
+/* Damage Flash */
 #damage-flash {
     position: fixed;
     top: 0; left: 0; width: 100vw; height: 100vh;
-    background: radial-gradient(ellipse at center, transparent 30%, rgba(255, 0, 0, 0.4) 100%);
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(255, 0, 0, 0.45) 100%);
     z-index: 40;
     pointer-events: none;
     opacity: 0;
@@ -196,114 +367,90 @@
     opacity: 1;
 }
 
-/* ============================================
-   Health / Mana Bars
-   ============================================ */
-.bar-container {
+/* Dragging Item Icon */
+#drag-item-icon {
+    image-rendering: pixelated;
     position: fixed;
-    left: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 50;
     pointer-events: none;
-}
-#health-container { bottom: 80px; }
-#mana-container { bottom: 56px; }
-
-.bar-icon {
-    font-size: 16px;
-    width: 20px;
-    text-align: center;
-}
-#health-container .bar-icon { color: #ff4466; }
-#mana-container .bar-icon { color: #66aaff; }
-
-.bar-track {
-    width: 160px;
-    height: 8px;
-    background: rgba(255,255,255,0.08);
-    border-radius: 4px;
-    overflow: hidden;
-}
-.bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.2s ease;
-}
-.health-fill {
-    background: linear-gradient(90deg, #ff2244, #ff6677);
-    box-shadow: 0 0 6px rgba(255, 34, 68, 0.4);
-}
-.mana-fill {
-    background: linear-gradient(90deg, #4466ff, #88aaff);
-    box-shadow: 0 0 6px rgba(68, 102, 255, 0.4);
-}
-.bar-text {
-    font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    color: rgba(255,255,255,0.6);
-    min-width: 55px;
+    z-index: 3000;
+    width: 40px; height: 40px;
+    transform: translate(-50%, -50%);
 }
 
-/* ============================================
-   Debug Info
-   ============================================ */
-#debug-info {
+#drag-item-icon.hidden {
+    display: none !important;
+}
+
+/* Authentic Minecraft Tooltip */
+#item-tooltip {
     position: fixed;
-    top: 8px; left: 8px;
-    font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    color: rgba(255,255,255,0.4);
-    z-index: 50;
     pointer-events: none;
+    z-index: 2500;
+    background: rgba(16, 0, 16, 0.94);
+    border: 2px solid #28007f;
+    outline: 2px solid #5000ff;
+    box-shadow: 0 0 0 2px #100010;
+    padding: 8px 12px;
+    color: #ffffff;
+    font-family: 'Minecraftia', monospace, sans-serif;
+    font-size: 13px;
+    max-width: 280px;
+    line-height: 1.4;
+    image-rendering: pixelated;
 }
 
-/* ============================================
-   Crafting
-   ============================================ */
-.crafting-col {
-    display: flex;
-    flex-direction: column;
-    padding-left: 20px;
-    border-left: 1px solid #444;
-    min-width: 160px;
+#item-tooltip.hidden {
+    display: none !important;
 }
 
-.crafting-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 50px);
-    grid-template-rows: repeat(2, 50px);
-    gap: 5px;
+/* Creative Inventory Panel */
+#creative-inventory-panel {
+    background: var(--mc-gui-bg, #c6c6c6) !important;
+    border: 4px solid #c6c6c6 !important;
+    border-top-color: #ffffff !important;
+    border-left-color: #ffffff !important;
+    border-right-color: #555555 !important;
+    border-bottom-color: #555555 !important;
+    box-shadow: inset 2px 2px 0 #dbdbdb, inset -2px -2px 0 #373737, 0 10px 40px rgba(0, 0, 0, 0.85) !important;
+    border-radius: 0 !important;
+    color: #404040 !important;
+    font-family: 'Minecraftia', monospace, sans-serif !important;
 }
 
-.crafting-output {
-    width: 60px;
-    height: 60px;
-    border: 2px solid #7c5cff;
-    background: rgba(124, 92, 255, 0.1);
-}
-
-.crafting-output:hover {
-    background: rgba(124, 92, 255, 0.25);
-}
-
-/* Creative inventory slots */
 .creative-item-slot {
-    width: 52px;
-    height: 52px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 6px;
+    width: 44px;
+    height: 44px;
+    background: #8b8b8b;
+    border-top: 2px solid #373737;
+    border-left: 2px solid #373737;
+    border-right: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
     cursor: grab;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s, border-color 0.15s;
+    image-rendering: pixelated;
     user-select: none;
+    box-sizing: border-box;
 }
+
 .creative-item-slot:hover {
-    background: rgba(124,92,255,0.25);
-    border-color: rgba(124,92,255,0.6);
+    background: #a4a4a4;
+}
+
+/* Pause Screen */
+#pause-screen {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+}
+
+#pause-screen.hidden {
+    display: none !important;
 }

@@ -499,6 +499,8 @@ class UISystem {
             };
             btnCloseRecipes.onclick = () => modalRecipeBook.classList.add('hidden');
         }
+
+        this.updateMinecraftHUD(null);
     }
 
     closeChest() {
@@ -856,6 +858,7 @@ class UISystem {
 
         // Render Always-Visible Hotbar
         this.renderGrid(this.elements.mainHotbar, player.inventory.slots.slice(0, 9), 0, player, 'inventory');
+        this.updateMinecraftHUD(player);
         
         // If open, render full inventory
         if (this.isOpen) {
@@ -886,6 +889,93 @@ class UISystem {
             // Render furnace if open
             if (this.furnacePos && this.furnaceData) {
                 this._updateFurnaceSlots();
+            }
+        }
+    }
+
+    updateMinecraftHUD(player) {
+        const pHealth = (player && player.health !== undefined) ? player.health : 100;
+        const pMaxHealth = (player && player.maxHealth) ? player.maxHealth : 100;
+        const pMana = (player && player.mana !== undefined) ? player.mana : 100;
+        const pMaxMana = (player && player.maxMana) ? player.maxMana : 100;
+        const pSelected = (player && player.selectedSlot !== undefined) ? player.selectedSlot : 0;
+
+        // 1. Hotbar Selector position
+        const selector = document.getElementById('mc-hotbar-selector');
+        if (selector) {
+            selector.style.left = `${pSelected * 40 - 2}px`;
+        }
+
+        // 2. Blue Mana Bar (Repurposed XP bar)
+        const manaFill = document.getElementById('mc-mana-fill');
+        const manaText = document.getElementById('mc-mana-text');
+        if (manaFill) {
+            const manaPct = Math.max(0, Math.min(100, (pMana / pMaxMana) * 100));
+            manaFill.style.width = `${manaPct}%`;
+        }
+        if (manaText) {
+            manaText.textContent = `${Math.ceil(pMana)}`;
+        }
+
+        // 3. Health Hearts (10 hearts total, 10 HP per heart)
+        const healthBar = document.getElementById('mc-health-bar');
+        if (healthBar) {
+            const maxHearts = 10;
+            const hpPerHeart = pMaxHealth / maxHearts; // 10 HP
+            const halfHp = hpPerHeart / 2; // 5 HP
+
+            if (this._prevHealth === undefined) this._prevHealth = pHealth;
+            const isHurt = pHealth < this._prevHealth;
+            this._prevHealth = pHealth;
+
+            let heartsHtml = '';
+            for (let i = 0; i < maxHearts; i++) {
+                const heartVal = (i + 1) * hpPerHeart;
+                let heartImg = 'heart_empty.png';
+                if (pHealth >= heartVal) {
+                    heartImg = isHurt ? 'heart_flash_full.png' : 'heart_full.png';
+                } else if (pHealth >= heartVal - halfHp) {
+                    heartImg = isHurt ? 'heart_flash_half.png' : 'heart_half.png';
+                } else {
+                    heartImg = isHurt ? 'heart_flash_empty.png' : 'heart_empty.png';
+                }
+
+                const lowHealthShake = (pHealth <= 20 && Math.random() > 0.6) ? 'transform: translateY(-2px);' : '';
+                heartsHtml += `<img src="assets/mc/hud/${heartImg}" class="mc-heart" style="${lowHealthShake}" />`;
+            }
+            healthBar.innerHTML = heartsHtml;
+        }
+
+        // 4. Armor Bar (10 chestplate icons)
+        const armorBar = document.getElementById('mc-armor-bar');
+        if (armorBar) {
+            let totalArmor = 0;
+            if (player && player.inventory && player.inventory.armor) {
+                for (const slot of player.inventory.armor) {
+                    if (slot && slot.item && slot.item.data && slot.item.data.equipData) {
+                        totalArmor += (slot.item.data.equipData.protection || 0);
+                    }
+                }
+            }
+
+            if (totalArmor > 0) {
+                armorBar.classList.remove('hidden');
+                let armorHtml = '';
+                const maxArmorIcons = 10;
+                const armorPerIcon = 2;
+                for (let i = 0; i < maxArmorIcons; i++) {
+                    const iconVal = (i + 1) * armorPerIcon;
+                    let armorImg = 'armor_empty.png';
+                    if (totalArmor >= iconVal) {
+                        armorImg = 'armor_full.png';
+                    } else if (totalArmor >= iconVal - 1) {
+                        armorImg = 'armor_half.png';
+                    }
+                    armorHtml += `<img src="assets/mc/hud/${armorImg}" class="mc-armor" />`;
+                }
+                armorBar.innerHTML = armorHtml;
+            } else {
+                armorBar.classList.add('hidden');
             }
         }
     }

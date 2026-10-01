@@ -918,7 +918,6 @@ class Game {
         if (!document.getElementById('crosshair')) {
             const ch = document.createElement('div');
             ch.id = 'crosshair';
-            ch.innerHTML = '<div class="ch ch-h"></div><div class="ch ch-v"></div><div class="ch ch-dot"></div>';
             document.body.appendChild(ch);
         }
         // Damage flash
@@ -927,28 +926,11 @@ class Game {
             df.id = 'damage-flash';
             document.body.appendChild(df);
         }
-        // HUD bars
-        if (!document.getElementById('health-container')) {
-            const hud = document.createElement('div');
-            hud.innerHTML = `
-                <div id="health-container" class="bar-container">
-                    <span class="bar-icon">♥</span>
-                    <div class="bar-track"><div class="bar-fill health-fill" id="health-fill"></div></div>
-                    <span class="bar-text" id="health-text">100/100</span>
-                </div>
-                <div id="mana-container" class="bar-container">
-                    <span class="bar-icon">★</span>
-                    <div class="bar-track"><div class="bar-fill mana-fill" id="mana-fill"></div></div>
-                    <span class="bar-text" id="mana-text">100/100</span>
-                </div>
-            `;
-            document.body.appendChild(hud);
-        }
         // Minimap Overlay
         if (!document.getElementById('minimap-overlay')) {
             const mmo = document.createElement('div');
             mmo.id = 'minimap-overlay';
-            mmo.style.cssText = 'position: absolute; top: 20px; right: 20px; width: 200px; height: 200px; pointer-events: none; z-index: 100; font-family: Outfit, sans-serif; border: 4px solid black; box-shadow: 0 0 15px rgba(0,0,0,0.8);';
+            mmo.style.cssText = 'position: absolute; top: 20px; right: 20px; width: 200px; height: 200px; pointer-events: none; z-index: 100; font-family: Minecraftia, monospace, sans-serif; border: 4px solid black; box-shadow: 0 0 15px rgba(0,0,0,0.8);';
             mmo.innerHTML = `
                 <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); color: white; font-weight: bold; text-shadow: 1px 1px 2px #000; font-size: 14px;">N</div>
                 <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); color: white; font-weight: bold; text-shadow: 1px 1px 2px #000; font-size: 14px;">S</div>
@@ -2736,11 +2718,47 @@ const initGame = () => {
     }
 
 
+    // Random Splash Text
+    const splashEl = document.getElementById('mc-splash-text');
+    if (splashEl) {
+        const splashes = [
+            "It's literally dirt!",
+            "Now with liquid layers!",
+            "100% pure slop!",
+            "Also try Terraria!",
+            "Cactus is skinny!",
+            "May contain magic wands!",
+            "Dungeons inside!",
+            "Woo, 3D voxels!",
+            "Smelt your ores!",
+            "Infinite worlds!",
+            "Watch out for Creepers!",
+            "Made with Three.js!",
+            "Bigger, better, sloppier!",
+            "Fly fast with WASD!",
+            "Don't dig straight down!",
+            "Blue mana XP bar!",
+            "Pixel perfect!"
+        ];
+        splashEl.textContent = splashes[Math.floor(Math.random() * splashes.length)];
+    }
+
+    // Start Screen Options Toggle
+    const optBtn = document.getElementById('btn-toggle-options');
+    const optPanel = document.getElementById('start-options-panel');
+    if (optBtn && optPanel) {
+        optBtn.onclick = () => {
+            optPanel.classList.toggle('hidden');
+        };
+    }
+
     if (startBtn) {
         startBtn.onclick = () => {
             document.getElementById('start-screen').classList.add('hidden');
             const hotbar = document.getElementById('geometric-hotbar');
             if (hotbar) hotbar.classList.remove('hidden');
+            const mcHud = document.getElementById('mc-hud-container');
+            if (mcHud) mcHud.classList.remove('hidden');
             game.start();
         };
     } else {

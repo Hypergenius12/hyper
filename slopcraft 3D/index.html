@@ -8,9 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SlopCraft 3D</title>
     <meta name="description" content="Explore infinite procedurally generated planets with dungeons, magic wands, and epic bossfights.">
-    <link rel="stylesheet" href="css/style.css?v=2">
-    <link rel="stylesheet" href="css/geometric.css?v=2">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=79">
+    <link rel="stylesheet" href="css/geometric.css?v=79">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-LCRDCCZRXM"></script>
@@ -27,63 +26,78 @@
 
     <!-- Start Screen -->
     <div id="start-screen">
+        <div id="mc-panorama-container">
+            <div id="mc-panorama"></div>
+            <div id="mc-panorama-overlay"></div>
+        </div>
         <div class="start-content">
-            <h1 class="game-title" style="font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif; font-size: 6rem; text-transform: none; text-shadow: 4px 4px 0 #5c3a21; letter-spacing: -2px; transform: rotate(-3deg);">
-                <span style="color: #8b5a2b;">Slop</span><span style="color: #4da64d;">Craft</span> <span style="color: #aaa;">3D</span>
-            </h1>
-            <p class="subtitle" style="font-family: 'Comic Sans MS'; color: #aa8866; font-size: 1.5rem; margin-top: -10px;">It's literally dirt. Enjoy.</p>
-            <div style="margin: 16px 0; display: flex; align-items: center; gap: 10px; justify-content: center;">
-                <label style="color: #aa8866; font-family: 'Comic Sans MS'; font-size: 1rem;">World Seed:</label>
-                <input id="seed-input" type="text" placeholder="(random)" maxlength="40"
-                    style="background: rgba(0,0,0,0.5); border: 1px solid #664422; color: #eeddbb; padding: 6px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; border-radius: 6px; width: 200px; outline: none;"/>
+            <div class="mc-title-container">
+                <h1 class="mc-game-title">SLOPCRAFT</h1>
+                <span class="mc-edition-subtitle">3D EDITION</span>
+                <div id="mc-splash-text" class="mc-splash-text">It's literally dirt!</div>
             </div>
-            <div style="margin: 10px 0; display: flex; align-items: center; gap: 10px; justify-content: center;">
-                <label style="color: #aa8866; font-family: 'Comic Sans MS'; font-size: 1rem; cursor: pointer;">
-                    <input type="checkbox" id="start-mc-textures-toggle"> Minecraft
-                </label>
+
+            <div style="margin: 16px 0; display: flex; align-items: center; gap: 12px; justify-content: center;">
+                <label style="color: #e0e0e0; font-family: 'Minecraftia', sans-serif; font-size: 14px; text-shadow: 2px 2px 0 #3f3f3f;">World Seed:</label>
+                <input id="seed-input" type="text" placeholder="(random)" maxlength="40" class="mc-input" style="width: 220px;" />
             </div>
-            <div style="margin: 10px 0; display: flex; align-items: center; gap: 10px; justify-content: center;">
-                <label style="color: #aa8866; font-family: 'Comic Sans MS'; font-size: 1rem; cursor: pointer;">
-                    <input type="checkbox" id="start-blur-toggle" checked> Distance Blur (Depth of Field)
-                </label>
-            </div>
+
             <div class="start-actions">
-                <button id="btn-new-game" class="menu-btn primary">New Game</button>
+                <button id="btn-new-game" class="mc-btn">Play Game</button>
+                <button id="btn-toggle-options" class="mc-btn">Options...</button>
             </div>
-            <p class="start-hint">Click to lock mouse · WASD to move · Space to jump</p>
+
+            <!-- Start Screen Options Panel -->
+            <div id="start-options-panel" class="hidden" style="margin: 10px 0; background: rgba(0,0,0,0.7); border: 2px solid #555; padding: 12px 20px; box-sizing: border-box; width: 320px;">
+                <div style="margin: 6px 0; display: flex; align-items: center; justify-content: space-between;">
+                    <label style="color: #fff; font-family: 'Minecraftia'; font-size: 13px; text-shadow: 1px 1px 0 #000; cursor: pointer;">
+                        <input type="checkbox" id="start-mc-textures-toggle"> Minecraft Textures
+                    </label>
+                </div>
+                <div style="margin: 6px 0; display: flex; align-items: center; justify-content: space-between;">
+                    <label style="color: #fff; font-family: 'Minecraftia'; font-size: 13px; text-shadow: 1px 1px 0 #000; cursor: pointer;">
+                        <input type="checkbox" id="start-blur-toggle" checked> Distance Blur
+                    </label>
+                </div>
+            </div>
+
+            <p class="start-hint">Click to lock mouse · WASD to move · Space to jump · E for Inventory</p>
+
+            <div style="position: fixed; bottom: 12px; left: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Slopcraft 3D v79</div>
+            <div style="position: fixed; bottom: 12px; right: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Copyright Mojang AB / Slopcraft Team</div>
         </div>
     </div>
 
     <!-- Pause Menu -->
     <div id="pause-screen" class="hidden">
-        <div class="start-content">
-            <h1 class="game-title" style="font-size: 3rem;">Paused</h1>
-            <div class="start-actions" style="margin-top: 2rem;">
-                <button id="btn-resume" class="menu-btn primary">Resume</button>
-                <div style="margin: 20px 0; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-                    <label style="display: block; color: white; margin-bottom: 10px; font-family: 'Outfit';">Render Distance: <span id="render-distance-val">8</span></label>
+        <div class="start-content" style="max-width: 420px; width: 90%;">
+            <h1 class="mc-game-title" style="font-size: 2.8rem; margin-bottom: 24px;">Game Menu</h1>
+            <div class="start-actions">
+                <button id="btn-resume" class="mc-btn">Back to Game</button>
+                <div style="margin: 10px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 14px; border: 2px solid #555; box-sizing: border-box;">
+                    <label style="display: block; color: white; margin-bottom: 8px; font-family: 'Minecraftia'; font-size: 13px;">Render Distance: <span id="render-distance-val">8</span></label>
                     <input type="range" id="render-distance-slider" min="2" max="16" value="8" style="width: 100%; cursor: pointer;">
                 </div>
-                <div style="margin: 20px 0; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-                    <label style="display: block; color: white; margin-bottom: 10px; font-family: 'Outfit';">Field of View: <span id="fov-val">75</span></label>
+                <div style="margin: 10px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 14px; border: 2px solid #555; box-sizing: border-box;">
+                    <label style="display: block; color: white; margin-bottom: 8px; font-family: 'Minecraftia'; font-size: 13px;">Field of View: <span id="fov-val">75</span></label>
                     <input type="range" id="fov-slider" min="30" max="120" value="75" style="width: 100%; cursor: pointer;">
                 </div>
-                <div style="margin: 10px 0; background: rgba(0,0,0,0.5); padding: 16px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-                    <label style="display: block; color: white; cursor: pointer; font-family: 'Outfit';">
-                        <input type="checkbox" id="pause-mc-textures-toggle"> Minecraft
+                <div style="margin: 6px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 10px 14px; border: 2px solid #555; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
+                    <label style="color: white; cursor: pointer; font-family: 'Minecraftia'; font-size: 13px;">
+                        <input type="checkbox" id="pause-mc-textures-toggle"> Minecraft Textures
                     </label>
                 </div>
-                <div style="margin: 10px 0; display: flex; align-items: center; gap: 10px; justify-content: center;">
-                    <label style="color: #aa8866; font-family: 'Comic Sans MS'; font-size: 1rem; cursor: pointer;">
-                        <input type="checkbox" id="pause-blur-toggle" checked> Distance Blur (Depth of Field)
+                <div style="margin: 6px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 10px 14px; border: 2px solid #555; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
+                    <label style="color: white; cursor: pointer; font-family: 'Minecraftia'; font-size: 13px;">
+                        <input type="checkbox" id="pause-blur-toggle" checked> Distance Blur
                     </label>
                 </div>
-                <div style="margin: 10px 0; background: rgba(0,0,0,0.5); padding: 16px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px;">
-                    <span style="color: rgba(255,255,255,0.7); font-family: 'Outfit'; font-size: 0.9rem;">World Seed:</span>
-                    <span id="current-seed-display" style="color: #aaddff; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; flex: 1;">-</span>
-                    <button id="btn-copy-seed" class="menu-btn" style="padding: 6px 14px; font-size: 0.8rem; margin: 0;">Copy</button>
+                <div style="margin: 6px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 10px 14px; border: 2px solid #555; box-sizing: border-box; display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #aaa; font-family: 'Minecraftia'; font-size: 12px;">Seed:</span>
+                    <span id="current-seed-display" style="color: #55ffff; font-family: 'Minecraftia'; font-size: 12px; flex: 1;">-</span>
+                    <button id="btn-copy-seed" class="mc-btn" style="width: auto; height: 28px; padding: 0 10px; font-size: 11px; margin: 0;">Copy</button>
                 </div>
-                <button id="btn-quit" class="menu-btn">Quit to Title</button>
+                <button id="btn-quit" class="mc-btn" style="margin-top: 10px;">Quit to Title</button>
             </div>
         </div>
     </div>
@@ -166,84 +180,81 @@
         <div class="inv-wrapper">
             <!-- Equipment column -->
             <div class="equipment-col">
+                <div class="mc-container-title" style="font-size: 11px;">Armor</div>
                 <div class="inv-slot armor-slot" data-slot="head"></div>
                 <div class="inv-slot armor-slot" data-slot="chest"></div>
                 <div class="inv-slot armor-slot" data-slot="legs"></div>
                 <div class="inv-slot armor-slot" data-slot="boots"></div>
-                <div style="height: 20px;"></div>
-                <div class="inv-slot offhand-slot" data-slot="offhand"></div>
+                <div style="height: 10px;"></div>
+                <div class="inv-slot offhand-slot" data-slot="shield"></div>
             </div>
             
             <div class="main-inv-col">
+                <div class="mc-container-title">Inventory</div>
                 <!-- Main grid (3 rows of 9) -->
                 <div class="main-grid" id="main-inventory-grid">
                     <!-- Filled by JS -->
                 </div>
                 
-                <div style="height: 20px;"></div>
+                <div style="height: 8px;"></div>
                 
                 <!-- Inventory separated hotbar -->
-                <div class="main-grid" id="inv-hotbar-grid" style="grid-template-rows: 60px;">
+                <div class="main-grid" id="inv-hotbar-grid" style="grid-template-rows: 40px;">
                     <!-- Filled by JS -->
                 </div>
             </div>
 
             <!-- Crafting Panel -->
             <div class="crafting-col" id="crafting-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <div style="color: white; font-weight: bold; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7;">Crafting</div>
-                    <button id="btn-recipe-book" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;">📖 Recipe Book</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div class="mc-container-title" style="margin: 0;">Crafting</div>
+                    <button id="btn-recipe-book" class="mc-btn" style="width: auto; height: 26px; padding: 0 8px; font-size: 11px; margin: 0;">📖 Recipes</button>
                 </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="crafting-grid" id="crafting-grid">
                         <!-- 4 crafting slots, filled by JS -->
                     </div>
-                    <div style="font-size: 1.4rem; color: rgba(255,255,255,0.5);">→</div>
+                    <div style="font-size: 1.4rem; color: #404040; font-family: 'Minecraftia';">→</div>
                     <div class="inv-slot crafting-output" id="crafting-output"></div>
                 </div>
-                <div id="crafting-recipe-name" style="margin-top: 10px; font-size: 0.75rem; color: rgba(255,255,255,0.4); font-family: 'JetBrains Mono', monospace;"></div>
+                <div id="crafting-recipe-name" style="margin-top: 8px; font-size: 0.75rem; color: #404040; font-family: 'Minecraftia', monospace;"></div>
             </div>
 
             <!-- Wand Configurator -->
             <div class="wand-config-col hidden" id="wand-config-panel">
-                <div style="color: white; font-weight: bold; margin-bottom: 10px; font-size: 1.2rem;" id="wand-config-title">Wand Configuration</div>
-                <div class="wand-slots-grid" id="wand-slots-grid" style="display: grid; grid-template-columns: repeat(2, 60px); gap: 10px;">
+                <div class="mc-container-title" id="wand-config-title">Wand Config</div>
+                <div class="wand-slots-grid" id="wand-slots-grid" style="display: grid; grid-template-columns: repeat(2, 44px); gap: 6px;">
                     <!-- Filled by JS -->
                 </div>
             </div>
 
             <!-- Chest Inventory Panel -->
-            <div class="crafting-col hidden" id="chest-panel" style="margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <div style="color: white; font-weight: bold; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7;">Chest</div>
-                </div>
-                <div class="main-grid" id="chest-grid" style="grid-template-rows: repeat(3, 60px);">
+            <div class="crafting-col hidden" id="chest-panel" style="margin-top: 10px;">
+                <div class="mc-container-title">Large Chest</div>
+                <div class="main-grid" id="chest-grid" style="grid-template-rows: repeat(3, 40px);">
                     <!-- 27 chest slots, filled by JS -->
                 </div>
             </div>
 
             <!-- Dungeon Menu Panel -->
-            <div class="crafting-col hidden" id="dungeon-menu-panel" style="margin-top: 20px; text-align: center;">
-                <div style="color: white; font-weight: bold; font-size: 1.2rem; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 2px;">Dungeon Entrance</div>
-                <p style="color: rgba(255,255,255,0.7); margin-bottom: 20px;">Beyond this door lies a dangerous dungeon.<br/>Do you wish to enter?</p>
-                <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" style="padding: 10px 20px; background: rgba(255,50,50,0.8); border: 2px solid white; color: white; cursor: pointer; font-weight: bold; border-radius: 4px;">Enter Dungeon</button>
-                <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" style="padding: 10px 20px; background: rgba(100,100,100,0.8); border: 2px solid white; color: white; cursor: pointer; font-weight: bold; border-radius: 4px; margin-left: 10px;">Leave</button>
+            <div class="crafting-col hidden" id="dungeon-menu-panel" style="margin-top: 10px; text-align: center;">
+                <div class="mc-container-title" style="font-size: 16px;">Dungeon Entrance</div>
+                <p style="color: #404040; margin-bottom: 14px; font-size: 12px;">Beyond this door lies a dangerous dungeon.<br/>Do you wish to enter?</p>
+                <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" class="mc-btn" style="width: 140px; height: 32px; font-size: 12px; margin: 0 4px;">Enter Dungeon</button>
+                <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" class="mc-btn" style="width: 100px; height: 32px; font-size: 12px; margin: 0 4px;">Leave</button>
             </div>
 
-
             <!-- Furnace Panel -->
-            <div class="crafting-col hidden" id="furnace-panel" style="margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <div style="color: white; font-weight: bold; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.7;">Furnace</div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <div class="inv-slot" id="furnace-input" style="border: 2px solid rgba(255,255,255,0.4);"></div>
-                        <div style="text-align: center; color: rgba(255,100,0,0.8); font-size: 1.2rem;" id="furnace-fire">🔥</div>
-                        <div class="inv-slot" id="furnace-fuel" style="border: 2px solid rgba(255,255,255,0.4);"></div>
+            <div class="crafting-col hidden" id="furnace-panel" style="margin-top: 10px;">
+                <div class="mc-container-title">Furnace</div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                        <div class="inv-slot" id="furnace-input"></div>
+                        <div style="width: 14px; height: 14px; background: url('assets/mc/container/furnace_fire.png') no-repeat; image-rendering: pixelated;" id="furnace-fire"></div>
+                        <div class="inv-slot" id="furnace-fuel"></div>
                     </div>
-                    <div style="width: 40px; height: 10px; background: rgba(0,0,0,0.5); border-radius: 5px; overflow: hidden; position: relative;">
-                        <div id="furnace-progress" style="width: 0%; height: 100%; background: white;"></div>
+                    <div style="width: 24px; height: 17px; background: url('assets/mc/container/furnace_arrow.png') no-repeat; image-rendering: pixelated; position: relative;">
+                        <div id="furnace-progress" style="width: 0%; height: 100%; background: #ffffff; mix-blend-mode: color-dodge;"></div>
                     </div>
                     <div class="inv-slot crafting-output" id="furnace-output"></div>
                 </div>
@@ -285,18 +296,29 @@
     <!-- Dragging Item Icon -->
     <div id="drag-item-icon" class="hidden"></div>
     <!-- Creative Inventory Panel -->
-    <div id="creative-inventory-panel" class="hidden" style="position:fixed;top:50%;right:20px;transform:translateY(-50%);background:rgba(10,10,20,0.97);border:1px solid rgba(124,92,255,0.4);border-radius:12px;padding:16px;z-index:2000;width:400px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 0 30px rgba(100,60,255,0.3);">
-      <div style="color:white;font-weight:bold;font-size:1rem;margin-bottom:10px;letter-spacing:2px;opacity:0.8;display:flex;justify-content:space-between;align-items:center;">
-        <span>✦ CREATIVE INVENTORY</span>
-        <span style="font-size:0.7rem;opacity:0.5;">Drag to inventory or hotbar</span>
+    <div id="creative-inventory-panel" class="hidden" style="position:fixed;top:50%;right:20px;transform:translateY(-50%);padding:16px;z-index:2000;width:370px;max-height:80vh;display:flex;flex-direction:column;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span class="mc-container-title" style="font-size:14px;margin:0;">Creative Inventory</span>
+        <span style="font-size:10px;color:#555;font-family:'Minecraftia';">Drag to hotbar</span>
       </div>
-      <input id="creative-search" placeholder="Search blocks…" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:white;padding:6px 10px;border-radius:6px;margin-bottom:10px;font-family:monospace;font-size:0.85rem;width:100%;box-sizing:border-box;" />
-      <div id="creative-items-grid" style="display:grid;grid-template-columns:repeat(7,52px);gap:6px;overflow-y:auto;max-height:60vh;padding-right:4px;"></div>
+      <input id="creative-search" class="mc-input" placeholder="Search items…" style="width:100%;margin-bottom:10px;" />
+      <div id="creative-items-grid" style="display:grid;grid-template-columns:repeat(7,44px);gap:4px;overflow-y:auto;max-height:55vh;"></div>
     </div>
-    <div id="creative-toast" class="hidden" style="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:8px 20px;border-radius:8px;font-family:monospace;font-size:14px;z-index:9999;border:1px solid rgba(255,255,255,0.2);pointer-events:none;"></div>
+    <div id="creative-toast" class="hidden" style="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:8px 20px;font-family:'Minecraftia';font-size:13px;z-index:9999;border:2px solid #555;pointer-events:none;"></div>
+
+    <!-- Minecraft In-Game HUD -->
+    <div id="mc-hud-container" class="hidden">
+        <div id="mc-armor-bar" class="hidden"></div>
+        <div id="mc-health-bar"></div>
+        <div id="mc-mana-bar-container">
+            <div id="mc-mana-text">100</div>
+            <div id="mc-mana-fill"></div>
+        </div>
+    </div>
 
     <!-- Geometric hotbar -->
     <div id="geometric-hotbar" class="hidden">
+        <div id="mc-hotbar-selector"></div>
         <div class="hotbar-grid" id="main-hotbar-grid">
             <!-- Filled by JS -->
         </div>
@@ -310,7 +332,7 @@
         }
     }
     </script>
-    <script type="module" src="js/main.js?v=78"></script>
+    <script type="module" src="js/main.js?v=79"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>
 </body>
