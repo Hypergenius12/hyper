@@ -326,7 +326,7 @@ const STORE_APPS = window.STORE_APPS = [
         id: 'clipbook', 
         name: 'Clipboard Viewer', 
         desc: 'Inspect clipboard buffer contents and currently copied text.', 
-        icon: 'clipbook', 
+        icon: 'sysinfo', 
         size: '110 KB', 
         exe: 'clipbrd.exe', 
         appId: 'clipbook-window', 
@@ -888,7 +888,7 @@ window.showStoreAppDetail = function(appId) {
         actionHTML = `
             <div style="text-align:right;">
                 <div style="color:#006600; font-family:Tahoma; font-size:11px; font-weight:bold; margin-bottom:4px; display:flex; align-items:center; justify-content:flex-end; gap:4px;">
-                    <img src="Windows XP Icons/Security Center (safe).png" style="width:14px; height:14px;"> Program is Installed
+                    <img src="Windows XP Icons/Security - Ok.png" style="width:14px; height:14px;"> Program is Installed
                 </div>
                 <div style="display:flex; gap:6px; justify-content:flex-end;">
                     <button onclick="openProgram('${app.appId}')" style="font-family:Tahoma; font-size:11px; font-weight:bold; padding:3px 12px; cursor:pointer;">Run Program</button>
@@ -950,7 +950,7 @@ window.showStoreAppDetail = function(appId) {
             <!-- Navigation Toolbar -->
             <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:6px; margin-bottom:8px; border-bottom:1px solid #ACA899;">
                 <button onclick="window.backToStoreList()" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; font-family:Tahoma; font-size:11px; font-weight:bold; cursor:pointer;">
-                    <img src="Windows XP Icons/Back.png" style="width:16px; height:16px;" onerror="this.src='Windows XP Icons/Folder_Up.png'"> Back to Software List
+                    <img src="Windows XP Icons/Back.png" style="width:16px; height:16px;" onerror="this.style.display='none'"> Back to Software List
                 </button>
                 <div style="font-family:Tahoma; font-size:11px; color:#555;">
                     Windows Catalog &gt; <span style="color:#0A246A;">${app.category || 'Applications'}</span> &gt; <b>${app.name}</b>

@@ -2,7 +2,7 @@
 /* Manages user accounts with separate filesystems, passwords, and avatars */
 
 const DEFAULT_ADMIN_AVATAR = 'Windows XP Icons/admin_login_icon.png';
-const DEFAULT_GUEST_AVATAR = 'Windows XP Icons/User Account.png';
+const DEFAULT_GUEST_AVATAR = 'Windows XP Icons/User Accounts.png';
 
 // Default accounts structure
 function getDefaultAccounts() {

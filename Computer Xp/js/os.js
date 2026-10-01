@@ -267,7 +267,7 @@ window.switchPropTab = function(btn, tabName) {
 };
 
 window.browsePropIcon = function() {
-    let icons = ["Windows XP Icons/Application Window.png", "Windows XP Icons/Computer.png", "Windows XP Icons/Control Panel.png", "Windows XP Icons/Desktop.png", "Windows XP Icons/Display Properties.png", "Windows XP Icons/Folder Opened.png", "Windows XP Icons/Folder Closed.png", "Windows XP Icons/Internet Explorer 6.png", "Windows XP Icons/Minesweeper.png", "Windows XP Icons/My Computer.png", "Windows XP Icons/My Documents.png", "Windows XP Icons/Notepad.png", "Windows XP Icons/Paint.png", "Windows XP Icons/Properties.png", "Windows XP Icons/Recycle Bin (empty).png", "Windows XP Icons/Recycle Bin (full).png", "Windows XP Icons/Run.png", "Windows XP Icons/Solitaire.png", "Windows XP Icons/System Properties.png", "Windows XP Icons/TXT.png", "Windows XP Icons/calc.png", "Windows XP Icons/cmd.png"];
+    let icons = ["Windows XP Icons/Application Window.png", "Windows XP Icons/Control Panel.png", "Windows XP Icons/Desktop.png", "Windows XP Icons/Display Properties.png", "Windows XP Icons/Folder Opened.png", "Windows XP Icons/Folder Closed.png", "Windows XP Icons/Internet Explorer 6.png", "Windows XP Icons/Minesweeper.png", "Windows XP Icons/My Computer.png", "Windows XP Icons/My Documents.png", "Windows XP Icons/Notepad.png", "Windows XP Icons/Paint.png", "Windows XP Icons/Properties.png", "Windows XP Icons/Recycle Bin (empty).png", "Windows XP Icons/Recycle Bin (full).png", "Windows XP Icons/Run.png", "Windows XP Icons/Solitaire.png", "Windows XP Icons/System Properties.png", "Windows XP Icons/TXT.png", "Windows XP Icons/Calculator.png", "Windows XP Icons/Command Prompt.png"];
     let html = '<div style="display:flex;flex-wrap:wrap;gap:5px;max-height:200px;overflow-y:auto;background:#fff;padding:5px;border:2px inset #ECE9D8;width:300px;">';
     icons.forEach(ic => { html += `<img src="${ic}" style="width:32px;height:32px;cursor:pointer;image-rendering:pixelated;" onclick="document.getElementById('prop-icon').src=this.getAttribute('src'); closeDialog(true);" onmouseover="this.style.background='#D1E8FF'" onmouseout="this.style.background='transparent'">`; });
     html += '</div>';
@@ -957,7 +957,7 @@ window.browseRunDialog = function() {
         const appExeMap = {
             'ie': { exe: 'iexplore.exe', icon: 'Windows XP Icons/Internet Explorer 6.png' },
             'outlook': { exe: 'msimn.exe', icon: 'Windows XP Icons/Outlook Express.png' },
-            'explorer': { exe: 'explorer.exe', icon: 'Windows XP Icons/Computer.png' },
+            'explorer': { exe: 'explorer.exe', icon: 'Windows XP Icons/My Computer.png' },
             'controlpanel': { exe: 'control.exe', icon: 'Windows XP Icons/Control Panel.png' },
             'cmd': { exe: 'cmd.exe', icon: 'Windows XP Icons/Command Prompt.png' },
             'sysinfo': { exe: 'msinfo32.exe', icon: 'Windows XP Icons/System Information.png' },
@@ -966,7 +966,7 @@ window.browseRunDialog = function() {
             'wordpad': { exe: 'wordpad.exe', icon: 'Windows XP Icons/Wordpad.png' },
             'paint': { exe: 'mspaint.exe', icon: 'Windows XP Icons/Paint.png' },
             'calc': { exe: 'calc.exe', icon: 'Windows XP Icons/Calculator.png' },
-            'media': { exe: 'wmplayer.exe', icon: 'Windows XP Icons/media.png' },
+            'media': { exe: 'wmplayer.exe', icon: 'Windows XP Icons/Windows Media Player 9.png' },
             'soundrecorder': { exe: 'sndrec32.exe', icon: 'Windows XP Icons/Volume.png' },
             'store': { exe: 'catalog.exe', icon: 'Windows XP Icons/Windows Catalog.png' },
             'charmap': { exe: 'charmap.exe', icon: 'Windows XP Icons/Charmap.png' },
@@ -982,7 +982,7 @@ window.browseRunDialog = function() {
             'spades': { exe: 'spades.exe', icon: 'Windows XP Icons/Internet Spades.png' },
             'defrag': { exe: 'dfrg.msc', icon: 'Windows XP Icons/Setup.png' },
             'regedit': { exe: 'regedit.exe', icon: 'Windows XP Icons/Registry Editor.png' },
-            'messenger': { exe: 'msmsgs.exe', icon: 'Windows XP Icons/messenger.png' }
+            'messenger': { exe: 'msmsgs.exe', icon: 'Windows XP Icons/Windows Messenger.png' }
         };
 
         ALL_START_APPS.forEach(app => {
@@ -1235,7 +1235,7 @@ window.closeFileDialog = function() {
 };window.triggerBSOD = function() {
     window.bsodTriggered = true;
     try {
-        let audio = new Audio('Windows XP Icons/Windows XP Critical Stop.wav');
+        let audio = new Audio('XP sounds/Windows XP Critical Stop.wav');
         audio.loop = false;
         audio.play().catch(e=>{});
     } catch(e) {}
@@ -1607,12 +1607,12 @@ window.showBalloon = function(title, text, iconType, onClick, duration = 6000) {
         if (typeof iconType === 'string') {
             if (iconType.includes('/')) iconSrc = iconType;
             else if (iconType === 'error') iconSrc = 'Windows XP Icons/error.webp';
-            else if (iconType === 'warning') iconSrc = 'Windows XP Icons/Help.png';
+            else if (iconType === 'warning') iconSrc = 'Windows XP Icons/Alert.png';
             else if (iconType === 'info') iconSrc = 'Windows XP Icons/Information.png';
         } else if ((title || '').toLowerCase().includes('error')) {
             iconSrc = 'Windows XP Icons/error.webp';
         } else if ((title || '').toLowerCase().includes('risk') || (title || '').toLowerCase().includes('warning') || (title || '').toLowerCase().includes('alert')) {
-            iconSrc = 'Windows XP Icons/Help.png';
+            iconSrc = 'Windows XP Icons/Alert.png';
         }
         iconEl.src = iconSrc;
     }
@@ -1828,8 +1828,10 @@ window.xpDialog = function(title, text, type = 'info', defaultValue = '') {
         if(icon) {
             if(type === 'error') {
                 icon.innerHTML = '<img src="Windows XP Icons/error.webp" style="width:32px; height:32px;">';
+            } else if(type === 'warning') {
+                icon.innerHTML = '<img src="Windows XP Icons/Alert.png" style="width:24px">';
             } else {
-                icon.innerHTML = (type === 'prompt' ? '<img src="Windows XP Icons/Help.png" style="width:24px">' : '<img src="Windows XP Icons/Info.png" style="width:24px">');
+                icon.innerHTML = (type === 'prompt' ? '<img src="Windows XP Icons/Question.png" style="width:24px">' : '<img src="Windows XP Icons/Information.png" style="width:24px">');
             }
         }
         // Play sounds for dialogs
@@ -1846,7 +1848,7 @@ window.xpDialog = function(title, text, type = 'info', defaultValue = '') {
             if(btnCancel) btnCancel.style.display = 'inline-block';
         } else if (type === 'confirm') {
             if(btnCancel) btnCancel.style.display = 'inline-block';
-                if(icon) icon.innerHTML = '<img src="Windows XP Icons/Help.png" style="width:24px">';
+            if(icon) icon.innerHTML = '<img src="Windows XP Icons/Question.png" style="width:24px">';
         }
 
         dialogResolve = resolve;
@@ -2688,7 +2690,7 @@ window.updateDesktopPreview = function() {
     
     if(bg === 'bliss') preview.style.background = "url('Windows XP Icons/bliss_bg.png') center/cover";
     else if(bg === 'matrix') {
-        preview.style.background = "url('Windows XP Icons/matrix_preview.png') center/cover";
+        preview.style.background = "#000";
         preview.style.backgroundColor = "#000";
     }
     else if(bg === 'custom' && typeof customBgDataUrl !== 'undefined' && customBgDataUrl) {
@@ -3075,7 +3077,7 @@ window.getIconForExtension = function(key, item) {
     }
     if (item && item.type === 'folder') return 'Windows XP Icons/Folder Closed.png';
     if (item && item.type === 'exe') return 'Windows XP Icons/Application Window.png';
-    if (item && item.type === 'shortcut') return 'Windows XP Icons/Shortcut.png'; // Fallback
+    if (item && item.type === 'shortcut') return 'Windows XP Icons/Internet Shortcut.png'; // Fallback
     
     // Fallback based on extension
     let ext = key.split('.').pop().toLowerCase();
@@ -3744,7 +3746,7 @@ window.startMenuSearch = function(query, executeFirst) {
         icon = 'Windows XP Icons/' + icon + '.png';
     }
                     let appId = desk[k].app || 'notepad-window';
-                    allApps.push({ name: n, icon: icon || 'Windows XP Icons/Executable.png', fn: `openProgram('${appId}'); toggleStartMenu();` });
+                    allApps.push({ name: n, icon: icon || 'Windows XP Icons/Application Window.png', fn: `openProgram('${appId}'); toggleStartMenu();` });
                 }
             }
         }
@@ -4644,7 +4646,7 @@ window.openIEFile = function(name, content, path) {
     let tab = document.createElement('div');
     tab.className = 'ie-fake-tab';
     tab.style.cssText = 'background:#fff; border:1px solid #ACA899; border-bottom:none; border-radius:3px 3px 0 0; padding:2px 10px; cursor:pointer; font-size:11px; display:flex; align-items:center; gap:5px; margin-bottom:-1px; position:relative; z-index:2;';
-    tab.innerHTML = `<img src="Windows XP Icons/IE Document.png" style="width:14px; height:14px;" onerror="this.src='Windows XP Icons/Internet Explorer 6.png'"> ${name} <span style="margin-left:5px; font-weight:bold; color:red; cursor:pointer;" onclick="this.parentNode.remove(); if(document.querySelectorAll('.ie-fake-tab').length===0) document.getElementById('ie-fake-tabs').remove(); event.stopPropagation();">x</span>`;
+    tab.innerHTML = `<img src="Windows XP Icons/Internet Explorer 6.png" style="width:14px; height:14px;"> ${name} <span style="margin-left:5px; font-weight:bold; color:red; cursor:pointer;" onclick="this.parentNode.remove(); if(document.querySelectorAll('.ie-fake-tab').length===0) document.getElementById('ie-fake-tabs').remove(); event.stopPropagation();">x</span>`;
     
     tab.onclick = function() {
         document.querySelectorAll('.ie-fake-tab').forEach(t => {

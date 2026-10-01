@@ -527,7 +527,7 @@ window.insertEmailImage = function() {
                         body.focus();
                         let img = document.createElement('img');
                         // Fake image from XP file system
-                        img.src = 'Windows XP Icons/Picture.png';
+                        img.src = 'Windows XP Icons/Windows Picture and Fax Viewer.png';
                         img.style.width = '100px';
                         img.style.display = 'block';
                         img.style.margin = '4px 0';

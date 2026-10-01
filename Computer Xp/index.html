@@ -2573,9 +2573,9 @@ Includes new multi-instance and Programmer view support!', 'info')">
                 <div class="start-menu-divider right-divider"></div>
                 
                 <div class="start-menu-item" onclick="openProgram('controlpanel-window'); toggleStartMenu();">
-                    <img src="Windows XP Icons/Control Panel.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.src='Windows XP Icons/Settings.png'"> <span>Control Panel</span></div>
+                    <img src="Windows XP Icons/Control Panel.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Control Panel</span></div>
                 <div class="start-menu-item" onclick="openProgram('printers-window'); toggleStartMenu();">
-                    <img src="Windows XP Icons/Printers and Faxes.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.src='Windows XP Icons/Settings.png'"> <span>Printers and Faxes</span></div>
+                    <img src="Windows XP Icons/Printers and Faxes.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Printers and Faxes</span></div>
                 
                 <div class="start-menu-divider right-divider"></div>
                 
@@ -4366,7 +4366,7 @@ if(typeof window.doBootSequence === 'function') {
                 </div>
             </div>
         </div>
-        <div class="email-toolbar" style="padding: 5px; background: url('Windows XP Icons/toolbar-bg.png'); border-bottom: 1px solid #ACA899; display: flex; gap: 5px; align-items: center;">
+        <div class="email-toolbar" style="padding: 5px; background: #ECE9D8; border-bottom: 1px solid #ACA899; display: flex; gap: 5px; align-items: center;">
             <div class="toolbar-btn" style="text-align:center; cursor:pointer; padding:2px 5px;" onclick="emailReply()"><img src="Windows XP Icons/Email.png" style="width:24px;"><br><span style="font-size:11px;">Reply</span></div>
             <div class="toolbar-btn" style="text-align:center; cursor:pointer; padding:2px 5px;" onclick="emailReplyAll()"><img src="Windows XP Icons/Email.png" style="width:24px;"><br><span style="font-size:11px;">Reply All</span></div>
             <div class="toolbar-btn" style="text-align:center; cursor:pointer; padding:2px 5px;" onclick="emailForward()"><img src="Windows XP Icons/Email.png" style="width:24px;"><br><span style="font-size:11px;">Forward</span></div>
@@ -4727,8 +4727,8 @@ if(typeof window.doBootSequence === 'function') {
             <div id="search-results-list" style="display: flex; flex-direction: column; gap: 5px;"></div>
         </div>
     </div>    <script src="js/defender.js?v=1"></script>
-<script type="module" src="../js/firebase-config.js"></script>
-<script type="module" src="../js/tracker.js"></script>
+<script type="module" src="js/firebase-config.js"></script>
+<script type="module" src="js/tracker.js"></script>
 </body>
 </html>
 
