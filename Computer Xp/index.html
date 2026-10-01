@@ -1073,7 +1073,7 @@
                         other elements to help you personalize your computer with one click.</p>
                     <div class="settings-row">
                         <label><strong>Theme:</strong></label><br>
-                        <select id="theme-select-themes" style="margin-bottom:10px; width:200px;" >
+                        <select id="theme-select-themes" style="margin-bottom:10px; width:200px;" onchange="syncThemeDropdowns('theme-select-themes')">
                             <option value="blue">Windows XP (Default)</option>
                             <option value="classic">Windows Classic</option>
                             <option value="olive">Olive Green</option>
@@ -3110,7 +3110,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
             </div>
         </div>
         <div
-            style="display:flex; background:#2A60A4; padding:5px 10px; align-items:center; color:white; font-family:Tahoma;">
+            style="display:flex; background:#2A60A4; padding:5px 10px; align-items:center; color:white; font-family:inherit;">
             <div style="display:flex; gap:10px;">
                 <button
                     style="border:none; background:transparent; color:white; font-size:12px; font-weight:bold; cursor:pointer;"
@@ -3128,7 +3128,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
             <div style="margin-left:auto; display:flex; align-items:center; gap:5px;">
                 <span style="font-size:11px;">Search:</span>
                 <input type="text" id="help-search-input"
-                    style="width:150px; font-family:Tahoma; font-size:11px; padding:2px;"
+                    style="width:150px; font-family:inherit; font-size:11px; padding:2px;"
                     onkeypress="if(event.key==='Enter') helpSearch()">
                 <button onclick="helpSearch()"
                     style="border:2px outset #ECE9D8; background:#ECE9D8; height:22px; cursor:pointer;">Go</button>
@@ -3137,7 +3137,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
         <div style="display:flex; flex:1; background:white; overflow:hidden;">
             <!-- Sidebar -->
             <div
-                style="width:220px; background:linear-gradient(to bottom, #E8F1FC, #B6D2F5); border-right:1px solid #ACA899; padding:15px; overflow-y:auto; font-family:Tahoma;">
+                style="width:220px; background:linear-gradient(to bottom, #E8F1FC, #B6D2F5); border-right:1px solid #ACA899; padding:15px; overflow-y:auto; font-family:inherit;">
                 <h3 style="color:#215DC6; margin-top:0; border-bottom:1px solid #ACA899; padding-bottom:5px;">Pick a
                     Help topic</h3>
                 <ul style="list-style:none; padding:0; margin:0;">
@@ -3166,7 +3166,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
                 </ul>
             </div>
             <!-- Main Content -->
-            <div id="help-content-area" style="flex:1; padding:20px; overflow-y:auto; font-family:Tahoma;">
+            <div id="help-content-area" style="flex:1; padding:20px; overflow-y:auto; font-family:inherit;">
                 <h2 style="color:#E56717; margin-top:0;">Help and Support Center</h2>
                 <p style="font-size:12px;">Find answers to your questions, understand how to work with your computer,
                     and get tips for better performance.</p>

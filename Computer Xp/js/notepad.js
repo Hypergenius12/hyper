@@ -116,6 +116,20 @@ window.triggerNotepadSaveAs = function() {
     }
 };
 
+window.triggerNotepadOpen = function() {
+    if (typeof window.openFileDialog === 'function') {
+        window.openFileDialog('open', '', (info) => {
+            let name = info.name || info.filename;
+            if (!name) return;
+            let dir = window.resolvePath(info.path);
+            if (dir && dir[name]) {
+                let item = dir[name];
+                window.openNotepadFile(name, item.content || '', info.path);
+            }
+        }, ['.txt', '.log', '.ini', '.inf', '.bat', '.js', '.html', '.css', '.json']);
+    }
+};
+
 
 
 

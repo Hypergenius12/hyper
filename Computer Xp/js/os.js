@@ -522,6 +522,7 @@ window.openAddRemovePrograms = function() {
 
 /* --- POWER STATE MANAGEMENT --- */
 window.logOffOS = function() {
+    try { localStorage.removeItem('xp_logged_in_user'); } catch(e) {}
     if(typeof window.toggleStartMenu === 'function') window.toggleStartMenu();
     // Close all windows on log off
     Object.keys(activeWindows).forEach(id => window.closeWindow(id));
@@ -768,6 +769,7 @@ window.renderAllPrograms = function() {
     overlay.insertBefore(topSep, overlay.children[topApps.length]);
 };
 window.shutdownOS = function() {
+    try { localStorage.removeItem('xp_logged_in_user'); } catch(e) {}
     if(typeof window.playSound === 'function') window.playSound('shutdown');
     let login = document.getElementById('login-screen');
     let menu = document.getElementById('start-menu');
@@ -782,11 +784,24 @@ window.shutdownOS = function() {
 };
 
 window.doBootSequence = function() {
+    let savedUser = null;
+    try { savedUser = localStorage.getItem('xp_logged_in_user'); } catch(e) {}
+
     let preOverlay = document.getElementById('pre-boot-overlay');
     if(preOverlay) preOverlay.style.display = 'none';
     let bios = document.getElementById('bios-screen');
     let boot = document.getElementById('boot-screen');
     let login = document.getElementById('login-screen');
+    
+    if (savedUser) {
+        if(bios) bios.style.display = 'none';
+        if(boot) boot.style.display = 'none';
+        if(login) login.style.display = 'none';
+        if (typeof window.loginToAccount === 'function') {
+            window.loginToAccount(savedUser);
+        }
+        return;
+    }
     
     if(bios) bios.style.display = 'block';
     if(boot) boot.style.display = 'none';
@@ -1285,6 +1300,102 @@ window.closeFileDialog = function() {
     document.addEventListener('keydown', () => location.reload(), {once: true});
 };
 
+window.triggerCorruptBSOD = function(filename) {
+    window.bsodTriggered = true;
+    try {
+        let audio = new Audio('XP sounds/Windows XP Critical Stop.wav');
+        audio.play().catch(e=>{});
+    } catch(e) {}
+    document.body.innerHTML = `
+        <div style="background-color:#0000AA; color:#FFFFFF; font-family:'Lucida Console', monospace; font-size:15px; padding:30px; height:100vh; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box;">
+            <div style="width: 100%; text-align: center; margin-bottom: 20px;">
+                <span style="background-color:#FFFFFF; color:#0000AA; padding: 0 10px; font-weight:bold;">Windows</span>
+            </div>
+            <div style="line-height:1.5;">
+                A problem has been detected and Windows has been shut down to prevent damage to your computer.<br><br>
+                NTFS_FILE_SYSTEM<br><br>
+                A fatal data corruption error occurred while attempting to read the file: <b>${filename || 'corrupted_file'}</b>.<br>
+                The master file table or cluster structure for this resource is unreadable or malformed.<br><br>
+                If this is the first time you've seen this Stop error screen, restart your computer. If this screen appears again, follow these steps:<br><br>
+                Check to make sure any storage devices are properly seated. Run CHKDSK /F to check for hard drive corruption.<br><br>
+                Technical information:<br><br>
+                *** STOP: 0x00000024 (0x00190447, 0xF7A52B88, 0xF7A52884, 0xF78A690F)<br>
+                *** NTFS.SYS - Address F78A690F base at F7895000, DateStamp 41107eea<br><br>
+                Beginning dump of physical memory<br>
+                Physical memory dump complete.<br>
+                Contact your system administrator or technical support group for further assistance.
+            </div>
+            <div style="margin-top:auto; text-align:center; cursor:pointer; color:#AAA;" onclick="location.reload()">
+                Press any key to restart...
+            </div>
+        </div>
+    `;
+    if(typeof window.playSound === 'function') window.playSound('error');
+    document.addEventListener('keydown', () => location.reload(), {once: true});
+};
+
+window.triggerRSOD = function(folderName) {
+    window.rsodTriggered = true;
+    try {
+        let audio = new Audio('XP sounds/Windows XP Error.wav');
+        audio.play().catch(e=>{});
+        setTimeout(() => {
+            let audio2 = new Audio('XP sounds/Windows XP Critical Stop.wav');
+            audio2.play().catch(e=>{});
+        }, 300);
+    } catch(e) {}
+    
+    document.body.innerHTML = `
+        <style>
+            @keyframes rsod-pulse {
+                0% { background-color: #550000; }
+                50% { background-color: #770000; }
+                100% { background-color: #550000; }
+            }
+            @keyframes rsod-flicker {
+                0%, 100% { opacity: 1; }
+                45% { opacity: 0.85; }
+                47% { opacity: 0.3; }
+                49% { opacity: 0.95; }
+                80% { opacity: 0.9; }
+            }
+            @keyframes rsod-glitch {
+                0% { transform: translate(0, 0); }
+                20% { transform: translate(-2px, 1px); }
+                40% { transform: translate(2px, -1px); }
+                60% { transform: translate(-1px, -1px); }
+                80% { transform: translate(1px, 2px); }
+                100% { transform: translate(0, 0); }
+            }
+        </style>
+        <div style="animation: rsod-pulse 4s infinite, rsod-flicker 0.15s infinite; background-color:#550000; color:#FF2222; font-family:'Lucida Console', 'Courier New', monospace; font-size:15px; padding:35px; height:100vh; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; text-shadow:0 0 8px #FF0000, 0 0 15px #880000; user-select:none;">
+            <div style="width: 100%; text-align: center; margin-bottom: 25px;">
+                <span style="background-color:#FF0000; color:#000000; padding: 4px 18px; font-weight:bold; letter-spacing:4px; font-size:18px;">R E D   S C R E E N   O F   D E A T H</span>
+            </div>
+            <div style="line-height:1.6; animation: rsod-glitch 2s infinite ease-in-out;">
+                <span style="color:#FFFFFF; font-size:18px; font-weight:bold;">A FATAL PARADOX HAS SHATTERED THE FABRIC OF REALITY.</span><br><br>
+                <span style="color:#FFAAAA; font-size:16px;">ERROR: RECURSIVE_VOID_COLLAPSE (0x00000666)</span><br><br>
+                You attempted to place folder <span style="background:#000; color:#FF4444; padding:2px 6px; border:1px solid #FF0000;">[ ${folderName || 'FOLDER'} ]</span> inside of itself.<br>
+                The directory swallowed its own origin. Space has folded into an infinite recursive nightmare.<br>
+                An endless recursive loop has awakened anomalous entities within the kernel.<br><br>
+                *** FATAL EXCEPTION AT 0xDEADBEEF: FOLDER_SWALLOWS_UNIVERSE<br>
+                *** RECURSION DEPTH: &infin; (OVERFLOWING SYSTEM FLESH)<br>
+                *** ENTITY DETECTED: IT IS WATCHING YOU FROM INSIDE THE RED CORRUPTION<br><br>
+                Technical information:<br>
+                *** STOP: 0x66600066 (0xDEAD6666, 0x00000666, 0xBADF00D0, 0x66666666)<br>
+                *** RED_VOID.SYS - The files are screaming into the abyss.<br><br>
+                Beginning sacrifice of physical memory...<br>
+                Dump failed: Memory consumed by recursive void.<br>
+                <span style="color:#FFFFFF; font-weight:bold;">THERE IS NO ESCAPE. DO NOT LOOK BEHIND YOU.</span>
+            </div>
+            <div style="margin-top:auto; text-align:center; cursor:pointer; color:#FFAAAA; font-size:16px; font-weight:bold; letter-spacing:2px;" onclick="location.reload()">
+                [ PRESS ANY KEY TO ESCAPE THE NIGHTMARE... ]
+            </div>
+        </div>
+    `;
+    document.addEventListener('keydown', () => location.reload(), {once: true});
+};
+
 window.renderFileDialogList = function(pathStr) {
     let list = document.getElementById('xp-file-dialog-list');
     if(!list) return;
@@ -1470,6 +1581,35 @@ window.bringToFront = function(element) {
 };
 
 window.openProgram = function(id) {
+    let appFriendlyName = (windowTitles && windowTitles[id]) ? windowTitles[id] : id.replace('-window', '');
+
+    // 1. Check if in Recycle Bin
+    if (typeof window.isAppInRecycler === 'function' && window.isAppInRecycler(id)) {
+        if (typeof window.playSound === 'function') window.playSound('recycle');
+        if (typeof window.showBalloon === 'function') {
+            window.showBalloon("Recycle Bin", "You must restore " + appFriendlyName + " from the Recycle Bin before opening it.");
+        }
+        if (typeof window.xpDialog === 'function') {
+            window.xpDialog("Recycle Bin", "The application '" + appFriendlyName + "' is in the Recycle Bin.\n\nYou must restore it first before you can open it.", "info");
+        }
+        return;
+    }
+
+    // 2. Check if permanently deleted
+    if (id !== 'store-window' && typeof window.isAppInstalled === 'function') {
+        if (!window.isAppInstalled(id)) {
+            if (typeof window.playSound === 'function') window.playSound('error');
+            if (typeof window.xpDialog === 'function') {
+                window.xpDialog(
+                    appFriendlyName,
+                    `Windows cannot open '${appFriendlyName}'. The application has been permanently deleted.`,
+                    'error'
+                );
+            }
+            return;
+        }
+    }
+
     const APP_TO_SYS_EXE = {
         'notepad-window': 'notepad.exe',
         'calc-window': 'calc.exe',
@@ -1500,27 +1640,18 @@ window.openProgram = function(id) {
                         if (typeof window.xpDialog === 'function') {
                             window.xpDialog(
                                 sysExe,
-                                `Windows cannot find '${sysExe}'. Make sure you typed the name correctly, and then try again. To search for a file, click the Start button, and then click Search.`,
+                                `The application '${appFriendlyName}' is in the Recycle Bin. You must restore it before opening it.`,
                                 'error'
                             );
                         }
                         return;
                     }
-                    // Auto-heal missing system file
+                    // Auto-heal missing system file only if not deleted
                     sys32[sysExe] = { type: "exe", app: id, icon: id.replace('-window','') };
                     if (typeof window.saveFileSystem === 'function') window.saveFileSystem();
                 }
             }
         } catch(e) {}
-    }
-
-    if(id !== 'store-window' && typeof window.isAppInstalled === 'function') {
-        if(!window.isAppInstalled(id)) {
-            if(typeof window.openCatalogApp === 'function') {
-                window.openCatalogApp(id);
-                return;
-            }
-        }
     }
     if(id === 'paint-window' && typeof window.initPaint === 'function') window.initPaint();
     if(id === 'defrag-window' && typeof window.initDefrag === 'function') window.initDefrag();
@@ -2911,8 +3042,8 @@ window.uploadBackground = function(event) {
 };
 
 window.applySettings = function(closeAfter) {
-    let themeElem = document.getElementById('theme-select-themes') || document.getElementById('theme-select-appearance');
-    let theme = themeElem ? themeElem.value : 'blue';
+    let themeElem = document.getElementById('theme-select-appearance') || document.getElementById('theme-select-themes');
+    let theme = themeElem ? themeElem.value : (localStorage.getItem('xp_theme') || 'blue');
     
     let bgVal = document.getElementById('bg-select').value;
     let bgColor = document.getElementById('bg-color-picker').value;
@@ -2960,8 +3091,12 @@ window.applySettings = function(closeAfter) {
         document.body.style.filter = 'none';
     }
     
-    document.body.className = ''; 
-    document.body.classList.add('theme-' + theme);
+    if (typeof window.applyTheme === 'function') {
+        window.applyTheme(theme, true);
+    } else {
+        document.body.classList.remove('theme-blue', 'theme-silver', 'theme-olive', 'theme-classic');
+        document.body.classList.add('theme-' + theme);
+    }
     
     // Font Size
     let fSizeSel = document.getElementById('font-size-select');
@@ -3570,19 +3705,39 @@ window.openFileLocation = function() {
 
 window.zIndexCounter = window.currentZIndex || 1000;
 
-if (typeof window.syncThemeDropdowns === 'undefined') {
-    window.syncThemeDropdowns = function(sourceId) {
-        let val = document.getElementById(sourceId).value;
-        if(sourceId === 'theme-select-appearance') {
-            let other = document.getElementById('theme-select-display');
-            if(other) other.value = val;
-        } else {
-            let other = document.getElementById('theme-select-appearance');
-            if(other) other.value = val;
+window.applyTheme = function(theme, save = true) {
+    if (!theme) theme = 'blue';
+    theme = theme.toLowerCase().trim();
+    if (!['blue', 'silver', 'olive', 'classic'].includes(theme)) theme = 'blue';
+    
+    document.body.classList.remove('theme-blue', 'theme-silver', 'theme-olive', 'theme-classic');
+    document.body.classList.add('theme-' + theme);
+    
+    let tSelect = document.getElementById('theme-select-themes');
+    if (tSelect && tSelect.value !== theme) tSelect.value = theme;
+    let aSelect = document.getElementById('theme-select-appearance');
+    if (aSelect && aSelect.value !== theme) aSelect.value = theme;
+    
+    if (save) {
+        localStorage.setItem('xp_theme', theme);
+        if (typeof window.setRegistryValue === 'function') {
+            window.setRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes", "CurrentTheme", theme);
         }
-        if (typeof changeTheme === 'function') changeTheme();
-    };
-}
+    }
+};
+
+window.syncThemeDropdowns = function(sourceId) {
+    let source = document.getElementById(sourceId);
+    if (!source) return;
+    let val = source.value;
+    window.applyTheme(val, true);
+};
+
+// Auto-apply saved theme on startup
+try {
+    let savedTheme = localStorage.getItem('xp_theme') || 'blue';
+    window.applyTheme(savedTheme, false);
+} catch(e) {}
 
 
 

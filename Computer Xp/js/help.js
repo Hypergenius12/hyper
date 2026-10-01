@@ -224,7 +224,7 @@ window.helpSearch = function() {
 
     if (matches.length === 0) {
         content.innerHTML = `
-            <div style="padding:20px; font-family:Tahoma; font-size:12px;">
+            <div style="padding:20px; font-family:inherit; font-size:12px;">
                 <h2 style="color:#215DC6;">Search Results</h2>
                 <p>No results found for <b>"${q}"</b>.</p>
                 <p>Try a different search term, or <a href="#" onclick="showHelpTopic('home')">return to the Help home page</a>.</p>
@@ -247,7 +247,7 @@ window.helpSearch = function() {
     ).join('');
 
     content.innerHTML = `
-        <div style="padding:20px; font-family:Tahoma; font-size:12px;">
+        <div style="padding:20px; font-family:inherit; font-size:12px;">
             <h2 style="color:#215DC6;">Search Results for "${q}"</h2>
             <p>${matches.length} result(s) found:</p>
             <ul style="list-style:disc; padding-left:20px;">

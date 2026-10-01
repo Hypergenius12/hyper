@@ -346,14 +346,18 @@
         if (helpItem && showHelp !== null) helpItem.style.display = (parseInt(showHelp, 10) === 0) ? 'none' : 'flex';
 
         // 6. CurrentTheme
-        let themeVal = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes", "CurrentTheme");
+        let themeVal = localStorage.getItem('xp_theme') || window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes", "CurrentTheme");
         if (themeVal) {
             let t = themeVal.toLowerCase();
-            document.body.classList.remove('theme-blue', 'theme-silver', 'theme-olive', 'theme-classic');
-            if (t.includes('silver')) document.body.classList.add('theme-silver');
-            else if (t.includes('olive') || t.includes('green')) document.body.classList.add('theme-olive');
-            else if (t.includes('classic') || t.includes('2000')) document.body.classList.add('theme-classic');
-            else document.body.classList.add('theme-blue');
+            if (typeof window.applyTheme === 'function') {
+                window.applyTheme(t, false);
+            } else {
+                document.body.classList.remove('theme-blue', 'theme-silver', 'theme-olive', 'theme-classic');
+                if (t.includes('silver')) document.body.classList.add('theme-silver');
+                else if (t.includes('olive') || t.includes('green')) document.body.classList.add('theme-olive');
+                else if (t.includes('classic') || t.includes('2000')) document.body.classList.add('theme-classic');
+                else document.body.classList.add('theme-blue');
+            }
         }
 
         // 7. SystemFont

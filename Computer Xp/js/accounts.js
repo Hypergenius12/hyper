@@ -10,7 +10,7 @@ function getDefaultAccounts() {
         "Administrator": {
             password: "12345admin",
             avatar: DEFAULT_ADMIN_AVATAR,
-            fsKey: "xp_virtual_drive_v2"
+            fsKey: "xp_virtual_drive_v3"
         },
         "Guest": {
             password: "",
@@ -28,6 +28,7 @@ window.loadAccounts = function() {
         // MIGRATION: Fix capitalizations that cause 404s on GitHub Pages
         saved = saved.replace(/Admin Login Icon\.png/g, 'admin_login_icon.png');
         saved = saved.replace(/Flower\.jpeg/g, 'flower.jpeg');
+        saved = saved.replace(/xp_virtual_drive_v2/g, 'xp_virtual_drive_v3');
         localStorage.setItem('xp_accounts', saved);
         try { 
             let accs = JSON.parse(saved); 
@@ -237,10 +238,13 @@ window.tryLogin = function(name) {
     loginToAccount(name);
 };
 
-function loginToAccount(name) {
+window.loginToAccount = function loginToAccount(name) {
     let accounts = window.loadAccounts();
-    let acc = accounts[name];
+    let acc = accounts[name] || accounts["Administrator"] || { fsKey: 'xp_virtual_drive_v2' };
     window.currentAccount = name;
+    try {
+        localStorage.setItem('xp_logged_in_user', name);
+    } catch(e) {}
     
     // Switch filesystem to this account's storage key
     let fsKey = acc.fsKey || 'xp_virtual_drive_v2';
@@ -264,7 +268,9 @@ function loginToAccount(name) {
     
     // Apply Desktop Background if saved
     try {
-        let uProfile = window.fs["C:"].contents["Documents and Settings"].contents[name];
+        let cKey = Object.keys(window.fs).find(k => k.toLowerCase() === 'c:') || "C:";
+        let dsKey = Object.keys(window.fs[cKey].contents).find(k => k.toLowerCase() === 'documents and settings') || "Documents and Settings";
+        let uProfile = window.fs[cKey].contents[dsKey].contents[name];
         if (uProfile && uProfile.wallpaper) {
             let wp = uProfile.wallpaper;
             if (typeof window.applyWallpaper === 'function') {
@@ -280,6 +286,11 @@ function loginToAccount(name) {
         }
     } catch(e) {}
 
+    // Apply saved Theme
+    if (typeof window.applyTheme === 'function') {
+        let savedTheme = localStorage.getItem('xp_theme') || 'blue';
+        window.applyTheme(savedTheme, false);
+    }
     
     // Play startup sound
     if(typeof window.playSound === 'function') window.playSound('startup');
@@ -287,10 +298,10 @@ function loginToAccount(name) {
     // Render desktop
     if(typeof window.renderDesktop === 'function') window.renderDesktop();
     if(typeof window.syncStartMenuWithInstalledApps === 'function') window.syncStartMenuWithInstalledApps();
-    if(typeof window.arrangeIcons === 'function') setTimeout(() => window.arrangeIcons('default'), 200);
 }
 
 function switchFilesystem(fsKey, username) {
+    if (fsKey === 'xp_virtual_drive_v2') fsKey = 'xp_virtual_drive_v3';
     // Load the new filesystem
     window._currentFSKey = fsKey;
     
@@ -301,6 +312,9 @@ function switchFilesystem(fsKey, username) {
         if(guestData) window.fs = JSON.parse(guestData);
     } else {
         let saved = localStorage.getItem(fsKey);
+        if(!saved && fsKey === 'xp_virtual_drive_v3') {
+            saved = localStorage.getItem('xp_virtual_drive_v2');
+        }
         if(saved) {
             try { 
                 window.fs = JSON.parse(saved);
@@ -314,9 +328,11 @@ function switchFilesystem(fsKey, username) {
             localStorage.setItem(fsKey, JSON.stringify(window.fs));
         }
     }
+    if (typeof fs !== 'undefined') fs = window.fs;
     
     // Ensure user folder structure and shortcuts exist
     fixPathsForUser(username);
+    if (typeof fs !== 'undefined') fs = window.fs;
     
     // Update current path 
     window.currentPath = "C:\\Documents and Settings\\" + username + "\\My Documents";
@@ -325,7 +341,16 @@ function switchFilesystem(fsKey, username) {
 function fixPathsForUser(username) {
     // Ensure user folder structure exists with full desktop shortcuts
     try {
-        let ds = window.fs["C:"].contents["Documents and Settings"].contents;
+        if (!window.fs) window.fs = {};
+        let cKey = Object.keys(window.fs).find(k => k.toLowerCase() === 'c:') || "C:";
+        if (!window.fs[cKey]) window.fs[cKey] = { type: "folder", icon: "drive", contents: {} };
+        if (!window.fs[cKey].contents) window.fs[cKey].contents = {};
+        
+        let dsKey = Object.keys(window.fs[cKey].contents).find(k => k.toLowerCase() === 'documents and settings') || "Documents and Settings";
+        if (!window.fs[cKey].contents[dsKey] || !window.fs[cKey].contents[dsKey].contents) {
+            window.fs[cKey].contents[dsKey] = { type: "folder", icon: "folder", contents: {} };
+        }
+        let ds = window.fs[cKey].contents[dsKey].contents;
         if(!ds[username]) {
             ds[username] = {
                 type: "folder",
@@ -343,31 +368,51 @@ function fixPathsForUser(username) {
             if(!ds[username].contents["Desktop"]) {
                 ds[username].contents["Desktop"] = { type: "folder", contents: buildDesktopShortcuts(username) };
             }
+            if(!ds[username].contents["Desktop"].contents) {
+                ds[username].contents["Desktop"].contents = buildDesktopShortcuts(username);
+            }
             
             // Filter out games from all programs if remote
-    if (window.location.search.includes('remote=1')) {
-        setTimeout(() => {
-            let startMenuTetris = document.getElementById('start-menu-tetris');
-            if (startMenuTetris) startMenuTetris.style.display = 'none';
-            let startMenuMine = document.getElementById('start-menu-mine');
-            if (startMenuMine) startMenuMine.style.display = 'none';
-            let startMenuSol = document.getElementById('start-menu-solitaire');
-            if (startMenuSol) startMenuSol.style.display = 'none';
-        }, 500);
-    }
-    // Inject WINDOWS files if missing
-            let winKey = Object.keys(window.fs["C:"].contents).find(k => k.toLowerCase() === 'windows');
-            if(!winKey) {
-                winKey = "WINDOWS";
-                window.fs["C:"].contents[winKey] = { type: "folder", contents: {} };
+            if (window.location.search.includes('remote=1')) {
+                setTimeout(() => {
+                    let startMenuTetris = document.getElementById('start-menu-tetris');
+                    if (startMenuTetris) startMenuTetris.style.display = 'none';
+                    let startMenuMine = document.getElementById('start-menu-mine');
+                    if (startMenuMine) startMenuMine.style.display = 'none';
+                    let startMenuSol = document.getElementById('start-menu-solitaire');
+                    if (startMenuSol) startMenuSol.style.display = 'none';
+                }, 500);
             }
-            let winDir = window.fs["C:"].contents[winKey].contents;
+            // Inject WINDOWS files if missing
+            let winKey = Object.keys(window.fs[cKey].contents).find(k => k.toLowerCase() === 'windows') || "WINDOWS";
+            if(!window.fs[cKey].contents[winKey]) {
+                window.fs[cKey].contents[winKey] = { type: "folder", contents: {} };
+            }
+            if(!window.fs[cKey].contents[winKey].contents) {
+                window.fs[cKey].contents[winKey].contents = {};
+            }
+            let winDir = window.fs[cKey].contents[winKey].contents;
             if(!winDir["system32"]) winDir["system32"] = { type: "folder", contents: {} };
             if(!winDir["Fonts"]) winDir["Fonts"] = { type: "folder", icon: "fonts", contents: {} };
+            if(!winDir["Fonts"].contents) winDir["Fonts"].contents = {};
+            
+            // Populate all 17 system fonts in Fonts folder
+            let fDir = winDir["Fonts"].contents;
+            let fontSource = (typeof window !== 'undefined' && window.XP_SYSTEM_FONTS) ? window.XP_SYSTEM_FONTS : {};
+            for (let fn in fontSource) {
+                if (!fDir[fn] || !fDir[fn].family) {
+                    fDir[fn] = Object.assign({}, fontSource[fn]);
+                }
+            }
+
             let sys32 = winDir["system32"].contents;
             
             winDir['regedit.exe'] = { type: 'exe', app: 'regedit-window', icon: 'regedit' };
             winDir['win.ini'] = { type: 'file', extension: 'ini', icon: 'txt', content: '[windows]\nrun=\nload=' };
+            if (!winDir["PCHealth"]) {
+                winDir["PCHealth"] = { type: "folder", contents: { "HelpCtr": { type: "folder", contents: { "Binaries": { type: "folder", contents: { "helpctr.exe": { type: "exe", app: "help-window", icon: "sysinfo" } } } } } } };
+            }
+
             
             sys32['explorer.exe'] = { type: 'exe', app: 'folder-window', icon: 'computer' };
             sys32['run.exe'] = { type: 'exe', app: 'run-window', icon: 'run' };
@@ -446,11 +491,13 @@ function fixPathsForUser(username) {
             if(!ds[username].contents["My Documents"]) {
                 ds[username].contents["My Documents"] = { type: "folder", contents: { "My Pictures": { type: "folder", contents: {} }, "My Music": { type: "folder", contents: {} } } };
             }
-            // Migrate: add missing shortcuts to existing desktop
+            // Migrate: only add default shortcuts if desktop is completely empty
             let desk = ds[username].contents["Desktop"].contents;
-            let defaults = buildDesktopShortcuts(username);
-            for(let key in defaults) {
-                if(!desk[key]) desk[key] = defaults[key];
+            if (Object.keys(desk).length === 0) {
+                let defaults = buildDesktopShortcuts(username);
+                for(let key in defaults) {
+                    desk[key] = defaults[key];
+                }
             }
             
             // Migrate: ensure Program Files exists and is populated

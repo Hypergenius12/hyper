@@ -155,21 +155,22 @@
                 'main-window': 'Data Miner'
             };
             
-            let appName = mapping[id];
+            let appName = mapping[id] || id.replace('-window', '');
             if (appName) {
-                if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled(appName)) {
-                    if (typeof window.openCatalogApp === 'function') {
-                        window.openCatalogApp(appName);
-                    } else if(window.xpDialog) {
-                        window.xpDialog("Error", "Windows cannot find the program. Make sure you typed the name correctly, and then try again.", "error");
+                if (typeof window.isAppInRecycler === 'function' && window.isAppInRecycler(appName)) {
+                    if (typeof window.playSound === 'function') window.playSound('recycle');
+                    if (typeof window.showBalloon === 'function') {
+                        window.showBalloon("Recycle Bin", "You must restore " + appName + " from the Recycle Bin before opening it.");
+                    }
+                    if (typeof window.xpDialog === 'function') {
+                        window.xpDialog("Recycle Bin", "The application '" + appName + "' is in the Recycle Bin.\n\nYou must restore it first before you can open it.", "info");
                     }
                     return;
                 }
-                if (typeof window.isAppInRecycler === 'function' && window.isAppInRecycler(appName)) {
-                    if (typeof window.openCatalogApp === 'function') {
-                        window.openCatalogApp(appName);
-                    } else if(window.xpDialog) {
-                        window.xpDialog("Error", "You need to restore the program from the Recycle Bin to use it.", "error");
+                if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled(appName)) {
+                    if (typeof window.playSound === 'function') window.playSound('error');
+                    if (typeof window.xpDialog === 'function') {
+                        window.xpDialog(appName, `Windows cannot open '${appName}'. The application has been permanently deleted.`, 'error');
                     }
                     return;
                 }

@@ -73,12 +73,9 @@ window.isAppInstalled = function(appName) {
         let exeName = p.substring(p.lastIndexOf("\\") + 1);
         
         let node = window.resolvePath(parentDir);
-        let inOriginal = (node && node[exeName]);
+        let inOriginal = !!(node && node[exeName]);
         
-        let recycler = window.resolvePath("C:\\RECYCLER");
-        let inRecycler = (recycler && recycler[exeName]);
-        
-        return !!(inOriginal || inRecycler);
+        return inOriginal;
     }
     
     let pfNode = window.resolvePath("C:\\Program Files");
@@ -557,6 +554,9 @@ window.selectedFileContext = null;
 
 window.saveFileSystem = function saveFileSystem(key) {
     if (!key) key = window._currentFSKey || 'xp_virtual_drive_v3';
+    let targetFs = window.fs || fs;
+    fs = targetFs;
+    window.fs = targetFs;
     
     try {
         let sys32 = window.resolvePath("C:\\Windows\\System32");
@@ -568,11 +568,11 @@ window.saveFileSystem = function saveFileSystem(key) {
         }
     } catch(e) {}
     
-    localStorage.setItem(key, JSON.stringify(fs));
+    localStorage.setItem(key, JSON.stringify(targetFs));
 }
 
 function loadFileSystem() {
-    let saved = localStorage.getItem('xp_virtual_drive_v3');
+    let saved = localStorage.getItem('xp_virtual_drive_v3') || localStorage.getItem('xp_virtual_drive_v2');
     if (saved) {
         // MIGRATION: Fix capitalizations that cause 404s on GitHub Pages
         saved = saved.replace(/Tetris\.png/g, 'tetris.webp');
@@ -582,8 +582,13 @@ function loadFileSystem() {
         saved = saved.replace(/volume alt\.png/gi, 'Volume.png');
         saved = saved.replace(/Volume Alt\.png/gi, 'Volume.png');
         localStorage.setItem('xp_virtual_drive_v3', saved);
-        try { fs = JSON.parse(saved); }
+        try { 
+            fs = JSON.parse(saved); 
+            window.fs = fs;
+        }
         catch (e) { console.error("Filesystem parse error."); }
+    } else {
+        window.fs = fs;
     }
 
     // Auto-migrate: ensure new desktop shortcuts exist for ALL accounts in the current FS
@@ -808,13 +813,16 @@ function loadFileSystem() {
                     });
                 } catch(fe) { /* ignore */ }
 
-                for (let key in defaults) {
-                    if (!desk[key]) {
+                if (Object.keys(desk).length === 0) {
+                    for (let key in defaults) {
                         desk[key] = defaults[key];
-                    } else {
-                        // Always force-sync app and icon in case old data has wrong values
-                        desk[key].app = defaults[key].app;
-                        desk[key].icon = defaults[key].icon;
+                    }
+                } else {
+                    for (let key in defaults) {
+                        if (desk[key]) {
+                            desk[key].app = defaults[key].app;
+                            desk[key].icon = defaults[key].icon;
+                        }
                     }
                 }
                 if(typeof window.saveFileSystem === 'function') window.saveFileSystem();
@@ -832,7 +840,7 @@ function bindSysIcons() {
 window.resolvePath = function (path) {
     if (!path) return null;
     let parts = path.split('\\').filter(p => p !== '');
-    let curr = fs;
+    let curr = window.fs || fs;
     for (let p of parts) {
         if (!curr || typeof curr !== 'object') return null;
         let actualKey = curr[p] !== undefined ? p : Object.keys(curr).find(k => k.toLowerCase() === p.toLowerCase());
@@ -1344,18 +1352,38 @@ window.xpClearSelection = function (area) {
 }
 
 function executeFile(name, item, currentDir = "") {
-    if (item.corrupted && !item.corruptBypass) {
+    if (!item) return;
+
+    // Check corrupted file
+    if (item.corrupted || item.extension === 'corrupt' || (item.content && typeof item.content === 'string' && item.content.startsWith('An error occurred reading '))) {
+        if (typeof window.triggerCorruptBSOD === 'function') {
+            window.triggerCorruptBSOD(name);
+            return;
+        } else if (typeof window.triggerBSOD === 'function') {
+            window.triggerBSOD("NTFS_FILE_SYSTEM (0x00000024): Corruption in " + name);
+            return;
+        }
+    }
+
+    // Check if in Recycle Bin
+    if (currentDir === "C:\\RECYCLER" || (typeof window.isAppInRecycler === 'function' && item.app && window.isAppInRecycler(item.app))) {
+        let appTitle = name.replace(/\.lnk$/i, '').replace(/\.exe$/i, '');
+        if (typeof window.playSound === 'function') window.playSound('recycle');
+        if (typeof window.showBalloon === 'function') {
+            window.showBalloon("Recycle Bin", "You must restore " + appTitle + " from the Recycle Bin before opening it.");
+        }
         if (typeof window.xpDialog === 'function') {
-            let safeName = name.replace(/'/g, "\\'");
-            let safeDir = currentDir.replace(/\\/g, '\\\\');
-            let msg = `The file '${name}' is corrupted or unreadable.<br><br><button onclick="window.closeWindow('xp-dialog'); window.bypassCorruptAndOpen('${safeDir}', '${safeName}');">Open in Notepad</button>`;
-            window.xpDialog('Corrupted File', msg, 'error');
+            window.xpDialog('Recycle Bin', "The item '" + appTitle + "' is in the Recycle Bin.\n\nYou must restore it first before you can open it.", 'info');
         }
         return;
     }
-    if (currentDir === "C:\\RECYCLER" && item.type !== 'folder') {
-        if(typeof window.xpDialog === 'function') {
-            window.xpDialog('Recycle Bin', 'This item is in the Recycle Bin. You must restore it before you can open it.\\n\\nRight-click the item and select "Restore".', 'error');
+
+    // Check permanently deleted
+    if (item.app && typeof window.isAppInstalled === 'function' && !window.isAppInstalled(item.app)) {
+        let appTitle = name.replace(/\.lnk$/i, '').replace(/\.exe$/i, '');
+        if (typeof window.playSound === 'function') window.playSound('error');
+        if (typeof window.xpDialog === 'function') {
+            window.xpDialog(appTitle, `Windows cannot open '${appTitle}'. The application has been permanently deleted or is not installed.`, 'error');
         }
         return;
     }
@@ -1402,11 +1430,25 @@ function executeFile(name, item, currentDir = "") {
         }
     }
     else if (item.type === 'exe' || (item.type === 'shortcut' && item.app)) {
-        if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled(item.app)) {
-            if (typeof window.openCatalogApp === 'function') {
-                window.openCatalogApp(item.app);
-                return;
+        let appName = item.app;
+        if (typeof window.isAppInRecycler === 'function' && window.isAppInRecycler(appName)) {
+            let appTitle = name.replace(/\.lnk$/i, '').replace(/\.exe$/i, '');
+            if (typeof window.playSound === 'function') window.playSound('recycle');
+            if (typeof window.showBalloon === 'function') {
+                window.showBalloon("Recycle Bin", "You must restore " + appTitle + " from the Recycle Bin before opening it.");
             }
+            if (typeof window.xpDialog === 'function') {
+                window.xpDialog('Recycle Bin', "The item '" + appTitle + "' is in the Recycle Bin.\n\nYou must restore it first before you can open it.", 'info');
+            }
+            return;
+        }
+        if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled(appName)) {
+            let appTitle = name.replace(/\.lnk$/i, '').replace(/\.exe$/i, '');
+            if (typeof window.playSound === 'function') window.playSound('error');
+            if (typeof window.xpDialog === 'function') {
+                window.xpDialog(appTitle, `Windows cannot open '${appTitle}'. The application has been permanently deleted or is not installed.`, 'error');
+            }
+            return;
         }
         // Special initialization for certain apps
         if (item.app === 'cmd-window' && typeof window.initCmd === 'function') window.initCmd();
@@ -1671,7 +1713,17 @@ window.triggerPaste = function () {
     let targetPath = isDesktop ? defaultDesk : (window.currentPath || defaultDesk);
     let dir = window.resolvePath(targetPath);
 
-    if (dir) {        window.fsClipboard.items.forEach(item => {
+    if (dir) {
+        for (let item of window.fsClipboard.items) {
+            let srcFullPath = item.path + (item.path.endsWith('\\') ? '' : '\\') + item.name;
+            if (srcFullPath.toLowerCase() === targetPath.toLowerCase() || targetPath.toLowerCase().startsWith(srcFullPath.toLowerCase() + '\\')) {
+                if (typeof window.triggerRSOD === 'function') {
+                    window.triggerRSOD(item.name);
+                    return;
+                }
+            }
+        }
+        window.fsClipboard.items.forEach(item => {
             let newName = item.name;
             let counter = 1;
             // If it's a copy action or we are pasting into the SAME directory, we might need to rename
@@ -1756,10 +1808,21 @@ window.dropRecycle = function (ev) {
 }
 
 window.dropIntoFolderIcon = function(ev, targetPath) {
-    ev.preventDefault();
-    ev.stopPropagation();
+    if (ev && ev.preventDefault) ev.preventDefault();
+    if (ev && ev.stopPropagation) ev.stopPropagation();
     
     let filesToDrop = window.draggedFiles && window.draggedFiles.length > 0 ? window.draggedFiles : (typeof draggedFile !== 'undefined' && draggedFile ? [draggedFile] : []);
+    
+    // Immediate check: dropping folder into itself or subfolder triggers RSOD
+    for (let f of filesToDrop) {
+        let srcFullPath = f.path + (f.path.endsWith('\\') ? '' : '\\') + f.name;
+        if (srcFullPath.toLowerCase() === targetPath.toLowerCase() || targetPath.toLowerCase().startsWith(srcFullPath.toLowerCase() + '\\')) {
+            if (typeof window.triggerRSOD === 'function') {
+                window.triggerRSOD(f.name);
+            }
+            return;
+        }
+    }
     
     let hasChanges = false;
     let pathsToRender = new Set();
@@ -1773,11 +1836,8 @@ window.dropIntoFolderIcon = function(ev, targetPath) {
     
     let targetDir = parentDir[folderName];
     if (!targetDir.contents) targetDir.contents = {};
-    
-    filesToDrop.forEach(f => {
-        let srcFullPath = f.path + (f.path.endsWith('\\') ? '' : '\\') + f.name;
-        if (srcFullPath === targetPath || targetPath.startsWith(srcFullPath + '\\')) return; 
         
+    filesToDrop.forEach(f => {
         let sDir = window.resolvePath(f.path);
         if(sDir && sDir[f.name]) {
             targetDir.contents[f.name] = sDir[f.name];
@@ -2282,8 +2342,12 @@ setTimeout(() => {
     let menuBtn1 = document.getElementById('menu-item-hidden-files');
     let menuBtn2 = document.getElementById('context-item-hidden-files');
     if(menuBtn1) menuBtn1.innerHTML = (regVal === 1 ? 'âœ“ ' : '') + 'Show Hidden Files';
-    if(menuBtn2) menuBtn2.innerHTML = (regVal === 1 ? 'âœ“ ' : '') + 'Show Hidden Files';
 }, 1000);
+
+// Load persistent filesystem state
+try {
+    loadFileSystem();
+} catch(e) {}
 
 
 
