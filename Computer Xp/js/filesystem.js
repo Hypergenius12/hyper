@@ -880,14 +880,26 @@ window.renderDesktop = function () {
             if (hideExtExp === 1 && item.type === 'file' && key.includes('.')) {
                 displayNameExp = key.substring(0, key.lastIndexOf('.'));
             }
-            div.innerHTML = `<img src="${window.getIconForExtension(key, item)}" alt="icon"><br><span>${displayNameExp}</span>`;
+            if (item.type === 'shortcut' || key.endsWith('.lnk')) {
+                displayNameExp = key.replace(/\.lnk$/i, '');
+            }
+            if (key === 'My Computer.lnk' || key === 'My Computer') {
+                let alias = window.getRegistryValue && window.getRegistryValue("HKEY_CLASSES_ROOT\\CLSID\\{20D04FE0-3AEA-1069-A2D8-08002B30309D}", "(Default)");
+                if (alias) displayNameExp = alias;
+            } else if (key === 'My Documents.lnk' || key === 'My Documents') {
+                let alias = window.getRegistryValue && window.getRegistryValue("HKEY_CLASSES_ROOT\\CLSID\\{450D8FBA-AD25-11D0-98E8-0050C5877549}", "(Default)");
+                if (alias) displayNameExp = alias;
+            } else if (key === 'Recycle Bin.lnk' || key === 'Recycle Bin') {
+                let alias = window.getRegistryValue && window.getRegistryValue("HKEY_CLASSES_ROOT\\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}", "(Default)");
+                if (alias) displayNameExp = alias;
+            }
             div.ondragstart = (e) => {
                 draggedFile = { name: key, path: deskPath, source: "desktop" };
                 e.dataTransfer.setData("text", div.id);
             };
 
             // Tooltip events
-            let displayName = key.replace('.lnk', '');
+            let displayName = displayNameExp || key.replace('.lnk', '');
             div.onmouseenter = (e) => {
                 if (typeof window.showDesktopTooltip === 'function') window.showDesktopTooltip(e, displayName);
             };
@@ -1037,7 +1049,7 @@ window.renderDesktop = function () {
             } else {
                 innerImgHTML = `<img src="${iconSrc}" onerror="this.src='Windows XP Icons/Generic Document.png'" style="margin-bottom:5px;">`;
             }
-            div.innerHTML = `${innerImgHTML}<span>${key.replace('.lnk', '')}</span>`;
+            div.innerHTML = `${innerImgHTML}<span>${displayNameExp}</span>`;
             desktopDiv.appendChild(div);
             index++;
         }

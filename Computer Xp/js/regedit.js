@@ -480,6 +480,34 @@
         }
     });
 
+    window.regeditModifySelected = function() {
+        if (!selectedKeyPath) return;
+        let node = getRegistryNode(selectedKeyPath);
+        if (!node) return;
+
+        let valName = selectedValueName || '(Default)';
+        let valObj = node[valName];
+        let type = valObj ? valObj.type : 'REG_SZ';
+        let currentVal = valObj ? valObj.data : '';
+        if (currentVal === undefined || currentVal === '(value not set)') currentVal = '';
+
+        let pStr = selectedKeyPath.join('\\');
+        if (typeof window.xpDialog === 'function') {
+            window.xpDialog(`Edit ${type}`, `Value data for ${valName}:`, 'prompt', currentVal).then(newVal => {
+                if (newVal !== null && newVal !== undefined) {
+                    window.setRegistryValue(pStr, valName, type, newVal);
+                    renderValues();
+                }
+            });
+        } else {
+            let newVal = prompt(`Value data for ${valName}:`, currentVal);
+            if (newVal !== null && newVal !== undefined) {
+                window.setRegistryValue(pStr, valName, type, newVal);
+                renderValues();
+            }
+        }
+    };
+
     // Make sure init runs when window opens or at start
     setTimeout(() => {
         initRegistry();

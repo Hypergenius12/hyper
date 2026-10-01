@@ -265,25 +265,18 @@ function loginToAccount(name) {
     // Apply Desktop Background if saved
     try {
         let uProfile = window.fs["C:"].contents["Documents and Settings"].contents[name];
-        if(uProfile && uProfile.wallpaper) {
+        if (uProfile && uProfile.wallpaper) {
             let wp = uProfile.wallpaper;
-            if(wp.type === 'bliss') {
-                document.body.style.backgroundImage = "url('Windows XP Icons/bliss_bg.png')";
-                document.body.style.backgroundSize = "cover";
-            } else if (wp.type === 'none') {
-                document.body.style.backgroundImage = "none";
-                document.body.style.backgroundColor = wp.color || "#3A6EA5";
-            } else if (wp.type === 'matrix') {
-                document.body.style.backgroundImage = "none";
-                document.body.style.backgroundColor = "#000000";
-            } else if (wp.type === 'custom' && wp.customData) {
-                document.body.style.backgroundImage = "url('" + wp.customData + "')";
-                document.body.style.backgroundSize = "cover";
+            if (typeof window.applyWallpaper === 'function') {
+                let wpName = wp.type === 'bliss' ? 'Bliss.bmp' : (wp.type || 'Bliss.bmp');
+                window.applyWallpaper(wpName, wp.color || '#004E98');
             }
         } else {
-            // default
-            document.body.style.backgroundImage = "url('Windows XP Icons/bliss_bg.png')";
-            document.body.style.backgroundSize = "cover";
+            let defWp = localStorage.getItem('xp_wallpaper') || 'Bliss.bmp';
+            let defClr = localStorage.getItem('xp_wallpaper_color') || '#004E98';
+            if (typeof window.applyWallpaper === 'function') {
+                window.applyWallpaper(defWp, defClr);
+            }
         }
     } catch(e) {}
 

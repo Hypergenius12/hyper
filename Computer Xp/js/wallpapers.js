@@ -127,9 +127,13 @@
     // Helper: get image content for wallpaper
     window.getWallpaperContent = function(name) {
         if (!name) return 'Windows XP Icons/bliss_bg.png';
-        if (name === 'none' || name === '(None)') return 'none';
-        if (name === 'matrix') return 'matrix';
-        if (name === 'custom' && window.customBgDataUrl) return window.customBgDataUrl;
+        let cleanName = (name || '').toString().split(/[\\/]/).pop();
+        if (cleanName === 'none' || cleanName === '(None)') return 'none';
+        if (cleanName === 'matrix') return 'matrix';
+        if (cleanName === 'custom' && window.customBgDataUrl) return window.customBgDataUrl;
+        if (cleanName.toLowerCase() === 'bliss' || cleanName.toLowerCase() === 'bliss.bmp') {
+            return 'Windows XP Icons/bliss_bg.png';
+        }
         
         // 1. Try finding in filesystem C:\WINDOWS\Web\Wallpaper
         if (window.fs && window.fs["C:"]) {
@@ -143,7 +147,7 @@
             
             if (wallDir) {
                 // Exact or case-insensitive match
-                let match = Object.keys(wallDir).find(k => k.toLowerCase() === name.toLowerCase() || k.toLowerCase().replace(/\.[^.]+$/, '') === name.toLowerCase());
+                let match = Object.keys(wallDir).find(k => k.toLowerCase() === cleanName.toLowerCase() || k.toLowerCase().replace(/\.[^.]+$/, '') === cleanName.toLowerCase());
                 if (match && wallDir[match].content) {
                     return wallDir[match].content;
                 }
@@ -151,7 +155,7 @@
         }
         
         // 2. Fallback to XP_WALLPAPERS
-        let key = Object.keys(XP_WALLPAPERS).find(k => k.toLowerCase() === name.toLowerCase() || XP_WALLPAPERS[k].name.toLowerCase() === name.toLowerCase());
+        let key = Object.keys(XP_WALLPAPERS).find(k => k.toLowerCase() === cleanName.toLowerCase() || XP_WALLPAPERS[k].name.toLowerCase() === cleanName.toLowerCase());
         if (key) return XP_WALLPAPERS[key].content;
         
         return 'Windows XP Icons/bliss_bg.png';
@@ -159,6 +163,9 @@
 
     // Helper: apply wallpaper to desktop
     window.applyWallpaper = function(name, color) {
+        if (!name || name.toLowerCase() === 'bliss' || name.toLowerCase() === 'bliss.bmp') {
+            name = 'Bliss.bmp';
+        }
         color = color || localStorage.getItem('xp_wallpaper_color') || '#004E98';
         let bgIframe = document.getElementById('bg-iframe');
         if (bgIframe) bgIframe.style.display = 'none';
@@ -187,11 +194,15 @@
             let content = window.getWallpaperContent(name);
             document.body.style.backgroundImage = 'url("' + content + '")';
             document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundRepeat = 'no-repeat';
             document.body.style.backgroundColor = color;
             let desk = document.getElementById('desktop');
             if (desk) {
                 desk.style.backgroundImage = 'url("' + content + '")';
                 desk.style.backgroundSize = 'cover';
+                desk.style.backgroundPosition = 'center';
+                desk.style.backgroundRepeat = 'no-repeat';
                 desk.style.backgroundColor = color;
             }
         }
@@ -199,9 +210,13 @@
         // Save
         localStorage.setItem('xp_wallpaper', name);
         localStorage.setItem('xp_wallpaper_color', color);
-        if (typeof window.setRegistryValue === 'function') {
-            window.setRegistryValue("HKEY_CURRENT_USER\\Control Panel\\Desktop", "Wallpaper", name);
-        }
+        try {
+            let key = typeof window.getRegistryKey === 'function' ? window.getRegistryKey("HKEY_CURRENT_USER\\Control Panel\\Desktop") : null;
+            if (key) {
+                key["Wallpaper"] = { type: "REG_SZ", data: "C:\\WINDOWS\\Web\\Wallpaper\\" + name };
+                if (typeof window.saveRegistry === 'function') window.saveRegistry();
+            }
+        } catch(e) {}
     };
 
     // Helper: populate wallpaper dropdown in Display Properties
@@ -285,7 +300,10 @@
 
     // Auto-apply saved wallpaper on startup
     function initWallpaper() {
-        let wp = localStorage.getItem('xp_wallpaper') || 'Bliss.bmp';
+        let wp = localStorage.getItem('xp_wallpaper');
+        if (!wp || wp.toLowerCase() === 'bliss' || wp.toLowerCase() === 'bliss.bmp') {
+            wp = 'Bliss.bmp';
+        }
         let clr = localStorage.getItem('xp_wallpaper_color') || '#004E98';
         window.applyWallpaper(wp, clr);
     }

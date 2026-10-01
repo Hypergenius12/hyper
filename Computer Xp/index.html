@@ -313,7 +313,7 @@
                 </div>
             </div>
         </div>
-        <div class="content" style="flex-direction: column; background: #ECE9D8; padding: 10px; display: flex; height: calc(100% - 60px);">
+        <div class="content" style="flex-direction: column; background: #ECE9D8; padding: 10px; display: flex; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden;">
             <div class="tabs" style="margin-bottom: 5px;">
                 <div class="tab active" id="taskmgr-tab-btn-apps" onclick="switchTaskmgrTab('apps')">Applications</div>
                 <div class="tab" id="taskmgr-tab-btn-perf" onclick="switchTaskmgrTab('perf')">Performance</div>
@@ -466,6 +466,8 @@
     <!-- Regedit Context Menu -->
     <div id="context-menu-regedit" class="context-menu-container"
         style="display:none; flex-direction:column; position:absolute; z-index:9999; background:#fff; border:1px solid #ACA899; box-shadow:2px 2px 5px rgba(0,0,0,0.2); padding:2px; min-width:150px; font-family:Tahoma; font-size:11px;">
+        <div class="context-item" id="regedit-menu-modify" style="font-weight:bold;" onclick="document.getElementById('context-menu-regedit').style.display='none'; if(typeof regeditModifySelected==='function') regeditModifySelected()">Modify...</div>
+        <div class="context-divider"></div>
         <div class="context-item has-submenu">
             New <span style="font-size: 8px; float:right;">&#x25B6;</span>
             <div class="context-submenu">
@@ -662,7 +664,6 @@
                     class="sys-icon-small" onerror="this.style.display='none'"> Minesweeper</span>
             <div class="window-controls">
                 <div class="win-btn" onclick="minimizeWindow('minesweeper-window')"><img src="Windows XP Icons/Minimize.png" alt="-"></div>
-                <div class="win-btn" onclick="maximizeWindow('minesweeper-window')"><img src="Windows XP Icons/Maximize.png" alt="[]"></div>
                 <div class="win-btn" onclick="closeWindow('minesweeper-window')"><img src="Windows XP Icons/Exit.png" alt="X"></div>
             </div>
         </div>
@@ -910,7 +911,7 @@
                 style="width:20px;height:20px;padding:0;border:none;background:transparent;cursor:pointer;">
         </div>
         <div class="window-body"
-            style="margin: 0; padding: 0; border: none; height: calc(100% - 60px); width: 100%; display: flex; flex-direction:column; background: #C0C0C0;">
+            style="margin: 0; padding: 0; border: none; flex: 1; min-height: 0; width: 100%; display: flex; flex-direction:column; background: #C0C0C0; box-sizing: border-box; overflow: hidden;">
             <div id="fp-frame-container"
                 style="flex:1; border-bottom: 1px solid #ACA899; box-sizing: border-box; background:white; margin: 2px;">
                 <iframe id="fp-editor-frame"
@@ -1006,7 +1007,7 @@
                 </div>
             </div>
         </div>
-        <div class="content" style="padding: 0; border: none; height: 300px; width: 500px; display: flex; flex-direction: column;">
+        <div class="content" style="padding: 0; border: none; flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;">
             <textarea id="notepad-textarea"
                 onkeyup="if(typeof updateNotepadStatus === 'function') updateNotepadStatus(this)" onclick="if(typeof updateNotepadStatus === 'function') updateNotepadStatus(this)" oninput="if(typeof updateNotepadStatus === 'function') updateNotepadStatus(this)"
                 style="flex: 1; box-sizing: border-box; resize: none; border: none; outline: none; font-family: 'Lucida Console', monospace; font-size: 14px; padding: 5px; white-space: nowrap; overflow: auto;"></textarea>
@@ -1021,7 +1022,6 @@
                     class="sys-icon-small" onerror="this.style.display='none'"> Display Properties</span>
             <div class="window-controls">
                 <div class="win-btn" onclick="document.getElementById('settings-window').classList.toggle('minimized'); if(document.getElementById('settings-window').classList.contains('minimized')) { document.getElementById('settings-window').style.setProperty('display','none','important'); }"><img src="Windows XP Icons/Minimize.png" alt="-"></div>
-                <div class="win-btn" onclick="document.getElementById('settings-window').classList.toggle('maximized');"><img src="Windows XP Icons/Maximize.png" alt="[]"></div>
                 <div class="win-btn" onclick="closeWindow('settings-window')"><img src="Windows XP Icons/Exit.png" alt="X"></div>
             </div>
         </div>
@@ -1095,7 +1095,7 @@
                             <label style="font-size:11px;">Background:</label><br>
                             <select id="bg-select" style="width:100%; margin-bottom:5px;"
                                 onchange="updateDesktopPreview()">
-                                <option value="bliss">Bliss</option>
+                                <option value="Bliss.bmp">Bliss</option>
                                 <option value="matrix">Matrix</option>
                                 <option value="none">(None)</option>
                             </select>
@@ -1653,7 +1653,7 @@
                 </div>
             </div>
         </div>
-        <div class="content" style="flex-direction: row; padding: 2px; background: #c0c0c0; height: calc(100% - 46px);">
+        <div class="content" style="flex-direction: row; padding: 2px; background: #c0c0c0; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden;">
                           <div id="paint-toolbox" style="width: 50px; background: #c0c0c0; border-right: 2px solid white; display: flex; flex-direction: column; padding: 5px; gap: 5px; box-sizing: border-box;">
     <button onclick="setPaintTool('brush')" title="Brush" style="padding:2px; height:28px;"><img src="Windows XP Icons/Paint.png" style="width:20px;height:20px;display:block;margin:0 auto;" onerror="this.src=''"></button>
     <button onclick="setPaintTool('eraser')" title="Eraser" style="padding:2px; height:28px;"><img src="Windows XP Icons/Erase.png" style="width:20px;height:20px;display:block;margin:0 auto;" onerror="this.src=''"></button>
@@ -1748,6 +1748,8 @@
                         </div>
                     </div>
                     <div class="app-menu-divider"></div>
+                    <div class="app-menu-item" onclick="if(typeof window.regeditModifySelected==='function') window.regeditModifySelected();"><u>M</u>odify...</div>
+                    <div class="app-menu-divider"></div>
                     <div class="app-menu-item" onclick="regeditDeleteSelected()">Delete</div>
                     <div class="app-menu-item" onclick="regeditRenameSelected()">Rename</div>
                     <div class="app-menu-divider"></div>
@@ -1762,7 +1764,7 @@
                 </div>
             </div>
         </div>
-        <div class="content" style="display:flex; height: calc(100% - 66px); background: #fff; font-family: Tahoma; font-size: 11px;">
+        <div class="content" style="display:flex; flex: 1; min-height: 0; background: #fff; font-family: Tahoma; font-size: 11px; box-sizing: border-box; overflow: hidden;">
             <div id="regedit-tree" style="flex: 1; border-right: 1px solid #ACA899; padding: 5px; overflow-y: auto;">
                 <!-- Tree view populated by JS -->
             </div>
@@ -2264,7 +2266,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
             </div>
         </div>
         <div id="cmd-content-area"
-            style="background:#000; color:#C0C0C0; font-family:'Lucida Console','Courier New',monospace; font-size:13px; padding:5px; flex:1; display:flex; flex-direction:column; overflow:hidden; height: calc(100% - 25px);">
+            style="background:#000; color:#C0C0C0; font-family:'Lucida Console','Courier New',monospace; font-size:13px; padding:5px; flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box;">
             <div id="cmd-output" style="flex:1; overflow-y:auto; overflow-x:hidden;"></div>
             <div style="display:flex; align-items:center;">
                 <span id="cmd-prompt" style="white-space:nowrap;">C:\></span>
@@ -2550,7 +2552,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
             <div id="all-programs-overlay" style="display:none; position:absolute; top:0; left:0; width:200px; bottom:0; background:#fff; flex-direction:column; overflow-y:auto; overflow-x:hidden; z-index:5; border-right:1px solid #95B4E8;"></div>
             <div class="start-menu-left" id="start-menu-left">
 <div id="start-menu-search-container" style="padding: 5px; border-bottom: 1px solid #ACA899;">
-    <input type="text" id="start-menu-search-input" placeholder="Search programs..." oninput="window.startMenuSearch(this.value)" onkeydown="if(event.key==='Enter') window.startMenuSearch(this.value, true)" style="width:100%; box-sizing:border-box; padding:3px; border:1px solid #7F9DB9;">
+    <input type="text" id="start-menu-search-input" placeholder="Search programs..." oninput="window.startMenuSearch(this.value)" onkeydown="if(typeof window.handleStartMenuSearchKey==='function') window.handleStartMenuSearchKey(event); else if(event.key==='Enter') window.startMenuSearch(this.value, true);" style="width:100%; box-sizing:border-box; padding:3px; border:1px solid #7F9DB9; font-family:Tahoma; font-size:11px;">
 </div>
 <div id="start-menu-search-results" style="display:none; flex-direction:column; flex:1; overflow-y:auto; overflow-x:hidden;"></div>
 
@@ -2565,33 +2567,33 @@ Includes new multi-instance and Programmer view support!', 'info')">
                 </div>
             </div>
             <div class="start-menu-right">
-                <div class="start-menu-item" onclick="openProgram('folder-window'); navigateTo('C:\\\\Documents and Settings\\\\' + (window.currentAccount || 'Administrator') + '\\\\My Documents'); toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-mydocs" onclick="openProgram('folder-window'); navigateTo('C:\\\\Documents and Settings\\\\' + (window.currentAccount || 'Administrator') + '\\\\My Documents'); toggleStartMenu();">
                     <img src="Windows XP Icons/My Documents.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>My Documents</span></div>
-                <div class="start-menu-item" onclick="openProgram('folder-window'); navigateTo('C:\\\\Documents and Settings\\\\' + (window.currentAccount || 'Administrator') + '\\\\My Documents'); toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-myrecent" onclick="openProgram('folder-window'); navigateTo('C:\\\\Documents and Settings\\\\' + (window.currentAccount || 'Administrator') + '\\\\My Documents'); toggleStartMenu();">
                     <img src="Windows XP Icons/Open.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>My Recent Documents</span></div>
-                <div class="start-menu-item" onclick="openProgram('folder-window'); navigateTo('C:\\\\Documents and Settings\\\\' + (window.currentAccount || 'Administrator') + '\\\\My Documents\\\\My Pictures'); toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-mypics" onclick="openProgram('folder-window'); navigateTo('C:\\\\Documents and Settings\\\\' + (window.currentAccount || 'Administrator') + '\\\\My Documents\\\\My Pictures'); toggleStartMenu();">
                     <img src="Windows XP Icons/My Pictures.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>My Pictures</span></div>
-                <div class="start-menu-item" onclick="openProgram('folder-window'); navigateTo('C:\\\\Documents and Settings\\\\' + (window.currentAccount || 'Administrator') + '\\\\My Documents\\\\My Music'); toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-mymusic" onclick="openProgram('folder-window'); navigateTo('C:\\\\Documents and Settings\\\\' + (window.currentAccount || 'Administrator') + '\\\\My Documents\\\\My Music'); toggleStartMenu();">
                     <img src="Windows XP Icons/My Music.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>My Music</span></div>
-                <div class="start-menu-item" onclick="openProgram('folder-window'); navigateTo('C:\\\\'); toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-mycomputer" onclick="openProgram('folder-window'); navigateTo('C:\\\\'); toggleStartMenu();">
                     <img src="Windows XP Icons/My Computer.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>My Computer</span></div>
                 
                 <div class="start-menu-divider right-divider"></div>
                 
-                <div class="start-menu-item" onclick="openProgram('controlpanel-window'); toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-controlpanel" onclick="openProgram('controlpanel-window'); toggleStartMenu();">
                     <img src="Windows XP Icons/Control Panel.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Control Panel</span></div>
-                <div class="start-menu-item" onclick="openProgram('printers-window'); toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-printers" onclick="openProgram('printers-window'); toggleStartMenu();">
                     <img src="Windows XP Icons/Printers and Faxes.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Printers and Faxes</span></div>
                 
                 <div class="start-menu-divider right-divider"></div>
                 
-                <div class="start-menu-item" onclick="if(typeof openHelpForSelected==='function'){openHelpForSelected();}else{openProgram('help-window'); showHelpTopic('home');} toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-help" onclick="if(typeof openHelpForSelected==='function'){openHelpForSelected();}else{openProgram('help-window'); showHelpTopic('home');} toggleStartMenu();">
                     <img src="Windows XP Icons/Help and Support.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Help and Support</span></div>
-                <div class="start-menu-item" onclick="if(typeof window.initXpTour === 'function') { window.openProgram('xptour-window'); window.initXpTour(); } toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-tour" onclick="if(typeof window.initXpTour === 'function') { window.openProgram('xptour-window'); window.initXpTour(); } toggleStartMenu();">
                     <img src="Windows XP Icons/Tour XP.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Tour Windows XP</span></div>
-                <div class="start-menu-item" onclick="if(typeof window.triggerSearch==='function'){window.triggerSearch();}toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-search" onclick="if(typeof window.triggerSearch==='function'){window.triggerSearch();}toggleStartMenu();">
                     <img src="Windows XP Icons/Search.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Search</span></div>
-                <div class="start-menu-item" onclick="openProgram('run-window'); toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-run" onclick="openProgram('run-window'); toggleStartMenu();">
                     <img src="Windows XP Icons/Run.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Run...</span></div>
             </div>
         </div>
@@ -3870,7 +3872,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
             <span style="font-family:Tahoma; font-size:11px; padding:4px;">Local Clipbook</span>
         </div>
         <div class="content"
-            style="flex-direction: column; background: #FFF; padding: 5px; height: 100%; border:none; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2);">
+            style="flex-direction: column; background: #FFF; padding: 5px; flex: 1; min-height: 0; box-sizing: border-box; border:none; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2);">
             <div id="clipbook-content"
                 style="font-family:'Courier New', monospace; font-size:12px; white-space:pre-wrap; overflow-y:auto; width:100%; height:100%; word-break: break-all;">
                 (Clipboard is currently empty)
@@ -4066,14 +4068,14 @@ Includes new multi-instance and Programmer view support!', 'info')">
 
     <script src="js/frontpage.js?v=6"></script>
     <script src="js/excel.js?v=8"></script>
-    <script src="js/registry.js"></script>
-    <script src="js/sysinfo.js?v=1781031063274"></script>
+    <script src="js/registry.js?v=2"></script>
+    <script src="js/sysinfo.js?v=2"></script>
     <script src="js/email.js?v=1781096102249"></script>
     <script src="js/help.js?v=2781525939149"></script>
     <script src="js/clipbook.js"></script>
-    <script src="js/wallpapers.js"></script>
+    <script src="js/wallpapers.js?v=2"></script>
     <script src="js/fontsystem.js"></script>
-    <script src="js/filesystem.js?v=14"></script>
+    <script src="js/filesystem.js?v=15"></script>
     <script src="js/minesweeper.js"></script>
     <script src="js/solitaire.js"></script>
     <script src="js/checkers.js"></script>
@@ -4084,14 +4086,14 @@ Includes new multi-instance and Programmer view support!', 'info')">
     <script src="js/mediaplayer.js"></script>
     <script src="js/imageviewer.js"></script>
     <script src="js/paint.js?v=12"></script>
-    <script src="js/regedit.js"></script>
+    <script src="js/regedit.js?v=2"></script>
     <script src="js/soundrecorder.js"></script>
     <script src="js/calc.js"></script>
     <script src="js/taskmgr.js"></script>
     <script src="js/cmd.js?v=12"></script>
-    <script src="js/accounts.js"></script>
+    <script src="js/accounts.js?v=2"></script>
     <script src="js/unsaved.js?v=8"></script>
-    <script src="js/os.js?v=14"></script>
+    <script src="js/os.js?v=15"></script>
     <script src="js/store.js?v=12"></script>
     <script src="js/pinball.js"></script>
     <script src="js/photon.js"></script>

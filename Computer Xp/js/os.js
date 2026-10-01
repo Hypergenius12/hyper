@@ -1977,38 +1977,6 @@ window.closeWindow = function(id) {
         elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
     }
     function closeDragElement() { document.onmouseup = null; document.onmousemove = null; }
-
-    let lockedWindows = ['xp-dialog', 'run-window', 'folder-options-window', 'xptour-window', 'sysinfo-window', 'calc-window', 'soundrecorder-window', 'charmap-window', 'properties-window'];
-    let wId = typeof windowId === 'string' ? windowId : elmnt.id;
-    if(wId && lockedWindows.includes(wId)) return;
-    if(elmnt.querySelector('.resize-handle')) return;
-
-    let resizer = document.createElement('div');
-    resizer.className = 'resize-handle';
-    elmnt.appendChild(resizer);
-    
-    let rpos1 = 0, rpos2 = 0, startW = 0, startH = 0;
-    resizer.onmousedown = function(e) {
-        if(elmnt.classList.contains('maximized')) return;
-        e = e || window.event;
-        e.preventDefault();
-        rpos1 = e.clientX;
-        rpos2 = e.clientY;
-        startW = elmnt.offsetWidth;
-        startH = elmnt.offsetHeight;
-        document.onmouseup = closeResizeElement;
-        document.onmousemove = elementResize;
-        if(typeof window.bringToFront === 'function') window.bringToFront(elmnt);
-    };
-    function elementResize(e) {
-        e = e || window.event;
-        e.preventDefault();
-        let nw = startW + (e.clientX - rpos1);
-        let nh = startH + (e.clientY - rpos2);
-        if(nw > 150) elmnt.style.width = nw + "px";
-        if(nh > 100) elmnt.style.height = nh + "px";
-    }
-    function closeResizeElement() { document.onmouseup = null; document.onmousemove = null; }
 };
 
 window.getGridStep = function() {
@@ -3852,14 +3820,79 @@ window.startMenuSearch = function(query, executeFirst) {
     
     if(matches.length === 0) {
         resultsContainer.innerHTML = '<div style="padding:10px; color:#555; text-align:center;">No results found.</div>';
+        window.searchSelectedIndex = -1;
     } else {
-        matches.forEach(app => {
+        matches.forEach((app, idx) => {
             let item = document.createElement('div');
             item.className = 'start-menu-item';
             item.setAttribute('onclick', app.fn);
+            item.onclick = () => {
+                try { (new Function(app.fn))(); } catch(err) { eval(app.fn); }
+            };
             let uninstBadge = app.uninstalled ? '<span style="font-size:10px; color:#888; font-style:italic; margin-left:6px;">(Install from Catalog)</span>' : '';
             item.innerHTML = `<img src="${app.icon}" class="sys-icon-small" style="margin-right:8px; ${app.uninstalled ? 'opacity:0.75;' : ''}" onerror="this.style.display='none'"><span>${app.name}${uninstBadge}</span>`;
+            item.onmouseenter = () => {
+                window.searchSelectedIndex = idx;
+                window.updateStartMenuSearchSelection();
+            };
+            resultsContainer.appendChild(item);
         });
+        window.searchSelectedIndex = 0;
+        window.updateStartMenuSearchSelection();
+    }
+};
+
+window.searchSelectedIndex = -1;
+window.updateStartMenuSearchSelection = function() {
+    let results = document.getElementById('start-menu-search-results');
+    if (!results) return;
+    let items = results.querySelectorAll('.start-menu-item');
+    items.forEach((item, idx) => {
+        if (idx === window.searchSelectedIndex) {
+            item.classList.add('selected');
+            item.style.backgroundColor = '#316AC5';
+            item.style.color = '#FFFFFF';
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('selected');
+            item.style.backgroundColor = '';
+            item.style.color = '';
+        }
+    });
+};
+
+window.handleStartMenuSearchKey = function(e) {
+    let results = document.getElementById('start-menu-search-results');
+    if (!results || results.style.display === 'none') return;
+    let items = results.querySelectorAll('.start-menu-item');
+    if (!items || items.length === 0) {
+        if (e.key === 'Escape') {
+            let inp = document.getElementById('start-menu-search-input');
+            if (inp) inp.value = '';
+            window.startMenuSearch('');
+        }
+        return;
+    }
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        window.searchSelectedIndex = (window.searchSelectedIndex + 1) % items.length;
+        window.updateStartMenuSearchSelection();
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        window.searchSelectedIndex = (window.searchSelectedIndex - 1 + items.length) % items.length;
+        window.updateStartMenuSearchSelection();
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        let targetIdx = window.searchSelectedIndex >= 0 ? window.searchSelectedIndex : 0;
+        if (items[targetIdx]) {
+            items[targetIdx].click();
+        }
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        let inp = document.getElementById('start-menu-search-input');
+        if (inp) inp.value = '';
+        window.startMenuSearch('');
     }
 };
 
@@ -4802,52 +4835,135 @@ window.restoreWindow = function(id) {
 
 
 
+const NON_RESIZABLE_WINDOWS = new Set([
+    'taskbar',
+    'calc-window',
+    'soundrecorder-window',
+    'charmap-window',
+    'minesweeper-window',
+    'tetris-window',
+    'pinball-window',
+    'solitaire-window',
+    'hearts-window',
+    'freecell-window',
+    'spades-window',
+    'checkers-window',
+    'xptour-window',
+    'main-window',
+    'run-window',
+    'settings-window',
+    'folder-options-window',
+    'properties-window',
+    'datetime-window',
+    'master-volume-window',
+    'volume-window',
+    'xp-dialog',
+    'xp-file-dialog',
+    'cmd-properties-dialog',
+    'excel-fx-dialog',
+    'fp-table-dialog-window',
+    'email-options-window',
+    'email-accounts-window',
+    'email-account-properties-window',
+    'ie-favorites-dialog',
+    'login-screen',
+    'screensaver-overlay'
+]);
+
 window.makeResizable = function(win) {
-    let handle = document.createElement('div');
-    handle.style.position = 'absolute';
-    handle.style.right = '0';
-    handle.style.bottom = '0';
-    handle.style.width = '15px';
-    handle.style.height = '15px';
-    handle.style.cursor = 'nwse-resize';
-    handle.style.zIndex = '999';
-    win.appendChild(handle);
-    
-    handle.addEventListener('mousedown', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        let isResizing = true;
-        let resizeStartX = e.clientX;
-        let resizeStartY = e.clientY;
-        let resizeStartW = win.offsetWidth;
-        let resizeStartH = win.offsetHeight;
-        
-        let moveHandler = function(e) {
-            if (!isResizing) return;
-            let dw = e.clientX - resizeStartX;
-            let dh = e.clientY - resizeStartY;
-            let nw = resizeStartW + dw;
-            let nh = resizeStartH + dh;
-            if (nw > 150) win.style.width = nw + 'px';
-            if (nh > 100) win.style.height = nh + 'px';
-        };
-        
-        let upHandler = function(e) {
-            isResizing = false;
-            document.removeEventListener('mousemove', moveHandler);
-            document.removeEventListener('mouseup', upHandler);
-        };
-        
-        document.addEventListener('mousemove', moveHandler);
-        document.addEventListener('mouseup', upHandler);
+    if (!win || !win.id) return;
+    if (NON_RESIZABLE_WINDOWS.has(win.id)) {
+        win.querySelectorAll('.resize-handle, .win-resize-edge').forEach(h => h.remove());
+        return;
+    }
+    if (win.querySelector('.win-resize-edge')) return;
+
+    const dirs = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+    dirs.forEach(dir => {
+        let handle = document.createElement('div');
+        handle.className = `win-resize-edge win-resize-${dir}`;
+        win.appendChild(handle);
+
+        handle.addEventListener('mousedown', function(e) {
+            if (win.classList.contains('maximized')) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (typeof window.bringToFront === 'function') window.bringToFront(win);
+
+            let startX = e.clientX;
+            let startY = e.clientY;
+            let startW = win.offsetWidth;
+            let startH = win.offsetHeight;
+            let startLeft = win.offsetLeft;
+            let startTop = win.offsetTop;
+
+            let minW = 280;
+            let minH = 180;
+
+            function onMouseMove(moveEvent) {
+                let dx = moveEvent.clientX - startX;
+                let dy = moveEvent.clientY - startY;
+
+                let newW = startW;
+                let newH = startH;
+                let newLeft = startLeft;
+                let newTop = startTop;
+
+                if (dir.includes('e')) {
+                    newW = Math.max(minW, startW + dx);
+                } else if (dir.includes('w')) {
+                    let proposedW = startW - dx;
+                    if (proposedW >= minW) {
+                        newW = proposedW;
+                        newLeft = startLeft + dx;
+                    } else {
+                        newW = minW;
+                        newLeft = startLeft + (startW - minW);
+                    }
+                }
+
+                if (dir.includes('s')) {
+                    newH = Math.max(minH, startH + dy);
+                } else if (dir.includes('n')) {
+                    let proposedH = startH - dy;
+                    if (proposedH >= minH) {
+                        newH = proposedH;
+                        newTop = startTop + dy;
+                    } else {
+                        newH = minH;
+                        newTop = startTop + (startH - minH);
+                    }
+                }
+
+                win.style.width = newW + 'px';
+                win.style.height = newH + 'px';
+                win.style.left = newLeft + 'px';
+                win.style.top = newTop + 'px';
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
     });
 };
 
-document.addEventListener('DOMContentLoaded', function() {
+window.initWindowResizing = function() {
     document.querySelectorAll('.window').forEach(w => {
-        if(w.id !== 'taskbar') window.makeResizable(w);
+        window.makeResizable(w);
     });
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.initWindowResizing);
+} else {
+    window.initWindowResizing();
+}
 
 
 window.applyIconSettings = function() {

@@ -462,10 +462,93 @@ body.theme-classic button:active { border-color: #404040 #fff #fff #404040; }
     flex: 1;
     overflow-y: auto;
 }
-.resize-handle
+.resize-handle {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 14px;
+    height: 14px;
+    cursor: nwse-resize;
+    z-index: 100;
+}
 
- position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; cursor: se-resize; z-index: 10; 
+/* Window Resize Grips & Edge Handles */
+.win-resize-edge {
+    position: absolute;
+    z-index: 99;
+}
+.win-resize-n { top: -3px; left: 0; right: 0; height: 6px; cursor: ns-resize; }
+.win-resize-s { bottom: -3px; left: 0; right: 0; height: 6px; cursor: ns-resize; }
+.win-resize-e { top: 0; bottom: 0; right: -3px; width: 6px; cursor: ew-resize; }
+.win-resize-w { top: 0; bottom: 0; left: -3px; width: 6px; cursor: ew-resize; }
+.win-resize-ne { top: -3px; right: -3px; width: 10px; height: 10px; cursor: nesw-resize; z-index: 101; }
+.win-resize-nw { top: -3px; left: -3px; width: 10px; height: 10px; cursor: nwse-resize; z-index: 101; }
+.win-resize-se {
+    bottom: 0;
+    right: 0;
+    width: 14px;
+    height: 14px;
+    cursor: nwse-resize;
+    z-index: 101;
+    background: radial-gradient(circle, #666 1px, transparent 1px);
+    background-size: 3px 3px;
+    background-position: right 2px bottom 2px;
+}
+.win-resize-sw { bottom: -3px; left: -3px; width: 10px; height: 10px; cursor: nesw-resize; z-index: 101; }
 
-\n/* Help Center Global Typography */\n#help-content-right {\n    font-family: Tahoma, Arial, sans-serif !important;\n    font-size: 12px !important;\n    line-height: 1.5 !important;\n    color: #000 !important;\n}\n#help-content-right h2 {\n    color: #E56717 !important;\n    font-size: 18px !important;\n    margin-top: 0 !important;\n    margin-bottom: 10px !important;\n    border-bottom: 1px solid #ACA899 !important;\n    padding-bottom: 5px !important;\n}\n#help-content-right h3 {\n    color: #215DC6 !important;\n    font-size: 14px !important;\n    margin-top: 15px !important;\n    margin-bottom: 8px !important;\n    border-bottom: 1px solid #ACA899 !important;\n    padding-bottom: 3px !important;\n}\n#help-content-right h4 {\n    color: #494949 !important;\n    font-size: 13px !important;\n    margin-top: 10px !important;\n    margin-bottom: 5px !important;\n}\n#help-content-right p {\n    margin-bottom: 10px !important;\n}\n#help-content-right ul {\n    margin-top: 5px !important;\n    margin-bottom: 10px !important;\n    padding-left: 25px !important;\n}\n#help-content-right li {\n    margin-bottom: 5px !important;\n}\n#help-content-right a {\n    color: #003399 !important;\n    text-decoration: none !important;\n}\n#help-content-right a:hover {\n    text-decoration: underline !important;\n}\n#help-content-right code {\n    background: #f0f0f0 !important;\n    padding: 2px 4px !important;\n    border: 1px solid #ccc !important;\n    font-family: monospace !important;\n    font-size: 11px !important;\n}\n
+/* Help Center Global Typography */
+#help-content-right {
+    font-family: Tahoma, Arial, sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    color: #000 !important;
+}
+#help-content-right h2 {
+    color: #E56717 !important;
+    font-size: 18px !important;
+    margin-top: 0 !important;
+    margin-bottom: 10px !important;
+    border-bottom: 1px solid #ACA899 !important;
+    padding-bottom: 5px !important;
+}
+#help-content-right h3 {
+    color: #215DC6 !important;
+    font-size: 14px !important;
+    margin-top: 15px !important;
+    margin-bottom: 8px !important;
+    border-bottom: 1px solid #ACA899 !important;
+    padding-bottom: 3px !important;
+}
+#help-content-right h4 {
+    color: #494949 !important;
+    font-size: 13px !important;
+    margin-top: 10px !important;
+    margin-bottom: 5px !important;
+}
+#help-content-right p {
+    margin-bottom: 10px !important;
+}
+#help-content-right ul {
+    margin-top: 5px !important;
+    margin-bottom: 10px !important;
+    padding-left: 25px !important;
+}
+#help-content-right li {
+    margin-bottom: 5px !important;
+}
+#help-content-right a {
+    color: #003399 !important;
+    text-decoration: none !important;
+}
+#help-content-right a:hover {
+    text-decoration: underline !important;
+}
+#help-content-right code {
+    background: #f0f0f0 !important;
+    padding: 2px 4px !important;
+    border: 1px solid #ccc !important;
+    font-family: monospace !important;
+    font-size: 11px !important;
+}
 .menu-check-icon { display: inline-block; width: 4px; height: 8px; border: solid black; border-width: 0 2px 2px 0; transform: rotate(45deg); margin-left: 3px; margin-top: -2px; }
 .context-item:hover .menu-check-icon { border-color: white; }

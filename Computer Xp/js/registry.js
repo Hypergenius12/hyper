@@ -260,80 +260,154 @@
             key[valueName] = { type: type, data: data };
             window.saveRegistry();
             
-            // --- REACTIVE TRIGGERS ---
-            // 1. Wallpaper
-            if (pathStr.includes('Desktop') && valueName === 'Wallpaper') {
-                if (data && data !== 'none' && data !== '(None)') {
-                    let url = null;
-                    if (typeof window.getWallpaperContent === 'function') {
-                        url = window.getWallpaperContent(data);
-                    } else {
-                        let file = window.resolvePath ? window.resolvePath(data) : null;
-                        url = (file && file.content) ? file.content : data;
-                    }
-                    if (url) {
-                        document.body.style.backgroundImage = 'url("' + url + '")';
-                        document.body.style.backgroundSize = 'cover';
-                        let desk = document.getElementById('desktop');
-                        if (desk) {
-                            desk.style.backgroundImage = 'url("' + url + '")';
-                            desk.style.backgroundSize = 'cover';
-                        }
-                    }
-                } else {
-                    document.body.style.backgroundImage = 'none';
-                    let desk = document.getElementById('desktop');
-                    if (desk) desk.style.backgroundImage = 'none';
-                }
-            }
+            // Apply all changes reactively to the OS
+            window.applyAllRegistrySettings();
 
-            // 2. Desktop Background Color
-            if (pathStr.includes('Colors') && valueName === 'Background') {
-                let col = data;
-                if (data && data.includes(' ')) {
-                    let p = data.split(' ').filter(x => x !== '');
-                    if (p.length === 3) col = 'rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')';
-                }
-                document.body.style.backgroundColor = col;
-                let desk = document.getElementById('desktop');
-                if (desk) desk.style.backgroundColor = col;
-            }
-
-            // 3. Hidden files & File Extensions
+            // Refresh desktop and explorer if file views might be affected
             if (pathStr.includes('Explorer\\Advanced') && (valueName === 'Hidden' || valueName === 'HideFileExt')) {
                 if (typeof window.renderDesktop === 'function') window.renderDesktop();
                 if (window.currentPath && typeof window.renderExplorer === 'function') window.renderExplorer(window.currentPath);
             }
-
-            // 4. Taskbar lock
-            if (pathStr.includes('Explorer\\Advanced') && valueName === 'TaskbarSizeMove') {
-                let locked = parseInt(data, 10) === 0;
-                window.isTaskbarLocked = locked;
-                try { localStorage.setItem('xp_taskbar_locked', locked ? 'true' : 'false'); } catch(e) {}
-                let check = document.getElementById('check-lock-taskbar');
-                if (check) check.innerHTML = locked ? '&#10003;' : '&nbsp;';
-            }
-
-            // 5. Balloon Tips
-            if (pathStr.includes('Explorer\\Advanced') && valueName === 'EnableBalloonTips') {
-                window.enableBalloonTips = parseInt(data, 10) !== 0;
-            }
-
-            // 6. Sound / Beep (Mute)
-            if (pathStr.includes('Sound') && valueName === 'Beep') {
-                let muted = (data === 'no' || data === '0' || data === 0);
-                window.sysMuted = muted;
-                try { localStorage.setItem('xp_sys_muted', muted ? 'true' : 'false'); } catch(e) {}
-            }
-
-            // 7. Registered Owner
-            if (pathStr.includes('CurrentVersion') && valueName === 'RegisteredOwner') {
-                let startUser = document.getElementById('start-menu-username');
-                if (startUser) startUser.innerText = data;
+            if (pathStr.includes('CLSID')) {
+                if (typeof window.renderDesktop === 'function') window.renderDesktop();
+                if (window.currentPath && typeof window.renderExplorer === 'function') window.renderExplorer(window.currentPath);
             }
 
             return true;
         }
         return false;
     };
+
+    window.applyAllRegistrySettings = function() {
+        if (!window.xpRegistry) return;
+
+        // 1. ProductName -> document.title, login banner, help center
+        let prodName = window.getRegistryValue("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName") || "Microsoft Windows XP";
+        document.title = prodName;
+        let loginTitle = document.querySelector('#login-title, .login-title, .login-banner h2');
+        if (loginTitle) loginTitle.innerText = prodName;
+        let helpBanner = document.querySelector('#help-window .help-banner-title, #help-banner-title');
+        if (helpBanner) helpBanner.innerText = prodName + " Help and Support Center";
+
+        // 2. ComputerName -> window.computerName, status bar, sysinfo
+        let compName = window.getRegistryValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ComputerName\\ComputerName", "ComputerName") || "WINXP-PRO";
+        window.computerName = compName;
+        let statusComp = document.getElementById('explorer-status-computer') || document.querySelector('#explorer-status-bar div:last-child');
+        if (statusComp) statusComp.innerText = compName;
+
+        // 3. RegisteredOwner -> Start menu username & profile display
+        let regOwner = window.getRegistryValue("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "RegisteredOwner");
+        if (regOwner) {
+            let startUser = document.getElementById('start-menu-username') || document.querySelector('.start-menu-header span');
+            if (startUser) startUser.innerText = regOwner;
+        }
+
+        // 4. CLSID Aliases for desktop & start menu
+        let myCompAlias = window.getRegistryValue("HKEY_CLASSES_ROOT\\CLSID\\{20D04FE0-3AEA-1069-A2D8-08002B30309D}", "(Default)");
+        if (myCompAlias) {
+            document.querySelectorAll('.desktop-icon[data-name*="My Computer"] span, #start-menu-item-mycomputer span').forEach(el => el.innerText = myCompAlias);
+        }
+        let myDocsAlias = window.getRegistryValue("HKEY_CLASSES_ROOT\\CLSID\\{450D8FBA-AD25-11D0-98E8-0050C5877549}", "(Default)");
+        if (myDocsAlias) {
+            document.querySelectorAll('.desktop-icon[data-name*="My Documents"] span, #start-menu-item-mydocs span').forEach(el => el.innerText = myDocsAlias);
+        }
+        let recycleAlias = window.getRegistryValue("HKEY_CLASSES_ROOT\\CLSID\\{645FF040-5081-101B-9F08-00AA002F954E}", "(Default)");
+        if (recycleAlias) {
+            document.querySelectorAll('.desktop-icon[data-name*="Recycle Bin"] span').forEach(el => el.innerText = recycleAlias);
+        }
+        let controlPanelAlias = window.getRegistryValue("HKEY_CLASSES_ROOT\\CLSID\\{21EC2020-3AEA-1069-A2DD-08002B30309D}", "(Default)");
+        if (controlPanelAlias) {
+            document.querySelectorAll('#start-menu-item-controlpanel span').forEach(el => el.innerText = controlPanelAlias);
+        }
+
+        // 5. Start Menu Policies (Start_Show...)
+        let showRun = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "Start_ShowRun");
+        let runItem = document.getElementById('start-menu-item-run');
+        if (runItem && showRun !== null) runItem.style.display = (parseInt(showRun, 10) === 0) ? 'none' : 'flex';
+
+        let showCP = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "Start_ShowControlPanel");
+        let cpItem = document.getElementById('start-menu-item-controlpanel');
+        if (cpItem && showCP !== null) cpItem.style.display = (parseInt(showCP, 10) === 0) ? 'none' : 'flex';
+
+        let showDocs = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "Start_ShowMyDocs");
+        let docsItem = document.getElementById('start-menu-item-mydocs');
+        if (docsItem && showDocs !== null) docsItem.style.display = (parseInt(showDocs, 10) === 0) ? 'none' : 'flex';
+
+        let showComp = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "Start_ShowMyComputer");
+        let compItem = document.getElementById('start-menu-item-mycomputer');
+        if (compItem && showComp !== null) compItem.style.display = (parseInt(showComp, 10) === 0) ? 'none' : 'flex';
+
+        let showPrinters = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "Start_ShowPrinters");
+        let printersItem = document.getElementById('start-menu-item-printers');
+        if (printersItem && showPrinters !== null) printersItem.style.display = (parseInt(showPrinters, 10) === 0) ? 'none' : 'flex';
+
+        let showHelp = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "Start_ShowHelp");
+        let helpItem = document.getElementById('start-menu-item-help');
+        if (helpItem && showHelp !== null) helpItem.style.display = (parseInt(showHelp, 10) === 0) ? 'none' : 'flex';
+
+        // 6. CurrentTheme
+        let themeVal = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes", "CurrentTheme");
+        if (themeVal) {
+            let t = themeVal.toLowerCase();
+            document.body.classList.remove('theme-blue', 'theme-silver', 'theme-olive', 'theme-classic');
+            if (t.includes('silver')) document.body.classList.add('theme-silver');
+            else if (t.includes('olive') || t.includes('green')) document.body.classList.add('theme-olive');
+            else if (t.includes('classic') || t.includes('2000')) document.body.classList.add('theme-classic');
+            else document.body.classList.add('theme-blue');
+        }
+
+        // 7. SystemFont
+        let sysFont = window.getRegistryValue("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\FontSubstitutes", "SystemFont") || window.getRegistryValue("HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics", "SystemFont");
+        if (sysFont && typeof window.applySystemFont === 'function') {
+            window.applySystemFont(sysFont, false);
+        }
+
+        // 8. Wallpaper & Background
+        let wpVal = window.getRegistryValue("HKEY_CURRENT_USER\\Control Panel\\Desktop", "Wallpaper");
+        let colorVal = window.getRegistryValue("HKEY_CURRENT_USER\\Control Panel\\Colors", "Background");
+        if (wpVal && typeof window.applyWallpaper === 'function') {
+            let col = colorVal;
+            if (colorVal && colorVal.includes(' ')) {
+                let p = colorVal.split(' ').filter(x => x !== '');
+                if (p.length === 3) col = 'rgb(' + p[0] + ',' + p[1] + ',' + p[2] + ')';
+            }
+            window.applyWallpaper(wpVal, col);
+        }
+
+        // 9. Taskbar lock
+        let taskbarVal = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "TaskbarSizeMove");
+        if (taskbarVal !== null) {
+            let locked = parseInt(taskbarVal, 10) === 0;
+            window.isTaskbarLocked = locked;
+            let check = document.getElementById('check-lock-taskbar');
+            if (check) check.innerHTML = locked ? '&#10003;' : '&nbsp;';
+        }
+
+        // 10. Balloon Tips
+        let balloonVal = window.getRegistryValue("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "EnableBalloonTips");
+        if (balloonVal !== null) {
+            window.enableBalloonTips = parseInt(balloonVal, 10) !== 0;
+        }
+
+        // 11. System sound / Beep
+        let beepVal = window.getRegistryValue("HKEY_CURRENT_USER\\Control Panel\\Sound", "Beep");
+        if (beepVal !== null) {
+            let muted = (beepVal === 'no' || beepVal === '0' || beepVal === 0);
+            window.sysMuted = muted;
+        }
+
+        // 12. Refresh System Info window if open
+        let sysWindow = document.getElementById('sysinfo-window');
+        if (sysWindow && sysWindow.style.display !== 'none' && typeof window.showSysInfo === 'function') {
+            window.showSysInfo('summary');
+        }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            window.applyAllRegistrySettings();
+        });
+    } else {
+        window.applyAllRegistrySettings();
+    }
 })();
