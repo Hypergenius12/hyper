@@ -150,6 +150,20 @@ window.gridAlign = true;
             else file = regSound;
         }
         if (!file) file = soundMap[type] || 'Windows XP Default.wav';
+
+        // Check if sound was deleted from C:\WINDOWS\Media
+        try {
+            let winDir = window.fs && window.fs["C:"] && (window.fs["C:"].contents["WINDOWS"] || window.fs["C:"].contents["Windows"]);
+            if (winDir && winDir.contents["Media"] && winDir.contents["Media"].contents) {
+                let mediaFiles = winDir.contents["Media"].contents;
+                let soundFileName = file.split(/[\\\/]/).pop();
+                let standardSounds = ['Windows XP Startup.wav', 'Windows XP Shutdown.wav', 'Windows XP Logon Sound.wav', 'Windows XP Logoff Sound.wav', 'Windows XP Error.wav', 'Windows XP Critical Stop.wav', 'Windows XP Exclamation.wav', 'Windows XP Ding.wav', 'Windows XP Notify.wav', 'Windows XP Balloon.wav', 'Windows XP Recycle.wav', 'Windows XP Minimize.wav', 'Windows XP Restore.wav', 'Windows XP Menu Command.wav', 'Windows XP Print complete.wav', 'Windows XP Hardware Insert.wav'];
+                if (standardSounds.includes(soundFileName) && !mediaFiles[soundFileName]) {
+                    return; // Sound was deleted from Media directory
+                }
+            }
+        } catch(e) {}
+
         let src = file.startsWith('XP sounds/') || file.startsWith('http') || file.startsWith('data:') ? file : 'XP sounds/' + file;
 
         try {
@@ -384,6 +398,9 @@ window.triggerDeleteContextMenu = function() {
                 }
                 if (typeof window.unpinStartItem === 'function') {
                     window.unpinStartItem(item.name.replace(/\.lnk$/i, '').replace(/\.exe$/i, ''));
+                }
+                if (typeof window.onFileSystemItemDeleted === 'function') {
+                    window.onFileSystemItemDeleted(item.path, item.name, dir[item.name]);
                 }
                 delete dir[item.name];
                 hasChanges = true;
@@ -1453,6 +1470,43 @@ window.bringToFront = function(element) {
 };
 
 window.openProgram = function(id) {
+    const APP_TO_SYS_EXE = {
+        'notepad-window': 'notepad.exe',
+        'calc-window': 'calc.exe',
+        'paint-window': 'mspaint.exe',
+        'cmd-window': 'cmd.exe',
+        'taskmgr-window': 'taskmgr.exe',
+        'regedit-window': 'regedit.exe',
+        'soundrecorder-window': 'sndrec32.exe',
+        'solitaire-window': 'sol.exe',
+        'minesweeper-window': 'winmine.exe',
+        'pinball-window': 'pinball.exe',
+        'settings-window': 'cleanmgr.exe',
+        'sysinfo-window': 'msinfo32.exe',
+        'defrag-window': 'dfrg.msc',
+        'charmap-window': 'charmap.exe',
+        'clipbook-window': 'clipbrd.exe'
+    };
+    let sysExe = APP_TO_SYS_EXE[id];
+    if (sysExe) {
+        try {
+            let winDir = window.fs && window.fs["C:"] && (window.fs["C:"].contents["WINDOWS"] || window.fs["C:"].contents["Windows"]);
+            if (winDir && winDir.contents["system32"] && winDir.contents["system32"].contents) {
+                let sys32 = winDir.contents["system32"].contents;
+                if (!sys32[sysExe]) {
+                    if (typeof window.xpDialog === 'function') {
+                        window.xpDialog(
+                            sysExe,
+                            `Windows cannot find '${sysExe}'. Make sure you typed the name correctly, and then try again. To search for a file, click the Start button, and then click Search.`,
+                            'error'
+                        );
+                    }
+                    return;
+                }
+            }
+        } catch(e) {}
+    }
+
     if(id !== 'store-window' && typeof window.isAppInstalled === 'function') {
         if(!window.isAppInstalled(id)) {
             if(typeof window.openCatalogApp === 'function') {
@@ -2226,6 +2280,14 @@ window.showContextMenu = function(event, target) {
                 if (pinItem) pinItem.style.display = 'flex';
             }
         }
+        let fn = window.selectedFileContext.name.toLowerCase();
+        let isImg = /\.(jpg|jpeg|png|bmp|gif|webp)$/i.test(fn);
+        let setWpItem = document.getElementById('menu-item-set-wallpaper');
+        if (setWpItem) setWpItem.style.display = isImg ? 'flex' : 'none';
+        let restoreItem = document.getElementById('menu-item-restore');
+        if (restoreItem) restoreItem.style.display = window.selectedFileContext.path === 'C:\\RECYCLER' ? 'flex' : 'none';
+        let extractItem = document.getElementById('menu-item-extract');
+        if (extractItem) extractItem.style.display = fn.endsWith('.zip') ? 'flex' : 'none';
     }
     
     let menu = window.selectedFileContext ? fileMenu : (target === 'folder' ? (folderMenu || deskMenu) : deskMenu);
@@ -2571,6 +2633,8 @@ window.switchSettingsTab = function(tabName) {
 
     if(tabName === 'datetime') updateSettingsClock();
     if(tabName === 'user') { if(typeof window.renderControlPanelUserAccounts === 'function') window.renderControlPanelUserAccounts(); }
+    if(tabName === 'desktop' && typeof window.populateWallpaperDropdown === 'function') window.populateWallpaperDropdown();
+    if(tabName === 'appearance' && typeof window.populateSystemFontDropdown === 'function') window.populateSystemFontDropdown();
 };
 
 function updateSettingsClock() {
@@ -2683,20 +2747,31 @@ window.changeAccountPassword = async function(username) {
 };
 
 window.updateDesktopPreview = function() {
-    let bg = document.getElementById('bg-select').value;
-    let color = document.getElementById('bg-color-picker').value;
+    let sel = document.getElementById('bg-select');
+    if (!sel) return;
+    let bg = sel.value;
+    let colorInput = document.getElementById('bg-color-picker');
+    let color = colorInput ? colorInput.value : '#004E98';
     let preview = document.getElementById('desktop-preview');
     if(!preview) return;
     
-    if(bg === 'bliss') preview.style.background = "url('Windows XP Icons/bliss_bg.png') center/cover";
-    else if(bg === 'matrix') {
+    if(bg === 'none') {
+        preview.style.background = color;
+    } else if(bg === 'matrix') {
         preview.style.background = "#000";
         preview.style.backgroundColor = "#000";
-    }
-    else if(bg === 'custom' && typeof customBgDataUrl !== 'undefined' && customBgDataUrl) {
+    } else if(bg === 'custom' && typeof customBgDataUrl !== 'undefined' && customBgDataUrl) {
         preview.style.background = "url('" + customBgDataUrl + "') center/cover";
+    } else if (typeof window.getWallpaperContent === 'function') {
+        let content = window.getWallpaperContent(bg);
+        if (content) {
+            preview.style.background = "url('" + content + "') center/cover";
+        } else {
+            preview.style.background = color;
+        }
+    } else {
+        preview.style.background = color;
     }
-    else preview.style.background = color;
 };
 
 window.updateScreensaverPreview = function() {
@@ -2754,27 +2829,14 @@ window.applySettings = function(closeAfter) {
     
     let bgVal = document.getElementById('bg-select').value;
     let bgColor = document.getElementById('bg-color-picker').value;
-    let body = document.body;
-    
-    let bgIframe = document.getElementById('bg-iframe');
-    if (bgIframe) bgIframe.style.display = 'none';
 
-    if(bgVal === 'bliss') {
-        document.body.style.backgroundImage = "url('Windows XP Icons/bliss_bg.png')";
-        document.body.style.backgroundSize = "cover";
-    } else if (bgVal === 'none') {
-        document.body.style.backgroundImage = "none";
-        document.body.style.backgroundColor = bgColor;
-    } else if (bgVal === 'matrix') {
-        document.body.style.backgroundImage = "none";
-        document.body.style.backgroundColor = "#000000";
-        if (bgIframe) {
-            bgIframe.src = 'matrix.html';
-            bgIframe.style.display = 'block';
-        }
-    } else if (bgVal === 'custom' && typeof customBg !== 'undefined' && customBg) {
-        document.body.style.backgroundImage = "url('" + customBg + "')";
-        document.body.style.backgroundSize = "cover";
+    if (typeof window.applyWallpaper === 'function') {
+        window.applyWallpaper(bgVal, bgColor);
+    }
+
+    let fontSel = document.getElementById('system-font-select');
+    if (fontSel && fontSel.value && typeof window.applySystemFont === 'function') {
+        window.applySystemFont(fontSel.value, true);
     }
     
     // Save to user profile

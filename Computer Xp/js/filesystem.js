@@ -335,13 +335,28 @@ var fs = {
             "WINDOWS": {
                 type: "folder",
                 contents: {
+                    "win.ini": {
+                        type: "file",
+                        extension: "ini",
+                        icon: "txt",
+                        content: "; for 16-bit app support\n[fonts]\nSystemFont=Tahoma\n\n[Desktop]\nWallpaper=Bliss.bmp\nTileWallpaper=0\nWallpaperStyle=2\n"
+                    },
+                    "system.ini": {
+                        type: "file",
+                        extension: "ini",
+                        icon: "txt",
+                        content: "; for 16-bit app support\n[drivers]\nwave=mmdrv.dll\ntimer=timer.drv\n\n[boot]\nfonts.fon=vgasys.fon\n386grabber=vga.3gr\noemfonts.fon=vgaoem.fon\nfixedfon.fon=vgafix.fon\n"
+                    },
                     "Fonts": {
-                        type: "folder", icon: "fonts", contents: {
-                            "Arial.ttf": { type: "file", icon: "ttf" },
-                            "Tahoma.ttf": { type: "file", icon: "ttf" },
-                            "Comic Sans MS.ttf": { type: "file", icon: "ttf" },
-                            "Times New Roman.ttf": { type: "file", icon: "ttf" }
-                        }
+                        type: "folder", icon: "fonts", contents: (function() {
+                            if (typeof window !== 'undefined' && window.XP_SYSTEM_FONTS) {
+                                return JSON.parse(JSON.stringify(window.XP_SYSTEM_FONTS));
+                            }
+                            return {
+                                "Tahoma.ttf": { type: "file", extension: "ttf", icon: "ttf", family: "Tahoma", name: "Tahoma", size: "138 KB" },
+                                "Arial.ttf": { type: "file", extension: "ttf", icon: "ttf", family: "Arial", name: "Arial", size: "290 KB" }
+                            };
+                        })()
                     },
                     "system32": {
                         type: "folder",
@@ -372,24 +387,20 @@ var fs = {
                             "Wallpaper": {
                                 type: "folder",
                                 icon: "folder",
-                                contents: {
-                                    "Bliss.bmp": { type: "file", extension: "bmp", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Autumn.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Azul.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Crystal.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Follow.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Friend.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Home.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Moon flower.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Peace.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Purple flower.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Radiance.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Red moon desert.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Ripple.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Stonehenge.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Tulips.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" },
-                                    "Wind.jpg": { type: "file", extension: "jpg", content: "Windows XP Icons/bliss_bg.png", icon: "jpg" }
-                                }
+                                contents: (function() {
+                                    let walls = {};
+                                    if (typeof window !== 'undefined' && window.XP_WALLPAPERS) {
+                                        for (let k in window.XP_WALLPAPERS) {
+                                            walls[k] = {
+                                                type: "file",
+                                                extension: window.XP_WALLPAPERS[k].ext,
+                                                content: window.XP_WALLPAPERS[k].content,
+                                                icon: window.XP_WALLPAPERS[k].icon || "jpg"
+                                            };
+                                        }
+                                    }
+                                    return walls;
+                                })()
                             }
                         }
                     },
@@ -584,12 +595,27 @@ function loadFileSystem() {
                         winDir.contents["Fonts"].icon = "fonts";
                     }
                     let fontsDir = winDir.contents["Fonts"].contents;
-                    let expectedFonts = ["Arial.ttf", "Tahoma.ttf", "Comic Sans MS.ttf", "Times New Roman.ttf", "Courier New.ttf", "Trebuchet MS.ttf", "Verdana.ttf", "Impact.ttf", "Georgia.ttf", "Lucida Console.ttf"];
-                    expectedFonts.forEach(font => {
-                        if (!fontsDir[font]) {
-                            fontsDir[font] = { type: "file", icon: "ttf" };
+                    if (window.XP_SYSTEM_FONTS) {
+                        for (let fn in window.XP_SYSTEM_FONTS) {
+                            if (!fontsDir[fn] || !fontsDir[fn].family) {
+                                fontsDir[fn] = Object.assign({}, window.XP_SYSTEM_FONTS[fn]);
+                            }
                         }
-                    });
+                    }
+
+                    // Critical ini files (win.ini, system.ini)
+                    if (!winDir.contents["win.ini"]) {
+                        winDir.contents["win.ini"] = {
+                            type: "file", extension: "ini", icon: "txt",
+                            content: "; for 16-bit app support\n[fonts]\nSystemFont=Tahoma\n\n[Desktop]\nWallpaper=Bliss.bmp\nTileWallpaper=0\nWallpaperStyle=2\n"
+                        };
+                    }
+                    if (!winDir.contents["system.ini"]) {
+                        winDir.contents["system.ini"] = {
+                            type: "file", extension: "ini", icon: "txt",
+                            content: "; for 16-bit app support\n[drivers]\nwave=mmdrv.dll\ntimer=timer.drv\n\n[boot]\nfonts.fon=vgasys.fon\n386grabber=vga.3gr\noemfonts.fon=vgaoem.fon\nfixedfon.fon=vgafix.fon\n"
+                        };
+                    }
 
                     // system32 executables
                     let sys32Key = Object.keys(winDir.contents).find(k => k.toLowerCase() === 'system32');
@@ -629,29 +655,19 @@ function loadFileSystem() {
                         winDir.contents["Web"].contents["Wallpaper"] = { type: "folder", icon: "folder", contents: {} };
                     }
                     let wallDir = winDir.contents["Web"].contents["Wallpaper"].contents;
-                    let wallpapers = [
-                        { name: "Bliss.bmp", ext: "bmp" },
-                        { name: "Autumn.jpg", ext: "jpg" },
-                        { name: "Azul.jpg", ext: "jpg" },
-                        { name: "Crystal.jpg", ext: "jpg" },
-                        { name: "Follow.jpg", ext: "jpg" },
-                        { name: "Friend.jpg", ext: "jpg" },
-                        { name: "Home.jpg", ext: "jpg" },
-                        { name: "Moon flower.jpg", ext: "jpg" },
-                        { name: "Peace.jpg", ext: "jpg" },
-                        { name: "Purple flower.jpg", ext: "jpg" },
-                        { name: "Radiance.jpg", ext: "jpg" },
-                        { name: "Red moon desert.jpg", ext: "jpg" },
-                        { name: "Ripple.jpg", ext: "jpg" },
-                        { name: "Stonehenge.jpg", ext: "jpg" },
-                        { name: "Tulips.jpg", ext: "jpg" },
-                        { name: "Wind.jpg", ext: "jpg" }
-                    ];
-                    wallpapers.forEach(w => {
-                        if (!wallDir[w.name]) {
-                            wallDir[w.name] = { type: "file", extension: w.ext, content: "Windows XP Icons/bliss_bg.png", icon: "jpg" };
+                    if (window.XP_WALLPAPERS) {
+                        for (let wn in window.XP_WALLPAPERS) {
+                            let wpData = window.XP_WALLPAPERS[wn];
+                            if (!wallDir[wn] || (wn !== 'Bliss.bmp' && wallDir[wn].content === 'Windows XP Icons/bliss_bg.png')) {
+                                wallDir[wn] = {
+                                    type: "file",
+                                    extension: wpData.ext,
+                                    content: wpData.content,
+                                    icon: wpData.icon || "jpg"
+                                };
+                            }
                         }
-                    });
+                    }
 
                     // Media (Sounds)
                     if (!winDir.contents["Media"] || !winDir.contents["Media"].contents) {
@@ -895,6 +911,9 @@ window.renderDesktop = function () {
                     menu.style.display = 'flex'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px';
                     document.getElementById('menu-item-restore').style.display = 'none';
                     document.getElementById('menu-item-extract').style.display = 'none';
+                    let isImg = /\.(jpg|jpeg|png|bmp|gif|webp)$/i.test(key) || (item && item.type === 'file' && ['jpg','jpeg','png','bmp','gif','webp'].includes(item.extension));
+                    let setWpItem = document.getElementById('menu-item-set-wallpaper');
+                    if (setWpItem) setWpItem.style.display = isImg ? 'block' : 'none';
                     let canPin = item.app || (item.type === 'shortcut' && item.target && window.resolvePath(item.target) && window.resolvePath(item.target).app);
                     document.getElementById('menu-item-pin').style.display = canPin ? 'block' : 'none';
                     document.getElementById('menu-item-unpin').style.display = 'none';
@@ -1316,6 +1335,16 @@ function executeFile(name, item, currentDir = "") {
             window.openPhotonImage(name, item.content, currentDir);
         }
     }
+    else if (item.type === 'file' && (item.extension === 'ttf' || item.extension === 'fon' || item.extension === 'otf' || /\.(ttf|fon|otf)$/i.test(name))) {
+        if (typeof window.openFontViewer === 'function') {
+            window.openFontViewer(name, item, currentDir);
+        }
+    }
+    else if (item.type === 'file' && (item.extension === 'ini' || item.extension === 'inf' || item.extension === 'log' || item.extension === 'bat' || /\.(ini|inf|log|bat)$/i.test(name))) {
+        if (typeof window.openNotepadFile === 'function') {
+            window.openNotepadFile(name, item.content, currentDir);
+        }
+    }
 }
 
 window.navigateTo = function (path) {
@@ -1575,6 +1604,9 @@ window.dropRecycle = function (ev) {
             itemToMove._originalPath = f.path;
 
             window.fs["C:"].contents["RECYCLER"].contents[f.name] = itemToMove;
+            if (typeof window.onFileSystemItemDeleted === 'function') {
+                window.onFileSystemItemDeleted(f.path, f.name, dir[f.name]);
+            }
             delete dir[f.name];
             hasChanges = true;
             pathsToRender.add(f.path);
@@ -1656,6 +1688,9 @@ window.restoreFile = function () {
         window.saveFileSystem();
         window.renderDesktop();
         window.renderExplorer(window.currentPath);
+        if (typeof window.onFileSystemItemRestored === 'function') {
+            window.onFileSystemItemRestored(targetPath, ctx.name, item);
+        }
         if (typeof window.showBalloon === 'function') window.showBalloon("Recycle Bin", "Restored " + ctx.name);
     }
 };

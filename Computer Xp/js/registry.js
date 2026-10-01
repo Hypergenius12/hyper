@@ -248,6 +248,10 @@
 
     // Helper to set a registry value
     window.setRegistryValue = function(pathStr, valueName, type, data) {
+        if (data === undefined && type !== undefined) {
+            data = type;
+            type = typeof data === 'number' ? 'REG_DWORD' : 'REG_SZ';
+        }
         let key = window.getRegistryKey(pathStr);
         if (key) {
             if (type === 'REG_DWORD') {
@@ -260,14 +264,21 @@
             // 1. Wallpaper
             if (pathStr.includes('Desktop') && valueName === 'Wallpaper') {
                 if (data && data !== 'none' && data !== '(None)') {
-                    let file = window.resolvePath ? window.resolvePath(data) : null;
-                    let url = (file && file.content) ? file.content : data;
-                    document.body.style.backgroundImage = 'url("' + url + '")';
-                    document.body.style.backgroundSize = 'cover';
-                    let desk = document.getElementById('desktop');
-                    if (desk) {
-                        desk.style.backgroundImage = 'url("' + url + '")';
-                        desk.style.backgroundSize = 'cover';
+                    let url = null;
+                    if (typeof window.getWallpaperContent === 'function') {
+                        url = window.getWallpaperContent(data);
+                    } else {
+                        let file = window.resolvePath ? window.resolvePath(data) : null;
+                        url = (file && file.content) ? file.content : data;
+                    }
+                    if (url) {
+                        document.body.style.backgroundImage = 'url("' + url + '")';
+                        document.body.style.backgroundSize = 'cover';
+                        let desk = document.getElementById('desktop');
+                        if (desk) {
+                            desk.style.backgroundImage = 'url("' + url + '")';
+                            desk.style.backgroundSize = 'cover';
+                        }
                     }
                 } else {
                     document.body.style.backgroundImage = 'none';

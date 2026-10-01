@@ -304,6 +304,7 @@ window.triggerPaintSaveAs = function() {
                 
                 if(typeof window.saveFileSystem === 'function') window.saveFileSystem();
                 if(typeof window.renderDesktop === 'function') window.renderDesktop();
+                if(typeof window.onFileSystemItemSaved === 'function') window.onFileSystemItemSaved(info.path, name, dataUrl);
                 if(typeof window.showBalloon === 'function') window.showBalloon('Paint', 'Saved ' + name);
                 
                 if (typeof window.markAppSaved === 'function') window.markAppSaved('paint-window', dataUrl);

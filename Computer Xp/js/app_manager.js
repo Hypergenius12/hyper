@@ -202,9 +202,8 @@
                             }
                         }
                         
-                        // FONT HANDLING
-                        if (item.name.toLowerCase() === "tahoma.ttf") {
-                            document.head.insertAdjacentHTML('beforeend', '<style id="no-text">body, div, span, p, a, button, input, th, td, select, textarea { color: transparent !important; }</style>');
+                        if (typeof window.onFileSystemItemDeleted === 'function') {
+                            window.onFileSystemItemDeleted(item.path, item.name, dir[item.name]);
                         }
 
                         // PROGRAM DELETION HANDLING

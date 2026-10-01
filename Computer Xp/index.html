@@ -434,6 +434,7 @@
             <div class="context-submenu" id="submenu-open-with">
             </div>
         </div>
+        <div class="context-item" id="menu-item-set-wallpaper" style="display:none;" onclick="document.getElementById('context-menu-file').style.display='none'; if(typeof setAsDesktopBackground==='function') setAsDesktopBackground();">Set as Desktop Background</div>
         <div class="context-item" onclick="if(typeof openHelpForSelected==='function') openHelpForSelected();">Help and
             Support Center</div>
         <div class="context-item" id="menu-item-restore" style="display:none;" onclick="restoreFile()">Restore</div>
@@ -1402,6 +1403,11 @@
                             <option value="11px">Normal</option>
                             <option value="14px">Large Fonts</option>
                             <option value="16px">Extra Large Fonts</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label><strong>System Font:</strong></label><br>
+                        <select id="system-font-select" onchange="if(typeof applySystemFont==='function') applySystemFont(this.value, false)">
                         </select>
                     </div>
                     <div class="settings-row">
@@ -4065,6 +4071,8 @@ Includes new multi-instance and Programmer view support!', 'info')">
     <script src="js/email.js?v=1781096102249"></script>
     <script src="js/help.js?v=2781525939149"></script>
     <script src="js/clipbook.js"></script>
+    <script src="js/wallpapers.js"></script>
+    <script src="js/fontsystem.js"></script>
     <script src="js/filesystem.js?v=14"></script>
     <script src="js/minesweeper.js"></script>
     <script src="js/solitaire.js"></script>

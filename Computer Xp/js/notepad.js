@@ -56,6 +56,7 @@ window.saveNotepadFile = async function() {
             if(dir && dir[filename]) {
                 dir[filename].content = content;
                 if(typeof window.saveFileSystem === 'function') window.saveFileSystem(); 
+                if(typeof window.onFileSystemItemSaved === 'function') window.onFileSystemItemSaved(dirPath, filename, content);
                 if(typeof window.showBalloon === 'function') window.showBalloon("Notepad", "File saved successfully.");
                 
                 let activeWin = getActiveNotepadElement('window');
@@ -104,6 +105,7 @@ window.triggerNotepadSaveAs = function() {
                 
                 if(typeof window.saveFileSystem === 'function') window.saveFileSystem();
                 if(typeof window.renderDesktop === 'function') window.renderDesktop();
+                if(typeof window.onFileSystemItemSaved === 'function') window.onFileSystemItemSaved(info.path, name, content);
                 if(typeof window.showBalloon === 'function') window.showBalloon('Notepad', 'Saved ' + name);
                 
                 if (activeWin && typeof window.markAppSaved === 'function') {
