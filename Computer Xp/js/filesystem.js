@@ -389,15 +389,35 @@ var fs = {
                                 icon: "folder",
                                 contents: (function() {
                                     let walls = {};
-                                    if (typeof window !== 'undefined' && window.XP_WALLPAPERS) {
-                                        for (let k in window.XP_WALLPAPERS) {
-                                            walls[k] = {
-                                                type: "file",
-                                                extension: window.XP_WALLPAPERS[k].ext,
-                                                content: window.XP_WALLPAPERS[k].content,
-                                                icon: window.XP_WALLPAPERS[k].icon || "jpg"
-                                            };
-                                        }
+                                    let source = (typeof window !== 'undefined' && window.XP_WALLPAPERS) ? window.XP_WALLPAPERS : {
+                                        "Bliss.bmp": { ext: "bmp", content: "Windows XP Icons/bliss_bg.png", icon: "bmp" },
+                                        "Ascent.jpg": { ext: "jpg", content: "wallpapers/Ascent.jpg", icon: "jpg" },
+                                        "Autumn.jpg": { ext: "jpg", content: "wallpapers/Autumn.jpg", icon: "jpg" },
+                                        "Azul.jpg": { ext: "jpg", content: "wallpapers/Azul.jpg", icon: "jpg" },
+                                        "Crystal.jpg": { ext: "jpg", content: "wallpapers/Crystal.jpg", icon: "jpg" },
+                                        "Follow.jpg": { ext: "jpg", content: "wallpapers/Follow.jpg", icon: "jpg" },
+                                        "Friend.jpg": { ext: "jpg", content: "wallpapers/Friend.jpg", icon: "jpg" },
+                                        "Home.jpg": { ext: "jpg", content: "wallpapers/Home.jpg", icon: "jpg" },
+                                        "Moon flower.jpg": { ext: "jpg", content: "wallpapers/Moon flower.jpg", icon: "jpg" },
+                                        "Peace.jpg": { ext: "jpg", content: "wallpapers/Peace.jpg", icon: "jpg" },
+                                        "Power.jpg": { ext: "jpg", content: "wallpapers/Power.jpg", icon: "jpg" },
+                                        "Purple flower.jpg": { ext: "jpg", content: "wallpapers/Purple flower.jpg", icon: "jpg" },
+                                        "Radiance.jpg": { ext: "jpg", content: "wallpapers/Radiance.jpg", icon: "jpg" },
+                                        "Red moon desert.jpg": { ext: "jpg", content: "wallpapers/Red moon desert.jpg", icon: "jpg" },
+                                        "Ripple.jpg": { ext: "jpg", content: "wallpapers/Ripple.jpg", icon: "jpg" },
+                                        "Stonehenge.jpg": { ext: "jpg", content: "wallpapers/Stonehenge.jpg", icon: "jpg" },
+                                        "Tulips.jpg": { ext: "jpg", content: "wallpapers/Tulips.jpg", icon: "jpg" },
+                                        "Vortec space.jpg": { ext: "jpg", content: "wallpapers/Vortec space.jpg", icon: "jpg" },
+                                        "Wind.jpg": { ext: "jpg", content: "wallpapers/Wind.jpg", icon: "jpg" },
+                                        "Windows XP.jpg": { ext: "jpg", content: "wallpapers/Windows XP.jpg", icon: "jpg" }
+                                    };
+                                    for (let k in source) {
+                                        walls[k] = {
+                                            type: "file",
+                                            extension: source[k].ext,
+                                            content: source[k].content,
+                                            icon: source[k].icon || "jpg"
+                                        };
                                     }
                                     return walls;
                                 })()
@@ -658,7 +678,7 @@ function loadFileSystem() {
                     if (window.XP_WALLPAPERS) {
                         for (let wn in window.XP_WALLPAPERS) {
                             let wpData = window.XP_WALLPAPERS[wn];
-                            if (!wallDir[wn] || (wn !== 'Bliss.bmp' && wallDir[wn].content === 'Windows XP Icons/bliss_bg.png')) {
+                            if (!wallDir[wn] || (wn !== 'Bliss.bmp' && (wallDir[wn].content === 'Windows XP Icons/bliss_bg.png' || (typeof wallDir[wn].content === 'string' && (wallDir[wn].content.startsWith('data:image/svg') || !wallDir[wn].content.startsWith('wallpapers/')))))) {
                                 wallDir[wn] = {
                                     type: "file",
                                     extension: wpData.ext,

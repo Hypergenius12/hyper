@@ -394,13 +394,35 @@ function fixPathsForUser(username) {
                 winDir["Web"].contents["Wallpaper"] = { type: "folder", icon: "folder", contents: {} };
             }
             let wallDir = winDir["Web"].contents["Wallpaper"].contents;
-            let wallpapers = ["Bliss.bmp", "Autumn.jpg", "Azul.jpg", "Crystal.jpg", "Follow.jpg", "Friend.jpg", "Home.jpg", "Moon flower.jpg", "Peace.jpg", "Purple flower.jpg", "Radiance.jpg", "Red moon desert.jpg", "Ripple.jpg", "Stonehenge.jpg", "Tulips.jpg", "Wind.jpg"];
-            wallpapers.forEach(w => {
-                if (!wallDir[w]) {
-                    let ext = w.split('.').pop();
-                    wallDir[w] = { type: "file", extension: ext, content: "Windows XP Icons/bliss_bg.png", icon: "jpg" };
+            let wpSource = (typeof window !== 'undefined' && window.XP_WALLPAPERS) ? window.XP_WALLPAPERS : {
+                "Bliss.bmp": { ext: "bmp", content: "Windows XP Icons/bliss_bg.png", icon: "bmp" },
+                "Ascent.jpg": { ext: "jpg", content: "wallpapers/Ascent.jpg", icon: "jpg" },
+                "Autumn.jpg": { ext: "jpg", content: "wallpapers/Autumn.jpg", icon: "jpg" },
+                "Azul.jpg": { ext: "jpg", content: "wallpapers/Azul.jpg", icon: "jpg" },
+                "Crystal.jpg": { ext: "jpg", content: "wallpapers/Crystal.jpg", icon: "jpg" },
+                "Follow.jpg": { ext: "jpg", content: "wallpapers/Follow.jpg", icon: "jpg" },
+                "Friend.jpg": { ext: "jpg", content: "wallpapers/Friend.jpg", icon: "jpg" },
+                "Home.jpg": { ext: "jpg", content: "wallpapers/Home.jpg", icon: "jpg" },
+                "Moon flower.jpg": { ext: "jpg", content: "wallpapers/Moon flower.jpg", icon: "jpg" },
+                "Peace.jpg": { ext: "jpg", content: "wallpapers/Peace.jpg", icon: "jpg" },
+                "Power.jpg": { ext: "jpg", content: "wallpapers/Power.jpg", icon: "jpg" },
+                "Purple flower.jpg": { ext: "jpg", content: "wallpapers/Purple flower.jpg", icon: "jpg" },
+                "Radiance.jpg": { ext: "jpg", content: "wallpapers/Radiance.jpg", icon: "jpg" },
+                "Red moon desert.jpg": { ext: "jpg", content: "wallpapers/Red moon desert.jpg", icon: "jpg" },
+                "Ripple.jpg": { ext: "jpg", content: "wallpapers/Ripple.jpg", icon: "jpg" },
+                "Stonehenge.jpg": { ext: "jpg", content: "wallpapers/Stonehenge.jpg", icon: "jpg" },
+                "Tulips.jpg": { ext: "jpg", content: "wallpapers/Tulips.jpg", icon: "jpg" },
+                "Vortec space.jpg": { ext: "jpg", content: "wallpapers/Vortec space.jpg", icon: "jpg" },
+                "Wind.jpg": { ext: "jpg", content: "wallpapers/Wind.jpg", icon: "jpg" },
+                "Windows XP.jpg": { ext: "jpg", content: "wallpapers/Windows XP.jpg", icon: "jpg" }
+            };
+            for (let w in wpSource) {
+                let info = wpSource[w];
+                let realContent = (w === 'Bliss.bmp') ? 'Windows XP Icons/bliss_bg.png' : (info.content || 'wallpapers/' + w);
+                if (!wallDir[w] || (w !== 'Bliss.bmp' && (wallDir[w].content === 'Windows XP Icons/bliss_bg.png' || (typeof wallDir[w].content === 'string' && wallDir[w].content.startsWith('data:image/svg'))))) {
+                    wallDir[w] = { type: "file", extension: info.ext || w.split('.').pop(), content: realContent, icon: info.icon || "jpg" };
                 }
-            });
+            }
 
             // Ensure Media (Sounds)
             if (!winDir["Media"] || !winDir["Media"].contents) winDir["Media"] = { type: "folder", icon: "folder", contents: {} };

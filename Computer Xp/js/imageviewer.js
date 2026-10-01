@@ -34,7 +34,7 @@ window.triggerViewerOpen = function() {
             let dir = window.resolvePath(pInfo.path);
             let item = dir && dir.contents ? dir.contents[name] : (dir ? dir[name] : null);
             if(item) {
-                if(item.content && item.content.startsWith('data:image')) {
+                if(item.content && (item.content.startsWith('data:image') || item.content.startsWith('wallpapers/') || item.content.startsWith('Windows XP Icons/') || /\.(png|jpg|jpeg|bmp|gif|webp)$/i.test(name))) {
                     window.openImageViewer(name, item, pInfo.path);
                 } else {
                     window.xpDialog("Windows Picture and Fax Viewer", "Cannot open this file format.", "error");
