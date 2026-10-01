@@ -29,65 +29,100 @@
         const canvas = document.getElementById('matrixCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Matrix character set: Katakana, numbers, latin uppercase, symbols
-        const chars = 'ｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$+-*/=%#&_<>~';
+        // Matrix glyph set: Katakana, numbers, operators, Latin
+        const chars = 'ｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ0123456789:・."=*+-<>¦|Z';
 
-        const fontSize = 14;
+        const fontSize = 16;
         let columns = 0;
         let drops = [];
-        let speeds = [];
 
-        function resize() {
+        function initDrops() {
             canvas.width = window.innerWidth || document.documentElement.clientWidth || 800;
             canvas.height = window.innerHeight || document.documentElement.clientHeight || 600;
             columns = Math.max(1, Math.floor(canvas.width / fontSize));
             drops = [];
-            speeds = [];
             for (let i = 0; i < columns; i++) {
-                drops[i] = Math.floor(Math.random() * -30);
-                speeds[i] = 0.4 + Math.random() * 0.6;
+                drops.push({
+                    y: Math.random() * -100,
+                    speed: 0.8 + Math.random() * 1.6,
+                    length: Math.floor(12 + Math.random() * 25),
+                    chars: []
+                });
             }
         }
 
-        window.addEventListener('resize', resize);
-        resize();
+        window.addEventListener('resize', initDrops);
+        initDrops();
 
-        function draw() {
-            // Semi-transparent black wash creating fading trail
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.07)';
+        let lastTime = 0;
+        function draw(timestamp) {
+            requestAnimationFrame(draw);
+
+            // Semi-transparent black overlay for smooth fading trails
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.font = 'bold ' + fontSize + 'px monospace';
 
             for (let i = 0; i < drops.length; i++) {
-                const char = chars[Math.floor(Math.random() * chars.length)];
+                const stream = drops[i];
                 const x = i * fontSize;
-                const y = drops[i] * fontSize;
+                const headY = Math.floor(stream.y);
 
-                if (y > 0 && y < canvas.height + fontSize) {
-                    // Bright luminous lead character
-                    ctx.fillStyle = '#e8ffe8';
-                    ctx.shadowColor = '#00ff66';
-                    ctx.shadowBlur = 8;
-                    ctx.fillText(char, x, y);
-
-                    // Trailing glowing green character directly behind lead
-                    if (drops[i] > 1) {
-                        const prevChar = chars[Math.floor(Math.random() * chars.length)];
-                        ctx.fillStyle = '#00ff41';
-                        ctx.shadowColor = 'transparent';
-                        ctx.shadowBlur = 0;
-                        ctx.fillText(prevChar, x, y - fontSize);
+                // Update random character stream buffer
+                if (Math.random() < 0.25 || stream.chars.length < stream.length) {
+                    const char = chars[Math.floor(Math.random() * chars.length)];
+                    stream.chars.unshift(char);
+                    if (stream.chars.length > stream.length) {
+                        stream.chars.pop();
                     }
                 }
 
-                if (y > canvas.height && Math.random() > 0.975) {
-                    drops[i] = 0;
-                }
-                drops[i] += speeds[i];
-            }
+                // Render stream segments
+                for (let j = 0; j < stream.chars.length; j++) {
+                    const charY = (headY - j) * fontSize;
+                    if (charY < -fontSize || charY > canvas.height + fontSize) continue;
 
-            requestAnimationFrame(draw);
+                    if (j === 0) {
+                        // Glowing white head
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.shadowColor = '#80FF80';
+                        ctx.shadowBlur = 10;
+                        ctx.fillText(stream.chars[j], x, charY);
+                        ctx.shadowBlur = 0;
+                    } else if (j === 1) {
+                        // Bright phosphorescent green
+                        ctx.fillStyle = '#66FF66';
+                        ctx.shadowColor = '#00FF41';
+                        ctx.shadowBlur = 6;
+                        ctx.fillText(stream.chars[j], x, charY);
+                        ctx.shadowBlur = 0;
+                    } else if (j < 6) {
+                        // Vivid matrix green
+                        ctx.fillStyle = '#00FF41';
+                        ctx.fillText(stream.chars[j], x, charY);
+                    } else if (j < stream.length * 0.7) {
+                        // Mid matrix green
+                        ctx.fillStyle = '#00AA2B';
+                        ctx.fillText(stream.chars[j], x, charY);
+                    } else {
+                        // Dark fading tail
+                        ctx.fillStyle = '#004711';
+                        ctx.fillText(stream.chars[j], x, charY);
+                    }
+                }
+
+                // Advance stream
+                stream.y += stream.speed;
+
+                // Reset stream after it falls past screen
+                if ((stream.y - stream.length) * fontSize > canvas.height) {
+                    stream.y = Math.random() * -30;
+                    stream.speed = 0.8 + Math.random() * 1.6;
+                    stream.length = Math.floor(12 + Math.random() * 25);
+                    stream.chars = [];
+                }
+            }
         }
 
         requestAnimationFrame(draw);

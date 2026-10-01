@@ -2602,6 +2602,7 @@ window.switchSettingsTab = function(tabName) {
     if(tabName === 'datetime') updateSettingsClock();
     if(tabName === 'user') { if(typeof window.renderControlPanelUserAccounts === 'function') window.renderControlPanelUserAccounts(); }
     if(tabName === 'desktop' && typeof window.populateWallpaperDropdown === 'function') window.populateWallpaperDropdown();
+    if(tabName === 'screensaver' && typeof window.updateScreensaverPreview === 'function') window.updateScreensaverPreview();
     if(tabName === 'appearance' && typeof window.populateSystemFontDropdown === 'function') window.populateSystemFontDropdown();
 };
 
@@ -2764,23 +2765,113 @@ window.updateDesktopPreview = function() {
 };
 
 window.updateScreensaverPreview = function() {
-    let ss = document.getElementById('screensaver-select').value;
+    let sel = document.getElementById('screensaver-select');
+    let ss = sel ? sel.value : 'none';
     let preview = document.getElementById('screensaver-preview');
     if(!preview) return;
-    if(ss === 'none') {
-        preview.style.display = 'none';
+
+    // Clear any previous animation loop
+    if (window._ssPreviewAnim) {
+        cancelAnimationFrame(window._ssPreviewAnim);
+        window._ssPreviewAnim = null;
+    }
+
+    preview.innerHTML = '';
+    preview.style.background = '#000000';
+
+    if(ss === 'none' || ss === '(None)') {
+        preview.innerHTML = '<span style="color:#555; font-family: Tahoma, sans-serif; font-size: 11px;">(None)</span>';
         return;
     }
-    preview.style.display = 'block';
-    
-    let src = '';
-    if (ss === 'matrix') src = 'matrix.html';
-    else if (ss === 'pipes') src = 'Windows-XP-Pipes-Screensaver-main/index.html';
-    
-    if (src) {
-        preview.innerHTML = '<iframe src="' + src + '" style="width:1000px; height:800px; border:none; transform: scale(0.1); transform-origin: 0 0; pointer-events:none;"></iframe>';
-    } else {
-        preview.innerHTML = '<div style="width:100%; height:100%; background:#000; color:#0f0; display:flex; align-items:center; justify-content:center; font-size:10px;">' + ss + ' preview</div>';
+
+    let pw = preview.clientWidth || 154;
+    let ph = preview.clientHeight || 114;
+
+    if (ss === 'matrix') {
+        preview.innerHTML = `<iframe src="matrix.html" style="width:100%; height:100%; border:none; display:block; pointer-events:none;"></iframe>`;
+    } else if (ss === 'pipes') {
+        // Pipes screensaver scaled down neatly to fit 154x114
+        preview.innerHTML = `<iframe src="Windows-XP-Pipes-Screensaver-main/index.html" style="width:308px; height:228px; border:none; display:block; transform: scale(0.5); transform-origin: top left; pointer-events:none;"></iframe>`;
+    } else if (ss === 'mystify') {
+        let cvs = document.createElement('canvas');
+        cvs.width = pw;
+        cvs.height = ph;
+        cvs.style.width = '100%';
+        cvs.style.height = '100%';
+        cvs.style.display = 'block';
+        preview.appendChild(cvs);
+        let ctx = cvs.getContext('2d');
+
+        let shapes = [
+            { pts: [{x:Math.random()*pw, y:Math.random()*ph, dx:1.2, dy:1.5}, {x:Math.random()*pw, y:Math.random()*ph, dx:-1.5, dy:1.1}, {x:Math.random()*pw, y:Math.random()*ph, dx:0.8, dy:-1.4}, {x:Math.random()*pw, y:Math.random()*ph, dx:-1.1, dy:-1.2}], color: 0 },
+            { pts: [{x:Math.random()*pw, y:Math.random()*ph, dx:-1.1, dy:1.8}, {x:Math.random()*pw, y:Math.random()*ph, dx:1.8, dy:-1.1}, {x:Math.random()*pw, y:Math.random()*ph, dx:-0.8, dy:-1.6}, {x:Math.random()*pw, y:Math.random()*ph, dx:1.4, dy:0.8}], color: 120 }
+        ];
+
+        function loopMystify() {
+            if (!document.getElementById('screensaver-preview') || !cvs.parentElement) return;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            ctx.fillRect(0, 0, pw, ph);
+
+            shapes.forEach(shape => {
+                shape.color = (shape.color + 1) % 360;
+                ctx.strokeStyle = `hsl(${shape.color}, 100%, 50%)`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                shape.pts.forEach((pt, i) => {
+                    pt.x += pt.dx; pt.y += pt.dy;
+                    if(pt.x <= 0 || pt.x >= pw) pt.dx *= -1;
+                    if(pt.y <= 0 || pt.y >= ph) pt.dy *= -1;
+                    if(i === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                });
+                ctx.closePath();
+                ctx.stroke();
+            });
+            window._ssPreviewAnim = requestAnimationFrame(loopMystify);
+        }
+        loopMystify();
+    } else if (ss === 'starfield') {
+        let cvs = document.createElement('canvas');
+        cvs.width = pw;
+        cvs.height = ph;
+        cvs.style.width = '100%';
+        cvs.style.height = '100%';
+        cvs.style.display = 'block';
+        preview.appendChild(cvs);
+        let ctx = cvs.getContext('2d');
+
+        let stars = Array.from({length: 120}, () => ({
+            x: (Math.random() - 0.5) * pw * 2,
+            y: (Math.random() - 0.5) * ph * 2,
+            z: Math.random() * pw
+        }));
+
+        function loopStarfield() {
+            if (!document.getElementById('screensaver-preview') || !cvs.parentElement) return;
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, pw, ph);
+            ctx.fillStyle = 'white';
+
+            stars.forEach(s => {
+                s.z -= 2;
+                if(s.z <= 0) {
+                    s.x = (Math.random() - 0.5) * pw * 2;
+                    s.y = (Math.random() - 0.5) * ph * 2;
+                    s.z = pw;
+                }
+                let sx = (s.x / s.z) * 80 + pw / 2;
+                let sy = (s.y / s.z) * 80 + ph / 2;
+                let r = Math.max(0.5, 120 / s.z * 0.8);
+
+                if (sx > 0 && sx < pw && sy > 0 && sy < ph) {
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+            window._ssPreviewAnim = requestAnimationFrame(loopStarfield);
+        }
+        loopStarfield();
     }
 };
 
@@ -3026,10 +3117,11 @@ window.startScreenSaver = function(previewType = null) {
         ssIframe.style.width = '100%';
         ssIframe.style.height = '100%';
         ssIframe.style.border = 'none';
-        ssIframe.style.zIndex = '9998';
+        ssIframe.style.zIndex = '200005';
         ssIframe.style.pointerEvents = 'none';
         document.body.appendChild(ssIframe);
     }
+    ssIframe.style.zIndex = '200005';
     ssIframe.style.display = 'none';
     
     if (type === 'pipes' || type === 'matrix') {
