@@ -24,7 +24,10 @@ window.initXpTour = function() {
     window.RufflePlayer = window.RufflePlayer || {};
     window.RufflePlayer.config = {
         "publicPath": undefined,
-        "polyfills": true
+        "polyfills": true,
+        "autoplay": "on",
+        "unmuteOverlay": "hidden",
+        "letterbox": "on"
     };
 
     if (!window.RufflePlayer.newest) {
@@ -82,11 +85,31 @@ function startTour(content, swfUrl, swfBase) {
             salign: "",
             scale: "showAll",
             autoplay: "on",
+            unmuteOverlay: "hidden",
             splashScreen: false
         }).then(function() {
             console.log('[XP Tour] SWF loaded successfully');
+            if (typeof player.unmute === 'function') player.unmute();
+            if (player.audioContext && player.audioContext.state === 'suspended') {
+                player.audioContext.resume().catch(function(){});
+            }
         }).catch(function(e) {
             console.error('[XP Tour] SWF load error:', e);
+        });
+
+        // Ensure user gestures unlock audio
+        var unlockTourAudio = function() {
+            try {
+                if (window.rufflePlayer) {
+                    if (typeof window.rufflePlayer.unmute === 'function') window.rufflePlayer.unmute();
+                    if (window.rufflePlayer.audioContext && window.rufflePlayer.audioContext.state === 'suspended') {
+                        window.rufflePlayer.audioContext.resume().catch(function(){});
+                    }
+                }
+            } catch(e) {}
+        };
+        ['click', 'mousedown', 'keydown'].forEach(function(evt) {
+            window.addEventListener(evt, unlockTourAudio, { passive: true });
         });
     } catch(e) {
         console.error('[XP Tour] Error creating player:', e);

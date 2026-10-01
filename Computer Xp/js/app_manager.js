@@ -5,7 +5,8 @@
 
         // 1. Seed the filesystem with all EXEs and Fonts folder
         try {
-            let win = window.fs["C:"].contents["Windows"];
+            let winKey = Object.keys(window.fs["C:"].contents).find(k => k.toLowerCase() === 'windows');
+            let win = winKey ? window.fs["C:"].contents[winKey] : null;
             if (!win) return;
 
             // Seed Fonts folder
@@ -41,8 +42,13 @@
                 }
             }
 
-            let sys32 = win.contents["System32"];
-            if (!sys32) return;
+            let sys32Key = Object.keys(win.contents).find(k => k.toLowerCase() === 'system32');
+            if (!sys32Key) {
+                sys32Key = "system32";
+                win.contents[sys32Key] = { type: "folder", contents: {} };
+            }
+            let sys32 = win.contents[sys32Key];
+            if (!sys32 || !sys32.contents) return;
 
             // System32 EXEs
             let sys32Exes = {

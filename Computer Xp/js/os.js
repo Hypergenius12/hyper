@@ -1491,17 +1491,24 @@ window.openProgram = function(id) {
     if (sysExe) {
         try {
             let winDir = window.fs && window.fs["C:"] && (window.fs["C:"].contents["WINDOWS"] || window.fs["C:"].contents["Windows"]);
-            if (winDir && winDir.contents["system32"] && winDir.contents["system32"].contents) {
-                let sys32 = winDir.contents["system32"].contents;
-                if (!sys32[sysExe]) {
-                    if (typeof window.xpDialog === 'function') {
-                        window.xpDialog(
-                            sysExe,
-                            `Windows cannot find '${sysExe}'. Make sure you typed the name correctly, and then try again. To search for a file, click the Start button, and then click Search.`,
-                            'error'
-                        );
+            if (winDir) {
+                let sys32Key = Object.keys(winDir.contents).find(k => k.toLowerCase() === 'system32');
+                let sys32 = sys32Key ? winDir.contents[sys32Key].contents : null;
+                if (sys32 && !sys32[sysExe]) {
+                    let recycler = window.resolvePath && window.resolvePath("C:\\RECYCLER");
+                    if (recycler && recycler[sysExe]) {
+                        if (typeof window.xpDialog === 'function') {
+                            window.xpDialog(
+                                sysExe,
+                                `Windows cannot find '${sysExe}'. Make sure you typed the name correctly, and then try again. To search for a file, click the Start button, and then click Search.`,
+                                'error'
+                            );
+                        }
+                        return;
                     }
-                    return;
+                    // Auto-heal missing system file
+                    sys32[sysExe] = { type: "exe", app: id, icon: id.replace('-window','') };
+                    if (typeof window.saveFileSystem === 'function') window.saveFileSystem();
                 }
             }
         } catch(e) {}
@@ -3579,90 +3586,62 @@ if (typeof window.syncThemeDropdowns === 'undefined') {
 
 
 
-window.addPrinterWizard = async function() {
-    let name = await window.xpDialog('Add Printer', 'Enter a name for the new printer:', 'prompt', 'HP LaserJet ' + Math.floor(Math.random() * 9000));
-    if (name) {
-        window.installedPrinters.push({
-            name: name,
-            type: 'Local Printer',
-            port: 'LPT1:',
-            status: 'Ready'
-        });
-        window._renderPrintersList();
-        window.xpDialog('Add Printer Wizard', 'Printer "' + name + '" was installed successfully.', 'info');
+// --- PRINTERS AND FAXES MANAGEMENT ---
+try {
+    let savedPrinters = localStorage.getItem('xp_installed_printers');
+    if (savedPrinters) {
+        window.installedPrinters = JSON.parse(savedPrinters);
     }
+} catch(e) {}
+
+if (!window.installedPrinters || !Array.isArray(window.installedPrinters) || window.installedPrinters.length === 0) {
+    window.installedPrinters = [
+        { id: 'laserjet', name: 'HP LaserJet 4 (Virtual)', status: 'Ready', paused: false, queue: 0, port: 'LPT1:' },
+        { id: 'xps', name: 'Microsoft XPS Document Writer', status: 'Ready', paused: false, queue: 0, port: 'XPSPort:' }
+    ];
+}
+window.selectedPrinterId = window.installedPrinters[0] ? window.installedPrinters[0].id : null;
+
+window._savePrintersState = function() {
+    try {
+        localStorage.setItem('xp_installed_printers', JSON.stringify(window.installedPrinters));
+    } catch(e) {}
 };
-
-window.setupFaxing = async function() {
-    let fax = await window.xpDialog('Fax Setup', 'Enter a fax number to send a test page:', 'prompt', '555-0199');
-    if (fax) {
-        window.xpDialog('Fax Setup', 'Dialing ' + fax + '...\n\nFax test page sent successfully.', 'info');
-    }
-};
-
-
-
-window.seeWhatsPrinting = function() {
-    window.xpDialog('Print Queue', 'There are currently 0 documents in the print queue.', 'info');
-};
-
-window.pausePrinting = function() {
-    window.xpDialog('Printers', 'Printing has been paused for the selected printer.', 'info');
-};
-
-window.cancelAllDocuments = async function() {
-    let confirm = await window.xpDialog('Cancel All Documents', 'Are you sure you want to cancel all documents for this printer?', 'confirm');
-    if(confirm) {
-        window.xpDialog('Printers', 'All documents have been canceled.', 'info');
-    }
-};
-
-window.setPrinterProperties = function() {
-    window.xpDialog('Printer Properties', 'General\n- Location: Office\n- Comment: Main Printer\n\nAdvanced\n- Driver: Microsoft XPS Document Writer v4\n- Spool print documents: Yes', 'info');
-};
-
-window.renamePrinter = async function() {
-    let name = await window.xpDialog('Rename Printer', 'Enter a new name for this printer:', 'prompt', 'My Printer');
-    if(name) {
-        window.xpDialog('Success', 'Printer renamed to: ' + name, 'info');
-    }
-};
-
-window.deletePrinter = async function() {
-    let confirm = await window.xpDialog('Delete Printer', 'Are you sure you want to delete this printer?', 'confirm');
-    if(confirm) {
-        window.xpDialog('Success', 'The printer has been deleted.', 'info');
-    }
-};
-
-
-
-window.installedPrinters = [
-    {id: 'xps', name: 'Microsoft XPS Document Writer', status: 'Ready', paused: false, queue: 0}
-];
-window.selectedPrinterId = null;
 
 window.renderPrinters = function() {
     let area = document.getElementById('printers-list-area');
     if(!area) return;
     area.innerHTML = '';
+
+    // "Add Printer" wizard icon as in authentic Windows XP
+    let addEl = document.createElement('div');
+    addEl.style.cssText = 'display:flex; flex-direction:column; align-items:center; width:90px; text-align:center; cursor:pointer; padding:6px; border-radius:3px; user-select:none;';
+    addEl.onmouseover = () => { addEl.style.background = 'rgba(49, 106, 197, 0.1)'; };
+    addEl.onmouseout = () => { addEl.style.background = 'transparent'; };
+    addEl.onclick = (e) => { e.stopPropagation(); window.addPrinterWizard(); };
+    addEl.innerHTML = `
+        <img src="Windows XP Icons/Printers and Faxes.png" style="width:32px;height:32px;margin-bottom:5px;">
+        <span style="font-size:11px;word-break:break-word;color:#000;">Add Printer</span>
+    `;
+    area.appendChild(addEl);
+
     window.installedPrinters.forEach(p => {
         let isSelected = (window.selectedPrinterId === p.id);
-        let bg = isSelected ? 'rgba(49, 106, 197, 1)' : 'transparent';
+        let bg = isSelected ? 'rgba(49, 106, 197, 0.9)' : 'transparent';
         let fg = isSelected ? '#fff' : '#000';
-        let subColor = isSelected ? '#ccc' : '#666';
-        let statusText = p.status;
-        if(p.paused) statusText = 'Paused';
+        let subColor = isSelected ? '#e0e8ff' : '#666';
+        let statusText = p.paused ? 'Paused' : p.status;
         
         let el = document.createElement('div');
-        el.style.cssText = `display:flex; flex-direction:column; align-items:center; width:80px; text-align:center; cursor:default; padding:5px; background:${bg}; color:${fg};`;
+        el.style.cssText = `display:flex; flex-direction:column; align-items:center; width:90px; text-align:center; cursor:pointer; padding:6px; background:${bg}; color:${fg}; border-radius:3px; user-select:none;`;
         el.onmouseover = () => { if(!isSelected) el.style.background='rgba(49, 106, 197, 0.1)'; };
         el.onmouseout = () => { if(!isSelected) el.style.background='transparent'; };
         el.onclick = (e) => { e.stopPropagation(); window.selectPrinter(p.id); };
+        el.ondblclick = (e) => { e.stopPropagation(); window.seeWhatsPrinting(); };
         
         el.innerHTML = `
-            <img src="Windows XP Icons/Printers and Faxes.png" style="width:32px;height:32px;margin-bottom:5px;">
-            <span style="font-size:11px;word-break:break-word;">${p.name}<br><span style="color:${subColor};">${statusText}</span></span>
+            <img src="Windows XP Icons/Printers and Faxes.png" style="width:32px;height:32px;margin-bottom:5px;${p.paused ? 'filter:grayscale(0.6); opacity:0.8;' : ''}">
+            <span style="font-size:11px;word-break:break-word;line-height:1.2;">${p.name}<br><span style="color:${subColor};font-size:10px;">${statusText}</span></span>
         `;
         area.appendChild(el);
     });
@@ -3674,40 +3653,96 @@ window.selectPrinter = function(id) {
 };
 
 window.addPrinterWizard = async function() {
-    let name = await window.xpDialog('Add Printer', 'Enter a name for the new printer:', 'prompt', 'New Printer');
-    if(name) {
+    let name = await window.xpDialog('Add Printer Wizard', 'Enter a name for the new printer:', 'prompt', 'HP LaserJet ' + Math.floor(1000 + Math.random() * 9000));
+    if(name && name.trim()) {
         let id = 'p_' + Date.now();
-        window.installedPrinters.push({id: id, name: name, status: 'Ready', paused: false, queue: 0});
-        window.selectPrinter(id);
+        window.installedPrinters.push({
+            id: id,
+            name: name.trim(),
+            status: 'Ready',
+            paused: false,
+            queue: 0,
+            port: 'LPT1:'
+        });
+        window.selectedPrinterId = id;
+        window._savePrintersState();
+        window.renderPrinters();
+        window.xpDialog('Add Printer Wizard', 'Printer "' + name.trim() + '" was installed successfully.', 'info');
+    }
+};
+
+window.setupFaxing = async function() {
+    let fax = await window.xpDialog('Fax Configuration Wizard', 'Enter your fax station identifier / number:', 'prompt', '555-0199');
+    if (fax && fax.trim()) {
+        window.xpDialog('Fax Configuration Wizard', 'Fax service configured successfully for ' + fax.trim() + '.\nYour computer is ready to send and receive faxes.', 'info');
     }
 };
 
 window.seeWhatsPrinting = function() {
-    let p = window.installedPrinters.find(x => x.id === window.selectedPrinterId);
+    let p = window.installedPrinters.find(x => x.id === window.selectedPrinterId) || window.installedPrinters[0];
     if(!p) return window.xpDialog('Printers', 'Please select a printer first.', 'info');
-    window.xpDialog('Print Queue - ' + p.name, 'There are currently ' + p.queue + ' documents in the print queue.', 'info');
+    let win = document.getElementById('print-queue-window');
+    if (win) {
+        let titleEl = document.getElementById('print-queue-title');
+        if (titleEl) {
+            let span = titleEl.querySelector('span');
+            if (span) span.innerHTML = `<img src="Windows XP Icons/Printers and Faxes.png" class="sys-icon-small"> ${p.name}${p.paused ? ' - Paused' : ''}`;
+        }
+        if (typeof window.openProgram === 'function') {
+            window.openProgram('print-queue-window');
+        } else {
+            win.style.display = 'flex';
+            window.bringToFront(win);
+        }
+        if (typeof window._renderPrintQueue === 'function') {
+            window._renderPrintQueue();
+        }
+    } else {
+        window.xpDialog('Print Queue - ' + p.name, 'There are currently ' + (p.queue || 0) + ' documents in the print queue.', 'info');
+    }
 };
 
 window.pausePrinting = function() {
-    let p = window.installedPrinters.find(x => x.id === window.selectedPrinterId);
+    let p = window.installedPrinters.find(x => x.id === window.selectedPrinterId) || window.installedPrinters[0];
     if(!p) return window.xpDialog('Printers', 'Please select a printer first.', 'info');
     p.paused = !p.paused;
+    p.status = p.paused ? 'Paused' : 'Ready';
+    window._savePrintersState();
     window.renderPrinters();
+    let titleEl = document.getElementById('print-queue-title');
+    if (titleEl) {
+        let span = titleEl.querySelector('span');
+        if (span) span.innerHTML = `<img src="Windows XP Icons/Printers and Faxes.png" class="sys-icon-small"> ${p.name}${p.paused ? ' - Paused' : ''}`;
+    }
+    if (typeof window.xpDialog === 'function') {
+        window.xpDialog('Printer Status', p.name + ' is now ' + (p.paused ? 'Paused.' : 'Ready.'), 'info');
+    }
 };
 
 window.setPrinterProperties = function() {
-    let p = window.installedPrinters.find(x => x.id === window.selectedPrinterId);
+    let p = window.installedPrinters.find(x => x.id === window.selectedPrinterId) || window.installedPrinters[0];
     if(!p) return window.xpDialog('Printers', 'Please select a printer first.', 'info');
-    window.xpDialog(p.name + ' Properties', 'General\n- Status: ' + (p.paused ? 'Paused' : p.status) + '\n- Documents in queue: ' + p.queue, 'info');
+    let qCount = p.queue || (window.printQueue ? window.printQueue.length : 0);
+    window.xpDialog(
+        p.name + ' Properties',
+        `General\n- Location: Local Port (${p.port || 'LPT1:'})\n- Status: ${p.paused ? 'Paused' : p.status}\n- Documents in queue: ${qCount}\n\nDevice Settings\n- Driver: Microsoft XPS / PostScript v4\n- Spool print documents: Yes\n- Color management: Automatic`,
+        'info'
+    );
 };
 
 window.renamePrinter = async function() {
-    let p = window.installedPrinters.find(x => x.id === window.selectedPrinterId);
+    let p = window.installedPrinters.find(x => x.id === window.selectedPrinterId) || window.installedPrinters[0];
     if(!p) return window.xpDialog('Printers', 'Please select a printer first.', 'info');
     let name = await window.xpDialog('Rename Printer', 'Enter a new name for this printer:', 'prompt', p.name);
-    if(name) {
-        p.name = name;
+    if(name && name.trim()) {
+        p.name = name.trim();
+        window._savePrintersState();
         window.renderPrinters();
+        let titleEl = document.getElementById('print-queue-title');
+        if (titleEl) {
+            let span = titleEl.querySelector('span');
+            if (span) span.innerHTML = `<img src="Windows XP Icons/Printers and Faxes.png" class="sys-icon-small"> ${p.name}${p.paused ? ' - Paused' : ''}`;
+        }
     }
 };
 
@@ -3717,7 +3752,8 @@ window.deletePrinter = async function() {
     let confirm = await window.xpDialog('Delete Printer', 'Are you sure you want to delete ' + p.name + '?', 'confirm');
     if(confirm) {
         window.installedPrinters = window.installedPrinters.filter(x => x.id !== p.id);
-        window.selectedPrinterId = null;
+        window.selectedPrinterId = window.installedPrinters[0] ? window.installedPrinters[0].id : null;
+        window._savePrintersState();
         window.renderPrinters();
     }
 };
@@ -4722,24 +4758,6 @@ window._renderPrintQueue = function() {
 window._clearPrintQueue = function() {
     window.printQueue = [];
     window._renderPrintQueue();
-};
-
-window.setPrinterProperties = function() {
-    if (typeof window.xpDialog === 'function') {
-        window.xpDialog('Properties', 'HP LaserJet 4 (Virtual) properties cannot be changed.', 'info');
-    }
-};
-
-window.pausePrinting = function() {
-    if (typeof window.xpDialog === 'function') {
-        window.xpDialog('Pause', 'Printer is paused. Pending jobs will not be processed.', 'info');
-    }
-};
-
-window.renamePrinter = function() {
-    if (typeof window.xpDialog === 'function') {
-        window.xpDialog('Rename', 'You do not have permission to rename the virtual printer.', 'error');
-    }
 };
 
 // ===== DUAL FILE PICKER PROMPT =====

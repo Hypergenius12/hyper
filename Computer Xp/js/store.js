@@ -738,13 +738,18 @@ window.findStoreApp = function(query) {
     );
 };
 
-const DEFAULT_UNINSTALLED_APPS = ['checkers', 'reversi', 'hearts', 'spades', 'freecell', 'messenger', 'excel', 'remotedesktop', 'xptour'];
+const DEFAULT_UNINSTALLED_APPS = ['checkers', 'reversi', 'hearts', 'spades', 'freecell', 'messenger', 'excel', 'remotedesktop'];
 
 // Storage for uninstalled apps
 window.getUninstalledApps = function() {
     try {
         let saved = localStorage.getItem('xp_uninstalled_apps');
-        if (saved !== null) return JSON.parse(saved);
+        if (saved !== null) {
+            let list = JSON.parse(saved);
+            if (Array.isArray(list)) {
+                return list.filter(x => x !== 'xptour' && x !== 'Tour Windows XP' && x !== 'xptour-window');
+            }
+        }
     } catch(e) {}
     return [...DEFAULT_UNINSTALLED_APPS];
 };

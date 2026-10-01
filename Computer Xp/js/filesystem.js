@@ -2,37 +2,69 @@
 window.isAppInstalled = function(appName) {
     let appPaths = {
         'Notepad': 'C:\\Windows\\System32\\notepad.exe',
+        'notepad-window': 'C:\\Windows\\System32\\notepad.exe',
         'WordPad': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
+        'wordpad-window': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
         'Paint': 'C:\\Windows\\System32\\mspaint.exe',
+        'paint-window': 'C:\\Windows\\System32\\mspaint.exe',
         'Calculator': 'C:\\Windows\\System32\\calc.exe',
+        'calc-window': 'C:\\Windows\\System32\\calc.exe',
         'Character Map': 'C:\\Windows\\System32\\charmap.exe',
+        'charmap-window': 'C:\\Windows\\System32\\charmap.exe',
         'Sound Recorder': 'C:\\Windows\\System32\\sndrec32.exe',
+        'soundrecorder-window': 'C:\\Windows\\System32\\sndrec32.exe',
         'Clipboard Viewer': 'C:\\Windows\\System32\\clipbrd.exe',
+        'clipbook-window': 'C:\\Windows\\System32\\clipbrd.exe',
         'Minesweeper': 'C:\\Windows\\System32\\winmine.exe',
+        'minesweeper-window': 'C:\\Windows\\System32\\winmine.exe',
         'Solitaire': 'C:\\Windows\\System32\\sol.exe',
+        'solitaire-window': 'C:\\Windows\\System32\\sol.exe',
         'FreeCell': 'C:\\Windows\\System32\\freecell.exe',
+        'freecell-window': 'C:\\Windows\\System32\\freecell.exe',
         'Hearts': 'C:\\Windows\\System32\\mshearts.exe',
+        'hearts-window': 'C:\\Windows\\System32\\mshearts.exe',
         'Internet Spades': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
+        'spades-window': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
         'Internet Checkers': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
+        'checkers-window': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
         'Internet Reversi': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
+        'reversi-window': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
         '3D Pinball': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
+        'pinball-window': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
         'Disk Defragmenter': 'C:\\Windows\\System32\\dfrg.msc',
+        'defrag-window': 'C:\\Windows\\System32\\dfrg.msc',
         'System Information': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
+        'sysinfo-window': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
         'Registry Editor': 'C:\\Windows\\regedit.exe',
+        'regedit-window': 'C:\\Windows\\regedit.exe',
         'Task Manager': 'C:\\Windows\\System32\\taskmgr.exe',
+        'taskmgr-window': 'C:\\Windows\\System32\\taskmgr.exe',
         'Command Prompt': 'C:\\Windows\\System32\\cmd.exe',
+        'cmd-window': 'C:\\Windows\\System32\\cmd.exe',
         'Internet Explorer': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
+        'ie-window': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
         'Outlook Express': 'C:\\Program Files\\Outlook Express\\msimn.exe',
+        'email-window': 'C:\\Program Files\\Outlook Express\\msimn.exe',
         'Windows Media Player': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
+        'mediaplayer-window': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
         'Windows Messenger': 'C:\\Program Files\\Messenger\\msmsgs.exe',
+        'messenger-window': 'C:\\Program Files\\Messenger\\msmsgs.exe',
         'Remote Desktop': 'C:\\Windows\\System32\\mstsc.exe',
+        'remotedesktop-window': 'C:\\Windows\\System32\\mstsc.exe',
         'Tour Windows XP': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
+        'xptour-window': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
         'Photon Picture Viewer': 'C:\\Windows\\System32\\photon.exe',
+        'photon-window': 'C:\\Windows\\System32\\photon.exe',
         'Control Panel': 'C:\\Windows\\System32\\control.exe',
+        'controlpanel-window': 'C:\\Windows\\System32\\control.exe',
         'Printers and Faxes': 'C:\\Windows\\System32\\printers.exe',
+        'printers-window': 'C:\\Windows\\System32\\printers.exe',
         'Help and Support': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
+        'help-window': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
         'Microsoft FrontPage': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
-        'Microsoft Excel': 'C:\\Program Files\\Microsoft Office\\excel.exe'
+        'frontpage-window': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
+        'Microsoft Excel': 'C:\\Program Files\\Microsoft Office\\excel.exe',
+        'excel-window': 'C:\\Program Files\\Microsoft Office\\excel.exe'
     };
     
     if (appPaths[appName]) {
@@ -57,37 +89,69 @@ window.isAppInstalled = function(appName) {
 window.isAppInRecycler = function(appName) {
     let appPaths = {
         'Notepad': 'C:\\Windows\\System32\\notepad.exe',
+        'notepad-window': 'C:\\Windows\\System32\\notepad.exe',
         'WordPad': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
+        'wordpad-window': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
         'Paint': 'C:\\Windows\\System32\\mspaint.exe',
+        'paint-window': 'C:\\Windows\\System32\\mspaint.exe',
         'Calculator': 'C:\\Windows\\System32\\calc.exe',
+        'calc-window': 'C:\\Windows\\System32\\calc.exe',
         'Character Map': 'C:\\Windows\\System32\\charmap.exe',
+        'charmap-window': 'C:\\Windows\\System32\\charmap.exe',
         'Sound Recorder': 'C:\\Windows\\System32\\sndrec32.exe',
+        'soundrecorder-window': 'C:\\Windows\\System32\\sndrec32.exe',
         'Clipboard Viewer': 'C:\\Windows\\System32\\clipbrd.exe',
+        'clipbook-window': 'C:\\Windows\\System32\\clipbrd.exe',
         'Minesweeper': 'C:\\Windows\\System32\\winmine.exe',
+        'minesweeper-window': 'C:\\Windows\\System32\\winmine.exe',
         'Solitaire': 'C:\\Windows\\System32\\sol.exe',
+        'solitaire-window': 'C:\\Windows\\System32\\sol.exe',
         'FreeCell': 'C:\\Windows\\System32\\freecell.exe',
+        'freecell-window': 'C:\\Windows\\System32\\freecell.exe',
         'Hearts': 'C:\\Windows\\System32\\mshearts.exe',
+        'hearts-window': 'C:\\Windows\\System32\\mshearts.exe',
         'Internet Spades': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
+        'spades-window': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
         'Internet Checkers': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
+        'checkers-window': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
         'Internet Reversi': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
+        'reversi-window': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
         '3D Pinball': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
+        'pinball-window': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
         'Disk Defragmenter': 'C:\\Windows\\System32\\dfrg.msc',
+        'defrag-window': 'C:\\Windows\\System32\\dfrg.msc',
         'System Information': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
+        'sysinfo-window': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
         'Registry Editor': 'C:\\Windows\\regedit.exe',
+        'regedit-window': 'C:\\Windows\\regedit.exe',
         'Task Manager': 'C:\\Windows\\System32\\taskmgr.exe',
+        'taskmgr-window': 'C:\\Windows\\System32\\taskmgr.exe',
         'Command Prompt': 'C:\\Windows\\System32\\cmd.exe',
+        'cmd-window': 'C:\\Windows\\System32\\cmd.exe',
         'Internet Explorer': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
+        'ie-window': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
         'Outlook Express': 'C:\\Program Files\\Outlook Express\\msimn.exe',
+        'email-window': 'C:\\Program Files\\Outlook Express\\msimn.exe',
         'Windows Media Player': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
+        'mediaplayer-window': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
         'Windows Messenger': 'C:\\Program Files\\Messenger\\msmsgs.exe',
+        'messenger-window': 'C:\\Program Files\\Messenger\\msmsgs.exe',
         'Remote Desktop': 'C:\\Windows\\System32\\mstsc.exe',
+        'remotedesktop-window': 'C:\\Windows\\System32\\mstsc.exe',
         'Tour Windows XP': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
+        'xptour-window': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
         'Photon Picture Viewer': 'C:\\Windows\\System32\\photon.exe',
+        'photon-window': 'C:\\Windows\\System32\\photon.exe',
         'Control Panel': 'C:\\Windows\\System32\\control.exe',
+        'controlpanel-window': 'C:\\Windows\\System32\\control.exe',
         'Printers and Faxes': 'C:\\Windows\\System32\\printers.exe',
+        'printers-window': 'C:\\Windows\\System32\\printers.exe',
         'Help and Support': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
+        'help-window': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
         'Microsoft FrontPage': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
-        'Microsoft Excel': 'C:\\Program Files\\Microsoft Office\\excel.exe'
+        'frontpage-window': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
+        'Microsoft Excel': 'C:\\Program Files\\Microsoft Office\\excel.exe',
+        'excel-window': 'C:\\Program Files\\Microsoft Office\\excel.exe'
     };
     
     if (appPaths[appName]) {
@@ -377,7 +441,17 @@ var fs = {
                             "cleanmgr.exe": { type: "exe", app: "settings-window", icon: "settings" },
                             "sol.exe": { type: "exe", app: "solitaire-window", icon: "solitaire" },
                             "winmine.exe": { type: "exe", app: "minesweeper-window", icon: "mine" },
-                            "pinball.exe": { type: "exe", app: "pinball-window", icon: "pinball" }
+                            "pinball.exe": { type: "exe", app: "pinball-window", icon: "pinball" },
+                            "dfrg.msc": { type: "exe", app: "defrag-window", icon: "defrag" },
+                            "charmap.exe": { type: "exe", app: "charmap-window", icon: "charmap" },
+                            "clipbrd.exe": { type: "exe", app: "clipbook-window", icon: "clipbrd" },
+                            "msinfo32.exe": { type: "exe", app: "sysinfo-window", icon: "sysinfo" },
+                            "mstsc.exe": { type: "exe", app: "mstsc-window", icon: "remotedesktop" },
+                            "photon.exe": { type: "exe", app: "photon-window", icon: "photon" },
+                            "control.exe": { type: "exe", app: "control-window", icon: "settings" },
+                            "printers.exe": { type: "exe", app: "printers-window", icon: "printers" },
+                            "mshearts.exe": { type: "exe", app: "hearts-window", icon: "hearts" },
+                            "freecell.exe": { type: "exe", app: "freecell-window", icon: "freecell" }
                         }
                     },
                     "Web": {
@@ -661,10 +735,34 @@ function loadFileSystem() {
                         "cleanmgr.exe": { type: "exe", app: "settings-window", icon: "settings" },
                         "sol.exe": { type: "exe", app: "solitaire-window", icon: "solitaire" },
                         "winmine.exe": { type: "exe", app: "minesweeper-window", icon: "mine" },
-                        "pinball.exe": { type: "exe", app: "pinball-window", icon: "pinball" }
+                        "pinball.exe": { type: "exe", app: "pinball-window", icon: "pinball" },
+                        "dfrg.msc": { type: "exe", app: "defrag-window", icon: "defrag" },
+                        "charmap.exe": { type: "exe", app: "charmap-window", icon: "charmap" },
+                        "clipbrd.exe": { type: "exe", app: "clipbook-window", icon: "clipbrd" },
+                        "msinfo32.exe": { type: "exe", app: "sysinfo-window", icon: "sysinfo" },
+                        "mstsc.exe": { type: "exe", app: "mstsc-window", icon: "remotedesktop" },
+                        "photon.exe": { type: "exe", app: "photon-window", icon: "photon" },
+                        "control.exe": { type: "exe", app: "control-window", icon: "settings" },
+                        "printers.exe": { type: "exe", app: "printers-window", icon: "printers" },
+                        "mshearts.exe": { type: "exe", app: "hearts-window", icon: "hearts" },
+                        "freecell.exe": { type: "exe", app: "freecell-window", icon: "freecell" }
                     };
                     for (let se in sysExes) {
                         if (!sys32Dir[se]) sys32Dir[se] = sysExes[se];
+                    }
+
+                    // Help & Tours
+                    if (!winDir.contents["Help"]) {
+                        winDir.contents["Help"] = { type: "folder", icon: "folder", contents: {} };
+                    }
+                    if (!winDir.contents["Help"].contents["Tours"]) {
+                        winDir.contents["Help"].contents["Tours"] = { type: "folder", icon: "folder", contents: {} };
+                    }
+                    if (!winDir.contents["Help"].contents["Tours"].contents["htmlTour"]) {
+                        winDir.contents["Help"].contents["Tours"].contents["htmlTour"] = { type: "folder", icon: "folder", contents: {} };
+                    }
+                    if (!winDir.contents["Help"].contents["Tours"].contents["htmlTour"].contents["tour.exe"]) {
+                        winDir.contents["Help"].contents["Tours"].contents["htmlTour"].contents["tour.exe"] = { type: "exe", app: "xptour-window", icon: "tourxp" };
                     }
 
                     // Web & Wallpaper
