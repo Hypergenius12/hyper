@@ -83,39 +83,66 @@ body.theme-blue .window { border: 3px solid #0055E5; }
 body.theme-silver .title-bar { background: linear-gradient(to bottom, #A8B1CB 0%, #C8CFE5 10%, #909CC3 90%, #7683AC 100%) !important; color: #000; text-shadow: none; }
 body.theme-silver .title-bar.inactive { background: linear-gradient(to bottom, #D2D5E0 0%, #E3E6EE 10%, #C1C6D6 90%, #B0B5C6 100%) !important; }
 body.theme-silver .taskbar { background: linear-gradient(to bottom, #96A3C6 0%, #B7C3E1 10%, #7B8CB6 90%, #6878A4 100%) !important; }
-body.theme-silver #tray { background: linear-gradient(to bottom, #7B8CB6 0%, #627299 100%) !important; border-left: 1px solid #5A698F !important; }
+body.theme-silver .system-tray, body.theme-silver #system-tray { background: linear-gradient(to bottom, #7B8CB6 0%, #627299 100%) !important; border-left: 1px solid #5A698F !important; }
 body.theme-silver .start-button { background: radial-gradient(circle at 15% 50%, #94B594 0%, #4D8E55 60%, #356E3B 100%) !important; box-shadow: 0px 2px 5px rgba(0,0,0,0.4), inset 0px 1px 1px #B9DDBE, inset -1px -1px 2px #26522B !important; }
 body.theme-silver .start-menu-header { background: linear-gradient(to bottom, #A8B1CB, #7683AC) !important; }
 body.theme-silver .start-menu-footer { background: linear-gradient(to bottom, #96A3C6, #7683AC) !important; }
-body.theme-silver .start-menu { border-color: #7683AC !important; }
+body.theme-silver #start-menu, body.theme-silver .start-menu { border-color: #7683AC !important; }
+body.theme-silver .start-menu-body { border-left-color: #7683AC !important; border-right-color: #7683AC !important; }
+body.theme-silver .start-menu-right { background: #E2E6EF !important; border-left: 1px solid #B0B9CE !important; }
+body.theme-silver .start-menu-right .start-menu-item span { color: #2D3851 !important; }
+body.theme-silver .start-menu-divider.right-divider { background: linear-gradient(to right, transparent, #B0B9CE 10%, #B0B9CE 90%, transparent) !important; }
+body.theme-silver #quick-launch { border-right: 1px solid #5A698F !important; }
 body.theme-silver .task-item { background: linear-gradient(to bottom, #C4CCDF 0%, #94A2C6 100%) !important; border-color: #7B8CB6 !important; color: #000 !important; }
 body.theme-silver .task-item.active { background: linear-gradient(to bottom, #8C9CC2 0%, #6E82AE 100%) !important; color: white !important; }
 body.theme-silver .window { border: 3px solid #7683AC !important; }
+body.theme-silver #help-toolbar { background: #7B8CB6 !important; }
+body.theme-silver #help-sidebar { background: linear-gradient(to bottom, #E2E6EF, #C1C6D6) !important; }
+body.theme-silver #help-sidebar h3 { color: #2D3851 !important; }
+body.theme-silver #help-sidebar a { color: #1E2638 !important; }
 
 /* Olive Green Theme */
 body.theme-olive .title-bar { background: linear-gradient(to bottom, #A9B26D 0%, #B9C485 10%, #A0A865 90%, #878E4B 100%) !important; }
 body.theme-olive .title-bar.inactive { background: linear-gradient(to bottom, #C2C6A3 0%, #D4D8BA 10%, #B7BC98 90%, #A7AD84 100%) !important; }
 body.theme-olive .taskbar { background: linear-gradient(to bottom, #9EAA63 0%, #B4C274 10%, #869251 90%, #758045 100%) !important; }
-body.theme-olive #tray { background: linear-gradient(to bottom, #869251 0%, #6F7A3E 100%) !important; border-left: 1px solid #5C6733 !important; }
+body.theme-olive .system-tray, body.theme-olive #system-tray { background: linear-gradient(to bottom, #869251 0%, #6F7A3E 100%) !important; border-left: 1px solid #5C6733 !important; }
 body.theme-olive .start-button { background: radial-gradient(circle at 15% 50%, #B5C46E 0%, #879446 60%, #687333 100%) !important; box-shadow: 0px 2px 5px rgba(0,0,0,0.4), inset 0px 1px 1px #D6E394, inset -1px -1px 2px #4D5624 !important; }
 body.theme-olive .start-menu-header { background: linear-gradient(to bottom, #A9B26D, #878E4B) !important; }
 body.theme-olive .start-menu-footer { background: linear-gradient(to bottom, #9EAA63, #758045) !important; }
-body.theme-olive .start-menu { border-color: #878E4B !important; }
+body.theme-olive #start-menu, body.theme-olive .start-menu { border-color: #878E4B !important; }
+body.theme-olive .start-menu-body { border-left-color: #878E4B !important; border-right-color: #878E4B !important; }
+body.theme-olive .start-menu-right { background: #E6ECDC !important; border-left: 1px solid #B8C29D !important; }
+body.theme-olive .start-menu-right .start-menu-item span { color: #3B441D !important; }
+body.theme-olive .start-menu-divider.right-divider { background: linear-gradient(to right, transparent, #B8C29D 10%, #B8C29D 90%, transparent) !important; }
+body.theme-olive #quick-launch { border-right: 1px solid #5C6733 !important; }
 body.theme-olive .task-item { background: linear-gradient(to bottom, #C3C9A0 0%, #9FA871 100%) !important; border-color: #869251 !important; color: #000 !important; }
 body.theme-olive .task-item.active { background: linear-gradient(to bottom, #8F995D 0%, #717C43 100%) !important; color: white !important; }
 body.theme-olive .window { border: 3px solid #878E4B !important; }
+body.theme-olive #help-toolbar { background: #869251 !important; }
+body.theme-olive #help-sidebar { background: linear-gradient(to bottom, #E6ECDC, #B7BC98) !important; }
+body.theme-olive #help-sidebar h3 { color: #434B24 !important; }
+body.theme-olive #help-sidebar a { color: #343B1B !important; }
 
 /* Classic Theme (Windows 2000 / Retro Gray) */
 body.theme-classic .title-bar { background: linear-gradient(90deg, #0a246a 0%, #a6caf0 100%); color: #fff; text-shadow: none; font-family: 'Tahoma', sans-serif; font-weight: bold; }
 body.theme-classic .title-bar.inactive { background: linear-gradient(90deg, #808080 0%, #c0c0c0 100%); color: #d4d0c8; }
 body.theme-classic .taskbar { background: #d4d0c8; border-top: 2px solid #fff; box-shadow: inset 0 1px 0 #fff; }
+body.theme-classic .system-tray, body.theme-classic #system-tray { background: #d4d0c8 !important; border-left: 1px solid #808080 !important; color: #000 !important; box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #fff !important; }
 body.theme-classic .start-button { background: #d4d0c8; color: #000; font-weight: bold; border: 2px solid; border-color: #fff #404040 #404040 #fff; border-radius: 0; box-shadow: inset 1px 1px 0 #fff; }
 body.theme-classic .start-menu-header { background: #808080; }
+body.theme-classic #start-menu, body.theme-classic .start-menu { border: 2px solid; border-color: #fff #404040 #404040 #fff !important; box-shadow: 2px 2px 5px rgba(0,0,0,0.5) !important; }
+body.theme-classic .start-menu-right { background: #d4d0c8 !important; border-left: 1px solid #808080 !important; }
+body.theme-classic #clock { color: #000 !important; }
+body.theme-classic #quick-launch { border-right: 1px solid #808080 !important; }
 body.theme-classic .task-item { background: #d4d0c8; border: 2px solid; border-color: #fff #404040 #404040 #fff; border-radius: 0; color: #000; box-shadow: inset 1px 1px 0 #fff; }
 body.theme-classic .task-item.active { background: #c0c0c0; border-color: #404040 #fff #fff #404040; box-shadow: inset -1px -1px 0 #fff; }
 body.theme-classic .window { border: 3px solid #d4d0c8; border-radius: 0; box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #404040, 1px 1px 0 #000; }
 body.theme-classic button { background: #d4d0c8; border: 2px solid; border-color: #fff #404040 #404040 #fff; border-radius: 0; color: #000; }
 body.theme-classic button:active { border-color: #404040 #fff #fff #404040; }
+body.theme-classic #help-toolbar { background: #0a246a !important; }
+body.theme-classic #help-sidebar { background: #d4d0c8 !important; }
+body.theme-classic #help-sidebar h3 { color: #000080 !important; }
+body.theme-classic #help-sidebar a { color: #000080 !important; }
 /* ----------------------- */
 
 #desktop {

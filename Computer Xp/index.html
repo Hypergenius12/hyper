@@ -3019,6 +3019,13 @@ Includes new multi-instance and Programmer view support!', 'info')">
                         onerror="this.src='Windows XP Icons/Control Panel.png'">
                     <span>Printers and Faxes</span>
                 </div>
+                <!-- Fonts -->
+                <div class="cp-item" onclick="openProgram('folder-window'); navigateTo('C:\\WINDOWS\\Fonts'); closeWindow('controlpanel-window');">
+                    <img src="Windows XP Icons/Fonts.png"
+                        style="width:32px; height:32px; image-rendering:pixelated;"
+                        onerror="this.src='Windows XP Icons/Control Panel.png'">
+                    <span>Fonts</span>
+                </div>
             </div>
         </div>
     </div>
@@ -3109,7 +3116,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
                 <div class="win-btn" onclick="closeWindow('help-window')"><img src="Windows XP Icons/Exit.png" alt="X"></div>
             </div>
         </div>
-        <div
+        <div id="help-toolbar"
             style="display:flex; background:#2A60A4; padding:5px 10px; align-items:center; color:white; font-family:inherit;">
             <div style="display:flex; gap:10px;">
                 <button
@@ -3136,7 +3143,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
         </div>
         <div style="display:flex; flex:1; background:white; overflow:hidden;">
             <!-- Sidebar -->
-            <div
+            <div id="help-sidebar"
                 style="width:220px; background:linear-gradient(to bottom, #E8F1FC, #B6D2F5); border-right:1px solid #ACA899; padding:15px; overflow-y:auto; font-family:inherit;">
                 <h3 style="color:#215DC6; margin-top:0; border-bottom:1px solid #ACA899; padding-bottom:5px;">Pick a
                     Help topic</h3>

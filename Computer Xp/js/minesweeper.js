@@ -18,7 +18,9 @@ window.setMinesweeperDifficulty = function(diff) {
         win.style.height = (msRows * 20 + 130) + 'px';
     }
     
-    initMinesweeper();
+    if (grid) {
+        initMinesweeper();
+    }
 };
 
 /* Minesweeper Logic */
@@ -39,11 +41,15 @@ function initMinesweeper() {
     msMinesLeft = msMines;
     msTimer = 0;
     clearInterval(msTimerInterval);
-    document.getElementById('mine-count').innerText = msMinesLeft.toString().padStart(3, '0');
-    document.getElementById('mine-timer').innerText = '000';
-    document.getElementById('mine-face').innerHTML = '<img src="minesweeper icons/happy.png" style="height:80%;">';
+    let countEl = document.getElementById('mine-count');
+    if (countEl) countEl.innerText = msMinesLeft.toString().padStart(3, '0');
+    let timerEl = document.getElementById('mine-timer');
+    if (timerEl) timerEl.innerText = '000';
+    let faceEl = document.getElementById('mine-face');
+    if (faceEl) faceEl.innerHTML = '<img src="minesweeper icons/happy.png" style="height:80%;">';
     
     let grid = document.getElementById('minesweeper-grid');
+    if (!grid) return;
     grid.innerHTML = '';
     msBoard = [];
 

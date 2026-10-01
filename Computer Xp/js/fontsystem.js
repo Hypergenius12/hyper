@@ -41,7 +41,7 @@
             :root {
                 --xp-system-font: "${fontFamily}", Tahoma, 'MS Sans Serif', sans-serif;
             }
-            body, button, input, select, textarea, .window, .title-bar, .start-menu, .taskbar, .desktop-icon, .context-menu, .stat-box, .explorer-address input, #desktop, #clock, #help-window, #help-window *, #help-content-area, #help-content-area * {
+            body, button, input, select, textarea, .window, .title-bar, #start-menu, #start-menu *, .start-menu, .start-menu *, .taskbar, .desktop-icon, .context-menu, .stat-box, .explorer-address input, #desktop, #clock, #help-window, #help-window *, #help-content-area, #help-content-area *, .menu-bar, .menu-bar *, .app-menu-dropdown, .app-menu-dropdown *, .app-menu-item, .app-menu-item * {
                 font-family: var(--xp-system-font) !important;
             }
         `;

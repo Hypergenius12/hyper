@@ -7,7 +7,10 @@ window.isAppInstalled = function(app) {
         'store-window', 'folder-window', 'settings-window', 'controlpanel-window',
         'printers-window', 'help-window', 'search-window', 'run-window',
         'fontview-window', 'print-queue-window', 'display-props-window',
-        'email-compose-window', 'properties-window', 'datetime-window'
+        'email-compose-window', 'properties-window', 'datetime-window',
+        'imageviewer-window', 'print-dialog-window', 'print-preview-window',
+        'printing-progress-window', 'email-accounts-window', 'email-account-properties-window',
+        'email-options-window', 'email-read-window', 'send-receive-window', 'fp-table-dialog-window'
     ];
     if (typeof app === 'string' && systemShells.includes(app)) {
         return true;
@@ -437,6 +440,7 @@ var fs = {
                         icon: "txt",
                         content: "; for 16-bit app support\n[drivers]\nwave=mmdrv.dll\ntimer=timer.drv\n\n[boot]\nfonts.fon=vgasys.fon\n386grabber=vga.3gr\noemfonts.fon=vgaoem.fon\nfixedfon.fon=vgafix.fon\n"
                     },
+                    "explorer.exe": { type: "exe", app: "folder-window", icon: "computer" },
                     "Fonts": {
                         type: "folder", icon: "fonts", contents: (function() {
                             if (typeof window !== 'undefined' && window.XP_SYSTEM_FONTS) {
@@ -572,9 +576,29 @@ var fs = {
 window.currentPath = "C:\\Documents and Settings\\Administrator\\My Documents";
 // Helper: get current user desktop path (works with multi-account system)
 window.getDesktopPath = function () {
-    let user = window.currentAccount || 'Administrator';
+    let savedUser = null;
+    try { savedUser = localStorage.getItem('xp_logged_in_user'); } catch(e) {}
+    let user = window.currentAccount || savedUser || 'Administrator';
     return "C:\\Documents and Settings\\" + user + "\\Desktop";
 };
+
+// Helper: determine active filesystem localStorage key
+window.getActiveFSKey = function () {
+    let savedUser = null;
+    try { savedUser = localStorage.getItem('xp_logged_in_user'); } catch(e) {}
+    let currentUser = window.currentAccount || savedUser || 'Administrator';
+    if (currentUser === 'Guest') return 'xp_virtual_drive_guest';
+    if (typeof window.loadAccounts === 'function') {
+        try {
+            let accounts = window.loadAccounts();
+            if (accounts && accounts[currentUser] && accounts[currentUser].fsKey) {
+                return accounts[currentUser].fsKey;
+            }
+        } catch(e) {}
+    }
+    return window._currentFSKey || 'xp_virtual_drive_v3';
+};
+
 let navHistory = [];
 let draggedFile = null;
 
@@ -582,7 +606,15 @@ window.fsClipboard = null;
 window.selectedFileContext = null;
 
 window.saveFileSystem = function saveFileSystem(key) {
-    if (!key) key = window._currentFSKey || 'xp_virtual_drive_v3';
+    if (!key) key = window._currentFSKey || (typeof window.getActiveFSKey === 'function' ? window.getActiveFSKey() : 'xp_virtual_drive_v3');
+    window._currentFSKey = key;
+    
+    // Guest account is ephemeral — never persist
+    let savedUser = null;
+    try { savedUser = localStorage.getItem('xp_logged_in_user'); } catch(e) {}
+    let currentUser = window.currentAccount || savedUser;
+    if (currentUser === 'Guest' || key === 'xp_virtual_drive_guest') return;
+    
     let targetFs = window.fs || fs;
     fs = targetFs;
     window.fs = targetFs;
@@ -590,18 +622,31 @@ window.saveFileSystem = function saveFileSystem(key) {
     try {
         let sys32 = window.resolvePath("C:\\Windows\\System32");
         let win = window.resolvePath("C:\\Windows");
-        if (!sys32 || !sys32["win32k.sys"] || !sys32["kernel32.dll"] || !win || !win["explorer.exe"]) {
+        let hasExplorer = (win && win["explorer.exe"]) || (sys32 && sys32["explorer.exe"]);
+        let hasKernel = sys32 && sys32["kernel32.dll"];
+        let hasWin32k = (sys32 && sys32["win32k.sys"]) || (win && win["win32k.sys"]);
+        if (window._sysInitialized && (!sys32 || !hasKernel || !win || !hasExplorer || !hasWin32k)) {
             if (typeof window.triggerBSOD === 'function' && !window.bsodTriggered) {
                 setTimeout(() => window.triggerBSOD(), 500);
             }
         }
     } catch(e) {}
     
-    localStorage.setItem(key, JSON.stringify(targetFs));
-}
+    try {
+        localStorage.setItem(key, JSON.stringify(targetFs));
+    } catch(e) {
+        console.error("Save filesystem error:", e);
+    }
+};
 
-function loadFileSystem() {
-    let saved = localStorage.getItem('xp_virtual_drive_v3') || localStorage.getItem('xp_virtual_drive_v2');
+window.loadFileSystem = function loadFileSystem(targetKey) {
+    let key = targetKey || window._currentFSKey || (typeof window.getActiveFSKey === 'function' ? window.getActiveFSKey() : 'xp_virtual_drive_v3');
+    window._currentFSKey = key;
+    
+    let saved = localStorage.getItem(key);
+    if (!saved && key === 'xp_virtual_drive_v3') {
+        saved = localStorage.getItem('xp_virtual_drive_v2');
+    }
     if (saved) {
         // MIGRATION: Fix capitalizations that cause 404s on GitHub Pages
         saved = saved.replace(/Tetris\.png/g, 'tetris.webp');
@@ -610,19 +655,40 @@ function loadFileSystem() {
         saved = saved.replace(/minesweeper icons\/happy\.png/gi, 'Minesweeper Icons/happy.png');
         saved = saved.replace(/volume alt\.png/gi, 'Volume.png');
         saved = saved.replace(/Volume Alt\.png/gi, 'Volume.png');
-        localStorage.setItem('xp_virtual_drive_v3', saved);
+        if (key === 'xp_virtual_drive_v3') {
+            localStorage.setItem('xp_virtual_drive_v3', saved);
+        }
         try { 
             fs = JSON.parse(saved); 
             window.fs = fs;
         }
-        catch (e) { console.error("Filesystem parse error."); }
+        catch (e) { console.error("Filesystem parse error for key:", key, e); }
     } else {
-        window.fs = fs;
+        let savedUser = null;
+        try { savedUser = localStorage.getItem('xp_logged_in_user'); } catch(e) {}
+        let user = window.currentAccount || savedUser || 'Administrator';
+        if (user === 'Guest' && typeof window.initGuestFS === 'function') {
+            window.initGuestFS();
+            let guestData = localStorage.getItem('xp_virtual_drive_guest');
+            if (guestData) {
+                try { window.fs = fs = JSON.parse(guestData); } catch(e) {}
+            }
+        } else if (user !== 'Administrator' && typeof window.buildUserFS === 'function') {
+            window.fs = fs = window.buildUserFS(user);
+        } else {
+            window.fs = fs;
+        }
     }
 
     // Auto-migrate: ensure new desktop shortcuts exist for ALL accounts in the current FS
     try {
-        let docsDir = fs["C:"].contents["Documents and Settings"].contents;
+        let curFs = window.fs || fs;
+        if (!curFs) return;
+        let cK = Object.keys(curFs).find(k => k.toLowerCase() === 'c:') || "C:";
+        if (!curFs[cK] || !curFs[cK].contents) return;
+        let dsK = Object.keys(curFs[cK].contents).find(k => k.toLowerCase() === 'documents and settings') || "Documents and Settings";
+        if (!curFs[cK].contents[dsK] || !curFs[cK].contents[dsK].contents) return;
+        let docsDir = curFs[cK].contents[dsK].contents;
         for (let user in docsDir) {
             if (docsDir[user].contents && docsDir[user].contents["Desktop"]) {
                 let desk = docsDir[user].contents["Desktop"].contents;
@@ -647,22 +713,24 @@ function loadFileSystem() {
 
                 // Fix pinball icon - safely check Games folder exists
                 try {
-                    let progFiles = fs["C:"].contents["Program Files"].contents;
-                    if (progFiles["Games"] && progFiles["Games"].contents) {
-                        let gamesDir = progFiles["Games"].contents;
-                        if (gamesDir["3D Pinball for Windows.lnk"]) {
-                            gamesDir["3D Pinball for Windows.lnk"].icon = "pinball";
-                        }
-                    } else {
-                        // Add Games folder if missing
-                        progFiles["Games"] = {
-                            type: "folder", contents: {
-                                "3D Pinball for Windows.lnk": { type: "exe", app: "pinball-window", icon: "pinball" },
-                                "Minesweeper.lnk": { type: "exe", app: "minesweeper-window", icon: "mine" },
-                                "Solitaire.lnk": { type: "exe", app: "solitaire-window", icon: "solitaire" },
-                                "Tetris XP.lnk": { type: "exe", app: "tetris-window", icon: "tetris" }
+                    let progFiles = curFs[cK].contents["Program Files"] ? curFs[cK].contents["Program Files"].contents : null;
+                    if (progFiles) {
+                        if (progFiles["Games"] && progFiles["Games"].contents) {
+                            let gamesDir = progFiles["Games"].contents;
+                            if (gamesDir["3D Pinball for Windows.lnk"]) {
+                                gamesDir["3D Pinball for Windows.lnk"].icon = "pinball";
                             }
-                        };
+                        } else {
+                            // Add Games folder if missing
+                            progFiles["Games"] = {
+                                type: "folder", contents: {
+                                    "3D Pinball for Windows.lnk": { type: "exe", app: "pinball-window", icon: "pinball" },
+                                    "Minesweeper.lnk": { type: "exe", app: "minesweeper-window", icon: "mine" },
+                                    "Solitaire.lnk": { type: "exe", app: "solitaire-window", icon: "solitaire" },
+                                    "Tetris XP.lnk": { type: "exe", app: "tetris-window", icon: "tetris" }
+                                }
+                            };
+                        }
                     }
                 } catch(ge) { /* ignore */ }
 
@@ -673,11 +741,12 @@ function loadFileSystem() {
 
                 // Ensure all default Program Files apps are populated
                 try {
-                    let progFiles = fs["C:"].contents["Program Files"].contents;
-                    if (!progFiles["Internet Explorer"]) progFiles["Internet Explorer"] = { type: "folder", contents: {} };
-                    if (!progFiles["Internet Explorer"].contents["iexplore.exe"]) {
-                        progFiles["Internet Explorer"].contents["iexplore.exe"] = { type: "exe", app: "ie-window", icon: "ie" };
-                    }
+                    let progFiles = curFs[cK].contents["Program Files"] ? curFs[cK].contents["Program Files"].contents : null;
+                    if (progFiles) {
+                        if (!progFiles["Internet Explorer"]) progFiles["Internet Explorer"] = { type: "folder", contents: {} };
+                        if (!progFiles["Internet Explorer"].contents["iexplore.exe"]) {
+                            progFiles["Internet Explorer"].contents["iexplore.exe"] = { type: "exe", app: "ie-window", icon: "ie" };
+                        }
 
                     if (!progFiles["Windows NT"]) progFiles["Windows NT"] = { type: "folder", contents: {} };
                     if (!progFiles["Windows NT"].contents["Accessories"]) progFiles["Windows NT"].contents["Accessories"] = { type: "folder", contents: {} };
@@ -750,34 +819,37 @@ function loadFileSystem() {
                     if (!progFiles["Windows Defender"].contents["MSASCui.exe"]) {
                         progFiles["Windows Defender"].contents["MSASCui.exe"] = { type: "exe", app: "defender-window", icon: "Windows XP Icons/Virus Protection.png" };
                     }
-                    
+                }
+                } catch(pe) { /* ignore */ }
+
                 try {
-                    let docsDir = fs["C:"].contents["Documents and Settings"].contents;
-                    for (let user in docsDir) {
-                        if (docsDir[user].contents && docsDir[user].contents["Desktop"]) {
-                            let desk = docsDir[user].contents["Desktop"].contents;
-                            if (!desk["Windows Defender.lnk"]) {
-                                desk["Windows Defender.lnk"] = { type: "exe", app: "defender-window", icon: "Windows XP Icons/Virus Protection.png" };
+                    let docsDir = curFs[cK].contents["Documents and Settings"] ? curFs[cK].contents["Documents and Settings"].contents : null;
+                    if (docsDir) {
+                        for (let user in docsDir) {
+                            if (docsDir[user].contents && docsDir[user].contents["Desktop"]) {
+                                let desk = docsDir[user].contents["Desktop"].contents;
+                                if (!desk["Windows Defender.lnk"]) {
+                                    desk["Windows Defender.lnk"] = { type: "exe", app: "defender-window", icon: "Windows XP Icons/Virus Protection.png" };
+                                }
                             }
-                        }
-                        if (docsDir[user].contents && docsDir[user].contents["Start Menu"] && docsDir[user].contents["Start Menu"].contents["Programs"]) {
-                            let progs = docsDir[user].contents["Start Menu"].contents["Programs"].contents;
-                            if (!progs["Windows Defender.lnk"]) {
-                                progs["Windows Defender.lnk"] = { type: "exe", app: "defender-window", icon: "Windows XP Icons/Virus Protection.png" };
+                            if (docsDir[user].contents && docsDir[user].contents["Start Menu"] && docsDir[user].contents["Start Menu"].contents["Programs"]) {
+                                let progs = docsDir[user].contents["Start Menu"].contents["Programs"].contents;
+                                if (!progs["Windows Defender.lnk"]) {
+                                    progs["Windows Defender.lnk"] = { type: "exe", app: "defender-window", icon: "Windows XP Icons/Virus Protection.png" };
+                                }
                             }
                         }
                     }
                 } catch(e) {}
-                } catch(pe) { /* ignore */ }
 
                 // Auto-migrate System folders (Fonts, system32, Web/Wallpaper, Media)
                 try {
-                    let winKey = Object.keys(fs["C:"].contents).find(k => k.toLowerCase() === 'windows');
+                    let winKey = Object.keys(curFs[cK].contents).find(k => k.toLowerCase() === 'windows');
                     if (!winKey) {
                         winKey = "WINDOWS";
-                        fs["C:"].contents[winKey] = { type: "folder", contents: {} };
+                        curFs[cK].contents[winKey] = { type: "folder", contents: {} };
                     }
-                    let winDir = fs["C:"].contents[winKey];
+                    let winDir = curFs[cK].contents[winKey];
                     if (!winDir.contents) winDir.contents = {};
 
                     // Fonts
@@ -1053,9 +1125,83 @@ window.populateOpenWith = function(filename, item, path) {
 window.renderDesktop = function () {
     let desktopDiv = document.getElementById('desktop');
     if (!desktopDiv) return;
-    desktopDiv.innerHTML = '';
-    let deskPath = window.getDesktopPath ? window.getDesktopPath() : "C:\\Documents and Settings\\Administrator\\Desktop";
+
+    let savedUser = null;
+    try { savedUser = localStorage.getItem('xp_logged_in_user'); } catch(e) {}
+    let currentUser = window.currentAccount || savedUser || 'Administrator';
+    let deskPath = window.getDesktopPath ? window.getDesktopPath() : ("C:\\Documents and Settings\\" + currentUser + "\\Desktop");
+
+    // Ensure filesystem is ready
+    if (!window.fs) {
+        if (typeof window.loadFileSystem === 'function') {
+            window.loadFileSystem();
+        }
+    }
+
     let desktopContents = window.resolvePath(deskPath);
+
+    // AUTO-HEAL: If desktopContents is missing or empty, ensure the user folder structure and default shortcuts exist
+    if (!desktopContents || typeof desktopContents !== 'object' || Object.keys(desktopContents).length === 0) {
+        try {
+            let curFs = window.fs || fs;
+            if (curFs) {
+                let cK = Object.keys(curFs).find(k => k.toLowerCase() === 'c:') || "C:";
+                if (!curFs[cK]) curFs[cK] = { type: "folder", icon: "drive", contents: {} };
+                if (!curFs[cK].contents) curFs[cK].contents = {};
+                let dsK = Object.keys(curFs[cK].contents).find(k => k.toLowerCase() === 'documents and settings') || "Documents and Settings";
+                if (!curFs[cK].contents[dsK] || !curFs[cK].contents[dsK].contents) {
+                    curFs[cK].contents[dsK] = { type: "folder", icon: "folder", contents: {} };
+                }
+                let ds = curFs[cK].contents[dsK].contents;
+
+                let defaults = (typeof window.buildDesktopShortcuts === 'function')
+                    ? window.buildDesktopShortcuts(currentUser)
+                    : {
+                        "My Computer.lnk": { type: "shortcut", target: "C:\\", icon: "computer" },
+                        "My Documents.lnk": { type: "shortcut", target: "C:\\Documents and Settings\\" + currentUser + "\\My Documents", icon: "folder" },
+                        "Recycle Bin.lnk": { type: "shortcut", target: "C:\\RECYCLER", icon: "recycle_empty" },
+                        "Control Panel.lnk": { type: "exe", app: "controlpanel-window", icon: "settings" },
+                        "Internet Explorer.lnk": { type: "exe", app: "ie-window", icon: "ie" },
+                        "Command Prompt.lnk": { type: "exe", app: "cmd-window", icon: "cmd" }
+                    };
+
+                if (!ds[currentUser]) {
+                    ds[currentUser] = {
+                        type: "folder",
+                        icon: "folder",
+                        contents: {
+                            "Desktop": { type: "folder", icon: "folder", contents: defaults },
+                            "My Documents": { type: "folder", icon: "folder", contents: {} }
+                        }
+                    };
+                } else {
+                    if (!ds[currentUser].contents) ds[currentUser].contents = {};
+                    if (!ds[currentUser].contents["Desktop"] || !ds[currentUser].contents["Desktop"].contents) {
+                        ds[currentUser].contents["Desktop"] = { type: "folder", icon: "folder", contents: defaults };
+                    } else if (Object.keys(ds[currentUser].contents["Desktop"].contents).length === 0) {
+                        ds[currentUser].contents["Desktop"].contents = defaults;
+                    }
+                }
+                desktopContents = window.resolvePath(deskPath);
+            }
+        } catch(healErr) {
+            console.error("Desktop auto-heal error:", healErr);
+        }
+    }
+
+    // Secondary fallback: if still null, try Administrator's desktop
+    if (!desktopContents && currentUser !== 'Administrator') {
+        desktopContents = window.resolvePath("C:\\Documents and Settings\\Administrator\\Desktop");
+    }
+
+    // If still null, do not blank out existing desktop DOM!
+    if (!desktopContents) {
+        console.warn("Unable to resolve desktopContents for path:", deskPath);
+        return;
+    }
+
+    desktopDiv.innerHTML = '';
+    let desktopNeedsSave = false;
 
     if (desktopContents) {
         let index = 0;
@@ -1212,24 +1358,30 @@ window.renderDesktop = function () {
                 div.ondblclick = () => executeFile(key, item, deskPath);
             }
 
-            if (item.x !== undefined && item.y !== undefined) {
+            let itemX = parseInt(item.x);
+            let itemY = parseInt(item.y);
+            if (!isNaN(itemX) && !isNaN(itemY)) {
                 if (typeof window.gridAlign !== 'undefined' && window.gridAlign) {
                     let gridStep = typeof window.getGridStep === 'function' ? window.getGridStep() : 85;
-                    div.style.left = Math.max(10, Math.round((item.x - 10) / gridStep) * gridStep + 10) + "px";
-                    div.style.top = Math.max(10, Math.round((item.y - 10) / gridStep) * gridStep + 10) + "px";
+                    div.style.left = Math.max(10, Math.round((itemX - 10) / gridStep) * gridStep + 10) + "px";
+                    div.style.top = Math.max(10, Math.round((itemY - 10) / gridStep) * gridStep + 10) + "px";
                 } else {
-                    div.style.left = item.x + "px";
-                    div.style.top = item.y + "px";
+                    div.style.left = itemX + "px";
+                    div.style.top = itemY + "px";
                 }
             } else {
                 let gridStep = typeof window.getGridStep === 'function' ? window.getGridStep() : 85;
                 let occ = new Set();
                 for (let k of keys) {
                     let itm = desktopContents[k];
-                    if (itm.x !== undefined && itm.y !== undefined) {
-                        let r = Math.round((itm.y - 10) / gridStep);
-                        let c = Math.round((itm.x - 10) / gridStep);
-                        occ.add(r + ',' + c);
+                    if (itm && itm.x !== undefined && itm.y !== undefined) {
+                        let ix = parseInt(itm.x);
+                        let iy = parseInt(itm.y);
+                        if (!isNaN(ix) && !isNaN(iy)) {
+                            let r = Math.round((iy - 10) / gridStep);
+                            let c = Math.round((ix - 10) / gridStep);
+                            occ.add(r + ',' + c);
+                        }
                     }
                 }
                 let r = 0, c = 0;
@@ -1241,7 +1393,7 @@ window.renderDesktop = function () {
                 div.style.left = (10 + c * gridStep) + "px";
                 item.x = 10 + c * gridStep;
                 item.y = 10 + r * gridStep;
-                window.saveFileSystem();
+                desktopNeedsSave = true;
             }
 
             let iconType = item.type === 'folder' ? 'folder' : (item.icon || 'txt');
@@ -1272,6 +1424,10 @@ window.renderDesktop = function () {
             desktopDiv.appendChild(div);
             index++;
         }
+    }
+    
+    if (desktopNeedsSave && typeof window.saveFileSystem === 'function') {
+        window.saveFileSystem();
     }
     
     if (typeof window.arrangeIcons === 'function') {
@@ -2252,10 +2408,19 @@ function getAppIdFromItem(item) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    loadFileSystem();
+    let activeKey = typeof window.getActiveFSKey === 'function' ? window.getActiveFSKey() : (window._currentFSKey || 'xp_virtual_drive_v3');
+    if (!window.fs || !window._currentFSKey || window._currentFSKey !== activeKey) {
+        if (typeof window.loadFileSystem === 'function') {
+            window.loadFileSystem(activeKey);
+        }
+    }
     bindSysIcons();
-    window.renderDesktop();
-    window.renderExplorer(window.currentPath);
+    if (typeof window.renderDesktop === 'function') {
+        window.renderDesktop();
+    }
+    if (typeof window.renderExplorer === 'function') {
+        window.renderExplorer(window.currentPath);
+    }
 });
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {

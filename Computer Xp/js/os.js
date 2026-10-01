@@ -1123,6 +1123,15 @@ window.executeRunCmd = function() {
     if (runWin) runWin.style.display = 'none';
 
     // Special Control Panel applets
+    if (cmd === 'fonts' || cmd === 'control fonts') {
+        if (typeof window.openProgram === 'function') {
+            window.openProgram('folder-window');
+            if (typeof window.navigateTo === 'function') {
+                window.navigateTo('C:\\WINDOWS\\Fonts');
+            }
+        }
+        return;
+    }
     if (cmd === 'timedate.cpl') {
         if (typeof window.openSettings === 'function') window.openSettings('datetime');
         return;
@@ -2311,6 +2320,19 @@ window.dropExplorer = function(ev) {
     }
     
     let filesToDrop = window.draggedFiles && window.draggedFiles.length > 0 ? window.draggedFiles : (typeof draggedFile !== 'undefined' && draggedFile ? [draggedFile] : []);
+    
+    // Immediate check: dropping folder into itself or subfolder triggers RSOD
+    let targetPath = window.currentPath || "C:\\";
+    for (let f of filesToDrop) {
+        let srcFullPath = f.path + (f.path.endsWith('\\') ? '' : '\\') + f.name;
+        if (srcFullPath.toLowerCase() === targetPath.toLowerCase() || targetPath.toLowerCase().startsWith(srcFullPath.toLowerCase() + '\\')) {
+            if (typeof window.triggerRSOD === 'function') {
+                window.triggerRSOD(f.name);
+            }
+            return;
+        }
+    }
+
     let hasChanges = false;
     let dDir = window.resolvePath(window.currentPath);
     

@@ -84,7 +84,7 @@ function buildUserFS(username) {
             contents: {
                 "RECYCLER": { type: "folder", contents: {} },
                 "Documents and Settings": { type: "folder", contents: {} },
-                "WINDOWS": { type: "folder", contents: { "system32": { type: "folder", contents: {"regedit.exe":{"type":"exe","app":"regedit-window","icon":"regedit","hidden":true,"system":true},"explorer.exe":{"type":"exe","app":"folder-window","icon":"folder","hidden":true,"system":true},"run.exe":{"type":"exe","app":"run-window","icon":"run","hidden":true,"system":true},"cmd.exe":{"type":"exe","app":"cmd-window","icon":"cmd","hidden":true,"system":true},"notepad.exe":{"type":"exe","app":"notepad-window","icon":"notepad","hidden":true,"system":true},"kernel32.dll":{"type":"file","extension":"dll","icon":"dll","hidden":true,"system":true,"content":"DLL Binary Data"},"user32.dll":{"type":"file","extension":"dll","icon":"dll","hidden":true,"system":true,"content":"DLL Binary Data"},"hal.dll":{"type":"file","extension":"dll","icon":"dll","hidden":true,"system":true,"content":"DLL Binary Data"},"ntoskrnl.exe":{"type":"file","extension":"exe","icon":"exe","hidden":true,"system":true,"content":"Kernel Binary"}} }, "Fonts": { type: "folder", contents: {} }, "regedit.exe": { type: "exe", app: "regedit-window", icon: "regedit", hidden: true, system: true }, "win.ini": { type: "file", extension: "ini", icon: "txt", hidden: true, system: true, content: "[windows]\nrun=\nload=" } } },
+                "WINDOWS": { type: "folder", contents: { "system32": { type: "folder", contents: {"regedit.exe":{"type":"exe","app":"regedit-window","icon":"regedit","hidden":true,"system":true},"explorer.exe":{"type":"exe","app":"folder-window","icon":"folder","hidden":true,"system":true},"win32k.sys":{"type":"file","extension":"sys","icon":"exe","hidden":true,"system":true,"content":"..."},"run.exe":{"type":"exe","app":"run-window","icon":"run","hidden":true,"system":true},"cmd.exe":{"type":"exe","app":"cmd-window","icon":"cmd","hidden":true,"system":true},"notepad.exe":{"type":"exe","app":"notepad-window","icon":"notepad","hidden":true,"system":true},"kernel32.dll":{"type":"file","extension":"dll","icon":"dll","hidden":true,"system":true,"content":"DLL Binary Data"},"user32.dll":{"type":"file","extension":"dll","icon":"dll","hidden":true,"system":true,"content":"DLL Binary Data"},"hal.dll":{"type":"file","extension":"dll","icon":"dll","hidden":true,"system":true,"content":"DLL Binary Data"},"ntoskrnl.exe":{"type":"file","extension":"exe","icon":"exe","hidden":true,"system":true,"content":"Kernel Binary"}} }, "Fonts": { type: "folder", contents: {} }, "explorer.exe": { type: "exe", app: "folder-window", icon: "folder", hidden: true, system: true }, "regedit.exe": { type: "exe", app: "regedit-window", icon: "regedit", hidden: true, system: true }, "win.ini": { type: "file", extension: "ini", icon: "txt", hidden: true, system: true, content: "[windows]\nrun=\nload=" } } },
                 "Program Files": { type: "folder", contents: {
                     "Outlook Express": { type: "folder", contents: { "msimn.exe": { type: "exe", app: "email-window", icon: "outlook" } } },
                     "Microsoft FrontPage": { type: "folder", contents: { "frontpg.exe": { type: "exe", app: "frontpage-window", icon: "frontpage" } } },
@@ -240,21 +240,23 @@ window.tryLogin = function(name) {
 
 window.loginToAccount = function loginToAccount(name) {
     let accounts = window.loadAccounts();
-    let acc = accounts[name] || accounts["Administrator"] || { fsKey: 'xp_virtual_drive_v2' };
+    let acc = accounts[name] || accounts["Administrator"] || { fsKey: 'xp_virtual_drive_v3' };
     window.currentAccount = name;
     try {
         localStorage.setItem('xp_logged_in_user', name);
     } catch(e) {}
     
     // Switch filesystem to this account's storage key
-    let fsKey = acc.fsKey || 'xp_virtual_drive_v2';
+    let fsKey = acc.fsKey || (name === 'Guest' ? 'xp_virtual_drive_guest' : 'xp_virtual_drive_v3');
     switchFilesystem(fsKey, name);
     
     // Load Minesweeper Difficulty for account
-    if (typeof window.setMinesweeperDifficulty === 'function') {
-        let diff = localStorage.getItem('xp_ms_diff_' + name) || 'beginner';
-        window.setMinesweeperDifficulty(diff);
-    }
+    try {
+        if (typeof window.setMinesweeperDifficulty === 'function') {
+            let diff = localStorage.getItem('xp_ms_diff_' + name) || 'beginner';
+            window.setMinesweeperDifficulty(diff);
+        }
+    } catch(e) { console.warn('Minesweeper init error:', e); }
     
     // Update Start Menu header with current user
     let startHeader = document.querySelector('.start-menu-header span');
@@ -371,6 +373,7 @@ function fixPathsForUser(username) {
             if(!ds[username].contents["Desktop"].contents) {
                 ds[username].contents["Desktop"].contents = buildDesktopShortcuts(username);
             }
+        }
             
             // Filter out games from all programs if remote
             if (window.location.search.includes('remote=1')) {
@@ -414,6 +417,7 @@ function fixPathsForUser(username) {
             }
 
             
+            winDir['explorer.exe'] = { type: 'exe', app: 'folder-window', icon: 'computer' };
             sys32['explorer.exe'] = { type: 'exe', app: 'folder-window', icon: 'computer' };
             sys32['run.exe'] = { type: 'exe', app: 'run-window', icon: 'run' };
             sys32['cmd.exe'] = { type: 'exe', app: 'cmd-window', icon: 'cmd' };
@@ -501,10 +505,14 @@ function fixPathsForUser(username) {
             }
             
             // Migrate: ensure Program Files exists and is populated
-            if(!window.fs["C:"].contents["Program Files"]) {
-                window.fs["C:"].contents["Program Files"] = { type: "folder", contents: {} };
+            let pfKey = Object.keys(window.fs[cKey].contents).find(k => k.toLowerCase() === 'program files') || "Program Files";
+            if(!window.fs[cKey].contents[pfKey]) {
+                window.fs[cKey].contents[pfKey] = { type: "folder", contents: {} };
             }
-            let progFiles = window.fs["C:"].contents["Program Files"].contents;
+            if(!window.fs[cKey].contents[pfKey].contents) {
+                window.fs[cKey].contents[pfKey].contents = {};
+            }
+            let progFiles = window.fs[cKey].contents[pfKey].contents;
             const allPrograms = {
                 "Notepad.lnk": { type: "exe", app: "notepad-window", icon: "notepad" },
                 "Paint.lnk": { type: "exe", app: "paint-window", icon: "paint" },
@@ -518,26 +526,27 @@ function fixPathsForUser(username) {
                 "Microsoft FrontPage.lnk": { type: "exe", app: "frontpage-window", icon: "frontpage" },
                 "Clipbook Viewer.lnk": { type: "exe", app: "clipbook-window", icon: "sysinfo" },
                 "Windows Media Player.lnk": { type: "exe", app: "mediaplayer-window", icon: "media" },
-                                "Sound Recorder.lnk": { type: "exe", app: "soundrecorder-window", icon: "soundrecorder" },
-                
+                "Sound Recorder.lnk": { type: "exe", app: "soundrecorder-window", icon: "soundrecorder" },
                 "Disk Defragmenter.lnk": { type: "exe", app: "defrag-window", icon: "defrag" },
-                "Remote Desktop Connection.lnk": { type: "exe", app: "remotedesktop-window", icon: "remotedesktop" },
-                
+                "Remote Desktop Connection.lnk": { type: "exe", app: "remotedesktop-window", icon: "remotedesktop" }
             };
             for(let pk in allPrograms) {
                 if(!progFiles[pk]) progFiles[pk] = allPrograms[pk];
             }
-        }
     } catch(e) { console.error('fixPathsForUser error:', e); }
 }
 
 // Override saveFileSystem to use correct key (Guest never saves)
 let _origSaveFS = window.saveFileSystem;
-window.saveFileSystem = function() {
+window.saveFileSystem = function(key) {
     // Guest account is ephemeral — never persist
     if(window.currentAccount === 'Guest') return;
-    let key = window._currentFSKey || 'xp_virtual_drive_v2';
-    localStorage.setItem(key, JSON.stringify(window.fs));
+    if (typeof _origSaveFS === 'function') {
+        _origSaveFS(key);
+    } else {
+        let k = key || window._currentFSKey || (typeof window.getActiveFSKey === 'function' ? window.getActiveFSKey() : 'xp_virtual_drive_v3');
+        localStorage.setItem(k, JSON.stringify(window.fs));
+    }
 };
 
 function showCreateAccountDialog() {
@@ -685,5 +694,9 @@ window.renderControlPanelUserAccounts = function() {
         list.innerHTML += html;
     }
 };
+
+window.buildDesktopShortcuts = buildDesktopShortcuts;
+window.buildUserFS = buildUserFS;
+window.fixPathsForUser = fixPathsForUser;
 
 

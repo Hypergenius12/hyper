@@ -22,7 +22,9 @@ window.openImageViewer = function(filename, item, currentDir) {
     window.resetZoomImage();
     
     if (typeof window.openProgram === 'function') {
+        window._openingImageViewerInternal = true;
         window.openProgram('imageviewer-window');
+        window._openingImageViewerInternal = false;
     }
 };
 
@@ -63,12 +65,12 @@ window.resetZoomImage = function() {
 // Also hook openProgram to clear it if opened directly
 let origOpenProgramForViewer = window.openProgram;
 window.openProgram = function(id) {
-    if(id === 'imageviewer-window') {
+    if(id === 'imageviewer-window' && !window._openingImageViewerInternal) {
         // If it's already open, do nothing, otherwise open empty
         let win = document.getElementById('imageviewer-window');
         if(!win || win.style.display === 'none') {
             window.openImageViewer();
-            return; // openImageViewer will call openProgram inside
+            return;
         }
     }
     if(typeof origOpenProgramForViewer === 'function') origOpenProgramForViewer(id);

@@ -776,7 +776,10 @@ window.isAppInstalled = function(app) {
         'store-window', 'folder-window', 'settings-window', 'controlpanel-window',
         'printers-window', 'help-window', 'search-window', 'run-window',
         'fontview-window', 'print-queue-window', 'display-props-window',
-        'email-compose-window', 'properties-window', 'datetime-window'
+        'email-compose-window', 'properties-window', 'datetime-window',
+        'imageviewer-window', 'print-dialog-window', 'print-preview-window',
+        'printing-progress-window', 'email-accounts-window', 'email-account-properties-window',
+        'email-options-window', 'email-read-window', 'send-receive-window', 'fp-table-dialog-window'
     ];
     if (typeof app === 'string' && systemShells.includes(app)) {
         return true;
