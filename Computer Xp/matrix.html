@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Matrix Digital Rain</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000000;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrixCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Matrix character set: Katakana, numbers, latin uppercase, symbols
+        const chars = 'ｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$+-*/=%#&_<>~';
+
+        const fontSize = 14;
+        let columns = 0;
+        let drops = [];
+        let speeds = [];
+
+        function resize() {
+            canvas.width = window.innerWidth || document.documentElement.clientWidth || 800;
+            canvas.height = window.innerHeight || document.documentElement.clientHeight || 600;
+            columns = Math.max(1, Math.floor(canvas.width / fontSize));
+            drops = [];
+            speeds = [];
+            for (let i = 0; i < columns; i++) {
+                drops[i] = Math.floor(Math.random() * -30);
+                speeds[i] = 0.4 + Math.random() * 0.6;
+            }
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function draw() {
+            // Semi-transparent black wash creating fading trail
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.07)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.font = 'bold ' + fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const char = chars[Math.floor(Math.random() * chars.length)];
+                const x = i * fontSize;
+                const y = drops[i] * fontSize;
+
+                if (y > 0 && y < canvas.height + fontSize) {
+                    // Bright luminous lead character
+                    ctx.fillStyle = '#e8ffe8';
+                    ctx.shadowColor = '#00ff66';
+                    ctx.shadowBlur = 8;
+                    ctx.fillText(char, x, y);
+
+                    // Trailing glowing green character directly behind lead
+                    if (drops[i] > 1) {
+                        const prevChar = chars[Math.floor(Math.random() * chars.length)];
+                        ctx.fillStyle = '#00ff41';
+                        ctx.shadowColor = 'transparent';
+                        ctx.shadowBlur = 0;
+                        ctx.fillText(prevChar, x, y - fontSize);
+                    }
+                }
+
+                if (y > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i] += speeds[i];
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        requestAnimationFrame(draw);
+    </script>
+</body>
+</html>

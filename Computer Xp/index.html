@@ -356,11 +356,10 @@
     </div>
 
     
-    <!-- Background Frame (For Matrix/Animated Wallpapers) -->
-    <iframe id="bg-iframe" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; border:none; pointer-events:none;"></iframe>
-
     <div id="desktop" oncontextmenu="showContextMenu(event, 'desktop'); return false;" ondrop="dropDesktop(event)"
         ondragover="allowDrop(event)" onmousedown="if(typeof startDesktopSelection === 'function') startDesktopSelection(event);">
+        <!-- Background Frame (For Matrix/Animated Wallpapers) -->
+        <iframe id="bg-iframe" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; border:none; pointer-events:none;"></iframe>
         <div id="desktop-selection-box" style="display:none; position:absolute; border:1px solid rgba(0,0,200,0.6); background:rgba(0, 50, 255, 0.2); z-index:9000; pointer-events:none;"></div>
     </div>
 
@@ -1123,10 +1122,23 @@
                             <input type="file" id="bg-upload" style="display:none;" onchange="uploadBackground(event)">
                         </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <label style="font-size:11px;">Color:</label>
-                        <input type="color" id="bg-color-picker" value="#004E98" style="height:25px;"
-                            onchange="updateDesktopPreview()">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <label style="font-size:11px;">Color:</label>
+                            <input type="color" id="bg-color-picker" value="#004E98" style="height:25px;"
+                                onchange="updateDesktopPreview()">
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <label style="font-size:11px;">Position:</label>
+                            <select id="bg-position-select" style="font-family:Tahoma; font-size:11px; padding:2px;"
+                                onchange="updateDesktopPreview()">
+                                <option value="stretch" selected>Stretch</option>
+                                <option value="contain">Fit</option>
+                                <option value="cover">Fill</option>
+                                <option value="center">Center</option>
+                                <option value="tile">Tile</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 

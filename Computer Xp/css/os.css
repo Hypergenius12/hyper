@@ -136,6 +136,7 @@ body.theme-classic button:active { border-color: #404040 #fff #fff #404040; }
     border: 1px solid transparent;
     position: absolute; 
     box-sizing: border-box;
+    z-index: 1;
 }
 
 .desktop-icon:hover { background-color: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 0; }
@@ -246,6 +247,12 @@ body.theme-classic button:active { border-color: #404040 #fff #fff #404040; }
 }
 .start-menu-divider.right-divider {
     background: linear-gradient(to right, transparent, #95B4E8 10%, #95B4E8 90%, transparent); margin: 4px 10px;
+}
+#start-menu-search-results {
+    max-height: 330px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px 0;
 }
 .all-programs-btn {
     border-top: 1px solid #ECE9D8; background: #fff; font-size: 12px; margin-top: auto;

@@ -167,15 +167,19 @@
     };
 
     // Helper: apply wallpaper to desktop
-    window.applyWallpaper = function(name, color) {
+    window.applyWallpaper = function(name, color, position) {
         if (!name || name.toLowerCase() === 'bliss' || name.toLowerCase() === 'bliss.bmp') {
             name = 'Bliss.bmp';
         }
         color = color || localStorage.getItem('xp_wallpaper_color') || '#004E98';
+        position = position || localStorage.getItem('xp_wallpaper_position') || 'stretch';
         let bgIframe = document.getElementById('bg-iframe');
-        if (bgIframe) bgIframe.style.display = 'none';
 
         if (name === 'none' || name === '(None)') {
+            if (bgIframe) {
+                bgIframe.style.display = 'none';
+                bgIframe.src = 'about:blank';
+            }
             document.body.style.backgroundImage = 'none';
             document.body.style.backgroundColor = color;
             let desk = document.getElementById('desktop');
@@ -189,25 +193,56 @@
             let desk = document.getElementById('desktop');
             if (desk) {
                 desk.style.backgroundImage = 'none';
-                desk.style.backgroundColor = '#000000';
+                desk.style.backgroundColor = 'transparent';
             }
             if (bgIframe) {
                 bgIframe.src = 'matrix.html';
                 bgIframe.style.display = 'block';
             }
         } else {
+            if (bgIframe) {
+                bgIframe.style.display = 'none';
+                bgIframe.src = 'about:blank';
+            }
             let content = window.getWallpaperContent(name);
+            let bgSize = '100% 100%';
+            let bgRepeat = 'no-repeat';
+            let bgPos = 'center center';
+
+            if (position === 'stretch') {
+                bgSize = '100% 100%';
+                bgRepeat = 'no-repeat';
+                bgPos = 'center center';
+            } else if (position === 'contain') {
+                bgSize = 'contain';
+                bgRepeat = 'no-repeat';
+                bgPos = 'center center';
+            } else if (position === 'cover') {
+                bgSize = 'cover';
+                bgRepeat = 'no-repeat';
+                bgPos = 'center center';
+            } else if (position === 'center') {
+                bgSize = 'auto';
+                bgRepeat = 'no-repeat';
+                bgPos = 'center center';
+            } else if (position === 'tile') {
+                bgSize = 'auto';
+                bgRepeat = 'repeat';
+                bgPos = 'top left';
+            }
+
             document.body.style.backgroundImage = 'url("' + content + '")';
-            document.body.style.backgroundSize = 'cover';
-            document.body.style.backgroundPosition = 'center';
-            document.body.style.backgroundRepeat = 'no-repeat';
+            document.body.style.backgroundSize = bgSize;
+            document.body.style.backgroundPosition = bgPos;
+            document.body.style.backgroundRepeat = bgRepeat;
             document.body.style.backgroundColor = color;
+
             let desk = document.getElementById('desktop');
             if (desk) {
                 desk.style.backgroundImage = 'url("' + content + '")';
-                desk.style.backgroundSize = 'cover';
-                desk.style.backgroundPosition = 'center';
-                desk.style.backgroundRepeat = 'no-repeat';
+                desk.style.backgroundSize = bgSize;
+                desk.style.backgroundPosition = bgPos;
+                desk.style.backgroundRepeat = bgRepeat;
                 desk.style.backgroundColor = color;
             }
         }
@@ -215,10 +250,12 @@
         // Save
         localStorage.setItem('xp_wallpaper', name);
         localStorage.setItem('xp_wallpaper_color', color);
+        localStorage.setItem('xp_wallpaper_position', position);
         try {
             let key = typeof window.getRegistryKey === 'function' ? window.getRegistryKey("HKEY_CURRENT_USER\\Control Panel\\Desktop") : null;
             if (key) {
                 key["Wallpaper"] = { type: "REG_SZ", data: "C:\\WINDOWS\\Web\\Wallpaper\\" + name };
+                key["WallpaperStyle"] = { type: "REG_SZ", data: position === 'stretch' ? "2" : (position === 'tile' ? "0" : "1") };
                 if (typeof window.saveRegistry === 'function') window.saveRegistry();
             }
         } catch(e) {}
@@ -230,6 +267,10 @@
         if (!sel) return;
 
         let curVal = localStorage.getItem('xp_wallpaper') || 'Bliss.bmp';
+        let curPos = localStorage.getItem('xp_wallpaper_position') || 'stretch';
+        let posSel = document.getElementById('bg-position-select');
+        if (posSel) posSel.value = curPos;
+
         sel.innerHTML = '';
 
         // Add (None)
@@ -310,7 +351,8 @@
             wp = 'Bliss.bmp';
         }
         let clr = localStorage.getItem('xp_wallpaper_color') || '#004E98';
-        window.applyWallpaper(wp, clr);
+        let pos = localStorage.getItem('xp_wallpaper_position') || 'stretch';
+        window.applyWallpaper(wp, clr, pos);
         if (typeof window.populateWallpaperDropdown === 'function') {
             window.populateWallpaperDropdown();
         }

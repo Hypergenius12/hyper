@@ -2720,24 +2720,45 @@ window.updateDesktopPreview = function() {
     let bg = sel.value;
     let colorInput = document.getElementById('bg-color-picker');
     let color = colorInput ? colorInput.value : '#004E98';
+    let posInput = document.getElementById('bg-position-select');
+    let pos = posInput ? posInput.value : 'stretch';
     let preview = document.getElementById('desktop-preview');
     if(!preview) return;
     
     if(bg === 'none') {
+        preview.innerHTML = '';
         preview.style.background = color;
     } else if(bg === 'matrix') {
         preview.style.background = "#000";
         preview.style.backgroundColor = "#000";
+        preview.innerHTML = '<iframe src="matrix.html" style="width:100%; height:100%; border:none; pointer-events:none;"></iframe>';
     } else if(bg === 'custom' && typeof customBgDataUrl !== 'undefined' && customBgDataUrl) {
-        preview.style.background = "url('" + customBgDataUrl + "') center/cover";
+        preview.innerHTML = '';
+        let bgSize = pos === 'stretch' ? '100% 100%' : (pos === 'contain' ? 'contain' : (pos === 'cover' ? 'cover' : 'auto'));
+        let bgRepeat = pos === 'tile' ? 'repeat' : 'no-repeat';
+        let bgPos = pos === 'tile' ? 'top left' : 'center center';
+        preview.style.backgroundImage = "url('" + customBgDataUrl + "')";
+        preview.style.backgroundSize = bgSize;
+        preview.style.backgroundRepeat = bgRepeat;
+        preview.style.backgroundPosition = bgPos;
+        preview.style.backgroundColor = color;
     } else if (typeof window.getWallpaperContent === 'function') {
+        preview.innerHTML = '';
         let content = window.getWallpaperContent(bg);
         if (content) {
-            preview.style.background = "url('" + content + "') center/cover";
+            let bgSize = pos === 'stretch' ? '100% 100%' : (pos === 'contain' ? 'contain' : (pos === 'cover' ? 'cover' : 'auto'));
+            let bgRepeat = pos === 'tile' ? 'repeat' : 'no-repeat';
+            let bgPos = pos === 'tile' ? 'top left' : 'center center';
+            preview.style.backgroundImage = "url('" + content + "')";
+            preview.style.backgroundSize = bgSize;
+            preview.style.backgroundRepeat = bgRepeat;
+            preview.style.backgroundPosition = bgPos;
+            preview.style.backgroundColor = color;
         } else {
             preview.style.background = color;
         }
     } else {
+        preview.innerHTML = '';
         preview.style.background = color;
     }
 };
@@ -2797,9 +2818,11 @@ window.applySettings = function(closeAfter) {
     
     let bgVal = document.getElementById('bg-select').value;
     let bgColor = document.getElementById('bg-color-picker').value;
+    let bgPosElem = document.getElementById('bg-position-select');
+    let bgPos = bgPosElem ? bgPosElem.value : 'stretch';
 
     if (typeof window.applyWallpaper === 'function') {
-        window.applyWallpaper(bgVal, bgColor);
+        window.applyWallpaper(bgVal, bgColor, bgPos);
     }
 
     let fontSel = document.getElementById('system-font-select');
@@ -3667,8 +3690,14 @@ window.startMenuSearch = function(query, executeFirst) {
     let overlay = document.getElementById('all-programs-overlay');
     
     if(!resultsContainer) return;
+
+    if (window._startMenuLastQuery !== q) {
+        window._startMenuLastQuery = q;
+        window._startMenuShowAllResults = false;
+    }
     
     if(q === '') {
+        window._startMenuShowAllResults = false;
         // Show normal start menu
         if(pinnedContainer) pinnedContainer.style.display = 'flex';
         if(recentContainer) recentContainer.style.display = 'flex';
@@ -3822,7 +3851,12 @@ window.startMenuSearch = function(query, executeFirst) {
         resultsContainer.innerHTML = '<div style="padding:10px; color:#555; text-align:center;">No results found.</div>';
         window.searchSelectedIndex = -1;
     } else {
-        matches.forEach((app, idx) => {
+        const MAX_INITIAL = 6;
+        let showAll = window._startMenuShowAllResults === true;
+        let displayedMatches = showAll ? matches : matches.slice(0, MAX_INITIAL);
+        let hiddenCount = matches.length - displayedMatches.length;
+
+        displayedMatches.forEach((app, idx) => {
             let item = document.createElement('div');
             item.className = 'start-menu-item';
             item.setAttribute('onclick', app.fn);
@@ -3830,13 +3864,34 @@ window.startMenuSearch = function(query, executeFirst) {
                 try { (new Function(app.fn))(); } catch(err) { eval(app.fn); }
             };
             let uninstBadge = app.uninstalled ? '<span style="font-size:10px; color:#888; font-style:italic; margin-left:6px;">(Install from Catalog)</span>' : '';
-            item.innerHTML = `<img src="${app.icon}" class="sys-icon-small" style="margin-right:8px; ${app.uninstalled ? 'opacity:0.75;' : ''}" onerror="this.style.display='none'"><span>${app.name}${uninstBadge}</span>`;
+            item.innerHTML = `<img src="${app.icon}" class="sys-icon-small" style="margin-right:8px; flex-shrink:0; ${app.uninstalled ? 'opacity:0.75;' : ''}" onerror="this.style.display='none'"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${app.name}${uninstBadge}</span>`;
             item.onmouseenter = () => {
                 window.searchSelectedIndex = idx;
                 window.updateStartMenuSearchSelection();
             };
             resultsContainer.appendChild(item);
         });
+
+        if (hiddenCount > 0) {
+            let moreItem = document.createElement('div');
+            moreItem.className = 'start-menu-item';
+            moreItem.style.color = '#0055EA';
+            moreItem.style.fontWeight = 'bold';
+            moreItem.style.borderTop = '1px dashed #ACA899';
+            moreItem.style.marginTop = '2px';
+            moreItem.style.justifyContent = 'center';
+            moreItem.style.cursor = 'pointer';
+            moreItem.title = `Show ${hiddenCount} more matching program${hiddenCount > 1 ? 's' : ''}`;
+            moreItem.innerHTML = `<span>... (${hiddenCount} more)</span>`;
+            moreItem.onclick = (e) => {
+                e.stopPropagation();
+                window._startMenuShowAllResults = true;
+                let inp = document.getElementById('start-menu-search-input');
+                window.startMenuSearch(inp ? inp.value : q);
+            };
+            resultsContainer.appendChild(moreItem);
+        }
+
         window.searchSelectedIndex = 0;
         window.updateStartMenuSearchSelection();
     }

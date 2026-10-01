@@ -318,9 +318,12 @@ const STORE_APPS = window.STORE_APPS = [
         version: '5.1',
         fullDesc: 'Browse every glyph in your installed TrueType fonts. Copy symbols directly into your documents.',
         features: ['Font family switching', 'Zoom preview box', 'Keystroke shortcuts for Alt codes'],
-        rating: 4.6,
-        ratingCount: 940,
-        reviews: [{ author: "FontFan", stars: 5, date: "Aug 12, 2003", text: "Handy when looking for foreign accent marks and copyright signs." }]
+        rating: 3.5,
+        ratingCount: 941,
+        reviews: [
+            { author: "SymbolSeeker", stars: 2, date: "Sep 28, 2003", text: "Too difficult to find specific symbols and sluggish when scrolling through large Unicode font sets." },
+            { author: "FontFan", stars: 5, date: "Aug 12, 2003", text: "Handy when looking for foreign accent marks and copyright signs." }
+        ]
     },
     { 
         id: 'clipbook', 
