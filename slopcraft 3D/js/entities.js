@@ -3032,6 +3032,7 @@ export class EntityManager {
             if (mob.justDied) {
                 if (mob.type === 'SHEEP') {
                     this.spawnItem(Item.blockItem(BLOCKS.WOOL, 'Wool'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                    this.spawnItem(Item.foodItem('raw_mutton', 12, 'Raw Mutton', 'Heals some health.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 } else if (mob.type === 'COW') {
                     this.spawnItem(Item.foodItem('raw_beef', 15, 'Raw Beef', 'Heals some health.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 } else if (mob.type === 'PIG') {

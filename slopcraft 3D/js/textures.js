@@ -213,7 +213,7 @@ const BLOCK_PROPS = {
     [BLOCKS.VINES]:         { name: 'Vines',          health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
     [BLOCKS.TALL_GRASS]:    { name: 'Tall Grass',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.RED_FLOWER]:    { name: 'Red Flower',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
-    [BLOCKS.CACTUS]:        { name: 'Cactus',         health: 2, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.CACTUS]:        { name: 'Cactus',         health: 2, transparent: true,  emissive: 0, solid: true, drops: BLOCKS.CACTUS },
     [BLOCKS.BLUE_FLOWER]:   { name: 'Blue Flower',    health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.YELLOW_FLOWER]: { name: 'Yellow Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.FERN]:          { name: 'Fern',           health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
@@ -2663,16 +2663,28 @@ const MC_ITEM_MAP = {
     'stone_shovel': 'stone_shovel',
     'iron_shovel': 'iron_shovel',
     'gold_shovel': 'golden_shovel',
+    'golden_shovel': 'golden_shovel',
     'diamond_shovel': 'diamond_shovel',
     'raw_beef': 'beef',
+    'beef': 'beef',
+    'steak': 'cooked_beef',
+    'cooked_beef': 'cooked_beef',
     'raw_porkchop': 'porkchop',
-    'raw_chicken': 'chicken',
-    'raw_mutton': 'mutton',
+    'porkchop': 'porkchop',
     'cooked_porkchop': 'cooked_porkchop',
+    'raw_chicken': 'chicken',
+    'chicken': 'chicken',
     'cooked_chicken': 'cooked_chicken',
+    'raw_mutton': 'mutton',
+    'mutton': 'mutton',
     'cooked_mutton': 'cooked_mutton',
+    'raw_fish': 'cod',
+    'cooked_fish': 'cooked_cod',
+    'cod': 'cod',
+    'cooked_cod': 'cooked_cod',
     'raw_iron': 'raw_iron',
     'raw_gold': 'raw_gold',
+    'raw_copper': 'raw_copper',
     'ender_pearl': 'ender_pearl',
     'helmet_iron': 'iron_helmet',
     'chest_iron': 'iron_chestplate',
@@ -2686,32 +2698,30 @@ const MC_ITEM_MAP = {
     'chest_diamond': 'diamond_chestplate',
     'legs_diamond': 'diamond_leggings',
     'boots_diamond': 'diamond_boots',
-    'flint_and_steel': 'flint_and_steel'
+    'flint_and_steel': 'flint_and_steel',
+    'bucket': 'bucket',
+    'water_bucket': 'water_bucket',
+    'lava_bucket': 'lava_bucket'
 };
 
-// Global cache: subtype -> data URL (populated once MC texture loads)
+// Global cache: subtype -> canvas / data URL
 const _itemTextureCache = new Map();
+const _itemCanvasCache = new Map();
 
 export function generateItemTexture(itemType, itemSubtype, onLoaded) {
-    // If already cached, return immediately and fire callback synchronously
-    if (_itemTextureCache.has(itemSubtype)) {
-        const cached = _itemTextureCache.get(itemSubtype);
-        const canvas = document.createElement('canvas');
-        canvas.width = 16; canvas.height = 16;
-        const img = new Image();
-        img.onload = () => {
-            canvas.getContext('2d').drawImage(img, 0, 0);
-            if (onLoaded) onLoaded(canvas);
-        };
-        img.src = cached;
-        // Still return the procedural version synchronously as placeholder
-    }
     const TEX_SIZE = 16;
     const canvas = document.createElement('canvas');
     canvas.width = TEX_SIZE;
     canvas.height = TEX_SIZE;
     const ctx = canvas.getContext('2d');
-    
+    ctx.imageSmoothingEnabled = false;
+
+    // If already cached in memory, draw immediately and return synchronously
+    if (_itemCanvasCache.has(itemSubtype)) {
+        ctx.drawImage(_itemCanvasCache.get(itemSubtype), 0, 0);
+        return canvas;
+    }
+
     // Clear transparent
     ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
 
@@ -2723,6 +2733,10 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 if (img) {
                     ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
                     ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                    const savedCvs = document.createElement('canvas');
+                    savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+                    savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+                    _itemCanvasCache.set(itemSubtype, savedCvs);
                     _itemTextureCache.set(itemSubtype, canvas.toDataURL());
                     if (onLoaded) onLoaded(canvas);
                 }
@@ -2765,6 +2779,8 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         'cooked_beef': { c: '#5c2e00', d: '#3e1f00', h: '#8b4513' },
         'raw_chicken': { c: '#ffe4e1', d: '#cdb7b5', h: '#fff0f5' },
         'cooked_chicken': { c: '#cd853f', d: '#8b5a2b', h: '#d2b48c' },
+        'raw_mutton': { c: '#c85a5a', d: '#8b3a3a', h: '#e07a7a' },
+        'cooked_mutton': { c: '#7a3e1d', d: '#4e250f', h: '#9e5227' },
         'raw_fish': { c: '#98c4d6', d: '#609cb5', h: '#bfe3f2' },
         'cooked_fish': { c: '#d2b48c', d: '#a08560', h: '#e6ccab' },
         'lizard_tail': { c: '#3cb371', d: '#2e8b57', h: '#48d1cc' },

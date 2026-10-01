@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=2';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=2';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js';
-import { AudioManager } from './audio.js';
-import { BiomeMap } from './map.js';
-import { DevMode } from './dev.js';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=78';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=78';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=78';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=78';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=78';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=78';
+import { AudioManager } from './audio.js?v=78';
+import { BiomeMap } from './map.js?v=78';
+import { DevMode } from './dev.js?v=78';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -65,6 +65,90 @@ function findSafeSpawn(params, dimension = 'overworld') {
     return { x: CHUNK_SIZE / 2, y: (dimension === 'nether' || dimension === 'aether') ? 60 : CHUNK_HEIGHT + 10, z: CHUNK_SIZE / 2 };
 }
 
+let _chestMatsPromise = null;
+let _chestBaseMaterials = null;
+let _chestLidMaterials = null;
+let _chestLatchMaterial = null;
+
+function initChestEntityMaterials(atlas) {
+    if (_chestBaseMaterials) return;
+    
+    // Create initial materials using atlas texture as immediate fallback
+    const tex = atlas.texture;
+    const makeMat = (uvData) => {
+        const faceTex = tex.clone();
+        faceTex.repeat.set(uvData.uSize, uvData.vSize);
+        faceTex.offset.set(uvData.u, uvData.v);
+        faceTex.needsUpdate = true;
+        return new THREE.MeshLambertMaterial({ map: faceTex });
+    };
+    const sideMat = makeMat(atlas.getUV(window.BLOCKS.CHEST_BLOCK, 'side'));
+    const topMat = makeMat(atlas.getUV(window.BLOCKS.CHEST_BLOCK, 'top'));
+    const botMat = makeMat(atlas.getUV(window.BLOCKS.CHEST_BLOCK, 'bottom'));
+    const frontMat = makeMat(atlas.getUV(window.BLOCKS.CHEST_BLOCK, 'front'));
+    
+    _chestBaseMaterials = [sideMat.clone(), sideMat.clone(), topMat.clone(), botMat.clone(), frontMat.clone(), sideMat.clone()];
+    _chestLidMaterials = [sideMat.clone(), sideMat.clone(), topMat.clone(), botMat.clone(), frontMat.clone(), sideMat.clone()];
+    _chestLatchMaterial = new THREE.MeshLambertMaterial({ color: 0xd8d8d8 });
+
+    // Load actual Minecraft chest entity texture
+    if (!_chestMatsPromise) {
+        _chestMatsPromise = new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const sliceMat = (sx, sy, sw, sh) => {
+                    const c = document.createElement('canvas');
+                    c.width = sw; c.height = sh;
+                    const ctx = c.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+                    const t = new THREE.CanvasTexture(c);
+                    t.magFilter = THREE.NearestFilter;
+                    t.minFilter = THREE.NearestFilter;
+                    t.colorSpace = THREE.SRGBColorSpace;
+                    return new THREE.MeshLambertMaterial({ map: t });
+                };
+                
+                // Lid faces (width: 14, depth: 14, height: 5)
+                const lidTop = sliceMat(14, 0, 14, 14);
+                const lidBot = sliceMat(28, 0, 14, 14);
+                const lidFront = sliceMat(14, 14, 14, 5);
+                const lidBack = sliceMat(42, 14, 14, 5);
+                const lidRight = sliceMat(0, 14, 14, 5);
+                const lidLeft = sliceMat(28, 14, 14, 5);
+                
+                // Base faces (width: 14, depth: 14, height: 10)
+                const baseTop = sliceMat(28, 19, 14, 14);
+                const baseBot = sliceMat(14, 19, 14, 14);
+                const baseFront = sliceMat(14, 33, 14, 10);
+                const baseBack = sliceMat(42, 33, 14, 10);
+                const baseRight = sliceMat(0, 33, 14, 10);
+                const baseLeft = sliceMat(28, 33, 14, 10);
+                
+                // Latch face (2 x 4)
+                const latch = sliceMat(1, 1, 2, 4);
+
+                // Update shared materials in place
+                const updateMats = (mats, newMats) => {
+                    for (let i = 0; i < 6; i++) {
+                        mats[i].map = newMats[i].map;
+                        mats[i].needsUpdate = true;
+                    }
+                };
+                updateMats(_chestBaseMaterials, [baseRight, baseLeft, baseTop, baseBot, baseFront, baseBack]);
+                updateMats(_chestLidMaterials, [lidRight, lidLeft, lidTop, lidBot, lidFront, lidBack]);
+                _chestLatchMaterial.map = latch.map;
+                _chestLatchMaterial.color.setHex(0xffffff);
+                _chestLatchMaterial.needsUpdate = true;
+                resolve();
+            };
+            img.onerror = () => resolve();
+            img.src = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/textures/entity/chest/normal.png';
+        });
+    }
+}
+
 class ChestVisual {
     constructor(scene, x, y, z, atlas) {
         this.scene = scene;
@@ -76,37 +160,26 @@ class ChestVisual {
         this.group = new THREE.Group();
         this.group.position.set(x + 0.5, y, z + 0.5);
 
-        const tex = atlas.texture;
-        
-        // Helper to clone texture for a specific face to set its UVs
-        const makeMat = (uvData) => {
-            const faceTex = tex.clone();
-            faceTex.repeat.set(uvData.uSize, uvData.vSize);
-            faceTex.offset.set(uvData.u, uvData.v);
-            faceTex.needsUpdate = true;
-            return new THREE.MeshLambertMaterial({ map: faceTex });
-        };
-        
-        // Materials order for BoxGeometry: right (+x), left (-x), top (+y), bottom (-y), front (+z), back (-z)
-        const sideMat = makeMat(atlas.getUV(window.BLOCKS.CHEST_BLOCK, 'side'));
-        const topMat = makeMat(atlas.getUV(window.BLOCKS.CHEST_BLOCK, 'top'));
-        const botMat = makeMat(atlas.getUV(window.BLOCKS.CHEST_BLOCK, 'bottom'));
-        const frontMat = makeMat(atlas.getUV(window.BLOCKS.CHEST_BLOCK, 'front'));
-        
-        const chestMaterials = [sideMat, sideMat, topMat, botMat, frontMat, sideMat];
-        
-        // Base
+        initChestEntityMaterials(atlas);
+
+        // Base (14/16 x 10/16 x 14/16)
         const baseGeo = new THREE.BoxGeometry(0.875, 0.625, 0.875);
         baseGeo.translate(0, 0.3125, 0); // Origin at bottom center
-        const baseMesh = new THREE.Mesh(baseGeo, chestMaterials);
+        const baseMesh = new THREE.Mesh(baseGeo, _chestBaseMaterials);
         this.group.add(baseMesh);
 
-        // Lid
+        // Lid (14/16 x 5/16 x 14/16)
         const lidGeo = new THREE.BoxGeometry(0.875, 0.25, 0.875);
         lidGeo.translate(0, 0.125, 0.4375); // Origin at hinge (back edge)
-        this.lidMesh = new THREE.Mesh(lidGeo, chestMaterials);
+        this.lidMesh = new THREE.Mesh(lidGeo, _chestLidMaterials);
         this.lidMesh.position.set(0, 0.625, -0.4375);
         this.group.add(this.lidMesh);
+
+        // Latch (2/16 x 4/16 x 1/16) on front of lid
+        const latchGeo = new THREE.BoxGeometry(0.125, 0.25, 0.0625);
+        const latchMesh = new THREE.Mesh(latchGeo, _chestLatchMaterial);
+        latchMesh.position.set(0, 0.05, 0.875 + 0.03125);
+        this.lidMesh.add(latchMesh);
 
         this.scene.add(this.group);
     }
@@ -122,10 +195,6 @@ class ChestVisual {
         for (let i = this.group.children.length - 1; i >= 0; i--) {
             const c = this.group.children[i];
             if (c.geometry) c.geometry.dispose();
-            if (c.material) {
-                if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
-                else c.material.dispose();
-            }
         }
     }
 }
@@ -300,8 +369,23 @@ class Game {
 
 
         this.world.onBlockDestroyed = (x, y, z, oldType, newType) => {
-            if (oldType === BLOCKS.AIR || oldType === BLOCKS.WATER || oldType === BLOCKS.LAVA || oldType === BLOCKS.SWAMP_WATER) return;
-            // When replaced by a fluid (water or lava) or air (player breaking)
+            const NO_DROP_BLOCKS = new Set([
+                BLOCKS.AIR,
+                BLOCKS.WATER,
+                BLOCKS.LAVA,
+                BLOCKS.SWAMP_WATER,
+                BLOCKS.FIRE,
+                BLOCKS.BEDROCK,
+                BLOCKS.PORTAL,
+                window.BLOCKS.AETHER_PORTAL,
+                window.BLOCKS.CAVERN_PORTAL,
+                window.BLOCKS.HIGHLANDS_PORTAL,
+                BLOCKS.TNT,
+                BLOCKS.GLASS,
+                BLOCKS.BOSS_SPAWNER,
+                BLOCKS.DUNGEON_DOOR_TOP,
+            ]);
+            if (NO_DROP_BLOCKS.has(oldType)) return;
             const props = getBlockProperties(oldType);
             
             // Ore blocks drop material items instead of themselves
@@ -320,9 +404,8 @@ class Game {
                 matItem.maxStack = 64;
                 this.entityManager.spawnItem(matItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
             } else {
-                // drops: null = drop nothing; drops: 0 (AIR) = drop nothing; drops: undefined = drop self
-                const dropType = (props.drops === undefined) ? oldType : props.drops;
-                if (dropType !== null && dropType !== BLOCKS.AIR) {
+                const dropType = (props.drops !== undefined && props.drops !== null && props.drops !== BLOCKS.AIR) ? props.drops : oldType;
+                if (dropType !== BLOCKS.AIR) {
                     this.entityManager.spawnItem(Item.blockItem(dropType, getBlockName(dropType)), 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
                 }
             }
@@ -715,7 +798,21 @@ class Game {
                 if (subtype === 'raw_beef') return { type: 'food', subtype: 'cooked_beef', name: 'Cooked Beef', stackable: true, maxStack: 64, data: { heal: 30 }, id: `food_cooked_beef` };
                 if (subtype === 'raw_porkchop') return { type: 'food', subtype: 'cooked_porkchop', name: 'Cooked Porkchop', stackable: true, maxStack: 64, data: { heal: 30 }, id: `food_cooked_porkchop` };
                 if (subtype === 'raw_chicken') return { type: 'food', subtype: 'cooked_chicken', name: 'Cooked Chicken', stackable: true, maxStack: 64, data: { heal: 25 }, id: `food_cooked_chicken` };
+                if (subtype === 'raw_mutton') return { type: 'food', subtype: 'cooked_mutton', name: 'Cooked Mutton', stackable: true, maxStack: 64, data: { heal: 25 }, id: `food_cooked_mutton` };
                 if (subtype === 'raw_fish') return { type: 'food', subtype: 'cooked_fish', name: 'Cooked Fish', stackable: true, maxStack: 64, data: { heal: 25 }, id: `food_cooked_fish` };
+            }
+            if (type === 'block' && (
+                subtype === window.BLOCKS.WOOD ||
+                subtype === window.BLOCKS.ACACIA_WOOD ||
+                subtype === window.BLOCKS.AUTUMN_WOOD ||
+                subtype === window.BLOCKS.PALM_WOOD ||
+                subtype === window.BLOCKS.PINE_WOOD ||
+                subtype === window.BLOCKS.AETHER_WOOD ||
+                subtype === window.BLOCKS.DARK_OAK_WOOD ||
+                subtype === window.BLOCKS.CHERRY_LOG ||
+                subtype === window.BLOCKS.CRIMSON_STEM
+            )) {
+                return { type: 'material', subtype: 'coal', name: 'Charcoal', stackable: true, maxStack: 64, id: 'mat_coal' };
             }
             return null;
         };
@@ -725,8 +822,33 @@ class Game {
             const t = fuelItem.item.type;
             const s = fuelItem.item.subtype;
             if (t === 'material' && (s === 'coal' || s === 'stick')) return true;
-            if (t === 'block' && (s === window.BLOCKS.PLANKS || s === window.BLOCKS.WOOD || s === window.BLOCKS.LEAVES)) return true;
-            if (t === 'equipment' && (s === 'wood_pickaxe' || s === 'wood_axe' || s === 'wood_sword' || s === 'wood_shovel')) return true;
+            if (t === 'block' && (
+                s === window.BLOCKS.PLANKS || 
+                s === window.BLOCKS.WOOD || 
+                s === window.BLOCKS.ACACIA_WOOD ||
+                s === window.BLOCKS.AUTUMN_WOOD ||
+                s === window.BLOCKS.PALM_WOOD ||
+                s === window.BLOCKS.PINE_WOOD ||
+                s === window.BLOCKS.AETHER_WOOD ||
+                s === window.BLOCKS.DARK_OAK_WOOD ||
+                s === window.BLOCKS.CHERRY_LOG ||
+                s === window.BLOCKS.CRIMSON_STEM ||
+                s === window.BLOCKS.LEAVES ||
+                s === window.BLOCKS.ACACIA_LEAVES ||
+                s === window.BLOCKS.CHERRY_LEAVES ||
+                s === window.BLOCKS.AUTUMN_LEAVES ||
+                s === window.BLOCKS.PALM_LEAVES ||
+                s === window.BLOCKS.GLOW_LEAVES ||
+                s === window.BLOCKS.CRAFTING_TABLE ||
+                s === window.BLOCKS.BOOKSHELF ||
+                s === window.BLOCKS.CHEST_BLOCK
+            )) return true;
+            if (typeof s === 'string' && (s.includes('wood') || s.includes('plank') || s.includes('log') || s.includes('stick') || s.includes('coal'))) return true;
+            if (t === 'equipment' && (
+                s === 'wood_pickaxe' || s === 'wood_axe' || s === 'wood_sword' || s === 'wood_shovel' ||
+                s === 'wooden_pickaxe' || s === 'wooden_axe' || s === 'wooden_sword' || s === 'wooden_shovel' ||
+                s === 'shovel_wood' || s === 'pickaxe_wood' || s === 'axe_wood' || s === 'sword_wood'
+            )) return true;
             return false;
         };
 
@@ -743,9 +865,10 @@ class Game {
 
             // Consume fuel if we can smelt but aren't burning
             if (canSmelt && !isBurning && isFuel(f.fuel)) {
-                // Determine fuel value
-                let fuelVal = 10.0; // Sticks/Planks
-                if (f.fuel.item.subtype === 'coal') fuelVal = 40.0; // 8 items (5s each)
+                let fuelVal = 10.0; // Sticks/Planks/Tools
+                const fs = f.fuel.item.subtype;
+                if (fs === 'coal') fuelVal = 40.0;
+                else if (fs === window.BLOCKS.WOOD || fs === window.BLOCKS.ACACIA_WOOD || fs === window.BLOCKS.AUTUMN_WOOD || fs === window.BLOCKS.PALM_WOOD || fs === window.BLOCKS.PINE_WOOD || fs === window.BLOCKS.AETHER_WOOD || fs === window.BLOCKS.DARK_OAK_WOOD || fs === window.BLOCKS.CHERRY_LOG || (typeof fs === 'string' && fs.includes('log'))) fuelVal = 15.0;
                 
                 f.maxBurnTime = fuelVal;
                 f.burnTime = fuelVal;
@@ -1195,7 +1318,9 @@ class Game {
                 // Open Furnace
                 this.audio.playClick(); 
                 const key = `${hit.blockPos.x},${hit.blockPos.y},${hit.blockPos.z}`;
-                
+                if (!this.furnaces.has(key)) {
+                    this._addFurnace(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                }
                 this.ui.toggleFurnace(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, this.furnaces.get(key), () => {
                     this.input.requestPointerLock();
                 });
@@ -1711,23 +1836,25 @@ class Game {
         }
 
         // Ambient Biome Particles
-        if (Math.random() < 0.3 && this.currentDimension === 'overworld') {
+        if (Math.random() < 0.5 && this.currentDimension === 'overworld') {
             const px = this.player.position.x;
             const pz = this.player.position.z;
             const { biome } = getBiomeParams(px, pz, this.planetParams);
             
             if (biome.isCherry || biome.name === 'Cherry Grove') {
-                const pos = this.player.position.clone();
-                pos.x += (Math.random() - 0.5) * 20;
-                pos.z += (Math.random() - 0.5) * 20;
-                pos.y += 5 + Math.random() * 5;
-                this.particles.emit(pos, 'leaf', 1, 0xffb7c5);
+                for (let k = 0; k < 2; k++) {
+                    const pos = this.player.position.clone();
+                    pos.x += (Math.random() - 0.5) * 24;
+                    pos.z += (Math.random() - 0.5) * 24;
+                    pos.y += 4 + Math.random() * 6;
+                    this.particles.emit(pos, 'leaf', 1, Math.random() < 0.3 ? 0xffc0cb : 0xffb7c5);
+                }
             } else if (biome.name === 'Autumn Forest') {
                 const pos = this.player.position.clone();
-                pos.x += (Math.random() - 0.5) * 20;
-                pos.z += (Math.random() - 0.5) * 20;
-                pos.y += 5 + Math.random() * 5;
-                const colors = [0xff8800, 0xcc4400, 0xffaa00];
+                pos.x += (Math.random() - 0.5) * 24;
+                pos.z += (Math.random() - 0.5) * 24;
+                pos.y += 4 + Math.random() * 6;
+                const colors = [0xff8800, 0xcc4400, 0xffaa00, 0xdd6600];
                 this.particles.emit(pos, 'leaf', 1, colors[Math.floor(Math.random()*colors.length)]);
             } else if (biome.alienFlora) {
                 const pos = this.player.position.clone();
@@ -1735,14 +1862,14 @@ class Game {
                 pos.z += (Math.random() - 0.5) * 20;
                 pos.y += Math.random() * 5;
                 this.particles.emit(pos, 'leaf', 1, 0x00ffcc);
-            } else if (biome.name === 'Forest' || biome.name === 'Dark Forest' || biome.jungleFlora) {
+            } else if (biome.name === 'Forest' || biome.name === 'Dark Forest' || biome.jungleFlora || biome.name === 'Jungle' || biome.hasTrees) {
                 // Dappled forest leaves — gentle green leaves drifting down
-                if (Math.random() < 0.4) {
+                for (let k = 0; k < 2; k++) {
                     const pos = this.player.position.clone();
                     pos.x += (Math.random() - 0.5) * 24;
                     pos.z += (Math.random() - 0.5) * 24;
-                    pos.y += 5 + Math.random() * 8;
-                    const colors = [0x228B22, 0x2E8B57, 0x3CB371, 0x6B8E23, 0x556B2F];
+                    pos.y += 4 + Math.random() * 7;
+                    const colors = [0x228B22, 0x2E8B57, 0x3CB371, 0x6B8E23, 0x556B2F, 0x4d7c0f];
                     this.particles.emit(pos, 'leaf', 1, colors[Math.floor(Math.random() * colors.length)]);
                 }
             }

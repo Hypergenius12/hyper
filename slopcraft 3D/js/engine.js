@@ -500,6 +500,8 @@ export class Chunk {
 
                         const bothLiquids = currentProps.isLiquid && effectiveNeighborProps.isLiquid;
 
+                        let isLiquidStep = false;
+                        let nTop = 0;
                         let shouldRenderFace = false;
                         if (currentBlockType === BLOCKS.CACTUS) {
                             if (face.name === 'top' || face.name === 'bottom') {
@@ -513,12 +515,15 @@ export class Chunk {
                                 let nData = 0;
                                 if (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE && ny >= 0 && ny < CHUNK_HEIGHT) {
                                     nData = this.data[(ny * CHUNK_SIZE * CHUNK_SIZE) + (nz * CHUNK_SIZE) + nx];
+                                } else {
+                                    nData = this.getData ? this.getData(wx + face.dir[0], ny, wz + face.dir[2]) : 0;
                                 }
                                 const isLava = (currentBlockType === BLOCKS.LAVA);
                                 const maxLevel = isLava ? 3 : 7;
-                                const nTop = (nData === 0) ? 0.88 : (nData === 8 ? 1.0 : (0.18 + (nData / maxLevel) * 0.70));
+                                nTop = (nData === 0) ? 0.88 : (nData === 8 ? 1.0 : (0.18 + (nData / maxLevel) * 0.70));
                                 if (liquidTopY > nTop + 0.05) {
                                     shouldRenderFace = true;
+                                    isLiquidStep = true;
                                 }
                             } else if (currentBlockType !== effectiveNeighborType) {
                                 shouldRenderFace = true;
@@ -540,6 +545,7 @@ export class Chunk {
 
                                 if (currentProps.isLiquid) {
                                     if (v[1] === 1) vy = y + liquidTopY;
+                                    else if (isLiquidStep && v[1] === 0) vy = y + nTop;
                                 } else if (currentBlockType === BLOCKS.CACTUS) {
                                     if (v[0] === 0) vx = x + 0.0625;
                                     else if (v[0] === 1) vx = x + 0.9375;
@@ -557,10 +563,19 @@ export class Chunk {
                             }
 
                             // UVs mapping
-                            _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v; // bottom left
-                            _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v; // bottom right
-                            _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize; // top right
-                            _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize; // top left
+                            if (isLiquidStep) {
+                                const v0 = uvInfo.v + uvInfo.vSize * (1 - liquidTopY);
+                                const v1 = uvInfo.v + uvInfo.vSize * (1 - nTop);
+                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = v1;
+                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = v1;
+                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = v0;
+                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = v0;
+                            } else {
+                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v; // bottom left
+                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v; // bottom right
+                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize; // top right
+                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize; // top left
+                            }
 
                             // Calculate ambient occlusion
                             const aoColor = calculateVertexAO(wx, y, wz, face, getBlockOptimized, blockType);
@@ -1077,6 +1092,13 @@ export class World {
                 if (this.onChestRemoved) this.onChestRemoved(wx, wy, wz);
             } else if (oldType !== window.BLOCKS.CHEST_BLOCK && type === window.BLOCKS.CHEST_BLOCK) {
                 if (this.onChestPlaced) this.onChestPlaced(wx, wy, wz);
+            }
+
+            // Register furnace placement/removal
+            if (oldType === window.BLOCKS.FURNACE && type !== window.BLOCKS.FURNACE) {
+                if (this.onFurnaceRemoved) this.onFurnaceRemoved(wx, wy, wz);
+            } else if (oldType !== window.BLOCKS.FURNACE && type === window.BLOCKS.FURNACE) {
+                if (this.onFurnacePlaced) this.onFurnacePlaced(wx, wy, wz);
             }
 
             // Register door placement/removal

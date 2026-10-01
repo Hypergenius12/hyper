@@ -766,12 +766,20 @@ class UISystem {
             { type: 'material',  subtype: 'diamond',         name: 'Diamond' },
             { type: 'material',  subtype: 'coal',            name: 'Coal' },
             { type: 'material',  subtype: 'ender_pearl',     name: 'Ender Pearl' },
+            { type: 'equipment', subtype: 'flint_and_steel', name: 'Flint and Steel' },
+            { type: 'equipment', subtype: 'bucket',          name: 'Bucket' },
+            { type: 'equipment', subtype: 'water_bucket',    name: 'Water Bucket' },
+            { type: 'equipment', subtype: 'lava_bucket',     name: 'Lava Bucket' },
             { type: 'food',      subtype: 'raw_beef',        name: 'Raw Beef' },
             { type: 'food',      subtype: 'cooked_beef',     name: 'Steak' },
             { type: 'food',      subtype: 'raw_porkchop',    name: 'Raw Porkchop' },
             { type: 'food',      subtype: 'cooked_porkchop', name: 'Cooked Porkchop' },
             { type: 'food',      subtype: 'raw_chicken',     name: 'Raw Chicken' },
             { type: 'food',      subtype: 'cooked_chicken',  name: 'Cooked Chicken' },
+            { type: 'food',      subtype: 'raw_mutton',      name: 'Raw Mutton' },
+            { type: 'food',      subtype: 'cooked_mutton',   name: 'Cooked Mutton' },
+            { type: 'food',      subtype: 'raw_fish',        name: 'Raw Fish' },
+            { type: 'food',      subtype: 'cooked_fish',     name: 'Cooked Fish' },
             { type: 'food',      subtype: 'apple',           name: 'Apple' },
             { type: 'food',      subtype: 'bread',           name: 'Bread' },
         ];
@@ -1200,6 +1208,10 @@ class UISystem {
         if ((standardTypes.includes(srcType) || srcType === 'creative') && standardTypes.includes(targetType)) {
             if ((targetType === 'furnace' && targetIndex === 2) || targetType === 'crafting_output') {
                 // Cannot drop into output slots
+                this.cancelDrag();
+                return;
+            }
+            if (targetType === 'furnace' && !this.furnaceData) {
                 this.cancelDrag();
                 return;
             }
