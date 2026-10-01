@@ -88,28 +88,36 @@
                 win.contents["Help"] = { type: "folder", contents: { "Tours": { type: "folder", contents: { "htmlTour": { type: "folder", contents: { "tour.exe": { type: "exe", app: "xptour-window", icon: "sysinfo" } } } } } } };
             }
 
-            // Program Files
-            let pf = window.fs["C:"].contents["Program Files"];
-            if (!pf) {
-                pf = { type: "folder", contents: {} };
-                window.fs["C:"].contents["Program Files"] = pf;
-            }
-
-            let pfExes = {
-                "Windows NT": { type: "folder", contents: { "Accessories": { type: "folder", contents: { "wordpad.exe": { type: "exe", app: "wordpad-window", icon: "wordpad" } } }, "Pinball": { type: "folder", contents: { "pinball.exe": { type: "exe", app: "pinball-window", icon: "sysinfo" } } } } },
-                "Internet Explorer": { type: "folder", contents: { "iexplore.exe": { type: "exe", app: "ie-window", icon: "ie" } } },
-                "Windows Media Player": { type: "folder", contents: { "wmplayer.exe": { type: "exe", app: "mediaplayer-window", icon: "media" } } },
-                "Outlook Express": { type: "folder", contents: { "msimn.exe": { type: "exe", app: "email-window", icon: "outlook" } } },
-                "Common Files": { type: "folder", contents: { "Microsoft Shared": { type: "folder", contents: { "MSInfo": { type: "folder", contents: { "msinfo32.exe": { type: "exe", app: "sysinfo-window", icon: "sysinfo" } } } } } } },
-                "Messenger": { type: "folder", contents: { "msmsgs.exe": { type: "exe", app: "messenger-window", icon: "messenger" } } },
-                "MSN Gaming Zone": { type: "folder", contents: { "Windows": { type: "folder", contents: { "spades.exe": { type: "exe", app: "spades-window", icon: "sysinfo" } } } } },
-                "Microsoft FrontPage": { type: "folder", contents: { "frontpage.exe": { type: "exe", app: "frontpage-window", icon: "frontpage" } } },
-                "Microsoft Office": { type: "folder", contents: { "excel.exe": { type: "exe", app: "excel-window", icon: "excel" } } }
+            // Program Files and executables setup
+            let ensureFile = (pathStr, nodeData) => {
+                let parts = pathStr.split('\\').filter(p => p !== '');
+                let curr = window.fs["C:"].contents;
+                for (let i = 1; i < parts.length - 1; i++) {
+                    let folderName = parts[i];
+                    if (!curr[folderName]) curr[folderName] = { type: "folder", contents: {} };
+                    if (!curr[folderName].contents) curr[folderName].contents = {};
+                    curr = curr[folderName].contents;
+                }
+                let fileName = parts[parts.length - 1];
+                if (!curr[fileName]) curr[fileName] = nodeData;
             };
-            
-            for (let k in pfExes) {
-                if (!pf.contents[k]) pf.contents[k] = pfExes[k];
-            }
+
+            ensureFile("C:\\Program Files\\Internet Explorer\\iexplore.exe", { type: "exe", app: "ie-window", icon: "ie" });
+            ensureFile("C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe", { type: "exe", app: "wordpad-window", icon: "wordpad" });
+            ensureFile("C:\\Program Files\\Windows NT\\Pinball\\pinball.exe", { type: "exe", app: "pinball-window", icon: "pinball" });
+            ensureFile("C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe", { type: "exe", app: "sysinfo-window", icon: "sysinfo" });
+            ensureFile("C:\\Program Files\\Outlook Express\\msimn.exe", { type: "exe", app: "email-window", icon: "outlook" });
+            ensureFile("C:\\Program Files\\Windows Media Player\\wmplayer.exe", { type: "exe", app: "mediaplayer-window", icon: "media" });
+            ensureFile("C:\\Program Files\\Messenger\\msmsgs.exe", { type: "exe", app: "messenger-window", icon: "messenger" });
+            ensureFile("C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe", { type: "exe", app: "spades-window", icon: "spades" });
+            ensureFile("C:\\Program Files\\Microsoft FrontPage\\frontpage.exe", { type: "exe", app: "frontpage-window", icon: "frontpage" });
+            ensureFile("C:\\Program Files\\Microsoft FrontPage\\frontpg.exe", { type: "exe", app: "frontpage-window", icon: "frontpage" });
+            ensureFile("C:\\Program Files\\Microsoft Office\\excel.exe", { type: "exe", app: "excel-window", icon: "excel" });
+            ensureFile("C:\\Program Files\\Internet Checkers\\chkrs.exe", { type: "exe", app: "checkers-window", icon: "checkers" });
+            ensureFile("C:\\Program Files\\Internet Reversi\\reversi.exe", { type: "exe", app: "reversi-window", icon: "reversi" });
+            ensureFile("C:\\Program Files\\Tetris XP\\tetris.exe", { type: "exe", app: "tetris-window", icon: "tetris" });
+            ensureFile("C:\\Program Files\\Data Miner\\dataminer.exe", { type: "exe", app: "main-window", icon: "mouse" });
+            ensureFile("C:\\Program Files\\Windows Defender\\MSASCui.exe", { type: "exe", app: "defender-window", icon: "Windows XP Icons/Virus Protection.png" });
             
             if (typeof window.saveFileSystem === 'function') window.saveFileSystem();
 
@@ -142,6 +150,7 @@
                 'mediaplayer-window': 'Windows Media Player',
                 'messenger-window': 'Windows Messenger',
                 'remotedesktop-window': 'Remote Desktop',
+                'mstsc-window': 'Remote Desktop',
                 'xptour-window': 'Tour Windows XP',
                 'photon-window': 'Photon Picture Viewer',
                 'controlpanel-window': 'Control Panel',
@@ -152,10 +161,11 @@
                 'checkers-window': 'Internet Checkers',
                 'reversi-window': 'Internet Reversi',
                 'tetris-window': 'Tetris XP',
-                'main-window': 'Data Miner'
+                'main-window': 'Data Miner',
+                'defender-window': 'Windows Defender'
             };
             
-            let appName = mapping[id] || id.replace('-window', '');
+            let appName = mapping[id];
             if (appName) {
                 if (typeof window.isAppInRecycler === 'function' && window.isAppInRecycler(appName)) {
                     if (typeof window.playSound === 'function') window.playSound('recycle');
@@ -170,7 +180,7 @@
                 if (typeof window.isAppInstalled === 'function' && !window.isAppInstalled(appName)) {
                     if (typeof window.playSound === 'function') window.playSound('error');
                     if (typeof window.xpDialog === 'function') {
-                        window.xpDialog(appName, `Windows cannot open '${appName}'. The application has been permanently deleted.`, 'error');
+                        window.xpDialog(appName, `Windows cannot open '${appName}'. The application has been permanently deleted or is not installed.`, 'error');
                     }
                     return;
                 }

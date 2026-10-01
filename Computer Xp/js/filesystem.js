@@ -1,167 +1,166 @@
 
-window.isAppInstalled = function(appName) {
-    let appPaths = {
-        'Notepad': 'C:\\Windows\\System32\\notepad.exe',
-        'notepad-window': 'C:\\Windows\\System32\\notepad.exe',
-        'WordPad': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
-        'wordpad-window': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
-        'Paint': 'C:\\Windows\\System32\\mspaint.exe',
-        'paint-window': 'C:\\Windows\\System32\\mspaint.exe',
-        'Calculator': 'C:\\Windows\\System32\\calc.exe',
-        'calc-window': 'C:\\Windows\\System32\\calc.exe',
-        'Character Map': 'C:\\Windows\\System32\\charmap.exe',
-        'charmap-window': 'C:\\Windows\\System32\\charmap.exe',
-        'Sound Recorder': 'C:\\Windows\\System32\\sndrec32.exe',
-        'soundrecorder-window': 'C:\\Windows\\System32\\sndrec32.exe',
-        'Clipboard Viewer': 'C:\\Windows\\System32\\clipbrd.exe',
-        'clipbook-window': 'C:\\Windows\\System32\\clipbrd.exe',
-        'Minesweeper': 'C:\\Windows\\System32\\winmine.exe',
-        'minesweeper-window': 'C:\\Windows\\System32\\winmine.exe',
-        'Solitaire': 'C:\\Windows\\System32\\sol.exe',
-        'solitaire-window': 'C:\\Windows\\System32\\sol.exe',
-        'FreeCell': 'C:\\Windows\\System32\\freecell.exe',
-        'freecell-window': 'C:\\Windows\\System32\\freecell.exe',
-        'Hearts': 'C:\\Windows\\System32\\mshearts.exe',
-        'hearts-window': 'C:\\Windows\\System32\\mshearts.exe',
-        'Internet Spades': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
-        'spades-window': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
-        'Internet Checkers': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
-        'checkers-window': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
-        'Internet Reversi': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
-        'reversi-window': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
-        '3D Pinball': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
-        'pinball-window': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
-        'Disk Defragmenter': 'C:\\Windows\\System32\\dfrg.msc',
-        'defrag-window': 'C:\\Windows\\System32\\dfrg.msc',
-        'System Information': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
-        'sysinfo-window': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
-        'Registry Editor': 'C:\\Windows\\regedit.exe',
-        'regedit-window': 'C:\\Windows\\regedit.exe',
-        'Task Manager': 'C:\\Windows\\System32\\taskmgr.exe',
-        'taskmgr-window': 'C:\\Windows\\System32\\taskmgr.exe',
-        'Command Prompt': 'C:\\Windows\\System32\\cmd.exe',
-        'cmd-window': 'C:\\Windows\\System32\\cmd.exe',
-        'Internet Explorer': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
-        'ie-window': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
-        'Outlook Express': 'C:\\Program Files\\Outlook Express\\msimn.exe',
-        'email-window': 'C:\\Program Files\\Outlook Express\\msimn.exe',
-        'Windows Media Player': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
-        'mediaplayer-window': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
-        'Windows Messenger': 'C:\\Program Files\\Messenger\\msmsgs.exe',
-        'messenger-window': 'C:\\Program Files\\Messenger\\msmsgs.exe',
-        'Remote Desktop': 'C:\\Windows\\System32\\mstsc.exe',
-        'remotedesktop-window': 'C:\\Windows\\System32\\mstsc.exe',
-        'Tour Windows XP': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
-        'xptour-window': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
-        'Photon Picture Viewer': 'C:\\Windows\\System32\\photon.exe',
-        'photon-window': 'C:\\Windows\\System32\\photon.exe',
-        'Control Panel': 'C:\\Windows\\System32\\control.exe',
-        'controlpanel-window': 'C:\\Windows\\System32\\control.exe',
-        'Printers and Faxes': 'C:\\Windows\\System32\\printers.exe',
-        'printers-window': 'C:\\Windows\\System32\\printers.exe',
-        'Help and Support': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
-        'help-window': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
-        'Microsoft FrontPage': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
-        'frontpage-window': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
-        'Microsoft Excel': 'C:\\Program Files\\Microsoft Office\\excel.exe',
-        'excel-window': 'C:\\Program Files\\Microsoft Office\\excel.exe'
-    };
-    
-    if (appPaths[appName]) {
-        let p = appPaths[appName];
-        let parentDir = p.substring(0, p.lastIndexOf("\\"));
-        let exeName = p.substring(p.lastIndexOf("\\") + 1);
-        
-        let node = window.resolvePath(parentDir);
-        let inOriginal = !!(node && node[exeName]);
-        
-        return inOriginal;
+window.isAppInstalled = function(app) {
+    if (!app) return false;
+
+    // Core system shells are always installed
+    let systemShells = [
+        'store-window', 'folder-window', 'settings-window', 'controlpanel-window',
+        'printers-window', 'help-window', 'search-window', 'run-window',
+        'fontview-window', 'print-queue-window', 'display-props-window',
+        'email-compose-window', 'properties-window', 'datetime-window'
+    ];
+    if (typeof app === 'string' && systemShells.includes(app)) {
+        return true;
     }
-    
-    let pfNode = window.resolvePath("C:\\Program Files");
-    if (pfNode && pfNode[appName]) return true;
+
+    let sApp = typeof window.findStoreApp === 'function' ? window.findStoreApp(app) : null;
+    let appName = sApp ? sApp.name : (typeof app === 'string' ? app : (app.name || ''));
+    let appId = sApp ? sApp.id : '';
+    let windowId = sApp ? sApp.appId : (typeof app === 'string' && app.endsWith('-window') ? app : '');
+
+    // Check recycle bin
+    if (typeof window.isAppInRecycler === 'function' && (
+        window.isAppInRecycler(appName) || 
+        (appId && window.isAppInRecycler(appId)) ||
+        (windowId && window.isAppInRecycler(windowId))
+    )) {
+        return false;
+    }
+
+    // Check uninstalled list
+    let uninstalled = typeof window.getUninstalledApps === 'function' ? window.getUninstalledApps() : [];
+    if (
+        (appId && uninstalled.includes(appId)) ||
+        (appName && uninstalled.includes(appName)) ||
+        (windowId && uninstalled.includes(windowId)) ||
+        (sApp && sApp.exe && uninstalled.includes(sApp.exe))
+    ) {
+        return false;
+    }
+
+    // Comprehensive mapping of application locations
+    let appPathCandidates = {
+        'Notepad': ['C:\\Windows\\System32\\notepad.exe', 'C:\\WINDOWS\\system32\\notepad.exe'],
+        'notepad-window': ['C:\\Windows\\System32\\notepad.exe', 'C:\\WINDOWS\\system32\\notepad.exe'],
+        'WordPad': ['C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe', 'C:\\Program Files\\WordPad\\wordpad.exe', 'C:\\Windows\\System32\\wordpad.exe'],
+        'wordpad-window': ['C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe', 'C:\\Program Files\\WordPad\\wordpad.exe', 'C:\\Windows\\System32\\wordpad.exe'],
+        'Paint': ['C:\\Windows\\System32\\mspaint.exe', 'C:\\WINDOWS\\system32\\mspaint.exe'],
+        'paint-window': ['C:\\Windows\\System32\\mspaint.exe', 'C:\\WINDOWS\\system32\\mspaint.exe'],
+        'Calculator': ['C:\\Windows\\System32\\calc.exe', 'C:\\WINDOWS\\system32\\calc.exe'],
+        'calc-window': ['C:\\Windows\\System32\\calc.exe', 'C:\\WINDOWS\\system32\\calc.exe'],
+        'Character Map': ['C:\\Windows\\System32\\charmap.exe', 'C:\\WINDOWS\\system32\\charmap.exe'],
+        'charmap-window': ['C:\\Windows\\System32\\charmap.exe', 'C:\\WINDOWS\\system32\\charmap.exe'],
+        'Sound Recorder': ['C:\\Windows\\System32\\sndrec32.exe', 'C:\\WINDOWS\\system32\\sndrec32.exe'],
+        'soundrecorder-window': ['C:\\Windows\\System32\\sndrec32.exe', 'C:\\WINDOWS\\system32\\sndrec32.exe'],
+        'Clipboard Viewer': ['C:\\Windows\\System32\\clipbrd.exe', 'C:\\WINDOWS\\system32\\clipbrd.exe'],
+        'clipbook-window': ['C:\\Windows\\System32\\clipbrd.exe', 'C:\\WINDOWS\\system32\\clipbrd.exe'],
+        'Minesweeper': ['C:\\Windows\\System32\\winmine.exe', 'C:\\WINDOWS\\system32\\winmine.exe', 'C:\\Program Files\\Games\\Minesweeper.lnk', 'C:\\Program Files\\Minesweeper\\winmine.exe'],
+        'minesweeper-window': ['C:\\Windows\\System32\\winmine.exe', 'C:\\WINDOWS\\system32\\winmine.exe', 'C:\\Program Files\\Games\\Minesweeper.lnk', 'C:\\Program Files\\Minesweeper\\winmine.exe'],
+        'Solitaire': ['C:\\Windows\\System32\\sol.exe', 'C:\\WINDOWS\\system32\\sol.exe', 'C:\\Program Files\\Games\\Solitaire.lnk', 'C:\\Program Files\\Solitaire\\sol.exe'],
+        'solitaire-window': ['C:\\Windows\\System32\\sol.exe', 'C:\\WINDOWS\\system32\\sol.exe', 'C:\\Program Files\\Games\\Solitaire.lnk', 'C:\\Program Files\\Solitaire\\sol.exe'],
+        'FreeCell': ['C:\\Windows\\System32\\freecell.exe', 'C:\\WINDOWS\\system32\\freecell.exe', 'C:\\Program Files\\FreeCell\\freecell.exe'],
+        'freecell-window': ['C:\\Windows\\System32\\freecell.exe', 'C:\\WINDOWS\\system32\\freecell.exe', 'C:\\Program Files\\FreeCell\\freecell.exe'],
+        'Hearts': ['C:\\Windows\\System32\\mshearts.exe', 'C:\\WINDOWS\\system32\\mshearts.exe', 'C:\\Program Files\\Internet Hearts\\mshearts.exe', 'C:\\Program Files\\Hearts\\mshearts.exe'],
+        'Internet Hearts': ['C:\\Windows\\System32\\mshearts.exe', 'C:\\WINDOWS\\system32\\mshearts.exe', 'C:\\Program Files\\Internet Hearts\\mshearts.exe', 'C:\\Program Files\\Hearts\\mshearts.exe'],
+        'hearts-window': ['C:\\Windows\\System32\\mshearts.exe', 'C:\\WINDOWS\\system32\\mshearts.exe', 'C:\\Program Files\\Internet Hearts\\mshearts.exe', 'C:\\Program Files\\Hearts\\mshearts.exe'],
+        'Internet Spades': ['C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe', 'C:\\Program Files\\Internet Spades\\spades.exe', 'C:\\Windows\\System32\\spades.exe'],
+        'spades-window': ['C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe', 'C:\\Program Files\\Internet Spades\\spades.exe', 'C:\\Windows\\System32\\spades.exe'],
+        'Internet Checkers': ['C:\\Program Files\\Internet Checkers\\chkrs.exe', 'C:\\Windows\\System32\\chkrs.exe'],
+        'checkers-window': ['C:\\Program Files\\Internet Checkers\\chkrs.exe', 'C:\\Windows\\System32\\chkrs.exe'],
+        'Internet Reversi': ['C:\\Program Files\\Internet Reversi\\reversi.exe', 'C:\\Windows\\System32\\reversi.exe'],
+        'reversi-window': ['C:\\Program Files\\Internet Reversi\\reversi.exe', 'C:\\Windows\\System32\\reversi.exe'],
+        '3D Pinball': ['C:\\Windows\\System32\\pinball.exe', 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe', 'C:\\Program Files\\3D Pinball\\pinball.exe', 'C:\\Program Files\\Games\\3D Pinball for Windows.lnk'],
+        'pinball-window': ['C:\\Windows\\System32\\pinball.exe', 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe', 'C:\\Program Files\\3D Pinball\\pinball.exe', 'C:\\Program Files\\Games\\3D Pinball for Windows.lnk'],
+        'Disk Defragmenter': ['C:\\Windows\\System32\\dfrg.msc', 'C:\\WINDOWS\\system32\\dfrg.msc', 'C:\\Program Files\\Disk Defragmenter\\dfrg.msc'],
+        'defrag-window': ['C:\\Windows\\System32\\dfrg.msc', 'C:\\WINDOWS\\system32\\dfrg.msc', 'C:\\Program Files\\Disk Defragmenter\\dfrg.msc'],
+        'System Information': ['C:\\Windows\\System32\\msinfo32.exe', 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe', 'C:\\Program Files\\System Information\\msinfo32.exe'],
+        'sysinfo-window': ['C:\\Windows\\System32\\msinfo32.exe', 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe', 'C:\\Program Files\\System Information\\msinfo32.exe'],
+        'Registry Editor': ['C:\\Windows\\System32\\regedit.exe', 'C:\\Windows\\regedit.exe', 'C:\\WINDOWS\\regedit.exe'],
+        'regedit-window': ['C:\\Windows\\System32\\regedit.exe', 'C:\\Windows\\regedit.exe', 'C:\\WINDOWS\\regedit.exe'],
+        'Task Manager': ['C:\\Windows\\System32\\taskmgr.exe', 'C:\\WINDOWS\\system32\\taskmgr.exe'],
+        'taskmgr-window': ['C:\\Windows\\System32\\taskmgr.exe', 'C:\\WINDOWS\\system32\\taskmgr.exe'],
+        'Command Prompt': ['C:\\Windows\\System32\\cmd.exe', 'C:\\WINDOWS\\system32\\cmd.exe'],
+        'cmd-window': ['C:\\Windows\\System32\\cmd.exe', 'C:\\WINDOWS\\system32\\cmd.exe'],
+        'Internet Explorer': ['C:\\Program Files\\Internet Explorer\\iexplore.exe', 'C:\\Windows\\System32\\iexplore.exe'],
+        'ie-window': ['C:\\Program Files\\Internet Explorer\\iexplore.exe', 'C:\\Windows\\System32\\iexplore.exe'],
+        'Outlook Express': ['C:\\Program Files\\Outlook Express\\msimn.exe', 'C:\\Windows\\System32\\msimn.exe'],
+        'email-window': ['C:\\Program Files\\Outlook Express\\msimn.exe', 'C:\\Windows\\System32\\msimn.exe'],
+        'Windows Media Player': ['C:\\Program Files\\Windows Media Player\\wmplayer.exe', 'C:\\Windows\\System32\\wmplayer.exe'],
+        'mediaplayer-window': ['C:\\Program Files\\Windows Media Player\\wmplayer.exe', 'C:\\Windows\\System32\\wmplayer.exe'],
+        'Windows Messenger': ['C:\\Program Files\\Messenger\\msmsgs.exe', 'C:\\Program Files\\Windows Messenger\\msmsgs.exe', 'C:\\Windows\\System32\\msmsgs.exe'],
+        'messenger-window': ['C:\\Program Files\\Messenger\\msmsgs.exe', 'C:\\Program Files\\Windows Messenger\\msmsgs.exe', 'C:\\Windows\\System32\\msmsgs.exe'],
+        'Remote Desktop': ['C:\\Windows\\System32\\mstsc.exe', 'C:\\WINDOWS\\system32\\mstsc.exe', 'C:\\Program Files\\Remote Desktop\\mstsc.exe'],
+        'remotedesktop-window': ['C:\\Windows\\System32\\mstsc.exe', 'C:\\WINDOWS\\system32\\mstsc.exe', 'C:\\Program Files\\Remote Desktop\\mstsc.exe'],
+        'mstsc-window': ['C:\\Windows\\System32\\mstsc.exe', 'C:\\WINDOWS\\system32\\mstsc.exe', 'C:\\Program Files\\Remote Desktop\\mstsc.exe'],
+        'Tour Windows XP': ['C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe', 'C:\\WINDOWS\\Help\\Tours\\htmlTour\\tour.exe', 'C:\\Windows\\System32\\tour.exe'],
+        'xptour-window': ['C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe', 'C:\\WINDOWS\\Help\\Tours\\htmlTour\\tour.exe', 'C:\\Windows\\System32\\tour.exe'],
+        'Photon Picture Viewer': ['C:\\Windows\\System32\\photon.exe', 'C:\\WINDOWS\\system32\\photon.exe', 'C:\\Program Files\\Photon\\photon.exe'],
+        'photon-window': ['C:\\Windows\\System32\\photon.exe', 'C:\\WINDOWS\\system32\\photon.exe', 'C:\\Program Files\\Photon\\photon.exe'],
+        'Control Panel': ['C:\\Windows\\System32\\control.exe', 'C:\\WINDOWS\\system32\\control.exe'],
+        'controlpanel-window': ['C:\\Windows\\System32\\control.exe', 'C:\\WINDOWS\\system32\\control.exe'],
+        'Printers and Faxes': ['C:\\Windows\\System32\\printers.exe', 'C:\\WINDOWS\\system32\\printers.exe'],
+        'printers-window': ['C:\\Windows\\System32\\printers.exe', 'C:\\WINDOWS\\system32\\printers.exe'],
+        'Help and Support': ['C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe', 'C:\\WINDOWS\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe', 'C:\\Windows\\System32\\helpctr.exe'],
+        'help-window': ['C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe', 'C:\\WINDOWS\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe', 'C:\\Windows\\System32\\helpctr.exe'],
+        'Microsoft FrontPage': ['C:\\Program Files\\Microsoft FrontPage\\frontpage.exe', 'C:\\Program Files\\Microsoft FrontPage\\frontpg.exe'],
+        'frontpage-window': ['C:\\Program Files\\Microsoft FrontPage\\frontpage.exe', 'C:\\Program Files\\Microsoft FrontPage\\frontpg.exe'],
+        'Microsoft Excel': ['C:\\Program Files\\Microsoft Office\\excel.exe', 'C:\\Program Files\\Microsoft Excel\\excel.exe', 'C:\\Windows\\System32\\excel.exe'],
+        'excel-window': ['C:\\Program Files\\Microsoft Office\\excel.exe', 'C:\\Program Files\\Microsoft Excel\\excel.exe', 'C:\\Windows\\System32\\excel.exe'],
+        'Tetris XP': ['C:\\Program Files\\Tetris XP\\tetris.exe', 'C:\\Program Files\\Games\\tetris.exe', 'C:\\Program Files\\Games\\Tetris XP.lnk'],
+        'tetris-window': ['C:\\Program Files\\Tetris XP\\tetris.exe', 'C:\\Program Files\\Games\\tetris.exe', 'C:\\Program Files\\Games\\Tetris XP.lnk'],
+        'Data Miner': ['C:\\Program Files\\Data Miner\\dataminer.exe', 'C:\\Windows\\System32\\dataminer.exe'],
+        'main-window': ['C:\\Program Files\\Data Miner\\dataminer.exe', 'C:\\Windows\\System32\\dataminer.exe'],
+        'Windows Defender': ['C:\\Program Files\\Windows Defender\\MSASCui.exe', 'C:\\Program Files\\Windows Defender\\defender.exe', 'C:\\Windows\\System32\\MSASCui.exe'],
+        'defender-window': ['C:\\Program Files\\Windows Defender\\MSASCui.exe', 'C:\\Program Files\\Windows Defender\\defender.exe', 'C:\\Windows\\System32\\MSASCui.exe']
+    };
+
+    let lookupKeys = [appName, appId, windowId, typeof app === 'string' ? app : ''];
+    let candidatePaths = [];
+    for (let k of lookupKeys) {
+        if (k && appPathCandidates[k]) {
+            candidatePaths = appPathCandidates[k];
+            break;
+        }
+    }
+
+    if (candidatePaths.length > 0 && typeof window.resolvePath === 'function') {
+        let exists = candidatePaths.some(p => {
+            let parentDir = p.substring(0, p.lastIndexOf("\\"));
+            let exeName = p.substring(p.lastIndexOf("\\") + 1);
+            let node = window.resolvePath(parentDir);
+            return !!(node && node[exeName]);
+        });
+        if (exists) return true;
+    }
+
+    // Also check generic C:\Program Files\[appName]
+    if (appName && typeof window.resolvePath === 'function') {
+        let pfNode = window.resolvePath("C:\\Program Files");
+        if (pfNode && (pfNode[appName] || pfNode[appName + '.exe'])) return true;
+    }
+
+    // Core system apps default to true if not deleted
+    if (sApp && sApp.systemApp) return true;
+
     return false;
 };
 
 window.isAppInRecycler = function(appName) {
-    let appPaths = {
-        'Notepad': 'C:\\Windows\\System32\\notepad.exe',
-        'notepad-window': 'C:\\Windows\\System32\\notepad.exe',
-        'WordPad': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
-        'wordpad-window': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
-        'Paint': 'C:\\Windows\\System32\\mspaint.exe',
-        'paint-window': 'C:\\Windows\\System32\\mspaint.exe',
-        'Calculator': 'C:\\Windows\\System32\\calc.exe',
-        'calc-window': 'C:\\Windows\\System32\\calc.exe',
-        'Character Map': 'C:\\Windows\\System32\\charmap.exe',
-        'charmap-window': 'C:\\Windows\\System32\\charmap.exe',
-        'Sound Recorder': 'C:\\Windows\\System32\\sndrec32.exe',
-        'soundrecorder-window': 'C:\\Windows\\System32\\sndrec32.exe',
-        'Clipboard Viewer': 'C:\\Windows\\System32\\clipbrd.exe',
-        'clipbook-window': 'C:\\Windows\\System32\\clipbrd.exe',
-        'Minesweeper': 'C:\\Windows\\System32\\winmine.exe',
-        'minesweeper-window': 'C:\\Windows\\System32\\winmine.exe',
-        'Solitaire': 'C:\\Windows\\System32\\sol.exe',
-        'solitaire-window': 'C:\\Windows\\System32\\sol.exe',
-        'FreeCell': 'C:\\Windows\\System32\\freecell.exe',
-        'freecell-window': 'C:\\Windows\\System32\\freecell.exe',
-        'Hearts': 'C:\\Windows\\System32\\mshearts.exe',
-        'hearts-window': 'C:\\Windows\\System32\\mshearts.exe',
-        'Internet Spades': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
-        'spades-window': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
-        'Internet Checkers': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
-        'checkers-window': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
-        'Internet Reversi': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
-        'reversi-window': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
-        '3D Pinball': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
-        'pinball-window': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
-        'Disk Defragmenter': 'C:\\Windows\\System32\\dfrg.msc',
-        'defrag-window': 'C:\\Windows\\System32\\dfrg.msc',
-        'System Information': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
-        'sysinfo-window': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
-        'Registry Editor': 'C:\\Windows\\regedit.exe',
-        'regedit-window': 'C:\\Windows\\regedit.exe',
-        'Task Manager': 'C:\\Windows\\System32\\taskmgr.exe',
-        'taskmgr-window': 'C:\\Windows\\System32\\taskmgr.exe',
-        'Command Prompt': 'C:\\Windows\\System32\\cmd.exe',
-        'cmd-window': 'C:\\Windows\\System32\\cmd.exe',
-        'Internet Explorer': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
-        'ie-window': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
-        'Outlook Express': 'C:\\Program Files\\Outlook Express\\msimn.exe',
-        'email-window': 'C:\\Program Files\\Outlook Express\\msimn.exe',
-        'Windows Media Player': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
-        'mediaplayer-window': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
-        'Windows Messenger': 'C:\\Program Files\\Messenger\\msmsgs.exe',
-        'messenger-window': 'C:\\Program Files\\Messenger\\msmsgs.exe',
-        'Remote Desktop': 'C:\\Windows\\System32\\mstsc.exe',
-        'remotedesktop-window': 'C:\\Windows\\System32\\mstsc.exe',
-        'Tour Windows XP': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
-        'xptour-window': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
-        'Photon Picture Viewer': 'C:\\Windows\\System32\\photon.exe',
-        'photon-window': 'C:\\Windows\\System32\\photon.exe',
-        'Control Panel': 'C:\\Windows\\System32\\control.exe',
-        'controlpanel-window': 'C:\\Windows\\System32\\control.exe',
-        'Printers and Faxes': 'C:\\Windows\\System32\\printers.exe',
-        'printers-window': 'C:\\Windows\\System32\\printers.exe',
-        'Help and Support': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
-        'help-window': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
-        'Microsoft FrontPage': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
-        'frontpage-window': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
-        'Microsoft Excel': 'C:\\Program Files\\Microsoft Office\\excel.exe',
-        'excel-window': 'C:\\Program Files\\Microsoft Office\\excel.exe'
-    };
-    
-    if (appPaths[appName]) {
-        let p = appPaths[appName];
-        let parentDir = p.substring(0, p.lastIndexOf("\\"));
-        let exeName = p.substring(p.lastIndexOf("\\") + 1);
-        
-        let node = window.resolvePath(parentDir);
-        let inOriginal = (node && node[exeName]);
-        if (inOriginal) return false;
-        
-        let recycler = window.resolvePath("C:\\RECYCLER");
-        return !!(recycler && recycler[exeName]);
+    if (!appName) return false;
+    let sApp = typeof window.findStoreApp === 'function' ? window.findStoreApp(appName) : null;
+    let targetName = sApp ? sApp.name : (typeof appName === 'string' ? appName : (appName.name || ''));
+    let exe = sApp ? sApp.exe : '';
+    let shortcut = sApp ? sApp.shortcut : (targetName + '.lnk');
+
+    let recycler = typeof window.resolvePath === 'function' ? window.resolvePath("C:\\RECYCLER") : null;
+    if (!recycler) return false;
+
+    let checkKeys = [targetName, exe, shortcut, targetName.toLowerCase(), exe.toLowerCase(), shortcut.toLowerCase()];
+    for (let rk in recycler) {
+        let rkLower = rk.toLowerCase();
+        if (checkKeys.includes(rkLower) || (exe && rkLower === exe.toLowerCase()) || (targetName && rkLower.startsWith(targetName.toLowerCase()))) {
+            return true;
+        }
     }
     return false;
 };
@@ -371,10 +370,41 @@ var fs = {
             "Program Files": {
                 type: "folder",
                 contents: {
+                    "Internet Explorer": { type: "folder", contents: { "iexplore.exe": { type: "exe", app: "ie-window", icon: "ie" } } },
                     "Outlook Express": { type: "folder", contents: { "msimn.exe": { type: "exe", app: "email-window", icon: "outlook" } } },
-                    "Microsoft FrontPage": { type: "folder", contents: { "frontpg.exe": { type: "exe", app: "frontpage-window", icon: "frontpage" } } },
+                    "Microsoft FrontPage": { type: "folder", contents: { "frontpage.exe": { type: "exe", app: "frontpage-window", icon: "frontpage" }, "frontpg.exe": { type: "exe", app: "frontpage-window", icon: "frontpage" } } },
+                    "Microsoft Office": { type: "folder", contents: { "excel.exe": { type: "exe", app: "excel-window", icon: "excel" } } },
                     "Windows Media Player": { type: "folder", contents: { "wmplayer.exe": { type: "exe", app: "mediaplayer-window", icon: "media" } } },
-                    
+                    "Windows NT": {
+                        type: "folder",
+                        contents: {
+                            "Accessories": { type: "folder", contents: { "wordpad.exe": { type: "exe", app: "wordpad-window", icon: "wordpad" } } },
+                            "Pinball": { type: "folder", contents: { "pinball.exe": { type: "exe", app: "pinball-window", icon: "pinball" } } }
+                        }
+                    },
+                    "Common Files": {
+                        type: "folder",
+                        contents: {
+                            "Microsoft Shared": {
+                                type: "folder",
+                                contents: {
+                                    "MSInfo": { type: "folder", contents: { "msinfo32.exe": { type: "exe", app: "sysinfo-window", icon: "sysinfo" } } }
+                                }
+                            }
+                        }
+                    },
+                    "Messenger": { type: "folder", contents: { "msmsgs.exe": { type: "exe", app: "messenger-window", icon: "messenger" } } },
+                    "MSN Gaming Zone": {
+                        type: "folder",
+                        contents: {
+                            "Windows": { type: "folder", contents: { "spades.exe": { type: "exe", app: "spades-window", icon: "spades" } } }
+                        }
+                    },
+                    "Internet Checkers": { type: "folder", contents: { "chkrs.exe": { type: "exe", app: "checkers-window", icon: "checkers" } } },
+                    "Internet Reversi": { type: "folder", contents: { "reversi.exe": { type: "exe", app: "reversi-window", icon: "reversi" } } },
+                    "Tetris XP": { type: "folder", contents: { "tetris.exe": { type: "exe", app: "tetris-window", icon: "tetris" } } },
+                    "Data Miner": { type: "folder", contents: { "dataminer.exe": { type: "exe", app: "main-window", icon: "mouse" } } },
+                    "Windows Defender": { type: "folder", contents: { "MSASCui.exe": { type: "exe", app: "defender-window", icon: "Windows XP Icons/Virus Protection.png" } } },
                     "Games": {
                         type: "folder", contents: {
                             "3D Pinball for Windows.lnk": { type: "exe", app: "pinball-window", icon: "pinball" },
@@ -387,8 +417,7 @@ var fs = {
                         type: "folder", contents: {
                             "mspaint.exe": { type: "exe", app: "paint-window", icon: "paint" },
                             "sndrec32.exe": { type: "exe", app: "soundrecorder-window", icon: "soundrecorder" },
-                            "calc.exe": { type: "exe", app: "calc-window", icon: "calc" },
-                            
+                            "calc.exe": { type: "exe", app: "calc-window", icon: "calc" }
                         }
                     }
                 }
@@ -642,20 +671,84 @@ function loadFileSystem() {
                     desk["Tetris XP.lnk"].icon = "Windows XP Icons/tetris.webp";
                 }
 
-                // Ensure Outlook Express and FrontPage are properly installed (have folder + exe in Program Files)
+                // Ensure all default Program Files apps are populated
                 try {
                     let progFiles = fs["C:"].contents["Program Files"].contents;
-                    if (!progFiles["Outlook Express"] || !progFiles["Outlook Express"].contents) {
-                        progFiles["Outlook Express"] = { type: "folder", contents: { "msimn.exe": { type: "exe", app: "email-window", icon: "outlook" } } };
+                    if (!progFiles["Internet Explorer"]) progFiles["Internet Explorer"] = { type: "folder", contents: {} };
+                    if (!progFiles["Internet Explorer"].contents["iexplore.exe"]) {
+                        progFiles["Internet Explorer"].contents["iexplore.exe"] = { type: "exe", app: "ie-window", icon: "ie" };
                     }
-                    if (!progFiles["Microsoft FrontPage"] || !progFiles["Microsoft FrontPage"].contents) {
-                        progFiles["Microsoft FrontPage"] = { type: "folder", contents: { "frontpg.exe": { type: "exe", app: "frontpage-window", icon: "frontpage" } } };
+
+                    if (!progFiles["Windows NT"]) progFiles["Windows NT"] = { type: "folder", contents: {} };
+                    if (!progFiles["Windows NT"].contents["Accessories"]) progFiles["Windows NT"].contents["Accessories"] = { type: "folder", contents: {} };
+                    if (!progFiles["Windows NT"].contents["Accessories"].contents["wordpad.exe"]) {
+                        progFiles["Windows NT"].contents["Accessories"].contents["wordpad.exe"] = { type: "exe", app: "wordpad-window", icon: "wordpad" };
                     }
-                    if (!progFiles["Windows Media Player"] || !progFiles["Windows Media Player"].contents) {
-                        progFiles["Windows Media Player"] = { type: "folder", contents: { "wmplayer.exe": { type: "exe", app: "mediaplayer-window", icon: "media" } } };
+                    if (!progFiles["Windows NT"].contents["Pinball"]) progFiles["Windows NT"].contents["Pinball"] = { type: "folder", contents: {} };
+                    if (!progFiles["Windows NT"].contents["Pinball"].contents["pinball.exe"]) {
+                        progFiles["Windows NT"].contents["Pinball"].contents["pinball.exe"] = { type: "exe", app: "pinball-window", icon: "pinball" };
                     }
-                    if (!progFiles["Windows Defender"] || !progFiles["Windows Defender"].contents) {
-                        progFiles["Windows Defender"] = { type: "folder", contents: { "MSASCui.exe": { type: "exe", app: "defender-window", icon: "Windows XP Icons/Virus Protection.png" } } };
+
+                    if (!progFiles["Common Files"]) progFiles["Common Files"] = { type: "folder", contents: {} };
+                    if (!progFiles["Common Files"].contents["Microsoft Shared"]) progFiles["Common Files"].contents["Microsoft Shared"] = { type: "folder", contents: {} };
+                    if (!progFiles["Common Files"].contents["Microsoft Shared"].contents["MSInfo"]) progFiles["Common Files"].contents["Microsoft Shared"].contents["MSInfo"] = { type: "folder", contents: {} };
+                    if (!progFiles["Common Files"].contents["Microsoft Shared"].contents["MSInfo"].contents["msinfo32.exe"]) {
+                        progFiles["Common Files"].contents["Microsoft Shared"].contents["MSInfo"].contents["msinfo32.exe"] = { type: "exe", app: "sysinfo-window", icon: "sysinfo" };
+                    }
+
+                    if (!progFiles["Outlook Express"]) progFiles["Outlook Express"] = { type: "folder", contents: {} };
+                    if (!progFiles["Outlook Express"].contents["msimn.exe"]) {
+                        progFiles["Outlook Express"].contents["msimn.exe"] = { type: "exe", app: "email-window", icon: "outlook" };
+                    }
+
+                    if (!progFiles["Windows Media Player"]) progFiles["Windows Media Player"] = { type: "folder", contents: {} };
+                    if (!progFiles["Windows Media Player"].contents["wmplayer.exe"]) {
+                        progFiles["Windows Media Player"].contents["wmplayer.exe"] = { type: "exe", app: "mediaplayer-window", icon: "media" };
+                    }
+
+                    if (!progFiles["Microsoft FrontPage"]) progFiles["Microsoft FrontPage"] = { type: "folder", contents: {} };
+                    progFiles["Microsoft FrontPage"].contents["frontpage.exe"] = { type: "exe", app: "frontpage-window", icon: "frontpage" };
+                    progFiles["Microsoft FrontPage"].contents["frontpg.exe"] = { type: "exe", app: "frontpage-window", icon: "frontpage" };
+
+                    if (!progFiles["Microsoft Office"]) progFiles["Microsoft Office"] = { type: "folder", contents: {} };
+                    if (!progFiles["Microsoft Office"].contents["excel.exe"]) {
+                        progFiles["Microsoft Office"].contents["excel.exe"] = { type: "exe", app: "excel-window", icon: "excel" };
+                    }
+
+                    if (!progFiles["Messenger"]) progFiles["Messenger"] = { type: "folder", contents: {} };
+                    if (!progFiles["Messenger"].contents["msmsgs.exe"]) {
+                        progFiles["Messenger"].contents["msmsgs.exe"] = { type: "exe", app: "messenger-window", icon: "messenger" };
+                    }
+
+                    if (!progFiles["MSN Gaming Zone"]) progFiles["MSN Gaming Zone"] = { type: "folder", contents: {} };
+                    if (!progFiles["MSN Gaming Zone"].contents["Windows"]) progFiles["MSN Gaming Zone"].contents["Windows"] = { type: "folder", contents: {} };
+                    if (!progFiles["MSN Gaming Zone"].contents["Windows"].contents["spades.exe"]) {
+                        progFiles["MSN Gaming Zone"].contents["Windows"].contents["spades.exe"] = { type: "exe", app: "spades-window", icon: "spades" };
+                    }
+
+                    if (!progFiles["Internet Checkers"]) progFiles["Internet Checkers"] = { type: "folder", contents: {} };
+                    if (!progFiles["Internet Checkers"].contents["chkrs.exe"]) {
+                        progFiles["Internet Checkers"].contents["chkrs.exe"] = { type: "exe", app: "checkers-window", icon: "checkers" };
+                    }
+
+                    if (!progFiles["Internet Reversi"]) progFiles["Internet Reversi"] = { type: "folder", contents: {} };
+                    if (!progFiles["Internet Reversi"].contents["reversi.exe"]) {
+                        progFiles["Internet Reversi"].contents["reversi.exe"] = { type: "exe", app: "reversi-window", icon: "reversi" };
+                    }
+
+                    if (!progFiles["Tetris XP"]) progFiles["Tetris XP"] = { type: "folder", contents: {} };
+                    if (!progFiles["Tetris XP"].contents["tetris.exe"]) {
+                        progFiles["Tetris XP"].contents["tetris.exe"] = { type: "exe", app: "tetris-window", icon: "tetris" };
+                    }
+
+                    if (!progFiles["Data Miner"]) progFiles["Data Miner"] = { type: "folder", contents: {} };
+                    if (!progFiles["Data Miner"].contents["dataminer.exe"]) {
+                        progFiles["Data Miner"].contents["dataminer.exe"] = { type: "exe", app: "main-window", icon: "mouse" };
+                    }
+
+                    if (!progFiles["Windows Defender"]) progFiles["Windows Defender"] = { type: "folder", contents: {} };
+                    if (!progFiles["Windows Defender"].contents["MSASCui.exe"]) {
+                        progFiles["Windows Defender"].contents["MSASCui.exe"] = { type: "exe", app: "defender-window", icon: "Windows XP Icons/Virus Protection.png" };
                     }
                     
                 try {

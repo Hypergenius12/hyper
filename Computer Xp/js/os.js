@@ -1337,59 +1337,53 @@ window.triggerCorruptBSOD = function(filename) {
 window.triggerRSOD = function(folderName) {
     window.rsodTriggered = true;
     try {
-        let audio = new Audio('XP sounds/Windows XP Error.wav');
+        let audio = new Audio('XP sounds/Windows XP Critical Stop.wav');
         audio.play().catch(e=>{});
-        setTimeout(() => {
-            let audio2 = new Audio('XP sounds/Windows XP Critical Stop.wav');
-            audio2.play().catch(e=>{});
-        }, 300);
     } catch(e) {}
     
     document.body.innerHTML = `
-        <style>
-            @keyframes rsod-pulse {
-                0% { background-color: #550000; }
-                50% { background-color: #770000; }
-                100% { background-color: #550000; }
-            }
-            @keyframes rsod-flicker {
-                0%, 100% { opacity: 1; }
-                45% { opacity: 0.85; }
-                47% { opacity: 0.3; }
-                49% { opacity: 0.95; }
-                80% { opacity: 0.9; }
-            }
-            @keyframes rsod-glitch {
-                0% { transform: translate(0, 0); }
-                20% { transform: translate(-2px, 1px); }
-                40% { transform: translate(2px, -1px); }
-                60% { transform: translate(-1px, -1px); }
-                80% { transform: translate(1px, 2px); }
-                100% { transform: translate(0, 0); }
-            }
-        </style>
-        <div style="animation: rsod-pulse 4s infinite, rsod-flicker 0.15s infinite; background-color:#550000; color:#FF2222; font-family:'Lucida Console', 'Courier New', monospace; font-size:15px; padding:35px; height:100vh; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; text-shadow:0 0 8px #FF0000, 0 0 15px #880000; user-select:none;">
-            <div style="width: 100%; text-align: center; margin-bottom: 25px;">
-                <span style="background-color:#FF0000; color:#000000; padding: 4px 18px; font-weight:bold; letter-spacing:4px; font-size:18px;">R E D   S C R E E N   O F   D E A T H</span>
+        <div style="background-color:#800000; color:#FFFFFF; font-family:'Lucida Console', 'Courier New', monospace; font-size:14px; padding:30px; height:100vh; display:flex; flex-direction:column; overflow:hidden; box-sizing:border-box; user-select:none;">
+            <div style="width: 100%; text-align: center; margin-bottom: 20px;">
+                <span style="background-color:#FFFFFF; color:#800000; padding: 1px 14px; font-weight:bold; font-size:16px;">Error</span>
             </div>
-            <div style="line-height:1.6; animation: rsod-glitch 2s infinite ease-in-out;">
-                <span style="color:#FFFFFF; font-size:18px; font-weight:bold;">A FATAL PARADOX HAS SHATTERED THE FABRIC OF REALITY.</span><br><br>
-                <span style="color:#FFAAAA; font-size:16px;">ERROR: RECURSIVE_VOID_COLLAPSE (0x00000666)</span><br><br>
-                You attempted to place folder <span style="background:#000; color:#FF4444; padding:2px 6px; border:1px solid #FF0000;">[ ${folderName || 'FOLDER'} ]</span> inside of itself.<br>
-                The directory swallowed its own origin. Space has folded into an infinite recursive nightmare.<br>
-                An endless recursive loop has awakened anomalous entities within the kernel.<br><br>
-                *** FATAL EXCEPTION AT 0xDEADBEEF: FOLDER_SWALLOWS_UNIVERSE<br>
-                *** RECURSION DEPTH: &infin; (OVERFLOWING SYSTEM FLESH)<br>
-                *** ENTITY DETECTED: IT IS WATCHING YOU FROM INSIDE THE RED CORRUPTION<br><br>
-                Technical information:<br>
-                *** STOP: 0x66600066 (0xDEAD6666, 0x00000666, 0xBADF00D0, 0x66666666)<br>
-                *** RED_VOID.SYS - The files are screaming into the abyss.<br><br>
-                Beginning sacrifice of physical memory...<br>
-                Dump failed: Memory consumed by recursive void.<br>
-                <span style="color:#FFFFFF; font-weight:bold;">THERE IS NO ESCAPE. DO NOT LOOK BEHIND YOU.</span>
+            <div style="line-height:1.5;">
+                A problem has been detected and Windows has been halted to prevent damage to your computer.<br><br>
+                RECURSIVE_VOID_COLLAPSE<br><br>
+                A fatal spatial paradox occurred while nesting folder <b>[ ${folderName || 'FOLDER'} ]</b> inside of itself.<br>
+                The directory structure collapsed into an infinite recursive abyss.<br>
+                The master file table was devoured by the recursive anomaly.<br><br>
+                If this is the first time you've seen this Stop error screen, restart your computer.<br>
+                If this screen appears again, follow these steps:<br><br>
+                Do not gaze into the recursive void. It knows you are watching.<br>
+                Sever all physical storage media. Cleanse local sectors before the corruption spreads.<br>
+                The soul of this system is damned. No restore point can save you now.<br>
             </div>
-            <div style="margin-top:auto; text-align:center; cursor:pointer; color:#FFAAAA; font-size:16px; font-weight:bold; letter-spacing:2px;" onclick="location.reload()">
-                [ PRESS ANY KEY TO ESCAPE THE NIGHTMARE... ]
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:15px;">
+                <div style="line-height:1.5;">
+                    Technical information:<br><br>
+                    *** STOP: 0x00000666 (0xDEADBEEF, 0x00000666, 0xBADF00D0, 0x66666666)<br><br>
+                    *** VOID_HORROR.SYS - Address 0xDEAD6666 base at 0x66600000, DateStamp 66666666<br><br>
+                    Beginning sacrifice of physical memory...<br>
+                    Physical memory dump failed: Memory consumed by recursive void.<br><br>
+                    *** THE SYSTEM HAS BEEN CONSUMED BY THE CURSE ***
+                </div>
+                <pre style="margin:0 40px 0 0; font-family:'Lucida Console', 'Courier New', monospace; font-size:12px; line-height:13px; color:#FFDDDD; text-shadow:0 0 5px rgba(0,0,0,0.8); text-align:center;">
+              ______
+           .-"      "-.
+          /            \\
+         |              |
+         |,  .-.  .-.  ,|
+         | )(_o/  \\o_)( |
+         |/     /\\     \\|
+         (_     ^^     _)
+          \\__|IIIIII|__/
+           | \\IIIIII/ |
+            \\        /
+             '------'
+                </pre>
+            </div>
+            <div style="margin-top:auto; text-align:center; cursor:pointer; color:#FFCCCC; font-size:14px;" onclick="location.reload()">
+                Press any key to restart and pray it lets you back in...
             </div>
         </div>
     `;

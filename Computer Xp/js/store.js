@@ -738,7 +738,7 @@ window.findStoreApp = function(query) {
     );
 };
 
-const DEFAULT_UNINSTALLED_APPS = ['checkers', 'reversi', 'hearts', 'spades', 'freecell', 'messenger', 'excel', 'remotedesktop'];
+const DEFAULT_UNINSTALLED_APPS = [];
 
 // Storage for uninstalled apps
 window.getUninstalledApps = function() {
@@ -747,11 +747,18 @@ window.getUninstalledApps = function() {
         if (saved !== null) {
             let list = JSON.parse(saved);
             if (Array.isArray(list)) {
+                // If user had the old default uninstalled apps list from earlier bug, clear them
+                let oldDefault = ['checkers', 'reversi', 'hearts', 'spades', 'freecell', 'messenger', 'excel', 'remotedesktop'];
+                if (!localStorage.getItem('xp_uninstalled_migrated_v3')) {
+                    list = list.filter(x => !oldDefault.includes(x));
+                    localStorage.setItem('xp_uninstalled_apps', JSON.stringify(list));
+                    localStorage.setItem('xp_uninstalled_migrated_v3', 'true');
+                }
                 return list.filter(x => x !== 'xptour' && x !== 'Tour Windows XP' && x !== 'xptour-window');
             }
         }
     } catch(e) {}
-    return [...DEFAULT_UNINSTALLED_APPS];
+    return [];
 };
 
 window.setUninstalledApps = function(list) {
@@ -763,98 +770,148 @@ window.setUninstalledApps = function(list) {
 // Universal isAppInstalled check
 window.isAppInstalled = function(app) {
     if (!app) return false;
-    let sApp = window.findStoreApp(app);
+
+    // Core system shells are always installed
+    let systemShells = [
+        'store-window', 'folder-window', 'settings-window', 'controlpanel-window',
+        'printers-window', 'help-window', 'search-window', 'run-window',
+        'fontview-window', 'print-queue-window', 'display-props-window',
+        'email-compose-window', 'properties-window', 'datetime-window'
+    ];
+    if (typeof app === 'string' && systemShells.includes(app)) {
+        return true;
+    }
+
+    let sApp = typeof window.findStoreApp === 'function' ? window.findStoreApp(app) : null;
     let appName = sApp ? sApp.name : (typeof app === 'string' ? app : (app.name || ''));
     let appId = sApp ? sApp.id : '';
+    let windowId = sApp ? sApp.appId : (typeof app === 'string' && app.endsWith('-window') ? app : '');
 
     // Check recycle bin
-    if (typeof window.isAppInRecycler === 'function' && (window.isAppInRecycler(appName) || (appId && window.isAppInRecycler(appId)))) {
+    if (typeof window.isAppInRecycler === 'function' && (
+        window.isAppInRecycler(appName) || 
+        (appId && window.isAppInRecycler(appId)) ||
+        (windowId && window.isAppInRecycler(windowId))
+    )) {
         return false;
     }
 
     // Check uninstalled list
-    let uninstalled = window.getUninstalledApps();
-    if (uninstalled.includes(appId) || uninstalled.includes(appName) || (sApp && uninstalled.includes(sApp.appId))) {
+    let uninstalled = typeof window.getUninstalledApps === 'function' ? window.getUninstalledApps() : [];
+    if (
+        (appId && uninstalled.includes(appId)) ||
+        (appName && uninstalled.includes(appName)) ||
+        (windowId && uninstalled.includes(windowId)) ||
+        (sApp && sApp.exe && uninstalled.includes(sApp.exe))
+    ) {
         return false;
     }
 
-    // Check physical existence in filesystem
-    let appPaths = {
-        'Notepad': 'C:\\Windows\\System32\\notepad.exe',
-        'notepad-window': 'C:\\Windows\\System32\\notepad.exe',
-        'WordPad': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
-        'wordpad-window': 'C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe',
-        'Paint': 'C:\\Windows\\System32\\mspaint.exe',
-        'paint-window': 'C:\\Windows\\System32\\mspaint.exe',
-        'Calculator': 'C:\\Windows\\System32\\calc.exe',
-        'calc-window': 'C:\\Windows\\System32\\calc.exe',
-        'Character Map': 'C:\\Windows\\System32\\charmap.exe',
-        'charmap-window': 'C:\\Windows\\System32\\charmap.exe',
-        'Sound Recorder': 'C:\\Windows\\System32\\sndrec32.exe',
-        'soundrecorder-window': 'C:\\Windows\\System32\\sndrec32.exe',
-        'Clipboard Viewer': 'C:\\Windows\\System32\\clipbrd.exe',
-        'clipbook-window': 'C:\\Windows\\System32\\clipbrd.exe',
-        'Minesweeper': 'C:\\Windows\\System32\\winmine.exe',
-        'minesweeper-window': 'C:\\Windows\\System32\\winmine.exe',
-        'Solitaire': 'C:\\Windows\\System32\\sol.exe',
-        'solitaire-window': 'C:\\Windows\\System32\\sol.exe',
-        'FreeCell': 'C:\\Windows\\System32\\freecell.exe',
-        'freecell-window': 'C:\\Windows\\System32\\freecell.exe',
-        'Hearts': 'C:\\Windows\\System32\\mshearts.exe',
-        'hearts-window': 'C:\\Windows\\System32\\mshearts.exe',
-        'Internet Spades': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
-        'spades-window': 'C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe',
-        'Internet Checkers': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
-        'checkers-window': 'C:\\Program Files\\Internet Checkers\\chkrs.exe',
-        'Internet Reversi': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
-        'reversi-window': 'C:\\Program Files\\Internet Reversi\\reversi.exe',
-        '3D Pinball': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
-        'pinball-window': 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe',
-        'Disk Defragmenter': 'C:\\Windows\\System32\\dfrg.msc',
-        'defrag-window': 'C:\\Windows\\System32\\dfrg.msc',
-        'System Information': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
-        'sysinfo-window': 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe',
-        'Registry Editor': 'C:\\Windows\\regedit.exe',
-        'regedit-window': 'C:\\Windows\\regedit.exe',
-        'Task Manager': 'C:\\Windows\\System32\\taskmgr.exe',
-        'taskmgr-window': 'C:\\Windows\\System32\\taskmgr.exe',
-        'Command Prompt': 'C:\\Windows\\System32\\cmd.exe',
-        'cmd-window': 'C:\\Windows\\System32\\cmd.exe',
-        'Internet Explorer': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
-        'ie-window': 'C:\\Program Files\\Internet Explorer\\iexplore.exe',
-        'Outlook Express': 'C:\\Program Files\\Outlook Express\\msimn.exe',
-        'email-window': 'C:\\Program Files\\Outlook Express\\msimn.exe',
-        'Windows Media Player': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
-        'mediaplayer-window': 'C:\\Program Files\\Windows Media Player\\wmplayer.exe',
-        'Windows Messenger': 'C:\\Program Files\\Messenger\\msmsgs.exe',
-        'messenger-window': 'C:\\Program Files\\Messenger\\msmsgs.exe',
-        'Remote Desktop': 'C:\\Windows\\System32\\mstsc.exe',
-        'remotedesktop-window': 'C:\\Windows\\System32\\mstsc.exe',
-        'Tour Windows XP': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
-        'xptour-window': 'C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe',
-        'Photon Picture Viewer': 'C:\\Windows\\System32\\photon.exe',
-        'photon-window': 'C:\\Windows\\System32\\photon.exe',
-        'Control Panel': 'C:\\Windows\\System32\\control.exe',
-        'controlpanel-window': 'C:\\Windows\\System32\\control.exe',
-        'Printers and Faxes': 'C:\\Windows\\System32\\printers.exe',
-        'printers-window': 'C:\\Windows\\System32\\printers.exe',
-        'Help and Support': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
-        'help-window': 'C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe',
-        'Microsoft FrontPage': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
-        'frontpage-window': 'C:\\Program Files\\Microsoft FrontPage\\frontpage.exe',
-        'Microsoft Excel': 'C:\\Program Files\\Microsoft Office\\excel.exe',
-        'excel-window': 'C:\\Program Files\\Microsoft Office\\excel.exe'
+    // Comprehensive mapping of application locations
+    let appPathCandidates = {
+        'Notepad': ['C:\\Windows\\System32\\notepad.exe', 'C:\\WINDOWS\\system32\\notepad.exe'],
+        'notepad-window': ['C:\\Windows\\System32\\notepad.exe', 'C:\\WINDOWS\\system32\\notepad.exe'],
+        'WordPad': ['C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe', 'C:\\Program Files\\WordPad\\wordpad.exe', 'C:\\Windows\\System32\\wordpad.exe'],
+        'wordpad-window': ['C:\\Program Files\\Windows NT\\Accessories\\wordpad.exe', 'C:\\Program Files\\WordPad\\wordpad.exe', 'C:\\Windows\\System32\\wordpad.exe'],
+        'Paint': ['C:\\Windows\\System32\\mspaint.exe', 'C:\\WINDOWS\\system32\\mspaint.exe'],
+        'paint-window': ['C:\\Windows\\System32\\mspaint.exe', 'C:\\WINDOWS\\system32\\mspaint.exe'],
+        'Calculator': ['C:\\Windows\\System32\\calc.exe', 'C:\\WINDOWS\\system32\\calc.exe'],
+        'calc-window': ['C:\\Windows\\System32\\calc.exe', 'C:\\WINDOWS\\system32\\calc.exe'],
+        'Character Map': ['C:\\Windows\\System32\\charmap.exe', 'C:\\WINDOWS\\system32\\charmap.exe'],
+        'charmap-window': ['C:\\Windows\\System32\\charmap.exe', 'C:\\WINDOWS\\system32\\charmap.exe'],
+        'Sound Recorder': ['C:\\Windows\\System32\\sndrec32.exe', 'C:\\WINDOWS\\system32\\sndrec32.exe'],
+        'soundrecorder-window': ['C:\\Windows\\System32\\sndrec32.exe', 'C:\\WINDOWS\\system32\\sndrec32.exe'],
+        'Clipboard Viewer': ['C:\\Windows\\System32\\clipbrd.exe', 'C:\\WINDOWS\\system32\\clipbrd.exe'],
+        'clipbook-window': ['C:\\Windows\\System32\\clipbrd.exe', 'C:\\WINDOWS\\system32\\clipbrd.exe'],
+        'Minesweeper': ['C:\\Windows\\System32\\winmine.exe', 'C:\\WINDOWS\\system32\\winmine.exe', 'C:\\Program Files\\Games\\Minesweeper.lnk', 'C:\\Program Files\\Minesweeper\\winmine.exe'],
+        'minesweeper-window': ['C:\\Windows\\System32\\winmine.exe', 'C:\\WINDOWS\\system32\\winmine.exe', 'C:\\Program Files\\Games\\Minesweeper.lnk', 'C:\\Program Files\\Minesweeper\\winmine.exe'],
+        'Solitaire': ['C:\\Windows\\System32\\sol.exe', 'C:\\WINDOWS\\system32\\sol.exe', 'C:\\Program Files\\Games\\Solitaire.lnk', 'C:\\Program Files\\Solitaire\\sol.exe'],
+        'solitaire-window': ['C:\\Windows\\System32\\sol.exe', 'C:\\WINDOWS\\system32\\sol.exe', 'C:\\Program Files\\Games\\Solitaire.lnk', 'C:\\Program Files\\Solitaire\\sol.exe'],
+        'FreeCell': ['C:\\Windows\\System32\\freecell.exe', 'C:\\WINDOWS\\system32\\freecell.exe', 'C:\\Program Files\\FreeCell\\freecell.exe'],
+        'freecell-window': ['C:\\Windows\\System32\\freecell.exe', 'C:\\WINDOWS\\system32\\freecell.exe', 'C:\\Program Files\\FreeCell\\freecell.exe'],
+        'Hearts': ['C:\\Windows\\System32\\mshearts.exe', 'C:\\WINDOWS\\system32\\mshearts.exe', 'C:\\Program Files\\Internet Hearts\\mshearts.exe', 'C:\\Program Files\\Hearts\\mshearts.exe'],
+        'Internet Hearts': ['C:\\Windows\\System32\\mshearts.exe', 'C:\\WINDOWS\\system32\\mshearts.exe', 'C:\\Program Files\\Internet Hearts\\mshearts.exe', 'C:\\Program Files\\Hearts\\mshearts.exe'],
+        'hearts-window': ['C:\\Windows\\System32\\mshearts.exe', 'C:\\WINDOWS\\system32\\mshearts.exe', 'C:\\Program Files\\Internet Hearts\\mshearts.exe', 'C:\\Program Files\\Hearts\\mshearts.exe'],
+        'Internet Spades': ['C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe', 'C:\\Program Files\\Internet Spades\\spades.exe', 'C:\\Windows\\System32\\spades.exe'],
+        'spades-window': ['C:\\Program Files\\MSN Gaming Zone\\Windows\\spades.exe', 'C:\\Program Files\\Internet Spades\\spades.exe', 'C:\\Windows\\System32\\spades.exe'],
+        'Internet Checkers': ['C:\\Program Files\\Internet Checkers\\chkrs.exe', 'C:\\Windows\\System32\\chkrs.exe'],
+        'checkers-window': ['C:\\Program Files\\Internet Checkers\\chkrs.exe', 'C:\\Windows\\System32\\chkrs.exe'],
+        'Internet Reversi': ['C:\\Program Files\\Internet Reversi\\reversi.exe', 'C:\\Windows\\System32\\reversi.exe'],
+        'reversi-window': ['C:\\Program Files\\Internet Reversi\\reversi.exe', 'C:\\Windows\\System32\\reversi.exe'],
+        '3D Pinball': ['C:\\Windows\\System32\\pinball.exe', 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe', 'C:\\Program Files\\3D Pinball\\pinball.exe', 'C:\\Program Files\\Games\\3D Pinball for Windows.lnk'],
+        'pinball-window': ['C:\\Windows\\System32\\pinball.exe', 'C:\\Program Files\\Windows NT\\Pinball\\pinball.exe', 'C:\\Program Files\\3D Pinball\\pinball.exe', 'C:\\Program Files\\Games\\3D Pinball for Windows.lnk'],
+        'Disk Defragmenter': ['C:\\Windows\\System32\\dfrg.msc', 'C:\\WINDOWS\\system32\\dfrg.msc', 'C:\\Program Files\\Disk Defragmenter\\dfrg.msc'],
+        'defrag-window': ['C:\\Windows\\System32\\dfrg.msc', 'C:\\WINDOWS\\system32\\dfrg.msc', 'C:\\Program Files\\Disk Defragmenter\\dfrg.msc'],
+        'System Information': ['C:\\Windows\\System32\\msinfo32.exe', 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe', 'C:\\Program Files\\System Information\\msinfo32.exe'],
+        'sysinfo-window': ['C:\\Windows\\System32\\msinfo32.exe', 'C:\\Program Files\\Common Files\\Microsoft Shared\\MSInfo\\msinfo32.exe', 'C:\\Program Files\\System Information\\msinfo32.exe'],
+        'Registry Editor': ['C:\\Windows\\System32\\regedit.exe', 'C:\\Windows\\regedit.exe', 'C:\\WINDOWS\\regedit.exe'],
+        'regedit-window': ['C:\\Windows\\System32\\regedit.exe', 'C:\\Windows\\regedit.exe', 'C:\\WINDOWS\\regedit.exe'],
+        'Task Manager': ['C:\\Windows\\System32\\taskmgr.exe', 'C:\\WINDOWS\\system32\\taskmgr.exe'],
+        'taskmgr-window': ['C:\\Windows\\System32\\taskmgr.exe', 'C:\\WINDOWS\\system32\\taskmgr.exe'],
+        'Command Prompt': ['C:\\Windows\\System32\\cmd.exe', 'C:\\WINDOWS\\system32\\cmd.exe'],
+        'cmd-window': ['C:\\Windows\\System32\\cmd.exe', 'C:\\WINDOWS\\system32\\cmd.exe'],
+        'Internet Explorer': ['C:\\Program Files\\Internet Explorer\\iexplore.exe', 'C:\\Windows\\System32\\iexplore.exe'],
+        'ie-window': ['C:\\Program Files\\Internet Explorer\\iexplore.exe', 'C:\\Windows\\System32\\iexplore.exe'],
+        'Outlook Express': ['C:\\Program Files\\Outlook Express\\msimn.exe', 'C:\\Windows\\System32\\msimn.exe'],
+        'email-window': ['C:\\Program Files\\Outlook Express\\msimn.exe', 'C:\\Windows\\System32\\msimn.exe'],
+        'Windows Media Player': ['C:\\Program Files\\Windows Media Player\\wmplayer.exe', 'C:\\Windows\\System32\\wmplayer.exe'],
+        'mediaplayer-window': ['C:\\Program Files\\Windows Media Player\\wmplayer.exe', 'C:\\Windows\\System32\\wmplayer.exe'],
+        'Windows Messenger': ['C:\\Program Files\\Messenger\\msmsgs.exe', 'C:\\Program Files\\Windows Messenger\\msmsgs.exe', 'C:\\Windows\\System32\\msmsgs.exe'],
+        'messenger-window': ['C:\\Program Files\\Messenger\\msmsgs.exe', 'C:\\Program Files\\Windows Messenger\\msmsgs.exe', 'C:\\Windows\\System32\\msmsgs.exe'],
+        'Remote Desktop': ['C:\\Windows\\System32\\mstsc.exe', 'C:\\WINDOWS\\system32\\mstsc.exe', 'C:\\Program Files\\Remote Desktop\\mstsc.exe'],
+        'remotedesktop-window': ['C:\\Windows\\System32\\mstsc.exe', 'C:\\WINDOWS\\system32\\mstsc.exe', 'C:\\Program Files\\Remote Desktop\\mstsc.exe'],
+        'mstsc-window': ['C:\\Windows\\System32\\mstsc.exe', 'C:\\WINDOWS\\system32\\mstsc.exe', 'C:\\Program Files\\Remote Desktop\\mstsc.exe'],
+        'Tour Windows XP': ['C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe', 'C:\\WINDOWS\\Help\\Tours\\htmlTour\\tour.exe', 'C:\\Windows\\System32\\tour.exe'],
+        'xptour-window': ['C:\\Windows\\Help\\Tours\\htmlTour\\tour.exe', 'C:\\WINDOWS\\Help\\Tours\\htmlTour\\tour.exe', 'C:\\Windows\\System32\\tour.exe'],
+        'Photon Picture Viewer': ['C:\\Windows\\System32\\photon.exe', 'C:\\WINDOWS\\system32\\photon.exe', 'C:\\Program Files\\Photon\\photon.exe'],
+        'photon-window': ['C:\\Windows\\System32\\photon.exe', 'C:\\WINDOWS\\system32\\photon.exe', 'C:\\Program Files\\Photon\\photon.exe'],
+        'Control Panel': ['C:\\Windows\\System32\\control.exe', 'C:\\WINDOWS\\system32\\control.exe'],
+        'controlpanel-window': ['C:\\Windows\\System32\\control.exe', 'C:\\WINDOWS\\system32\\control.exe'],
+        'Printers and Faxes': ['C:\\Windows\\System32\\printers.exe', 'C:\\WINDOWS\\system32\\printers.exe'],
+        'printers-window': ['C:\\Windows\\System32\\printers.exe', 'C:\\WINDOWS\\system32\\printers.exe'],
+        'Help and Support': ['C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe', 'C:\\WINDOWS\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe', 'C:\\Windows\\System32\\helpctr.exe'],
+        'help-window': ['C:\\Windows\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe', 'C:\\WINDOWS\\PCHealth\\HelpCtr\\Binaries\\helpctr.exe', 'C:\\Windows\\System32\\helpctr.exe'],
+        'Microsoft FrontPage': ['C:\\Program Files\\Microsoft FrontPage\\frontpage.exe', 'C:\\Program Files\\Microsoft FrontPage\\frontpg.exe'],
+        'frontpage-window': ['C:\\Program Files\\Microsoft FrontPage\\frontpage.exe', 'C:\\Program Files\\Microsoft FrontPage\\frontpg.exe'],
+        'Microsoft Excel': ['C:\\Program Files\\Microsoft Office\\excel.exe', 'C:\\Program Files\\Microsoft Excel\\excel.exe', 'C:\\Windows\\System32\\excel.exe'],
+        'excel-window': ['C:\\Program Files\\Microsoft Office\\excel.exe', 'C:\\Program Files\\Microsoft Excel\\excel.exe', 'C:\\Windows\\System32\\excel.exe'],
+        'Tetris XP': ['C:\\Program Files\\Tetris XP\\tetris.exe', 'C:\\Program Files\\Games\\tetris.exe', 'C:\\Program Files\\Games\\Tetris XP.lnk'],
+        'tetris-window': ['C:\\Program Files\\Tetris XP\\tetris.exe', 'C:\\Program Files\\Games\\tetris.exe', 'C:\\Program Files\\Games\\Tetris XP.lnk'],
+        'Data Miner': ['C:\\Program Files\\Data Miner\\dataminer.exe', 'C:\\Windows\\System32\\dataminer.exe'],
+        'main-window': ['C:\\Program Files\\Data Miner\\dataminer.exe', 'C:\\Windows\\System32\\dataminer.exe'],
+        'Windows Defender': ['C:\\Program Files\\Windows Defender\\MSASCui.exe', 'C:\\Program Files\\Windows Defender\\defender.exe', 'C:\\Windows\\System32\\MSASCui.exe'],
+        'defender-window': ['C:\\Program Files\\Windows Defender\\MSASCui.exe', 'C:\\Program Files\\Windows Defender\\defender.exe', 'C:\\Windows\\System32\\MSASCui.exe']
     };
 
-    let target = appPaths[appName] || (appId && appPaths[appId]) || (typeof app === 'string' && appPaths[app]);
-    if (target && typeof window.resolvePath === 'function') {
-        let parentDir = target.substring(0, target.lastIndexOf("\\"));
-        let exeName = target.substring(target.lastIndexOf("\\") + 1);
-        let node = window.resolvePath(parentDir);
-        if (!node || !node[exeName]) return false;
+    let lookupKeys = [appName, appId, windowId, typeof app === 'string' ? app : ''];
+    let candidatePaths = [];
+    for (let k of lookupKeys) {
+        if (k && appPathCandidates[k]) {
+            candidatePaths = appPathCandidates[k];
+            break;
+        }
     }
 
-    return true;
+    if (candidatePaths.length > 0 && typeof window.resolvePath === 'function') {
+        let exists = candidatePaths.some(p => {
+            let parentDir = p.substring(0, p.lastIndexOf("\\"));
+            let exeName = p.substring(p.lastIndexOf("\\") + 1);
+            let node = window.resolvePath(parentDir);
+            return !!(node && node[exeName]);
+        });
+        if (exists) return true;
+    }
+
+    // Also check generic C:\Program Files\[appName]
+    if (appName && typeof window.resolvePath === 'function') {
+        let pfNode = window.resolvePath("C:\\Program Files");
+        if (pfNode && (pfNode[appName] || pfNode[appName + '.exe'])) return true;
+    }
+
+    // Core system apps default to true if not deleted
+    if (sApp && sApp.systemApp) return true;
+
+    return false;
 };
 
 // Open the catalog directly on a specific app's detail page
@@ -1336,41 +1393,120 @@ window.installApp = function(appId) {
 };
 
 function executeInstall(app) {
+    let sApp = window.findStoreApp(app) || app;
+    
     // 1. Remove from uninstalled state
     let uninstalled = window.getUninstalledApps();
-    uninstalled = uninstalled.filter(x => x !== app.id && x !== app.name && x !== app.appId && x !== app.exe);
+    uninstalled = uninstalled.filter(x => 
+        x !== sApp.id && x !== sApp.name && x !== sApp.appId && x !== sApp.exe &&
+        x !== app.id && x !== app.name && x !== app.appId && x !== app.exe
+    );
     window.setUninstalledApps(uninstalled);
 
-    // 2. Ensure desktop shortcut exists
-    let deskNode = window.resolvePath(window.getDesktopPath());
-    let rawBytes = parseSizeString(app.size) || 0;
-    if (deskNode) {
-        deskNode[app.shortcut] = { type: "exe", app: app.appId, icon: app.icon };
+    // 2. Remove any match from C:\RECYCLER
+    let recycler = window.resolvePath("C:\\RECYCLER");
+    if (recycler) {
+        let toDelete = [];
+        for (let k in recycler) {
+            let kLower = k.toLowerCase();
+            if (
+                kLower === sApp.name.toLowerCase() ||
+                kLower === (sApp.name.toLowerCase() + '.lnk') ||
+                kLower === (sApp.shortcut ? sApp.shortcut.toLowerCase() : '') ||
+                kLower === (sApp.exe ? sApp.exe.toLowerCase() : '')
+            ) {
+                toDelete.push(k);
+            }
+        }
+        toDelete.forEach(k => delete recycler[k]);
     }
-    
-    // 3. Ensure Program Files folder & exe exists
+
+    // 3. Ensure desktop shortcut exists
+    let deskNode = window.resolvePath(window.getDesktopPath());
+    let rawBytes = parseSizeString(sApp.size) || 102400;
+    if (deskNode) {
+        deskNode[sApp.shortcut || (sApp.name + '.lnk')] = { type: "exe", app: sApp.appId, icon: sApp.icon };
+    }
+
+    // 4. Ensure Program Files folder & exe exists
     let pfNode = window.resolvePath("C:\\Program Files");
     if(pfNode) {
-        if(!pfNode[app.name]) {
-            pfNode[app.name] = { type: 'folder', contents: {} };
+        if(!pfNode[sApp.name]) {
+            pfNode[sApp.name] = { type: 'folder', contents: {} };
         }
-        if (pfNode[app.name].contents) {
-            pfNode[app.name].contents[app.exe] = { type: "exe", app: app.appId, icon: app.icon, sizeRaw: rawBytes };
+        if (pfNode[sApp.name].contents) {
+            pfNode[sApp.name].contents[sApp.exe] = { type: "exe", app: sApp.appId, icon: sApp.icon, sizeRaw: rawBytes };
         } else {
-            pfNode[app.name][app.exe] = { type: "exe", app: app.appId, icon: app.icon, sizeRaw: rawBytes };
+            pfNode[sApp.name][sApp.exe] = { type: "exe", app: sApp.appId, icon: sApp.icon, sizeRaw: rawBytes };
         }
+    }
+
+    // 5. Restore primary locations if needed
+    if (sApp.id === 'excel' || sApp.appId === 'excel-window') {
+        let offDir = window.resolvePath("C:\\Program Files\\Microsoft Office");
+        if (!offDir && pfNode) {
+            pfNode["Microsoft Office"] = { type: 'folder', contents: {} };
+            offDir = pfNode["Microsoft Office"].contents;
+        }
+        if (offDir) offDir["excel.exe"] = { type: "exe", app: "excel-window", icon: sApp.icon, sizeRaw: rawBytes };
+    } else if (sApp.id === 'wordpad' || sApp.appId === 'wordpad-window') {
+        let ntDir = window.resolvePath("C:\\Program Files\\Windows NT\\Accessories");
+        if (ntDir) ntDir["wordpad.exe"] = { type: "exe", app: "wordpad-window", icon: "wordpad", sizeRaw: rawBytes };
+    } else if (sApp.id === 'pinball' || sApp.appId === 'pinball-window') {
+        let sys32 = window.resolvePath("C:\\Windows\\System32");
+        if (sys32) sys32["pinball.exe"] = { type: "exe", app: "pinball-window", icon: "pinball", sizeRaw: rawBytes };
+        let pbDir = window.resolvePath("C:\\Program Files\\Windows NT\\Pinball");
+        if (pbDir) pbDir["pinball.exe"] = { type: "exe", app: "pinball-window", icon: "pinball", sizeRaw: rawBytes };
+    } else if (sApp.id === 'frontpage' || sApp.appId === 'frontpage-window') {
+        let fpDir = window.resolvePath("C:\\Program Files\\Microsoft FrontPage");
+        if (fpDir) {
+            fpDir["frontpage.exe"] = { type: "exe", app: "frontpage-window", icon: "frontpage", sizeRaw: rawBytes };
+            fpDir["frontpg.exe"] = { type: "exe", app: "frontpage-window", icon: "frontpage", sizeRaw: rawBytes };
+        }
+    } else if (sApp.id === 'freecell' || sApp.id === 'hearts' || sApp.id === 'remotedesktop') {
+        let sys32 = window.resolvePath("C:\\Windows\\System32");
+        if (sys32) sys32[sApp.exe] = { type: "exe", app: sApp.appId, icon: sApp.icon, sizeRaw: rawBytes };
+    } else if (sApp.id === 'spades') {
+        let msnDir = window.resolvePath("C:\\Program Files\\MSN Gaming Zone\\Windows");
+        if (!msnDir && pfNode) {
+            if (!pfNode["MSN Gaming Zone"]) pfNode["MSN Gaming Zone"] = { type: 'folder', contents: {} };
+            if (!pfNode["MSN Gaming Zone"].contents["Windows"]) pfNode["MSN Gaming Zone"].contents["Windows"] = { type: 'folder', contents: {} };
+            msnDir = pfNode["MSN Gaming Zone"].contents["Windows"].contents;
+        }
+        if (msnDir) msnDir["spades.exe"] = { type: "exe", app: "spades-window", icon: sApp.icon, sizeRaw: rawBytes };
+    } else if (sApp.id === 'checkers') {
+        let chkDir = window.resolvePath("C:\\Program Files\\Internet Checkers");
+        if (!chkDir && pfNode) {
+            pfNode["Internet Checkers"] = { type: 'folder', contents: {} };
+            chkDir = pfNode["Internet Checkers"].contents;
+        }
+        if (chkDir) chkDir["chkrs.exe"] = { type: "exe", app: "checkers-window", icon: sApp.icon, sizeRaw: rawBytes };
+    } else if (sApp.id === 'reversi') {
+        let revDir = window.resolvePath("C:\\Program Files\\Internet Reversi");
+        if (!revDir && pfNode) {
+            pfNode["Internet Reversi"] = { type: 'folder', contents: {} };
+            revDir = pfNode["Internet Reversi"].contents;
+        }
+        if (revDir) revDir["reversi.exe"] = { type: "exe", app: "reversi-window", icon: sApp.icon, sizeRaw: rawBytes };
+    } else if (sApp.id === 'messenger') {
+        let msgDir = window.resolvePath("C:\\Program Files\\Messenger");
+        if (!msgDir && pfNode) {
+            pfNode["Messenger"] = { type: 'folder', contents: {} };
+            msgDir = pfNode["Messenger"].contents;
+        }
+        if (msgDir) msgDir["msmsgs.exe"] = { type: "exe", app: "messenger-window", icon: sApp.icon, sizeRaw: rawBytes };
     }
 
     if (typeof window.saveFileSystem === 'function') window.saveFileSystem();
     if (typeof window.renderDesktop === 'function') window.renderDesktop();
     
-    let startItem = document.getElementById('start-menu-' + app.id);
+    let startItem = document.getElementById('start-menu-' + sApp.id);
     if(startItem) startItem.style.display = 'block';
-    let smItem = document.querySelector('.start-menu-item[data-name="' + app.name + '"]');
+    let smItem = document.querySelector('.start-menu-item[data-name="' + sApp.name + '"]');
     if(smItem) smItem.style.display = 'block';
 
     renderStore();
-    if(typeof window.showBalloon === 'function') window.showBalloon("Installation Complete", `${app.name} has been successfully installed.`);
+    if(typeof window.showBalloon === 'function') window.showBalloon("Installation Complete", `${sApp.name} has been successfully installed.`);
     if(typeof window.syncStartMenuWithInstalledApps === 'function') window.syncStartMenuWithInstalledApps();
 }
 
@@ -1410,6 +1546,30 @@ window.uninstallApp = function(appId) {
     let sys32Node = window.resolvePath("C:\\Windows\\System32");
     if(sys32Node && sys32Node[app.exe]) {
         delete sys32Node[app.exe];
+    }
+
+    // 6. Delete from primary subfolders
+    if (app.id === 'excel') {
+        let offDir = window.resolvePath("C:\\Program Files\\Microsoft Office");
+        if (offDir && offDir["excel.exe"]) delete offDir["excel.exe"];
+    } else if (app.id === 'wordpad') {
+        let ntDir = window.resolvePath("C:\\Program Files\\Windows NT\\Accessories");
+        if (ntDir && ntDir["wordpad.exe"]) delete ntDir["wordpad.exe"];
+    } else if (app.id === 'pinball') {
+        let pbDir = window.resolvePath("C:\\Program Files\\Windows NT\\Pinball");
+        if (pbDir && pbDir["pinball.exe"]) delete pbDir["pinball.exe"];
+    } else if (app.id === 'spades') {
+        let msnDir = window.resolvePath("C:\\Program Files\\MSN Gaming Zone\\Windows");
+        if (msnDir && msnDir["spades.exe"]) delete msnDir["spades.exe"];
+    } else if (app.id === 'checkers') {
+        let chkDir = window.resolvePath("C:\\Program Files\\Internet Checkers");
+        if (chkDir && chkDir["chkrs.exe"]) delete chkDir["chkrs.exe"];
+    } else if (app.id === 'reversi') {
+        let revDir = window.resolvePath("C:\\Program Files\\Internet Reversi");
+        if (revDir && revDir["reversi.exe"]) delete revDir["reversi.exe"];
+    } else if (app.id === 'messenger') {
+        let msgDir = window.resolvePath("C:\\Program Files\\Messenger");
+        if (msgDir && msgDir["msmsgs.exe"]) delete msgDir["msmsgs.exe"];
     }
 
     if (typeof window.saveFileSystem === 'function') window.saveFileSystem();
