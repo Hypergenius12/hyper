@@ -15,8 +15,8 @@ export class InputManager {
     constructor() {
         this.keys = { forward: false, backward: false, left: false, right: false, jump: false, sprint: false, crouch: false };
         this.mouse = { dx: 0, dy: 0, leftClick: false, rightClick: false, scrollDelta: 0 };
-        this.menuKeys = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false };
-        this._menuKeysDown = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false };
+        this.menuKeys = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false, togglePerspective: false };
+        this._menuKeysDown = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false, togglePerspective: false };
         this.hotbarIndex = -1;
         this.isLocked = false;
         this.canvas = null;
@@ -189,7 +189,11 @@ export class InputManager {
                 if (!this._menuKeysDown.pause) { this.menuKeys.pause = true; this._menuKeysDown.pause = true; }
                 break;
             case 'F3':
-                if (!this._menuKeysDown.debug) { this.menuKeys.debug = true; this._menuKeysDown.debug = true; }
+            case 'F5':
+                if (!this._menuKeysDown.togglePerspective) { 
+                    this.menuKeys.togglePerspective = true; 
+                    this._menuKeysDown.togglePerspective = true; 
+                }
                 break;
             case 'KeyQ':
                 if (!this._menuKeysDown.dropItem) { this.menuKeys.dropItem = true; this._menuKeysDown.dropItem = true; }
@@ -222,7 +226,8 @@ export class InputManager {
             case 'KeyP': this._menuKeysDown.planet = false; break;
             case 'KeyM': this._menuKeysDown.map = false; break;
             case 'Escape': this._menuKeysDown.pause = false; break;
-            case 'F3': case 'ControlLeft': case 'ControlRight': this._menuKeysDown.debug = false; break;
+            case 'F3': case 'F5': this._menuKeysDown.togglePerspective = false; break;
+            case 'ControlLeft': case 'ControlRight': this._menuKeysDown.debug = false; break;
             case 'KeyQ': this._menuKeysDown.dropItem = false; break;
             case 'KeyU': this._menuKeysDown.devMode = false; break;
             case 'KeyC': this._menuKeysDown.creative = false; break;

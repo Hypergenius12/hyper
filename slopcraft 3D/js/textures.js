@@ -158,7 +158,8 @@ export const BLOCKS = {
     DARK_OAK_WOOD: 191,
     DARK_OAK_LEAVES: 192,
     DARK_OAK_PLANKS: 193,
-    CRYING_OBSIDIAN: 195
+    CRYING_OBSIDIAN: 195,
+    MYCELIUM: 196
 };
 
 // Block properties
@@ -298,6 +299,7 @@ const BLOCK_PROPS = {
     [BLOCKS.DARK_OAK_LEAVES]: { name: 'Dark Oak Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.DARK_OAK_PLANKS]: { name: 'Dark Oak Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.CRYING_OBSIDIAN]: { name: 'Crying Obsidian', health: 15, transparent: false, emissive: 0.6, solid: true, drops: null },
+    [BLOCKS.MYCELIUM]:      { name: 'Mycelium',       health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
     [BLOCKS.AETHER_LEAVES]: { name: 'Aether Leaves',  health: 1, transparent: true, emissive: 0.2, solid: true, drops: null, flammable: true },
     [BLOCKS.AETHER_PORTAL]: { name: 'Aether Portal',  health: 0, transparent: true, emissive: 1.0, solid: false, drops: null },
     [BLOCKS.AETHER_CLOUD]:  { name: 'Aether Cloud',   health: 1, transparent: true, emissive: 0.5, solid: true, drops: null },
@@ -2061,6 +2063,27 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addPixels(ctx, rng, 'rgba(50, 255, 255, 0.9)', 50);
             break;
 
+        case BLOCKS.MYCELIUM:
+            if (face === 'top') {
+                fillBase(ctx, 111, 99, 105); // Purple-grey mycelium mat
+                addNoise(ctx, rng, 18);
+                addPixels(ctx, rng, 'rgba(145, 130, 140, 0.7)', 30);
+                addPixels(ctx, rng, 'rgba(165, 140, 160, 0.8)', 20);
+                addPixels(ctx, rng, 'rgba(85, 75, 80, 0.6)', 25);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 114, 80, 56); // Dirt bottom
+                addNoise(ctx, rng, 20);
+            } else {
+                fillBase(ctx, 114, 80, 56); // Dirt base
+                addNoise(ctx, rng, 20);
+                ctx.fillStyle = 'rgba(111, 99, 105, 0.95)';
+                ctx.fillRect(0, 0, TEX_SIZE, 3);
+                for (let i = 0; i < TEX_SIZE; i += 2) {
+                    if (rng() > 0.4) ctx.fillRect(i, 3, 1, 1 + (rng() * 3) | 0);
+                }
+            }
+            break;
+
         default:
             fillBase(ctx, 255, 0, 255);
             break;
@@ -2070,7 +2093,7 @@ function hasFaceVariants(blockType) {
     return [
         BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD, BLOCKS.DARK_OAK_WOOD,
         BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS,
-        BLOCKS.CACTUS, BLOCKS.SANDSTONE, BLOCKS.BOOKSHELF
+        BLOCKS.CACTUS, BLOCKS.SANDSTONE, BLOCKS.BOOKSHELF, BLOCKS.MYCELIUM
     ].includes(blockType);
 }
 
@@ -2104,6 +2127,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.MUSHROOM_CAP]: 'red_mushroom_block',
     [BLOCKS.ALIEN_STONE]: 'end_stone',
     [BLOCKS.ALIEN_GRASS]: { top: 'mycelium_top', side: 'mycelium_side', bottom: 'end_stone' },
+    [BLOCKS.MYCELIUM]: { top: 'mycelium_top', side: 'mycelium_side', bottom: 'dirt' },
     [BLOCKS.ALIEN_CRYSTAL]: 'purpur_block',
     [BLOCKS.SNOW]: 'snow',
     [BLOCKS.ICE]: 'ice',
@@ -3734,3 +3758,216 @@ export function generateMobTexture(mobType, onLoaded) {
     
     return canvas;
 }
+
+// Procedural Player Character Skin Textures
+export function generatePlayerSkinTextures() {
+    // 1. Head Canvas (16x16 with Steve face, hair, and sides)
+    const headCanvas = document.createElement('canvas');
+    headCanvas.width = 16; headCanvas.height = 16;
+    const hctx = headCanvas.getContext('2d');
+    hctx.fillStyle = '#c68c53'; // Steve skin tone
+    hctx.fillRect(0, 0, 16, 16);
+    // Hair
+    hctx.fillStyle = '#4a3219';
+    hctx.fillRect(0, 0, 16, 4);
+    hctx.fillRect(0, 4, 2, 4);
+    hctx.fillRect(14, 4, 2, 4);
+    // Eyes: white + blue pupils
+    hctx.fillStyle = '#ffffff';
+    hctx.fillRect(3, 7, 3, 2);
+    hctx.fillRect(10, 7, 3, 2);
+    hctx.fillStyle = '#2b448a';
+    hctx.fillRect(4, 7, 2, 2);
+    hctx.fillRect(10, 7, 2, 2);
+    // Nose
+    hctx.fillStyle = '#b0733d';
+    hctx.fillRect(7, 9, 2, 2);
+    // Mouth / Beard
+    hctx.fillStyle = '#5c3619';
+    hctx.fillRect(6, 11, 4, 2);
+    hctx.fillRect(5, 12, 6, 2);
+
+    // 2. Torso Canvas (16x16 with cyan shirt, neckline, and subtle shading)
+    const torsoCanvas = document.createElement('canvas');
+    torsoCanvas.width = 16; torsoCanvas.height = 16;
+    const tctx = torsoCanvas.getContext('2d');
+    tctx.fillStyle = '#008b8b';
+    tctx.fillRect(0, 0, 16, 16);
+    // V-neck skin
+    tctx.fillStyle = '#c68c53';
+    tctx.fillRect(6, 0, 4, 4);
+    // Shading
+    tctx.fillStyle = '#006d6d';
+    tctx.fillRect(0, 13, 16, 3);
+    tctx.fillRect(0, 4, 1, 9);
+    tctx.fillRect(15, 4, 1, 9);
+
+    // 3. Arm Canvas (16x16 with sleeve top, skin, wrist shading)
+    const armCanvas = document.createElement('canvas');
+    armCanvas.width = 16; armCanvas.height = 16;
+    const actx = armCanvas.getContext('2d');
+    actx.fillStyle = '#c68c53';
+    actx.fillRect(0, 0, 16, 16);
+    // Teal sleeve
+    actx.fillStyle = '#008b8b';
+    actx.fillRect(0, 0, 16, 5);
+    actx.fillStyle = '#006d6d';
+    actx.fillRect(0, 4, 16, 1);
+    // Knuckles
+    actx.fillStyle = '#b0733d';
+    actx.fillRect(2, 13, 12, 2);
+
+    // 4. Leg Canvas (16x16 with dark blue jeans and grey boots)
+    const legCanvas = document.createElement('canvas');
+    legCanvas.width = 16; legCanvas.height = 16;
+    const lctx = legCanvas.getContext('2d');
+    lctx.fillStyle = '#283668';
+    lctx.fillRect(0, 0, 16, 16);
+    // Boots
+    lctx.fillStyle = '#444444';
+    lctx.fillRect(0, 12, 16, 4);
+    lctx.fillStyle = '#222222';
+    lctx.fillRect(0, 15, 16, 1);
+
+    // Helper: add noise
+    for (const ctx of [hctx, tctx, actx, lctx]) {
+        const id = ctx.getImageData(0, 0, 16, 16);
+        const d = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const n = (Math.random() - 0.5) * 14;
+            d[i] = Math.max(0, Math.min(255, d[i] + n));
+            d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+            d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
+        }
+        ctx.putImageData(id, 0, 0);
+    }
+
+    return { headCanvas, torsoCanvas, armCanvas, legCanvas };
+}
+
+export function generatePlayerSkinTexture() {
+    return generatePlayerSkinTextures().headCanvas;
+}
+
+// Procedural First-Person Detailed Hand Texture (teal sleeve cuff + shaded skin + knuckles)
+export function generateDetailedHandTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+
+    // Teal sleeve on upper portion (top 0 to 22)
+    ctx.fillStyle = '#008b8b';
+    ctx.fillRect(0, 0, 32, 22);
+    // Darker seam & cuff shadow
+    ctx.fillStyle = '#005f5f';
+    ctx.fillRect(0, 20, 32, 2);
+    ctx.fillRect(0, 0, 3, 20);
+    ctx.fillRect(29, 0, 3, 20);
+
+    // Skin on lower portion (wrist to fingers: 22 to 64)
+    ctx.fillStyle = '#c68c53';
+    ctx.fillRect(0, 22, 32, 42);
+
+    // Wrist fold
+    ctx.fillStyle = '#b37740';
+    ctx.fillRect(0, 24, 32, 2);
+
+    // Palm / tendon shading
+    ctx.fillStyle = '#d49b64';
+    ctx.fillRect(10, 28, 12, 16);
+
+    // Knuckles shading near fingers
+    ctx.fillStyle = '#a66835';
+    for (let x = 3; x < 30; x += 7) {
+        ctx.fillRect(x, 48, 5, 3);
+        ctx.fillRect(x + 1, 46, 3, 2);
+    }
+
+    // Finger separation lines
+    ctx.fillStyle = '#8f5428';
+    ctx.fillRect(8, 48, 2, 16);
+    ctx.fillRect(15, 48, 2, 16);
+    ctx.fillRect(22, 48, 2, 16);
+
+    // Fingernails highlights
+    ctx.fillStyle = '#e8b88a';
+    ctx.fillRect(3, 60, 4, 3);
+    ctx.fillRect(10, 60, 4, 3);
+    ctx.fillRect(17, 60, 4, 3);
+    ctx.fillRect(24, 60, 4, 3);
+
+    // Pixel noise
+    const id = ctx.getImageData(0, 0, 32, 64);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+        const n = (Math.random() - 0.5) * 14;
+        d[i] = Math.max(0, Math.min(255, d[i] + n));
+        d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+        d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
+    }
+    ctx.putImageData(id, 0, 0);
+
+    return canvas;
+}
+
+// Procedural Carved Wand Staff Texture (rich grain + golden rune filigree)
+export function generateWandShaftTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    // Rich dark carved mahogany/skyroot wood base
+    ctx.fillStyle = '#3a2312';
+    ctx.fillRect(0, 0, 32, 128);
+
+    // Vertical wood grains
+    for (let x = 0; x < 32; x += 3) {
+        ctx.fillStyle = (x % 6 === 0) ? '#4a2f19' : '#29180b';
+        ctx.fillRect(x, 0, 2, 128);
+    }
+
+    // Polished golden rings & rune bands
+    ctx.fillStyle = '#d4af37';
+    // Top collar (holding gem socket)
+    ctx.fillRect(0, 0, 32, 10);
+    ctx.fillStyle = '#ffdf78';
+    ctx.fillRect(0, 2, 32, 3); // Gold highlight
+    ctx.fillStyle = '#997a15';
+    ctx.fillRect(0, 9, 32, 2); // Gold shadow
+
+    // Middle grip band
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(0, 56, 32, 8);
+    ctx.fillStyle = '#ffdf78';
+    ctx.fillRect(0, 58, 32, 2);
+
+    // Pommel band at bottom
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(0, 118, 32, 10);
+    ctx.fillStyle = '#ffdf78';
+    ctx.fillRect(0, 120, 32, 2);
+
+    // Mystical cyan glowing rune engravings down shaft
+    ctx.fillStyle = '#00ffff';
+    const runePattern = [14, 22, 34, 42, 70, 78, 90, 98, 106];
+    for (const y of runePattern) {
+        ctx.fillRect(14, y, 4, 3);
+        ctx.fillRect(12, y + 1, 8, 1);
+    }
+
+    // Noise
+    const id = ctx.getImageData(0, 0, 32, 128);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+        const n = (Math.random() - 0.5) * 12;
+        d[i] = Math.max(0, Math.min(255, d[i] + n));
+        d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+        d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
+    }
+    ctx.putImageData(id, 0, 0);
+
+    return canvas;
+}
+

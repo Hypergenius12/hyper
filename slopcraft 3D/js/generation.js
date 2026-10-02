@@ -15,7 +15,7 @@ const BIOMES = {
     BADLANDS: { name: 'Badlands', surface: BLOCKS.RED_SAND, dirt: BLOCKS.TERRACOTTA, freq: 0.5, hasTrees: false, hasDeadBush: true, hasDeadTrees: true },
     TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true },
     ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true },
-    MUSHROOM: { name: 'Mushroom', surface: BLOCKS.DIRT, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true },
+    MUSHROOM: { name: 'Mushroom', surface: BLOCKS.MYCELIUM, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true },
     CRYSTAL: { name: 'Crystal', surface: BLOCKS.ALIEN_STONE, dirt: BLOCKS.STONE, freq: 0.1, hasTrees: false, hasCrystals: true },
     ALIEN: { name: 'Alien', surface: BLOCKS.ALIEN_STONE, dirt: BLOCKS.ALIEN_STONE, freq: 1.0, hasTrees: true, alienFlora: true },
     VOLCANIC: { name: 'Volcanic', surface: BLOCKS.OBSIDIAN, dirt: BLOCKS.STONE, freq: 0.5, hasTrees: false },

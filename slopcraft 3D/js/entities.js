@@ -3,7 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture } from './textures.js';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures } from './textures.js?v=81';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -339,6 +339,274 @@ export class Player {
                 if (typeof slot.item.data.wand.updateCooldowns === 'function') {
                     slot.item.data.wand.updateCooldowns(dt);
                 }
+            }
+        }
+
+        // Animate Player 3D Character Model
+        this.updatePlayerModel(dt, keys);
+    }
+
+    createPlayerMesh(assignToPlayer = true) {
+        const group = new THREE.Group();
+        group.name = 'playerCharacterModel';
+
+        const { headCanvas, torsoCanvas, armCanvas, legCanvas } = generatePlayerSkinTextures();
+        const makeTex = (c) => {
+            const t = new THREE.CanvasTexture(c);
+            t.magFilter = THREE.NearestFilter;
+            t.minFilter = THREE.NearestFilter;
+            t.colorSpace = THREE.SRGBColorSpace;
+            return t;
+        };
+
+        const headMat = new THREE.MeshLambertMaterial({ map: makeTex(headCanvas) });
+        const torsoMat = new THREE.MeshLambertMaterial({ map: makeTex(torsoCanvas) });
+        const armMat = new THREE.MeshLambertMaterial({ map: makeTex(armCanvas) });
+        const legMat = new THREE.MeshLambertMaterial({ map: makeTex(legCanvas) });
+
+        // Head Group (pivot at neck y=1.45)
+        const headPivot = new THREE.Group();
+        headPivot.name = 'head';
+        headPivot.position.set(0, 1.45, 0);
+
+        // Head mesh (0.4 x 0.4 x 0.4)
+        const headGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+        const headMesh = new THREE.Mesh(headGeo, headMat);
+        headMesh.position.set(0, 0.2, 0);
+        headMesh.rotation.y = Math.PI; // Face outwards towards front of character
+        headMesh.castShadow = true;
+        headPivot.add(headMesh);
+
+        // Armor: Helmet (open-faced cap with sides and forehead band so face remains visible)
+        const helmetGroup = new THREE.Group();
+        helmetGroup.name = 'armor_helmet';
+        const helmetMat = new THREE.MeshLambertMaterial({ color: 0xdddddd });
+        // Helmet top
+        const hTop = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.1, 0.46), helmetMat);
+        hTop.position.set(0, 0.38, 0);
+        helmetGroup.add(hTop);
+        // Helmet back
+        const hBack = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.36, 0.08), helmetMat);
+        hBack.position.set(0, 0.22, 0.19);
+        helmetGroup.add(hBack);
+        // Helmet left side
+        const hLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.36, 0.44), helmetMat);
+        hLeft.position.set(-0.19, 0.22, 0.01);
+        helmetGroup.add(hLeft);
+        // Helmet right side
+        const hRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.36, 0.44), helmetMat);
+        hRight.position.set(0.19, 0.22, 0.01);
+        helmetGroup.add(hRight);
+        // Helmet forehead visor / brow band
+        const hBrow = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.1, 0.08), helmetMat);
+        hBrow.position.set(0, 0.33, -0.19);
+        helmetGroup.add(hBrow);
+        helmetGroup.visible = false;
+        headPivot.add(helmetGroup);
+
+        group.add(headPivot);
+
+        // Torso (0.45 x 0.65 x 0.25, centered at y=1.05)
+        const torsoGeo = new THREE.BoxGeometry(0.45, 0.65, 0.25);
+        const torso = new THREE.Mesh(torsoGeo, torsoMat);
+        torso.name = 'torso';
+        torso.position.set(0, 1.05, 0);
+        torso.castShadow = true;
+
+        // Armor: Chestplate
+        const chestGeo = new THREE.BoxGeometry(0.52, 0.68, 0.32);
+        const chestMat = new THREE.MeshLambertMaterial({ color: 0xdddddd });
+        const chestMesh = new THREE.Mesh(chestGeo, chestMat);
+        chestMesh.name = 'armor_chest';
+        chestMesh.visible = false;
+        torso.add(chestMesh);
+
+        group.add(torso);
+
+        // Left Arm (pivot at shoulder y=1.35, x=-0.32)
+        const leftArmPivot = new THREE.Group();
+        leftArmPivot.name = 'leftArm';
+        leftArmPivot.position.set(-0.32, 1.35, 0);
+
+        const armGeo = new THREE.BoxGeometry(0.18, 0.65, 0.18);
+        const leftArmMesh = new THREE.Mesh(armGeo, armMat);
+        leftArmMesh.position.set(0, -0.28, 0);
+        leftArmMesh.castShadow = true;
+        leftArmPivot.add(leftArmMesh);
+        group.add(leftArmPivot);
+
+        // Right Arm (pivot at shoulder y=1.35, x=0.32)
+        const rightArmPivot = new THREE.Group();
+        rightArmPivot.name = 'rightArm';
+        rightArmPivot.position.set(0.32, 1.35, 0);
+
+        const rightArmMesh = new THREE.Mesh(armGeo, armMat);
+        rightArmMesh.position.set(0, -0.28, 0);
+        rightArmMesh.castShadow = true;
+        rightArmPivot.add(rightArmMesh);
+        group.add(rightArmPivot);
+
+        // Left Leg (pivot at hip y=0.72, x=-0.12)
+        const leftLegPivot = new THREE.Group();
+        leftLegPivot.name = 'leftLeg';
+        leftLegPivot.position.set(-0.12, 0.72, 0);
+
+        const legGeo = new THREE.BoxGeometry(0.2, 0.72, 0.2);
+        const leftLegMesh = new THREE.Mesh(legGeo, legMat);
+        leftLegMesh.position.set(0, -0.36, 0);
+        leftLegMesh.castShadow = true;
+        leftLegPivot.add(leftLegMesh);
+
+        // Armor: Left Leggings piece
+        const legArmorGeo = new THREE.BoxGeometry(0.24, 0.5, 0.24);
+        const leggingsMat = new THREE.MeshLambertMaterial({ color: 0xdddddd });
+        const leftLegArmor = new THREE.Mesh(legArmorGeo, leggingsMat);
+        leftLegArmor.name = 'armor_legs_l';
+        leftLegArmor.position.set(0, -0.25, 0);
+        leftLegArmor.visible = false;
+        leftLegPivot.add(leftLegArmor);
+
+        // Armor: Left Boot
+        const bootGeo = new THREE.BoxGeometry(0.25, 0.24, 0.25);
+        const bootsMat = new THREE.MeshLambertMaterial({ color: 0xdddddd });
+        const leftBoot = new THREE.Mesh(bootGeo, bootsMat);
+        leftBoot.name = 'armor_boots_l';
+        leftBoot.position.set(0, -0.6, 0);
+        leftBoot.visible = false;
+        leftLegPivot.add(leftBoot);
+
+        group.add(leftLegPivot);
+
+        // Right Leg (pivot at hip y=0.72, x=0.12)
+        const rightLegPivot = new THREE.Group();
+        rightLegPivot.name = 'rightLeg';
+        rightLegPivot.position.set(0.12, 0.72, 0);
+
+        const rightLegMesh = new THREE.Mesh(legGeo, legMat);
+        rightLegMesh.position.set(0, -0.36, 0);
+        rightLegMesh.castShadow = true;
+        rightLegPivot.add(rightLegMesh);
+
+        // Armor: Right Leggings piece
+        const rightLegArmor = new THREE.Mesh(legArmorGeo, leggingsMat);
+        rightLegArmor.name = 'armor_legs_r';
+        rightLegArmor.position.set(0, -0.25, 0);
+        rightLegArmor.visible = false;
+        rightLegPivot.add(rightLegArmor);
+
+        // Armor: Right Boot
+        const rightBoot = new THREE.Mesh(bootGeo, bootsMat);
+        rightBoot.name = 'armor_boots_r';
+        rightBoot.position.set(0, -0.6, 0);
+        rightBoot.visible = false;
+        rightLegPivot.add(rightBoot);
+
+        group.add(rightLegPivot);
+
+        if (assignToPlayer) {
+            this.mesh = group;
+        }
+        return group;
+    }
+
+    updatePlayerModel(dt, keys) {
+        if (!this.mesh) return;
+
+        // Position model directly at player feet coordinates
+        this.mesh.position.copy(this.position);
+        this.mesh.rotation.y = this.rotation.yaw; // Face forward along look direction
+
+        // Head pitch look
+        const head = this.mesh.getObjectByName('head');
+        if (head) {
+            head.rotation.x = this.rotation.pitch;
+        }
+
+        // Walk animation
+        const isMoving = keys && (keys.forward || keys.backward || keys.left || keys.right);
+        const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
+        if (isMoving || horizontalSpeed > 0.5) {
+            this.walkPhase = (this.walkPhase || 0) + dt * (keys.sprint ? 14 : 9);
+        } else {
+            // Decay to rest
+            this.walkPhase = (this.walkPhase || 0) * Math.pow(0.05, dt * 8);
+        }
+
+        const swing = Math.sin(this.walkPhase || 0) * 0.7;
+        const leftArm = this.mesh.getObjectByName('leftArm');
+        const rightArm = this.mesh.getObjectByName('rightArm');
+        const leftLeg = this.mesh.getObjectByName('leftLeg');
+        const rightLeg = this.mesh.getObjectByName('rightLeg');
+
+        if (leftLeg) leftLeg.rotation.x = -swing;
+        if (rightLeg) rightLeg.rotation.x = swing;
+        if (leftArm) leftArm.rotation.x = swing;
+        if (rightArm) rightArm.rotation.x = -swing;
+
+        // Sync armor visibility and colors
+        this.syncArmorDisplay(this.mesh);
+    }
+
+    syncArmorDisplay(targetModel) {
+        if (!targetModel) return;
+
+        const getArmorColor = (item) => {
+            if (!item || !item.subtype) return 0xdddddd;
+            const sub = item.subtype;
+            if (sub.includes('diamond')) return 0x4cedd3;
+            if (sub.includes('gold')) return 0xfdf55f;
+            if (sub.includes('iron')) return 0xd8d8d8;
+            if (sub.includes('netherite')) return 0x44393b;
+            return 0xdddddd;
+        };
+
+        const helmet = this.inventory.armor[0];
+        const chest = this.inventory.armor[1];
+        const legs = this.inventory.armor[2];
+        const boots = this.inventory.armor[3];
+
+        const helmetMesh = targetModel.getObjectByName('armor_helmet');
+        if (helmetMesh) {
+            helmetMesh.visible = !!helmet;
+            if (helmet) {
+                const hCol = getArmorColor(helmet.item);
+                helmetMesh.traverse(child => {
+                    if (child.isMesh && child.material && child.material.color) {
+                        child.material.color.setHex(hCol);
+                    }
+                });
+            }
+        }
+
+        const chestMesh = targetModel.getObjectByName('armor_chest');
+        if (chestMesh) {
+            chestMesh.visible = !!chest;
+            if (chest) chestMesh.material.color.setHex(getArmorColor(chest.item));
+        }
+
+        const legsL = targetModel.getObjectByName('armor_legs_l');
+        const legsR = targetModel.getObjectByName('armor_legs_r');
+        if (legsL && legsR) {
+            const hasLegs = !!legs;
+            legsL.visible = hasLegs;
+            legsR.visible = hasLegs;
+            if (hasLegs) {
+                const col = getArmorColor(legs.item);
+                legsL.material.color.setHex(col);
+                legsR.material.color.setHex(col);
+            }
+        }
+
+        const bootsL = targetModel.getObjectByName('armor_boots_l');
+        const bootsR = targetModel.getObjectByName('armor_boots_r');
+        if (bootsL && bootsR) {
+            const hasBoots = !!boots;
+            bootsL.visible = hasBoots;
+            bootsR.visible = hasBoots;
+            if (hasBoots) {
+                const col = getArmorColor(boots.item);
+                bootsL.material.color.setHex(col);
+                bootsR.material.color.setHex(col);
             }
         }
     }

@@ -905,6 +905,9 @@ class UISystem {
             // Render armor slots
             this._updateArmorSlots();
 
+            // Render live 3D player character preview in inventory box
+            this._renderPlayerPreview(player);
+
             // Render chest if open
             if (this.chestPos && this.chestInventory) {
                 this.renderGrid(this.elements.chestGrid, this.chestInventory, 0, player, 'chest');
@@ -1639,6 +1642,54 @@ class UISystem {
             if (!el) return;
             this.renderSlotItem(el, this.currentPlayer.inventory.armor[i]);
         });
+    }
+
+    _renderPlayerPreview(player) {
+        const canvas = document.getElementById('player-preview-canvas');
+        if (!canvas || !player) return;
+
+        if (!this._previewRenderer) {
+            this._previewRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            this._previewRenderer.setSize(104, 144);
+            this._previewRenderer.setPixelRatio(window.devicePixelRatio || 1);
+
+            this._previewScene = new THREE.Scene();
+            this._previewCamera = new THREE.PerspectiveCamera(40, 104 / 144, 0.1, 20);
+            this._previewCamera.position.set(0, 1.05, 3.1);
+            this._previewCamera.lookAt(0, 0.95, 0);
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.85);
+            this._previewScene.add(ambient);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(1.5, 3.0, 2.0);
+            this._previewScene.add(dirLight);
+
+            // Preview player model instance (independent from in-game player.mesh)
+            this._previewModel = player.createPlayerMesh(false);
+            this._previewModel.position.set(0, 0, 0);
+            this._previewScene.add(this._previewModel);
+            this._previewAngle = 0;
+        }
+
+        // Keep preview model at scene origin and gently spin
+        this._previewAngle = (this._previewAngle || 0) + 0.02;
+        if (this._previewModel) {
+            this._previewModel.position.set(0, 0, 0);
+            this._previewModel.rotation.y = Math.sin(this._previewAngle) * 0.45; // gentle front sway
+            // Make arms hang naturally
+            const la = this._previewModel.getObjectByName('leftArm');
+            const ra = this._previewModel.getObjectByName('rightArm');
+            if (la) la.rotation.x = 0;
+            if (ra) ra.rotation.x = 0;
+
+            // Sync armor display from live player inventory
+            if (typeof player.syncArmorDisplay === 'function') {
+                player.syncArmorDisplay(this._previewModel);
+            }
+        }
+
+        this._previewRenderer.render(this._previewScene, this._previewCamera);
     }
 
     _updateCraftingSlots(forceUpdate = false) {

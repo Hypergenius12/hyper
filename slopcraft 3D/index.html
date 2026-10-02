@@ -8,8 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SlopCraft 3D</title>
     <meta name="description" content="Explore infinite procedurally generated planets with dungeons, magic wands, and epic bossfights.">
-    <link rel="stylesheet" href="css/style.css?v=80">
-    <link rel="stylesheet" href="css/geometric.css?v=80">
+    <link rel="stylesheet" href="css/style.css?v=81">
+    <link rel="stylesheet" href="css/geometric.css?v=81">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-LCRDCCZRXM"></script>
@@ -201,9 +201,9 @@
                         <div class="inv-slot offhand-slot" data-slot="shield" style="margin-top: 4px;"></div>
                     </div>
 
-                    <!-- Player Silhouette Box -->
+                    <!-- Live 3D Player Character Preview Box -->
                     <div id="player-preview-box">
-                        <div class="player-silhouette"></div>
+                        <canvas id="player-preview-canvas" width="104" height="144"></canvas>
                     </div>
 
                     <!-- Crafting 2x2 Panel -->
@@ -353,7 +353,7 @@
         }
     }
     </script>
-    <script type="module" src="js/main.js?v=80"></script>
+    <script type="module" src="js/main.js?v=81"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>
 </body>

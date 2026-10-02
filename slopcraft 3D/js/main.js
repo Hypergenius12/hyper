@@ -2,11 +2,11 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=78';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=78';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=78';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=78';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=80';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=81';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture } from './textures.js?v=81';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=81';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=81';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=81';
 import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=78';
 import { AudioManager } from './audio.js?v=78';
 import { BiomeMap } from './map.js?v=78';
@@ -480,11 +480,16 @@ class Game {
         this.engine.scene.add(this.miningOverlay);
         this.miningOverlay.visible = false;
 
-        // View Model (Hands/Wand)
+        // View Model (Detailed Hands/Wand)
         this.viewModel = new THREE.Group();
+        const handCanvas = generateDetailedHandTexture();
+        const handTex = new THREE.CanvasTexture(handCanvas);
+        handTex.magFilter = THREE.NearestFilter;
+        handTex.minFilter = THREE.NearestFilter;
+        handTex.colorSpace = THREE.SRGBColorSpace;
         this.handMesh = new THREE.Mesh(
             new THREE.BoxGeometry(0.2, 0.6, 0.2),
-            new THREE.MeshLambertMaterial({ color: 0xe0ac69 }) // skin tone
+            new THREE.MeshLambertMaterial({ map: handTex })
         );
         this.handMesh.position.set(0.4, -0.4, -0.5);
         this.handMesh.rotation.x = -Math.PI / 4;
@@ -493,6 +498,14 @@ class Game {
         this.engine.camera.add(this.viewModel);
         this.engine.scene.add(this.engine.camera); // Needed for child objects to render
         this.heldItemMesh = null;
+
+        // Player 3D Character Model (for 3rd person view)
+        this.playerMesh = this.player.createPlayerMesh();
+        this.engine.scene.add(this.playerMesh);
+        this.playerMesh.visible = false; // Hidden in 1st person
+
+        // Perspective Camera Mode: 0 = First Person, 1 = Third Person Back, 2 = Third Person Front
+        this.cameraMode = 0;
 
         // Minimap Camera
         const d = 40; // minimap view half-size in blocks
@@ -1039,13 +1052,27 @@ class Game {
 
             } else if (slot.item.type === 'wand') {
                 this.heldItemMesh = new THREE.Group();
-                // Wooden staff handle
+                // Textured wooden staff handle with golden rune rings
+                const wandShaftCanvas = generateWandShaftTexture();
+                const wandTex = new THREE.CanvasTexture(wandShaftCanvas);
+                wandTex.magFilter = THREE.NearestFilter;
+                wandTex.minFilter = THREE.NearestFilter;
+                wandTex.colorSpace = THREE.SRGBColorSpace;
+                const staffMat = new THREE.MeshLambertMaterial({ map: wandTex });
+
                 const staff = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.015, 0.025, 0.6, 6),
-                    new THREE.MeshLambertMaterial({ color: 0x5c4033 })
+                    new THREE.CylinderGeometry(0.016, 0.024, 0.62, 8),
+                    staffMat
                 );
                 staff.position.y = -0.1;
                 this.heldItemMesh.add(staff);
+
+                // Golden crown / prongs cradling the gem
+                const crownGeo = new THREE.CylinderGeometry(0.038, 0.02, 0.08, 6, 1, true);
+                const crownMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.3, metalness: 0.8 });
+                const crownMesh = new THREE.Mesh(crownGeo, crownMat);
+                crownMesh.position.y = 0.22;
+                this.heldItemMesh.add(crownMesh);
                 
                 // Gem top
                 let activeColor = 0x88ccff; // Default cyan/arcane
@@ -1100,6 +1127,9 @@ class Game {
             this.heldItemMesh.userData.item = slot.item;
             this.viewModel.add(this.heldItemMesh);
         }
+
+        // Ensure first-person hand & held weapon are strictly hidden in 3rd person
+        this.viewModel.visible = (this.cameraMode === 0);
 
         // Left click (Attack / Mine / Magic)
         if (this.input.mouse.leftClick) {
@@ -1514,6 +1544,22 @@ class Game {
             this.devMode.toggle();
         }
 
+        if (this.input.menuKeys.togglePerspective) {
+            this.input.menuKeys.togglePerspective = false;
+            this.cameraMode = (this.cameraMode + 1) % 3;
+            // 0: 1st person, 1: 3rd person behind, 2: 3rd person front
+            if (this.playerMesh) {
+                this.playerMesh.visible = (this.cameraMode !== 0);
+            }
+            if (this.viewModel) {
+                this.viewModel.visible = (this.cameraMode === 0);
+            }
+            const crosshair = document.getElementById('crosshair');
+            if (crosshair) {
+                crosshair.style.display = (this.cameraMode === 0) ? 'block' : 'none';
+            }
+        }
+
         if (this.input.menuKeys.debug) {
             this.input.menuKeys.debug = false;
             const di = document.getElementById('debug-info');
@@ -1615,15 +1661,43 @@ class Game {
 
         const bobOffset = Math.sin(this.bobPhase) * 0.02; // Very subtle bob
 
-        // Update Camera to match player eyes
+        // Update Camera to match perspective mode
         const eyePos = this.player.getEyePosition();
-        this.engine.camera.position.copy(eyePos);
-        this.engine.camera.position.y += Math.abs(bobOffset); // Upward bounce
-
         const lookDir = this.player.getLookDirection();
-        this.engine.camera.lookAt(eyePos.clone().add(lookDir));
-        // Add subtle tilt based on bob
-        this.engine.camera.rotateZ(bobOffset * 0.05);
+
+        if (this.cameraMode === 0) {
+            // First Person
+            this.engine.camera.position.copy(eyePos);
+            this.engine.camera.position.y += Math.abs(bobOffset); // Upward bounce
+            this.engine.camera.lookAt(eyePos.clone().add(lookDir));
+            this.engine.camera.rotateZ(bobOffset * 0.05);
+        } else {
+            // Third Person (1: Behind player, 2: In front of player facing player)
+            const isFront = (this.cameraMode === 2);
+            const camDist = 3.2;
+            const camDir = isFront ? lookDir.clone() : lookDir.clone().negate();
+            const targetPos = eyePos.clone().addScaledVector(camDir, camDist);
+            targetPos.y += 0.3; // slightly elevated angle
+
+            // Simple raycast against world to avoid clipping inside solid blocks
+            const raySteps = 16;
+            let actualPos = eyePos.clone();
+            for (let step = 1; step <= raySteps; step++) {
+                const sample = eyePos.clone().lerp(targetPos, step / raySteps);
+                const sb = this.world.getBlock(Math.floor(sample.x), Math.floor(sample.y), Math.floor(sample.z));
+                const sp = getBlockProperties(sb);
+                if (sp && sp.solid) {
+                    break;
+                }
+                actualPos.copy(sample);
+            }
+            this.engine.camera.position.copy(actualPos);
+            if (isFront) {
+                this.engine.camera.lookAt(eyePos.clone().add(new THREE.Vector3(0, -0.1, 0)));
+            } else {
+                this.engine.camera.lookAt(eyePos.clone().addScaledVector(lookDir, 5));
+            }
+        }
         // Check Portal Warp
         const pbx = Math.floor(this.player.position.x);
         const pby = Math.floor(this.player.position.y);
