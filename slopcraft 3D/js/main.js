@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=82';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=82';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=82';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=82';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=82';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=78';
-import { AudioManager } from './audio.js?v=78';
-import { BiomeMap } from './map.js?v=78';
-import { DevMode } from './dev.js?v=78';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=83';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=83';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=83';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=83';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=83';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=83';
+import { AudioManager } from './audio.js?v=83';
+import { BiomeMap } from './map.js?v=83';
+import { DevMode } from './dev.js?v=83';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -27,7 +27,6 @@ function findSafeSpawn(params, dimension = 'overworld') {
                 let centerBlocks;
                 if (dimension === 'nether') centerBlocks = generateNetherChunk(cx, cz, params);
                 else if (dimension === 'aether') centerBlocks = generateAetherChunk(cx, cz, params);
-                else if (dimension === 'caverns') centerBlocks = generateCavernsChunk(cx, cz, params);
                 else centerBlocks = generateChunkTerrain(cx, cz, params);
 
                 const searchRadius = Math.floor(CHUNK_SIZE / 2);
@@ -375,11 +374,10 @@ class Game {
                 BLOCKS.LAVA,
                 BLOCKS.SWAMP_WATER,
                 BLOCKS.FIRE,
+                BLOCKS.SOUL_FIRE,
                 BLOCKS.BEDROCK,
                 BLOCKS.PORTAL,
                 window.BLOCKS.AETHER_PORTAL,
-                window.BLOCKS.CAVERN_PORTAL,
-                window.BLOCKS.HIGHLANDS_PORTAL,
                 BLOCKS.TNT,
                 BLOCKS.GLASS,
                 BLOCKS.BOSS_SPAWNER,
@@ -388,14 +386,26 @@ class Game {
             if (NO_DROP_BLOCKS.has(oldType)) return;
             const props = getBlockProperties(oldType);
             
+            // Check held tool for special attributes (e.g. Ruby auto-smelt)
+            const selSlot = this.player ? this.player.inventory.slots[this.player.selectedSlot] : null;
+            const isRubyPickaxe = selSlot && selSlot.item && selSlot.item.subtype === 'pickaxe_ruby';
+
             // Ore blocks drop material items instead of themselves
             const ORE_DROPS = {
-                [BLOCKS.IRON_ORE]:    { subtype: 'raw_iron', name: 'Raw Iron' },
-                [BLOCKS.GOLD_ORE]:    { subtype: 'raw_gold', name: 'Raw Gold' },
-                [BLOCKS.CRYSTAL_ORE]: { subtype: 'diamond', name: 'Diamond' },
-                [BLOCKS.DIAMOND_ORE]: { subtype: 'diamond', name: 'Diamond' },
-                [BLOCKS.MANA_ORE]:    { subtype: 'mana_crystal', name: 'Mana Crystal' },
-                [BLOCKS.COAL_ORE]:    { subtype: 'coal', name: 'Coal' },
+                [BLOCKS.IRON_ORE]:          { subtype: isRubyPickaxe ? 'iron_ingot' : 'raw_iron', name: isRubyPickaxe ? 'Iron Ingot' : 'Raw Iron' },
+                [BLOCKS.GOLD_ORE]:          { subtype: isRubyPickaxe ? 'gold_ingot' : 'raw_gold', name: isRubyPickaxe ? 'Gold Ingot' : 'Raw Gold' },
+                [BLOCKS.NETHER_GOLD_ORE]:   { subtype: isRubyPickaxe ? 'gold_ingot' : 'gold_nugget', name: isRubyPickaxe ? 'Gold Ingot' : 'Gold Nugget' },
+                [BLOCKS.CRYSTAL_ORE]:       { subtype: 'diamond', name: 'Diamond' },
+                [BLOCKS.DIAMOND_ORE]:       { subtype: 'diamond', name: 'Diamond' },
+                [BLOCKS.MANA_ORE]:          { subtype: 'mana_crystal', name: 'Mana Crystal' },
+                [BLOCKS.COAL_ORE]:          { subtype: 'coal', name: 'Coal' },
+                [BLOCKS.RUBY_ORE]:          { subtype: 'ruby', name: 'Ruby' },
+                [BLOCKS.SAPPHIRE_ORE]:      { subtype: 'sapphire', name: 'Sapphire' },
+                [BLOCKS.ZANITE_ORE]:        { subtype: 'zanite_gemstone', name: 'Zanite Gemstone' },
+                [BLOCKS.GRAVITITE_ORE]:     { subtype: 'gravitite_ore', name: 'Gravitite Ore' },
+                [BLOCKS.AMBROSIUM_ORE]:     { subtype: 'ambrosium_shard', name: 'Ambrosium Shard' },
+                [BLOCKS.NETHER_QUARTZ_ORE]: { subtype: 'quartz', name: 'Nether Quartz' },
+                [BLOCKS.ANCIENT_DEBRIS]:    { subtype: 'netherite_scrap', name: 'Netherite Scrap' },
             };
             const oreDrop = ORE_DROPS[oldType];
             if (oreDrop) {
@@ -448,6 +458,7 @@ class Game {
         this.projectileManager = new ProjectileManager(this.engine.scene);
         this.cloudSystem = new CloudSystem(this.engine.scene);
         this.meteorSystem = new MeteorShowerSystem(this.engine.scene, this.particles, this.audio, this.world);
+        this.burningBlocks = new Map();
 
         document.addEventListener('keydown', (e) => {
             if (e.code === 'F2') {
@@ -603,8 +614,6 @@ class Game {
                     const below = this.world.getBlock(x, y - 1, z);
                     if (below === window.BLOCKS.PORTAL) { portalType = 'nether'; this.world.setBlock(x, y - 1, z, window.BLOCKS.NETHERRACK); }
                     else if (below === window.BLOCKS.AETHER_PORTAL) { portalType = 'aether'; this.world.setBlock(x, y - 1, z, window.BLOCKS.AETHER_DIRT); }
-                    else if (below === window.BLOCKS.CAVERN_PORTAL) { portalType = 'cavern'; this.world.setBlock(x, y - 1, z, window.BLOCKS.STONE); }
-                    else if (below === window.BLOCKS.HIGHLANDS_PORTAL) { portalType = 'highlands'; this.world.setBlock(x, y - 1, z, window.BLOCKS.DIRT); }
                 }
 
                 if (portalType === 'nether') {
@@ -620,18 +629,6 @@ class Game {
                         { item: new Item('material', 'diamond', {}, 'Diamond'), maxCount: 3, chance: 0.5 },
                         { item: Item.equipmentItem('sword_diamond', { damage: 10 }, 'Diamond Sword'), maxCount: 1, chance: 0.3 },
                         { item: Item.equipmentItem('pickaxe_diamond', { mineSpeed: 3, damage: 5 }, 'Diamond Pickaxe'), maxCount: 1, chance: 0.3 }
-                    ];
-                } else if (portalType === 'cavern') {
-                    lootTable = [
-                        { item: Item.blockItem(window.BLOCKS.COAL_ORE, 'Coal Ore'), maxCount: 10, chance: 0.8 },
-                        { item: new Item('material', 'iron_ingot', {}, 'Iron Ingot'), maxCount: 6, chance: 0.7 },
-                        { item: Item.equipmentItem('pickaxe_iron', { mineSpeed: 2, damage: 4 }, 'Iron Pickaxe'), maxCount: 1, chance: 0.5 }
-                    ];
-                } else if (portalType === 'highlands') {
-                    lootTable = [
-                        { item: Item.blockItem(window.BLOCKS.COBBLESTONE, 'Cobblestone'), maxCount: 20, chance: 1.0 },
-                        { item: new Item('material', 'emerald', {}, 'Emerald'), maxCount: 4, chance: 0.4 },
-                        { item: Item.equipmentItem('sword_stone', { damage: 5 }, 'Stone Sword'), maxCount: 1, chance: 0.6 }
                     ];
                 } else if (y < 40) {
                     // Dungeon loot - spells, modifiers, and rare gear
@@ -1152,14 +1149,37 @@ class Game {
                     }
                 }
                 this.input.mouse.leftClick = false; // single cast
+            } else if (hit.hit && (hit.blockType === BLOCKS.FIRE || hit.blockType === BLOCKS.SOUL_FIRE)) {
+                // Punching fire extinguishes it instantly like Minecraft
+                this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
+                this.extinguishBurningBlock(hit.blockPos.x, hit.blockPos.y - 1, hit.blockPos.z);
+                if (this.audio && this.audio.playFizz) this.audio.playFizz();
+                this.particles.emit({x: hit.blockPos.x + 0.5, y: hit.blockPos.y + 0.5, z: hit.blockPos.z + 0.5}, 'smoke', 8, 0x888888);
+                this.breakTimer = 0;
+                this.input.mouse.leftClick = false;
             } else if (entityHit.hit && this.breakTimer === 0) { // Attack entity
                 let damage = 5; // Unarmed base damage
+                let appliedDir = lookDir.clone();
                 if (slot && slot.item.type === 'equipment' && slot.item.data.equipData && slot.item.data.equipData.damage) {
                     damage = slot.item.data.equipData.damage;
+                    const sub = slot.item.subtype || '';
+                    if (sub.includes('ruby')) {
+                        entityHit.mob.burnTimer = 4.5;
+                        this.particles.emit(entityHit.mob.position, 'fire', 8, 0xff4400);
+                    } else if (sub.includes('sapphire')) {
+                        if (entityHit.mob.freezeTimer !== undefined) entityHit.mob.freezeTimer = 3.5;
+                        this.particles.emit(entityHit.mob.position, 'magic', 8, 0x66ccff);
+                    } else if (sub.includes('gravitite')) {
+                        appliedDir.y += 0.8;
+                        appliedDir.multiplyScalar(2.0);
+                        this.particles.emit(entityHit.mob.position, 'magic', 10, 0xcc66ff);
+                    } else if (sub.includes('netherite')) {
+                        appliedDir.multiplyScalar(1.6);
+                    }
                 } else if (slot && slot.item.type === 'wand') {
                     damage = 10;
                 }
-                entityHit.mob.takeDamage(damage, lookDir);
+                entityHit.mob.takeDamage(damage, appliedDir);
                 this.audio.playHit();
 
                 this.particles.emit(entityHit.mob.position, 'blood', 5, 0xff0000);
@@ -1174,8 +1194,13 @@ class Game {
                 const blockProps = getBlockProperties(hit.blockType);
                 
                 let mineMult = 1.0;
-                if (slot && slot.item.type === 'equipment' && slot.item.data.equipData && slot.item.data.equipData.mineSpeed) {
-                    mineMult = slot.item.data.equipData.mineSpeed;
+                if (slot && slot.item.type === 'equipment' && slot.item.data.equipData) {
+                    const eq = slot.item.data.equipData;
+                    if (eq.mineSpeed) mineMult = eq.mineSpeed;
+                    if (blockProps.flammable && eq.chopSpeed) mineMult = Math.max(mineMult, eq.chopSpeed);
+                    if (eq.digSpeed && (blockProps.isDirt || hit.blockType === BLOCKS.DIRT || hit.blockType === BLOCKS.GRASS || hit.blockType === BLOCKS.SAND || hit.blockType === BLOCKS.SOUL_SAND || hit.blockType === BLOCKS.SOUL_SOIL)) {
+                        mineMult = Math.max(mineMult, eq.digSpeed);
+                    }
                 }
                 
                 const breakTime = this.input.creativeMode ? 0.001 : (((blockProps.health || 1) * 0.1) / mineMult);
@@ -1258,44 +1283,100 @@ class Game {
             }
 
             if (slot && slot.item.subtype === 'flint_and_steel' && hit.hit) {
-                // If clicked on Obsidian/Glowstone/etc, try to light a portal first
+                const bx = hit.blockPos.x, by = hit.blockPos.y, bz = hit.blockPos.z;
+                const clickedBlock = hit.blockType;
+                const key = `${bx},${by},${bz}`;
+                const topBlock = this.world.getBlock(bx, by + 1, bz);
+
+                // 1. Extinguish: if clicked directly on fire or soul fire
+                if (clickedBlock === window.BLOCKS.FIRE || clickedBlock === window.BLOCKS.SOUL_FIRE) {
+                    this.world.setBlock(bx, by, bz, window.BLOCKS.AIR);
+                    this.extinguishBurningBlock(bx, by - 1, bz);
+                    if (this.audio && this.audio.playFizz) this.audio.playFizz();
+                    this.particles.emit({x: bx + 0.5, y: by + 0.5, z: bz + 0.5}, 'smoke', 15, 0x888888);
+                    this.input.mouse.rightClick = false;
+                    return;
+                }
+
+                // Extinguish: if clicking a block that is burning or has fire on top/adjacent
+                if (this.burningBlocks.has(key) || topBlock === window.BLOCKS.FIRE || topBlock === window.BLOCKS.SOUL_FIRE) {
+                    if (topBlock === window.BLOCKS.FIRE || topBlock === window.BLOCKS.SOUL_FIRE) {
+                        this.world.setBlock(bx, by + 1, bz, window.BLOCKS.AIR);
+                    }
+                    const dirs = [[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,-1,0]];
+                    for (const [dx, dy, dz] of dirs) {
+                        const adj = this.world.getBlock(bx + dx, by + dy, bz + dz);
+                        if (adj === window.BLOCKS.FIRE || adj === window.BLOCKS.SOUL_FIRE) {
+                            this.world.setBlock(bx + dx, by + dy, bz + dz, window.BLOCKS.AIR);
+                        }
+                    }
+                    this.extinguishBurningBlock(bx, by, bz);
+                    if (this.audio && this.audio.playFizz) this.audio.playFizz();
+                    this.particles.emit({x: bx + 0.5, y: by + 1.2, z: bz + 0.5}, 'smoke', 15, 0x888888);
+                    this.input.mouse.rightClick = false;
+                    return;
+                }
+
+                // If face adjacent block is fire, clicking face also puts it out
+                if (hit.face) {
+                    const nx = bx + hit.face.x;
+                    const ny = by + hit.face.y;
+                    const nz = bz + hit.face.z;
+                    const faceBlock = this.world.getBlock(nx, ny, nz);
+                    if (faceBlock === window.BLOCKS.FIRE || faceBlock === window.BLOCKS.SOUL_FIRE) {
+                        this.world.setBlock(nx, ny, nz, window.BLOCKS.AIR);
+                        this.extinguishBurningBlock(bx, by, bz);
+                        if (this.audio && this.audio.playFizz) this.audio.playFizz();
+                        this.particles.emit({x: nx + 0.5, y: ny + 0.5, z: nz + 0.5}, 'smoke', 15, 0x888888);
+                        this.input.mouse.rightClick = false;
+                        return;
+                    }
+                }
+
+                // 2. Portal lighting (Obsidian / Glowstone only)
                 let portalLit = false;
-                if (hit.blockType === window.BLOCKS.OBSIDIAN || hit.blockType === window.BLOCKS.GLOWSTONE || hit.blockType === window.BLOCKS.PORTAL_FRAME ||
-                    hit.blockType === window.BLOCKS.DIRT || hit.blockType === window.BLOCKS.GRASS ||
-                    hit.blockType === window.BLOCKS.STONE || hit.blockType === window.BLOCKS.COBBLESTONE) {
-                    portalLit = this.tryLightPortal(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                if (hit.blockType === window.BLOCKS.OBSIDIAN || hit.blockType === window.BLOCKS.GLOWSTONE || hit.blockType === window.BLOCKS.PORTAL_FRAME) {
+                    portalLit = this.tryLightPortal(bx, by, bz);
                     if (portalLit) this.audio.playHit();
                 }
 
+                // 3. TNT ignition & Ground/Block fire
                 if (!portalLit) {
                     if (hit.blockType === window.BLOCKS.TNT) {
-                        this.igniteTNT(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                        this.igniteTNT(bx, by, bz);
                         this.audio.playFizz();
                     } else if (hit.face) {
-                        const bx = hit.blockPos.x, by = hit.blockPos.y, bz = hit.blockPos.z;
                         const nx = bx + hit.face.x;
                         const ny = by + hit.face.y;
                         const nz = bz + hit.face.z;
-                        const clickedBlock = hit.blockType;
                         const faceBlock = this.world.getBlock(nx, ny, nz);
-                        // Place fire on the face-adjacent air block if possible
+                        const blockUnderFace = this.world.getBlock(nx, ny - 1, nz);
+
+                        // Soul Fire on Soul Sand or Soul Soil
+                        const isSoul = (clickedBlock === window.BLOCKS.SOUL_SAND || clickedBlock === window.BLOCKS.SOUL_SOIL ||
+                                        blockUnderFace === window.BLOCKS.SOUL_SAND || blockUnderFace === window.BLOCKS.SOUL_SOIL);
+                        const fireType = isSoul ? window.BLOCKS.SOUL_FIRE : window.BLOCKS.FIRE;
+
+                        // Place fire on the face-adjacent air block
                         if (faceBlock === window.BLOCKS.AIR &&
-                            this.world.getBlock(nx, ny - 1, nz) !== window.BLOCKS.WATER &&
-                            this.world.getBlock(nx, ny - 1, nz) !== window.BLOCKS.SWAMP_WATER) {
-                            this.world.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                            blockUnderFace !== window.BLOCKS.WATER &&
+                            blockUnderFace !== window.BLOCKS.SWAMP_WATER) {
+                            this.world.setBlock(nx, ny, nz, fireType);
                             this.audio.playHit();
-                            this.particles.emit({x: nx + 0.5, y: ny + 0.5, z: nz + 0.5}, 'fire', 8, 0xff5500);
+                            this.particles.emit({x: nx + 0.5, y: ny + 0.5, z: nz + 0.5}, isSoul ? 'portal' : 'fire', 8, isSoul ? 0x00ffff : 0xff5500);
                         }
-                        // Additionally, if the clicked block itself is flammable, set fire on top of it too
+
+                        // If clicked block is combustible (wood, planks, leaves, etc.), ignite it with 3D burning fire overlay!
                         const clickedProps = window.getBlockProperties ? window.getBlockProperties(clickedBlock) : null;
                         const isFlammable = clickedProps && clickedProps.flammable;
                         if (isFlammable) {
-                            const topBlock = this.world.getBlock(bx, by + 1, bz);
-                            if (topBlock === window.BLOCKS.AIR) {
-                                this.world.setBlock(bx, by + 1, bz, window.BLOCKS.FIRE);
-                                this.audio.playHit();
-                                this.particles.emit({x: bx + 0.5, y: by + 1.5, z: bz + 0.5}, 'fire', 12, 0xff5500);
+                            const topB = this.world.getBlock(bx, by + 1, bz);
+                            if (topB === window.BLOCKS.AIR) {
+                                this.world.setBlock(bx, by + 1, bz, fireType);
                             }
+                            this.igniteBurningBlock(bx, by, bz, isSoul);
+                            this.audio.playHit();
+                            this.particles.emit({x: bx + 0.5, y: by + 1.2, z: bz + 0.5}, isSoul ? 'portal' : 'fire', 12, isSoul ? 0x00ffff : 0xff5500);
                         }
                     }
                 }
@@ -1496,7 +1577,7 @@ class Game {
             const p = this.pendingPortal.pos;
             // Wait for chunk to be generated before building portal
             if (this.world.getChunkAt(p.x, p.z)) {
-                this.buildLitPortal(p.x, p.y, p.z, this.pendingPortal.isNether, this.pendingPortal.isAether, this.pendingPortal.isCaverns, this.pendingPortal.isHighlands);
+                this.buildLitPortal(p.x, p.y, p.z, this.pendingPortal.isNether, this.pendingPortal.isAether);
                 this.pendingPortal = null;
             }
         }
@@ -1570,7 +1651,7 @@ class Game {
         if (this.isPaused) {
             this.input.resetMouse();
             // Continue loading chunks while paused
-            const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'caverns' ? generateCavernsChunk : generateChunkTerrain));
+            const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : generateChunkTerrain);
             this.world.update(this.player.position, (cx, cz) => {
                 const start = performance.now();
                 const res = chunkGenFn(cx, cz, this.planetParams);
@@ -1617,9 +1698,9 @@ class Game {
                 this.footstepTimer = 0.45; // trigger immediately next step
             }
 
-            if (this.currentDimension === 'highlands') {
-                this.player.speedMult = 3.0; // Super fast speed
-                this.player.jumpSpeed = 16.0; // 2x jump height (base is 8.0)
+            if (this.currentDimension === 'aether') {
+                this.player.speedMult = 1.15;
+                this.player.jumpSpeed = 10.5; // Floaty aether jump
             } else {
                 this.player.speedMult = 1.0;
                 this.player.jumpSpeed = 8.0;
@@ -1710,15 +1791,9 @@ class Game {
         } else if (pBlock === window.BLOCKS.AETHER_PORTAL && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'aether' ? 'overworld' : 'aether');
             this.audio.playPortalTravel();
-        } else if (pBlock === window.BLOCKS.CAVERN_PORTAL && !this.isWarping) {
-            this.warpToNewPlanet(this.currentDimension === 'caverns' ? 'overworld' : 'caverns');
-            this.audio.playPortalTravel();
-        } else if (pBlock === window.BLOCKS.HIGHLANDS_PORTAL && !this.isWarping) {
-            this.warpToNewPlanet(this.currentDimension === 'highlands' ? 'overworld' : 'highlands');
-            this.audio.playPortalTravel();
         }
         
-        const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'caverns' ? generateCavernsChunk : (this.currentDimension === 'highlands' ? generateHighlandsChunk : generateChunkTerrain)));
+        const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : generateChunkTerrain);
         this.world.update(this.player.position, (cx, cz) => {
             const start = performance.now();
             const chunkBlocks = chunkGenFn(cx, cz, this.planetParams);
@@ -1903,43 +1978,97 @@ class Game {
             this.ui._updateFurnaceSlots();
         }
 
+        // Update Burning Blocks with animated 3D fire overlay
+        if (this.burningBlocks && this.burningBlocks.size > 0) {
+            const now = performance.now();
+            for (const [key, burn] of this.burningBlocks.entries()) {
+                const currentBlock = this.world.getBlock(burn.x, burn.y, burn.z);
+                const props = getBlockProperties(currentBlock);
+                if (!props.solid || currentBlock === BLOCKS.AIR || currentBlock === BLOCKS.FIRE || currentBlock === BLOCKS.SOUL_FIRE) {
+                    if (burn.mesh) {
+                        this.engine.scene.remove(burn.mesh);
+                        if (burn.mesh.geometry) burn.mesh.geometry.dispose();
+                        if (burn.mesh.material) burn.mesh.material.dispose();
+                    }
+                    this.burningBlocks.delete(key);
+                    continue;
+                }
+
+                if (burn.mesh && burn.mesh.material) {
+                    burn.mesh.material.opacity = 0.65 + 0.3 * Math.sin(now * 0.012 + burn.x * 3 + burn.z);
+                }
+
+                if (Math.random() < 0.25) {
+                    this.particles.emit({
+                        x: burn.x + 0.1 + Math.random() * 0.8,
+                        y: burn.y + 0.8 + Math.random() * 0.4,
+                        z: burn.z + 0.1 + Math.random() * 0.8
+                    }, burn.isSoul ? 'portal' : 'fire', 2, burn.isSoul ? 0x00ffff : 0xff6600);
+                }
+
+                if (now - burn.startTime >= burn.duration) {
+                    const burnResult = (Math.random() < 0.6) ? (burn.isSoul ? BLOCKS.SOUL_FIRE : BLOCKS.FIRE) : BLOCKS.AIR;
+                    this.world.setBlock(burn.x, burn.y, burn.z, burnResult);
+                    this.audio.playBreak(currentBlock);
+                    this.particles.emit({ x: burn.x + 0.5, y: burn.y + 0.5, z: burn.z + 0.5 }, 'smoke', 10, 0x555555);
+                    
+                    if (burn.mesh) {
+                        this.engine.scene.remove(burn.mesh);
+                        if (burn.mesh.geometry) burn.mesh.geometry.dispose();
+                        if (burn.mesh.material) burn.mesh.material.dispose();
+                    }
+                    this.burningBlocks.delete(key);
+                }
+            }
+        }
+
         // Ambient Biome Particles
-        if (Math.random() < 0.5 && this.currentDimension === 'overworld') {
+        if (Math.random() < 0.5) {
             const px = this.player.position.x;
             const pz = this.player.position.z;
-            const { biome } = getBiomeParams(px, pz, this.planetParams);
-            
-            if (biome.isCherry || biome.name === 'Cherry Grove') {
-                for (let k = 0; k < 2; k++) {
+            if (this.currentDimension === 'overworld') {
+                const { biome } = getBiomeParams(px, pz, this.planetParams);
+                
+                if (biome.isCherry || biome.name === 'Cherry Grove') {
+                    for (let k = 0; k < 2; k++) {
+                        const pos = this.player.position.clone();
+                        pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 4 + Math.random() * 6;
+                        this.particles.emit(pos, 'leaf', 1, Math.random() < 0.3 ? 0xffc0cb : 0xffb7c5);
+                    }
+                } else if (biome.name === 'Autumn Forest') {
                     const pos = this.player.position.clone();
-                    pos.x += (Math.random() - 0.5) * 24;
-                    pos.z += (Math.random() - 0.5) * 24;
-                    pos.y += 4 + Math.random() * 6;
-                    this.particles.emit(pos, 'leaf', 1, Math.random() < 0.3 ? 0xffc0cb : 0xffb7c5);
-                }
-            } else if (biome.name === 'Autumn Forest') {
-                const pos = this.player.position.clone();
-                pos.x += (Math.random() - 0.5) * 24;
-                pos.z += (Math.random() - 0.5) * 24;
-                pos.y += 4 + Math.random() * 6;
-                const colors = [0xff8800, 0xcc4400, 0xffaa00, 0xdd6600];
-                this.particles.emit(pos, 'leaf', 1, colors[Math.floor(Math.random()*colors.length)]);
-            } else if (biome.alienFlora) {
-                const pos = this.player.position.clone();
-                pos.x += (Math.random() - 0.5) * 20;
-                pos.z += (Math.random() - 0.5) * 20;
-                pos.y += Math.random() * 5;
-                this.particles.emit(pos, 'leaf', 1, 0x00ffcc);
-            } else if (biome.name === 'Forest' || biome.name === 'Dark Forest' || biome.jungleFlora || biome.name === 'Jungle' || biome.hasTrees) {
-                // Dappled forest leaves — gentle green leaves drifting down
-                for (let k = 0; k < 2; k++) {
+                    pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 4 + Math.random() * 6;
+                    const colors = [0xff8800, 0xcc4400, 0xffaa00, 0xdd6600];
+                    this.particles.emit(pos, 'leaf', 1, colors[Math.floor(Math.random()*colors.length)]);
+                } else if (biome.name === 'Mystic Grove') {
                     const pos = this.player.position.clone();
-                    pos.x += (Math.random() - 0.5) * 24;
-                    pos.z += (Math.random() - 0.5) * 24;
-                    pos.y += 4 + Math.random() * 7;
-                    const colors = [0x228B22, 0x2E8B57, 0x3CB371, 0x6B8E23, 0x556B2F, 0x4d7c0f];
-                    this.particles.emit(pos, 'leaf', 1, colors[Math.floor(Math.random() * colors.length)]);
+                    pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 2 + Math.random() * 5;
+                    const colors = [0xdd88ff, 0xee99ff, 0xccaaff, 0x88eebb];
+                    this.particles.emit(pos, 'magic', 1, colors[Math.floor(Math.random()*colors.length)]);
+                } else if (biome.name === 'Lavender Fields') {
+                    const pos = this.player.position.clone();
+                    pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 1 + Math.random() * 3;
+                    this.particles.emit(pos, 'leaf', 1, 0xb388ff);
+                } else if (biome.name === 'Volcanic') {
+                    const pos = this.player.position.clone();
+                    pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 1 + Math.random() * 5;
+                    this.particles.emit(pos, Math.random() < 0.5 ? 'smoke' : 'fire', 1, Math.random() < 0.5 ? 0x333333 : 0xff4400);
+                } else if (biome.alienFlora) {
+                    const pos = this.player.position.clone();
+                    pos.x += (Math.random() - 0.5) * 20; pos.z += (Math.random() - 0.5) * 20; pos.y += Math.random() * 5;
+                    this.particles.emit(pos, 'magic', 1, Math.random() < 0.5 ? 0x00ffcc : 0xaa00ff);
+                } else if (biome.name === 'Forest' || biome.name === 'Dark Forest' || biome.name === 'Redwood Forest' || biome.jungleFlora || biome.name === 'Jungle' || biome.hasTrees) {
+                    for (let k = 0; k < 2; k++) {
+                        const pos = this.player.position.clone();
+                        pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 4 + Math.random() * 7;
+                        const colors = [0x228B22, 0x2E8B57, 0x3CB371, 0x6B8E23, 0x556B2F, 0x4d7c0f];
+                        this.particles.emit(pos, 'leaf', 1, colors[Math.floor(Math.random() * colors.length)]);
+                    }
                 }
+            } else if (this.currentDimension === 'nether') {
+                const pos = this.player.position.clone();
+                pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += (Math.random() - 0.5) * 8;
+                this.particles.emit(pos, 'smoke', 1, 0x221111);
             }
         }
 
@@ -2265,7 +2394,7 @@ class Game {
             const ry = window.innerHeight - mapSize - padding;
             
             // Tilt the camera for a 2.5D map look but fixed height to avoid jump parallax
-            const isUnderground = this.currentDimension === 'nether' || this.currentDimension === 'caverns' || (this.engine.planetParams && this.engine.planetParams.theme === 'nether');
+            const isUnderground = this.currentDimension === 'nether' || (this.engine.planetParams && this.engine.planetParams.theme === 'nether');
             const camY = isUnderground ? this.player.position.y + 40 : 250;
             const lookY = isUnderground ? camY - 250 : 0;
             this.minimapCamera.position.set(this.player.position.x, camY, this.player.position.z + 40);
@@ -2483,8 +2612,6 @@ class Game {
         this.isWarping = true;
 
         const isAether = targetDim === 'aether';
-        const isCaverns = targetDim === 'caverns';
-        const isHighlands = targetDim === 'highlands';
         const isWarpingToDim = targetDim !== 'overworld';
 
         if (isWarpingToDim) {
@@ -2498,7 +2625,7 @@ class Game {
         fade.style.position = 'fixed';
         fade.style.top = '0'; fade.style.left = '0';
         fade.style.width = '100%'; fade.style.height = '100%';
-        fade.style.backgroundColor = isWarpingToDim ? (isAether ? 'white' : (isHighlands ? '#00ffff' : '#400000')) : 'white';
+        fade.style.backgroundColor = isWarpingToDim ? (isAether ? 'white' : '#400000') : 'white';
         fade.style.opacity = '0';
         fade.style.transition = 'opacity 1.5s ease-in-out';
         fade.style.zIndex = '9999';
@@ -2532,12 +2659,11 @@ class Game {
             let spawnPos;
             if (isWarpingToDim) {
                 spawnPos = findSafeSpawn(this.planetParams, targetDim);
-                this.pendingPortal = { pos: spawnPos, isNether: targetDim === 'nether', isAether: targetDim === 'aether', isCaverns: targetDim === 'caverns', isHighlands: targetDim === 'highlands' };
+                this.pendingPortal = { pos: spawnPos, isNether: targetDim === 'nether', isAether: targetDim === 'aether' };
             } else {
                 spawnPos = this.overworldReturnPos || findSafeSpawn(this.planetParams, 'overworld');
-                // Use the saved portal type for the return portal
                 const returnDim = this.lastPortalDim || 'nether';
-                this.pendingPortal = { pos: spawnPos, isNether: returnDim === 'nether', isAether: returnDim === 'aether', isCaverns: returnDim === 'caverns', isHighlands: returnDim === 'highlands' };
+                this.pendingPortal = { pos: spawnPos, isNether: returnDim === 'nether', isAether: returnDim === 'aether' };
             }
             // Center player in the block to avoid wall clipping
             this.player.position.set(spawnPos.x + 0.5, spawnPos.y, spawnPos.z + 0.5);
@@ -2557,20 +2683,13 @@ class Game {
         }, 1500);
     }
 
-    buildLitPortal(px, py, pz, isNether, isAether = false, isCaverns = false, isHighlands = false) {
+    buildLitPortal(px, py, pz, isNether, isAether = false) {
         const startX = Math.floor(px) - 1;
         const startY = Math.floor(py);
         const startZ = Math.floor(pz) - 3; // Offset portal 3 blocks away
         
-        let frameBlock = window.BLOCKS.OBSIDIAN;
-        if (isAether) frameBlock = window.BLOCKS.GLOWSTONE;
-        if (isCaverns) frameBlock = window.BLOCKS.DIRT;
-        if (isHighlands) frameBlock = window.BLOCKS.STONE;
-
-        let interiorBlock = window.BLOCKS.PORTAL;
-        if (isAether) interiorBlock = window.BLOCKS.AETHER_PORTAL;
-        if (isCaverns) interiorBlock = window.BLOCKS.CAVERN_PORTAL;
-        if (isHighlands) interiorBlock = window.BLOCKS.HIGHLANDS_PORTAL;
+        let frameBlock = isAether ? window.BLOCKS.GLOWSTONE : window.BLOCKS.OBSIDIAN;
+        let interiorBlock = isAether ? window.BLOCKS.AETHER_PORTAL : window.BLOCKS.PORTAL;
 
         // Build 4x5 lit portal with obsidian/glowstone frame
         for (let x = startX; x < startX + 4; x++) {
@@ -2584,11 +2703,7 @@ class Game {
         }
         
         // Platform block
-        let floorBlock = window.BLOCKS.OBSIDIAN;
-        if (isNether) floorBlock = window.BLOCKS.NETHERRACK;
-        if (isAether) floorBlock = window.BLOCKS.AETHER_STONE;
-        if (isCaverns) floorBlock = window.BLOCKS.CAVERN_STONE;
-        if (isHighlands) floorBlock = window.BLOCKS.HIGHLANDS_STONE;
+        let floorBlock = isAether ? window.BLOCKS.AETHER_STONE : (isNether ? window.BLOCKS.NETHERRACK : window.BLOCKS.OBSIDIAN);
 
         // Clear space and build platform
         for (let x = startX - 2; x <= startX + 5; x++) {
@@ -2606,6 +2721,73 @@ class Game {
                 }
             }
         }
+    }
+
+    createFireOverlayMesh(x, y, z, isSoul = false) {
+        const geom = new THREE.BoxGeometry(1.02, 1.02, 1.02);
+        const fireBlock = isSoul ? window.BLOCKS.SOUL_FIRE : window.BLOCKS.FIRE;
+        const fireUV = this.atlas ? this.atlas.getUV(fireBlock, 'side') : null;
+
+        if (this.atlas && fireUV) {
+            const uvAttr = geom.attributes.uv;
+            const u0 = fireUV.u, v0 = fireUV.v;
+            const u1 = fireUV.u + fireUV.uSize, v1 = fireUV.v + fireUV.vSize;
+            for (let faceIdx = 0; faceIdx < 6; faceIdx++) {
+                const base = faceIdx * 8;
+                uvAttr.array[base + 0] = u0; uvAttr.array[base + 1] = v1;
+                uvAttr.array[base + 2] = u1; uvAttr.array[base + 3] = v1;
+                uvAttr.array[base + 4] = u0; uvAttr.array[base + 5] = v0;
+                uvAttr.array[base + 6] = u1; uvAttr.array[base + 7] = v0;
+            }
+            uvAttr.needsUpdate = true;
+        }
+
+        const mat = new THREE.MeshBasicMaterial({
+            map: this.atlas ? this.atlas.texture : null,
+            transparent: true,
+            opacity: 0.85,
+            depthWrite: false,
+            side: THREE.DoubleSide
+        });
+
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+        this.engine.scene.add(mesh);
+        return mesh;
+    }
+
+    igniteBurningBlock(x, y, z, isSoul = false) {
+        const key = `${x},${y},${z}`;
+        if (this.burningBlocks.has(key)) return;
+        const bType = this.world.getBlock(x, y, z);
+        const mesh = this.createFireOverlayMesh(x, y, z, isSoul);
+        this.burningBlocks.set(key, {
+            x, y, z,
+            blockType: bType,
+            isSoul,
+            startTime: performance.now(),
+            duration: 4000,
+            mesh
+        });
+    }
+
+    extinguishBurningBlock(x, y, z) {
+        const key = `${x},${y},${z}`;
+        const burn = this.burningBlocks.get(key);
+        if (burn) {
+            if (burn.mesh) {
+                this.engine.scene.remove(burn.mesh);
+                if (burn.mesh.geometry) burn.mesh.geometry.dispose();
+                if (burn.mesh.material) burn.mesh.material.dispose();
+            }
+            this.burningBlocks.delete(key);
+            return true;
+        }
+        return false;
+    }
+
+    switchDimension(dim) {
+        this.warpToNewPlanet(dim);
     }
 
     igniteTNT(x, y, z) {
@@ -2737,12 +2919,6 @@ class Game {
         
         // Then try Glowstone -> Aether Portal
         if (this._tryLightPortalType(startX, startY, startZ, [window.BLOCKS.GLOWSTONE], window.BLOCKS.AETHER_PORTAL)) return;
-        
-        // Then try Dirt -> Caverns Portal
-        if (this._tryLightPortalType(startX, startY, startZ, [window.BLOCKS.DIRT, window.BLOCKS.GRASS], window.BLOCKS.CAVERN_PORTAL)) return;
-
-        // Then try Stone or Cobblestone -> Highlands Portal
-        if (this._tryLightPortalType(startX, startY, startZ, [window.BLOCKS.STONE, window.BLOCKS.COBBLESTONE], window.BLOCKS.HIGHLANDS_PORTAL)) return;
     }
 
     _tryLightPortalType(startX, startY, startZ, frameBlocks, portalBlock) {

@@ -159,7 +159,38 @@ export const BLOCKS = {
     DARK_OAK_LEAVES: 192,
     DARK_OAK_PLANKS: 193,
     CRYING_OBSIDIAN: 195,
-    MYCELIUM: 196
+    MYCELIUM: 196,
+    WARPED_NYLIUM: 197,
+    WARPED_STEM: 198,
+    WARPED_WART_BLOCK: 199,
+    WARPED_ROOTS: 200,
+    TWISTING_VINES: 201,
+    NETHER_SPROUTS: 202,
+    SOUL_SOIL: 203,
+    BONE_BLOCK: 204,
+    SOUL_FIRE: 205,
+    BASALT: 206,
+    SMOOTH_BASALT: 207,
+    MAGMA: 208,
+    BLACKSTONE: 209,
+    SHROOMLIGHT: 210,
+    ZANITE_ORE: 211,
+    GRAVITITE_ORE: 212,
+    AMBROSIUM_ORE: 213,
+    CARVED_HOLYSTONE: 214,
+    SENTRY_STONE: 215,
+    BLUE_AERCLOUD: 216,
+    GOLDEN_AERCLOUD: 217,
+    GOLDEN_OAK_WOOD: 218,
+    GOLDEN_OAK_LEAVES: 219,
+    MAGIC_WOOD: 220,
+    MAGIC_LEAVES: 221,
+    REDWOOD_LOG: 222,
+    REDWOOD_LEAVES: 223,
+    LAVENDER: 224,
+    PODZOL: 225,
+    RUBY_ORE: 226,
+    SAPPHIRE_ORE: 227
 };
 
 // Block properties
@@ -317,7 +348,40 @@ const BLOCK_PROPS = {
     [BLOCKS.QUICKSOIL]:     { name: 'Quicksoil',      health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.HOLYSTONE]:     { name: 'Holystone',      health: 8, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.ENCHANTED_AETHER_LOG]: { name: 'Enchanted Log', health: 5, transparent: false, emissive: 0.2, solid: true, drops: null, flammable: true },
-    [BLOCKS.ENCHANTED_AETHER_LEAVES]: { name: 'Enchanted Leaves', health: 1, transparent: true, emissive: 0.2, solid: true, drops: null, flammable: true }
+    [BLOCKS.ENCHANTED_AETHER_LEAVES]: { name: 'Enchanted Leaves', health: 1, transparent: true, emissive: 0.2, solid: true, drops: null, flammable: true },
+    [BLOCKS.MYCELIUM]:      { name: 'Mycelium',       health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
+    [BLOCKS.CRYING_OBSIDIAN]:{ name: 'Crying Obsidian', health: 50, transparent: false, emissive: 0.6, solid: true, drops: null },
+    [BLOCKS.WARPED_NYLIUM]: { name: 'Warped Nylium',  health: 4, transparent: false, emissive: 0.1, solid: true, drops: BLOCKS.NETHERRACK },
+    [BLOCKS.WARPED_STEM]:   { name: 'Warped Stem',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.WARPED_WART_BLOCK]: { name: 'Warped Wart Block', health: 2, transparent: false, emissive: 0.1, solid: true, drops: null },
+    [BLOCKS.WARPED_ROOTS]:  { name: 'Warped Roots',   health: 1, transparent: true, emissive: 0.2, solid: false, isCross: true, drops: null },
+    [BLOCKS.TWISTING_VINES]:{ name: 'Twisting Vines', health: 1, transparent: true, emissive: 0.2, solid: false, isCross: true, drops: null },
+    [BLOCKS.NETHER_SPROUTS]:{ name: 'Nether Sprouts', health: 1, transparent: true, emissive: 0.2, solid: false, isCross: true, drops: null },
+    [BLOCKS.SOUL_SOIL]:     { name: 'Soul Soil',      health: 3, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.BONE_BLOCK]:    { name: 'Bone Block',     health: 4, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.SOUL_FIRE]:     { name: 'Soul Fire',      health: 0, transparent: true, emissive: 1.0, solid: false, isCross: true, drops: null },
+    [BLOCKS.BASALT]:        { name: 'Basalt',         health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.SMOOTH_BASALT]: { name: 'Smooth Basalt',  health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.MAGMA]:         { name: 'Magma Block',    health: 3, transparent: false, emissive: 0.6, solid: true, drops: null },
+    [BLOCKS.BLACKSTONE]:    { name: 'Blackstone',     health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.SHROOMLIGHT]:   { name: 'Shroomlight',    health: 2, transparent: false, emissive: 1.0, solid: true, drops: null },
+    [BLOCKS.ZANITE_ORE]:    { name: 'Zanite Ore',     health: 8, transparent: false, emissive: 0.2, solid: true, drops: null },
+    [BLOCKS.GRAVITITE_ORE]: { name: 'Gravitite Ore',  health: 10, transparent: false, emissive: 0.5, solid: true, drops: null },
+    [BLOCKS.AMBROSIUM_ORE]: { name: 'Ambrosium Ore',  health: 6, transparent: false, emissive: 0.4, solid: true, drops: null },
+    [BLOCKS.CARVED_HOLYSTONE]: { name: 'Carved Holystone', health: 9, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.SENTRY_STONE]:  { name: 'Sentry Stone',   health: 12, transparent: false, emissive: 0.3, solid: true, drops: null },
+    [BLOCKS.BLUE_AERCLOUD]: { name: 'Blue Aercloud',  health: 1, transparent: true, emissive: 0.2, solid: true, drops: null },
+    [BLOCKS.GOLDEN_AERCLOUD]: { name: 'Golden Aercloud', health: 1, transparent: true, emissive: 0.3, solid: true, drops: null },
+    [BLOCKS.GOLDEN_OAK_WOOD]: { name: 'Golden Oak Wood', health: 6, transparent: false, emissive: 0.1, solid: true, drops: null, flammable: true },
+    [BLOCKS.GOLDEN_OAK_LEAVES]: { name: 'Golden Oak Leaves', health: 1, transparent: true, emissive: 0.4, solid: true, drops: null, flammable: true },
+    [BLOCKS.MAGIC_WOOD]:    { name: 'Magic Wood',     health: 5, transparent: false, emissive: 0.2, solid: true, drops: null, flammable: true },
+    [BLOCKS.MAGIC_LEAVES]:  { name: 'Magic Leaves',   health: 1, transparent: true, emissive: 0.5, solid: true, drops: null, flammable: true },
+    [BLOCKS.REDWOOD_LOG]:   { name: 'Redwood Log',    health: 6, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.REDWOOD_LEAVES]:{ name: 'Redwood Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.LAVENDER]:      { name: 'Lavender',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
+    [BLOCKS.PODZOL]:        { name: 'Podzol',         health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
+    [BLOCKS.RUBY_ORE]:      { name: 'Ruby Ore',       health: 8, transparent: false, emissive: 0.3, solid: true, drops: null },
+    [BLOCKS.SAPPHIRE_ORE]:  { name: 'Sapphire Ore',   health: 8, transparent: false, emissive: 0.3, solid: true, drops: null }
 };
 
 export function getBlockProperties(type) {
@@ -2133,6 +2197,111 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
 
+        case BLOCKS.SOUL_FIRE:
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = '#00f0ff';
+            for (let fx = 2; fx < 14; fx += 2) {
+                const fh = 4 + (rng() * 8) | 0;
+                ctx.fillRect(fx, TEX_SIZE - fh, 2, fh);
+            }
+            ctx.fillStyle = '#80ffff';
+            for (let fx = 3; fx < 13; fx += 3) {
+                const fh = 2 + (rng() * 5) | 0;
+                ctx.fillRect(fx, TEX_SIZE - fh, 1, fh);
+            }
+            break;
+
+        case BLOCKS.RUBY_ORE:
+            fillBase(ctx, 110, 110, 110);
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, '#d32f2f', 24);
+            addPixels(ctx, rng, '#ff5252', 16);
+            addPixels(ctx, rng, '#8b0000', 12);
+            break;
+
+        case BLOCKS.SAPPHIRE_ORE:
+            fillBase(ctx, 110, 110, 110);
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, '#1976d2', 24);
+            addPixels(ctx, rng, '#448aff', 16);
+            addPixels(ctx, rng, '#0d47a1', 12);
+            break;
+
+        case BLOCKS.MAGIC_WOOD:
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 60, 40, 80);
+                addNoise(ctx, rng, 15);
+                ctx.strokeStyle = '#9c27b0';
+                ctx.strokeRect(3, 3, 10, 10);
+                ctx.strokeRect(5, 5, 6, 6);
+            } else {
+                fillBase(ctx, 45, 30, 60);
+                addNoise(ctx, rng, 20);
+                addPixels(ctx, rng, '#7b1fa2', 30);
+                addPixels(ctx, rng, '#4a148c', 30);
+            }
+            break;
+
+        case BLOCKS.MAGIC_LEAVES:
+            fillBase(ctx, 156, 39, 176);
+            addNoise(ctx, rng, 25);
+            addPixels(ctx, rng, '#e1bee7', 40);
+            addPixels(ctx, rng, '#ba68c8', 40);
+            addPixels(ctx, rng, '#00e5ff', 15);
+            break;
+
+        case BLOCKS.REDWOOD_LOG:
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 160, 95, 60);
+                addNoise(ctx, rng, 15);
+                ctx.strokeStyle = '#8d4024';
+                ctx.strokeRect(2, 2, 12, 12);
+                ctx.strokeRect(4, 4, 8, 8);
+                ctx.strokeRect(6, 6, 4, 4);
+            } else {
+                fillBase(ctx, 110, 48, 25);
+                addNoise(ctx, rng, 25);
+                addPixels(ctx, rng, '#7a2f14', 40);
+                addPixels(ctx, rng, '#d06035', 30);
+            }
+            break;
+
+        case BLOCKS.REDWOOD_LEAVES:
+            fillBase(ctx, 35, 75, 45);
+            addNoise(ctx, rng, 25);
+            addPixels(ctx, rng, '#1e5230', 50);
+            addPixels(ctx, rng, '#4b8b58', 40);
+            break;
+
+        case BLOCKS.LAVENDER:
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = '#388e3c';
+            ctx.fillRect(7, 6, 2, 10);
+            ctx.fillStyle = '#7e57c2';
+            ctx.fillRect(6, 2, 4, 7);
+            ctx.fillStyle = '#b39ddb';
+            ctx.fillRect(7, 1, 2, 3);
+            ctx.fillStyle = '#512da8';
+            ctx.fillRect(6, 5, 1, 3);
+            ctx.fillRect(9, 4, 1, 3);
+            break;
+
+        case BLOCKS.BLUE_AERCLOUD:
+            fillBase(ctx, 180, 235, 255);
+            addNoise(ctx, rng, 12);
+            addPixels(ctx, rng, 'rgba(255, 255, 255, 0.8)', 60);
+            addPixels(ctx, rng, 'rgba(100, 200, 255, 0.6)', 40);
+            break;
+
+        case BLOCKS.GOLDEN_AERCLOUD:
+            fillBase(ctx, 255, 240, 180);
+            addNoise(ctx, rng, 12);
+            addPixels(ctx, rng, 'rgba(255, 255, 255, 0.8)', 60);
+            addPixels(ctx, rng, 'rgba(255, 200, 80, 0.6)', 40);
+            break;
+
         default:
             fillBase(ctx, 255, 0, 255);
             break;
@@ -2142,7 +2311,8 @@ function hasFaceVariants(blockType) {
     return [
         BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD, BLOCKS.DARK_OAK_WOOD,
         BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS,
-        BLOCKS.CACTUS, BLOCKS.SANDSTONE, BLOCKS.BOOKSHELF, BLOCKS.MYCELIUM
+        BLOCKS.CACTUS, BLOCKS.SANDSTONE, BLOCKS.BOOKSHELF, BLOCKS.MYCELIUM,
+        BLOCKS.WARPED_NYLIUM, BLOCKS.WARPED_STEM, BLOCKS.BONE_BLOCK, BLOCKS.BASALT, BLOCKS.BLACKSTONE, BLOCKS.PODZOL, BLOCKS.GOLDEN_OAK_WOOD, BLOCKS.MAGIC_WOOD, BLOCKS.REDWOOD_LOG
     ].includes(blockType);
 }
 
@@ -2291,7 +2461,38 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.QUICKSOIL]: 'aether://quicksoil',
     [BLOCKS.HOLYSTONE]: 'aether://holystone',
     [BLOCKS.ENCHANTED_AETHER_LOG]: { top: 'aether://golden_oak_log', side: 'aether://golden_oak_log', bottom: 'aether://golden_oak_log' },
-    [BLOCKS.ENCHANTED_AETHER_LEAVES]: 'aether://crystal_leaves'
+    [BLOCKS.ENCHANTED_AETHER_LEAVES]: 'aether://crystal_leaves',
+    [BLOCKS.WARPED_NYLIUM]: { top: 'warped_nylium', side: 'warped_nylium_side', bottom: 'netherrack' },
+    [BLOCKS.WARPED_STEM]: { top: 'warped_stem_top', side: 'warped_stem', bottom: 'warped_stem_top' },
+    [BLOCKS.WARPED_WART_BLOCK]: 'warped_wart_block',
+    [BLOCKS.WARPED_ROOTS]: 'warped_roots',
+    [BLOCKS.TWISTING_VINES]: 'twisting_vines',
+    [BLOCKS.NETHER_SPROUTS]: 'nether_sprouts',
+    [BLOCKS.SOUL_SOIL]: 'soul_soil',
+    [BLOCKS.BONE_BLOCK]: { top: 'bone_block_top', side: 'bone_block_side', bottom: 'bone_block_top' },
+    [BLOCKS.SOUL_FIRE]: 'soul_fire_0',
+    [BLOCKS.BASALT]: { top: 'basalt_top', side: 'basalt_side', bottom: 'basalt_top' },
+    [BLOCKS.SMOOTH_BASALT]: 'smooth_basalt',
+    [BLOCKS.MAGMA]: 'magma',
+    [BLOCKS.BLACKSTONE]: { top: 'blackstone_top', side: 'blackstone', bottom: 'blackstone_top' },
+    [BLOCKS.SHROOMLIGHT]: 'shroomlight',
+    [BLOCKS.PODZOL]: { top: 'podzol_top', side: 'podzol_side', bottom: 'dirt' },
+    [BLOCKS.ZANITE_ORE]: 'zanite_ore',
+    [BLOCKS.GRAVITITE_ORE]: 'gravitite_ore',
+    [BLOCKS.AMBROSIUM_ORE]: 'ambrosium_ore',
+    [BLOCKS.CARVED_HOLYSTONE]: 'carved_holystone',
+    [BLOCKS.SENTRY_STONE]: 'sentry_stone',
+    [BLOCKS.BLUE_AERCLOUD]: 'cold_aercloud',
+    [BLOCKS.GOLDEN_AERCLOUD]: 'cold_aercloud',
+    [BLOCKS.GOLDEN_OAK_WOOD]: { top: 'golden_oak_log', side: 'golden_oak_log', bottom: 'golden_oak_log' },
+    [BLOCKS.GOLDEN_OAK_LEAVES]: 'golden_oak_leaves',
+    [BLOCKS.MAGIC_WOOD]: { top: 'dark_oak_log_top', side: 'dark_oak_log', bottom: 'dark_oak_log_top' },
+    [BLOCKS.MAGIC_LEAVES]: 'cherry_leaves',
+    [BLOCKS.REDWOOD_LOG]: { top: 'spruce_log_top', side: 'spruce_log', bottom: 'spruce_log_top' },
+    [BLOCKS.REDWOOD_LEAVES]: 'spruce_leaves',
+    [BLOCKS.LAVENDER]: 'allium',
+    [BLOCKS.RUBY_ORE]: 'redstone_ore',
+    [BLOCKS.SAPPHIRE_ORE]: 'lapis_ore'
 };
 
 let _mcChestPromise = null;
@@ -2339,37 +2540,42 @@ function loadMinecraftTexture(name) {
     if (name.startsWith('chest://')) {
         return loadMinecraftChestTexture(name.slice(8));
     }
+    const cleanName = name.replace(/^aether:\/\//, '');
+    const tryPaths = [
+        `assets/aether/block/${cleanName}.png`,
+        `assets/aether/item/${cleanName}.png`,
+        `assets/mc/block/${cleanName}.png`,
+        `assets/mc/item/${cleanName}.png`,
+        `assets/mc/${cleanName}.png`
+    ];
+
     return new Promise((resolve) => {
-        // Try local assets first (instant load, offline friendly)
-        const localPath = name.includes('/') ? `assets/mc/${name}.png` : `assets/mc/block/${name}.png`;
-        const localImg = new Image();
-        localImg.onload = () => resolve(localImg);
-        localImg.onerror = () => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => resolve(img);
-            img.onerror = () => {
-                // Some names might be items instead of blocks
-                const altImg = new Image();
-                altImg.crossOrigin = 'anonymous';
-                altImg.onload = () => resolve(altImg);
-                altImg.onerror = () => resolve(null);
-                altImg.src = MINECRAFT_ASSETS_BASE + 'item/' + name + '.png';
-            };
-            if (name.startsWith('aether://')) {
-                const rawName = name.slice(9);
-                if (rawName === 'aether_dirt') {
-                    img.src = 'https://raw.githubusercontent.com/The-Aether-Team/The-Aether/1.21.1-develop/src/main/resources/packs/classic_base/assets/aether/textures/block/natural/aether_dirt.png';
+        const tryNextLocal = (idx) => {
+            if (idx >= tryPaths.length) {
+                // Remote fallback
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => {
+                    const altImg = new Image();
+                    altImg.crossOrigin = 'anonymous';
+                    altImg.onload = () => resolve(altImg);
+                    altImg.onerror = () => resolve(null);
+                    altImg.src = MINECRAFT_ASSETS_BASE + 'item/' + cleanName + '.png';
+                };
+                if (cleanName.includes('/')) {
+                    img.src = MINECRAFT_ASSETS_BASE + cleanName + '.png';
                 } else {
-                    img.src = AETHER_ASSETS_BASE + rawName + '.png';
+                    img.src = MINECRAFT_ASSETS_BASE + 'block/' + cleanName + '.png';
                 }
-            } else if (name.includes('/')) {
-                img.src = MINECRAFT_ASSETS_BASE + name + '.png';
-            } else {
-                img.src = MINECRAFT_ASSETS_BASE + 'block/' + name + '.png';
+                return;
             }
+            const localImg = new Image();
+            localImg.onload = () => resolve(localImg);
+            localImg.onerror = () => tryNextLocal(idx + 1);
+            localImg.src = tryPaths[idx];
         };
-        localImg.src = localPath;
+        tryNextLocal(0);
     });
 }
 
@@ -2429,7 +2635,7 @@ export async function createTextureAtlas(useMinecraft = false) {
         generateBlockTexture(tmpCtx, entry.blockType, entry.face === 'all' ? 'side' : entry.face, rng);
         ctx.drawImage(tmp, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
 
-        if (entry.blockType === BLOCKS.WATER || entry.blockType === BLOCKS.LAVA || entry.blockType === BLOCKS.SWAMP_WATER || entry.blockType === BLOCKS.FIRE) {
+        if (entry.blockType === BLOCKS.WATER || entry.blockType === BLOCKS.LAVA || entry.blockType === BLOCKS.SWAMP_WATER || entry.blockType === BLOCKS.FIRE || entry.blockType === BLOCKS.SOUL_FIRE) {
             const fCanvas = document.createElement('canvas');
             fCanvas.width = TEX_SIZE; fCanvas.height = TEX_SIZE;
             fCanvas.getContext('2d').drawImage(tmp, 0, 0);
@@ -2799,7 +3005,23 @@ const MC_ITEM_MAP = {
     'flint_and_steel': 'flint_and_steel',
     'bucket': 'bucket',
     'water_bucket': 'water_bucket',
-    'lava_bucket': 'lava_bucket'
+    'lava_bucket': 'lava_bucket',
+    'netherite_ingot': 'netherite_ingot',
+    'sword_netherite': 'netherite_sword',
+    'pickaxe_netherite': 'netherite_pickaxe',
+    'axe_netherite': 'netherite_axe',
+    'shovel_netherite': 'netherite_shovel',
+    'zanite_gem': 'zanite_gem',
+    'ambrosium_shard': 'ambrosium_shard',
+    'sword_zanite': 'zanite_sword',
+    'pickaxe_zanite': 'zanite_pickaxe',
+    'axe_zanite': 'zanite_axe',
+    'shovel_zanite': 'zanite_shovel',
+    'gravitite_ingot': 'gravitite_sword',
+    'sword_gravitite': 'gravitite_sword',
+    'pickaxe_gravitite': 'gravitite_pickaxe',
+    'axe_gravitite': 'gravitite_axe',
+    'shovel_gravitite': 'gravitite_shovel'
 };
 
 // Global cache: subtype -> canvas / data URL
@@ -2853,6 +3075,13 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         'mana_crystal': { c: '#03a9f4', d: '#01579b', h: '#b3e5fc' },
         'boss': { c: '#aa00ff', d: '#5500aa', h: '#d580ff' },
         'stick': { c: '#795548', d: '#4e342e', h: '#a1887f' },
+        'ruby': { c: '#d32f2f', d: '#8b0000', h: '#ff6666' },
+        'sapphire': { c: '#1976d2', d: '#0d47a1', h: '#64b5f6' },
+        'zanite': { c: '#ab47bc', d: '#6a1b9a', h: '#ea80fc' },
+        'gravitite': { c: '#f06292', d: '#ad1457', h: '#ff80ab' },
+        'netherite': { c: '#3e383c', d: '#221e21', h: '#5e565c' },
+        'amber': { c: '#ffb300', d: '#ff8f00', h: '#ffe082' },
+        'ambrosium': { c: '#fff176', d: '#fbc02d', h: '#ffffff' },
         'wand_basic': { c: '#795548', d: '#4e342e', g: '#e0e0e0' },
         'wand_fire': { c: '#795548', d: '#4e342e', g: '#ff3d00' },
         'wand_ice': { c: '#795548', d: '#4e342e', g: '#00b0ff' },
@@ -2895,11 +3124,18 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     // Helper to determine material tier from subtype
     let matName = 'iron_ingot';
     if (itemSubtype.includes('wood')) matName = 'wood';
-    if (itemSubtype.includes('stone') || itemSubtype.includes('cobble')) matName = 'stone';
-    if (itemSubtype.includes('iron')) matName = 'iron_ingot';
-    if (itemSubtype.includes('gold')) matName = 'gold_ingot';
-    if (itemSubtype.includes('diamond')) matName = 'diamond';
-    if (itemSubtype.includes('boss')) matName = 'boss';
+    else if (itemSubtype.includes('stone') || itemSubtype.includes('cobble')) matName = 'stone';
+    else if (itemSubtype.includes('gold')) matName = 'gold_ingot';
+    else if (itemSubtype.includes('diamond')) matName = 'diamond';
+    else if (itemSubtype.includes('ruby')) matName = 'ruby';
+    else if (itemSubtype.includes('sapphire')) matName = 'sapphire';
+    else if (itemSubtype.includes('zanite')) matName = 'zanite';
+    else if (itemSubtype.includes('gravitite')) matName = 'gravitite';
+    else if (itemSubtype.includes('netherite')) matName = 'netherite';
+    else if (itemSubtype.includes('amber')) matName = 'amber';
+    else if (itemSubtype.includes('ambrosium')) matName = 'ambrosium';
+    else if (itemSubtype.includes('iron')) matName = 'iron_ingot';
+    else if (itemSubtype.includes('boss')) matName = 'boss';
 
     let p = palettes[matName] || palettes['iron_ingot'];
     

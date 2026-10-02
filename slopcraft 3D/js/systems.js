@@ -155,24 +155,6 @@ export class LightingSystem {
                 moon: 0,
                 hemi: 1.0
             };
-        } else if (currentDimension === 'caverns') {
-            state = {
-                amb: new THREE.Color(0x3a453a), // Brighter ambient
-                bg: new THREE.Color(0x1a201a), // Slightly brighter fog/bg
-                top: new THREE.Color(0x556655), // Brighter top
-                sun: 0,
-                moon: 0,
-                hemi: 1.5 // Increased hemi light
-            };
-        } else if (currentDimension === 'highlands') {
-            state = {
-                amb: new THREE.Color(0xaaccee),
-                bg: new THREE.Color(0x00ffff),
-                top: new THREE.Color(0x00aaff),
-                sun: 1.5,
-                moon: 0,
-                hemi: 1.2
-            };
         } else {
             state = this._getLightState(this.timeOfDay);
         }
@@ -193,8 +175,6 @@ export class LightingSystem {
                 this.scene.fog.density = 0.02; // Thicker fog in Aether to feel like clouds
             } else if (currentDimension === 'nether') {
                 this.scene.fog.density = 0.015;
-            } else if (currentDimension === 'highlands') {
-                this.scene.fog.density = 0.005; // Light mist for scale
             } else {
                 this.scene.fog.density = this.scene.fog.baseDensity || 0.003;
             }
@@ -748,28 +728,119 @@ class UISystem {
         sep.textContent = '— Items & Equipment —';
         panel.appendChild(sep);
 
+        const getEquipDataForSubtype = (sub) => {
+            // Netherite
+            if (sub === 'sword_netherite')   return { damage: 11, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Infernal Might (Fireproof & High Knockback)' };
+            if (sub === 'pickaxe_netherite') return { mineSpeed: 5.5, damage: 6, chopSpeed: 1.5, passive: 'Infernal Resilience (Fireproof)' };
+            if (sub === 'axe_netherite')     return { chopSpeed: 5.5, damage: 10, mineSpeed: 1.0, passive: 'Infernal Cleave (Heavy Strike)' };
+            if (sub === 'shovel_netherite')  return { digSpeed: 5.5, damage: 5, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Infernal Excavation' };
+            // Gravitite (Aether)
+            if (sub === 'sword_gravitite')   return { damage: 10, mineSpeed: 1.0, chopSpeed: 1.0, levitate: true, passive: 'Levitation Surge (Launches Mobs Upward)' };
+            if (sub === 'pickaxe_gravitite') return { mineSpeed: 5.0, damage: 5, chopSpeed: 1.5, passive: 'Levitation Core (Zero-G)' };
+            if (sub === 'axe_gravitite')     return { chopSpeed: 5.0, damage: 9, mineSpeed: 1.0, passive: 'Levitation Strike' };
+            if (sub === 'shovel_gravitite')  return { digSpeed: 5.0, damage: 4, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Levitation Scoop' };
+            // Ruby
+            if (sub === 'sword_ruby')        return { damage: 9, mineSpeed: 1.0, chopSpeed: 1.0, fire: true, passive: 'Igniting Edge (Sets Enemies Ablaze)' };
+            if (sub === 'pickaxe_ruby')      return { mineSpeed: 4.5, damage: 5, chopSpeed: 1.5, passive: 'Molten Core (Auto-Smelts Ores to Ingots)' };
+            if (sub === 'axe_ruby')          return { chopSpeed: 4.5, damage: 8, mineSpeed: 1.0, passive: 'Kindling Strike' };
+            if (sub === 'shovel_ruby')       return { digSpeed: 4.5, damage: 4, mineSpeed: 1.0, chopSpeed: 1.0 };
+            // Sapphire
+            if (sub === 'sword_sapphire')    return { damage: 8, mineSpeed: 1.0, chopSpeed: 1.0, frost: true, passive: 'Glacial Frost (Freezes Enemies)' };
+            if (sub === 'pickaxe_sapphire')  return { mineSpeed: 4.0, damage: 4, chopSpeed: 1.5, passive: 'Crystal Precision' };
+            if (sub === 'axe_sapphire')      return { chopSpeed: 4.0, damage: 7, mineSpeed: 1.0, passive: 'Glacial Cleave' };
+            if (sub === 'shovel_sapphire')   return { digSpeed: 4.0, damage: 3, mineSpeed: 1.0, chopSpeed: 1.0 };
+            // Zanite (Aether)
+            if (sub === 'sword_zanite')      return { damage: 7, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Aetherial Surge (Damage Scales With Use)' };
+            if (sub === 'pickaxe_zanite')    return { mineSpeed: 4.2, damage: 4, chopSpeed: 1.5, passive: 'Aetherial Surge (Mines Faster With Use)' };
+            if (sub === 'axe_zanite')        return { chopSpeed: 4.2, damage: 7, mineSpeed: 1.0, passive: 'Aetherial Surge' };
+            if (sub === 'shovel_zanite')     return { digSpeed: 4.2, damage: 3, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Aetherial Surge' };
+            // Diamond
+            if (sub === 'sword_diamond')     return { damage: 12, mineSpeed: 1.0, chopSpeed: 1.0 };
+            if (sub === 'pickaxe_diamond')   return { mineSpeed: 6.0, damage: 5, chopSpeed: 1.5 };
+            if (sub === 'axe_diamond')       return { chopSpeed: 5.0, damage: 7, mineSpeed: 1.0 };
+            if (sub === 'shovel_diamond')    return { digSpeed: 5.0, damage: 4, mineSpeed: 1.0, chopSpeed: 1.0 };
+            // Iron
+            if (sub === 'sword_iron')        return { damage: 8, mineSpeed: 1.0, chopSpeed: 1.0 };
+            if (sub === 'pickaxe_iron')      return { mineSpeed: 3.0, damage: 4, chopSpeed: 1.5 };
+            if (sub === 'axe_iron')          return { chopSpeed: 3.0, damage: 5, mineSpeed: 1.0 };
+            if (sub === 'shovel_iron')       return { digSpeed: 3.0, damage: 3, mineSpeed: 1.0, chopSpeed: 1.0 };
+            // Gold
+            if (sub === 'sword_gold')        return { damage: 7, mineSpeed: 1.0, chopSpeed: 1.0 };
+            if (sub === 'pickaxe_gold')      return { mineSpeed: 2.5, damage: 3, chopSpeed: 2.5 };
+            if (sub === 'axe_gold')          return { chopSpeed: 2.5, damage: 4, mineSpeed: 1.0 };
+            if (sub === 'shovel_gold')       return { digSpeed: 2.5, damage: 2, mineSpeed: 1.0, chopSpeed: 1.0 };
+            // Stone
+            if (sub === 'sword_stone')       return { damage: 5, mineSpeed: 1.0, chopSpeed: 1.0 };
+            if (sub === 'pickaxe_stone')     return { mineSpeed: 2.0, damage: 3, chopSpeed: 1.2 };
+            if (sub === 'axe_stone')         return { chopSpeed: 2.0, damage: 4, mineSpeed: 1.0 };
+            if (sub === 'shovel_stone')      return { digSpeed: 2.0, damage: 2, mineSpeed: 1.0, chopSpeed: 1.0 };
+            // Wood
+            if (sub === 'sword_wood')        return { damage: 3, mineSpeed: 1.0, chopSpeed: 1.0 };
+            if (sub === 'pickaxe_wood')      return { mineSpeed: 1.5, damage: 2, chopSpeed: 1.0 };
+            if (sub === 'axe_wood')          return { chopSpeed: 1.5, damage: 3, mineSpeed: 1.0 };
+            if (sub === 'shovel_wood')       return { digSpeed: 1.5, damage: 1, mineSpeed: 1.0, chopSpeed: 1.0 };
+            // Armor
+            if (sub.startsWith('head_') || sub.startsWith('helmet_')) return { protection: sub.includes('diamond') ? 5 : (sub.includes('gold') ? 3 : 2) };
+            if (sub.startsWith('chest_')) return { protection: sub.includes('diamond') ? 10 : (sub.includes('gold') ? 7 : 5) };
+            if (sub.startsWith('legs_')) return { protection: sub.includes('diamond') ? 7 : (sub.includes('gold') ? 4 : 3) };
+            if (sub.startsWith('boots_')) return { protection: sub.includes('diamond') ? 5 : (sub.includes('gold') ? 3 : 2) };
+
+            return { damage: 0, durability: 999 };
+        };
+
         const equipItems = [
             { type: 'equipment', subtype: 'flint_and_steel', name: 'Flint and Steel' },
-            { type: 'equipment', subtype: 'sword_wood',      name: 'Wooden Sword' },
-            { type: 'equipment', subtype: 'sword_stone',     name: 'Stone Sword' },
-            { type: 'equipment', subtype: 'sword_iron',      name: 'Iron Sword' },
-            { type: 'equipment', subtype: 'sword_gold',      name: 'Golden Sword' },
+            // Netherite
+            { type: 'equipment', subtype: 'sword_netherite',   name: 'Netherite Sword' },
+            { type: 'equipment', subtype: 'pickaxe_netherite', name: 'Netherite Pickaxe' },
+            { type: 'equipment', subtype: 'axe_netherite',     name: 'Netherite Axe' },
+            { type: 'equipment', subtype: 'shovel_netherite',  name: 'Netherite Shovel' },
+            // Ruby
+            { type: 'equipment', subtype: 'sword_ruby',        name: 'Ruby Sword' },
+            { type: 'equipment', subtype: 'pickaxe_ruby',      name: 'Ruby Pickaxe' },
+            { type: 'equipment', subtype: 'axe_ruby',          name: 'Ruby Axe' },
+            { type: 'equipment', subtype: 'shovel_ruby',       name: 'Ruby Shovel' },
+            // Sapphire
+            { type: 'equipment', subtype: 'sword_sapphire',    name: 'Sapphire Sword' },
+            { type: 'equipment', subtype: 'pickaxe_sapphire',  name: 'Sapphire Pickaxe' },
+            { type: 'equipment', subtype: 'axe_sapphire',      name: 'Sapphire Axe' },
+            { type: 'equipment', subtype: 'shovel_sapphire',   name: 'Sapphire Shovel' },
+            // Zanite (Aether)
+            { type: 'equipment', subtype: 'sword_zanite',      name: 'Zanite Sword' },
+            { type: 'equipment', subtype: 'pickaxe_zanite',    name: 'Zanite Pickaxe' },
+            { type: 'equipment', subtype: 'axe_zanite',        name: 'Zanite Axe' },
+            { type: 'equipment', subtype: 'shovel_zanite',     name: 'Zanite Shovel' },
+            // Gravitite (Aether)
+            { type: 'equipment', subtype: 'sword_gravitite',   name: 'Gravitite Sword' },
+            { type: 'equipment', subtype: 'pickaxe_gravitite', name: 'Gravitite Pickaxe' },
+            { type: 'equipment', subtype: 'axe_gravitite',     name: 'Gravitite Axe' },
+            { type: 'equipment', subtype: 'shovel_gravitite',  name: 'Gravitite Shovel' },
+            // Diamond
             { type: 'equipment', subtype: 'sword_diamond',   name: 'Diamond Sword' },
-            { type: 'equipment', subtype: 'pickaxe_wood',    name: 'Wooden Pickaxe' },
-            { type: 'equipment', subtype: 'pickaxe_stone',   name: 'Stone Pickaxe' },
-            { type: 'equipment', subtype: 'pickaxe_iron',    name: 'Iron Pickaxe' },
-            { type: 'equipment', subtype: 'pickaxe_gold',    name: 'Golden Pickaxe' },
             { type: 'equipment', subtype: 'pickaxe_diamond', name: 'Diamond Pickaxe' },
-            { type: 'equipment', subtype: 'axe_wood',        name: 'Wooden Axe' },
-            { type: 'equipment', subtype: 'axe_stone',       name: 'Stone Axe' },
-            { type: 'equipment', subtype: 'axe_iron',        name: 'Iron Axe' },
-            { type: 'equipment', subtype: 'axe_gold',        name: 'Golden Axe' },
             { type: 'equipment', subtype: 'axe_diamond',     name: 'Diamond Axe' },
-            { type: 'equipment', subtype: 'shovel_wood',     name: 'Wooden Shovel' },
-            { type: 'equipment', subtype: 'shovel_stone',    name: 'Stone Shovel' },
-            { type: 'equipment', subtype: 'shovel_iron',     name: 'Iron Shovel' },
-            { type: 'equipment', subtype: 'shovel_gold',     name: 'Golden Shovel' },
             { type: 'equipment', subtype: 'shovel_diamond',  name: 'Diamond Shovel' },
+            // Iron
+            { type: 'equipment', subtype: 'sword_iron',      name: 'Iron Sword' },
+            { type: 'equipment', subtype: 'pickaxe_iron',    name: 'Iron Pickaxe' },
+            { type: 'equipment', subtype: 'axe_iron',        name: 'Iron Axe' },
+            { type: 'equipment', subtype: 'shovel_iron',     name: 'Iron Shovel' },
+            // Gold
+            { type: 'equipment', subtype: 'sword_gold',      name: 'Golden Sword' },
+            { type: 'equipment', subtype: 'pickaxe_gold',    name: 'Golden Pickaxe' },
+            { type: 'equipment', subtype: 'axe_gold',        name: 'Golden Axe' },
+            { type: 'equipment', subtype: 'shovel_gold',     name: 'Golden Shovel' },
+            // Stone
+            { type: 'equipment', subtype: 'sword_stone',     name: 'Stone Sword' },
+            { type: 'equipment', subtype: 'pickaxe_stone',   name: 'Stone Pickaxe' },
+            { type: 'equipment', subtype: 'axe_stone',       name: 'Stone Axe' },
+            { type: 'equipment', subtype: 'shovel_stone',    name: 'Stone Shovel' },
+            // Wood
+            { type: 'equipment', subtype: 'sword_wood',      name: 'Wooden Sword' },
+            { type: 'equipment', subtype: 'pickaxe_wood',    name: 'Wooden Pickaxe' },
+            { type: 'equipment', subtype: 'axe_wood',        name: 'Wooden Axe' },
+            { type: 'equipment', subtype: 'shovel_wood',     name: 'Wooden Shovel' },
+            // Armor
             { type: 'equipment', subtype: 'helmet_iron',     name: 'Iron Helmet' },
             { type: 'equipment', subtype: 'chest_iron',      name: 'Iron Chestplate' },
             { type: 'equipment', subtype: 'legs_iron',       name: 'Iron Leggings' },
@@ -782,6 +853,15 @@ class UISystem {
             { type: 'equipment', subtype: 'chest_diamond',   name: 'Diamond Chestplate' },
             { type: 'equipment', subtype: 'legs_diamond',    name: 'Diamond Leggings' },
             { type: 'equipment', subtype: 'boots_diamond',   name: 'Diamond Boots' },
+            // Materials
+            { type: 'material',  subtype: 'netherite_ingot', name: 'Netherite Ingot' },
+            { type: 'material',  subtype: 'netherite_scrap', name: 'Netherite Scrap' },
+            { type: 'material',  subtype: 'ruby',            name: 'Ruby' },
+            { type: 'material',  subtype: 'sapphire',        name: 'Sapphire' },
+            { type: 'material',  subtype: 'zanite_gemstone', name: 'Zanite Gemstone' },
+            { type: 'material',  subtype: 'gravitite_ore',   name: 'Gravitite Ore' },
+            { type: 'material',  subtype: 'ambrosium_shard', name: 'Ambrosium Shard' },
+            { type: 'material',  subtype: 'quartz',          name: 'Nether Quartz' },
             { type: 'material',  subtype: 'raw_iron',        name: 'Raw Iron' },
             { type: 'material',  subtype: 'raw_gold',        name: 'Raw Gold' },
             { type: 'material',  subtype: 'iron_ingot',      name: 'Iron Ingot' },
@@ -789,10 +869,10 @@ class UISystem {
             { type: 'material',  subtype: 'diamond',         name: 'Diamond' },
             { type: 'material',  subtype: 'coal',            name: 'Coal' },
             { type: 'material',  subtype: 'ender_pearl',     name: 'Ender Pearl' },
-            { type: 'equipment', subtype: 'flint_and_steel', name: 'Flint and Steel' },
             { type: 'equipment', subtype: 'bucket',          name: 'Bucket' },
             { type: 'equipment', subtype: 'water_bucket',    name: 'Water Bucket' },
             { type: 'equipment', subtype: 'lava_bucket',     name: 'Lava Bucket' },
+            // Food
             { type: 'food',      subtype: 'raw_beef',        name: 'Raw Beef' },
             { type: 'food',      subtype: 'cooked_beef',     name: 'Steak' },
             { type: 'food',      subtype: 'raw_porkchop',    name: 'Raw Porkchop' },
@@ -832,7 +912,16 @@ class UISystem {
 
             slot.onmouseenter = (e) => {
                 if (this.dragState.isDragging || !this.isOpen) return;
-                const html = `<strong style="color:#7c5cff; font-size:16px;">${itm.name}</strong><br/><span style="color:#aaa;">${itm.type.charAt(0).toUpperCase() + itm.type.slice(1)}</span>`;
+                let html = `<strong style="color:#7c5cff; font-size:16px;">${itm.name}</strong><br/><span style="color:#aaa;">${itm.type.charAt(0).toUpperCase() + itm.type.slice(1)}</span>`;
+                if (itm.type === 'equipment') {
+                    const ed = getEquipDataForSubtype(itm.subtype);
+                    if (ed.damage) html += `<br/><span style="color:#ff6666;">Damage: ${ed.damage}</span>`;
+                    if (ed.mineSpeed && ed.mineSpeed > 1) html += `<br/><span style="color:#ffaa44;">Mine Speed: ${ed.mineSpeed}x</span>`;
+                    if (ed.chopSpeed && ed.chopSpeed > 1) html += `<br/><span style="color:#a7c957;">Chop Speed: ${ed.chopSpeed}x</span>`;
+                    if (ed.digSpeed && ed.digSpeed > 1) html += `<br/><span style="color:#d4a373;">Dig Speed: ${ed.digSpeed}x</span>`;
+                    if (ed.protection) html += `<br/><span style="color:#88aaff;">Protection: ${ed.protection}</span>`;
+                    if (ed.passive) html += `<br/><span style="color:#ffd166; font-weight:bold;">★ ${ed.passive}</span>`;
+                }
                 this.elements.tooltip.innerHTML = html;
                 this.elements.tooltip.classList.remove('hidden');
                 this.elements.tooltip.style.left = (e.clientX + 15) + 'px';
@@ -851,7 +940,7 @@ class UISystem {
                         id: `${itm.type}_${itm.subtype}_${Date.now()}`,
                         stackable: itm.type === 'material' || itm.type === 'food',
                         maxStack: (itm.type === 'material' || itm.type === 'food') ? 64 : 1,
-                        data: itm.type === 'equipment' ? { equipData: { damage: 0, durability: 999 } } : {},
+                        data: itm.type === 'equipment' ? { equipData: getEquipDataForSubtype(itm.subtype) } : {},
                         description: ''
                     },
                     count: (itm.type === 'material' || itm.type === 'food') ? 64 : 1
@@ -1501,10 +1590,13 @@ class UISystem {
             } else if (slot.item.type === 'equipment') {
                 const ed = slot.item.data.equipData || {};
                 if (ed.protection) html += `<span style="color:#88aaff;">Protection: ${ed.protection}</span><br/>`;
-                if (ed.mineSpeed) html += `<span style="color:#ffaa44;">Mine Speed: ${ed.mineSpeed}x</span><br/>`;
+                if (ed.mineSpeed && ed.mineSpeed > 1) html += `<span style="color:#ffaa44;">Mine Speed: ${ed.mineSpeed}x</span><br/>`;
+                if (ed.chopSpeed && ed.chopSpeed > 1) html += `<span style="color:#a7c957;">Chop Speed: ${ed.chopSpeed}x</span><br/>`;
+                if (ed.digSpeed && ed.digSpeed > 1) html += `<span style="color:#d4a373;">Dig Speed: ${ed.digSpeed}x</span><br/>`;
                 if (ed.damage) html += `<span style="color:#ff6666;">Damage: ${ed.damage}</span><br/>`;
                 if (ed.speedMult) html += `<span style="color:#44ff88;">Speed: ${ed.speedMult}x</span><br/>`;
                 if (ed.flying) html += `<span style="color:#88ffff;">🕊 Can fly</span><br/>`;
+                if (ed.passive) html += `<span style="color:#ffd166; font-weight:bold;">★ ${ed.passive}</span><br/>`;
                 if (slot.item.description) html += `<span style="color:#aaa;">${slot.item.description}</span>`;
             } else if (slot.item.type === 'modifier') {
                 const mod = slot.item.data.mod || slot.item;
@@ -1808,46 +1900,69 @@ class UISystem {
             [B.PALM_WOOD]: { block: B.PALM_PLANKS, name: 'Palm Planks' },
             [B.PINE_WOOD]: { block: B.PINE_PLANKS, name: 'Pine Planks' },
             [B.CRIMSON_STEM]: { block: B.CRIMSON_PLANKS, name: 'Crimson Planks' },
-            [B.DARK_OAK_WOOD]: { block: B.DARK_OAK_PLANKS, name: 'Dark Oak Planks' }
+            [B.DARK_OAK_WOOD]: { block: B.DARK_OAK_PLANKS, name: 'Dark Oak Planks' },
+            [B.MAGIC_WOOD]: { block: B.MAGIC_PLANKS, name: 'Magic Planks' },
+            [B.REDWOOD_LOG]: { block: B.REDWOOD_PLANKS, name: 'Redwood Planks' },
+            [B.WARPED_STEM]: { block: B.WARPED_PLANKS, name: 'Warped Planks' },
+            [B.GOLDEN_OAK_WOOD]: { block: B.GOLDEN_OAK_PLANKS, name: 'Golden Oak Planks' },
+            [B.AETHER_WOOD]: { block: B.AETHER_PLANKS, name: 'Skyroot Planks' },
         };
         const woodType = s.find(x => x !== null && woodToPlankMap[x]);
-        const isPlank = (t) => [B.PLANKS, B.ACACIA_PLANKS, B.CHERRY_PLANKS, B.AUTUMN_PLANKS, B.PALM_PLANKS, B.PINE_PLANKS, B.CRIMSON_PLANKS, B.DARK_OAK_PLANKS].includes(t);
+        const isPlank = (t) => [
+            B.PLANKS, B.ACACIA_PLANKS, B.CHERRY_PLANKS, B.AUTUMN_PLANKS, B.PALM_PLANKS,
+            B.PINE_PLANKS, B.CRIMSON_PLANKS, B.DARK_OAK_PLANKS, B.MAGIC_PLANKS,
+            B.REDWOOD_PLANKS, B.WARPED_PLANKS, B.GOLDEN_OAK_PLANKS, B.AETHER_PLANKS
+        ].includes(t);
         const countAnyPlank = s.filter(x => x !== null && isPlank(x)).length;
         const matchesMat = (t, expected) => expected === B.PLANKS ? isPlank(t) : t === expected;
 
         const getMatSuffix = (matType) => {
-            if (matType === 'iron_ingot') return '_iron';
-            if (matType === 'gold_ingot') return '_gold';
-            if (matType === 'diamond') return '_diamond';
-            if (matType === B.COBBLESTONE) return '_stone';
-            if (matType === B.PLANKS) return '_wood';
+            if (matType === 'netherite_ingot') return '_netherite';
+            if (matType === 'gravitite_ore')   return '_gravitite';
+            if (matType === 'ruby')            return '_ruby';
+            if (matType === 'sapphire')        return '_sapphire';
+            if (matType === 'zanite_gemstone') return '_zanite';
+            if (matType === 'iron_ingot')      return '_iron';
+            if (matType === 'gold_ingot')      return '_gold';
+            if (matType === 'diamond')         return '_diamond';
+            if (matType === B.COBBLESTONE)     return '_stone';
+            if (matType === B.PLANKS)          return '_wood';
             return '_iron';
         };
 
         // Pickaxes: 3 top mat, 2 stick middle
-        const pickaxeRecipe = (matType, mineSpeed, damage, chopSpeed, toolName) => {
+        const pickaxeRecipe = (matType, mineSpeed, damage, chopSpeed, toolName, passive = '') => {
             if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && matchesMat(s[2], matType) &&
                 !s[3] && s[4] === 'stick' && !s[5] &&
                 !s[6] && s[7] === 'stick' && !s[8])
-                return equip('pickaxe' + getMatSuffix(matType), { mineSpeed, damage, chopSpeed }, toolName, `${toolName}. Mine Speed: ${mineSpeed}x`);
+                return equip('pickaxe' + getMatSuffix(matType), { mineSpeed, damage, chopSpeed, passive }, toolName, `${toolName}. Mine Speed: ${mineSpeed}x${passive ? ' · ' + passive : ''}`);
             return null;
         };
 
         // Swords: 2 mat vertical, 1 stick bottom
-        const swordRecipe = (matType, damage, toolName) => {
+        const swordRecipe = (matType, damage, toolName, extraData = {}) => {
             if (!s[0] && matchesMat(s[1], matType) && !s[2] &&
                 !s[3] && matchesMat(s[4], matType) && !s[5] &&
                 !s[6] && s[7] === 'stick' && !s[8])
-                return equip('sword' + getMatSuffix(matType), { mineSpeed: 1.0, damage, chopSpeed: 1.0 }, toolName, `${toolName}. Damage: ${damage}`);
+                return equip('sword' + getMatSuffix(matType), { mineSpeed: 1.0, damage, chopSpeed: 1.0, ...extraData }, toolName, `${toolName}. Damage: ${damage}${extraData.passive ? ' · ' + extraData.passive : ''}`);
             return null;
         };
 
         // Axes: 3 mat corner, 2 stick
-        const axeRecipe = (matType, chopSpeed, damage, toolName) => {
+        const axeRecipe = (matType, chopSpeed, damage, toolName, passive = '') => {
             if (matchesMat(s[0], matType) && matchesMat(s[1], matType) && !s[2] &&
                 matchesMat(s[3], matType) && s[4] === 'stick' && !s[5] &&
                 !s[6] && s[7] === 'stick' && !s[8])
-                return equip('axe' + getMatSuffix(matType), { mineSpeed: 1.0, damage, chopSpeed }, toolName, `${toolName}. Chops fast. Speed: ${chopSpeed}x`);
+                return equip('axe' + getMatSuffix(matType), { mineSpeed: 1.0, damage, chopSpeed, passive }, toolName, `${toolName}. Chop Speed: ${chopSpeed}x${passive ? ' · ' + passive : ''}`);
+            return null;
+        };
+
+        // Shovels: 1 mat top-middle, 2 stick
+        const shovelRecipe = (matType, digSpeed, damage, toolName, passive = '') => {
+            if (!s[0] && matchesMat(s[1], matType) && !s[2] &&
+                !s[3] && s[4] === 'stick' && !s[5] &&
+                !s[6] && s[7] === 'stick' && !s[8])
+                return equip('shovel' + getMatSuffix(matType), { mineSpeed: 1.0, digSpeed, damage, chopSpeed: 1.0, passive }, toolName, `${toolName}. Dig Speed: ${digSpeed}x${passive ? ' · ' + passive : ''}`);
             return null;
         };
 
@@ -1930,28 +2045,59 @@ class UISystem {
         if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
         if (getCount(B.GOLD_BLOCK) === 1 && totalItems === 1) return mat('gold_ingot', 'Gold Ingot', 9);
         if (getCount(B.DIAMOND_BLOCK) === 1 && totalItems === 1) return mat('diamond', 'Diamond', 9);
+        if (getCount('netherite_scrap') === 4 && getCount('gold_ingot') === 4 && totalItems === 8) return mat('netherite_ingot', 'Netherite Ingot', 1);
 
         if (!this.is3x3Crafting) return null;
 
         // ONLY 3x3 recipes
             let r;
-            r = pickaxeRecipe('iron_ingot', 3.0, 5, 1.5, 'Iron Pickaxe'); if (r) return r;
+            // Pickaxes
+            r = pickaxeRecipe('netherite_ingot', 5.5, 6, 1.5, 'Netherite Pickaxe', 'Infernal Resilience (Fireproof)'); if (r) return r;
+            r = pickaxeRecipe('gravitite_ore', 5.0, 5, 1.5, 'Gravitite Pickaxe', 'Levitation Core'); if (r) return r;
+            r = pickaxeRecipe('ruby', 4.5, 5, 1.5, 'Ruby Pickaxe', 'Molten Core (Auto-Smelts Ores)'); if (r) return r;
+            r = pickaxeRecipe('sapphire', 4.0, 4, 1.5, 'Sapphire Pickaxe', 'Crystal Precision'); if (r) return r;
+            r = pickaxeRecipe('zanite_gemstone', 4.2, 4, 1.5, 'Zanite Pickaxe', 'Aetherial Surge'); if (r) return r;
             r = pickaxeRecipe('diamond', 6.0, 8, 3.0, 'Diamond Pickaxe'); if (r) return r;
+            r = pickaxeRecipe('iron_ingot', 3.0, 5, 1.5, 'Iron Pickaxe'); if (r) return r;
+            r = pickaxeRecipe('gold_ingot', 2.5, 4, 2.5, 'Gold Pickaxe'); if (r) return r;
             r = pickaxeRecipe(B.COBBLESTONE, 2.0, 4, 1.2, 'Stone Pickaxe'); if (r) return r;
             r = pickaxeRecipe(B.PLANKS, 1.5, 3, 1.0, 'Wooden Pickaxe'); if (r) return r;
-            r = pickaxeRecipe('gold_ingot', 2.5, 4, 2.5, 'Gold Pickaxe'); if (r) return r;
 
-            r = swordRecipe('iron_ingot', 8, 'Iron Sword'); if (r) return r;
+            // Swords
+            r = swordRecipe('netherite_ingot', 11, 'Netherite Sword', { passive: 'Infernal Might (Fireproof & High Knockback)' }); if (r) return r;
+            r = swordRecipe('gravitite_ore', 10, 'Gravitite Sword', { levitate: true, passive: 'Levitation Surge (Launches Mobs Upward)' }); if (r) return r;
+            r = swordRecipe('ruby', 9, 'Ruby Sword', { fire: true, passive: 'Igniting Edge (Sets Enemies Ablaze)' }); if (r) return r;
+            r = swordRecipe('sapphire', 8, 'Sapphire Sword', { frost: true, passive: 'Glacial Frost (Freezes Enemies)' }); if (r) return r;
+            r = swordRecipe('zanite_gemstone', 7, 'Zanite Sword', { passive: 'Aetherial Surge' }); if (r) return r;
             r = swordRecipe('diamond', 12, 'Diamond Sword'); if (r) return r;
+            r = swordRecipe('iron_ingot', 8, 'Iron Sword'); if (r) return r;
+            r = swordRecipe('gold_ingot', 7, 'Gold Sword'); if (r) return r;
             r = swordRecipe(B.COBBLESTONE, 5, 'Stone Sword'); if (r) return r;
             r = swordRecipe(B.PLANKS, 3, 'Wooden Sword'); if (r) return r;
-            r = swordRecipe('gold_ingot', 7, 'Gold Sword'); if (r) return r;
 
-            r = axeRecipe('iron_ingot', 3.0, 5, 'Iron Axe'); if (r) return r;
+            // Axes
+            r = axeRecipe('netherite_ingot', 5.5, 10, 'Netherite Axe', 'Infernal Cleave'); if (r) return r;
+            r = axeRecipe('gravitite_ore', 5.0, 9, 'Gravitite Axe', 'Levitation Strike'); if (r) return r;
+            r = axeRecipe('ruby', 4.5, 8, 'Ruby Axe', 'Kindling Strike'); if (r) return r;
+            r = axeRecipe('sapphire', 4.0, 7, 'Sapphire Axe', 'Glacial Cleave'); if (r) return r;
+            r = axeRecipe('zanite_gemstone', 4.2, 7, 'Zanite Axe', 'Aetherial Surge'); if (r) return r;
             r = axeRecipe('diamond', 5.0, 7, 'Diamond Axe'); if (r) return r;
+            r = axeRecipe('iron_ingot', 3.0, 5, 'Iron Axe'); if (r) return r;
+            r = axeRecipe('gold_ingot', 2.5, 4, 'Gold Axe'); if (r) return r;
             r = axeRecipe(B.COBBLESTONE, 2.0, 4, 'Stone Axe'); if (r) return r;
             r = axeRecipe(B.PLANKS, 1.5, 3, 'Wooden Axe'); if (r) return r;
-            r = axeRecipe('gold_ingot', 2.5, 4, 'Gold Axe'); if (r) return r;
+
+            // Shovels
+            r = shovelRecipe('netherite_ingot', 5.5, 5, 'Netherite Shovel', 'Infernal Excavation'); if (r) return r;
+            r = shovelRecipe('gravitite_ore', 5.0, 4, 'Gravitite Shovel', 'Levitation Scoop'); if (r) return r;
+            r = shovelRecipe('ruby', 4.5, 4, 'Ruby Shovel'); if (r) return r;
+            r = shovelRecipe('sapphire', 4.0, 3, 'Sapphire Shovel'); if (r) return r;
+            r = shovelRecipe('zanite_gemstone', 4.2, 3, 'Zanite Shovel', 'Aetherial Surge'); if (r) return r;
+            r = shovelRecipe('diamond', 5.0, 4, 'Diamond Shovel'); if (r) return r;
+            r = shovelRecipe('iron_ingot', 3.0, 3, 'Iron Shovel'); if (r) return r;
+            r = shovelRecipe('gold_ingot', 2.5, 2, 'Golden Shovel'); if (r) return r;
+            r = shovelRecipe(B.COBBLESTONE, 2.0, 2, 'Stone Shovel'); if (r) return r;
+            r = shovelRecipe(B.PLANKS, 1.5, 1, 'Wooden Shovel'); if (r) return r;
 
             r = armorRecipe2H('iron_ingot', 'Iron Helmet', 'head_iron', 2); if (r) return r;
             r = armorRecipeFull('iron_ingot', 'Iron Chestplate', 'chest_iron', 5); if (r) return r;

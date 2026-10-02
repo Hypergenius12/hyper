@@ -69,7 +69,7 @@ export class DevMode {
                     this.log("  heal - Restore health and mana");
                     this.log("  speed <multiplier> - Change movement speed");
                     this.log("  spawn <mob> - Spawn a mob");
-                    this.log("  dim <nether|overworld|aether|caverns|highlands> - Switch dimension");
+                    this.log("  dim <overworld|nether|aether> - Switch dimension");
                     this.log("  clear - Clear console");
                     break;
                 case 'clear':
@@ -114,11 +114,11 @@ export class DevMode {
                 case 'dim':
                     if (args.length >= 1) {
                         const dim = args[0].toLowerCase();
-                        if (['overworld', 'nether', 'aether', 'caverns', 'highlands'].includes(dim)) {
+                        if (['overworld', 'nether', 'aether'].includes(dim)) {
                             this.game.switchDimension(dim);
                             this.log(`Switching to ${dim}...`);
                         } else {
-                            this.log(`Unknown dimension. Try nether, overworld, aether, caverns, highlands`, "#FF5555");
+                            this.log(`Unknown dimension. Try overworld, nether, aether`, "#FF5555");
                         }
                     }
                     break;

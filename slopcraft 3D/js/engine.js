@@ -1487,10 +1487,11 @@ export class World {
                             this.setBlock(wx, wy + 1, wz, window.BLOCKS.SUGARCANE);
                         }
                     }
-                } else if (block === window.BLOCKS.FIRE) {
+                } else if (block === window.BLOCKS.FIRE || block === window.BLOCKS.SOUL_FIRE) {
                     const wx = chunk.cx * 16 + rx;
                     const wy = ry;
                     const wz = chunk.cz * 16 + rz;
+                    const isSoulFire = block === window.BLOCKS.SOUL_FIRE;
                     
                     const dirs = [
                         [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]
@@ -1499,7 +1500,10 @@ export class World {
                     // 1. Check if supported (needs solid block below, or adjacent flammable block)
                     let supported = false;
                     const blockBelow = this.getBlock(wx, wy - 1, wz);
-                    if (blockBelow !== window.BLOCKS.AIR && blockBelow !== window.BLOCKS.WATER && blockBelow !== window.BLOCKS.LAVA && blockBelow !== window.BLOCKS.FIRE) {
+                    const onSoulGround = blockBelow === window.BLOCKS.SOUL_SAND || blockBelow === window.BLOCKS.SOUL_SOIL;
+                    if (isSoulFire && onSoulGround) {
+                        supported = true;
+                    } else if (blockBelow !== window.BLOCKS.AIR && blockBelow !== window.BLOCKS.WATER && blockBelow !== window.BLOCKS.LAVA && blockBelow !== window.BLOCKS.FIRE && blockBelow !== window.BLOCKS.SOUL_FIRE) {
                         supported = true;
                     } else {
                         for (const [dx, dy, dz] of dirs) {
@@ -1517,7 +1521,6 @@ export class World {
                     
                     // 2. Spread to nearby AIR blocks that are next to flammable blocks
                     if (Math.random() < 0.4) {
-                        // Pick a random nearby position (-1 to 1)
                         const rx_spread = Math.floor(Math.random() * 3) - 1;
                         const ry_spread = Math.floor(Math.random() * 3) - 1;
                         const rz_spread = Math.floor(Math.random() * 3) - 1;
@@ -1528,7 +1531,6 @@ export class World {
                             const nz = wz + rz_spread;
                             
                             if (this.getBlock(nx, ny, nz) === window.BLOCKS.AIR) {
-                                // Check if this air block is adjacent to something flammable
                                 let canCatch = false;
                                 for (const [dx, dy, dz] of dirs) {
                                     if (this.isFlammable(this.getBlock(nx + dx, ny + dy, nz + dz))) {
@@ -1537,7 +1539,9 @@ export class World {
                                     }
                                 }
                                 if (canCatch) {
-                                    this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
+                                    const belowTarget = this.getBlock(nx, ny - 1, nz);
+                                    const spreadSoul = belowTarget === window.BLOCKS.SOUL_SAND || belowTarget === window.BLOCKS.SOUL_SOIL;
+                                    this.setBlock(nx, ny, nz, spreadSoul ? window.BLOCKS.SOUL_FIRE : window.BLOCKS.FIRE);
                                 }
                             }
                         }
@@ -1556,14 +1560,13 @@ export class World {
                             }
                             break;
                         } else if (this.isFlammable(adjBlock) && Math.random() < 0.45) {
-                            // Turn burned block into fire or air!
-                            this.setBlock(nx, ny, nz, Math.random() < 0.6 ? window.BLOCKS.FIRE : window.BLOCKS.AIR);
+                            this.setBlock(nx, ny, nz, Math.random() < 0.6 ? (isSoulFire ? window.BLOCKS.SOUL_FIRE : window.BLOCKS.FIRE) : window.BLOCKS.AIR);
                             break;
                         }
                     }
                     
-                    // 4. Fire naturally dies out sometimes
-                    if (Math.random() < 0.1) {
+                    // 4. Fire naturally dies out sometimes (soul fire on soul soil never dies)
+                    if (!isSoulFire && Math.random() < 0.1) {
                         this.setBlock(wx, wy, wz, window.BLOCKS.AIR);
                     }
                 } else if (block === window.BLOCKS.LAVA) {

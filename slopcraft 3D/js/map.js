@@ -177,25 +177,13 @@ export class BiomeMap {
         const dim = this.game.currentDimension || 'overworld';
         
         if (dim === 'nether') {
-            const temp = (params.tempNoise(worldX * 0.005, worldZ * 0.005) + 1) / 2;
-            const moist = (params.moistNoise(worldX * 0.005, worldZ * 0.005) + 1) / 2;
-            if (temp > 0.6) return 'Crimson Forest';
-            if (moist < 0.4) return 'Soul Sand Valley';
+            const bNoise = params.tempNoise(worldX * 0.003, worldZ * 0.003);
+            if (bNoise < -0.35) return 'Basalt Deltas';
+            if (bNoise < -0.05) return 'Soul Sand Valley';
+            if (bNoise < 0.25) return 'Warped Forest';
+            if (bNoise < 0.55) return 'Crimson Forest';
             return 'Nether Wastes';
         } 
-        if (dim === 'caverns') {
-            const biomeNoise = params.tempNoise(worldX * 0.005, worldZ * 0.005);
-            if (biomeNoise > 0.4) return 'Magma Caves';
-            if (biomeNoise < -0.4) return 'Crystal Caves';
-            return 'Caverns';
-        }
-        if (dim === 'highlands') {
-            const biomeNoiseVal = params.noise2D(worldX * 0.002 + 5000, worldZ * 0.002 + 5000);
-            if (biomeNoiseVal < -0.3) return 'Volcanic Peaks';
-            if (biomeNoiseVal < 0.2) return 'Meadows';
-            if (biomeNoiseVal < 0.6) return 'Frozen Wastes';
-            return 'Jagged Peaks';
-        }
         if (dim === 'aether') {
             return 'Aether Islands';
         }
@@ -273,6 +261,9 @@ export class BiomeMap {
                     case 'Ice Spikes': color = '#B3E6FF'; break;
                     case 'Mountains': color = '#A0A0A0'; break;
                     case 'Volcanic': color = '#331111'; break;
+                    case 'Mystic Grove': color = '#d8b4e2'; break;
+                    case 'Redwood Forest': color = '#78350f'; break;
+                    case 'Lavender Fields': color = '#a78bfa'; break;
                     case 'Mushroom': color = '#FF66FF'; break;
                     case 'Alien': color = '#8800FF'; break;
                     case 'Glow Forest': color = '#00FFFF'; break;
@@ -280,16 +271,9 @@ export class BiomeMap {
                     // Nether
                     case 'Nether Wastes': color = '#5c1717'; break;
                     case 'Crimson Forest': color = '#8a0a1a'; break;
+                    case 'Warped Forest': color = '#0d9488'; break;
                     case 'Soul Sand Valley': color = '#4e3f36'; break;
-                    // Caverns
-                    case 'Caverns': color = '#444444'; break;
-                    case 'Magma Caves': color = '#cc3300'; break;
-                    case 'Crystal Caves': color = '#3399ff'; break;
-                    // Highlands
-                    case 'Jagged Peaks': color = '#DDDDDD'; break;
-                    case 'Volcanic Peaks': color = '#222222'; break;
-                    case 'Meadows': color = '#44AA55'; break;
-                    case 'Frozen Wastes': color = '#EEEEFF'; break;
+                    case 'Basalt Deltas': color = '#27272a'; break;
                     // Aether
                     case 'Aether Islands': color = '#FFFFEE'; break;
                     
