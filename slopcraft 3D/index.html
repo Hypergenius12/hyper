@@ -8,8 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SlopCraft 3D</title>
     <meta name="description" content="Explore infinite procedurally generated planets with dungeons, magic wands, and epic bossfights.">
-    <link rel="stylesheet" href="css/style.css?v=79">
-    <link rel="stylesheet" href="css/geometric.css?v=79">
+    <link rel="stylesheet" href="css/style.css?v=80">
+    <link rel="stylesheet" href="css/geometric.css?v=80">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-LCRDCCZRXM"></script>
@@ -37,7 +37,7 @@
                 <div id="mc-splash-text" class="mc-splash-text">It's literally dirt!</div>
             </div>
 
-            <div style="margin: 16px 0; display: flex; align-items: center; gap: 12px; justify-content: center;">
+            <div style="margin: 18px 0 22px 0; display: flex; align-items: center; gap: 14px; justify-content: center;">
                 <label style="color: #e0e0e0; font-family: 'Minecraftia', sans-serif; font-size: 14px; text-shadow: 2px 2px 0 #3f3f3f;">World Seed:</label>
                 <input id="seed-input" type="text" placeholder="(random)" maxlength="40" class="mc-input" style="width: 220px;" />
             </div>
@@ -48,56 +48,67 @@
             </div>
 
             <!-- Start Screen Options Panel -->
-            <div id="start-options-panel" class="hidden" style="margin: 10px 0; background: rgba(0,0,0,0.7); border: 2px solid #555; padding: 12px 20px; box-sizing: border-box; width: 320px;">
-                <div style="margin: 6px 0; display: flex; align-items: center; justify-content: space-between;">
+            <div id="start-options-panel" class="hidden" style="margin: 12px 0 16px 0; background: rgba(0,0,0,0.75); border: 2px solid #555; padding: 14px 20px; box-sizing: border-box; width: 340px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
                     <label style="color: #fff; font-family: 'Minecraftia'; font-size: 13px; text-shadow: 1px 1px 0 #000; cursor: pointer;">
                         <input type="checkbox" id="start-mc-textures-toggle"> Minecraft Textures
                     </label>
                 </div>
-                <div style="margin: 6px 0; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
                     <label style="color: #fff; font-family: 'Minecraftia'; font-size: 13px; text-shadow: 1px 1px 0 #000; cursor: pointer;">
                         <input type="checkbox" id="start-blur-toggle" checked> Distance Blur
                     </label>
                 </div>
             </div>
 
-            <p class="start-hint">Click to lock mouse · WASD to move · Space to jump · E for Inventory</p>
+            <p class="start-hint" style="margin-top: 14px;">Click to lock mouse · WASD to move · Space to jump · E for Inventory</p>
 
-            <div style="position: fixed; bottom: 12px; left: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Slopcraft 3D v79</div>
+            <div style="position: fixed; bottom: 12px; left: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Slopcraft 3D v80</div>
             <div style="position: fixed; bottom: 12px; right: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Copyright Mojang AB / Slopcraft Team</div>
         </div>
     </div>
 
-    <!-- Pause Menu -->
+    <!-- Pause Menu (Game Menu) -->
     <div id="pause-screen" class="hidden">
-        <div class="start-content" style="max-width: 420px; width: 90%;">
-            <h1 class="mc-game-title" style="font-size: 2.8rem; margin-bottom: 24px;">Game Menu</h1>
-            <div class="start-actions">
-                <button id="btn-resume" class="mc-btn">Back to Game</button>
-                <div style="margin: 10px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 14px; border: 2px solid #555; box-sizing: border-box;">
-                    <label style="display: block; color: white; margin-bottom: 8px; font-family: 'Minecraftia'; font-size: 13px;">Render Distance: <span id="render-distance-val">8</span></label>
-                    <input type="range" id="render-distance-slider" min="2" max="16" value="8" style="width: 100%; cursor: pointer;">
+        <div class="pause-menu-card">
+            <h1 class="mc-game-title" style="font-size: 2.8rem; margin-bottom: 20px;">Game Menu</h1>
+            <div class="pause-menu-body">
+                <button id="btn-resume" class="mc-btn" style="width: 100%; max-width: 380px; margin: 4px 0 10px 0;">Back to Game</button>
+                
+                <!-- Options Grid: 2 columns / Spread-out layout -->
+                <div class="pause-options-grid">
+                    <div class="pause-option-box">
+                        <label>Render Distance: <span id="render-distance-val">8</span></label>
+                        <input type="range" id="render-distance-slider" min="2" max="16" value="8">
+                    </div>
+                    <div class="pause-option-box">
+                        <label>Field of View: <span id="fov-val">75</span></label>
+                        <input type="range" id="fov-slider" min="30" max="120" value="75">
+                    </div>
                 </div>
-                <div style="margin: 10px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 14px; border: 2px solid #555; box-sizing: border-box;">
-                    <label style="display: block; color: white; margin-bottom: 8px; font-family: 'Minecraftia'; font-size: 13px;">Field of View: <span id="fov-val">75</span></label>
-                    <input type="range" id="fov-slider" min="30" max="120" value="75" style="width: 100%; cursor: pointer;">
+
+                <!-- Toggles row side-by-side -->
+                <div class="pause-toggles-row">
+                    <div class="pause-toggle-box">
+                        <label>
+                            <input type="checkbox" id="pause-mc-textures-toggle"> MC Textures
+                        </label>
+                    </div>
+                    <div class="pause-toggle-box">
+                        <label>
+                            <input type="checkbox" id="pause-blur-toggle" checked> Distance Blur
+                        </label>
+                    </div>
                 </div>
-                <div style="margin: 6px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 10px 14px; border: 2px solid #555; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
-                    <label style="color: white; cursor: pointer; font-family: 'Minecraftia'; font-size: 13px;">
-                        <input type="checkbox" id="pause-mc-textures-toggle"> Minecraft Textures
-                    </label>
+
+                <!-- World Seed row -->
+                <div class="pause-seed-box">
+                    <span style="color: #aaa; font-family: 'Minecraftia'; font-size: 12px; flex-shrink: 0;">Seed:</span>
+                    <span id="current-seed-display" style="color: #55ffff; font-family: 'Minecraftia'; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0 8px; text-align: left;">-</span>
+                    <button id="btn-copy-seed" class="mc-btn" style="width: auto; height: 28px; padding: 0 12px; font-size: 11px; margin: 0; flex-shrink: 0;">Copy</button>
                 </div>
-                <div style="margin: 6px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 10px 14px; border: 2px solid #555; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
-                    <label style="color: white; cursor: pointer; font-family: 'Minecraftia'; font-size: 13px;">
-                        <input type="checkbox" id="pause-blur-toggle" checked> Distance Blur
-                    </label>
-                </div>
-                <div style="margin: 6px 0; width: 320px; background: rgba(0,0,0,0.6); padding: 10px 14px; border: 2px solid #555; box-sizing: border-box; display: flex; align-items: center; gap: 8px;">
-                    <span style="color: #aaa; font-family: 'Minecraftia'; font-size: 12px;">Seed:</span>
-                    <span id="current-seed-display" style="color: #55ffff; font-family: 'Minecraftia'; font-size: 12px; flex: 1;">-</span>
-                    <button id="btn-copy-seed" class="mc-btn" style="width: auto; height: 28px; padding: 0 10px; font-size: 11px; margin: 0;">Copy</button>
-                </div>
-                <button id="btn-quit" class="mc-btn" style="margin-top: 10px;">Quit to Title</button>
+
+                <button id="btn-quit" class="mc-btn" style="width: 100%; max-width: 380px; margin-top: 12px;">Quit to Title</button>
             </div>
         </div>
     </div>
@@ -210,6 +221,15 @@
                         </div>
                         <div id="crafting-recipe-name" style="margin-top: 4px; font-size: 0.75rem; color: #404040; font-family: 'Minecraftia', monospace; min-height: 14px;"></div>
                     </div>
+
+                    <!-- Wand Configurator (active when holding wand) -->
+                    <div id="wand-config-panel" class="hidden">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div class="mc-container-title" id="wand-config-title" style="margin: 0; font-size: 13px;">Wand Config</div>
+                            <button id="btn-recipe-book-wand" class="mc-btn" style="width: auto; height: 24px; padding: 0 8px; font-size: 11px; margin: 0 0 0 10px;">📖 Recipes</button>
+                        </div>
+                        <div class="wand-slots-grid" id="wand-slots-grid" style="display: grid; grid-template-columns: repeat(4, 40px); grid-template-rows: repeat(2, 40px); gap: 4px;"></div>
+                    </div>
                 </div>
 
                 <!-- 2. Chest Panel (3 rows of 9) -->
@@ -234,12 +254,6 @@
                         </div>
                         <div class="inv-slot crafting-output" id="furnace-output"></div>
                     </div>
-                </div>
-
-                <!-- 4. Wand Configurator (if active) -->
-                <div id="wand-config-panel" class="container-top-panel hidden">
-                    <div class="mc-container-title" id="wand-config-title">Wand Config</div>
-                    <div class="wand-slots-grid" id="wand-slots-grid" style="display: grid; grid-template-columns: repeat(4, 44px); gap: 6px;"></div>
                 </div>
 
                 <!-- 5. Dungeon Menu Panel -->
@@ -339,7 +353,7 @@
         }
     }
     </script>
-    <script type="module" src="js/main.js?v=79"></script>
+    <script type="module" src="js/main.js?v=80"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>
 </body>

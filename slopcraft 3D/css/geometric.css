@@ -22,9 +22,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     background: var(--mc-gui-bg, #c6c6c6);
-    padding: 14px 16px;
+    padding: 16px 20px;
     border: 4px solid #c6c6c6;
     border-top-color: #ffffff;
     border-left-color: #ffffff;
@@ -34,7 +34,7 @@
     font-family: 'Minecraftia', monospace, sans-serif;
     color: #404040;
     box-sizing: border-box;
-    width: 440px;
+    width: 464px;
 }
 
 .mc-container-title {
@@ -458,6 +458,110 @@
     display: none !important;
 }
 
+/* Authentic Minecraft Game Menu (Pause Screen) */
+.pause-menu-card {
+    background: rgba(0, 0, 0, 0.75);
+    border: 3px solid #555;
+    box-shadow: 0 12px 45px rgba(0, 0, 0, 0.9);
+    padding: 24px 32px;
+    box-sizing: border-box;
+    width: 460px;
+    max-width: 92vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.pause-menu-body {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.pause-options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+}
+
+.pause-option-box {
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #555;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+}
+
+.pause-option-box label {
+    display: block;
+    color: white;
+    margin-bottom: 6px;
+    font-family: 'Minecraftia', monospace, sans-serif;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.pause-option-box input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+}
+
+.pause-toggles-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+}
+
+.pause-toggle-box {
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #555;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.pause-toggle-box label {
+    color: white;
+    cursor: pointer;
+    font-family: 'Minecraftia', monospace, sans-serif;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.pause-seed-box {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #555;
+    padding: 8px 14px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+@media (max-width: 480px) {
+    .pause-options-grid, .pause-toggles-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* ============================================
    Two-Tier Minecraft Container Layout
    ============================================ */
@@ -468,7 +572,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .container-top-panel {
@@ -486,9 +590,10 @@
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     width: 100%;
     padding: 0 4px;
+    gap: 12px;
 }
 
 #player-preview-box {
@@ -615,10 +720,10 @@
 .mc-recipe-book-modal {
     position: fixed;
     top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 320px;
-    height: 420px;
+    left: calc(50% - 232px - 336px);
+    transform: translateY(-50%);
+    width: 326px;
+    height: 450px;
     background: var(--mc-gui-bg, #c6c6c6);
     border: 4px solid #c6c6c6;
     border-top-color: #ffffff;
@@ -633,6 +738,13 @@
     box-sizing: border-box;
     font-family: 'Minecraftia', monospace, sans-serif;
     color: #404040;
+}
+
+@media (max-width: 920px) {
+    .mc-recipe-book-modal {
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
 }
 
 .mc-recipe-book-modal.hidden {

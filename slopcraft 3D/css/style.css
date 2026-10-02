@@ -529,7 +529,7 @@ canvas#game-canvas {
 /* Authentic 3D Minecraft Title Logo */
 .mc-title-container {
     position: relative;
-    margin-bottom: 24px;
+    margin-bottom: 40px;
     display: inline-block;
 }
 
@@ -570,14 +570,14 @@ canvas#game-canvas {
 /* Bouncing Yellow Splash Text */
 .mc-splash-text {
     position: absolute;
-    bottom: -12px;
-    right: -40px;
+    bottom: -6px;
+    right: -24px;
     color: #ffff00;
     font-family: 'Minecraftia', monospace, sans-serif;
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     text-shadow: 2px 2px 0 #3f3f00;
     transform-origin: center center;
-    transform: rotate(-20deg);
+    transform: rotate(-15deg);
     animation: mc-splash-bounce 0.5s ease-in-out infinite alternate;
     white-space: nowrap;
     pointer-events: none;
@@ -585,16 +585,16 @@ canvas#game-canvas {
 }
 
 @keyframes mc-splash-bounce {
-    0% { transform: rotate(-20deg) scale(1); }
-    100% { transform: rotate(-20deg) scale(1.08); }
+    0% { transform: rotate(-15deg) scale(1); }
+    100% { transform: rotate(-15deg) scale(1.08); }
 }
 
 .start-actions {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
 /* Minecraft Text Box Input */

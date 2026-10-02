@@ -493,13 +493,16 @@ class UISystem {
         this._initFurnaceSlots();
 
         const btnRecipeBook = document.getElementById('btn-recipe-book');
+        const btnRecipeBookWand = document.getElementById('btn-recipe-book-wand');
         const modalRecipeBook = document.getElementById('recipe-book-modal');
         const btnCloseRecipes = document.getElementById('btn-close-recipes');
-        if (btnRecipeBook && modalRecipeBook && btnCloseRecipes) {
-            btnRecipeBook.onclick = () => {
+        if (modalRecipeBook && btnCloseRecipes) {
+            const openRecipes = () => {
                 modalRecipeBook.classList.remove('hidden');
                 this.showRecipeBook();
             };
+            if (btnRecipeBook) btnRecipeBook.onclick = openRecipes;
+            if (btnRecipeBookWand) btnRecipeBookWand.onclick = openRecipes;
             btnCloseRecipes.onclick = () => modalRecipeBook.classList.add('hidden');
         }
 
@@ -882,13 +885,17 @@ class UISystem {
             this.renderGrid(this.elements.mainGrid, player.inventory.slots.slice(9, 36), 9, player, 'inventory');
             this.renderGrid(this.elements.invHotbar, player.inventory.slots.slice(0, 9), 0, player, 'inventory');
             
-            // Render Wand Config if holding wand
+            // Render Wand Config if holding wand (and not using 3x3 crafting table, chest, or furnace)
             const activeSlot = player.inventory.slots[player.selectedSlot];
-            if (activeSlot && activeSlot.item.type === 'wand') {
-                this.elements.wandConfigPanel.classList.remove('hidden');
+            if (!this.is3x3Crafting && !this.chestPos && !this.furnacePos && activeSlot && activeSlot.item.type === 'wand') {
+                if (this.elements.wandConfigPanel) this.elements.wandConfigPanel.classList.remove('hidden');
+                if (this.elements.craftingPanel) this.elements.craftingPanel.classList.add('hidden');
                 this.renderWandConfig(activeSlot.item);
             } else {
-                this.elements.wandConfigPanel.classList.add('hidden');
+                if (this.elements.wandConfigPanel) this.elements.wandConfigPanel.classList.add('hidden');
+                if (!this.chestPos && !this.furnacePos && this.elements.craftingPanel) {
+                    this.elements.craftingPanel.classList.remove('hidden');
+                }
             }
 
             // Render crafting slots

@@ -6,7 +6,7 @@ import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './eng
 import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture } from './textures.js?v=78';
 import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=78';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=78';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=78';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=80';
 import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=78';
 import { AudioManager } from './audio.js?v=78';
 import { BiomeMap } from './map.js?v=78';
