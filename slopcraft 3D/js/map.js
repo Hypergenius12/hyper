@@ -262,11 +262,7 @@ export class BiomeMap {
                     case 'Volcanic': color = '#331111'; break;
                     case 'Mystic Grove': color = '#d8b4e2'; break;
                     case 'Redwood Forest': color = '#78350f'; break;
-                    case 'Lavender Fields': color = '#a78bfa'; break;
                     case 'Mushroom': color = '#FF66FF'; break;
-                    case 'Alien': color = '#8800FF'; break;
-                    case 'Glow Forest': color = '#00FFFF'; break;
-                    case 'Crystal': color = '#a36ddb'; break;
                     // Nether
                     case 'Nether Wastes': color = '#5c1717'; break;
                     case 'Crimson Forest': color = '#8a0a1a'; break;

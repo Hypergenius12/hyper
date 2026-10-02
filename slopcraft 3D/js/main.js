@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=85';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=85';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=85';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=85';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=85';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=85';
-import { AudioManager } from './audio.js?v=85';
-import { BiomeMap } from './map.js?v=85';
-import { DevMode } from './dev.js?v=85';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=86';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=86';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=86';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=86';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=86';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=86';
+import { AudioManager } from './audio.js?v=86';
+import { BiomeMap } from './map.js?v=86';
+import { DevMode } from './dev.js?v=86';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -2040,18 +2040,10 @@ class Game {
                     pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 2 + Math.random() * 5;
                     const colors = [0xdd88ff, 0xee99ff, 0xccaaff, 0x88eebb];
                     this.particles.emit(pos, 'magic', 1, colors[Math.floor(Math.random()*colors.length)]);
-                } else if (biome.name === 'Lavender Fields') {
-                    const pos = this.player.position.clone();
-                    pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 1 + Math.random() * 3;
-                    this.particles.emit(pos, 'leaf', 1, 0xb388ff);
                 } else if (biome.name === 'Volcanic') {
                     const pos = this.player.position.clone();
                     pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 1 + Math.random() * 5;
                     this.particles.emit(pos, Math.random() < 0.5 ? 'smoke' : 'fire', 1, Math.random() < 0.5 ? 0x333333 : 0xff4400);
-                } else if (biome.alienFlora) {
-                    const pos = this.player.position.clone();
-                    pos.x += (Math.random() - 0.5) * 20; pos.z += (Math.random() - 0.5) * 20; pos.y += Math.random() * 5;
-                    this.particles.emit(pos, 'magic', 1, Math.random() < 0.5 ? 0x00ffcc : 0xaa00ff);
                 } else if (biome.name === 'Forest' || biome.name === 'Dark Forest' || biome.name === 'Redwood Forest' || biome.jungleFlora || biome.name === 'Jungle' || biome.hasTrees) {
                     for (let k = 0; k < 2; k++) {
                         const pos = this.player.position.clone();
@@ -2091,9 +2083,11 @@ class Game {
                     hitFound = true;
                     playerHit = true;
                     hitPos.copy(this.player.position);
-                    this.player.takeDamage(proj.stats.damage);
-                    const d = document.getElementById('damage-flash');
-                    if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                    if (!this.player.isCreative) {
+                        this.player.takeDamage(proj.stats.damage);
+                        const d = document.getElementById('damage-flash');
+                        if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                    }
                 }
             } else {
                 eHit = this.entityManager.raycast(proj.position, _tempVec3, dt * proj.stats.speed + 0.5);
@@ -2896,7 +2890,9 @@ class Game {
         const pDist = this.player.position.distanceTo(new THREE.Vector3(x, y, z));
         if (pDist < radius + 3.0) {
             const dmg = Math.floor(65 * (1 - pDist / (radius + 3.0)));
-            this.player.takeDamage(dmg);
+            if (!this.player.isCreative) {
+                this.player.takeDamage(dmg);
+            }
             // Knockback player
             const knockDir = this.player.position.clone().sub(new THREE.Vector3(x, y, z)).normalize();
             this.player.velocity.add(knockDir.multiplyScalar(15));

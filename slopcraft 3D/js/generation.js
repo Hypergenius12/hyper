@@ -16,8 +16,6 @@ const BIOMES = {
     TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true },
     ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true },
     MUSHROOM: { name: 'Mushroom', surface: BLOCKS.MYCELIUM, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true },
-    CRYSTAL: { name: 'Crystal', surface: BLOCKS.ALIEN_STONE, dirt: BLOCKS.STONE, freq: 0.1, hasTrees: false, hasCrystals: true },
-    ALIEN: { name: 'Alien', surface: BLOCKS.ALIEN_STONE, dirt: BLOCKS.ALIEN_STONE, freq: 1.0, hasTrees: true, alienFlora: true },
     VOLCANIC: { name: 'Volcanic', surface: BLOCKS.BASALT, dirt: BLOCKS.BLACKSTONE, freq: 0.5, hasTrees: false, isVolcanic: true },
     SWAMP: { name: 'Swamp', surface: BLOCKS.SWAMP_GRASS, dirt: BLOCKS.MUD, freq: 0.6, hasTrees: true, swampFlora: true },
     JUNGLE: { name: 'Jungle', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, jungleFlora: true },
@@ -25,13 +23,11 @@ const BIOMES = {
     MOUNTAINS: { name: 'Mountains', surface: BLOCKS.SNOW, dirt: BLOCKS.STONE, freq: 0.4, hasTrees: true },
     DEEP_OCEAN: { name: 'Deep Ocean', surface: BLOCKS.SAND, dirt: BLOCKS.STONE, freq: 0.3, hasTrees: false },
     CHERRY_GROVE: { name: 'Cherry Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, isCherry: true },
-    GLOW_FOREST: { name: 'Glow Forest', surface: BLOCKS.ALIEN_GRASS, dirt: BLOCKS.ALIEN_STONE, freq: 0.5, hasTrees: true, isGlow: true },
     OASIS: { name: 'Oasis', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.2, hasTrees: true, isOasis: true },
     CORAL_REEF: { name: 'Coral Reef', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.3, hasTrees: false, isCoralReef: true },
     DARK_FOREST: { name: 'Dark Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isDark: true, hasMushrooms: true },
     MYSTIC_GROVE: { name: 'Mystic Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.6, hasTrees: true, isMystic: true },
-    REDWOOD_FOREST: { name: 'Redwood Forest', surface: BLOCKS.PODZOL, dirt: BLOCKS.DIRT, freq: 0.5, hasTrees: true, isRedwood: true },
-    LAVENDER_FIELDS: { name: 'Lavender Fields', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.6, hasTrees: false, isLavender: true }
+    REDWOOD_FOREST: { name: 'Redwood Forest', surface: BLOCKS.PODZOL, dirt: BLOCKS.DIRT, freq: 0.5, hasTrees: true, isRedwood: true }
 };
 
 export function generateAetherChunk(cx, cz, params) {
@@ -412,16 +408,12 @@ export function getBiomeParams(wx, wz, params) {
             if (moist < 0.35) {
                 biome = weirdness > 0.7 ? BIOMES.MUSHROOM : BIOMES.PLAINS;
             } else if (moist > 0.65) {
-                if (weirdness > 0.8) biome = BIOMES.MYSTIC_GROVE;
-                else if (weirdness > 0.65) biome = BIOMES.ALIEN;
-                else if (weirdness > 0.5) biome = BIOMES.GLOW_FOREST;
-                else if (weirdness > 0.35) biome = BIOMES.DARK_FOREST;
+                if (weirdness > 0.75) biome = BIOMES.MYSTIC_GROVE;
+                else if (weirdness > 0.45) biome = BIOMES.DARK_FOREST;
                 else biome = BIOMES.SWAMP;
             } else {
                 if (weirdness > 0.78) biome = BIOMES.CHERRY_GROVE;
-                else if (temp < 0.45 && weirdness > 0.55) biome = BIOMES.REDWOOD_FOREST;
-                else if (temp >= 0.45 && weirdness > 0.55) biome = BIOMES.LAVENDER_FIELDS;
-                else if (weirdness > 0.4) biome = BIOMES.CRYSTAL;
+                else if (weirdness > 0.55) biome = BIOMES.REDWOOD_FOREST;
                 else if (isFlat) biome = BIOMES.PLAINS;
                 else biome = BIOMES.FOREST;
             }
@@ -539,12 +531,10 @@ export function getColumnInfo(wx, wz, params) {
                     else if (temp > 0.75 && moist < 0.3) lBiome = BIOMES.BADLANDS; // hot & very dry → Badlands
                     else if (temp > 0.75 && moist < 0.4) lBiome = BIOMES.DESERT;
                     else if (temp > 0.75 && moist > 0.6) lBiome = BIOMES.SWAMP;
-                    else if (moist > 0.7 && weird > 0.75) lBiome = BIOMES.ALIEN;
-                    else if (moist > 0.7 && weird > 0.6) lBiome = BIOMES.GLOW_FOREST;
+                    else if (moist > 0.7 && weird > 0.75) lBiome = BIOMES.MYSTIC_GROVE;
                     else if (temp > 0.75) lBiome = BIOMES.SAVANNA;
                     
-                    const isNoLakeBiome = lBiome.name === 'Alien' || lBiome.name === 'Crystal' || lBiome.name === 'Volcanic'
-                        || lBiome.name === 'Badlands' || lBiome.name === 'Ice Spikes';
+                    const isNoLakeBiome = lBiome.name === 'Volcanic' || lBiome.name === 'Badlands' || lBiome.name === 'Ice Spikes';
                     if (!isNoLakeBiome) {
                         const maxR = 12 + rng() * 10;
                         const dist = Math.hypot(wx - lx, wz - lz);
@@ -952,12 +942,6 @@ export function generateChunkTerrain(cx, cz, params) {
                     continue;
                 }
 
-                // Lavender Fields
-                if (biome.isLavender && r < 0.45) {
-                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LAVENDER, true);
-                    continue;
-                }
-
                 // Redwood Forest Trees
                 if (biome.isRedwood && r < 0.025) {
                     generateRedwoodTree(blocks, tx, surfaceY + 1, tz, floraRng);
@@ -991,8 +975,6 @@ export function generateChunkTerrain(cx, cz, params) {
                 } else if (biome.jungleFlora && r < 0.08) {
                     if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                     else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true); // Bush
-                } else if (biome.alienFlora && r < 0.15) {
-                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.ALIEN_TALL_GRASS, true);
                 } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && !biome.isVolcanic && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef && !biome.isBeach) {
                     // Normal ground flora logic
                     let fr = floraRng();
@@ -1006,8 +988,6 @@ export function generateChunkTerrain(cx, cz, params) {
                         } else {
                             safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                         }
-                    } else if (biome === BIOMES.GLOW_FOREST && fr < 0.15) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
                     } else if (biome.isMystic && fr < 0.35) {
                         if (fr < 0.12) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
                         else if (fr < 0.22) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
@@ -1017,7 +997,10 @@ export function generateChunkTerrain(cx, cz, params) {
                     } else if (biome === BIOMES.OASIS && fr < 0.2) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.OASIS_FERN, true);
                     } else if (fr < 0.2) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, floraRng() > 0.3 ? BLOCKS.TALL_GRASS : BLOCKS.FERN, true);
+                        // Plains and Forest biomes strictly spawn tall grass, never ferns
+                        const isNoFernBiome = (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome.name === 'Plains' || biome.name === 'Forest');
+                        const blockType = isNoFernBiome ? BLOCKS.TALL_GRASS : (floraRng() > 0.3 ? BLOCKS.TALL_GRASS : BLOCKS.FERN);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, blockType, true);
                     } else if (fr >= 0.2 && fr < 0.25) {
                         const r3 = floraRng();
                         const flowerType = r3 < 0.25 ? BLOCKS.RED_FLOWER : (r3 < 0.5 ? BLOCKS.YELLOW_FLOWER : (r3 < 0.75 ? BLOCKS.BLUE_FLOWER : BLOCKS.WHITE_FLOWER));
@@ -1088,44 +1071,7 @@ function generateMysticTree(blocks, x, y, z, rng) {
     safeSetBlock(blocks, x, y + height, z, BLOCKS.SHROOMLIGHT, false);
 }
 
-function generateAlienSporeTree(blocks, x, y, z, rng) {
-    const height = 5 + Math.floor(rng() * 4);
-    for (let i = 0; i < height; i++) {
-        safeSetBlock(blocks, x, y + i, z, BLOCKS.ALIEN_SPORE_STEM);
-    }
-    const capRadius = 3;
-    for (let dx = -capRadius; dx <= capRadius; dx++) {
-        for (let dz = -capRadius; dz <= capRadius; dz++) {
-            if (dx * dx + dz * dz <= capRadius * capRadius) {
-                safeSetBlock(blocks, x + dx, y + height, z + dz, BLOCKS.ALIEN_SPORE_BLOCK, true);
-            }
-        }
-    }
-    safeSetBlock(blocks, x, y + height + 1, z, BLOCKS.ALIEN_CRYSTAL, true);
-    if (rng() < 0.6) {
-        safeSetBlock(blocks, x + 1, y + height - 1, z, BLOCKS.SHROOMLIGHT, true);
-    }
-}
-
-function generateGlowTree(blocks, x, y, z, rng) {
-    const height = 5 + Math.floor(rng() * 3);
-    for (let i = 0; i < height; i++) {
-        safeSetBlock(blocks, x, y + i, z, BLOCKS.GLOW_STEM);
-    }
-    for (let dy = -2; dy <= 1; dy++) {
-        for (let dx = -2; dx <= 2; dx++) {
-            for (let dz = -2; dz <= 2; dz++) {
-                if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
-                safeSetBlock(blocks, x + dx, y + height + dy, z + dz, BLOCKS.GLOW_LEAVES, true);
-            }
-        }
-    }
-    safeSetBlock(blocks, x, y + height - 1, z, BLOCKS.SHROOMLIGHT, false);
-}
-
 function generateTree(blocks, x, y, z, biome, rng) {
-    if (biome.alienFlora) { generateAlienSporeTree(blocks, x, y, z, rng); return; }
-    if (biome.isGlow) { generateGlowTree(blocks, x, y, z, rng); return; }
     if (biome.isMystic) { generateMysticTree(blocks, x, y, z, rng); return; }
     if (biome.isRedwood) { generateRedwoodTree(blocks, x, y, z, rng); return; }
 
