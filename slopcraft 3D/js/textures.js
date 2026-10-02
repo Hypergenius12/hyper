@@ -545,9 +545,21 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         case BLOCKS.WATER:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            ctx.fillStyle = 'rgba(30, 80, 180, 0.65)';
-            ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-            addNoise(ctx, rng, 10);
+            fillBase(ctx, 42, 95, 225); // Vibrant classic Minecraft water blue
+            // Undulating lighter cyan water wave ripples
+            ctx.fillStyle = 'rgba(80, 155, 255, 0.7)';
+            for (let y = 1; y < TEX_SIZE; y += 4) {
+                const off = (rng() * 4) | 0;
+                ctx.fillRect(off, y, 5 + ((rng() * 4) | 0), 1);
+                ctx.fillRect((off + 8) % 16, y + 2, 4 + ((rng() * 3) | 0), 1);
+            }
+            // Deeper wave shadows
+            ctx.fillStyle = 'rgba(25, 60, 170, 0.6)';
+            for (let y = 0; y < TEX_SIZE; y += 3) {
+                const off = (rng() * 6) | 0;
+                ctx.fillRect(off, y, 4, 1);
+            }
+            addNoise(ctx, rng, 6);
             break;
         case BLOCKS.WOOD:
             if (face === 'top' || face === 'bottom') {
@@ -1185,10 +1197,47 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             drawPlanks(ctx, rng, 120, 40, 60, 'rgba(80, 20, 40, 0.7)', 'rgba(100, 30, 50, 0.5)');
             break;
         case BLOCKS.CACTUS:
-            fillBase(ctx, 40, 120, 40);
-            addNoise(ctx, rng, 15);
-            addStripes(ctx, rng, 'rgba(20, 80, 20, 0.6)', 'v', 4);
-            addPixels(ctx, rng, 'rgba(0, 0, 0, 0.8)', 20); // Spikes
+            if (face === 'top') {
+                fillBase(ctx, 92, 148, 48); // light cactus green
+                addNoise(ctx, rng, 8);
+                // Indented dark green star center
+                ctx.fillStyle = '#406c20';
+                ctx.fillRect(6, 6, 4, 4);
+                ctx.fillRect(4, 7, 8, 2);
+                ctx.fillRect(7, 4, 2, 8);
+                // Dark valley notches around edges
+                ctx.fillStyle = '#345718';
+                ctx.fillRect(0, 0, 2, 2); ctx.fillRect(14, 0, 2, 2);
+                ctx.fillRect(0, 14, 2, 2); ctx.fillRect(14, 14, 2, 2);
+                ctx.fillRect(7, 0, 2, 2); ctx.fillRect(7, 14, 2, 2);
+                ctx.fillRect(0, 7, 2, 2); ctx.fillRect(14, 7, 2, 2);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 67, 109, 34); // darker bottom
+                addNoise(ctx, rng, 10);
+            } else {
+                // Cactus side: vertical ridges and valleys with authentic thorns
+                fillBase(ctx, 88, 142, 44);
+                // Valley stripes (dark green)
+                ctx.fillStyle = '#497824';
+                for (let x = 0; x < TEX_SIZE; x += 4) {
+                    ctx.fillRect(x, 0, 2, TEX_SIZE);
+                }
+                // Ridge highlights (light green)
+                ctx.fillStyle = '#6da838';
+                for (let x = 2; x < TEX_SIZE; x += 4) {
+                    ctx.fillRect(x, 0, 1, TEX_SIZE);
+                }
+                // Thorns: white spines with black shadow
+                const thornY = [2, 6, 10, 14];
+                for (let i = 0; i < thornY.length; i++) {
+                    const y = thornY[i];
+                    const x = ((i % 2 === 0 ? 2 : 10) + ((rng() > 0.5) ? 0 : 4)) % 16;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(x, y, 1, 1);
+                    ctx.fillStyle = '#1c320d';
+                    ctx.fillRect(x, y + 1, 1, 1);
+                }
+            }
             break;
         case BLOCKS.CHERRY_LOG:
             if (face === 'top' || face === 'bottom') {
@@ -2109,7 +2158,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.DIRT]: 'dirt',
     [BLOCKS.STONE]: 'stone',
     [BLOCKS.SAND]: 'sand',
-    [BLOCKS.WATER]: 'water_flow',
+    [BLOCKS.WATER]: 'water_still',
     [BLOCKS.WOOD]: { top: 'oak_log_top', side: 'oak_log', bottom: 'oak_log_top' },
     [BLOCKS.LEAVES]: 'oak_leaves',
     [BLOCKS.PLANKS]: 'oak_planks',
@@ -2149,7 +2198,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.ACACIA_LEAVES]: 'acacia_leaves',
     [BLOCKS.MUD]: 'podzol_top',
     [BLOCKS.SWAMP_GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
-    [BLOCKS.SWAMP_WATER]: 'water_flow',
+    [BLOCKS.SWAMP_WATER]: 'water_still',
     [BLOCKS.ALIEN_SPORE_STEM]: 'warped_stem',
     [BLOCKS.ALIEN_SPORE_BLOCK]: 'warped_wart_block',
     [BLOCKS.VINES]: 'vine',
@@ -2291,29 +2340,36 @@ function loadMinecraftTexture(name) {
         return loadMinecraftChestTexture(name.slice(8));
     }
     return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = () => {
-            // Some names might be items instead of blocks
-            const altImg = new Image();
-            altImg.crossOrigin = 'anonymous';
-            altImg.onload = () => resolve(altImg);
-            altImg.onerror = () => resolve(null);
-            altImg.src = MINECRAFT_ASSETS_BASE + 'item/' + name + '.png';
-        };
-        if (name.startsWith('aether://')) {
-            const rawName = name.slice(9);
-            if (rawName === 'aether_dirt') {
-                img.src = 'https://raw.githubusercontent.com/The-Aether-Team/The-Aether/1.21.1-develop/src/main/resources/packs/classic_base/assets/aether/textures/block/natural/aether_dirt.png';
+        // Try local assets first (instant load, offline friendly)
+        const localPath = name.includes('/') ? `assets/mc/${name}.png` : `assets/mc/block/${name}.png`;
+        const localImg = new Image();
+        localImg.onload = () => resolve(localImg);
+        localImg.onerror = () => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => {
+                // Some names might be items instead of blocks
+                const altImg = new Image();
+                altImg.crossOrigin = 'anonymous';
+                altImg.onload = () => resolve(altImg);
+                altImg.onerror = () => resolve(null);
+                altImg.src = MINECRAFT_ASSETS_BASE + 'item/' + name + '.png';
+            };
+            if (name.startsWith('aether://')) {
+                const rawName = name.slice(9);
+                if (rawName === 'aether_dirt') {
+                    img.src = 'https://raw.githubusercontent.com/The-Aether-Team/The-Aether/1.21.1-develop/src/main/resources/packs/classic_base/assets/aether/textures/block/natural/aether_dirt.png';
+                } else {
+                    img.src = AETHER_ASSETS_BASE + rawName + '.png';
+                }
+            } else if (name.includes('/')) {
+                img.src = MINECRAFT_ASSETS_BASE + name + '.png';
             } else {
-                img.src = AETHER_ASSETS_BASE + rawName + '.png';
+                img.src = MINECRAFT_ASSETS_BASE + 'block/' + name + '.png';
             }
-        } else if (name.includes('/')) {
-            img.src = MINECRAFT_ASSETS_BASE + name + '.png';
-        } else {
-            img.src = MINECRAFT_ASSETS_BASE + 'block/' + name + '.png';
-        }
+        };
+        localImg.src = localPath;
     });
 }
 
@@ -2405,8 +2461,9 @@ export async function createTextureAtlas(useMinecraft = false) {
                     if (img) {
                         ctx.clearRect(entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         
-                        // Tint grass, leaves, and water
-                        const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || texName === 'water_flow' || texName === 'vine' || texName.includes('tall_grass') || texName === 'fern' || texName === 'lily_pad');
+                        // Tint grass, leaves, and swamp water
+                        const isWater = (texName === 'water_flow' || texName === 'water_still');
+                        const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || (isWater && bt === BLOCKS.SWAMP_WATER) || texName === 'vine' || texName.includes('tall_grass') || texName === 'fern' || texName === 'lily_pad');
                         
                         let tintColor = null;
                         if (requiresTint) {
@@ -2419,9 +2476,8 @@ export async function createTextureAtlas(useMinecraft = false) {
                             // Determine tint color
                             let tint = '#8ee066'; // default grass (brightened)
                             
-                            if (texName === 'water_flow') {
-                                if (bt === BLOCKS.SWAMP_WATER) tint = '#4c6559';
-                                else tint = '#3f76e4';
+                            if (isWater) {
+                                tint = '#4c6559'; // Swamp water
                             }
                             else if (bt === BLOCKS.SWAMP_GRASS) tint = '#6a7039';
                             else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
@@ -3759,155 +3815,157 @@ export function generateMobTexture(mobType, onLoaded) {
     return canvas;
 }
 
-// Procedural Player Character Skin Textures
-export function generatePlayerSkinTextures() {
-    // 1. Head Canvas (16x16 with Steve face, hair, and sides)
-    const headCanvas = document.createElement('canvas');
-    headCanvas.width = 16; headCanvas.height = 16;
-    const hctx = headCanvas.getContext('2d');
-    hctx.fillStyle = '#c68c53'; // Steve skin tone
-    hctx.fillRect(0, 0, 16, 16);
-    // Hair
-    hctx.fillStyle = '#4a3219';
-    hctx.fillRect(0, 0, 16, 4);
-    hctx.fillRect(0, 4, 2, 4);
-    hctx.fillRect(14, 4, 2, 4);
-    // Eyes: white + blue pupils
-    hctx.fillStyle = '#ffffff';
-    hctx.fillRect(3, 7, 3, 2);
-    hctx.fillRect(10, 7, 3, 2);
-    hctx.fillStyle = '#2b448a';
-    hctx.fillRect(4, 7, 2, 2);
-    hctx.fillRect(10, 7, 2, 2);
-    // Nose
-    hctx.fillStyle = '#b0733d';
-    hctx.fillRect(7, 9, 2, 2);
-    // Mouth / Beard
-    hctx.fillStyle = '#5c3619';
-    hctx.fillRect(6, 11, 4, 2);
-    hctx.fillRect(5, 12, 6, 2);
+// Authentic Minecraft Steve Skin (64x64 PNG)
+export const STEVE_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAMAAACdt4HsAAAAdVBMVEUAAAAKvLwAzMwmGgokGAgrHg0zJBE/KhW3g2uzeV5SPYn///+qclmbY0mQWT8Af38AaGhVVVWUYD52SzOBUzmPXj5JJRBCHQp3QjVqQDA0JRIoKCg3Nzc/Pz9KSko6MYlBNZtGOqUDenoFiIgElZUApKQAr6/wvakZAAAAAXRSTlMAQObYZgAAAolJREFUeNrt1l1rHucZReFrj/whu5hSCCQtlOTE/f+/Jz4q9Cu0YIhLcFVpVg+FsOCVehi8jmZgWOzZz33DM4CXlum3gH95GgeAzQZVeL4gTm6Cbp4vqFkD8HwBazPY8wWbMq9utu3mNZ5fotVezbzOE3kBEFbaZuc8kb00NTMUbWJp678Xf2GV7RRtx1TDQQ6XBNvsmL2+2vHq1TftmMPIyAWujtN2cl274ua2jpVpZneXEjjo7XW1q53V9ds4ODO5xIuhvGHvfLI3aixauig415uuO2+vl9+cncfsFw25zL650fXn687jqnXuP68/X3+eV3zE7y6u9eB73MlfAcfbTf3yR8CfAX+if8S/H5/EAbAxj5LN48tULvEBOh8V1AageMTXe2YHAOwHbZxrzPkSR3+ffr8TR2JDzE/4Fj8CDgEwDsW+q+9GsR07hhg2CsALBgMo2v5wNxXnQXMeGQVW7gUAyKI2m6KDsJ8Au3++F5RZO+kKNQjQcLLWgjwUjBXLltFgWWMUUlviocBgNoxNGgMjSxiYAA7zgLFo2hgIENiDU8gQCzDOmViGFAsEuBcQSDCothhpJaDRA8E5fHqH2nTbYm5fHLo1V0u3B7DAuheoeScRYabjjjuzs17cHVaTrTXmK78m9swP34d9oK/dfeXSIH2PW/MXwPvxN/bJlxw8zlYAcEyeI6gNgA/O8P8neN8xe1IHP2gTzegjvhUDfuRygmwEs2GE4mkCDIAzm2R4yAuPsIdR9k8AvMc+3L9+2UEjo4WP0FpgP19O0MzCsqxIoMsdDBvYcQyGmO0ZJRoYCKjLJWY0BAhYwGUBCgkh8MRdOKt+ruqMwAB2OcEX94U1TPbYJP0PkyyAI1S6cSIAAAAASUVORK5CYII=';
 
-    // 2. Torso Canvas (16x16 with cyan shirt, neckline, and subtle shading)
-    const torsoCanvas = document.createElement('canvas');
-    torsoCanvas.width = 16; torsoCanvas.height = 16;
-    const tctx = torsoCanvas.getContext('2d');
-    tctx.fillStyle = '#008b8b';
-    tctx.fillRect(0, 0, 16, 16);
-    // V-neck skin
-    tctx.fillStyle = '#c68c53';
-    tctx.fillRect(6, 0, 4, 4);
-    // Shading
-    tctx.fillStyle = '#006d6d';
-    tctx.fillRect(0, 13, 16, 3);
-    tctx.fillRect(0, 4, 1, 9);
-    tctx.fillRect(15, 4, 1, 9);
+let _steveImg = null;
+let _steveCanvas = null;
 
-    // 3. Arm Canvas (16x16 with sleeve top, skin, wrist shading)
-    const armCanvas = document.createElement('canvas');
-    armCanvas.width = 16; armCanvas.height = 16;
-    const actx = armCanvas.getContext('2d');
-    actx.fillStyle = '#c68c53';
-    actx.fillRect(0, 0, 16, 16);
-    // Teal sleeve
-    actx.fillStyle = '#008b8b';
-    actx.fillRect(0, 0, 16, 5);
-    actx.fillStyle = '#006d6d';
-    actx.fillRect(0, 4, 16, 1);
-    // Knuckles
-    actx.fillStyle = '#b0733d';
-    actx.fillRect(2, 13, 12, 2);
+export function getSteveSkinCanvas() {
+    if (_steveCanvas) return _steveCanvas;
+    const cvs = document.createElement('canvas');
+    cvs.width = 64; cvs.height = 64;
+    const ctx = cvs.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = false;
 
-    // 4. Leg Canvas (16x16 with dark blue jeans and grey boots)
-    const legCanvas = document.createElement('canvas');
-    legCanvas.width = 16; legCanvas.height = 16;
-    const lctx = legCanvas.getContext('2d');
-    lctx.fillStyle = '#283668';
-    lctx.fillRect(0, 0, 16, 16);
-    // Boots
-    lctx.fillStyle = '#444444';
-    lctx.fillRect(0, 12, 16, 4);
-    lctx.fillStyle = '#222222';
-    lctx.fillRect(0, 15, 16, 1);
-
-    // Helper: add noise
-    for (const ctx of [hctx, tctx, actx, lctx]) {
-        const id = ctx.getImageData(0, 0, 16, 16);
-        const d = id.data;
-        for (let i = 0; i < d.length; i += 4) {
-            const n = (Math.random() - 0.5) * 14;
-            d[i] = Math.max(0, Math.min(255, d[i] + n));
-            d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
-            d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
-        }
-        ctx.putImageData(id, 0, 0);
+    if (!_steveImg) {
+        _steveImg = new Image();
+        _steveImg.crossOrigin = 'anonymous';
+        _steveImg.onload = () => {
+            ctx.drawImage(_steveImg, 0, 0);
+        };
+        // Check local asset, fallback to base64
+        const local = new Image();
+        local.onload = () => {
+            _steveImg = local;
+            ctx.drawImage(local, 0, 0);
+        };
+        local.onerror = () => {
+            _steveImg.src = STEVE_B64;
+        };
+        local.src = 'assets/mc/steve.png';
+    } else if (_steveImg.complete && _steveImg.naturalWidth > 0) {
+        ctx.drawImage(_steveImg, 0, 0);
     }
+    _steveCanvas = cvs;
+    return cvs;
+}
 
-    return { headCanvas, torsoCanvas, armCanvas, legCanvas };
+export function getStevePartTextures() {
+    const skin = getSteveSkinCanvas();
+    const slice = (x, y, w, h) => {
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(skin, x, y, w, h, 0, 0, w, h);
+        return c;
+    };
+
+    return {
+        head: {
+            right:  slice(0, 8, 8, 8),    // +X (face 0) Right ear/hair
+            left:   slice(16, 8, 8, 8),   // -X (face 1) Left ear/hair
+            top:    slice(8, 0, 8, 8),    // +Y (face 2) Top hair
+            bottom: slice(16, 0, 8, 8),   // -Y (face 3) Neck
+            back:   slice(24, 8, 8, 8),   // +Z (face 4) BACK OF HEAD (Hair)
+            front:  slice(8, 8, 8, 8)     // -Z (face 5) FRONT OF HEAD (Steve's Face!)
+        },
+        torso: {
+            right:  slice(16, 20, 4, 12), // +X
+            left:   slice(28, 20, 4, 12), // -X
+            top:    slice(20, 16, 8, 4),  // +Y
+            bottom: slice(28, 16, 8, 4),  // -Y
+            back:   slice(32, 20, 8, 12), // +Z BACK OF SHIRT
+            front:  slice(20, 20, 8, 12)  // -Z FRONT CHEST (Teal V-neck)
+        },
+        rightArm: {
+            right:  slice(40, 20, 4, 12), // +X outer
+            left:   slice(48, 20, 4, 12), // -X inner
+            top:    slice(44, 16, 4, 4),  // +Y shoulder/cuff
+            bottom: slice(48, 16, 4, 4),  // -Y palm/fist
+            back:   slice(52, 20, 4, 12), // +Z back
+            front:  slice(44, 20, 4, 12)  // -Z front
+        },
+        leftArm: {
+            right:  slice(32, 52, 4, 12), // +X inner
+            left:   slice(40, 52, 4, 12), // -X outer
+            top:    slice(36, 48, 4, 4),  // +Y shoulder/cuff
+            bottom: slice(40, 48, 4, 4),  // -Y palm/fist
+            back:   slice(44, 52, 4, 12), // +Z back
+            front:  slice(36, 52, 4, 12)  // -Z front
+        },
+        rightLeg: {
+            right:  slice(0, 20, 4, 12),  // +X outer
+            left:   slice(8, 20, 4, 12),  // -X inner
+            top:    slice(4, 16, 4, 4),   // +Y
+            bottom: slice(8, 16, 4, 4),   // -Y sole
+            back:   slice(12, 20, 4, 12), // +Z back
+            front:  slice(4, 20, 4, 12)   // -Z front (jeans + boot)
+        },
+        leftLeg: {
+            right:  slice(16, 52, 4, 12), // +X inner
+            left:   slice(24, 52, 4, 12), // -X outer
+            top:    slice(20, 48, 4, 4),  // +Y
+            bottom: slice(24, 48, 4, 4),  // -Y sole
+            back:   slice(28, 52, 4, 12), // +Z back
+            front:  slice(20, 52, 4, 12)  // -Z front (jeans + boot)
+        }
+    };
+}
+
+export function createSteveBodyMaterials(partName) {
+    const parts = getStevePartTextures()[partName];
+    if (!parts) return null;
+    const makeTex = (canvas) => {
+        const t = new THREE.CanvasTexture(canvas);
+        t.magFilter = THREE.NearestFilter;
+        t.minFilter = THREE.NearestFilter;
+        t.colorSpace = THREE.SRGBColorSpace;
+        return t;
+    };
+    // Three.js BoxGeometry face mapping order:
+    // [0]: +X (Right)
+    // [1]: -X (Left)
+    // [2]: +Y (Top)
+    // [3]: -Y (Bottom)
+    // [4]: +Z (Back of character)
+    // [5]: -Z (Front of character)
+    return [
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.right) }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.left) }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.top) }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.bottom) }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.back) }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.front) })
+    ];
+}
+
+// Procedural Player Character Skin Textures (Steve face on front, hair on back)
+export function generatePlayerSkinTextures() {
+    const parts = getStevePartTextures();
+    return {
+        headCanvas: parts.head.front,
+        torsoCanvas: parts.torso.front,
+        armCanvas: parts.rightArm.front,
+        legCanvas: parts.rightLeg.front
+    };
 }
 
 export function generatePlayerSkinTexture() {
     return generatePlayerSkinTextures().headCanvas;
 }
 
-// Procedural First-Person Detailed Hand Texture (teal sleeve cuff + shaded skin + knuckles)
+// First-Person Steve Hand Texture
 export function generateDetailedHandTexture() {
+    const skin = getSteveSkinCanvas();
     const canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 64;
+    canvas.width = 16;
+    canvas.height = 32;
     const ctx = canvas.getContext('2d');
-
-    // Teal sleeve on upper portion (top 0 to 22)
-    ctx.fillStyle = '#008b8b';
-    ctx.fillRect(0, 0, 32, 22);
-    // Darker seam & cuff shadow
-    ctx.fillStyle = '#005f5f';
-    ctx.fillRect(0, 20, 32, 2);
-    ctx.fillRect(0, 0, 3, 20);
-    ctx.fillRect(29, 0, 3, 20);
-
-    // Skin on lower portion (wrist to fingers: 22 to 64)
-    ctx.fillStyle = '#c68c53';
-    ctx.fillRect(0, 22, 32, 42);
-
-    // Wrist fold
-    ctx.fillStyle = '#b37740';
-    ctx.fillRect(0, 24, 32, 2);
-
-    // Palm / tendon shading
-    ctx.fillStyle = '#d49b64';
-    ctx.fillRect(10, 28, 12, 16);
-
-    // Knuckles shading near fingers
-    ctx.fillStyle = '#a66835';
-    for (let x = 3; x < 30; x += 7) {
-        ctx.fillRect(x, 48, 5, 3);
-        ctx.fillRect(x + 1, 46, 3, 2);
-    }
-
-    // Finger separation lines
-    ctx.fillStyle = '#8f5428';
-    ctx.fillRect(8, 48, 2, 16);
-    ctx.fillRect(15, 48, 2, 16);
-    ctx.fillRect(22, 48, 2, 16);
-
-    // Fingernails highlights
-    ctx.fillStyle = '#e8b88a';
-    ctx.fillRect(3, 60, 4, 3);
-    ctx.fillRect(10, 60, 4, 3);
-    ctx.fillRect(17, 60, 4, 3);
-    ctx.fillRect(24, 60, 4, 3);
-
-    // Pixel noise
-    const id = ctx.getImageData(0, 0, 32, 64);
-    const d = id.data;
-    for (let i = 0; i < d.length; i += 4) {
-        const n = (Math.random() - 0.5) * 14;
-        d[i] = Math.max(0, Math.min(255, d[i] + n));
-        d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
-        d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
-    }
-    ctx.putImageData(id, 0, 0);
-
+    ctx.imageSmoothingEnabled = false;
+    // Steve right arm front: (x: 44, y: 20, w: 4, h: 12) stretched to 16x32
+    ctx.drawImage(skin, 44, 20, 4, 12, 0, 0, 16, 32);
     return canvas;
 }
 

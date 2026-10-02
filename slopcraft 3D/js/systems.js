@@ -687,8 +687,9 @@ class UISystem {
                         img.src = icon.toDataURL();
                         img.className = 'item-icon';
                         img.style.imageRendering = 'pixelated';
-                        img.style.width = '100%'; 
-                        img.style.height = '100%';
+                        img.style.width = '76%'; 
+                        img.style.height = '76%';
+                        img.style.objectFit = 'contain';
                         img.draggable = false;
                         slot.appendChild(img);
                     }
@@ -823,8 +824,9 @@ class UISystem {
             img.src = cvs.toDataURL();
             img.className = 'item-icon';
             img.style.imageRendering = 'pixelated';
-            img.style.width = '100%';
-            img.style.height = '100%';
+            img.style.width = '76%';
+            img.style.height = '76%';
+            img.style.objectFit = 'contain';
             img.draggable = false;
             slot.appendChild(img);
 
@@ -1070,7 +1072,7 @@ class UISystem {
                 // Use the 3D isometric icon canvas
                 const iconCanvas = this.atlas.getBlockIcon(slot.item.subtype);
                 const dataURL = iconCanvas.toDataURL();
-                inner = `<img src="${dataURL}" class="item-icon" draggable="false" style="image-rendering:pixelated;width:100%;height:100%;" />`;
+                inner = `<img src="${dataURL}" class="item-icon" draggable="false" style="image-rendering:pixelated;width:76%;height:76%;object-fit:contain;" />`;
             } else {
                 let cvs;
                 const updateImg = (canvas) => {
@@ -1087,7 +1089,7 @@ class UISystem {
                 else if (slot.item.type === 'food') cvs = generateItemTexture('food', slot.item.subtype, updateImg);
                 
                 if (cvs) {
-                    inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 100%; height: 100%;" />`;
+                    inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 76%; height: 76%; object-fit: contain;" />`;
                 } else {
                     inner = `<div style="text-align:center; line-height:100%;">${slot.item.name.substring(0,2).toUpperCase()}</div>`;
                 }
@@ -1676,7 +1678,7 @@ class UISystem {
         this._previewAngle = (this._previewAngle || 0) + 0.02;
         if (this._previewModel) {
             this._previewModel.position.set(0, 0, 0);
-            this._previewModel.rotation.y = Math.sin(this._previewAngle) * 0.45; // gentle front sway
+            this._previewModel.rotation.y = Math.PI + Math.sin(this._previewAngle) * 0.45; // gentle front sway facing camera
             // Make arms hang naturally
             const la = this._previewModel.getObjectByName('leftArm');
             const ra = this._previewModel.getObjectByName('rightArm');

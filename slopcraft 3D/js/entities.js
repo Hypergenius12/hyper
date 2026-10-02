@@ -3,7 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures } from './textures.js?v=81';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials } from './textures.js?v=82';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -350,19 +350,12 @@ export class Player {
         const group = new THREE.Group();
         group.name = 'playerCharacterModel';
 
-        const { headCanvas, torsoCanvas, armCanvas, legCanvas } = generatePlayerSkinTextures();
-        const makeTex = (c) => {
-            const t = new THREE.CanvasTexture(c);
-            t.magFilter = THREE.NearestFilter;
-            t.minFilter = THREE.NearestFilter;
-            t.colorSpace = THREE.SRGBColorSpace;
-            return t;
-        };
-
-        const headMat = new THREE.MeshLambertMaterial({ map: makeTex(headCanvas) });
-        const torsoMat = new THREE.MeshLambertMaterial({ map: makeTex(torsoCanvas) });
-        const armMat = new THREE.MeshLambertMaterial({ map: makeTex(armCanvas) });
-        const legMat = new THREE.MeshLambertMaterial({ map: makeTex(legCanvas) });
+        const headMats = createSteveBodyMaterials('head');
+        const torsoMats = createSteveBodyMaterials('torso');
+        const leftArmMats = createSteveBodyMaterials('leftArm');
+        const rightArmMats = createSteveBodyMaterials('rightArm');
+        const leftLegMats = createSteveBodyMaterials('leftLeg');
+        const rightLegMats = createSteveBodyMaterials('rightLeg');
 
         // Head Group (pivot at neck y=1.45)
         const headPivot = new THREE.Group();
@@ -370,10 +363,13 @@ export class Player {
         headPivot.position.set(0, 1.45, 0);
 
         // Head mesh (0.4 x 0.4 x 0.4)
+        // In Three.js BoxGeometry face mapping:
+        // [4]: +Z (Back of head / hair, facing backward)
+        // [5]: -Z (Front face of Steve, facing forward!)
         const headGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-        const headMesh = new THREE.Mesh(headGeo, headMat);
+        const headMesh = new THREE.Mesh(headGeo, headMats);
         headMesh.position.set(0, 0.2, 0);
-        headMesh.rotation.y = Math.PI; // Face outwards towards front of character
+        headMesh.rotation.y = 0; // Face faces forward (-Z), NOT on back of head!
         headMesh.castShadow = true;
         headPivot.add(headMesh);
 
@@ -408,7 +404,7 @@ export class Player {
 
         // Torso (0.45 x 0.65 x 0.25, centered at y=1.05)
         const torsoGeo = new THREE.BoxGeometry(0.45, 0.65, 0.25);
-        const torso = new THREE.Mesh(torsoGeo, torsoMat);
+        const torso = new THREE.Mesh(torsoGeo, torsoMats);
         torso.name = 'torso';
         torso.position.set(0, 1.05, 0);
         torso.castShadow = true;
@@ -429,7 +425,7 @@ export class Player {
         leftArmPivot.position.set(-0.32, 1.35, 0);
 
         const armGeo = new THREE.BoxGeometry(0.18, 0.65, 0.18);
-        const leftArmMesh = new THREE.Mesh(armGeo, armMat);
+        const leftArmMesh = new THREE.Mesh(armGeo, leftArmMats);
         leftArmMesh.position.set(0, -0.28, 0);
         leftArmMesh.castShadow = true;
         leftArmPivot.add(leftArmMesh);
@@ -440,7 +436,7 @@ export class Player {
         rightArmPivot.name = 'rightArm';
         rightArmPivot.position.set(0.32, 1.35, 0);
 
-        const rightArmMesh = new THREE.Mesh(armGeo, armMat);
+        const rightArmMesh = new THREE.Mesh(armGeo, rightArmMats);
         rightArmMesh.position.set(0, -0.28, 0);
         rightArmMesh.castShadow = true;
         rightArmPivot.add(rightArmMesh);
@@ -452,7 +448,7 @@ export class Player {
         leftLegPivot.position.set(-0.12, 0.72, 0);
 
         const legGeo = new THREE.BoxGeometry(0.2, 0.72, 0.2);
-        const leftLegMesh = new THREE.Mesh(legGeo, legMat);
+        const leftLegMesh = new THREE.Mesh(legGeo, leftLegMats);
         leftLegMesh.position.set(0, -0.36, 0);
         leftLegMesh.castShadow = true;
         leftLegPivot.add(leftLegMesh);
@@ -482,7 +478,7 @@ export class Player {
         rightLegPivot.name = 'rightLeg';
         rightLegPivot.position.set(0.12, 0.72, 0);
 
-        const rightLegMesh = new THREE.Mesh(legGeo, legMat);
+        const rightLegMesh = new THREE.Mesh(legGeo, rightLegMats);
         rightLegMesh.position.set(0, -0.36, 0);
         rightLegMesh.castShadow = true;
         rightLegPivot.add(rightLegMesh);

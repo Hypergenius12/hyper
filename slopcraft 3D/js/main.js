@@ -2,11 +2,11 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=81';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture } from './textures.js?v=81';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=81';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=81';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=81';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=82';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=82';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateCavernsChunk, generateHighlandsChunk, getBiomeParams } from './generation.js?v=82';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=82';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=82';
 import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=78';
 import { AudioManager } from './audio.js?v=78';
 import { BiomeMap } from './map.js?v=78';
@@ -250,7 +250,7 @@ class Game {
         this.composer = new EffectComposer(this.engine.renderer, renderTarget);
         this.composer.addPass(this.renderPass);
         this.composer.addPass(this.bokehPass);
-        this.bokehPass.enabled = localStorage.getItem('slopcraft_blur') !== 'false';
+        this.bokehPass.enabled = localStorage.getItem('slopcraft_blur') === 'true'; // default false
         this.outputPass = new OutputPass();
         this.composer.addPass(this.outputPass);
 
@@ -482,14 +482,10 @@ class Game {
 
         // View Model (Detailed Hands/Wand)
         this.viewModel = new THREE.Group();
-        const handCanvas = generateDetailedHandTexture();
-        const handTex = new THREE.CanvasTexture(handCanvas);
-        handTex.magFilter = THREE.NearestFilter;
-        handTex.minFilter = THREE.NearestFilter;
-        handTex.colorSpace = THREE.SRGBColorSpace;
+        const rightArmMats = createSteveBodyMaterials('rightArm');
         this.handMesh = new THREE.Mesh(
             new THREE.BoxGeometry(0.2, 0.6, 0.2),
-            new THREE.MeshLambertMaterial({ map: handTex })
+            rightArmMats
         );
         this.handMesh.position.set(0.4, -0.4, -0.5);
         this.handMesh.rotation.x = -Math.PI / 4;
@@ -1238,9 +1234,14 @@ class Game {
                 const cam = this.engine.camera;
                 const dir = new THREE.Vector3();
                 cam.getWorldDirection(dir);
-                const pearlGeom = new THREE.SphereGeometry(0.15, 8, 8);
-                const pearlMat = new THREE.MeshPhongMaterial({ color: 0x22cc88, emissive: 0x115544, shininess: 80 });
-                const pearlMesh = new THREE.Mesh(pearlGeom, pearlMat);
+                const pearlCanvas = generateItemTexture('material', 'ender_pearl');
+                const pearlTex = new THREE.CanvasTexture(pearlCanvas);
+                pearlTex.magFilter = THREE.NearestFilter;
+                pearlTex.minFilter = THREE.NearestFilter;
+                pearlTex.colorSpace = THREE.SRGBColorSpace;
+                const pearlMat = new THREE.SpriteMaterial({ map: pearlTex, transparent: true });
+                const pearlMesh = new THREE.Sprite(pearlMat);
+                pearlMesh.scale.set(0.35, 0.35, 0.35);
                 pearlMesh.position.copy(this.player.position).add(new THREE.Vector3(0, 1.5, 0));
                 this.engine.scene.add(pearlMesh);
                 this.thrownPearls.push({
@@ -1800,6 +1801,10 @@ class Game {
                 pearl.mesh.position.x += pearl.velocity.x * dt;
                 pearl.mesh.position.y += pearl.velocity.y * dt;
                 pearl.mesh.position.z += pearl.velocity.z * dt;
+                // Spin pearl sprite in flight
+                if (pearl.mesh.material && typeof pearl.mesh.material.rotation === 'number') {
+                    pearl.mesh.material.rotation += 8 * dt;
+                }
                 // Trail particles
                 if (this.particles && Math.random() < 0.4) {
                     this.particles.emit(pearl.mesh.position.clone(), 'magic', 1, 0x22cc88);
@@ -1833,8 +1838,13 @@ class Game {
                     }
                     // Clean up
                     this.engine.scene.remove(pearl.mesh);
-                    pearl.mesh.geometry.dispose();
-                    pearl.mesh.material.dispose();
+                    if (pearl.mesh.material) {
+                        if (pearl.mesh.material.map) pearl.mesh.material.map.dispose();
+                        pearl.mesh.material.dispose();
+                    }
+                    if (pearl.mesh.geometry && !pearl.mesh.isSprite && pearl.mesh.geometry.dispose) {
+                        pearl.mesh.geometry.dispose();
+                    }
                     this.thrownPearls.splice(i, 1);
                 }
             }
@@ -2354,29 +2364,90 @@ class Game {
         }
 
         const di = document.getElementById('debug-info');
+        const dLeft = document.getElementById('debug-left');
+        const dRight = document.getElementById('debug-right');
         if (di && !di.classList.contains('hidden')) {
             try {
-                const bx = Math.floor(this.player.position.x);
-                const by = Math.floor(this.player.position.y);
-                const bz = Math.floor(this.player.position.z);
-                const biome = this.world.getBiomeAt(bx, bz)?.name || 'Unknown';
-                
+                const px = this.player.position.x;
+                const py = this.player.position.y;
+                const pz = this.player.position.z;
+                const bx = Math.floor(px);
+                const by = Math.floor(py);
+                const bz = Math.floor(pz);
+                const cx = Math.floor(bx / 16);
+                const cz = Math.floor(bz / 16);
+                const subX = ((bx % 16) + 16) % 16;
+                const subY = ((by % 16) + 16) % 16;
+                const subZ = ((bz % 16) + 16) % 16;
+
                 const lookDir = this.player.getLookDirection();
+                const yawDeg = ((this.player.rotation.yaw * 180 / Math.PI) % 360 + 360) % 360 - 180;
+                const pitchDeg = this.player.rotation.pitch * 180 / Math.PI;
+                let facingDir = 'north';
+                let facingAxis = 'Towards negative Z';
+                if (Math.abs(lookDir.x) > Math.abs(lookDir.z)) {
+                    if (lookDir.x > 0) {
+                        facingDir = 'east';
+                        facingAxis = 'Towards positive X';
+                    } else {
+                        facingDir = 'west';
+                        facingAxis = 'Towards negative X';
+                    }
+                } else {
+                    if (lookDir.z > 0) {
+                        facingDir = 'south';
+                        facingAxis = 'Towards positive Z';
+                    } else {
+                        facingDir = 'north';
+                        facingAxis = 'Towards negative Z';
+                    }
+                }
+
+                const rawBiome = this.world.getBiomeAt(bx, bz)?.name || 'Plains';
+                const biomeId = rawBiome.toLowerCase().replace(/\s+/g, '_');
+
                 const eyePos = this.player.getEyePosition();
-                
                 const invSlot = this.player.inventory.slots[this.player.selectedSlot];
                 const isHoldingBucket = invSlot && invSlot.item && invSlot.item.type === 'material' && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket');
                 const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingBucket);
-                const lookBlockName = hit.hit ? `${getBlockName(hit.blockType)} [${hit.blockPos.x}, ${hit.blockPos.y}, ${hit.blockPos.z}]` : 'None';
-                
-                di.innerHTML = `SlopCraft 3D (Debug Mode)<br>
-FPS: ${this.fps}<br>
-XYZ: ${this.player.position.x.toFixed(2)}, ${this.player.position.y.toFixed(2)}, ${this.player.position.z.toFixed(2)}<br>
-Biome: ${biome}<br>
-Looking at: ${lookBlockName}<br>
-Chunks: ${this.world.chunks.size} | Mobs: ${this.entityManager.mobs.length} | Render Distance: ${this.world.renderDistance}`;
+
+                const leftLines = [
+                    `SlopCraft 3D 1.20.4 (Vanilla / WebGL)`,
+                    `${this.fps || 60} fps T: 60, B: 0, I: 0`,
+                    `C: ${this.world.chunks.size} (s) D: ${this.world.renderDistance}, L: 0`,
+                    `E: ${this.entityManager.mobs.length}/${this.entityManager.mobs.length}`,
+                    ``,
+                    `XYZ: ${px.toFixed(3)} / ${py.toFixed(3)} / ${pz.toFixed(3)}`,
+                    `Block: ${bx} ${by} ${bz} [${subX} ${subY} ${subZ}]`,
+                    `Chunk: ${cx} ${cz} in [${subX} ${subY} ${subZ}]`,
+                    `Facing: ${facingDir} (${facingAxis}) (${yawDeg.toFixed(1)} / ${pitchDeg.toFixed(1)})`,
+                    `Biome: minecraft:${biomeId}`,
+                    `Light: 15 (15 sky, 0 block)`,
+                    `Dimension: ${this.currentDimension || 'overworld'}`
+                ];
+
+                const rightLines = [
+                    `SlopCraft WebEngine (Three.js r160)`,
+                    `Display: ${window.innerWidth}x${window.innerHeight}`,
+                    `Renderer: WebGL2 (Browser GPU)`
+                ];
+
+                if (hit && hit.hit) {
+                    const blockName = getBlockName(hit.blockType) || 'Unknown';
+                    const blockId = blockName.toLowerCase().replace(/\s+/g, '_');
+                    rightLines.push(``);
+                    rightLines.push(`Targeted Block: ${hit.blockPos.x}, ${hit.blockPos.y}, ${hit.blockPos.z}`);
+                    rightLines.push(`minecraft:${blockId}`);
+                }
+
+                if (dLeft && dRight) {
+                    dLeft.innerHTML = leftLines.map(l => l ? `<span class="mc-debug-line">${l}</span>` : `<div style="height:4px;"></div>`).join('');
+                    dRight.innerHTML = rightLines.map(l => l ? `<span class="mc-debug-line">${l}</span>` : `<div style="height:4px;"></div>`).join('');
+                } else {
+                    di.innerHTML = leftLines.filter(Boolean).join('<br>');
+                }
             } catch (e) {
-                di.innerHTML = `F3 Error: ${e.message}`;
+                if (dLeft) dLeft.innerHTML = `<span class="mc-debug-line">F3 Error: ${e.message}</span>`;
             }
         }
     }
@@ -2777,7 +2848,7 @@ const initGame = () => {
 
     const startBlurToggle = document.getElementById('start-blur-toggle');
     const pauseBlurToggle = document.getElementById('pause-blur-toggle');
-    const useBlur = localStorage.getItem('slopcraft_blur') !== 'false'; // default true
+    const useBlur = localStorage.getItem('slopcraft_blur') === 'true'; // default false
     if (startBlurToggle) {
         startBlurToggle.checked = useBlur;
         startBlurToggle.addEventListener('change', (e) => {

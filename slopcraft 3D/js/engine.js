@@ -143,8 +143,8 @@ export class InputManager {
             }
         }
 
-        if (e.code === 'Tab' || e.code === 'F3') e.preventDefault();
-        if (!this.isLocked && !['Escape', 'KeyE', 'KeyF', 'KeyP', 'Tab', 'KeyI', 'F3', 'KeyQ', 'KeyM', 'KeyU'].includes(e.code)) return;
+        if (e.code === 'Tab' || e.code === 'F3' || e.code === 'F5') e.preventDefault();
+        if (!this.isLocked && !['Escape', 'KeyE', 'KeyF', 'KeyP', 'Tab', 'KeyI', 'F3', 'F5', 'KeyQ', 'KeyM', 'KeyU'].includes(e.code)) return;
 
         switch (e.code) {
             case 'KeyW': case 'ArrowUp': this.keys.forward = true; break;
@@ -189,6 +189,11 @@ export class InputManager {
                 if (!this._menuKeysDown.pause) { this.menuKeys.pause = true; this._menuKeysDown.pause = true; }
                 break;
             case 'F3':
+                if (!this._menuKeysDown.debug) { 
+                    this.menuKeys.debug = true; 
+                    this._menuKeysDown.debug = true; 
+                }
+                break;
             case 'F5':
                 if (!this._menuKeysDown.togglePerspective) { 
                     this.menuKeys.togglePerspective = true; 
@@ -226,7 +231,8 @@ export class InputManager {
             case 'KeyP': this._menuKeysDown.planet = false; break;
             case 'KeyM': this._menuKeysDown.map = false; break;
             case 'Escape': this._menuKeysDown.pause = false; break;
-            case 'F3': case 'F5': this._menuKeysDown.togglePerspective = false; break;
+            case 'F3': this._menuKeysDown.debug = false; break;
+            case 'F5': this._menuKeysDown.togglePerspective = false; break;
             case 'ControlLeft': case 'ControlRight': this._menuKeysDown.debug = false; break;
             case 'KeyQ': this._menuKeysDown.dropItem = false; break;
             case 'KeyU': this._menuKeysDown.devMode = false; break;
@@ -825,10 +831,10 @@ export class World {
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
-            opacity: 0.88, // slightly more opaque water
+            opacity: 0.75, // natural translucent water
             side: THREE.DoubleSide,
-            shininess: 80,
-            specular: new THREE.Color(0x4488bb)
+            shininess: 30,
+            specular: new THREE.Color(0x336699)
         });
         const matTransparent = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
