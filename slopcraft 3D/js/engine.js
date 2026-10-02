@@ -589,7 +589,7 @@ export class Chunk {
                             }
 
                             // Calculate ambient occlusion
-                            const aoColor = calculateVertexAO(wx, y, wz, face, getBlockOptimized, blockType);
+                            const aoColor = calculateVertexAO(wx, y, wz, face, getBlockOptimized, currentBlockType);
                             
                             let waterFade = 0;
                             if (effectiveNeighborType === BLOCKS.WATER || effectiveNeighborType === BLOCKS.SWAMP_WATER || neighborType === BLOCKS.WATER || neighborType === BLOCKS.SWAMP_WATER) {
@@ -752,7 +752,7 @@ function _vertexAO(wx, wy, wz, vx, vy, vz, face, getNeighborBlock) {
 }
 
 function calculateVertexAO(wx, wy, wz, face, getNeighborBlock, blockType) {
-    if (blockType === window.BLOCKS.WATER || blockType === window.BLOCKS.LAVA || blockType === window.BLOCKS.GLASS || blockType === window.BLOCKS.TORCH) {
+    if (blockType === BLOCKS.WATER || blockType === BLOCKS.SWAMP_WATER || blockType === BLOCKS.LAVA || blockType === BLOCKS.GLASS || blockType === BLOCKS.TORCH) {
         _aoResult[0] = 1; _aoResult[1] = 1; _aoResult[2] = 1; _aoResult[3] = 1;
         return _aoResult;
     }
@@ -831,10 +831,11 @@ export class World {
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
-            opacity: 0.75, // natural translucent water
+            opacity: 0.80, // natural translucent water
+            depthWrite: false, // Prevents z-sorting fighting and clipping underwater terrain
             side: THREE.DoubleSide,
-            shininess: 30,
-            specular: new THREE.Color(0x336699)
+            shininess: 0, // Eliminate harsh blocky quad specular glare grid
+            specular: new THREE.Color(0x000000)
         });
         const matTransparent = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,

@@ -609,21 +609,30 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         case BLOCKS.WATER:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            fillBase(ctx, 42, 95, 225); // Vibrant classic Minecraft water blue
-            // Undulating lighter cyan water wave ripples
-            ctx.fillStyle = 'rgba(80, 155, 255, 0.7)';
-            for (let y = 1; y < TEX_SIZE; y += 4) {
-                const off = (rng() * 4) | 0;
-                ctx.fillRect(off, y, 5 + ((rng() * 4) | 0), 1);
-                ctx.fillRect((off + 8) % 16, y + 2, 4 + ((rng() * 3) | 0), 1);
+            const wImgData = ctx.createImageData(TEX_SIZE, TEX_SIZE);
+            for (let y = 0; y < TEX_SIZE; y++) {
+                for (let x = 0; x < TEX_SIZE; x++) {
+                    const u = (x / TEX_SIZE) * Math.PI * 2;
+                    const v = (y / TEX_SIZE) * Math.PI * 2;
+                    const wave = (Math.sin(u) * 0.5 + Math.cos(v) * 0.5 + Math.sin(u - v) * 0.25) / 1.25;
+                    let r, g, b;
+                    if (wave > 0) {
+                        r = Math.round(43 + (110 - 43) * wave);
+                        g = Math.round(95 + (165 - 95) * wave);
+                        b = Math.round(232 + (250 - 232) * wave);
+                    } else {
+                        r = Math.round(43 - (43 - 28) * (-wave));
+                        g = Math.round(95 - (95 - 72) * (-wave));
+                        b = Math.round(232 - (232 - 195) * (-wave));
+                    }
+                    const pIdx = (y * TEX_SIZE + x) * 4;
+                    wImgData.data[pIdx] = r;
+                    wImgData.data[pIdx + 1] = g;
+                    wImgData.data[pIdx + 2] = b;
+                    wImgData.data[pIdx + 3] = 200;
+                }
             }
-            // Deeper wave shadows
-            ctx.fillStyle = 'rgba(25, 60, 170, 0.6)';
-            for (let y = 0; y < TEX_SIZE; y += 3) {
-                const off = (rng() * 6) | 0;
-                ctx.fillRect(off, y, 4, 1);
-            }
-            addNoise(ctx, rng, 6);
+            ctx.putImageData(wImgData, 0, 0);
             break;
         case BLOCKS.WOOD:
             if (face === 'top' || face === 'bottom') {
@@ -2536,46 +2545,291 @@ function loadMinecraftChestTexture(face) {
     });
 }
 
+const LOCAL_ASSET_MAP = {
+    "aether_dirt": "assets/aether/block/aether_dirt.png",
+    "aether_grass_side": "assets/aether/block/aether_grass_side.png",
+    "aether_grass_top": "assets/aether/block/aether_grass_top.png",
+    "ambrosium_ore": "assets/aether/block/ambrosium_ore.png",
+    "carved_holystone": "assets/aether/block/carved_holystone.png",
+    "cold_aercloud": "assets/aether/block/cold_aercloud.png",
+    "golden_oak_leaves": "assets/aether/block/golden_oak_leaves.png",
+    "golden_oak_log": "assets/aether/block/golden_oak_log.png",
+    "gravitite_ore": "assets/aether/block/gravitite_ore.png",
+    "holystone": "assets/aether/block/holystone.png",
+    "sentry_stone": "assets/aether/block/sentry_stone.png",
+    "zanite_ore": "assets/aether/block/zanite_ore.png",
+    "ambrosium_shard": "assets/aether/item/ambrosium_shard.png",
+    "gravitite_axe": "assets/aether/item/gravitite_axe.png",
+    "gravitite_pickaxe": "assets/aether/item/gravitite_pickaxe.png",
+    "gravitite_shovel": "assets/aether/item/gravitite_shovel.png",
+    "gravitite_sword": "assets/aether/item/gravitite_sword.png",
+    "zanite_axe": "assets/aether/item/zanite_axe.png",
+    "zanite_gem": "assets/aether/item/zanite_gem.png",
+    "zanite_pickaxe": "assets/aether/item/zanite_pickaxe.png",
+    "zanite_shovel": "assets/aether/item/zanite_shovel.png",
+    "zanite_sword": "assets/aether/item/zanite_sword.png",
+    "acacia_leaves": "assets/mc/block/acacia_leaves.png",
+    "acacia_log": "assets/mc/block/acacia_log.png",
+    "acacia_log_top": "assets/mc/block/acacia_log_top.png",
+    "acacia_planks": "assets/mc/block/acacia_planks.png",
+    "allium": "assets/mc/block/allium.png",
+    "andesite": "assets/mc/block/andesite.png",
+    "basalt_side": "assets/mc/block/basalt_side.png",
+    "basalt_top": "assets/mc/block/basalt_top.png",
+    "bedrock": "assets/mc/block/bedrock.png",
+    "blackstone": "assets/mc/block/blackstone.png",
+    "blackstone_top": "assets/mc/block/blackstone_top.png",
+    "bone_block_side": "assets/mc/block/bone_block_side.png",
+    "bone_block_top": "assets/mc/block/bone_block_top.png",
+    "bookshelf": "assets/mc/block/bookshelf.png",
+    "brain_coral": "assets/mc/block/brain_coral.png",
+    "bricks": "assets/mc/block/bricks.png",
+    "bubble_coral": "assets/mc/block/bubble_coral.png",
+    "cactus_bottom": "assets/mc/block/cactus_bottom.png",
+    "cactus_side": "assets/mc/block/cactus_side.png",
+    "cactus_top": "assets/mc/block/cactus_top.png",
+    "cherry_leaves": "assets/mc/block/cherry_leaves.png",
+    "cherry_log": "assets/mc/block/cherry_log.png",
+    "cherry_log_top": "assets/mc/block/cherry_log_top.png",
+    "cherry_planks": "assets/mc/block/cherry_planks.png",
+    "clay": "assets/mc/block/clay.png",
+    "coal_ore": "assets/mc/block/coal_ore.png",
+    "cobblestone": "assets/mc/item/cobblestone.png",
+    "cornflower": "assets/mc/block/cornflower.png",
+    "crafting_table_front": "assets/mc/block/crafting_table_front.png",
+    "crafting_table_side": "assets/mc/block/crafting_table_side.png",
+    "crafting_table_top": "assets/mc/block/crafting_table_top.png",
+    "crimson_nylium": "assets/mc/block/crimson_nylium.png",
+    "crimson_nylium_side": "assets/mc/block/crimson_nylium_side.png",
+    "crimson_planks": "assets/mc/block/crimson_planks.png",
+    "crimson_roots": "assets/mc/block/crimson_roots.png",
+    "crimson_stem": "assets/mc/block/crimson_stem.png",
+    "crimson_stem_top": "assets/mc/block/crimson_stem_top.png",
+    "crying_obsidian": "assets/mc/block/crying_obsidian.png",
+    "dandelion": "assets/mc/block/dandelion.png",
+    "dark_oak_leaves": "assets/mc/block/dark_oak_leaves.png",
+    "dark_oak_log": "assets/mc/block/dark_oak_log.png",
+    "dark_oak_log_top": "assets/mc/block/dark_oak_log_top.png",
+    "dark_oak_planks": "assets/mc/block/dark_oak_planks.png",
+    "dead_bush": "assets/mc/block/dead_bush.png",
+    "diamond_block": "assets/mc/block/diamond_block.png",
+    "diamond_ore": "assets/mc/block/diamond_ore.png",
+    "diorite": "assets/mc/block/diorite.png",
+    "dirt": "assets/mc/block/dirt.png",
+    "emerald_block": "assets/mc/block/emerald_block.png",
+    "end_gateway_beam": "assets/mc/block/end_gateway_beam.png",
+    "end_portal_frame_side": "assets/mc/block/end_portal_frame_side.png",
+    "end_portal_frame_top": "assets/mc/block/end_portal_frame_top.png",
+    "end_stone": "assets/mc/block/end_stone.png",
+    "fern": "assets/mc/block/fern.png",
+    "fire_0": "assets/mc/block/fire_0.png",
+    "fire_coral": "assets/mc/block/fire_coral.png",
+    "furnace_front": "assets/mc/block/furnace_front.png",
+    "furnace_side": "assets/mc/block/furnace_side.png",
+    "furnace_top": "assets/mc/block/furnace_top.png",
+    "glass": "assets/mc/block/glass.png",
+    "glowstone": "assets/mc/block/glowstone.png",
+    "gold_block": "assets/mc/block/gold_block.png",
+    "gold_ore": "assets/mc/block/gold_ore.png",
+    "grass_block_side": "assets/mc/block/grass_block_side.png",
+    "grass_block_top": "assets/mc/block/grass_block_top.png",
+    "gravel": "assets/mc/block/gravel.png",
+    "horn_coral": "assets/mc/block/horn_coral.png",
+    "ice": "assets/mc/block/ice.png",
+    "iron_block": "assets/mc/block/iron_block.png",
+    "iron_ore": "assets/mc/block/iron_ore.png",
+    "jungle_planks": "assets/mc/block/jungle_planks.png",
+    "kelp": "assets/mc/block/kelp.png",
+    "kelp_plant": "assets/mc/block/kelp_plant.png",
+    "ladder": "assets/mc/block/ladder.png",
+    "lapis_ore": "assets/mc/block/lapis_ore.png",
+    "lava_flow": "assets/mc/block/lava_flow.png",
+    "lily_of_the_valley": "assets/mc/block/lily_of_the_valley.png",
+    "lily_pad": "assets/mc/block/lily_pad.png",
+    "magma": "assets/mc/block/magma.png",
+    "mossy_cobblestone": "assets/mc/block/mossy_cobblestone.png",
+    "mushroom_stem": "assets/mc/block/mushroom_stem.png",
+    "mycelium_side": "assets/mc/block/mycelium_side.png",
+    "mycelium_top": "assets/mc/block/mycelium_top.png",
+    "nautilus_shell": "assets/mc/block/nautilus_shell.png",
+    "netherrack": "assets/mc/block/netherrack.png",
+    "nether_bricks": "assets/mc/block/nether_bricks.png",
+    "nether_portal": "assets/mc/block/nether_portal.png",
+    "nether_sprouts": "assets/mc/block/nether_sprouts.png",
+    "nether_wart_block": "assets/mc/block/nether_wart_block.png",
+    "oak_door_bottom": "assets/mc/block/oak_door_bottom.png",
+    "oak_door_top": "assets/mc/block/oak_door_top.png",
+    "oak_leaves": "assets/mc/block/oak_leaves.png",
+    "oak_log": "assets/mc/item/oak_log.png",
+    "oak_log_top": "assets/mc/block/oak_log_top.png",
+    "oak_planks": "assets/mc/block/oak_planks.png",
+    "obsidian": "assets/mc/block/obsidian.png",
+    "orange_tulip": "assets/mc/block/orange_tulip.png",
+    "pale_oak_leaves": "assets/mc/block/pale_oak_leaves.png",
+    "pale_oak_log": "assets/mc/block/pale_oak_log.png",
+    "pale_oak_log_top": "assets/mc/block/pale_oak_log_top.png",
+    "pink_petals": "assets/mc/block/pink_petals.png",
+    "podzol_side": "assets/mc/block/podzol_side.png",
+    "podzol_top": "assets/mc/block/podzol_top.png",
+    "poppy": "assets/mc/block/poppy.png",
+    "purpur_block": "assets/mc/block/purpur_block.png",
+    "redstone_ore": "assets/mc/block/redstone_ore.png",
+    "red_mushroom": "assets/mc/block/red_mushroom.png",
+    "red_mushroom_block": "assets/mc/block/red_mushroom_block.png",
+    "red_sand": "assets/mc/block/red_sand.png",
+    "sand": "assets/mc/block/sand.png",
+    "sandstone": "assets/mc/block/sandstone.png",
+    "sandstone_bottom": "assets/mc/block/sandstone_bottom.png",
+    "sandstone_top": "assets/mc/block/sandstone_top.png",
+    "seagrass": "assets/mc/block/seagrass.png",
+    "sea_lantern": "assets/mc/block/sea_lantern.png",
+    "shroomlight": "assets/mc/block/shroomlight.png",
+    "smooth_basalt": "assets/mc/block/smooth_basalt.png",
+    "snow": "assets/mc/block/snow.png",
+    "soul_fire_0": "assets/mc/block/soul_fire_0.png",
+    "soul_sand": "assets/mc/block/soul_sand.png",
+    "soul_soil": "assets/mc/block/soul_soil.png",
+    "spawner": "assets/mc/block/spawner.png",
+    "spruce_leaves": "assets/mc/block/spruce_leaves.png",
+    "spruce_log": "assets/mc/block/spruce_log.png",
+    "spruce_log_top": "assets/mc/block/spruce_log_top.png",
+    "spruce_planks": "assets/mc/block/spruce_planks.png",
+    "stone": "assets/mc/block/stone.png",
+    "stone_bricks": "assets/mc/block/stone_bricks.png",
+    "sugar_cane": "assets/mc/block/sugar_cane.png",
+    "tall_grass_top": "assets/mc/block/tall_grass_top.png",
+    "terracotta": "assets/mc/block/terracotta.png",
+    "tnt_bottom": "assets/mc/block/tnt_bottom.png",
+    "tnt_side": "assets/mc/block/tnt_side.png",
+    "tnt_top": "assets/mc/block/tnt_top.png",
+    "torch": "assets/mc/block/torch.png",
+    "tube_coral": "assets/mc/block/tube_coral.png",
+    "turtle_scute": "assets/mc/block/turtle_scute.png",
+    "twisting_vines": "assets/mc/block/twisting_vines.png",
+    "vine": "assets/mc/block/vine.png",
+    "warped_nylium": "assets/mc/block/warped_nylium.png",
+    "warped_nylium_side": "assets/mc/block/warped_nylium_side.png",
+    "warped_roots": "assets/mc/block/warped_roots.png",
+    "warped_stem": "assets/mc/block/warped_stem.png",
+    "warped_stem_top": "assets/mc/block/warped_stem_top.png",
+    "warped_wart_block": "assets/mc/block/warped_wart_block.png",
+    "water_flow": "assets/mc/block/water_flow.png",
+    "water_still": "assets/mc/block/water_still.png",
+    "white_wool": "assets/mc/block/white_wool.png",
+    "apple": "assets/mc/item/apple.png",
+    "beef": "assets/mc/item/beef.png",
+    "blaze_rod": "assets/mc/item/blaze_rod.png",
+    "bread": "assets/mc/item/bread.png",
+    "bucket": "assets/mc/item/bucket.png",
+    "chicken": "assets/mc/item/chicken.png",
+    "coal": "assets/mc/item/coal.png",
+    "cod": "assets/mc/item/cod.png",
+    "cooked_beef": "assets/mc/item/cooked_beef.png",
+    "cooked_chicken": "assets/mc/item/cooked_chicken.png",
+    "cooked_cod": "assets/mc/item/cooked_cod.png",
+    "cooked_mutton": "assets/mc/item/cooked_mutton.png",
+    "cooked_porkchop": "assets/mc/item/cooked_porkchop.png",
+    "diamond": "assets/mc/item/diamond.png",
+    "diamond_axe": "assets/mc/item/diamond_axe.png",
+    "diamond_boots": "assets/mc/item/diamond_boots.png",
+    "diamond_chestplate": "assets/mc/item/diamond_chestplate.png",
+    "diamond_helmet": "assets/mc/item/diamond_helmet.png",
+    "diamond_leggings": "assets/mc/item/diamond_leggings.png",
+    "diamond_pickaxe": "assets/mc/item/diamond_pickaxe.png",
+    "diamond_shovel": "assets/mc/item/diamond_shovel.png",
+    "diamond_sword": "assets/mc/item/diamond_sword.png",
+    "ender_pearl": "assets/mc/item/ender_pearl.png",
+    "flint_and_steel": "assets/mc/item/flint_and_steel.png",
+    "golden_axe": "assets/mc/item/golden_axe.png",
+    "golden_boots": "assets/mc/item/golden_boots.png",
+    "golden_chestplate": "assets/mc/item/golden_chestplate.png",
+    "golden_helmet": "assets/mc/item/golden_helmet.png",
+    "golden_leggings": "assets/mc/item/golden_leggings.png",
+    "golden_pickaxe": "assets/mc/item/golden_pickaxe.png",
+    "golden_shovel": "assets/mc/item/golden_shovel.png",
+    "golden_sword": "assets/mc/item/golden_sword.png",
+    "gold_ingot": "assets/mc/item/gold_ingot.png",
+    "iron_axe": "assets/mc/item/iron_axe.png",
+    "iron_boots": "assets/mc/item/iron_boots.png",
+    "iron_chestplate": "assets/mc/item/iron_chestplate.png",
+    "iron_helmet": "assets/mc/item/iron_helmet.png",
+    "iron_ingot": "assets/mc/item/iron_ingot.png",
+    "iron_leggings": "assets/mc/item/iron_leggings.png",
+    "iron_pickaxe": "assets/mc/item/iron_pickaxe.png",
+    "iron_shovel": "assets/mc/item/iron_shovel.png",
+    "iron_sword": "assets/mc/item/iron_sword.png",
+    "lapis_lazuli": "assets/mc/item/lapis_lazuli.png",
+    "lava_bucket": "assets/mc/item/lava_bucket.png",
+    "mutton": "assets/mc/item/mutton.png",
+    "netherite_axe": "assets/mc/item/netherite_axe.png",
+    "netherite_ingot": "assets/mc/item/netherite_ingot.png",
+    "netherite_pickaxe": "assets/mc/item/netherite_pickaxe.png",
+    "netherite_shovel": "assets/mc/item/netherite_shovel.png",
+    "netherite_sword": "assets/mc/item/netherite_sword.png",
+    "nether_star": "assets/mc/item/nether_star.png",
+    "porkchop": "assets/mc/item/porkchop.png",
+    "prismarine_shard": "assets/mc/item/prismarine_shard.png",
+    "raw_copper": "assets/mc/item/raw_copper.png",
+    "raw_gold": "assets/mc/item/raw_gold.png",
+    "raw_iron": "assets/mc/item/raw_iron.png",
+    "stick": "assets/mc/item/stick.png",
+    "stone_axe": "assets/mc/item/stone_axe.png",
+    "stone_pickaxe": "assets/mc/item/stone_pickaxe.png",
+    "stone_shovel": "assets/mc/item/stone_shovel.png",
+    "stone_sword": "assets/mc/item/stone_sword.png",
+    "water_bucket": "assets/mc/item/water_bucket.png",
+    "wooden_axe": "assets/mc/item/wooden_axe.png",
+    "wooden_pickaxe": "assets/mc/item/wooden_pickaxe.png",
+    "wooden_shovel": "assets/mc/item/wooden_shovel.png",
+    "wooden_sword": "assets/mc/item/wooden_sword.png",
+    "icons": "assets/mc/icons.png",
+    "mana_bar_bg": "assets/mc/mana_bar_bg.png",
+    "mana_bar_fill": "assets/mc/mana_bar_fill.png",
+    "steve": "assets/mc/steve.png",
+    "widgets": "assets/mc/widgets.png",
+    "aether_grass_block_top": "assets/aether/block/aether_grass_top.png",
+    "aether_grass_block_side": "assets/aether/block/aether_grass_side.png",
+    "skyroot_log": "assets/aether/block/golden_oak_log.png",
+    "skyroot_log_top": "assets/aether/block/golden_oak_log.png",
+    "skyroot_leaves": "assets/aether/block/golden_oak_leaves.png",
+    "crystal_leaves": "assets/aether/block/golden_oak_leaves.png",
+    "white_flower": "assets/mc/block/lily_of_the_valley.png",
+    "quicksoil": "assets/mc/block/sand.png"
+};
+
 function loadMinecraftTexture(name) {
     if (name.startsWith('chest://')) {
         return loadMinecraftChestTexture(name.slice(8));
     }
     const cleanName = name.replace(/^aether:\/\//, '');
-    const tryPaths = [
-        `assets/aether/block/${cleanName}.png`,
-        `assets/aether/item/${cleanName}.png`,
-        `assets/mc/block/${cleanName}.png`,
-        `assets/mc/item/${cleanName}.png`,
-        `assets/mc/${cleanName}.png`
-    ];
+    const localPath = LOCAL_ASSET_MAP[cleanName] || LOCAL_ASSET_MAP[cleanName.replace(/^.*\//, '')];
 
     return new Promise((resolve) => {
-        const tryNextLocal = (idx) => {
-            if (idx >= tryPaths.length) {
-                // Remote fallback
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => resolve(img);
-                img.onerror = () => {
-                    const altImg = new Image();
-                    altImg.crossOrigin = 'anonymous';
-                    altImg.onload = () => resolve(altImg);
-                    altImg.onerror = () => resolve(null);
-                    altImg.src = MINECRAFT_ASSETS_BASE + 'item/' + cleanName + '.png';
-                };
-                if (cleanName.includes('/')) {
-                    img.src = MINECRAFT_ASSETS_BASE + cleanName + '.png';
-                } else {
-                    img.src = MINECRAFT_ASSETS_BASE + 'block/' + cleanName + '.png';
-                }
-                return;
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+            // Local fallback failed, try remote
+            const remoteImg = new Image();
+            remoteImg.crossOrigin = 'anonymous';
+            remoteImg.onload = () => resolve(remoteImg);
+            remoteImg.onerror = () => resolve(null);
+            if (cleanName.includes('/')) {
+                remoteImg.src = MINECRAFT_ASSETS_BASE + cleanName + '.png';
+            } else {
+                remoteImg.src = MINECRAFT_ASSETS_BASE + 'block/' + cleanName + '.png';
             }
-            const localImg = new Image();
-            localImg.onload = () => resolve(localImg);
-            localImg.onerror = () => tryNextLocal(idx + 1);
-            localImg.src = tryPaths[idx];
         };
-        tryNextLocal(0);
+
+        if (localPath) {
+            img.src = localPath;
+        } else {
+            img.crossOrigin = 'anonymous';
+            if (cleanName.includes('/')) {
+                img.src = MINECRAFT_ASSETS_BASE + cleanName + '.png';
+            } else {
+                img.src = MINECRAFT_ASSETS_BASE + 'block/' + cleanName + '.png';
+            }
+        }
     });
 }
 
