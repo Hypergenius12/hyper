@@ -2221,21 +2221,342 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
 
-        case BLOCKS.RUBY_ORE:
+        case BLOCKS.RUBY_ORE: {
             fillBase(ctx, 110, 110, 110);
             addNoise(ctx, rng, 20);
-            addPixels(ctx, rng, '#d32f2f', 24);
-            addPixels(ctx, rng, '#ff5252', 16);
-            addPixels(ctx, rng, '#8b0000', 12);
+            const clusters = [[3, 3], [10, 2], [5, 9], [11, 10]];
+            for (const [cx, cy] of clusters) {
+                ctx.fillStyle = '#4a0014'; ctx.fillRect(cx - 1, cy - 1, 4, 4);
+                ctx.fillStyle = '#9b0032'; ctx.fillRect(cx, cy, 3, 3);
+                ctx.fillStyle = '#e0115f'; ctx.fillRect(cx, cy, 2, 2);
+                ctx.fillStyle = '#ff6088'; ctx.fillRect(cx, cy, 1, 1);
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(cx + 1, cy, 1, 1);
+            }
             break;
+        }
 
-        case BLOCKS.SAPPHIRE_ORE:
+        case BLOCKS.SAPPHIRE_ORE: {
             fillBase(ctx, 110, 110, 110);
             addNoise(ctx, rng, 20);
-            addPixels(ctx, rng, '#1976d2', 24);
-            addPixels(ctx, rng, '#448aff', 16);
-            addPixels(ctx, rng, '#0d47a1', 12);
+            const clusters = [[2, 4], [9, 3], [4, 10], [11, 9]];
+            for (const [cx, cy] of clusters) {
+                ctx.fillStyle = '#081c52'; ctx.fillRect(cx - 1, cy - 1, 4, 4);
+                ctx.fillStyle = '#0e3a96'; ctx.fillRect(cx, cy, 3, 3);
+                ctx.fillStyle = '#2f80ed'; ctx.fillRect(cx, cy, 2, 2);
+                ctx.fillStyle = '#56ccf2'; ctx.fillRect(cx, cy, 1, 1);
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(cx + 1, cy, 1, 1);
+            }
             break;
+        }
+
+        case BLOCKS.ENCHANTED_AETHER_LEAVES: {
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            addLeaves(ctx, rng, 'rgba(217, 70, 239, 0.9)', 'rgba(134, 25, 143, 0.95)', 'rgba(0, 245, 212, 0.85)');
+            addPixels(ctx, rng, '#ffffff', 8);
+            break;
+        }
+
+        case BLOCKS.ENCHANTED_AETHER_LOG: {
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 220, 230, 240);
+                addNoise(ctx, rng, 15);
+                ctx.strokeStyle = '#a855f7';
+                ctx.strokeRect(2, 2, 12, 12);
+                ctx.strokeStyle = '#c084fc';
+                ctx.strokeRect(4, 4, 8, 8);
+                ctx.fillStyle = '#e879f9';
+                ctx.fillRect(7, 7, 2, 2);
+            } else {
+                fillBase(ctx, 180, 195, 210);
+                addNoise(ctx, rng, 20);
+                addPixels(ctx, rng, '#93c5fd', 30);
+                addPixels(ctx, rng, '#c084fc', 20);
+            }
+            break;
+        }
+
+        case BLOCKS.CRYING_OBSIDIAN: {
+            fillBase(ctx, 20, 10, 30);
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, '#100518', 40);
+            addPixels(ctx, rng, '#a855f7', 25);
+            addPixels(ctx, rng, '#c084fc', 15);
+            addPixels(ctx, rng, '#e879f9', 8);
+            break;
+        }
+
+        case BLOCKS.WARPED_NYLIUM: {
+            if (face === 'top') {
+                fillBase(ctx, 22, 115, 105);
+                addNoise(ctx, rng, 25);
+                addPixels(ctx, rng, '#14b8a6', 40);
+                addPixels(ctx, rng, '#5eead4', 20);
+                addPixels(ctx, rng, '#0f766e', 30);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 110, 35, 35);
+                addNoise(ctx, rng, 30);
+                addPixels(ctx, rng, '#701a1a', 40);
+            } else {
+                fillBase(ctx, 110, 35, 35);
+                addNoise(ctx, rng, 30);
+                ctx.fillStyle = '#14b8a6';
+                ctx.fillRect(0, 0, TEX_SIZE, 3);
+                for (let i = 0; i < TEX_SIZE; i += 2) {
+                    if (rng() > 0.35) ctx.fillRect(i, 3, 1, 1 + (rng() * 3) | 0);
+                }
+            }
+            break;
+        }
+
+        case BLOCKS.WARPED_STEM: {
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 45, 110, 105);
+                addNoise(ctx, rng, 15);
+                ctx.strokeStyle = '#0f766e';
+                ctx.strokeRect(3, 3, 10, 10);
+                ctx.strokeRect(5, 5, 6, 6);
+            } else {
+                fillBase(ctx, 30, 85, 80);
+                addNoise(ctx, rng, 20);
+                addPixels(ctx, rng, '#14b8a6', 35);
+                addPixels(ctx, rng, '#0f766e', 35);
+            }
+            break;
+        }
+
+        case BLOCKS.WARPED_WART_BLOCK: {
+            fillBase(ctx, 20, 110, 105);
+            addNoise(ctx, rng, 25);
+            addPixels(ctx, rng, '#14b8a6', 40);
+            addPixels(ctx, rng, '#042f2e', 35);
+            addPixels(ctx, rng, '#5eead4', 15);
+            break;
+        }
+
+        case BLOCKS.WARPED_ROOTS: {
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = '#14b8a6';
+            for (let rx = 3; rx < 13; rx += 3) {
+                const rh = 6 + (rng() * 6) | 0;
+                ctx.fillRect(rx, TEX_SIZE - rh, 2, rh);
+            }
+            addPixels(ctx, rng, '#5eead4', 10);
+            break;
+        }
+
+        case BLOCKS.TWISTING_VINES: {
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = '#14b8a6';
+            for (let y = 0; y < TEX_SIZE; y++) {
+                const vx = 7 + Math.sin(y * 0.8) * 3 | 0;
+                ctx.fillRect(vx, y, 2, 1);
+            }
+            addPixels(ctx, rng, '#5eead4', 12);
+            break;
+        }
+
+        case BLOCKS.NETHER_SPROUTS: {
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = '#06b6d4';
+            for (let rx = 2; rx < 14; rx += 2) {
+                const rh = 2 + (rng() * 4) | 0;
+                ctx.fillRect(rx, TEX_SIZE - rh, 1, rh);
+            }
+            break;
+        }
+
+        case BLOCKS.SOUL_SOIL: {
+            fillBase(ctx, 75, 55, 45);
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, '#36231a', 40);
+            addPixels(ctx, rng, '#593e32', 30);
+            break;
+        }
+
+        case BLOCKS.BONE_BLOCK: {
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 225, 220, 200);
+                addNoise(ctx, rng, 10);
+                ctx.strokeStyle = '#a8a29e';
+                ctx.strokeRect(3, 3, 10, 10);
+                ctx.fillStyle = '#78716c';
+                ctx.fillRect(6, 6, 4, 4);
+            } else {
+                fillBase(ctx, 225, 220, 200);
+                addNoise(ctx, rng, 15);
+                addPixels(ctx, rng, '#d6d3d1', 40);
+                addPixels(ctx, rng, '#a8a29e', 20);
+            }
+            break;
+        }
+
+        case BLOCKS.BASALT: {
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 110, 110, 115);
+                addNoise(ctx, rng, 15);
+                ctx.strokeStyle = '#505055';
+                ctx.strokeRect(3, 3, 10, 10);
+            } else {
+                fillBase(ctx, 60, 60, 65);
+                addNoise(ctx, rng, 15);
+                for (let x = 0; x < TEX_SIZE; x += 3) {
+                    ctx.fillStyle = (x % 6 === 0) ? '#45454a' : '#75757d';
+                    ctx.fillRect(x, 0, 2, TEX_SIZE);
+                }
+            }
+            break;
+        }
+
+        case BLOCKS.SMOOTH_BASALT: {
+            fillBase(ctx, 70, 70, 75);
+            addNoise(ctx, rng, 12);
+            addPixels(ctx, rng, '#505055', 30);
+            addPixels(ctx, rng, '#8a8a92', 20);
+            break;
+        }
+
+        case BLOCKS.MAGMA: {
+            fillBase(ctx, 40, 10, 5);
+            addNoise(ctx, rng, 15);
+            ctx.fillStyle = '#ff6b00';
+            ctx.fillRect(2, 4, 8, 2);
+            ctx.fillRect(7, 4, 2, 7);
+            ctx.fillRect(3, 11, 10, 2);
+            ctx.fillStyle = '#ffb703';
+            ctx.fillRect(3, 4, 5, 1);
+            ctx.fillRect(7, 5, 1, 5);
+            ctx.fillRect(5, 11, 6, 1);
+            addPixels(ctx, rng, '#d00000', 30);
+            break;
+        }
+
+        case BLOCKS.BLACKSTONE: {
+            fillBase(ctx, 40, 36, 40);
+            addNoise(ctx, rng, 15);
+            addPixels(ctx, rng, '#201c22', 40);
+            addPixels(ctx, rng, '#58525b', 25);
+            break;
+        }
+
+        case BLOCKS.SHROOMLIGHT: {
+            fillBase(ctx, 245, 140, 65);
+            addNoise(ctx, rng, 15);
+            addPixels(ctx, rng, '#fb923c', 40);
+            addPixels(ctx, rng, '#fdba74', 35);
+            addPixels(ctx, rng, '#ea580c', 20);
+            break;
+        }
+
+        case BLOCKS.ZANITE_ORE: {
+            fillBase(ctx, 160, 165, 180);
+            addNoise(ctx, rng, 20);
+            const clusters = [[3, 4], [10, 3], [5, 10], [11, 11]];
+            for (const [cx, cy] of clusters) {
+                ctx.fillStyle = '#581c87'; ctx.fillRect(cx - 1, cy - 1, 4, 4);
+                ctx.fillStyle = '#9333ea'; ctx.fillRect(cx, cy, 3, 3);
+                ctx.fillStyle = '#c084fc'; ctx.fillRect(cx, cy, 2, 2);
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(cx + 1, cy, 1, 1);
+            }
+            break;
+        }
+
+        case BLOCKS.GRAVITITE_ORE: {
+            fillBase(ctx, 160, 165, 180);
+            addNoise(ctx, rng, 20);
+            const clusters = [[4, 3], [9, 4], [3, 10], [10, 10]];
+            for (const [cx, cy] of clusters) {
+                ctx.fillStyle = '#831843'; ctx.fillRect(cx - 1, cy - 1, 4, 4);
+                ctx.fillStyle = '#db2777'; ctx.fillRect(cx, cy, 3, 3);
+                ctx.fillStyle = '#f472b6'; ctx.fillRect(cx, cy, 2, 2);
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(cx + 1, cy, 1, 1);
+            }
+            break;
+        }
+
+        case BLOCKS.AMBROSIUM_ORE: {
+            fillBase(ctx, 160, 165, 180);
+            addNoise(ctx, rng, 20);
+            const clusters = [[3, 3], [10, 4], [4, 11], [11, 9]];
+            for (const [cx, cy] of clusters) {
+                ctx.fillStyle = '#78350f'; ctx.fillRect(cx - 1, cy - 1, 4, 4);
+                ctx.fillStyle = '#d97706'; ctx.fillRect(cx, cy, 3, 3);
+                ctx.fillStyle = '#fbbf24'; ctx.fillRect(cx, cy, 2, 2);
+                ctx.fillStyle = '#fef08a'; ctx.fillRect(cx + 1, cy, 1, 1);
+            }
+            break;
+        }
+
+        case BLOCKS.CARVED_HOLYSTONE: {
+            fillBase(ctx, 175, 180, 195);
+            addNoise(ctx, rng, 15);
+            ctx.strokeStyle = '#94a3b8';
+            ctx.strokeRect(1, 1, 14, 14);
+            ctx.strokeRect(4, 4, 8, 8);
+            ctx.fillStyle = '#64748b';
+            ctx.fillRect(7, 7, 2, 2);
+            break;
+        }
+
+        case BLOCKS.SENTRY_STONE: {
+            fillBase(ctx, 50, 55, 65);
+            addNoise(ctx, rng, 15);
+            ctx.strokeStyle = '#334155';
+            ctx.strokeRect(1, 1, 14, 14);
+            ctx.fillStyle = '#06b6d4';
+            ctx.fillRect(4, 7, 8, 2);
+            ctx.fillStyle = '#67e8f9';
+            ctx.fillRect(6, 7, 4, 1);
+            break;
+        }
+
+        case BLOCKS.GOLDEN_OAK_WOOD: {
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 210, 165, 75);
+                addNoise(ctx, rng, 15);
+                ctx.strokeStyle = '#b45309';
+                ctx.strokeRect(2, 2, 12, 12);
+                ctx.strokeRect(4, 4, 8, 8);
+            } else {
+                fillBase(ctx, 160, 110, 45);
+                addNoise(ctx, rng, 20);
+                addPixels(ctx, rng, '#d97706', 35);
+                addPixels(ctx, rng, '#92400e', 35);
+            }
+            break;
+        }
+
+        case BLOCKS.GOLDEN_OAK_LEAVES: {
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            addLeaves(ctx, rng, '#eab308', '#ca8a04', '#fef08a');
+            break;
+        }
+
+        case BLOCKS.PODZOL: {
+            if (face === 'top') {
+                fillBase(ctx, 95, 60, 35);
+                addNoise(ctx, rng, 20);
+                addPixels(ctx, rng, '#5c3317', 40);
+                addPixels(ctx, rng, '#3d200e', 30);
+                addPixels(ctx, rng, '#784620', 30);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 134, 96, 67);
+                addNoise(ctx, rng, 25);
+            } else {
+                fillBase(ctx, 134, 96, 67);
+                addNoise(ctx, rng, 25);
+                ctx.fillStyle = '#5c3317';
+                ctx.fillRect(0, 0, TEX_SIZE, 3);
+                for (let i = 0; i < TEX_SIZE; i += 2) {
+                    if (rng() > 0.4) ctx.fillRect(i, 3, 1, 1 + (rng() * 2) | 0);
+                }
+            }
+            break;
+        }
 
         case BLOCKS.MAGIC_WOOD:
             if (face === 'top' || face === 'bottom') {
@@ -2500,8 +2821,8 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.REDWOOD_LOG]: { top: 'spruce_log_top', side: 'spruce_log', bottom: 'spruce_log_top' },
     [BLOCKS.REDWOOD_LEAVES]: 'spruce_leaves',
     [BLOCKS.LAVENDER]: 'allium',
-    [BLOCKS.RUBY_ORE]: 'redstone_ore',
-    [BLOCKS.SAPPHIRE_ORE]: 'lapis_ore'
+    [BLOCKS.RUBY_ORE]: 'ruby_ore',
+    [BLOCKS.SAPPHIRE_ORE]: 'sapphire_ore'
 };
 
 let _mcChestPromise = null;
@@ -2792,9 +3113,23 @@ const LOCAL_ASSET_MAP = {
     "skyroot_log": "assets/aether/block/golden_oak_log.png",
     "skyroot_log_top": "assets/aether/block/golden_oak_log.png",
     "skyroot_leaves": "assets/aether/block/golden_oak_leaves.png",
-    "crystal_leaves": "assets/aether/block/golden_oak_leaves.png",
+    "crystal_leaves": "assets/aether/block/crystal_leaves.png",
     "white_flower": "assets/mc/block/lily_of_the_valley.png",
-    "quicksoil": "assets/mc/block/sand.png"
+    "quicksoil": "assets/mc/block/sand.png",
+    "ruby_ore": "assets/mc/block/ruby_ore.png",
+    "sapphire_ore": "assets/mc/block/sapphire_ore.png",
+    "ruby": "assets/mc/item/ruby.png",
+    "sapphire": "assets/mc/item/sapphire.png",
+    "ruby_sword": "assets/mc/item/ruby_sword.png",
+    "ruby_pickaxe": "assets/mc/item/ruby_pickaxe.png",
+    "ruby_axe": "assets/mc/item/ruby_axe.png",
+    "ruby_shovel": "assets/mc/item/ruby_shovel.png",
+    "sapphire_sword": "assets/mc/item/sapphire_sword.png",
+    "sapphire_pickaxe": "assets/mc/item/sapphire_pickaxe.png",
+    "sapphire_axe": "assets/mc/item/sapphire_axe.png",
+    "sapphire_shovel": "assets/mc/item/sapphire_shovel.png",
+    "quartz": "assets/mc/item/quartz.png",
+    "netherite_scrap": "assets/mc/item/netherite_scrap.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -3015,6 +3350,9 @@ export async function createTextureAtlas(useMinecraft = false) {
         }
         await Promise.all(itemPromises);
     }
+
+    // Ensure Steve skin is initialized and fully loaded
+    await initSteveSkin();
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.magFilter = THREE.NearestFilter;
@@ -3265,17 +3603,31 @@ const MC_ITEM_MAP = {
     'pickaxe_netherite': 'netherite_pickaxe',
     'axe_netherite': 'netherite_axe',
     'shovel_netherite': 'netherite_shovel',
+    'ruby': 'ruby',
+    'sapphire': 'sapphire',
+    'sword_ruby': 'ruby_sword',
+    'pickaxe_ruby': 'ruby_pickaxe',
+    'axe_ruby': 'ruby_axe',
+    'shovel_ruby': 'ruby_shovel',
+    'sword_sapphire': 'sapphire_sword',
+    'pickaxe_sapphire': 'sapphire_pickaxe',
+    'axe_sapphire': 'sapphire_axe',
+    'shovel_sapphire': 'sapphire_shovel',
     'zanite_gem': 'zanite_gem',
+    'zanite_gemstone': 'zanite_gem',
     'ambrosium_shard': 'ambrosium_shard',
     'sword_zanite': 'zanite_sword',
     'pickaxe_zanite': 'zanite_pickaxe',
     'axe_zanite': 'zanite_axe',
     'shovel_zanite': 'zanite_shovel',
     'gravitite_ingot': 'gravitite_sword',
+    'gravitite_ore': 'gravitite_ore',
     'sword_gravitite': 'gravitite_sword',
     'pickaxe_gravitite': 'gravitite_pickaxe',
     'axe_gravitite': 'gravitite_axe',
-    'shovel_gravitite': 'gravitite_shovel'
+    'shovel_gravitite': 'gravitite_shovel',
+    'quartz': 'quartz',
+    'netherite_scrap': 'netherite_scrap'
 };
 
 // Global cache: subtype -> canvas / data URL
@@ -3684,7 +4036,7 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                "
             ];
             p = { c: '#ffffff', d: '#e0e0e0', h: '#ffffff' };
-        } else if (itemSubtype === 'coal' || itemSubtype === 'diamond' || itemSubtype === 'mana_crystal') {
+        } else if (itemSubtype === 'coal' || itemSubtype === 'diamond' || itemSubtype === 'mana_crystal' || itemSubtype === 'ruby' || itemSubtype === 'sapphire' || itemSubtype === 'zanite_gem' || itemSubtype === 'zanite_gemstone' || itemSubtype === 'ambrosium_shard' || itemSubtype === 'quartz' || itemSubtype === 'netherite_scrap') {
             shape = [
                 "                ",
                 "      OOOO      ",
@@ -3703,7 +4055,7 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                ",
                 "                "
             ];
-        } else if (itemSubtype === 'iron_ingot' || itemSubtype === 'gold_ingot') {
+        } else if (itemSubtype === 'iron_ingot' || itemSubtype === 'gold_ingot' || itemSubtype === 'netherite_ingot' || itemSubtype === 'gravitite_ingot' || itemSubtype === 'gravitite_ore') {
             shape = [
                 "                ",
                 "                ",
@@ -4310,6 +4662,139 @@ export const STEVE_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABA
 
 let _steveImg = null;
 let _steveCanvas = null;
+let _stevePartCanvases = null;
+const _activeSteveTextures = new Set();
+
+function renderProceduralSteveSkin(ctx) {
+    // Fill transparent initial
+    ctx.clearRect(0, 0, 64, 64);
+
+    const hair = '#4a3219';
+    const skin = '#bc8a65';
+    const skinDark = '#9e6b48';
+    const shirt = '#00a8a8';
+    const jeans = '#2b3d68';
+    const boots = '#3a3a3a';
+
+    // 1. Head (0, 0 to 32, 16)
+    // Top of head (8, 0, 8, 8)
+    ctx.fillStyle = hair; ctx.fillRect(8, 0, 8, 8);
+    // Neck / Bottom of head (16, 0, 8, 8)
+    ctx.fillStyle = skin; ctx.fillRect(16, 0, 8, 8);
+    // Right head (0, 8, 8, 8)
+    ctx.fillStyle = hair; ctx.fillRect(0, 8, 8, 4);
+    ctx.fillStyle = skin; ctx.fillRect(0, 12, 8, 4);
+    // Left head (16, 8, 8, 8)
+    ctx.fillStyle = hair; ctx.fillRect(16, 8, 8, 4);
+    ctx.fillStyle = skin; ctx.fillRect(16, 12, 8, 4);
+    // Back of head (24, 8, 8, 8)
+    ctx.fillStyle = hair; ctx.fillRect(24, 8, 8, 8);
+    // Front face (8, 8, 8, 8)
+    ctx.fillStyle = hair; ctx.fillRect(8, 8, 8, 2);
+    ctx.fillStyle = skin; ctx.fillRect(8, 10, 8, 6);
+    // Eyes
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(9, 11, 2, 1); ctx.fillRect(13, 11, 2, 1);
+    ctx.fillStyle = '#2f4ba3'; ctx.fillRect(10, 11, 1, 1); ctx.fillRect(13, 11, 1, 1);
+    // Nose
+    ctx.fillStyle = skinDark; ctx.fillRect(11, 12, 2, 1);
+    // Mouth / Beard
+    ctx.fillStyle = '#543820'; ctx.fillRect(10, 13, 4, 1);
+
+    // 2. Torso (16, 16 to 40, 32)
+    // Top of torso (20, 16, 8, 4)
+    ctx.fillStyle = shirt; ctx.fillRect(20, 16, 8, 4);
+    // Bottom of torso (28, 16, 8, 4)
+    ctx.fillStyle = shirt; ctx.fillRect(28, 16, 8, 4);
+    // Sides & Back of torso
+    ctx.fillStyle = shirt; ctx.fillRect(16, 20, 24, 12);
+    // Front V-neck skin
+    ctx.fillStyle = skin; ctx.fillRect(23, 20, 2, 2);
+
+    // 3. Right Arm (40, 16 to 56, 32)
+    // Top shoulder (44, 16, 4, 4)
+    ctx.fillStyle = shirt; ctx.fillRect(44, 16, 4, 4);
+    // Bottom palm (48, 16, 4, 4)
+    ctx.fillStyle = skin; ctx.fillRect(48, 16, 4, 4);
+    // Arm sides (40, 20, 16, 12)
+    ctx.fillStyle = shirt; ctx.fillRect(40, 20, 16, 4); // Sleeve
+    ctx.fillStyle = skin;  ctx.fillRect(40, 24, 16, 8); // Bare arm & hand
+
+    // 4. Left Arm (32, 48 to 48, 64)
+    ctx.fillStyle = shirt; ctx.fillRect(36, 48, 4, 4);
+    ctx.fillStyle = skin;  ctx.fillRect(40, 48, 4, 4);
+    ctx.fillStyle = shirt; ctx.fillRect(32, 52, 16, 4);
+    ctx.fillStyle = skin;  ctx.fillRect(32, 56, 16, 8);
+
+    // 5. Right Leg (0, 16 to 16, 32)
+    ctx.fillStyle = jeans; ctx.fillRect(4, 16, 4, 4);
+    ctx.fillStyle = boots; ctx.fillRect(8, 16, 4, 4);
+    ctx.fillStyle = jeans; ctx.fillRect(0, 20, 16, 10);
+    ctx.fillStyle = boots; ctx.fillRect(0, 30, 16, 2);
+
+    // 6. Left Leg (16, 48 to 32, 64)
+    ctx.fillStyle = jeans; ctx.fillRect(20, 48, 4, 4);
+    ctx.fillStyle = boots; ctx.fillRect(24, 48, 4, 4);
+    ctx.fillStyle = jeans; ctx.fillRect(16, 52, 16, 10);
+    ctx.fillStyle = boots; ctx.fillRect(16, 62, 16, 2);
+}
+
+function updateStevePartCanvases() {
+    if (!_stevePartCanvases) return;
+    const skin = getSteveSkinCanvas();
+    const copy = (c, x, y, w, h) => {
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(skin, x, y, w, h, 0, 0, w, h);
+    };
+
+    const p = _stevePartCanvases;
+    copy(p.head.right, 0, 8, 8, 8);
+    copy(p.head.left, 16, 8, 8, 8);
+    copy(p.head.top, 8, 0, 8, 8);
+    copy(p.head.bottom, 16, 0, 8, 8);
+    copy(p.head.back, 24, 8, 8, 8);
+    copy(p.head.front, 8, 8, 8, 8);
+
+    copy(p.torso.right, 16, 20, 4, 12);
+    copy(p.torso.left, 28, 20, 4, 12);
+    copy(p.torso.top, 20, 16, 8, 4);
+    copy(p.torso.bottom, 28, 16, 8, 4);
+    copy(p.torso.back, 32, 20, 8, 12);
+    copy(p.torso.front, 20, 20, 8, 12);
+
+    copy(p.rightArm.right, 40, 20, 4, 12);
+    copy(p.rightArm.left, 48, 20, 4, 12);
+    copy(p.rightArm.top, 44, 16, 4, 4);
+    copy(p.rightArm.bottom, 48, 16, 4, 4);
+    copy(p.rightArm.back, 52, 20, 4, 12);
+    copy(p.rightArm.front, 44, 20, 4, 12);
+
+    copy(p.leftArm.right, 32, 52, 4, 12);
+    copy(p.leftArm.left, 40, 52, 4, 12);
+    copy(p.leftArm.top, 36, 48, 4, 4);
+    copy(p.leftArm.bottom, 40, 48, 4, 4);
+    copy(p.leftArm.back, 44, 52, 4, 12);
+    copy(p.leftArm.front, 36, 52, 4, 12);
+
+    copy(p.rightLeg.right, 0, 20, 4, 12);
+    copy(p.rightLeg.left, 8, 20, 4, 12);
+    copy(p.rightLeg.top, 4, 16, 4, 4);
+    copy(p.rightLeg.bottom, 8, 16, 4, 4);
+    copy(p.rightLeg.back, 12, 20, 4, 12);
+    copy(p.rightLeg.front, 4, 20, 4, 12);
+
+    copy(p.leftLeg.right, 16, 52, 4, 12);
+    copy(p.leftLeg.left, 24, 52, 4, 12);
+    copy(p.leftLeg.top, 20, 48, 4, 4);
+    copy(p.leftLeg.bottom, 24, 48, 4, 4);
+    copy(p.leftLeg.back, 28, 52, 4, 12);
+    copy(p.leftLeg.front, 20, 52, 4, 12);
+
+    for (const tex of _activeSteveTextures) {
+        tex.needsUpdate = true;
+    }
+}
 
 export function getSteveSkinCanvas() {
     if (_steveCanvas) return _steveCanvas;
@@ -4318,90 +4803,104 @@ export function getSteveSkinCanvas() {
     const ctx = cvs.getContext('2d', { willReadFrequently: true });
     ctx.imageSmoothingEnabled = false;
 
-    if (!_steveImg) {
-        _steveImg = new Image();
-        _steveImg.crossOrigin = 'anonymous';
-        _steveImg.onload = () => {
-            ctx.drawImage(_steveImg, 0, 0);
-        };
-        // Check local asset, fallback to base64
-        const local = new Image();
-        local.onload = () => {
-            _steveImg = local;
-            ctx.drawImage(local, 0, 0);
-        };
-        local.onerror = () => {
-            _steveImg.src = STEVE_B64;
-        };
-        local.src = 'assets/mc/steve.png';
-    } else if (_steveImg.complete && _steveImg.naturalWidth > 0) {
-        ctx.drawImage(_steveImg, 0, 0);
-    }
+    // Synchronously paint procedural Steve immediately so the skin is never black!
+    renderProceduralSteveSkin(ctx);
     _steveCanvas = cvs;
     return cvs;
 }
 
+export async function initSteveSkin() {
+    const cvs = getSteveSkinCanvas();
+    const ctx = cvs.getContext('2d', { willReadFrequently: true });
+
+    return new Promise((resolve) => {
+        const local = new Image();
+        local.crossOrigin = 'anonymous';
+        local.onload = () => {
+            _steveImg = local;
+            ctx.clearRect(0, 0, 64, 64);
+            ctx.drawImage(local, 0, 0);
+            updateStevePartCanvases();
+            resolve(cvs);
+        };
+        local.onerror = () => {
+            // Fallback to base64 embedded Steve skin
+            const b64 = new Image();
+            b64.onload = () => {
+                _steveImg = b64;
+                ctx.clearRect(0, 0, 64, 64);
+                ctx.drawImage(b64, 0, 0);
+                updateStevePartCanvases();
+                resolve(cvs);
+            };
+            b64.onerror = () => resolve(cvs);
+            b64.src = STEVE_B64;
+        };
+        local.src = 'assets/mc/steve.png';
+    });
+}
+
 export function getStevePartTextures() {
-    const skin = getSteveSkinCanvas();
-    const slice = (x, y, w, h) => {
+    if (_stevePartCanvases) return _stevePartCanvases;
+    const make = (w, h) => {
         const c = document.createElement('canvas');
         c.width = w; c.height = h;
-        const ctx = c.getContext('2d');
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(skin, x, y, w, h, 0, 0, w, h);
         return c;
     };
 
-    return {
+    _stevePartCanvases = {
         head: {
-            right:  slice(0, 8, 8, 8),    // +X (face 0) Right ear/hair
-            left:   slice(16, 8, 8, 8),   // -X (face 1) Left ear/hair
-            top:    slice(8, 0, 8, 8),    // +Y (face 2) Top hair
-            bottom: slice(16, 0, 8, 8),   // -Y (face 3) Neck
-            back:   slice(24, 8, 8, 8),   // +Z (face 4) BACK OF HEAD (Hair)
-            front:  slice(8, 8, 8, 8)     // -Z (face 5) FRONT OF HEAD (Steve's Face!)
+            right:  make(8, 8),
+            left:   make(8, 8),
+            top:    make(8, 8),
+            bottom: make(8, 8),
+            back:   make(8, 8),
+            front:  make(8, 8)
         },
         torso: {
-            right:  slice(16, 20, 4, 12), // +X
-            left:   slice(28, 20, 4, 12), // -X
-            top:    slice(20, 16, 8, 4),  // +Y
-            bottom: slice(28, 16, 8, 4),  // -Y
-            back:   slice(32, 20, 8, 12), // +Z BACK OF SHIRT
-            front:  slice(20, 20, 8, 12)  // -Z FRONT CHEST (Teal V-neck)
+            right:  make(4, 12),
+            left:   make(4, 12),
+            top:    make(8, 4),
+            bottom: make(8, 4),
+            back:   make(8, 12),
+            front:  make(8, 12)
         },
         rightArm: {
-            right:  slice(40, 20, 4, 12), // +X outer
-            left:   slice(48, 20, 4, 12), // -X inner
-            top:    slice(44, 16, 4, 4),  // +Y shoulder/cuff
-            bottom: slice(48, 16, 4, 4),  // -Y palm/fist
-            back:   slice(52, 20, 4, 12), // +Z back
-            front:  slice(44, 20, 4, 12)  // -Z front
+            right:  make(4, 12),
+            left:   make(4, 12),
+            top:    make(4, 4),
+            bottom: make(4, 4),
+            back:   make(4, 12),
+            front:  make(4, 12)
         },
         leftArm: {
-            right:  slice(32, 52, 4, 12), // +X inner
-            left:   slice(40, 52, 4, 12), // -X outer
-            top:    slice(36, 48, 4, 4),  // +Y shoulder/cuff
-            bottom: slice(40, 48, 4, 4),  // -Y palm/fist
-            back:   slice(44, 52, 4, 12), // +Z back
-            front:  slice(36, 52, 4, 12)  // -Z front
+            right:  make(4, 12),
+            left:   make(4, 12),
+            top:    make(4, 4),
+            bottom: make(4, 4),
+            back:   make(4, 12),
+            front:  make(4, 12)
         },
         rightLeg: {
-            right:  slice(0, 20, 4, 12),  // +X outer
-            left:   slice(8, 20, 4, 12),  // -X inner
-            top:    slice(4, 16, 4, 4),   // +Y
-            bottom: slice(8, 16, 4, 4),   // -Y sole
-            back:   slice(12, 20, 4, 12), // +Z back
-            front:  slice(4, 20, 4, 12)   // -Z front (jeans + boot)
+            right:  make(4, 12),
+            left:   make(4, 12),
+            top:    make(4, 4),
+            bottom: make(4, 4),
+            back:   make(4, 12),
+            front:  make(4, 12)
         },
         leftLeg: {
-            right:  slice(16, 52, 4, 12), // +X inner
-            left:   slice(24, 52, 4, 12), // -X outer
-            top:    slice(20, 48, 4, 4),  // +Y
-            bottom: slice(24, 48, 4, 4),  // -Y sole
-            back:   slice(28, 52, 4, 12), // +Z back
-            front:  slice(20, 52, 4, 12)  // -Z front (jeans + boot)
+            right:  make(4, 12),
+            left:   make(4, 12),
+            top:    make(4, 4),
+            bottom: make(4, 4),
+            back:   make(4, 12),
+            front:  make(4, 12)
         }
     };
+
+    updateStevePartCanvases();
+    return _stevePartCanvases;
 }
 
 export function createSteveBodyMaterials(partName) {
@@ -4412,22 +4911,18 @@ export function createSteveBodyMaterials(partName) {
         t.magFilter = THREE.NearestFilter;
         t.minFilter = THREE.NearestFilter;
         t.colorSpace = THREE.SRGBColorSpace;
+        t.needsUpdate = true;
+        _activeSteveTextures.add(t);
         return t;
     };
-    // Three.js BoxGeometry face mapping order:
-    // [0]: +X (Right)
-    // [1]: -X (Left)
-    // [2]: +Y (Top)
-    // [3]: -Y (Bottom)
-    // [4]: +Z (Back of character)
-    // [5]: -Z (Front of character)
+    const emissive = new THREE.Color(0x222222);
     return [
-        new THREE.MeshLambertMaterial({ map: makeTex(parts.right) }),
-        new THREE.MeshLambertMaterial({ map: makeTex(parts.left) }),
-        new THREE.MeshLambertMaterial({ map: makeTex(parts.top) }),
-        new THREE.MeshLambertMaterial({ map: makeTex(parts.bottom) }),
-        new THREE.MeshLambertMaterial({ map: makeTex(parts.back) }),
-        new THREE.MeshLambertMaterial({ map: makeTex(parts.front) })
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.right), emissive }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.left), emissive }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.top), emissive }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.bottom), emissive }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.back), emissive }),
+        new THREE.MeshLambertMaterial({ map: makeTex(parts.front), emissive })
     ];
 }
 

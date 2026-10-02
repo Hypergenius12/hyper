@@ -418,6 +418,12 @@ class UISystem {
     constructor() {
         this.elements = {
             geometricUI: document.getElementById('geometric-ui'),
+            survivalContainer: document.getElementById('survival-container'),
+            creativeContainer: document.getElementById('creative-container'),
+            creativeTabsBar: document.getElementById('creative-tabs-bar'),
+            creativeItemsGrid: document.getElementById('creative-items-grid'),
+            creativeSearch: document.getElementById('creative-search'),
+            creativeTrashSlot: document.getElementById('creative-trash-slot'),
             mainGrid: document.getElementById('main-inventory-grid'),
             invHotbar: document.getElementById('inv-hotbar-grid'),
             mainHotbar: document.getElementById('main-hotbar-grid'),
@@ -517,14 +523,21 @@ class UISystem {
         this._updateCraftingUILayout();
         
         if (this.isOpen) {
+            this.isCreativeOpen = false;
             this.elements.geometricUI.classList.remove('hidden');
+            if (this.elements.survivalContainer) this.elements.survivalContainer.classList.remove('hidden');
+            if (this.elements.creativeContainer) this.elements.creativeContainer.classList.add('hidden');
+            if (this.elements.creativeTrashSlot) this.elements.creativeTrashSlot.classList.add('hidden');
             if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.remove('hidden');
             if (this.elements.chestPanel) this.elements.chestPanel.classList.add('hidden');
             if (this.elements.furnacePanel) this.elements.furnacePanel.classList.add('hidden');
             if (this.elements.equipmentCol) this.elements.equipmentCol.style.display = 'flex';
             if (this.elements.playerPreviewBox) this.elements.playerPreviewBox.style.display = 'flex';
         } else {
+            this.isCreativeOpen = false;
             this.elements.geometricUI.classList.add('hidden');
+            if (this.elements.creativeContainer) this.elements.creativeContainer.classList.add('hidden');
+            if (this.elements.creativeTrashSlot) this.elements.creativeTrashSlot.classList.add('hidden');
             this.elements.tooltip.classList.add('hidden');
             const modalRecipeBook = document.getElementById('recipe-book-modal');
             if (modalRecipeBook) modalRecipeBook.classList.add('hidden');
@@ -614,8 +627,9 @@ class UISystem {
             // Close creative
             this.isCreativeOpen = false;
             this.isOpen = false;
-            document.getElementById('creative-inventory-panel').classList.add('hidden');
-            document.getElementById('geometric-ui').classList.add('hidden');
+            if (this.elements.creativeContainer) this.elements.creativeContainer.classList.add('hidden');
+            if (this.elements.creativeTrashSlot) this.elements.creativeTrashSlot.classList.add('hidden');
+            if (this.elements.geometricUI) this.elements.geometricUI.classList.add('hidden');
             this.elements.tooltip.classList.add('hidden');
             if (this.dragState.isDragging) this.cancelDrag();
             return;
@@ -625,30 +639,43 @@ class UISystem {
         this.closeFurnace();
         this.isCreativeOpen = true;
         this.isOpen = true;
+        if (this.elements.geometricUI) this.elements.geometricUI.classList.remove('hidden');
+        if (this.elements.survivalContainer) this.elements.survivalContainer.classList.add('hidden');
+        if (this.elements.creativeContainer) this.elements.creativeContainer.classList.remove('hidden');
+        if (this.elements.creativeTrashSlot) this.elements.creativeTrashSlot.classList.remove('hidden');
         this._renderCreativeInventory();
-        document.getElementById('creative-inventory-panel').classList.remove('hidden');
-        document.getElementById('geometric-ui').classList.remove('hidden');
-        // Also show the player's own inventory and hotbar
-        document.getElementById('crafting-panel').classList.add('hidden');
         if (this.currentPlayer) {
-            this.renderGrid(this.elements.mainGrid, this.currentPlayer.inventory.slots.slice(9, 36), 9, this.currentPlayer, 'inventory');
             this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
         }
     }
 
     _renderCreativeInventory() {
-        const panel = document.getElementById('creative-items-grid');
+        const panel = this.elements.creativeItemsGrid || document.getElementById('creative-items-grid');
         if (!panel) return;
         panel.innerHTML = '';
 
         const BLOCKS = window.BLOCKS_REF || window.BLOCKS;
         if (!BLOCKS) return;
 
-        // Skip AIR and internal invisible blocks
-        const skip = new Set([0, 27, 77, 119, 126, 131, 194]);
+        // Skip AIR and internal/invisible/removed autumn & fallen leaves blocks
+        const skip = new Set([0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 194]);
         const entries = Object.entries(BLOCKS)
             .filter(([name, id]) => !skip.has(id) && typeof id === 'number')
             .sort((a,b) => a[1] - b[1]);
+
+        const getBlockCategory = (id, nameStr) => {
+            const naturalIds = new Set([
+                1, 2, 4, 6, 7, 10, 11, 12, 13, 18, 19, 21, 22, 23, 24, 29, 30, 32, 34, 36, 37, 38,
+                39, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 60, 61, 62, 63,
+                64, 65, 78, 79, 91, 92, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 110, 114, 115, 116,
+                117, 118, 120, 121, 122, 123, 125, 129, 130, 132, 133, 134, 135, 136, 137, 138, 185, 186
+            ]);
+            const lower = nameStr.toLowerCase();
+            if (naturalIds.has(id) || lower.includes('ore') || lower.includes('leaves') || lower.includes('log') || lower.includes('grass') || lower.includes('dirt') || lower.includes('flower') || lower.includes('plant') || lower.includes('vine') || lower.includes('root') || lower.includes('stem') || lower.includes('coral') || lower.includes('nylium') || lower.includes('shroom') || lower.includes('sprout') || lower.includes('soil') || lower.includes('sand') || lower.includes('cloud')) {
+                return 'natural';
+            }
+            return 'building';
+        };
 
         for (const [name, id] of entries) {
             const slot = document.createElement('div');
@@ -657,6 +684,7 @@ class UISystem {
             slot.title = readableName;
             slot.dataset.blockId = id;
             slot.dataset.blockName = readableName;
+            slot.dataset.category = getBlockCategory(id, name);
 
             if (this.atlas) {
                 try {
@@ -691,7 +719,7 @@ class UISystem {
                 this.elements.tooltip.classList.add('hidden');
             };
 
-            // Click / drag to take stack of 64
+            // Click / drag to take stack of 64 (or Shift+Click to hotbar directly)
             slot.onmousedown = (e) => {
                 if (e.button !== 0) return;
                 e.preventDefault();
@@ -706,6 +734,14 @@ class UISystem {
                     },
                     count: 64
                 };
+                if (e.shiftKey) {
+                    if (this.currentPlayer && this.currentPlayer.inventory) {
+                        this.currentPlayer.inventory.addItem(fakeSlot.item, fakeSlot.count);
+                        this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                        this.renderGrid(this.elements.mainHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                    }
+                    return;
+                }
                 this.dragState.isDragging = true;
                 this.dragState.sourceType = 'creative';
                 this.dragState.sourceIndex = -1;
@@ -723,11 +759,6 @@ class UISystem {
         }
 
         // --- Equipment / Items Section ---
-        const sep = document.createElement('div');
-        sep.style.cssText = 'width:100%; padding:6px 0 2px 0; color:#aaa; font-size:11px; font-weight:bold; text-align:center; border-top:1px solid #444; margin-top:6px; grid-column:1/-1;';
-        sep.textContent = '— Items & Equipment —';
-        panel.appendChild(sep);
-
         const getEquipDataForSubtype = (sub) => {
             // Netherite
             if (sub === 'sword_netherite')   return { damage: 11, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Infernal Might (Fireproof & High Knockback)' };
@@ -887,7 +918,7 @@ class UISystem {
             { type: 'food',      subtype: 'bread',           name: 'Bread' },
         ];
 
-        // Render equipment/item slots synchronously using the already-imported generateItemTexture
+        // Render equipment/item slots synchronously using generateItemTexture
         for (const itm of equipItems) {
             const slot = document.createElement('div');
             slot.className = 'inv-slot creative-item-slot';
@@ -895,6 +926,7 @@ class UISystem {
             slot.dataset.itemType = itm.type;
             slot.dataset.itemSubtype = itm.subtype;
             slot.dataset.itemName = itm.name;
+            slot.dataset.category = itm.type === 'equipment' ? 'equipment' : 'materials';
 
             const cvs = generateItemTexture(itm.type, itm.subtype, (updatedCvs) => {
                 const existing = slot.querySelector('img');
@@ -945,6 +977,14 @@ class UISystem {
                     },
                     count: (itm.type === 'material' || itm.type === 'food') ? 64 : 1
                 };
+                if (e.shiftKey) {
+                    if (this.currentPlayer && this.currentPlayer.inventory) {
+                        this.currentPlayer.inventory.addItem(fakeSlot.item, fakeSlot.count);
+                        this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                        this.renderGrid(this.elements.mainHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                    }
+                    return;
+                }
                 this.dragState.isDragging = true;
                 this.dragState.sourceType = 'creative';
                 this.dragState.sourceIndex = -1;
@@ -960,6 +1000,83 @@ class UISystem {
 
             panel.appendChild(slot);
         }
+
+        this._initCreativeTabsAndSearch();
+        this._filterCreativeSlots();
+    }
+
+    _initCreativeTabsAndSearch() {
+        if (this._creativeTabsInitialized) return;
+        this._creativeTabsInitialized = true;
+        this.activeCreativeTab = 'all';
+
+        const tabs = document.querySelectorAll('.creative-tab');
+        tabs.forEach(tabBtn => {
+            tabBtn.onclick = () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabBtn.classList.add('active');
+                const tabKey = tabBtn.dataset.tab;
+                this.activeCreativeTab = tabKey;
+                if (tabKey === 'survival') {
+                    if (this.elements.survivalContainer) this.elements.survivalContainer.classList.remove('hidden');
+                    if (this.elements.creativeItemsGrid) this.elements.creativeItemsGrid.parentElement.classList.add('hidden');
+                    if (this.elements.creativeSearch) this.elements.creativeSearch.parentElement.classList.add('hidden');
+                    if (this.currentPlayer) {
+                        this.renderGrid(this.elements.mainGrid, this.currentPlayer.inventory.slots.slice(9, 36), 9, this.currentPlayer, 'inventory');
+                        this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                    }
+                } else {
+                    if (this.elements.survivalContainer) this.elements.survivalContainer.classList.add('hidden');
+                    if (this.elements.creativeItemsGrid) this.elements.creativeItemsGrid.parentElement.classList.remove('hidden');
+                    if (this.elements.creativeSearch) this.elements.creativeSearch.parentElement.classList.remove('hidden');
+                    this._filterCreativeSlots();
+                }
+            };
+        });
+
+        if (this.elements.creativeSearch) {
+            this.elements.creativeSearch.oninput = () => this._filterCreativeSlots();
+        }
+
+        if (this.elements.creativeTrashSlot) {
+            this.elements.creativeTrashSlot.onmouseup = () => {
+                if (this.dragState.isDragging) {
+                    this.dragState.itemData = null;
+                    this.dragState.isDragging = false;
+                    this.elements.dragIcon.classList.add('hidden');
+                    this._updateInventory();
+                }
+            };
+            this.elements.creativeTrashSlot.onclick = () => {
+                if (this.dragState.isDragging) {
+                    this.dragState.itemData = null;
+                    this.dragState.isDragging = false;
+                    this.elements.dragIcon.classList.add('hidden');
+                    this._updateInventory();
+                } else if (this.currentPlayer && this.currentPlayer.inventory) {
+                    const sel = this.currentPlayer.selectedSlot;
+                    if (this.currentPlayer.inventory.slots[sel]) {
+                        this.currentPlayer.inventory.slots[sel] = null;
+                        this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                        this.renderGrid(this.elements.mainHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                    }
+                }
+            };
+        }
+    }
+
+    _filterCreativeSlots() {
+        const query = (this.elements.creativeSearch ? this.elements.creativeSearch.value : '').toLowerCase().trim();
+        const tab = this.activeCreativeTab || 'all';
+        const slots = (this.elements.creativeItemsGrid || document.getElementById('creative-items-grid'))?.querySelectorAll('.creative-item-slot');
+        if (!slots) return;
+        slots.forEach(slot => {
+            const cat = slot.dataset.category || 'building';
+            const name = (slot.title || slot.dataset.itemName || slot.dataset.blockName || '').toLowerCase();
+            const matchesTab = (tab === 'all') || (cat === tab);
+            const matchesQuery = !query || name.includes(query);
+            slot.style.display = (matchesTab && matchesQuery) ? '' : 'none';
+        });
     }
 
     updateHUD(player, fps, atlas) {
@@ -973,40 +1090,45 @@ class UISystem {
         
         // If open, render full inventory
         if (this.isOpen) {
-            this.renderGrid(this.elements.mainGrid, player.inventory.slots.slice(9, 36), 9, player, 'inventory');
+            const isSurvivalShowing = !this.isCreativeOpen || this.activeCreativeTab === 'survival';
+            if (isSurvivalShowing) {
+                this.renderGrid(this.elements.mainGrid, player.inventory.slots.slice(9, 36), 9, player, 'inventory');
+            }
             this.renderGrid(this.elements.invHotbar, player.inventory.slots.slice(0, 9), 0, player, 'inventory');
             
-            // Render Wand Config if holding wand (and not using 3x3 crafting table, chest, or furnace)
-            const activeSlot = player.inventory.slots[player.selectedSlot];
-            if (!this.is3x3Crafting && !this.chestPos && !this.furnacePos && activeSlot && activeSlot.item.type === 'wand') {
-                if (this.elements.wandConfigPanel) this.elements.wandConfigPanel.classList.remove('hidden');
-                if (this.elements.craftingPanel) this.elements.craftingPanel.classList.add('hidden');
-                this.renderWandConfig(activeSlot.item);
-            } else {
-                if (this.elements.wandConfigPanel) this.elements.wandConfigPanel.classList.add('hidden');
-                if (!this.chestPos && !this.furnacePos && this.elements.craftingPanel) {
-                    this.elements.craftingPanel.classList.remove('hidden');
+            if (isSurvivalShowing) {
+                // Render Wand Config if holding wand (and not using 3x3 crafting table, chest, or furnace)
+                const activeSlot = player.inventory.slots[player.selectedSlot];
+                if (!this.is3x3Crafting && !this.chestPos && !this.furnacePos && activeSlot && activeSlot.item.type === 'wand') {
+                    if (this.elements.wandConfigPanel) this.elements.wandConfigPanel.classList.remove('hidden');
+                    if (this.elements.craftingPanel) this.elements.craftingPanel.classList.add('hidden');
+                    this.renderWandConfig(activeSlot.item);
+                } else {
+                    if (this.elements.wandConfigPanel) this.elements.wandConfigPanel.classList.add('hidden');
+                    if (!this.chestPos && !this.furnacePos && this.elements.craftingPanel) {
+                        this.elements.craftingPanel.classList.remove('hidden');
+                    }
                 }
-            }
 
-            // Render crafting slots
-            this._updateCraftingSlots();
-            this._updateCraftingOutput();
+                // Render crafting slots
+                this._updateCraftingSlots();
+                this._updateCraftingOutput();
 
-            // Render armor slots
-            this._updateArmorSlots();
+                // Render armor slots
+                this._updateArmorSlots();
 
-            // Render live 3D player character preview in inventory box
-            this._renderPlayerPreview(player);
+                // Render live 3D player character preview in inventory box
+                this._renderPlayerPreview(player);
 
-            // Render chest if open
-            if (this.chestPos && this.chestInventory) {
-                this.renderGrid(this.elements.chestGrid, this.chestInventory, 0, player, 'chest');
-            }
+                // Render chest if open
+                if (this.chestPos && this.chestInventory) {
+                    this.renderGrid(this.elements.chestGrid, this.chestInventory, 0, player, 'chest');
+                }
 
-            // Render furnace if open
-            if (this.furnacePos && this.furnaceData) {
-                this._updateFurnaceSlots();
+                // Render furnace if open
+                if (this.furnacePos && this.furnaceData) {
+                    this._updateFurnaceSlots();
+                }
             }
         }
     }
@@ -2508,18 +2630,3 @@ export class MeteorShowerSystem {
         }
     }
 }
-
-// ─── Creative search wired up via event delegation ───
-document.addEventListener('DOMContentLoaded', () => {
-    const search = document.getElementById('creative-search');
-    if (search) {
-        search.addEventListener('input', () => {
-            const q = search.value.toLowerCase();
-            const slots = document.querySelectorAll('.creative-item-slot');
-            slots.forEach(s => {
-                const name = (s.title || '').toLowerCase();
-                s.style.display = (!q || name.includes(q)) ? '' : 'none';
-            });
-        });
-    }
-});

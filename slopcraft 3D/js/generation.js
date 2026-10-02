@@ -25,7 +25,6 @@ const BIOMES = {
     MOUNTAINS: { name: 'Mountains', surface: BLOCKS.SNOW, dirt: BLOCKS.STONE, freq: 0.4, hasTrees: true },
     DEEP_OCEAN: { name: 'Deep Ocean', surface: BLOCKS.SAND, dirt: BLOCKS.STONE, freq: 0.3, hasTrees: false },
     CHERRY_GROVE: { name: 'Cherry Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, isCherry: true },
-    AUTUMN_FOREST: { name: 'Autumn Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, isAutumn: true },
     GLOW_FOREST: { name: 'Glow Forest', surface: BLOCKS.ALIEN_GRASS, dirt: BLOCKS.ALIEN_STONE, freq: 0.5, hasTrees: true, isGlow: true },
     OASIS: { name: 'Oasis', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.2, hasTrees: true, isOasis: true },
     CORAL_REEF: { name: 'Coral Reef', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.3, hasTrees: false, isCoralReef: true },
@@ -408,7 +407,7 @@ export function getBiomeParams(wx, wz, params) {
                 biome = BIOMES.SAVANNA;
             }
         } else if (temp < 0.2) { // Cold
-            biome = (weirdness > 0.6 && moist > 0.4) ? BIOMES.AUTUMN_FOREST : BIOMES.TUNDRA;
+            biome = (weirdness > 0.6 && moist > 0.4) ? BIOMES.ICE_SPIKES : BIOMES.TUNDRA;
         } else { // Temperate (0.2 to 0.75)
             if (moist < 0.35) {
                 biome = weirdness > 0.7 ? BIOMES.MUSHROOM : BIOMES.PLAINS;
@@ -1007,8 +1006,6 @@ export function generateChunkTerrain(cx, cz, params) {
                         } else {
                             safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                         }
-                    } else if (biome === BIOMES.AUTUMN_FOREST && fr < 0.4) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FALLEN_LEAVES, true);
                     } else if (biome === BIOMES.GLOW_FOREST && fr < 0.15) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
                     } else if (biome.isMystic && fr < 0.35) {
@@ -1144,7 +1141,6 @@ function generateTree(blocks, x, y, z, biome, rng) {
     
     if (isSavanna) { trunkType = BLOCKS.ACACIA_WOOD; leafType = BLOCKS.ACACIA_LEAVES; }
     else if (isCherry) { trunkType = BLOCKS.CHERRY_LOG; leafType = BLOCKS.CHERRY_LEAVES; }
-    else if (biome.isAutumn) { trunkType = BLOCKS.AUTUMN_WOOD; leafType = BLOCKS.AUTUMN_LEAVES; }
     else if (biome.isOasis) { trunkType = BLOCKS.PALM_WOOD; leafType = BLOCKS.PALM_LEAVES; }
     else if (isPine) { trunkType = BLOCKS.PINE_WOOD; leafType = BLOCKS.PINE_LEAVES; }
     else if (isDark) { trunkType = BLOCKS.DARK_OAK_WOOD; leafType = BLOCKS.DARK_OAK_LEAVES; }

@@ -187,93 +187,118 @@
     <!-- Geometric UI overlay -->
     <div id="geometric-ui" class="hidden">
         <div class="inv-wrapper">
-            <!-- TOP CONTAINER SECTION: Context-dependent (Survival 2x2 Crafting + Armor, OR Chest, OR Furnace, OR 3x3 Crafting) -->
-            <div id="container-top-section">
-                <!-- 1. Survival Inventory Top: Armor + Player Preview + 2x2 Crafting -->
-                <div id="survival-top-panel" class="container-top-panel">
-                    <div class="equipment-col">
-                        <div class="inv-slot armor-slot" data-slot="head"></div>
-                        <div class="inv-slot armor-slot" data-slot="chest"></div>
-                        <div class="inv-slot armor-slot" data-slot="legs"></div>
-                        <div class="inv-slot armor-slot" data-slot="boots"></div>
-                        <div class="inv-slot offhand-slot" data-slot="shield" style="margin-top: 4px;"></div>
-                    </div>
-
-                    <!-- Live 3D Player Character Preview Box -->
-                    <div id="player-preview-box">
-                        <canvas id="player-preview-canvas" width="104" height="144"></canvas>
-                    </div>
-
-                    <!-- Crafting 2x2 Panel -->
-                    <div id="crafting-panel">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <div class="mc-container-title" style="margin: 0; font-size: 13px;">Crafting</div>
-                            <button id="btn-recipe-book" class="mc-btn" style="width: auto; height: 24px; padding: 0 8px; font-size: 11px; margin: 0 0 0 10px;">📖 Recipes</button>
+            <!-- SURVIVAL CONTAINER -->
+            <div id="survival-container">
+                <!-- TOP CONTAINER SECTION: Context-dependent (Survival 2x2 Crafting + Armor, OR Chest, OR Furnace, OR 3x3 Crafting) -->
+                <div id="container-top-section">
+                    <!-- 1. Survival Inventory Top: Armor + Player Preview + 2x2 Crafting -->
+                    <div id="survival-top-panel" class="container-top-panel">
+                        <div class="equipment-col">
+                            <div class="inv-slot armor-slot" data-slot="head"></div>
+                            <div class="inv-slot armor-slot" data-slot="chest"></div>
+                            <div class="inv-slot armor-slot" data-slot="legs"></div>
+                            <div class="inv-slot armor-slot" data-slot="boots"></div>
+                            <div class="inv-slot offhand-slot" data-slot="shield" style="margin-top: 4px;"></div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div class="crafting-grid" id="crafting-grid">
-                                <!-- 4/9 slots filled by JS -->
+
+                        <!-- Live 3D Player Character Preview Box -->
+                        <div id="player-preview-box">
+                            <canvas id="player-preview-canvas" width="104" height="144"></canvas>
+                        </div>
+
+                        <!-- Crafting 2x2 Panel -->
+                        <div id="crafting-panel">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div class="mc-container-title" style="margin: 0; font-size: 13px;">Crafting</div>
+                                <button id="btn-recipe-book" class="mc-btn" style="width: auto; height: 24px; padding: 0 8px; font-size: 11px; margin: 0 0 0 10px;">📖 Recipes</button>
                             </div>
-                            <div style="font-size: 1.4rem; color: #404040; font-family: 'Minecraftia';">→</div>
-                            <div class="inv-slot crafting-output" id="crafting-output"></div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div class="crafting-grid" id="crafting-grid">
+                                    <!-- 4/9 slots filled by JS -->
+                                </div>
+                                <div style="font-size: 1.4rem; color: #404040; font-family: 'Minecraftia';">→</div>
+                                <div class="inv-slot crafting-output" id="crafting-output"></div>
+                            </div>
+                            <div id="crafting-recipe-name" style="margin-top: 4px; font-size: 0.75rem; color: #404040; font-family: 'Minecraftia', monospace; min-height: 14px;"></div>
                         </div>
-                        <div id="crafting-recipe-name" style="margin-top: 4px; font-size: 0.75rem; color: #404040; font-family: 'Minecraftia', monospace; min-height: 14px;"></div>
+
+                        <!-- Wand Configurator (active when holding wand) -->
+                        <div id="wand-config-panel" class="hidden">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div class="mc-container-title" id="wand-config-title" style="margin: 0; font-size: 13px;">Wand Config</div>
+                                <button id="btn-recipe-book-wand" class="mc-btn" style="width: auto; height: 24px; padding: 0 8px; font-size: 11px; margin: 0 0 0 10px;">📖 Recipes</button>
+                            </div>
+                            <div class="wand-slots-grid" id="wand-slots-grid" style="display: grid; grid-template-columns: repeat(4, 40px); grid-template-rows: repeat(2, 40px); gap: 4px;"></div>
+                        </div>
                     </div>
 
-                    <!-- Wand Configurator (active when holding wand) -->
-                    <div id="wand-config-panel" class="hidden">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <div class="mc-container-title" id="wand-config-title" style="margin: 0; font-size: 13px;">Wand Config</div>
-                            <button id="btn-recipe-book-wand" class="mc-btn" style="width: auto; height: 24px; padding: 0 8px; font-size: 11px; margin: 0 0 0 10px;">📖 Recipes</button>
+                    <!-- 2. Chest Panel (3 rows of 9) -->
+                    <div id="chest-panel" class="container-top-panel hidden">
+                        <div class="mc-container-title">Chest</div>
+                        <div class="main-grid" id="chest-grid" style="grid-template-rows: repeat(3, 40px);">
+                            <!-- 27 chest slots, filled by JS -->
                         </div>
-                        <div class="wand-slots-grid" id="wand-slots-grid" style="display: grid; grid-template-columns: repeat(4, 40px); grid-template-rows: repeat(2, 40px); gap: 4px;"></div>
+                    </div>
+
+                    <!-- 3. Furnace Panel -->
+                    <div id="furnace-panel" class="container-top-panel hidden">
+                        <div class="mc-container-title" style="text-align: center; width: 100%;">Furnace</div>
+                        <div class="furnace-body">
+                            <div class="furnace-fire-col">
+                                <div class="inv-slot" id="furnace-input"></div>
+                                <div id="furnace-fire" class="furnace-fire-sprite"></div>
+                                <div class="inv-slot" id="furnace-fuel"></div>
+                            </div>
+                            <div class="furnace-arrow-container">
+                                <div id="furnace-progress" class="furnace-arrow-fill"></div>
+                            </div>
+                            <div class="inv-slot crafting-output" id="furnace-output"></div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Dungeon Menu Panel -->
+                    <div id="dungeon-menu-panel" class="container-top-panel hidden" style="text-align: center; padding: 10px;">
+                        <div class="mc-container-title" style="font-size: 16px;">Dungeon Entrance</div>
+                        <p style="color: #404040; margin-bottom: 14px; font-size: 12px;">Beyond this door lies a dangerous dungeon.<br/>Do you wish to enter?</p>
+                        <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" class="mc-btn" style="width: 140px; height: 32px; font-size: 12px; margin: 0 4px;">Enter Dungeon</button>
+                        <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" class="mc-btn" style="width: 100px; height: 32px; font-size: 12px; margin: 0 4px;">Leave</button>
                     </div>
                 </div>
 
-                <!-- 2. Chest Panel (3 rows of 9) -->
-                <div id="chest-panel" class="container-top-panel hidden">
-                    <div class="mc-container-title">Chest</div>
-                    <div class="main-grid" id="chest-grid" style="grid-template-rows: repeat(3, 40px);">
-                        <!-- 27 chest slots, filled by JS -->
+                <!-- Survival 3x9 Main Grid -->
+                <div class="main-inv-col">
+                    <div class="mc-container-title" style="margin-top: 10px;">Inventory</div>
+                    <div class="main-grid" id="main-inventory-grid">
+                        <!-- Filled by JS -->
                     </div>
-                </div>
-
-                <!-- 3. Furnace Panel -->
-                <div id="furnace-panel" class="container-top-panel hidden">
-                    <div class="mc-container-title" style="text-align: center; width: 100%;">Furnace</div>
-                    <div class="furnace-body">
-                        <div class="furnace-fire-col">
-                            <div class="inv-slot" id="furnace-input"></div>
-                            <div id="furnace-fire" class="furnace-fire-sprite"></div>
-                            <div class="inv-slot" id="furnace-fuel"></div>
-                        </div>
-                        <div class="furnace-arrow-container">
-                            <div id="furnace-progress" class="furnace-arrow-fill"></div>
-                        </div>
-                        <div class="inv-slot crafting-output" id="furnace-output"></div>
-                    </div>
-                </div>
-
-                <!-- 5. Dungeon Menu Panel -->
-                <div id="dungeon-menu-panel" class="container-top-panel hidden" style="text-align: center; padding: 10px;">
-                    <div class="mc-container-title" style="font-size: 16px;">Dungeon Entrance</div>
-                    <p style="color: #404040; margin-bottom: 14px; font-size: 12px;">Beyond this door lies a dangerous dungeon.<br/>Do you wish to enter?</p>
-                    <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" class="mc-btn" style="width: 140px; height: 32px; font-size: 12px; margin: 0 4px;">Enter Dungeon</button>
-                    <button onclick="document.getElementById('dungeon-menu-panel').classList.add('hidden'); document.exitPointerLock();" class="mc-btn" style="width: 100px; height: 32px; font-size: 12px; margin: 0 4px;">Leave</button>
                 </div>
             </div>
 
-            <!-- BOTTOM SECTION: Player Inventory (3 rows of 9) + Separated Hotbar (1 row of 9) -->
-            <div class="main-inv-col">
-                <div class="mc-container-title" style="margin-top: 10px;">Inventory</div>
-                <!-- Main grid (3 rows of 9) -->
-                <div class="main-grid" id="main-inventory-grid">
-                    <!-- Filled by JS -->
+            <!-- CREATIVE CONTAINER -->
+            <div id="creative-container" class="hidden">
+                <div class="creative-tabs-bar" id="creative-tabs-bar">
+                    <button type="button" class="creative-tab active" data-tab="all">All</button>
+                    <button type="button" class="creative-tab" data-tab="building">Building</button>
+                    <button type="button" class="creative-tab" data-tab="natural">Natural</button>
+                    <button type="button" class="creative-tab" data-tab="equipment">Equipment</button>
+                    <button type="button" class="creative-tab" data-tab="materials">Items</button>
+                    <button type="button" class="creative-tab" data-tab="survival">Survival</button>
                 </div>
-                
-                <div style="height: 6px;"></div>
-                
-                <!-- Inventory separated hotbar -->
+                <div class="creative-search-row">
+                    <span class="mc-container-title" style="margin: 0; font-size: 12px; white-space: nowrap;">Search:</span>
+                    <input type="text" id="creative-search" class="mc-input" placeholder="Search items..." autocomplete="off" spellcheck="false" />
+                </div>
+                <div class="creative-grid-viewport">
+                    <div id="creative-items-grid" class="creative-grid"></div>
+                </div>
+            </div>
+
+            <!-- SHARED HOTBAR SECTION (Always at bottom of container) -->
+            <div class="inv-hotbar-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 6px; margin-bottom: 4px;">
+                    <div class="mc-container-title" style="margin: 0; font-size: 12px;">Hotbar</div>
+                    <div class="inv-slot creative-trash-slot hidden" id="creative-trash-slot" title="Destroy Item (Click or Drop item here to delete)">🗑️</div>
+                </div>
                 <div class="main-grid" id="inv-hotbar-grid" style="grid-template-rows: 40px;">
                     <!-- Filled by JS -->
                 </div>
@@ -314,15 +339,6 @@
     
     <!-- Dragging Item Icon -->
     <div id="drag-item-icon" class="hidden"></div>
-    <!-- Creative Inventory Panel -->
-    <div id="creative-inventory-panel" class="hidden" style="position:fixed;top:50%;right:20px;transform:translateY(-50%);padding:16px;z-index:2000;width:370px;max-height:80vh;display:flex;flex-direction:column;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span class="mc-container-title" style="font-size:14px;margin:0;">Creative Inventory</span>
-        <span style="font-size:10px;color:#555;font-family:'Minecraftia';">Drag to hotbar</span>
-      </div>
-      <input id="creative-search" class="mc-input" placeholder="Search items…" style="width:100%;margin-bottom:10px;" />
-      <div id="creative-items-grid" style="display:grid;grid-template-columns:repeat(7,44px);gap:4px;overflow-y:auto;max-height:55vh;"></div>
-    </div>
     <div id="creative-toast" class="hidden" style="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:8px 20px;font-family:'Minecraftia';font-size:13px;z-index:9999;border:2px solid #555;pointer-events:none;"></div>
 
     <!-- Minecraft In-Game HUD -->
@@ -351,7 +367,7 @@
         }
     }
     </script>
-    <script type="module" src="js/main.js?v=84"></script>
+    <script type="module" src="js/main.js?v=85"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>
 </body>

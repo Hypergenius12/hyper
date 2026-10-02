@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=84';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=84';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=84';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=84';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=84';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=84';
-import { AudioManager } from './audio.js?v=84';
-import { BiomeMap } from './map.js?v=84';
-import { DevMode } from './dev.js?v=84';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=85';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=85';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=85';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=85';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=85';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=85';
+import { AudioManager } from './audio.js?v=85';
+import { BiomeMap } from './map.js?v=85';
+import { DevMode } from './dev.js?v=85';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -2035,11 +2035,6 @@ class Game {
                         pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 4 + Math.random() * 6;
                         this.particles.emit(pos, 'leaf', 1, Math.random() < 0.3 ? 0xffc0cb : 0xffb7c5);
                     }
-                } else if (biome.name === 'Autumn Forest') {
-                    const pos = this.player.position.clone();
-                    pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 4 + Math.random() * 6;
-                    const colors = [0xff8800, 0xcc4400, 0xffaa00, 0xdd6600];
-                    this.particles.emit(pos, 'leaf', 1, colors[Math.floor(Math.random()*colors.length)]);
                 } else if (biome.name === 'Mystic Grove') {
                     const pos = this.player.position.clone();
                     pos.x += (Math.random() - 0.5) * 24; pos.z += (Math.random() - 0.5) * 24; pos.y += 2 + Math.random() * 5;
