@@ -20,9 +20,11 @@
 /* Authentic Vanilla Minecraft Container Window */
 .inv-wrapper {
     display: flex;
-    gap: 16px;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
     background: var(--mc-gui-bg, #c6c6c6);
-    padding: 16px 20px;
+    padding: 14px 16px;
     border: 4px solid #c6c6c6;
     border-top-color: #ffffff;
     border-left-color: #ffffff;
@@ -32,6 +34,7 @@
     font-family: 'Minecraftia', monospace, sans-serif;
     color: #404040;
     box-sizing: border-box;
+    width: 440px;
 }
 
 .mc-container-title {
@@ -39,7 +42,7 @@
     font-size: 14px;
     font-weight: normal;
     color: #404040;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     user-select: none;
 }
 
@@ -47,14 +50,14 @@
 .equipment-col {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding-right: 8px;
-    border-right: 2px solid #a0a0a0;
+    gap: 4px;
 }
 
 .main-inv-col {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
 /* Grids */
@@ -188,18 +191,18 @@
 /* Hotbar Frame */
 #geometric-hotbar {
     position: fixed;
-    bottom: 12px;
+    bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
-    width: 364px;
-    height: 44px;
+    width: 455px;
+    height: 55px;
     background-image: url('../assets/mc/hud/hotbar.png');
     background-size: 100% 100%;
     background-repeat: no-repeat;
     image-rendering: pixelated;
     display: flex;
     align-items: center;
-    padding: 2px;
+    padding: 3px;
     box-sizing: border-box;
     z-index: 500;
 }
@@ -216,8 +219,8 @@
 }
 
 #main-hotbar-grid .inv-slot {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     background: transparent;
     border: none;
     box-shadow: none;
@@ -230,8 +233,8 @@
 /* Hotbar Active Selection Frame */
 #mc-hotbar-selector {
     position: absolute;
-    width: 48px;
-    height: 48px;
+    width: 58px;
+    height: 58px;
     top: -2px;
     left: -2px;
     background-image: url('../assets/mc/hud/hotbar_selector.png');
@@ -246,15 +249,15 @@
 /* Stacked HUD Status Bars (Hearts, Armor, Mana) */
 #mc-hud-container {
     position: fixed;
-    bottom: 58px;
+    bottom: 74px;
     left: 50%;
     transform: translateX(-50%);
-    width: 364px;
+    width: 455px;
     z-index: 500;
     pointer-events: none;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
 }
 
 #mc-hud-container.hidden {
@@ -264,10 +267,10 @@
 /* Blue Mana Bar (Repurposed XP Bar) */
 #mc-mana-bar-container {
     position: relative;
-    width: 364px;
-    height: 10px;
+    width: 455px;
+    height: 12px;
     background-image: url('../assets/mc/mana_bar_bg.png');
-    background-size: 364px 10px;
+    background-size: 455px 12px;
     background-repeat: no-repeat;
     image-rendering: pixelated;
 }
@@ -276,7 +279,7 @@
     width: 100%;
     height: 100%;
     background-image: url('../assets/mc/mana_bar_fill.png');
-    background-size: 364px 10px;
+    background-size: 455px 12px;
     background-repeat: no-repeat;
     image-rendering: pixelated;
     transition: width 0.1s linear;
@@ -286,10 +289,10 @@
     position: absolute;
     width: 100%;
     text-align: center;
-    top: -15px;
+    top: -16px;
     left: 0;
     font-family: 'Minecraftia', monospace, sans-serif;
-    font-size: 13px;
+    font-size: 14px;
     color: #55ffff;
     text-shadow:
         1px 1px 0 #000,
@@ -306,12 +309,12 @@
     display: flex;
     flex-direction: row;
     gap: 1px;
-    height: 18px;
+    height: 22px;
 }
 
 .mc-heart {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     background-size: 100% 100%;
     background-repeat: no-repeat;
     image-rendering: pixelated;
@@ -322,7 +325,7 @@
     display: flex;
     flex-direction: row;
     gap: 1px;
-    height: 18px;
+    height: 22px;
 }
 
 #mc-armor-bar.hidden {
@@ -330,8 +333,8 @@
 }
 
 .mc-armor {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     background-size: 100% 100%;
     background-repeat: no-repeat;
     image-rendering: pixelated;
@@ -453,4 +456,273 @@
 
 #pause-screen.hidden {
     display: none !important;
+}
+
+/* ============================================
+   Two-Tier Minecraft Container Layout
+   ============================================ */
+
+#container-top-section {
+    width: 100%;
+    min-height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.container-top-panel {
+    width: 100%;
+    display: flex;
+    box-sizing: border-box;
+}
+
+.container-top-panel.hidden {
+    display: none !important;
+}
+
+/* Survival Inventory: Armor + Player Preview + 2x2 Crafting */
+#survival-top-panel {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0 4px;
+}
+
+#player-preview-box {
+    width: 104px;
+    height: 144px;
+    background: #000000;
+    border-top: 2px solid #373737;
+    border-left: 2px solid #373737;
+    border-right: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.player-silhouette {
+    width: 64px;
+    height: 120px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player-silhouette::before {
+    content: '';
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    top: 8px;
+    background: #555555;
+    border-radius: 2px;
+    box-shadow: 
+        0 36px 0 0 #444444,
+        0 40px 0 8px #3a3a3a,
+        -16px 40px 0 0 #333333,
+        16px 40px 0 0 #333333,
+        -8px 84px 0 2px #222222,
+        8px 84px 0 2px #222222;
+    opacity: 0.6;
+}
+
+#crafting-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Chest Panel */
+#chest-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+}
+
+/* Furnace Panel */
+#furnace-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.furnace-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin: 8px 0 12px 0;
+    width: 100%;
+}
+
+.furnace-fire-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.furnace-fire-sprite {
+    width: 28px;
+    height: 28px;
+    background-image: url('../assets/mc/container/furnace_fire.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    transition: opacity 0.15s ease;
+}
+
+.furnace-fire-sprite.lit {
+    background-image: url('../assets/mc/container/furnace_fire_lit.png');
+}
+
+.furnace-arrow-container {
+    width: 48px;
+    height: 34px;
+    background-image: url('../assets/mc/container/furnace_arrow.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    position: relative;
+    overflow: hidden;
+}
+
+.furnace-arrow-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    background-image: url('../assets/mc/container/furnace_arrow_fill.png');
+    background-size: 48px 34px;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    transition: width 0.1s linear;
+}
+
+/* ============================================
+   Authentic Minecraft Recipe Book Modal
+   ============================================ */
+.mc-recipe-book-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    height: 420px;
+    background: var(--mc-gui-bg, #c6c6c6);
+    border: 4px solid #c6c6c6;
+    border-top-color: #ffffff;
+    border-left-color: #ffffff;
+    border-right-color: #555555;
+    border-bottom-color: #555555;
+    box-shadow: inset 2px 2px 0 #dbdbdb, inset -2px -2px 0 #373737, 0 14px 45px rgba(0, 0, 0, 0.85);
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    font-family: 'Minecraftia', monospace, sans-serif;
+    color: #404040;
+}
+
+.mc-recipe-book-modal.hidden {
+    display: none !important;
+}
+
+.recipe-book-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #a0a0a0;
+}
+
+.recipe-close-btn {
+    background: #8b8b8b;
+    border-top: 2px solid #ffffff;
+    border-left: 2px solid #ffffff;
+    border-right: 2px solid #373737;
+    border-bottom: 2px solid #373737;
+    color: #ffffff;
+    font-family: 'Minecraftia', monospace;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 8px;
+    box-shadow: inset -1px -1px 0 #000000;
+}
+
+.recipe-close-btn:hover {
+    background: #a4a4a4;
+}
+
+.recipe-close-btn:active {
+    border-top-color: #373737;
+    border-left-color: #373737;
+    border-right-color: #ffffff;
+    border-bottom-color: #ffffff;
+}
+
+.recipe-book-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
+}
+
+#recipe-list {
+    flex: 1;
+    overflow-y: auto;
+    border-top: 2px solid #373737;
+    border-left: 2px solid #373737;
+    border-right: 2px solid #ffffff;
+    border-bottom: 2px solid #ffffff;
+    background: #8b8b8b;
+    padding: 4px;
+    max-height: 170px;
+}
+
+.recipe-item {
+    padding: 5px 8px;
+    cursor: pointer;
+    color: #202020;
+    font-size: 11px;
+    font-family: 'Minecraftia', monospace;
+    user-select: none;
+    border: 1px solid transparent;
+}
+
+.recipe-item:hover {
+    background: #a4a4a4;
+    color: #000000;
+}
+
+.recipe-item.selected {
+    background: #555555;
+    color: #ffffff;
+    text-shadow: 1px 1px 0 #000000;
+    border-top: 1px solid #373737;
+    border-left: 1px solid #373737;
+    border-right: 1px solid #777777;
+    border-bottom: 1px solid #777777;
+}
+
+#recipe-viewer {
+    border-top: 2px solid #a0a0a0;
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }

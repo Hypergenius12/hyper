@@ -842,10 +842,10 @@ export function generateChunkTerrain(cx, cz, params) {
                 } else if (biome === BIOMES.DESERT && r < 0.000003) {
                     generateAncientPyramid(blocks, tx, surfaceY, tz, floraRng);
                     continue;
-                } else if (r < 0.00008) {
+                } else if (r < 0.00003) {
                     generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng, 'nether');
                     continue;
-                } else if (r < 0.000085) {
+                } else if (r < 0.00006) {
                     generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng, 'cavern');
                     continue;
                 } else if (r < 0.00009) {

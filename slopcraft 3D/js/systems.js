@@ -449,6 +449,9 @@ class UISystem {
             craftingOutput: document.getElementById('crafting-output'),
             craftingRecipeName: document.getElementById('crafting-recipe-name'),
             craftingPanel: document.getElementById('crafting-panel'),
+            survivalTopPanel: document.getElementById('survival-top-panel'),
+            equipmentCol: document.querySelector('.equipment-col'),
+            playerPreviewBox: document.getElementById('player-preview-box'),
             chestPanel: document.getElementById('chest-panel'),
             chestGrid: document.getElementById('chest-grid'),
             furnacePanel: document.getElementById('furnace-panel'),
@@ -510,6 +513,7 @@ class UISystem {
             this.chestInventory = null;
             this.onChestClose = null;
             if (this.elements.chestPanel) this.elements.chestPanel.classList.add('hidden');
+            if (this.isOpen && this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.remove('hidden');
         }
     }
 
@@ -520,6 +524,7 @@ class UISystem {
             this.furnaceData = null;
             this.onFurnaceClose = null;
             if (this.elements.furnacePanel) this.elements.furnacePanel.classList.add('hidden');
+            if (this.isOpen && this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.remove('hidden');
         }
     }
 
@@ -530,9 +535,16 @@ class UISystem {
         
         if (this.isOpen) {
             this.elements.geometricUI.classList.remove('hidden');
+            if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.remove('hidden');
+            if (this.elements.chestPanel) this.elements.chestPanel.classList.add('hidden');
+            if (this.elements.furnacePanel) this.elements.furnacePanel.classList.add('hidden');
+            if (this.elements.equipmentCol) this.elements.equipmentCol.style.display = 'flex';
+            if (this.elements.playerPreviewBox) this.elements.playerPreviewBox.style.display = 'flex';
         } else {
             this.elements.geometricUI.classList.add('hidden');
             this.elements.tooltip.classList.add('hidden');
+            const modalRecipeBook = document.getElementById('recipe-book-modal');
+            if (modalRecipeBook) modalRecipeBook.classList.add('hidden');
             if (this.dragState.isDragging) this.cancelDrag();
             
             // Return all crafting items back to inventory when closing
@@ -567,6 +579,9 @@ class UISystem {
         this.closeChest();
         this.closeFurnace();
         this.elements.wandConfigPanel.classList.add('hidden');
+        if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.remove('hidden');
+        if (this.elements.equipmentCol) this.elements.equipmentCol.style.display = 'none';
+        if (this.elements.playerPreviewBox) this.elements.playerPreviewBox.style.display = 'none';
         this.elements.craftingPanel.classList.remove('hidden');
     }
 
@@ -586,6 +601,7 @@ class UISystem {
         this.chestPos = {x, y, z};
         this.chestInventory = inventory;
         this.onChestClose = onClose;
+        if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.add('hidden');
         this.elements.chestPanel.classList.remove('hidden');
     }
 
@@ -605,6 +621,7 @@ class UISystem {
         this.furnacePos = {x, y, z};
         this.furnaceData = data;
         this.onFurnaceClose = onClose;
+        if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.add('hidden');
         this.elements.furnacePanel.classList.remove('hidden');
     }
 
@@ -903,7 +920,7 @@ class UISystem {
         // 1. Hotbar Selector position
         const selector = document.getElementById('mc-hotbar-selector');
         if (selector) {
-            selector.style.left = `${pSelected * 40 - 2}px`;
+            selector.style.left = `${pSelected * 50 - 3}px`;
         }
 
         // 2. Blue Mana Bar (Repurposed XP bar)
@@ -1650,7 +1667,13 @@ class UISystem {
             this.elements.furnaceProgress.style.width = `${Math.floor(this.furnaceData.progress * 100)}%`;
         }
         if (this.elements.furnaceFire) {
-            this.elements.furnaceFire.style.opacity = this.furnaceData.isSmelting ? '1.0' : '0.2';
+            if (this.furnaceData.isSmelting) {
+                this.elements.furnaceFire.classList.add('lit');
+                this.elements.furnaceFire.style.opacity = '1.0';
+            } else {
+                this.elements.furnaceFire.classList.remove('lit');
+                this.elements.furnaceFire.style.opacity = '0.35';
+            }
         }
     }
 
@@ -2029,26 +2052,16 @@ class UISystem {
         const filteredRecipes = recipes.filter(r => this.is3x3Crafting ? true : !r.needs3x3);
         let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
         filteredRecipes.forEach((r, idx) => {
-            html += `<li class="recipe-item" data-idx="${idx}" style="margin-bottom: 8px; cursor: pointer; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); transition: background 0.2s;">
-                <div style="color: #fff; font-weight: bold; font-size: 1rem; margin-bottom: 2px;">${r.name}</div>
-            </li>`;
+            html += `<li class="recipe-item" data-idx="${idx}">${r.name}</li>`;
         });
         html += '</ul>';
         list.innerHTML = html;
 
-        // Add hover styles dynamically via JS (since we don't have CSS classes for it)
         const items = list.querySelectorAll('.recipe-item');
         items.forEach(item => {
-            item.addEventListener('mouseenter', () => item.style.background = 'rgba(255,255,255,0.1)');
-            item.addEventListener('mouseleave', () => {
-                if (!item.classList.contains('selected')) item.style.background = 'transparent';
-            });
-            
             item.addEventListener('click', () => {
-                items.forEach(i => { i.classList.remove('selected'); i.style.background = 'transparent'; i.style.borderColor = 'rgba(255,255,255,0.1)'; });
+                items.forEach(i => i.classList.remove('selected'));
                 item.classList.add('selected');
-                item.style.background = 'rgba(100, 150, 255, 0.2)';
-                item.style.borderColor = 'rgba(100, 150, 255, 0.8)';
                 
                 const idx = parseInt(item.getAttribute('data-idx'));
                 this.showRecipeDetails(filteredRecipes[idx]);
@@ -2070,9 +2083,6 @@ class UISystem {
         const createSlotEl = (def) => {
             const el = document.createElement('div');
             el.className = 'inv-slot';
-            el.style.width = '40px';
-            el.style.height = '40px';
-            el.style.border = '2px solid rgba(150,150,150,0.5)';
             if (!def) return el;
             
             let dataURL = null;
@@ -2089,9 +2099,7 @@ class UISystem {
             
             const img = document.createElement('img');
             img.src = dataURL;
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'contain';
+            img.className = 'item-icon';
             el.appendChild(img);
             return el;
         };
@@ -2142,23 +2150,15 @@ class UISystem {
         // Render Output
         const outContainer = document.getElementById('recipe-viewer-output');
         outContainer.innerHTML = '';
-        outContainer.style.border = '2px solid #fff';
         const outEl = createSlotEl(recipe.out);
-        if (recipe.outCount > 1) {
-            const num = document.createElement('div');
-            num.className = 'slot-count';
-            num.innerText = recipe.outCount;
-            num.style.position = 'absolute';
-            num.style.bottom = '2px';
-            num.style.right = '4px';
-            num.style.fontSize = '12px';
-            num.style.fontWeight = 'bold';
-            num.style.textShadow = '1px 1px 0 #000';
-            outEl.appendChild(num);
-        }
-        // Steal the children out of the slotEl we created
         while (outEl.children.length > 0) {
             outContainer.appendChild(outEl.children[0]);
+        }
+        if (recipe.outCount > 1) {
+            const num = document.createElement('div');
+            num.className = 'item-count';
+            num.innerText = recipe.outCount;
+            outContainer.appendChild(num);
         }
     }
 }

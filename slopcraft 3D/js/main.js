@@ -111,8 +111,8 @@ function initChestEntityMaterials(atlas) {
                 };
                 
                 // Lid faces (width: 14, depth: 14, height: 5)
-                const lidTop = sliceMat(14, 0, 14, 14);
-                const lidBot = sliceMat(28, 0, 14, 14);
+                const lidTop = sliceMat(28, 0, 14, 14);
+                const lidBot = sliceMat(14, 0, 14, 14);
                 const lidFront = sliceMat(14, 14, 14, 5);
                 const lidBack = sliceMat(42, 14, 14, 5);
                 const lidRight = sliceMat(0, 14, 14, 5);
@@ -1229,7 +1229,9 @@ class Game {
             if (slot && slot.item.subtype === 'flint_and_steel' && hit.hit) {
                 // If clicked on Obsidian/Glowstone/etc, try to light a portal first
                 let portalLit = false;
-                if (hit.blockType === window.BLOCKS.OBSIDIAN || hit.blockType === window.BLOCKS.GLOWSTONE || hit.blockType === window.BLOCKS.PORTAL_FRAME) {
+                if (hit.blockType === window.BLOCKS.OBSIDIAN || hit.blockType === window.BLOCKS.GLOWSTONE || hit.blockType === window.BLOCKS.PORTAL_FRAME ||
+                    hit.blockType === window.BLOCKS.DIRT || hit.blockType === window.BLOCKS.GRASS ||
+                    hit.blockType === window.BLOCKS.STONE || hit.blockType === window.BLOCKS.COBBLESTONE) {
                     portalLit = this.tryLightPortal(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                     if (portalLit) this.audio.playHit();
                 }

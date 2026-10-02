@@ -2240,8 +2240,8 @@ function loadMinecraftChestTexture(face) {
         ctx.imageSmoothingEnabled = false;
 
         if (face === 'top') {
-            // Lid top: (14, 0, 14, 14)
-            ctx.drawImage(img, 14, 0, 14, 14, 0, 0, TEX_SIZE, TEX_SIZE);
+            // Lid top exterior: (28, 0, 14, 14)
+            ctx.drawImage(img, 28, 0, 14, 14, 0, 0, TEX_SIZE, TEX_SIZE);
         } else if (face === 'bottom') {
             // Base bottom: (28, 19, 14, 14)
             ctx.drawImage(img, 28, 19, 14, 14, 0, 0, TEX_SIZE, TEX_SIZE);
@@ -2455,6 +2455,25 @@ export async function createTextureAtlas(useMinecraft = false) {
             }
         }
         await Promise.all(promises);
+
+        // Preload all Minecraft item textures so slots never glitch or pop
+        const itemPromises = [];
+        for (const [subtype, mcName] of Object.entries(MC_ITEM_MAP)) {
+            if (!_itemCanvasCache.has(subtype)) {
+                itemPromises.push(loadMinecraftTexture(mcName).then(img => {
+                    if (img) {
+                        const itemCvs = document.createElement('canvas');
+                        itemCvs.width = TEX_SIZE; itemCvs.height = TEX_SIZE;
+                        const ictx = itemCvs.getContext('2d');
+                        ictx.imageSmoothingEnabled = false;
+                        ictx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                        _itemCanvasCache.set(subtype, itemCvs);
+                        _itemTextureCache.set(subtype, itemCvs.toDataURL());
+                    }
+                }));
+            }
+        }
+        await Promise.all(itemPromises);
     }
 
     const texture = new THREE.CanvasTexture(canvas);
@@ -2476,15 +2495,11 @@ export async function createTextureAtlas(useMinecraft = false) {
         else if (face === 'front' || face === 'pz') faceKey = 'front';
         const entry = map[faceKey] || map.side || map.top;
         
-        // Add a tiny inset (0.1px) to prevent texture bleeding / 1px gaps
-        const epU = (1.0 / atlasW) * 0.49;
-        const epV = (1.0 / atlasH) * 0.49;
-        
         return {
-            u: entry.col * uUnit + epU,
-            v: 1 - (entry.row + 1) * vUnit + epV, // flip Y for Three.js
-            uSize: uUnit - epU * 2,
-            vSize: vUnit - epV * 2
+            u: entry.col * uUnit,
+            v: 1 - (entry.row + 1) * vUnit, // flip Y for Three.js
+            uSize: uUnit,
+            vSize: vUnit
         };
     }
 
@@ -2514,9 +2529,11 @@ export async function createTextureAtlas(useMinecraft = false) {
         };
 
         if (props.isCross) {
-            // Flat 2D for cross models
+            // Flat 2D for cross models (torch, flowers, saplings) - enlarged to fill slot nicely
             const tmp = getFaceCanvas('side');
-            iconCtx.drawImage(tmp, 0, 0, TEX_SIZE, TEX_SIZE, (TEX_SIZE/2)*SCALE, (TEX_SIZE/2)*SCALE, TEX_SIZE*SCALE, TEX_SIZE*SCALE);
+            const pad = 2 * SCALE;
+            const drawSize = (TEX_SIZE * 2 - 4) * SCALE;
+            iconCtx.drawImage(tmp, 0, 0, TEX_SIZE, TEX_SIZE, pad, pad, drawSize, drawSize);
             return iconCanvas;
         }
 
@@ -2601,6 +2618,7 @@ export async function createTextureAtlas(useMinecraft = false) {
                 
                 didUpdate = true;
             } else {
+                if (useMinecraft) continue;
                 if (texture.userData.lastShift === shift) continue;
                 tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
                 tmpCtx.drawImage(frame.canvas, 0, shift);
