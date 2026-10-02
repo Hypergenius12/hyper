@@ -395,6 +395,15 @@ window.triggerDeleteContextMenu = function() {
                 }
                 if (!permanentlyDelete && recycler && item.name !== "Recycle Bin.lnk") {
                     recycler[item.name] = dir[item.name];
+                } else if (permanentlyDelete && typeof window.findStoreApp === 'function') {
+                    let sApp = window.findStoreApp(item.name);
+                    if (sApp) {
+                        let uninst = typeof window.getUninstalledApps === 'function' ? window.getUninstalledApps() : [];
+                        if (!uninst.includes(sApp.id)) uninst.push(sApp.id);
+                        if (!uninst.includes(sApp.name)) uninst.push(sApp.name);
+                        if (typeof window.setUninstalledApps === 'function') window.setUninstalledApps(uninst);
+                        if (typeof window.renderStore === 'function') window.renderStore();
+                    }
                 }
                 if (typeof window.unpinStartItem === 'function') {
                     window.unpinStartItem(item.name.replace(/\.lnk$/i, '').replace(/\.exe$/i, ''));

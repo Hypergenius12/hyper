@@ -738,27 +738,39 @@ window.findStoreApp = function(query) {
     );
 };
 
-const DEFAULT_UNINSTALLED_APPS = [];
+window.DEFAULT_UNINSTALLED_APPS = window.DEFAULT_UNINSTALLED_APPS || ['checkers', 'reversi', 'hearts', 'spades', 'freecell', 'messenger', 'excel', 'remotedesktop'];
+var DEFAULT_UNINSTALLED_APPS = window.DEFAULT_UNINSTALLED_APPS;
 
 // Storage for uninstalled apps
 window.getUninstalledApps = function() {
     try {
+        if (!localStorage.getItem('xp_uninstalled_apps_catalog_fixed')) {
+            let saved = localStorage.getItem('xp_uninstalled_apps');
+            let currentList = [];
+            if (saved !== null) {
+                try { currentList = JSON.parse(saved); } catch(e) {}
+            }
+            if (!Array.isArray(currentList)) currentList = [];
+            // Merge default uninstalled apps that aren't already recorded
+            DEFAULT_UNINSTALLED_APPS.forEach(appId => {
+                if (!currentList.includes(appId)) {
+                    currentList.push(appId);
+                }
+            });
+            localStorage.setItem('xp_uninstalled_apps', JSON.stringify(currentList));
+            localStorage.setItem('xp_uninstalled_apps_catalog_fixed', 'true');
+            return currentList.filter(x => x !== 'xptour' && x !== 'Tour Windows XP' && x !== 'xptour-window');
+        }
+
         let saved = localStorage.getItem('xp_uninstalled_apps');
         if (saved !== null) {
             let list = JSON.parse(saved);
             if (Array.isArray(list)) {
-                // If user had the old default uninstalled apps list from earlier bug, clear them
-                let oldDefault = ['checkers', 'reversi', 'hearts', 'spades', 'freecell', 'messenger', 'excel', 'remotedesktop'];
-                if (!localStorage.getItem('xp_uninstalled_migrated_v3')) {
-                    list = list.filter(x => !oldDefault.includes(x));
-                    localStorage.setItem('xp_uninstalled_apps', JSON.stringify(list));
-                    localStorage.setItem('xp_uninstalled_migrated_v3', 'true');
-                }
                 return list.filter(x => x !== 'xptour' && x !== 'Tour Windows XP' && x !== 'xptour-window');
             }
         }
     } catch(e) {}
-    return [];
+    return [...DEFAULT_UNINSTALLED_APPS];
 };
 
 window.setUninstalledApps = function(list) {
@@ -908,7 +920,13 @@ window.isAppInstalled = function(app) {
     // Also check generic C:\Program Files\[appName]
     if (appName && typeof window.resolvePath === 'function') {
         let pfNode = window.resolvePath("C:\\Program Files");
-        if (pfNode && (pfNode[appName] || pfNode[appName + '.exe'])) return true;
+        if (pfNode) {
+            if (pfNode[appName + '.exe'] || pfNode[appName + '.lnk']) return true;
+            if (pfNode[appName] && pfNode[appName].contents) {
+                let hasExe = Object.keys(pfNode[appName].contents).some(k => k.toLowerCase().endsWith('.exe') || k.toLowerCase().endsWith('.lnk'));
+                if (hasExe) return true;
+            }
+        }
     }
 
     // Core system apps default to true if not deleted

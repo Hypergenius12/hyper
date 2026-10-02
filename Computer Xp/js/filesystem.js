@@ -1,4 +1,20 @@
 
+window.DEFAULT_UNINSTALLED_APPS = window.DEFAULT_UNINSTALLED_APPS || ['checkers', 'reversi', 'hearts', 'spades', 'freecell', 'messenger', 'excel', 'remotedesktop'];
+var DEFAULT_UNINSTALLED_APPS = window.DEFAULT_UNINSTALLED_APPS;
+
+if (typeof window.getUninstalledApps !== 'function') {
+    window.getUninstalledApps = function() {
+        try {
+            let saved = localStorage.getItem('xp_uninstalled_apps');
+            if (saved !== null) {
+                let list = JSON.parse(saved);
+                if (Array.isArray(list)) return list.filter(x => x !== 'xptour' && x !== 'Tour Windows XP' && x !== 'xptour-window');
+            }
+        } catch(e) {}
+        return [...DEFAULT_UNINSTALLED_APPS];
+    };
+}
+
 window.isAppInstalled = function(app) {
     if (!app) return false;
 
@@ -139,7 +155,13 @@ window.isAppInstalled = function(app) {
     // Also check generic C:\Program Files\[appName]
     if (appName && typeof window.resolvePath === 'function') {
         let pfNode = window.resolvePath("C:\\Program Files");
-        if (pfNode && (pfNode[appName] || pfNode[appName + '.exe'])) return true;
+        if (pfNode) {
+            if (pfNode[appName + '.exe'] || pfNode[appName + '.lnk']) return true;
+            if (pfNode[appName] && pfNode[appName].contents) {
+                let hasExe = Object.keys(pfNode[appName].contents).some(k => k.toLowerCase().endsWith('.exe') || k.toLowerCase().endsWith('.lnk'));
+                if (hasExe) return true;
+            }
+        }
     }
 
     // Core system apps default to true if not deleted
@@ -2219,10 +2241,25 @@ window.emptyRecycleBin = function () {
         if(typeof window.xpDialog === 'function') {
             window.xpDialog('Confirm File Delete', 'Are you sure you want to permanently delete all of these items?', 'confirm').then(ok => {
                 if(ok) {
+                    let recyclerContents = fs["C:"].contents["RECYCLER"].contents;
+                    for (let itemKey in recyclerContents) {
+                        let item = recyclerContents[itemKey];
+                        let appName = (item && item.app) ? item.app : itemKey.replace(/\.lnk$/i, '').replace(/\.exe$/i, '');
+                        if (typeof window.findStoreApp === 'function') {
+                            let sApp = window.findStoreApp(appName) || window.findStoreApp(itemKey);
+                            if (sApp) {
+                                let uninst = typeof window.getUninstalledApps === 'function' ? window.getUninstalledApps() : [];
+                                if (!uninst.includes(sApp.id)) uninst.push(sApp.id);
+                                if (!uninst.includes(sApp.name)) uninst.push(sApp.name);
+                                if (typeof window.setUninstalledApps === 'function') window.setUninstalledApps(uninst);
+                            }
+                        }
+                    }
                     fs["C:"].contents["RECYCLER"].contents = {};
                     window.saveFileSystem();
                     window.renderDesktop();
                     if (window.currentPath === "C:\\RECYCLER") window.renderExplorer(window.currentPath);
+                    if (typeof window.renderStore === 'function') window.renderStore();
                     if (typeof window.playSound === 'function') window.playSound('recycle');
                     if (typeof window.showBalloon === 'function') window.showBalloon("Recycle Bin", "Emptied successfully.");
                 }
