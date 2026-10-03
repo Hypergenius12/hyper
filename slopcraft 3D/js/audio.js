@@ -181,81 +181,55 @@ export class AudioManager {
     }
 
     playFootstep(blockType) {
-        const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
         const doFallback = () => { this.playNoise(0.05, 0.1); };
-        if (useMC) {
-            let mat = this._getMCBlockMaterial(blockType);
-            if (mat === 'glass') mat = 'stone'; // stepping on glass sounds like stone
-            const v = Math.floor(Math.random() * 4) + 1;
-            this.playMC(`step/${mat}${v}`, 0.4).then(s => { if(!s) doFallback(); });
-            return;
-        }
-        doFallback();
+        let mat = this._getMCBlockMaterial(blockType);
+        if (mat === 'glass') mat = 'stone'; // stepping on glass sounds like stone
+        const v = Math.floor(Math.random() * 4) + 1;
+        this.playMC(`step/${mat}${v}`, 0.4).then(s => { if(!s) doFallback(); });
     }
 
     playSwim(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            const v = Math.floor(Math.random() * 4) + 1;
-            this.playMC(`liquid/swim${v}`, 0.6, position);
-        } else this.playNoise(0.1, 0.2, position);
+        const v = Math.floor(Math.random() * 4) + 1;
+        this.playMC(`liquid/swim${v}`, 0.6, position).then(s => { if(!s) this.playNoise(0.1, 0.2, position); });
     }
 
     playWaterSplash() {
-        const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
         const doFallback = () => { this.playNoise(0.3, 0.4); };
-        if (useMC) {
-            this.playMC('random/splash', 0.6).then(s => { if(!s) doFallback(); });
-            return;
-        }
-        doFallback();
+        this.playMC('random/splash', 0.6).then(s => { if(!s) doFallback(); });
     }
 
     playBreak(blockType) {
-        const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
         const doFallback = () => {
             this.playNoise(0.15, 0.3);
             this.playTone(150, 'square', 0.05, 0.2, -50);
         };
-        if (useMC) {
-            let mat = this._getMCBlockMaterial(blockType);
-            if (mat === 'glass') {
-                const v = Math.floor(Math.random() * 3) + 1;
-                this.playMC(`random/glass${v}`, 0.6).then(s => { if(!s) doFallback(); });
-                return;
-            }
-            const v = Math.floor(Math.random() * 4) + 1;
-            this.playMC(`dig/${mat}${v}`, 0.6).then(s => { if(!s) doFallback(); });
+        let mat = this._getMCBlockMaterial(blockType);
+        if (mat === 'glass') {
+            const v = Math.floor(Math.random() * 3) + 1;
+            this.playMC(`random/glass${v}`, 0.6).then(s => { if(!s) doFallback(); });
             return;
         }
-        doFallback();
+        const v = Math.floor(Math.random() * 4) + 1;
+        this.playMC(`dig/${mat}${v}`, 0.6).then(s => { if(!s) doFallback(); });
     }
 
     playPlace(blockType, position) {
-        const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
         const doFallback = () => {
             this.playNoise(0.1, 0.2, position);
         };
-        if (useMC) {
-            let mat = this._getMCBlockMaterial(blockType);
-            if (mat === 'glass') mat = 'stone'; // placing glass sounds like stone
-            const v = Math.floor(Math.random() * 4) + 1;
-            this.playMC(`dig/${mat}${v}`, 0.4, position).then(s => { if(!s) doFallback(); });
-            return;
-        }
-        doFallback();
+        let mat = this._getMCBlockMaterial(blockType);
+        if (mat === 'glass') mat = 'stone'; // placing glass sounds like stone
+        const v = Math.floor(Math.random() * 4) + 1;
+        this.playMC(`dig/${mat}${v}`, 0.4, position).then(s => { if(!s) doFallback(); });
     }
 
     playExplode(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            const v = Math.floor(Math.random() * 4) + 1;
-            this.playMC(`random/explode${v}`, 0.9, position);
-        } else this.playNoise(0.5, 0.8, position);
+        const v = Math.floor(Math.random() * 4) + 1;
+        this.playMC(`random/explode${v}`, 0.9, position).then(s => { if(!s) this.playNoise(0.5, 0.8, position); });
     }
 
     playFizz(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('random/fizz', 0.8, position);
-        } else this.playNoise(0.2, 0.4, position);
+        this.playMC('random/fizz', 0.8, position).then(s => { if(!s) this.playNoise(0.2, 0.4, position); });
     }
 
     playHit(position) {
@@ -263,11 +237,7 @@ export class AudioManager {
             this.playNoise(0.05, 0.4, position);
             this.playTone(300, 'square', 0.05, 0.2, -100, position);
         };
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('damage/hit1', 0.7, position).then(s => { if(!s) doFallback(); });
-            return;
-        }
-        doFallback();
+        this.playMC('damage/hit1', 0.7, position).then(s => { if(!s) doFallback(); });
     }
 
     playHurt(position) {
@@ -275,79 +245,50 @@ export class AudioManager {
             this.playTone(400, 'sawtooth', 0.2, 0.4, -200, position);
             this.playNoise(0.1, 0.5, position);
         };
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('damage/hit2', 0.7, position).then(s => { if(!s) doFallback(); });
-            return;
-        }
-        doFallback();
+        this.playMC('damage/hit2', 0.7, position).then(s => { if(!s) doFallback(); });
     }
 
     playChestOpen(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('block/chest/open', 0.8, position);
-        } else this.playNoise(0.1, 0.3, position);
+        this.playMC('block/chest/open', 0.8, position).then(s => { if(!s) this.playNoise(0.1, 0.3, position); });
     }
     
     playChestClose(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('block/chest/close1', 0.8, position);
-        } else this.playNoise(0.1, 0.3, position);
+        this.playMC('block/chest/close1', 0.8, position).then(s => { if(!s) this.playNoise(0.1, 0.3, position); });
     }
     
     playDoorOpen(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('random/door_open', 0.8, position);
-        } else this.playNoise(0.1, 0.2, position);
+        this.playMC('random/door_open', 0.8, position).then(s => { if(!s) this.playNoise(0.1, 0.2, position); });
     }
     
     playDoorClose(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('random/door_close', 0.8, position);
-        } else this.playNoise(0.1, 0.2, position);
+        this.playMC('random/door_close', 0.8, position).then(s => { if(!s) this.playNoise(0.1, 0.2, position); });
     }
 
-
-
     playEat(position = null) {
-        const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
         const doFallback = () => {
             this.playNoise(0.2, 0.4, position);
             this.playTone(300, 'square', 0.1, 0.3, -50, position);
         };
-        if (useMC) {
-            const v = Math.floor(Math.random() * 3) + 1;
-            this.playMC(`random/eat${v}`, 0.7, position).then(s => { if(!s) doFallback(); });
-            return;
-        }
-        doFallback();
+        const v = Math.floor(Math.random() * 3) + 1;
+        this.playMC(`random/eat${v}`, 0.7, position).then(s => { if(!s) doFallback(); });
     }
 
     playClick() {
         const doFallback = () => {
             this.playTone(800, 'sine', 0.05, 0.2);
         };
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('random/click', 0.7).then(s => { if(!s) doFallback(); });
-            return;
-        }
-        doFallback();
+        this.playMC('random/click', 0.7).then(s => { if(!s) doFallback(); });
     }
 
     playPop(position = null) {
         const doFallback = () => {
             this.playTone(600, 'sine', 0.08, 0.3, 200, position);
         };
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('random/pop', 0.7, position).then(s => { if(!s) doFallback(); });
-            return;
-        }
-        doFallback();
+        this.playMC('random/pop', 0.7, position).then(s => { if(!s) doFallback(); });
     }
 
     playCast(position = null) {
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('random/bow', 0.8, position);
-        } else this.playTone(600, 'sine', 0.3, 0.3, 400, position);
+        this.playMC('random/bow', 0.8, position).then(s => { if(!s) this.playTone(600, 'sine', 0.3, 0.3, 400, position); });
     }
 
     playPortalTravel(position = null) {
@@ -356,10 +297,6 @@ export class AudioManager {
             this.playTone(90, 'triangle', 1.4, 0.5, -30, position);
             this.playNoise(0.8, 0.25, position);
         };
-        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
-            this.playMC('portal/travel', 0.85, position).then(s => { if (!s) doFallback(); });
-            return;
-        }
-        doFallback();
+        this.playMC('portal/travel', 0.85, position).then(s => { if (!s) doFallback(); });
     }
 }

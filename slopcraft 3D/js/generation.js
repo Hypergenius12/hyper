@@ -904,12 +904,19 @@ export function generateChunkTerrain(cx, cz, params) {
                     continue; // Done with underwater flora
                 }
                 
-                // Sugarcane logic: rare next to rivers/water on sand
+                // Sugarcane logic: strictly warm biomes (Desert, Savanna, Jungle, Swamp, Badlands, Beach, Oasis) adjacent to water
+                const isWarmBiome = (biome === BIOMES.DESERT || biome === BIOMES.SAVANNA || biome === BIOMES.JUNGLE || 
+                    biome === BIOMES.SWAMP || biome === BIOMES.BADLANDS || biome === BIOMES.BEACH || 
+                    biome === BIOMES.OASIS || biome.isBeach || biome.isOasis || biome.jungleFlora || 
+                    biome.savannaFlora || biome.swampFlora || biome.name === 'Desert' || biome.name === 'Savanna' || 
+                    biome.name === 'Jungle' || biome.name === 'Swamp' || biome.name === 'Badlands' || 
+                    biome.name === 'Beach' || biome.name === 'Oasis');
+                
                 const groundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
                 const groundBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[groundIdx] : BLOCKS.AIR;
-                const isSandGround = groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.RED_SAND;
+                const isSugarcaneSoil = groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.RED_SAND || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.SWAMP_GRASS || groundBlock === BLOCKS.SAVANNA_GRASS || groundBlock === BLOCKS.MUD;
                 
-                if (isSandGround && surfaceY >= params.seaLevel && surfaceY <= params.seaLevel + 3 && r < 0.12) {
+                if (isWarmBiome && isSugarcaneSoil && surfaceY >= params.seaLevel && surfaceY <= params.seaLevel + 3 && r < 0.12) {
                     const n1 = getColumnInfo(wx - 1, wz, params);
                     const n2 = getColumnInfo(wx + 1, wz, params);
                     const n3 = getColumnInfo(wx, wz - 1, params);
@@ -1002,9 +1009,9 @@ export function generateChunkTerrain(cx, cz, params) {
                         else if (fr < 0.22) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
                         else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
                     } else if (biome === BIOMES.OASIS && fr < 0.2) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.OASIS_FERN, true);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
                     } else if (biome.isRedwood) {
-                        // Redwood Forest (Mega Taiga / Old Growth Pine): rich with short ferns, tall ferns, and tall grass
+                        // Redwood Forest (Mega Taiga / Old Growth Pine): cold biome, rich with short ferns, tall ferns, and tall grass
                         if (fr < 0.35) {
                             const fernRoll = floraRng();
                             if (fernRoll < 0.45) {
@@ -1016,7 +1023,7 @@ export function generateChunkTerrain(cx, cz, params) {
                             }
                         }
                     } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
-                        // Taiga / Tundra: short ferns, tall ferns, and tall grass
+                        // Taiga / Tundra: cold biome, short ferns, tall ferns, and tall grass
                         if (fr < 0.25) {
                             const taigaRoll = floraRng();
                             if (taigaRoll < 0.35) {
@@ -1028,14 +1035,10 @@ export function generateChunkTerrain(cx, cz, params) {
                             }
                         }
                     } else if (biome.jungleFlora || biome === BIOMES.JUNGLE || biome.name === 'Jungle') {
-                        // Jungle: short ferns, tall ferns, tall grass, and jungle flowers
+                        // Jungle: tall grass and jungle flowers — strictly zero ferns (ferns restricted to cold biomes)
                         if (fr < 0.32) {
                             const jungleRoll = floraRng();
-                            if (jungleRoll < 0.35) {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
-                            } else if (jungleRoll < 0.65) {
-                                generateTallFern(blocks, tx, surfaceY + 1, tz);
-                            } else if (jungleRoll < 0.85) {
+                            if (jungleRoll < 0.65) {
                                 safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                             } else {
                                 const fl = floraRng() < 0.5 ? BLOCKS.RED_FLOWER : BLOCKS.YELLOW_FLOWER;

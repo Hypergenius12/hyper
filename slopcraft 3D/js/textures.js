@@ -3340,7 +3340,10 @@ const LOCAL_ASSET_MAP = {
     "spider_spawn_egg": "assets/mc/item/spider_spawn_egg.png",
     "tropical_fish_spawn_egg": "assets/mc/item/tropical_fish_spawn_egg.png",
     "turtle_spawn_egg": "assets/mc/item/turtle_spawn_egg.png",
-    "zombie_spawn_egg": "assets/mc/item/zombie_spawn_egg.png"
+    "zombie_spawn_egg": "assets/mc/item/zombie_spawn_egg.png",
+    "creeper_spawn_egg": "assets/mc/item/creeper_spawn_egg.png",
+    "enderman_spawn_egg": "assets/mc/item/enderman_spawn_egg.png",
+    "pufferfish_spawn_egg": "assets/mc/item/pufferfish_spawn_egg.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -3379,7 +3382,7 @@ function loadMinecraftTexture(name) {
     });
 }
 
-export async function createTextureAtlas(useMinecraft = false) {
+export async function createTextureAtlas(useMinecraft = true) {
     // Calculate atlas layout
     // Each block gets at most 3 faces (top, side, bottom)
     // We lay them out linearly
@@ -3880,16 +3883,22 @@ const MC_ITEM_MAP = {
     'tropical_fish_spawn_egg': 'tropical_fish_spawn_egg',
     'turtle_spawn_egg': 'turtle_spawn_egg',
     'zombie_spawn_egg': 'zombie_spawn_egg',
+    'creeper_spawn_egg': 'creeper_spawn_egg',
+    'enderman_spawn_egg': 'enderman_spawn_egg',
+    'pufferfish_spawn_egg': 'pufferfish_spawn_egg',
     'spawn_egg_bat': 'bat_spawn_egg',
     'spawn_egg_camel': 'camel_spawn_egg',
     'spawn_egg_chicken': 'chicken_spawn_egg',
     'spawn_egg_cod': 'cod_spawn_egg',
     'spawn_egg_cow': 'cow_spawn_egg',
+    'spawn_egg_creeper': 'creeper_spawn_egg',
+    'spawn_egg_enderman': 'enderman_spawn_egg',
     'spawn_egg_frog': 'frog_spawn_egg',
     'spawn_egg_golem': 'iron_golem_spawn_egg',
     'spawn_egg_lavaslime': 'magma_cube_spawn_egg',
     'spawn_egg_piglin_bruiser': 'piglin_brute_spawn_egg',
     'spawn_egg_pig': 'pig_spawn_egg',
+    'spawn_egg_pufferfish': 'pufferfish_spawn_egg',
     'spawn_egg_salmon': 'salmon_spawn_egg',
     'spawn_egg_sheep': 'sheep_spawn_egg',
     'spawn_egg_skeleton': 'skeleton_spawn_egg',
@@ -3907,6 +3916,8 @@ const SPAWN_EGG_COLORS = {
     'chicken':         { c: '#a1a1a1', d: '#707070', h: '#c8c8c8', e: '#ff0000' },
     'zombie':          { c: '#00afaf', d: '#007070', h: '#00dfdf', e: '#799c65' },
     'skeleton':        { c: '#c1c1c1', d: '#919191', h: '#dedede', e: '#494949' },
+    'creeper':         { c: '#0da70b', d: '#076106', h: '#12d60e', e: '#000000' },
+    'enderman':        { c: '#161616', d: '#0a0a0a', h: '#2a2a2a', e: '#cc00ff' },
     'spider':          { c: '#342d27', d: '#1f1a16', h: '#4b4138', e: '#a80e0e' },
     'slime':           { c: '#51a03e', d: '#38732a', h: '#70cf57', e: '#7eb75b' },
     'lavaslime':       { c: '#340000', d: '#1c0000', h: '#540000', e: '#fcfc00' },
@@ -3914,37 +3925,15 @@ const SPAWN_EGG_COLORS = {
     'bat':             { c: '#4c3e30', d: '#2e251b', h: '#6a5743', e: '#0f0f0f' },
     'piglin_bruiser':  { c: '#995f40', d: '#6b3f27', h: '#bf7952', e: '#ffd83d' },
     'piglin_brute':    { c: '#995f40', d: '#6b3f27', h: '#bf7952', e: '#ffd83d' },
-    'goblin':          { c: '#3d6e32', d: '#274720', h: '#559c46', e: '#822424' },
     'golem':           { c: '#d0c8b0', d: '#9a9482', h: '#ece6d0', e: '#5e8238' },
     'iron_golem':      { c: '#d0c8b0', d: '#9a9482', h: '#ece6d0', e: '#5e8238' },
-    'wisp':            { c: '#66e0ff', d: '#2db8db', h: '#a8f2ff', e: '#ffffff' },
-    'fire_golem':      { c: '#c43e00', d: '#802900', h: '#f05b18', e: '#ffd700' },
-    'ice_golem':       { c: '#70c0e8', d: '#4585a8', h: '#aae0ff', e: '#ffffff' },
-    'jungle_guardian': { c: '#23591b', d: '#14360f', h: '#35822b', e: '#d4af37' },
-    'sand_wraith':     { c: '#d2b55b', d: '#96813e', h: '#e8ce7d', e: '#4a3b1a' },
-    'lich':            { c: '#3d2856', d: '#241633', h: '#5c3d82', e: '#8aff80' },
+    'turtle':          { c: '#e7e7e7', d: '#a3a3a3', h: '#ffffff', e: '#00afaf' },
+    'frog':            { c: '#597d36', d: '#38521f', h: '#78a649', e: '#9bb869' },
+    'camel':           { c: '#c4975a', d: '#876435', h: '#dfb57b', e: '#6b4d24' },
     'cod':             { c: '#c1a176', d: '#876e4c', h: '#dec39e', e: '#e5cbb0' },
     'salmon':          { c: '#8f2525', d: '#5e1717', h: '#b83b3b', e: '#0e4435' },
     'tropical_fish':   { c: '#ef6915', d: '#ab4609', h: '#ff8a42', e: '#ffffff' },
-    'clownfish':       { c: '#f07416', d: '#a64d08', h: '#ff9240', e: '#ffffff' },
-    'blue_tang':       { c: '#1d48b8', d: '#102e7d', h: '#3f6ee8', e: '#ffeb3b' },
-    'bass':            { c: '#4a6042', d: '#2e3d29', h: '#6a8a5f', e: '#8a9e7f' },
-    'crab':            { c: '#c73824', d: '#8a2415', h: '#e85843', e: '#ffffff' },
-    'pufferfish':      { c: '#e8a93a', d: '#a87720', h: '#ffc766', e: '#337ab7' },
-    'turtle':          { c: '#e7e7e7', d: '#a3a3a3', h: '#ffffff', e: '#00afaf' },
-    'bird':            { c: '#2196f3', d: '#12609e', h: '#5bb4f8', e: '#ffeb3b' },
-    'chicken':         { c: '#a1a1a1', d: '#707070', h: '#c8c8c8', e: '#ff0000' },
-    'lizard':          { c: '#3b8a32', d: '#24591e', h: '#54b849', e: '#c2a632' },
-    'piranha':         { c: '#a82c2c', d: '#6b1919', h: '#d44848', e: '#383838' },
-    'shark':           { c: '#60727d', d: '#3e4a52', h: '#849aa8', e: '#ffffff' },
-    'aether_bunny':    { c: '#8fe3ff', d: '#54a6c2', h: '#bdf0ff', e: '#ffffff' },
-    'angel':           { c: '#e8d584', d: '#a69651', h: '#fff3b0', e: '#ffffff' },
-    'cave_crawler':    { c: '#363434', d: '#1e1c1c', h: '#545050', e: '#e63946' },
-    'blind_horror':    { c: '#1c1b24', d: '#0e0d14', h: '#333140', e: '#9c27b0' },
-    'camel':           { c: '#c4975a', d: '#876435', h: '#dfb57b', e: '#6b4d24' },
-    'penguin':         { c: '#212529', d: '#0f1112', h: '#3c424a', e: '#ff9800' },
-    'frog':            { c: '#597d36', d: '#38521f', h: '#78a649', e: '#9bb869' },
-    'alien_bug':       { c: '#5d2e8c', d: '#361654', h: '#8445c4', e: '#00e5ff' }
+    'pufferfish':      { c: '#e8a93a', d: '#a87720', h: '#ffc766', e: '#337ab7' }
 };
 
 // Global cache: subtype -> canvas / data URL
@@ -3968,7 +3957,7 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     // Clear transparent
     ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
 
-    const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
+    const useMC = true;
     if (useMC) {
         const mcKey = (itemType === 'spawn_egg') 
             ? (MC_ITEM_MAP['spawn_egg_' + itemSubtype] || MC_ITEM_MAP[itemSubtype + '_spawn_egg'] || MC_ITEM_MAP[itemSubtype])
@@ -5291,23 +5280,70 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
         }
     }
 
-    // --- AETHER_BUNNY ---
-    else if (mobType === 'AETHER_BUNNY') {
+    // --- CREEPER ---
+    else if (mobType === 'CREEPER') {
+        fill('#4ba635'); noise(75, 166, 53, 30, 45);
         if (part === 'head_front') {
-            fill('#ffffff'); noise(255, 255, 255, 10, 20);
-            rect(2, 6, 3, 3, '#141414'); dot(2, 6, '#ffffff'); dot(4, 8, '#ffffff');
-            rect(11, 6, 3, 3, '#141414'); dot(11, 6, '#ffffff'); dot(13, 8, '#ffffff');
-            rect(7, 9, 2, 2, '#ff99aa'); dot(6, 11, '#ffb8c8'); dot(9, 11, '#ffb8c8');
-            dot(0, 9, '#d0d0d0'); dot(1, 9, '#d0d0d0');
-            dot(14, 9, '#d0d0d0'); dot(15, 9, '#d0d0d0');
-        } else if (part === 'ears') {
-            fill('#ffffff'); rect(3, 1, 10, 14, '#ffb0c0'); noise(255, 176, 192, 10, 15);
-        } else if (part === 'leg') {
-            fill('#ffffff'); noise(255, 255, 255, 8, 15);
-            rect(4, 13, 8, 3, '#ffc0cb');
+            // Authentic Minecraft Creeper Face
+            rect(2, 4, 3, 3, '#101010'); rect(11, 4, 3, 3, '#101010');
+            rect(6, 7, 4, 4, '#101010');
+            rect(4, 9, 8, 5, '#101010');
+            rect(6, 11, 4, 3, '#4ba635');
         } else {
-            fill('#ffffff'); noise(255, 255, 255, 12, 25);
-            rect(4, 4, 8, 8, '#f4f4f4');
+            // Mottled darker green patches
+            for (let i = 0; i < 5; i++) {
+                const x = (i * 7) % 14, y = (i * 9) % 14;
+                rect(x, y, 3, 3, '#2e7a1e');
+            }
+        }
+    }
+
+    // --- ENDERMAN ---
+    else if (mobType === 'ENDERMAN') {
+        fill('#161616'); noise(22, 22, 22, 8, 20);
+        if (part === 'head_front') {
+            // Glowing magenta/purple eyes
+            rect(1, 7, 4, 2, '#cc00ff'); rect(11, 7, 4, 2, '#cc00ff');
+            dot(2, 7, '#ff88ff'); dot(12, 7, '#ff88ff');
+        } else {
+            for (let i = 0; i < 4; i++) {
+                dot(Math.floor(Math.random() * 16), Math.floor(Math.random() * 16), '#2c1438');
+            }
+        }
+    }
+
+    // --- IRON GOLEM ---
+    else if (mobType === 'GOLEM') {
+        fill('#d4cfc5'); noise(212, 207, 197, 12, 22);
+        if (part === 'head_front') {
+            // Long cylindrical nose & red eyes
+            rect(7, 6, 2, 5, '#997c6c');
+            rect(3, 7, 3, 2, '#701010'); dot(4, 7, '#ff1010');
+            rect(10, 7, 3, 2, '#701010'); dot(11, 7, '#ff1010');
+            rect(3, 6, 10, 1, '#666058');
+        } else if (part === 'body') {
+            // Iron plating with moss/vines
+            rect(2, 3, 3, 10, '#4f7d38');
+            rect(9, 2, 2, 12, '#4f7d38');
+            rect(0, 12, 16, 2, '#b8b2a6');
+        } else if (part === 'arm') {
+            rect(1, 6, 3, 6, '#4f7d38');
+            rect(0, 14, 16, 2, '#9a9488');
+        } else if (part === 'leg') {
+            rect(0, 13, 16, 3, '#888278');
+        }
+    }
+
+    // --- PUFFERFISH ---
+    else if (mobType === 'PUFFERFISH') {
+        fill('#e8a635'); noise(232, 166, 53, 15, 25);
+        if (part === 'head_front' || part === 'body') {
+            rect(0, 11, 16, 5, '#d0e5ff');
+            rect(2, 5, 3, 3, '#101010'); dot(3, 5, '#ffffff');
+            rect(11, 5, 3, 3, '#101010'); dot(12, 5, '#ffffff');
+            rect(6, 9, 4, 2, '#443010');
+        } else {
+            rect(0, 10, 16, 6, '#d0e5ff');
         }
     }
 
@@ -5359,28 +5395,6 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
         }
     }
 
-    // --- PENGUIN ---
-    else if (mobType === 'PENGUIN') {
-        if (part === 'head_front') {
-            fill('#1c1c22'); noise(28, 28, 34, 10, 15);
-            rect(1, 4, 4, 6, '#ffffff');
-            rect(11, 4, 4, 6, '#ffffff');
-            dot(3, 5, '#111111'); dot(12, 5, '#111111');
-            rect(6, 7, 4, 4, '#f59e0b');
-            dot(7, 8, '#d97706'); dot(8, 8, '#d97706');
-        } else if (part === 'belly' || part === 'head_bottom') {
-            fill('#ffffff'); noise(245, 245, 250, 8, 12);
-        } else if (part === 'wing' || part === 'arm') {
-            fill('#1c1c22'); noise(28, 28, 34, 8, 15);
-            rect(0, 0, 4, 16, '#ffffff');
-        } else if (part === 'leg' || part === 'feet') {
-            fill('#f59e0b'); noise(245, 158, 11, 10, 15);
-            dot(4, 14, '#d97706'); dot(11, 14, '#d97706');
-        } else {
-            fill('#1c1c22'); noise(28, 28, 34, 10, 20);
-        }
-    }
-
     // --- FROG ---
     else if (mobType === 'FROG') {
         if (part === 'head_front') {
@@ -5421,57 +5435,6 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
         }
     }
 
-    // --- SHARK ---
-    else if (mobType === 'SHARK') {
-        if (part === 'head_front') {
-            fill('#4a5b6d'); noise(74, 91, 109, 10, 15);
-            rect(0, 9, 16, 7, '#e2e8f0'); noise(226, 232, 240, 6, 10);
-            rect(1, 4, 3, 2, '#0f172a'); dot(2, 4, '#ffffff');
-            rect(12, 4, 3, 2, '#0f172a'); dot(13, 4, '#ffffff');
-            rect(3, 8, 10, 4, '#1e293b');
-            for (let i = 4; i <= 11; i += 2) { dot(i, 8, '#ffffff'); dot(i, 11, '#ffffff'); }
-        } else if (part === 'fin') {
-            fill('#3d4b5a'); noise(61, 75, 90, 8, 12);
-            rect(0, 0, 4, 16, '#64748b');
-        } else {
-            fill('#4a5b6d'); noise(74, 91, 109, 12, 18);
-            rect(0, 10, 16, 6, '#e2e8f0');
-        }
-    }
-
-    // --- LIZARD ---
-    else if (mobType === 'LIZARD') {
-        if (part === 'head_front') {
-            fill('#2e8b57'); noise(46, 139, 87, 12, 20);
-            rect(2, 4, 3, 3, '#facc15'); rect(3, 4, 1, 3, '#000000');
-            rect(11, 4, 3, 3, '#facc15'); rect(12, 4, 1, 3, '#000000');
-            dot(5, 9, '#155724'); dot(10, 9, '#155724');
-            rect(3, 11, 10, 2, '#86efac');
-        } else if (part === 'tail') {
-            fill('#2e8b57'); noise(46, 139, 87, 10, 15);
-            rect(0, 4, 16, 2, '#155724'); rect(0, 10, 16, 2, '#155724');
-        } else {
-            fill('#2e8b57'); noise(46, 139, 87, 12, 22);
-            rect(2, 3, 12, 3, '#155724'); rect(2, 9, 12, 3, '#155724');
-        }
-    }
-
-    // --- BIRD ---
-    else if (mobType === 'BIRD') {
-        if (part === 'head_front') {
-            fill('#0284c7'); noise(2, 132, 199, 12, 20);
-            rect(2, 4, 3, 3, '#0f172a'); dot(3, 4, '#ffffff');
-            rect(11, 4, 3, 3, '#0f172a'); dot(12, 4, '#ffffff');
-            rect(6, 7, 4, 4, '#f59e0b'); dot(7, 8, '#d97706'); dot(8, 8, '#d97706');
-        } else if (part === 'wing') {
-            fill('#0369a1'); noise(3, 105, 161, 10, 18);
-            rect(0, 10, 16, 6, '#082f49');
-        } else {
-            fill('#0284c7'); noise(2, 132, 199, 15, 25);
-            rect(4, 5, 8, 8, '#38bdf8');
-        }
-    }
-
     // --- BAT ---
     else if (mobType === 'BAT') {
         if (part === 'head_front') {
@@ -5490,44 +5453,11 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
         }
     }
 
-    // --- CRAB ---
-    else if (mobType === 'CRAB') {
-        if (part === 'head_front' || part === 'body') {
-            fill('#dc2626'); noise(220, 38, 38, 12, 22);
-            rect(3, 2, 2, 3, '#000000'); dot(3, 2, '#ffffff');
-            rect(11, 2, 2, 3, '#000000'); dot(11, 2, '#ffffff');
-            rect(2, 6, 12, 4, '#ea580c');
-        } else if (part === 'claw') {
-            fill('#ea580c'); noise(234, 88, 12, 10, 18);
-            rect(1, 1, 6, 4, '#dc2626');
-            rect(9, 1, 6, 4, '#dc2626');
-            rect(4, 5, 8, 2, '#ffffff');
-        } else {
-            fill('#dc2626'); noise(220, 38, 38, 10, 15);
-        }
-    }
-
-    // --- PIRANHA ---
-    else if (mobType === 'PIRANHA') {
-        if (part === 'head_front') {
-            fill('#71717a'); noise(113, 113, 122, 10, 15);
-            rect(0, 8, 16, 8, '#b91c1c'); noise(185, 28, 28, 10, 18);
-            rect(1, 3, 3, 3, '#dc2626'); dot(2, 4, '#000000');
-            rect(12, 3, 3, 3, '#dc2626'); dot(13, 4, '#000000');
-            rect(3, 7, 10, 3, '#000000');
-            for (let i = 3; i <= 12; i += 2) { dot(i, 7, '#ffffff'); dot(i, 9, '#ffffff'); }
-        } else {
-            fill('#71717a'); noise(113, 113, 122, 12, 18);
-            rect(0, 9, 16, 7, '#b91c1c'); noise(185, 28, 28, 12, 20);
-        }
-    }
-
-    // --- FISH (COD, BASS, SALMON, TROPICAL_FISH) ---
-    else if (mobType === 'COD' || mobType === 'BASS' || mobType === 'SALMON' || mobType === 'TROPICAL_FISH') {
+    // --- FISH (COD, SALMON, TROPICAL_FISH) ---
+    else if (mobType === 'COD' || mobType === 'SALMON' || mobType === 'TROPICAL_FISH') {
         let fishBase = '#a09880';
         let fishR = 160, fishG = 152, fishB = 128;
-        if (mobType === 'BASS') { fishBase = '#446633'; fishR = 68; fishG = 102; fishB = 51; }
-        else if (mobType === 'SALMON') { fishBase = '#be3636'; fishR = 190; fishG = 54; fishB = 54; }
+        if (mobType === 'SALMON') { fishBase = '#be3636'; fishR = 190; fishG = 54; fishB = 54; }
         else if (mobType === 'TROPICAL_FISH') { fishBase = '#ff8800'; fishR = 255; fishG = 136; fishB = 0; }
 
         fill(fishBase); noise(fishR, fishG, fishB, 12, 20);
@@ -5543,11 +5473,7 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
 
     // --- DEFAULT & OTHER CREATURES ---
     else {
-        let base = '#888888';
-        let r = 136, g = 136, b = 136;
-        if (mobType === 'GOBLIN') { base = '#559922'; r = 85; g = 153; b = 34; }
-
-        fill(base); noise(r, g, b, 15, 25);
+        fill('#888888'); noise(136, 136, 136, 15, 25);
         if (part === 'head_front') {
             rect(2, 6, 2, 2, '#000000'); dot(2, 6, '#ffffff');
             rect(12, 6, 2, 2, '#000000'); dot(12, 6, '#ffffff');
