@@ -350,7 +350,7 @@ const BLOCK_PROPS = {
     [BLOCKS.CRYING_OBSIDIAN]: { name: 'Crying Obsidian', health: 15, transparent: false, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.MYCELIUM]:      { name: 'Mycelium',       health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
     [BLOCKS.AETHER_LEAVES]: { name: 'Aether Leaves',  health: 1, transparent: true, emissive: 0.2, solid: true, drops: null, flammable: true },
-    [BLOCKS.AETHER_PORTAL]: { name: 'Aether Portal',  health: 0, transparent: true, emissive: 1.0, solid: false, drops: null },
+    [BLOCKS.AETHER_PORTAL]: { name: 'Aether Portal',  health: 0, transparent: true, emissive: 0.5, solid: false, drops: null },
     [BLOCKS.AETHER_CLOUD]:  { name: 'Aether Cloud',   health: 1, transparent: true, emissive: 0.5, solid: true, drops: null },
     [BLOCKS.AETHER_TALL_GRASS]: { name: 'Aether Tall Grass', health: 1, transparent: true, emissive: 0.2, solid: false, isCross: true, drops: null },
     [BLOCKS.AETHER_FLOWER]: { name: 'Aether Flower',  health: 1, transparent: true, emissive: 0.4, solid: false, isCross: true, drops: null },
@@ -2849,7 +2849,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.SAVANNA_GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
     [BLOCKS.ACACIA_WOOD]: { top: 'acacia_log_top', side: 'acacia_log', bottom: 'acacia_log_top' },
     [BLOCKS.ACACIA_LEAVES]: 'acacia_leaves',
-    [BLOCKS.MUD]: 'podzol_top',
+    [BLOCKS.MUD]: 'mud',
     [BLOCKS.SWAMP_GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
     [BLOCKS.SWAMP_WATER]: 'water_still',
     [BLOCKS.ALIEN_SPORE_STEM]: 'warped_stem',
@@ -3311,6 +3311,7 @@ const LOCAL_ASSET_MAP = {
     "sapphire_ore": "assets/mc/block/sapphire_ore.png",
     "ruby": "assets/mc/item/ruby.png",
     "sapphire": "assets/mc/item/sapphire.png",
+    "mud": "assets/mc/block/mud.png",
     "ruby_sword": "assets/mc/item/ruby_sword.png",
     "ruby_pickaxe": "assets/mc/item/ruby_pickaxe.png",
     "ruby_axe": "assets/mc/item/ruby_axe.png",
@@ -3467,67 +3468,85 @@ export async function createTextureAtlas(useMinecraft = true) {
             
             if (texName) {
                 promises.push(loadMinecraftTexture(texName).then(img => {
-                    if (img) {
+                        if (img) {
                         ctx.clearRect(entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         
                         // Tint grass, leaves, and swamp water
                         const isWater = (texName === 'water_flow' || texName === 'water_still');
                         const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || (isWater && bt === BLOCKS.SWAMP_WATER) || texName === 'vine' || texName.includes('tall_grass') || texName === 'fern' || texName === 'lily_pad');
                         
+                        // Helper: force all pixels in atlas region to fully opaque
+                        const forceOpaque = (ax, ay) => {
+                            const pd = ctx.getImageData(ax, ay, TEX_SIZE, TEX_SIZE);
+                            for (let pi = 3; pi < pd.data.length; pi += 4) pd.data[pi] = 255;
+                            ctx.putImageData(pd, ax, ay);
+                        };
+
                         let tintColor = null;
                         if (requiresTint) {
                             // Draw the image first to a temporary canvas so we can tint it
                             const tCanvas = document.createElement('canvas');
                             tCanvas.width = TEX_SIZE; tCanvas.height = TEX_SIZE;
                             const tCtx = tCanvas.getContext('2d');
-                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
                             
                             // Determine tint color
                             let tint = '#8ee066'; // default grass (brightened)
                             
                             if (isWater) {
-                                tint = '#4c6559'; // Swamp water
+                                // For swamp water: draw white base then overlay dark green so it stays visible
+                                tCtx.fillStyle = '#3d5a40';
+                                tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+                                tCtx.globalAlpha = 0.6;
+                                tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                                tCtx.globalAlpha = 1.0;
+                                ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
+                                forceOpaque(entry.col * TEX_SIZE, entry.row * TEX_SIZE);
+                                tintColor = '#3d5a40';
+                            } else {
+                                if (bt === BLOCKS.SWAMP_GRASS) tint = '#6a7039';
+                                else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
+                                else if (bt === BLOCKS.HIGHLANDS_GRASS) tint = '#659c40';
+                                else if (bt === BLOCKS.AETHER_GRASS) tint = '#b3ffb3';
+                                else if (texName.includes('leaves') || texName === 'vine' || texName === 'fern' || texName.includes('tall_grass') || texName === 'lily_pad') {
+                                    if (bt === BLOCKS.ACACIA_LEAVES) tint = '#aea42a';
+                                    else if (bt === BLOCKS.PINE_LEAVES) tint = '#4f855f';
+                                    else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#659c40';
+                                    else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff';
+                                    else if (texName === 'fern' || texName.includes('tall_grass')) tint = '#70c942';
+                                    else tint = '#6fc042';
+                                }
+                                tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                                tCtx.globalCompositeOperation = 'multiply';
+                                tintColor = tint;
+                                tCtx.fillStyle = tint;
+                                tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+                                // Restore alpha channel using destination-in
+                                tCtx.globalCompositeOperation = 'destination-in';
+                                tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                                ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
                             }
-                            else if (bt === BLOCKS.SWAMP_GRASS) tint = '#6a7039';
-                            else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
-                            else if (bt === BLOCKS.HIGHLANDS_GRASS) tint = '#659c40';
-                            else if (bt === BLOCKS.AETHER_GRASS) tint = '#b3ffb3';
-                            
-                            else if (texName.includes('leaves') || texName === 'vine' || texName === 'fern' || texName.includes('tall_grass') || texName === 'lily_pad') {
-                                if (bt === BLOCKS.ACACIA_LEAVES) tint = '#aea42a'; // Savanna leaves
-                                else if (bt === BLOCKS.PINE_LEAVES) tint = '#4f855f'; // Taiga/Pine
-                                else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#659c40'; // Dark Forest leaves
-                                else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff'; // Don't heavily tint cherry leaves, Minecraft cherry leaves are intrinsically pink
-                                else if (texName === 'fern' || texName.includes('tall_grass')) tint = '#70c942'; // bright vibrant ferns and tall grass
-                                else tint = '#6fc042'; // default leaves
-                            }
-                            
-                            tCtx.globalCompositeOperation = 'multiply';
-                            tintColor = tint;
-                            tCtx.fillStyle = tint;
-                            tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-                            
-                            // Restore alpha channel using destination-in
-                            tCtx.globalCompositeOperation = 'destination-in';
-                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
-                            
-                            ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
                         } else if (texName === 'end_portal_frame_side') {
-                            // Vanilla MC end_portal_frame_side has 3 empty rows at top because frame in MC is 13/16 height.
-                            // Slopcraft blocks are full 16x16 cubes, so stretch the non-empty 13 rows across all 16 rows.
                             ctx.drawImage(img, 0, 3, TEX_SIZE, 13, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         } else {
                             ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         }
+
+                        // For water blocks: force all atlas pixels fully opaque so material opacity controls transparency
+                        if (isWater && bt !== BLOCKS.SWAMP_WATER) {
+                            forceOpaque(entry.col * TEX_SIZE, entry.row * TEX_SIZE);
+                        }
                         
-                        // If animated strip, save it to animatedFrames and clear the old procedural canvas
+                        // If animated strip, save it to animatedFrames
                         if (img.height > TEX_SIZE) {
+                            const forceOpaqueFlag = isWater;
                             const frameInfo = animatedFrames.find(f => f.x === entry.col * TEX_SIZE && f.y === entry.row * TEX_SIZE);
                             if (frameInfo) {
                                 frameInfo.isMC = true;
                                 frameInfo.img = img;
                                 frameInfo.frames = img.height / TEX_SIZE;
-                                frameInfo.tint = requiresTint ? tintColor : null;
+                                frameInfo.tint = (!isWater && requiresTint) ? tintColor : null;
+                                frameInfo.forceOpaque = forceOpaqueFlag;
+                                frameInfo.swampWater = (isWater && bt === BLOCKS.SWAMP_WATER);
                             } else {
                                 animatedFrames.push({
                                     x: entry.col * TEX_SIZE,
@@ -3535,7 +3554,9 @@ export async function createTextureAtlas(useMinecraft = true) {
                                     isMC: true,
                                     img: img,
                                     frames: img.height / TEX_SIZE,
-                                    tint: requiresTint ? tintColor : null
+                                    tint: (!isWater && requiresTint) ? tintColor : null,
+                                    forceOpaque: forceOpaqueFlag,
+                                    swampWater: (isWater && bt === BLOCKS.SWAMP_WATER),
                                 });
                             }
                         }
@@ -3693,7 +3714,20 @@ export async function createTextureAtlas(useMinecraft = true) {
                 ctx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
                 
                 // If it requires tint, multiply tint color over it
-                if (frame.tint) {
+                if (frame.swampWater) {
+                    tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                    tmpCtx.fillStyle = '#3d5a40';
+                    tmpCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+                    tmpCtx.globalAlpha = 0.6;
+                    tmpCtx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                    tmpCtx.globalAlpha = 1.0;
+                    ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                    ctx.drawImage(tmp, 0, 0, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                    // Force opaque
+                    const pd2 = ctx.getImageData(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                    for (let pi = 3; pi < pd2.data.length; pi += 4) pd2.data[pi] = 255;
+                    ctx.putImageData(pd2, frame.x, frame.y);
+                } else if (frame.tint) {
                     tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
                     tmpCtx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
                     tmpCtx.globalCompositeOperation = 'multiply';
@@ -3706,6 +3740,13 @@ export async function createTextureAtlas(useMinecraft = true) {
                     
                     ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
                     ctx.drawImage(tmp, 0, 0, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                }
+                
+                // Force water pixels opaque so material opacity controls transparency
+                if (frame.forceOpaque) {
+                    const pd = ctx.getImageData(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                    for (let pi = 3; pi < pd.data.length; pi += 4) pd.data[pi] = 255;
+                    ctx.putImageData(pd, frame.x, frame.y);
                 }
                 
                 didUpdate = true;
@@ -5038,6 +5079,83 @@ export function generateSpellTexture(element) {
 }
 
 
+// ============================================================
+// MC Entity Skin Config — maps each mob to CDN URL + face UVs
+// [sx, sy, sw, sh] = source rect in skin sheet → scaled to 16x16
+// ============================================================
+const _ENTITY_BASE = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/entity/';
+const MC_MOB_SKIN_CONFIG = {
+    // --- Quadrupeds (head UVs same for all; body/leg vary) ---
+    COW:  { url: _ENTITY_BASE + 'cow/cow.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [18,20,10,14], leg: [0,16,4,16], horn: [22,0,6,4], snout: [16,8,8,8] },
+    PIG:  { url: _ENTITY_BASE + 'pig/pig.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [28,16,8,14], leg: [0,16,4,16], snout: [16,8,8,8] },
+    SHEEP: { url: _ENTITY_BASE + 'sheep/sheep.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [28,16,8,14], leg: [0,16,4,16] },
+    CHICKEN: { url: _ENTITY_BASE + 'chicken.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [0,16,4,12], wing: [24,13,8,9] },
+    // --- Humanoids (64x64 skin layout) ---
+    ZOMBIE: { url: _ENTITY_BASE + 'zombie/zombie.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
+    SKELETON: { url: _ENTITY_BASE + 'skeleton/skeleton.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
+    CREEPER: { url: _ENTITY_BASE + 'creeper/creeper.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [4,20,4,12] },
+    ENDERMAN: { url: _ENTITY_BASE + 'enderman/enderman.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
+    PIGLIN_BRUISER: { url: _ENTITY_BASE + 'piglin/piglin_brute.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
+    GOLEM: { url: _ENTITY_BASE + 'iron_golem/iron_golem.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
+    // --- Other ---
+    SPIDER: { url: _ENTITY_BASE + 'spider/spider.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [0,16,16,8] },
+    SLIME: { url: _ENTITY_BASE + 'slime/slime_outer.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [8,8,8,8] },
+    LAVASLIME: { url: _ENTITY_BASE + 'slime/magma_cube.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [8,8,8,8] },
+    BAT: { url: _ENTITY_BASE + 'bat.png',
+        head_front: [0,0,6,6], head_back: [12,0,6,6], head_top: [6,0,6,6], head_bottom: [12,0,6,6], head_side: [0,0,6,6],
+        body: [0,6,6,10] },
+    TURTLE: { url: _ENTITY_BASE + 'turtle/big_sea_turtle.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [10,10,8,8], leg: [0,16,6,6] },
+    FROG: { url: _ENTITY_BASE + 'frog/temperate_frog.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [0,14,8,8], leg: [0,14,4,6] },
+    CAMEL: { url: _ENTITY_BASE + 'camel/camel.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [26,20,8,12], leg: [0,18,4,14] },
+    // --- Fish ---
+    COD:  { url: _ENTITY_BASE + 'fish/cod.png',
+        head_front: [0,0,8,8], head_back: [16,0,8,8], head_top: [8,0,8,4], head_bottom: [16,0,8,4], head_side: [0,0,4,8],
+        body: [0,8,8,8] },
+    SALMON: { url: _ENTITY_BASE + 'fish/salmon.png',
+        head_front: [0,0,8,8], head_back: [16,0,8,8], head_top: [8,0,8,4], head_bottom: [16,0,8,4], head_side: [0,0,4,8],
+        body: [0,8,8,8] },
+    TROPICAL_FISH: { url: _ENTITY_BASE + 'fish/tropical_fish_a.png',
+        head_front: [0,0,8,8], head_back: [16,0,8,8], head_top: [8,0,8,4], head_bottom: [16,0,8,4], head_side: [0,0,4,8],
+        body: [0,8,8,8] },
+    PUFFERFISH: { url: _ENTITY_BASE + 'fish/pufferfish0.png',
+        head_front: [0,0,8,8], head_back: [0,0,8,8], head_top: [8,0,8,4], head_bottom: [0,0,8,4], head_side: [0,0,4,8],
+        body: [0,8,8,8] },
+};
+// Preloaded skin image cache to avoid redundant network requests
+const _mobSkinCache = {};
+
 export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
     if (typeof part === 'function') {
         onLoaded = part;
@@ -5480,7 +5598,44 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
         }
     }
 
-    if (onLoaded) onLoaded(canvas);
+    // --- MC Entity Skin loading: replace procedural texture with real MC skin face ---
+    const _skinCfg = MC_MOB_SKIN_CONFIG[mobType];
+    if (_skinCfg) {
+        const _uvRect = _skinCfg[part];
+        if (_uvRect) {
+            const _applyFace = (img) => {
+                const [sx, sy, sw, sh] = _uvRect;
+                ctx.clearRect(0, 0, 16, 16);
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 16, 16);
+                if (onLoaded) onLoaded(canvas);
+            };
+            const _cached = _mobSkinCache[_skinCfg.url];
+            if (_cached instanceof HTMLImageElement && _cached.complete && _cached.naturalWidth > 0) {
+                // Already loaded — apply immediately
+                _applyFace(_cached);
+            } else if (!_cached) {
+                // Start loading; store a promise sentinel so concurrent calls wait
+                _mobSkinCache[_skinCfg.url] = 'loading';
+                const _img = new Image();
+                _img.crossOrigin = 'anonymous';
+                _img.onload = () => {
+                    _mobSkinCache[_skinCfg.url] = _img;
+                    _applyFace(_img);
+                };
+                _img.onerror = () => { _mobSkinCache[_skinCfg.url] = null; };
+                _img.src = _skinCfg.url;
+            } else if (_cached !== 'loading') {
+                // null = failed, keep procedural fallback
+                if (onLoaded) onLoaded(canvas);
+            }
+            // If 'loading', onLoaded will be called when the image arrives
+        } else {
+            if (onLoaded) onLoaded(canvas);
+        }
+    } else {
+        if (onLoaded) onLoaded(canvas);
+    }
     return canvas;
 }
 

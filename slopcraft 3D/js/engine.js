@@ -598,12 +598,20 @@ export class Chunk {
                                 let depth = Math.max(0, 22 - y);
                                 waterFade = Math.min(1.0, depth / 10.0);
                             }
-                            
-                            const wc = { r: 0x11/255, g: 0x33/255, b: 0x66/255 };
 
                             for (let i = 0; i < 4; i++) {
                                 let c = aoColor[i];
-                                if (waterFade > 0) {
+                                // Water/swamp water: use biome tint color as vertex color so UV tile seams are invisible
+                                if (currentBlockType === BLOCKS.WATER) {
+                                    _colors[colorCount++] = 0.247; // R  #3F76E4 = MC water biome color
+                                    _colors[colorCount++] = 0.463; // G
+                                    _colors[colorCount++] = 0.894; // B
+                                } else if (currentBlockType === BLOCKS.SWAMP_WATER) {
+                                    _colors[colorCount++] = 0.239; // R  #3D5A40 swamp green
+                                    _colors[colorCount++] = 0.353; // G
+                                    _colors[colorCount++] = 0.251; // B
+                                } else if (waterFade > 0) {
+                                    const wc = { r: 0x11/255, g: 0x33/255, b: 0x66/255 };
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.r * waterFade;
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.g * waterFade;
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.b * waterFade;
@@ -863,11 +871,11 @@ export class World {
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
-            alphaTest: 0.5,
+            alphaTest: 0.1,
             side: THREE.DoubleSide,
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 2.0,
+            emissiveIntensity: 0.8,
             shininess: 0
         });
         const matSlightGlowOpaque = new THREE.MeshPhongMaterial({

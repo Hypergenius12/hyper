@@ -1546,10 +1546,22 @@ class Game {
                 // Place block
                 const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
                 const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
-                if (curBlock === BLOCKS.AIR || curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER || curBlock === BLOCKS.LAVA) {
+                // Prevent placing blocks inside the player's AABB (0.6 wide × 1.8 tall)
+                const _pp = this.player.position;
+                const _playerOverlap = (
+                    _pp.x - 0.3 < placePos.x + 1 && _pp.x + 0.3 > placePos.x &&
+                    _pp.y       < placePos.y + 1 && _pp.y + 1.8  > placePos.y &&
+                    _pp.z - 0.3 < placePos.z + 1 && _pp.z + 0.3  > placePos.z
+                );
+                if (!_playerOverlap && (curBlock === BLOCKS.AIR || curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER || curBlock === BLOCKS.LAVA)) {
                     if (slot.item.subtype === BLOCKS.DUNGEON_DOOR) {
                         const curBlockTop = this.world.getBlock(placePos.x, placePos.y + 1, placePos.z);
-                        if (curBlockTop === BLOCKS.AIR || curBlockTop === BLOCKS.WATER || curBlockTop === BLOCKS.SWAMP_WATER || curBlockTop === BLOCKS.LAVA) {
+                        const _topOverlap = (
+                            _pp.x - 0.3 < placePos.x + 1 && _pp.x + 0.3 > placePos.x &&
+                            _pp.y       < placePos.y + 2 && _pp.y + 1.8  > placePos.y + 1 &&
+                            _pp.z - 0.3 < placePos.z + 1 && _pp.z + 0.3  > placePos.z
+                        );
+                        if (!_topOverlap && (curBlockTop === BLOCKS.AIR || curBlockTop === BLOCKS.WATER || curBlockTop === BLOCKS.SWAMP_WATER || curBlockTop === BLOCKS.LAVA)) {
                             this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype);
                             this.world.setBlock(placePos.x, placePos.y + 1, placePos.z, slot.item.subtype);
                             this.audio.playPlace();
