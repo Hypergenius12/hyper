@@ -3,7 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials } from './textures.js?v=82';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials } from './textures.js?v=87';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -306,11 +306,6 @@ export class Player {
                 this.velocity.y += 18 * dt;
                 // Cap upward velocity so we don't shoot out of the water like a rocket
                 if (this.velocity.y > 4.5) this.velocity.y = 4.5;
-            } else {
-                const blockInProps = getBlockProperties(blockIn);
-                if (blockInProps && blockInProps.solid) {
-                    this.position.y += Math.max(1, dt * 10);
-                }
             }
         }
 
@@ -330,8 +325,8 @@ export class Player {
         // Fall clamp
         if (this.velocity.y < -50) this.velocity.y = -50;
 
-        // Void damage
-        if (!this.isCreative && this.position.y < -10) {
+        // Void damage (except in Aether where falling drops into the Overworld sky)
+        if (!this.isCreative && this.position.y < -10 && (!world || world.dimension !== 'aether')) {
             this.takeDamage(1000);
         }
 

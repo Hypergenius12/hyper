@@ -597,8 +597,8 @@ function safeSetBlock(blocks, x, y, z, type, onlyAir = false) {
 }
 
 function generateSugarcane(blocks, x, y, z, rng) {
-    // Generate 1 to 3 blocks high
-    const height = 1 + Math.floor(rng() * 3);
+    // Generate 2 to 3 blocks high
+    const height = 2 + Math.floor(rng() * 2);
     for (let i = 0; i < height; i++) {
         safeSetBlock(blocks, x, y + i, z, BLOCKS.SUGARCANE, true);
     }
@@ -895,14 +895,22 @@ export function generateChunkTerrain(cx, cz, params) {
                     continue; // Done with underwater flora
                 }
                 
-                // Sugarcane logic
-                if ((surfaceY === params.seaLevel || surfaceY === params.seaLevel + 1) && r < 0.1 && (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome === BIOMES.SWAMP || biome === BIOMES.DESERT)) {
-                    // It must be placed exactly near water. We know beaches are sand here.
-                    const left = getColumnInfo(wx - 1, wz, params).surfaceY;
-                    const right = getColumnInfo(wx + 1, wz, params).surfaceY;
-                    const top = getColumnInfo(wx, wz - 1, params).surfaceY;
-                    const bottom = getColumnInfo(wx, wz + 1, params).surfaceY;
-                    if (left < surfaceY || right < surfaceY || top < surfaceY || bottom < surfaceY) {
+                // Sugarcane logic: rare next to rivers/water on sand
+                const groundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                const groundBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[groundIdx] : BLOCKS.AIR;
+                const isSandGround = groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.RED_SAND;
+                
+                if (isSandGround && surfaceY >= params.seaLevel && surfaceY <= params.seaLevel + 3 && r < 0.12) {
+                    const n1 = getColumnInfo(wx - 1, wz, params);
+                    const n2 = getColumnInfo(wx + 1, wz, params);
+                    const n3 = getColumnInfo(wx, wz - 1, params);
+                    const n4 = getColumnInfo(wx, wz + 1, params);
+                    const nearWater = [n1, n2, n3, n4].some(n => 
+                        n.surfaceY < params.seaLevel || 
+                        (n.bData && n.bData.lakeSurfaceY > 0 && n.surfaceY <= n.bData.lakeSurfaceY) ||
+                        n.surfaceY < surfaceY
+                    );
+                    if (nearWater) {
                         generateSugarcane(blocks, tx, surfaceY + 1, tz, floraRng);
                         continue; // Skip other flora here
                     }
@@ -927,9 +935,9 @@ export function generateChunkTerrain(cx, cz, params) {
                 }
 
                 // Don't spawn flora if a structure overwrote the ground
-                const groundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                const groundBlock = blocks[groundIdx];
-                const isValidGround = groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.SNOW || groundBlock === BLOCKS.MYCELIUM || groundBlock === BLOCKS.SWAMP_GRASS || groundBlock === BLOCKS.SAVANNA_GRASS || groundBlock === BLOCKS.ALIEN_GRASS || groundBlock === BLOCKS.ALIEN_STONE || groundBlock === BLOCKS.RED_SAND || groundBlock === BLOCKS.PODZOL || groundBlock === BLOCKS.BASALT || groundBlock === BLOCKS.SMOOTH_BASALT || groundBlock === BLOCKS.BLACKSTONE;
+                const currentGroundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                const currentGroundBlock = blocks[currentGroundIdx];
+                const isValidGround = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.SAND || currentGroundBlock === BLOCKS.SNOW || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.ALIEN_GRASS || currentGroundBlock === BLOCKS.ALIEN_STONE || currentGroundBlock === BLOCKS.RED_SAND || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.BASALT || currentGroundBlock === BLOCKS.SMOOTH_BASALT || currentGroundBlock === BLOCKS.BLACKSTONE;
                 if (!isValidGround) continue;
 
                 // Volcanic Biome Spire Columns and Fire

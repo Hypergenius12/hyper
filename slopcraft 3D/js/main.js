@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=86';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=86';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=86';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=86';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=86';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=86';
-import { AudioManager } from './audio.js?v=86';
-import { BiomeMap } from './map.js?v=86';
-import { DevMode } from './dev.js?v=86';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=87';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=87';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=87';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=87';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=87';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=87';
+import { AudioManager } from './audio.js?v=87';
+import { BiomeMap } from './map.js?v=87';
+import { DevMode } from './dev.js?v=87';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -847,7 +847,8 @@ class Game {
                 s === window.BLOCKS.GLOW_LEAVES ||
                 s === window.BLOCKS.CRAFTING_TABLE ||
                 s === window.BLOCKS.BOOKSHELF ||
-                s === window.BLOCKS.CHEST_BLOCK
+                s === window.BLOCKS.CHEST_BLOCK ||
+                s === window.BLOCKS.COAL_BLOCK
             )) return true;
             if (typeof s === 'string' && (s.includes('wood') || s.includes('plank') || s.includes('log') || s.includes('stick') || s.includes('coal'))) return true;
             if (t === 'equipment' && (
@@ -873,8 +874,9 @@ class Game {
             if (canSmelt && !isBurning && isFuel(f.fuel)) {
                 let fuelVal = 10.0; // Sticks/Planks/Tools
                 const fs = f.fuel.item.subtype;
-                if (fs === 'coal') fuelVal = 40.0;
-                else if (fs === window.BLOCKS.WOOD || fs === window.BLOCKS.ACACIA_WOOD || fs === window.BLOCKS.AUTUMN_WOOD || fs === window.BLOCKS.PALM_WOOD || fs === window.BLOCKS.PINE_WOOD || fs === window.BLOCKS.AETHER_WOOD || fs === window.BLOCKS.DARK_OAK_WOOD || fs === window.BLOCKS.CHERRY_LOG || (typeof fs === 'string' && fs.includes('log'))) fuelVal = 15.0;
+                if (fs === 'coal') fuelVal = 76.0;
+                else if (fs === window.BLOCKS.COAL_BLOCK) fuelVal = 684.0;
+                else if (fs === window.BLOCKS.WOOD || fs === window.BLOCKS.ACACIA_WOOD || fs === window.BLOCKS.AUTUMN_WOOD || fs === window.BLOCKS.PALM_WOOD || fs === window.BLOCKS.PINE_WOOD || fs === window.BLOCKS.AETHER_WOOD || fs === window.BLOCKS.DARK_OAK_WOOD || fs === window.BLOCKS.CHERRY_LOG || (typeof fs === 'string' && fs.includes('log'))) fuelVal = 20.0;
                 
                 f.maxBurnTime = fuelVal;
                 f.burnTime = fuelVal;
@@ -889,7 +891,7 @@ class Game {
                 f.isSmelting = true;
                 
                 if (canSmelt) {
-                    f.progress += dt / 5.0; // 5 seconds to smelt 1 item
+                    f.progress += dt / 9.5; // ~9.5 seconds to smelt 1 item
                     if (f.progress >= 1.0) {
                         f.progress = 0;
                         f.input.count--;
@@ -1710,6 +1712,15 @@ class Game {
             this.input.keys._creativeMode = this.input.creativeMode;
             this.player.update(dt, this.input.keys, this.input.mouse, this.world);
             this.handleInput(dt);
+
+            // Falling from Aether sky islands into the Overworld sky
+            if (this.currentDimension === 'aether' && this.player.position.y < -3 && !this.isWarping) {
+                const targetX = this.player.position.x;
+                const targetZ = this.player.position.z;
+                this.warpToNewPlanet('overworld', { x: targetX, y: 220, z: targetZ });
+                if (this.audio && this.audio.playPortalTravel) this.audio.playPortalTravel();
+                return;
+            }
 
             if (this.player.health <= 0) {
                 // Respawn
@@ -2595,7 +2606,7 @@ class Game {
         }
     }
 
-    warpToNewPlanet(targetDim = 'nether') {
+    warpToNewPlanet(targetDim = 'nether', overrideSpawnPos = null) {
         if (!this.isReady) return;
         this.isReady = false;
         this.isWarping = true;
@@ -2603,7 +2614,7 @@ class Game {
         const isAether = targetDim === 'aether';
         const isWarpingToDim = targetDim !== 'overworld';
 
-        if (isWarpingToDim) {
+        if (isWarpingToDim && !overrideSpawnPos) {
             // Save the exact position we left from and the portal type
             this.overworldReturnPos = this.player.position.clone();
             this.lastPortalDim = targetDim;
@@ -2614,7 +2625,7 @@ class Game {
         fade.style.position = 'fixed';
         fade.style.top = '0'; fade.style.left = '0';
         fade.style.width = '100%'; fade.style.height = '100%';
-        fade.style.backgroundColor = isWarpingToDim ? (isAether ? 'white' : '#400000') : 'white';
+        fade.style.backgroundColor = isWarpingToDim ? (isAether ? 'white' : '#400000') : (overrideSpawnPos ? '#c8e6ff' : 'white');
         fade.style.opacity = '0';
         fade.style.transition = 'opacity 1.5s ease-in-out';
         fade.style.zIndex = '9999';
@@ -2630,13 +2641,26 @@ class Game {
             this.currentDimension = targetDim;
             this.world.dimension = targetDim;
 
-            // Clear World
-            for (const chunk of this.world.chunks.values()) {
-                chunk.dispose();
+            // Thoroughly clear World and remove any leftover scene chunk meshes
+            this.world.clearAll();
+
+            // Clear doors from old dimension
+            for (const door of this.doors.values()) {
+                if (door && door.mesh) this.engine.scene.remove(door.mesh);
             }
-            this.world.chunks.clear();
-            this.world.chunksToGenerate = [];
-            this.world.chunksToBuild = [];
+            this.doors.clear();
+
+            // Clear chest visuals from old dimension
+            for (const visual of this.chestVisuals.values()) {
+                visual.dispose();
+            }
+            this.chestVisuals.clear();
+
+            // Clear burning blocks
+            for (const burn of this.burningBlocks.values()) {
+                if (burn && burn.mesh) this.engine.scene.remove(burn.mesh);
+            }
+            this.burningBlocks.clear();
 
             // Clear entities
             for (const mob of this.entityManager.mobs) mob.dispose();
@@ -2646,7 +2670,10 @@ class Game {
 
             // Reset Player
             let spawnPos;
-            if (isWarpingToDim) {
+            if (overrideSpawnPos) {
+                spawnPos = overrideSpawnPos;
+                this.pendingPortal = null;
+            } else if (isWarpingToDim) {
                 spawnPos = findSafeSpawn(this.planetParams, targetDim);
                 this.pendingPortal = { pos: spawnPos, isNether: targetDim === 'nether', isAether: targetDim === 'aether' };
             } else {
@@ -2654,9 +2681,47 @@ class Game {
                 const returnDim = this.lastPortalDim || 'nether';
                 this.pendingPortal = { pos: spawnPos, isNether: returnDim === 'nether', isAether: returnDim === 'aether' };
             }
-            // Center player in the block to avoid wall clipping
-            this.player.position.set(spawnPos.x + 0.5, spawnPos.y, spawnPos.z + 0.5);
-            this.player.velocity.set(0, 0, 0);
+
+            if (overrideSpawnPos) {
+                this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
+                this.player.velocity.set(0, -10, 0); // Gentle falling through clouds
+            } else {
+                // Center player in the block to avoid wall clipping
+                this.player.position.set(spawnPos.x + 0.5, spawnPos.y, spawnPos.z + 0.5);
+                this.player.velocity.set(0, 0, 0);
+            }
+
+            // Immediately preload the 3x3 surrounding chunks synchronously so the world is fully solid & visible when fade lifts
+            const chunkGenFn = targetDim === 'nether' ? generateNetherChunk : (targetDim === 'aether' ? generateAetherChunk : generateChunkTerrain);
+            this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), 0);
+            while (this.world.chunksToGenerate.length > 0) {
+                const chunk = this.world.chunksToGenerate.shift();
+                if (!this.world.chunks.has(this.world.getChunkKey(chunk.cx, chunk.cz))) continue;
+                chunk.blocks = chunkGenFn(chunk.cx, chunk.cz, this.planetParams);
+                chunk.dirty = true;
+                this.world.chunksToBuild.push(chunk);
+            }
+            while (this.world.chunksToBuild.length > 0) {
+                const chunk = this.world.chunksToBuild.shift();
+                if (chunk.dirty) {
+                    this.world.textureAtlas.sharedMaterials = this.world.sharedMaterials;
+                    const neighborChunks = [
+                        [null, null, null],
+                        [null, null, null],
+                        [null, null, null]
+                    ];
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dz = -1; dz <= 1; dz++) {
+                            const key = this.world.getChunkKey(chunk.cx + dx, chunk.cz + dz);
+                            neighborChunks[dx + 1][dz + 1] = this.world.chunks.get(key) || null;
+                        }
+                    }
+                    const mesh = chunk.buildMesh(this.world.textureAtlas, neighborChunks);
+                    if (mesh && !mesh.parent) {
+                        this.world.scene.add(mesh);
+                    }
+                }
+            }
 
             // Update UI/Env
             this.lighting.timeOfDay = 0.5;

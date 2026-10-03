@@ -810,6 +810,7 @@ class UISystem {
             if (sub === 'pickaxe_wood')      return { mineSpeed: 1.5, damage: 2, chopSpeed: 1.0 };
             if (sub === 'axe_wood')          return { chopSpeed: 1.5, damage: 3, mineSpeed: 1.0 };
             if (sub === 'shovel_wood')       return { digSpeed: 1.5, damage: 1, mineSpeed: 1.0, chopSpeed: 1.0 };
+            if (sub === 'bow')               return { range: 25, damage: 6, passive: 'Ranged Weapon' };
             // Armor
             if (sub.startsWith('head_') || sub.startsWith('helmet_')) return { protection: sub.includes('diamond') ? 5 : (sub.includes('gold') ? 3 : 2) };
             if (sub.startsWith('chest_')) return { protection: sub.includes('diamond') ? 10 : (sub.includes('gold') ? 7 : 5) };
@@ -898,8 +899,22 @@ class UISystem {
             { type: 'material',  subtype: 'iron_ingot',      name: 'Iron Ingot' },
             { type: 'material',  subtype: 'gold_ingot',      name: 'Gold Ingot' },
             { type: 'material',  subtype: 'diamond',         name: 'Diamond' },
+            { type: 'material',  subtype: 'emerald',         name: 'Emerald' },
+            { type: 'material',  subtype: 'lapis_lazuli',    name: 'Lapis Lazuli' },
+            { type: 'material',  subtype: 'redstone',        name: 'Redstone' },
             { type: 'material',  subtype: 'coal',            name: 'Coal' },
+            { type: 'material',  subtype: 'flint',           name: 'Flint' },
+            { type: 'material',  subtype: 'feather',         name: 'Feather' },
+            { type: 'material',  subtype: 'string',          name: 'String' },
+            { type: 'material',  subtype: 'paper',           name: 'Paper' },
+            { type: 'material',  subtype: 'book',            name: 'Book' },
+            { type: 'material',  subtype: 'sugar',           name: 'Sugar' },
+            { type: 'material',  subtype: 'wheat',           name: 'Wheat' },
+            { type: 'material',  subtype: 'arrow',           name: 'Arrow' },
+            { type: 'material',  subtype: 'compass',         name: 'Compass' },
+            { type: 'material',  subtype: 'clock',           name: 'Clock' },
             { type: 'material',  subtype: 'ender_pearl',     name: 'Ender Pearl' },
+            { type: 'equipment', subtype: 'bow',             name: 'Bow' },
             { type: 'equipment', subtype: 'bucket',          name: 'Bucket' },
             { type: 'equipment', subtype: 'water_bucket',    name: 'Water Bucket' },
             { type: 'equipment', subtype: 'lava_bucket',     name: 'Lava Bucket' },
@@ -915,6 +930,7 @@ class UISystem {
             { type: 'food',      subtype: 'raw_fish',        name: 'Raw Fish' },
             { type: 'food',      subtype: 'cooked_fish',     name: 'Cooked Fish' },
             { type: 'food',      subtype: 'apple',           name: 'Apple' },
+            { type: 'food',      subtype: 'golden_apple',    name: 'Golden Apple' },
             { type: 'food',      subtype: 'bread',           name: 'Bread' },
         ];
 
@@ -2036,6 +2052,8 @@ class UISystem {
             B.REDWOOD_PLANKS, B.WARPED_PLANKS, B.GOLDEN_OAK_PLANKS, B.AETHER_PLANKS
         ].includes(t);
         const countAnyPlank = s.filter(x => x !== null && isPlank(x)).length;
+        const isLog = (t) => t !== null && woodToPlankMap[t] !== undefined;
+        const countAnyLog = s.filter(x => isLog(x)).length;
         const matchesMat = (t, expected) => expected === B.PLANKS ? isPlank(t) : t === expected;
 
         const getMatSuffix = (matType) => {
@@ -2163,11 +2181,24 @@ class UISystem {
         if (getCount('paper') === 3 && getCount('leather') === 1 && totalItems === 4) return mat('book', 'Book', 1);
         if (getCount(B.SANDSTONE) === 4 && totalItems === 4) return block(B.SANDSTONE, 'Smooth Sandstone', 4);
 
+        // Workstations crafted in 2x2 or 3x3
+        if (getCount('flint') === 2 && (countAnyPlank === 4 || countAnyPlank === 2) && totalItems === (2 + countAnyPlank)) return block(B.FLETCHING_TABLE, 'Fletching Table', 1);
+        if (getCount('iron_ingot') === 2 && (countAnyPlank === 4 || countAnyPlank === 2) && totalItems === (2 + countAnyPlank)) return block(B.SMITHING_TABLE, 'Smithing Table', 1);
+        if (getCount('paper') === 2 && (countAnyPlank === 4 || countAnyPlank === 2) && totalItems === (2 + countAnyPlank)) return block(B.CARTOGRAPHY_TABLE, 'Cartography Table', 1);
+        if (getCount('string') === 2 && countAnyPlank === 2 && totalItems === 4) return block(B.LOOM, 'Loom', 1);
+
         // Reverse Storage is 1 item -> 9 items.
         if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
         if (getCount(B.GOLD_BLOCK) === 1 && totalItems === 1) return mat('gold_ingot', 'Gold Ingot', 9);
         if (getCount(B.DIAMOND_BLOCK) === 1 && totalItems === 1) return mat('diamond', 'Diamond', 9);
+        if (getCount(B.EMERALD_BLOCK) === 1 && totalItems === 1) return mat('emerald', 'Emerald', 9);
+        if (getCount(B.LAPIS_BLOCK) === 1 && totalItems === 1) return mat('lapis_lazuli', 'Lapis Lazuli', 9);
+        if (getCount(B.REDSTONE_BLOCK) === 1 && totalItems === 1) return mat('redstone', 'Redstone Dust', 9);
+        if (getCount(B.COAL_BLOCK) === 1 && totalItems === 1) return mat('coal', 'Coal', 9);
         if (getCount('netherite_scrap') === 4 && getCount('gold_ingot') === 4 && totalItems === 8) return mat('netherite_ingot', 'Netherite Ingot', 1);
+
+        if (getCount('wheat') === 3 && totalItems === 3) return mat('bread', 'Bread', 1);
+        if (getCount('flint') === 1 && getCount('stick') === 1 && getCount('feather') === 1 && totalItems === 3) return mat('arrow', 'Arrow', 4);
 
         if (!this.is3x3Crafting) return null;
 
@@ -2267,13 +2298,31 @@ class UISystem {
             if (isPlank(s[0]) && isPlank(s[1]) && !s[2] && isPlank(s[3]) && isPlank(s[4]) && !s[5] && isPlank(s[6]) && isPlank(s[7]) && !s[8]) return block(B.DUNGEON_DOOR, 'Door', 3);
             if (!s[0] && isPlank(s[1]) && isPlank(s[2]) && !s[3] && isPlank(s[4]) && isPlank(s[5]) && !s[6] && isPlank(s[7]) && isPlank(s[8])) return block(B.DUNGEON_DOOR, 'Door', 3);
 
+            // Workstations & Furniture
+            if (getCount('iron_ingot') === 1 && getCount(B.STONE) === 3 && totalItems === 4) return block(B.STONECUTTER, 'Stonecutter', 1);
+            if (getCount('stick') === 2 && (getCount(B.STONE) === 1 || getCount(B.COBBLESTONE) === 1) && countAnyPlank === 2 && totalItems === 5) return block(B.GRINDSTONE, 'Grindstone', 1);
+            if (getCount(B.FURNACE) === 1 && countAnyLog === 4 && totalItems === 5) return block(B.SMOKER, 'Smoker', 1);
+            if (getCount(B.FURNACE) === 1 && getCount('iron_ingot') === 5 && getCount(B.STONE) === 3 && totalItems === 9) return block(B.BLAST_FURNACE, 'Blast Furnace', 1);
+
             if (countAnyPlank === 8 && totalItems === 8) return block(B.CHEST_BLOCK, 'Chest', 1);
+            if (countAnyPlank === 6 && getCount('book') === 3 && totalItems === 9) return block(B.BOOKSHELF, 'Bookshelf', 1);
             if (countAnyPlank === 6 && totalItems === 6) return block(B.BOOKSHELF, 'Bookshelf', 1);
             if (getCount('stick') === 7 && totalItems === 7) return block(B.LADDER, 'Ladder', 3);
 
+            // Storage Blocks (9 items -> 1 block)
             if (getCount('iron_ingot') === 9 && totalItems === 9) return block(B.IRON_BLOCK, 'Iron Block', 1);
             if (getCount('gold_ingot') === 9 && totalItems === 9) return block(B.GOLD_BLOCK, 'Gold Block', 1);
             if (getCount('diamond') === 9 && totalItems === 9) return block(B.DIAMOND_BLOCK, 'Diamond Block', 1);
+            if (getCount('emerald') === 9 && totalItems === 9) return block(B.EMERALD_BLOCK, 'Emerald Block', 1);
+            if ((getCount('lapis_lazuli') === 9 || getCount('lapis') === 9) && totalItems === 9) return block(B.LAPIS_BLOCK, 'Lapis Block', 1);
+            if (getCount('redstone') === 9 && totalItems === 9) return block(B.REDSTONE_BLOCK, 'Redstone Block', 1);
+            if (getCount('coal') === 9 && totalItems === 9) return block(B.COAL_BLOCK, 'Coal Block', 1);
+
+            // Utilities & Weapons
+            if (getCount('iron_ingot') === 4 && getCount('redstone') === 1 && totalItems === 5) return mat('compass', 'Compass', 1);
+            if (getCount('gold_ingot') === 4 && getCount('redstone') === 1 && totalItems === 5) return mat('clock', 'Clock', 1);
+            if (getCount('stick') === 3 && getCount('string') === 3 && totalItems === 6) return equip('bow', { range: 25, damage: 6, passive: 'Ranged Weapon' }, 'Bow', 'Fires arrows at distant foes.');
+            if (getCount('gold_ingot') === 8 && getCount('apple') === 1 && totalItems === 9) return { item: { type: 'food', subtype: 'golden_apple', name: 'Golden Apple', stackable: true, maxStack: 64, id: `food_golden_apple_${Date.now()}`, data: { heal: 20 }, description: 'Restores 20 health.' }, count: 1 };
             
             if (getCount(B.SAND) === 4 && getCount('coal') === 5 && totalItems === 9) return block(B.TNT, 'TNT', 1);
 
@@ -2371,10 +2420,35 @@ class UISystem {
             { name: "Iron Block", desc: "Storage block.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')]], out: blk(B.IRON_BLOCK), outCount: 1, needs3x3: true },
             { name: "Gold Block", desc: "Storage block.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: blk(B.GOLD_BLOCK), outCount: 1, needs3x3: true },
             { name: "Diamond Block", desc: "Storage block.", grid: [[mat('diamond'),mat('diamond'),mat('diamond')],[mat('diamond'),mat('diamond'),mat('diamond')],[mat('diamond'),mat('diamond'),mat('diamond')]], out: blk(B.DIAMOND_BLOCK), outCount: 1, needs3x3: true },
+            { name: "Emerald Block", desc: "Storage block.", grid: [[mat('emerald'),mat('emerald'),mat('emerald')],[mat('emerald'),mat('emerald'),mat('emerald')],[mat('emerald'),mat('emerald'),mat('emerald')]], out: blk(B.EMERALD_BLOCK), outCount: 1, needs3x3: true },
+            { name: "Lapis Block", desc: "Storage block.", grid: [[mat('lapis_lazuli'),mat('lapis_lazuli'),mat('lapis_lazuli')],[mat('lapis_lazuli'),mat('lapis_lazuli'),mat('lapis_lazuli')],[mat('lapis_lazuli'),mat('lapis_lazuli'),mat('lapis_lazuli')]], out: blk(B.LAPIS_BLOCK), outCount: 1, needs3x3: true },
+            { name: "Redstone Block", desc: "Storage block.", grid: [[mat('redstone'),mat('redstone'),mat('redstone')],[mat('redstone'),mat('redstone'),mat('redstone')],[mat('redstone'),mat('redstone'),mat('redstone')]], out: blk(B.REDSTONE_BLOCK), outCount: 1, needs3x3: true },
+            { name: "Coal Block", desc: "Storage & fuel block.", grid: [[mat('coal'),mat('coal'),mat('coal')],[mat('coal'),mat('coal'),mat('coal')],[mat('coal'),mat('coal'),mat('coal')]], out: blk(B.COAL_BLOCK), outCount: 1, needs3x3: true },
 
             { name: "Iron Ingot (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.IRON_BLOCK),_,_],[_,_,_]], out: mat('iron_ingot'), outCount: 9, needs3x3: false },
             { name: "Gold Ingot (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.GOLD_BLOCK),_,_],[_,_,_]], out: mat('gold_ingot'), outCount: 9, needs3x3: false },
-            { name: "Diamond (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.DIAMOND_BLOCK),_,_],[_,_,_]], out: mat('diamond'), outCount: 9, needs3x3: false }
+            { name: "Diamond (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.DIAMOND_BLOCK),_,_],[_,_,_]], out: mat('diamond'), outCount: 9, needs3x3: false },
+            { name: "Emerald (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.EMERALD_BLOCK),_,_],[_,_,_]], out: mat('emerald'), outCount: 9, needs3x3: false },
+            { name: "Lapis Lazuli (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.LAPIS_BLOCK),_,_],[_,_,_]], out: mat('lapis_lazuli'), outCount: 9, needs3x3: false },
+            { name: "Redstone (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.REDSTONE_BLOCK),_,_],[_,_,_]], out: mat('redstone'), outCount: 9, needs3x3: false },
+            { name: "Coal (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.COAL_BLOCK),_,_],[_,_,_]], out: mat('coal'), outCount: 9, needs3x3: false },
+
+            { name: "Fletching Table", desc: "Decorative workstation.", grid: [[mat('flint'),mat('flint'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.FLETCHING_TABLE), outCount: 1, needs3x3: true },
+            { name: "Smithing Table", desc: "Workstation for tools.", grid: [[mat('iron_ingot'),mat('iron_ingot'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.SMITHING_TABLE), outCount: 1, needs3x3: true },
+            { name: "Cartography Table", desc: "Mapmaking workstation.", grid: [[mat('paper'),mat('paper'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.CARTOGRAPHY_TABLE), outCount: 1, needs3x3: true },
+            { name: "Smoker", desc: "Rapidly cooks food.", grid: [[_,blk(B.WOOD),_],[blk(B.WOOD),blk(B.FURNACE),blk(B.WOOD)],[_,blk(B.WOOD),_]], out: blk(B.SMOKER), outCount: 1, needs3x3: true },
+            { name: "Blast Furnace", desc: "High-heat smelting furnace.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),blk(B.FURNACE),mat('iron_ingot')],[blk(B.STONE),blk(B.STONE),blk(B.STONE)]], out: blk(B.BLAST_FURNACE), outCount: 1, needs3x3: true },
+            { name: "Grindstone", desc: "Repairs and disenchants.", grid: [[mat('stick'),blk(B.STONE),mat('stick')],[blk(B.PLANKS),_,blk(B.PLANKS)],[_,_,_]], out: blk(B.GRINDSTONE), outCount: 1, needs3x3: true },
+            { name: "Loom", desc: "Weaves banners and patterns.", grid: [[_,_,_],[mat('string'),mat('string'),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.LOOM), outCount: 1, needs3x3: false },
+            { name: "Stonecutter", desc: "Precision masonry tool.", grid: [[_,mat('iron_ingot'),_],[blk(B.STONE),blk(B.STONE),blk(B.STONE)],[_,_,_]], out: blk(B.STONECUTTER), outCount: 1, needs3x3: true },
+            { name: "Bookshelf", desc: "Storage for literature.", grid: [[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[mat('book'),mat('book'),mat('book')],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.BOOKSHELF), outCount: 1, needs3x3: true },
+
+            { name: "Bow", desc: "Ranged weapon.", grid: [[_,mat('stick'),mat('string')],[mat('stick'),_,mat('string')],[_,mat('stick'),mat('string')]], out: eqp('bow'), outCount: 1, needs3x3: true },
+            { name: "Arrow (4)", desc: "Ammunition for bows.", grid: [[_,mat('flint'),_],[_,mat('stick'),_],[_,mat('feather'),_]], out: mat('arrow'), outCount: 4, needs3x3: true },
+            { name: "Bread", desc: "Filling baked food.", grid: [[_,_,_],[mat('wheat'),mat('wheat'),mat('wheat')],[_,_,_]], out: mat('bread'), outCount: 1, needs3x3: true },
+            { name: "Golden Apple", desc: "Powerful restorative food.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('apple'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: mat('golden_apple'), outCount: 1, needs3x3: true },
+            { name: "Compass", desc: "Navigation instrument.", grid: [[_,mat('iron_ingot'),_],[mat('iron_ingot'),mat('redstone'),mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('compass'), outCount: 1, needs3x3: true },
+            { name: "Clock", desc: "Tracks day and night cycle.", grid: [[_,mat('gold_ingot'),_],[mat('gold_ingot'),mat('redstone'),mat('gold_ingot')],[_,mat('gold_ingot'),_]], out: mat('clock'), outCount: 1, needs3x3: true }
         ];
 
         const filteredRecipes = recipes.filter(r => this.is3x3Crafting ? true : !r.needs3x3);

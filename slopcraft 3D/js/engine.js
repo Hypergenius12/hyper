@@ -705,6 +705,8 @@ export class Chunk {
             this.mesh.castShadow = false; // Massive performance gain: voxel terrain doesn't need to cast shadows on itself
             this.mesh.receiveShadow = false; // Voxel terrain uses AO and sunlight baked into colors, receiving shadows kills FPS
         }
+        this.mesh.userData.isChunkMesh = true;
+        this.mesh.visible = true;
         this.dirty = false;
         return this.mesh;
     }
@@ -912,6 +914,31 @@ export class World {
 
     setCamera(camera) {
         this.camera = camera;
+    }
+
+    clearAll() {
+        for (const chunk of this.chunks.values()) {
+            chunk.dispose();
+        }
+        this.chunks.clear();
+        this.chunksToBuild = [];
+        this.chunksToGenerate = [];
+        this.liquidUpdates.clear();
+
+        // Also sweep scene for any orphaned chunk meshes or leftover meshes
+        const toRemove = [];
+        if (this.scene && this.scene.children) {
+            for (const child of this.scene.children) {
+                if (child.isMesh && (child.userData.isChunkMesh || child.material === this.sharedMaterials || (Array.isArray(child.material) && child.material[0] === this.sharedMaterials[0]))) {
+                    toRemove.push(child);
+                }
+            }
+            for (const mesh of toRemove) {
+                this.scene.remove(mesh);
+                if (mesh.geometry) mesh.geometry.dispose();
+            }
+        }
+        _meshPool.length = 0;
     }
 
     getChunkKey(cx, cz) {
@@ -1290,7 +1317,7 @@ export class World {
         // Process a few chunks per frame for generating blocks
         let gensThisFrame = 0;
         
-        while (this.chunksToGenerate.length > 0 && gensThisFrame < 1) {
+        while (this.chunksToGenerate.length > 0 && gensThisFrame < 4) {
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToGenerate.length; i++) {
@@ -1383,8 +1410,8 @@ export class World {
 
         // Process a few chunks per frame
         let buildsThisFrame = 0;
-        // Limit to 1 build per frame to ensure smooth 60 FPS
-        while (this.chunksToBuild.length > 0 && buildsThisFrame < 1) {
+        // Limit to 4 builds per frame for responsive, seamless chunk rendering
+        while (this.chunksToBuild.length > 0 && buildsThisFrame < 4) {
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToBuild.length; i++) {
@@ -1739,7 +1766,8 @@ export class World {
                 grounded = true;
                 targetY = Math.floor(targetY) + 1.0;
             } else { // Jumping up and hitting ceiling
-                targetY = Math.floor(targetY + entityHeight - 0.01) - entityHeight;
+                const ceilingBlockY = Math.floor(targetY + entityHeight - 0.01);
+                targetY = Math.min(position.y, ceilingBlockY - entityHeight - 0.001);
             }
         }
 

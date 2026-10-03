@@ -190,11 +190,35 @@ export const BLOCKS = {
     LAVENDER: 224,
     PODZOL: 225,
     RUBY_ORE: 226,
-    SAPPHIRE_ORE: 227
+    SAPPHIRE_ORE: 227,
+    FLETCHING_TABLE: 142,
+    SMITHING_TABLE: 143,
+    CARTOGRAPHY_TABLE: 144,
+    SMOKER: 145,
+    BLAST_FURNACE: 146,
+    GRINDSTONE: 147,
+    LOOM: 148,
+    STONECUTTER: 149,
+    EMERALD_BLOCK: 150,
+    LAPIS_BLOCK: 151,
+    REDSTONE_BLOCK: 152,
+    COAL_BLOCK: 153
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.FLETCHING_TABLE]:   { name: 'Fletching Table',   health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.SMITHING_TABLE]:    { name: 'Smithing Table',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.CARTOGRAPHY_TABLE]: { name: 'Cartography Table', health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.SMOKER]:            { name: 'Smoker',            health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.BLAST_FURNACE]:     { name: 'Blast Furnace',     health: 8, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.GRINDSTONE]:        { name: 'Grindstone',        health: 5, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.LOOM]:              { name: 'Loom',              health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.STONECUTTER]:       { name: 'Stonecutter',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.EMERALD_BLOCK]:     { name: 'Emerald Block',     health: 8, transparent: false, emissive: 0.1, solid: true, drops: null },
+    [BLOCKS.LAPIS_BLOCK]:       { name: 'Lapis Block',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.REDSTONE_BLOCK]:    { name: 'Redstone Block',    health: 6, transparent: false, emissive: 0.6, solid: true, drops: null },
+    [BLOCKS.COAL_BLOCK]:        { name: 'Coal Block',        health: 6, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.AIR]:           { name: 'Air',           health: 0, transparent: true,  emissive: 0, solid: false, drops: null },
     [BLOCKS.GRASS]:         { name: 'Grass',         health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
     [BLOCKS.DIRT]:          { name: 'Dirt',           health: 3, transparent: false, emissive: 0, solid: true, drops: null },
@@ -422,6 +446,18 @@ function addPixels(ctx, rng, color, count) {
     ctx.fillStyle = color;
     for (let i = 0; i < count; i++) {
         ctx.fillRect((rng() * TEX_SIZE) | 0, (rng() * TEX_SIZE) | 0, 1, 1);
+    }
+}
+
+function addLeaves(ctx, rng, c1, c2, c3) {
+    const colors = [c1, c2, c3 || c1];
+    for (let i = 0; i < 90; i++) {
+        const x = (rng() * TEX_SIZE) | 0;
+        const y = (rng() * TEX_SIZE) | 0;
+        const w = 1 + ((rng() * 2) | 0);
+        const h = 1 + ((rng() * 2) | 0);
+        ctx.fillStyle = colors[(rng() * colors.length) | 0];
+        ctx.fillRect(x, y, w, h);
     }
 }
 
@@ -916,10 +952,16 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addPixels(ctx, rng, 'rgba(180,120,255,0.4)', 5);
             break;
         case BLOCKS.PORTAL:
-            fillBase(ctx, 80, 20, 180);
+            fillBase(ctx, 45, 10, 85);
             addNoise(ctx, rng, 20);
-            addPixels(ctx, rng, 'rgba(160,80,255,0.5)', 15);
-            addPixels(ctx, rng, 'rgba(200,150,255,0.3)', 10);
+            for (let r = 2; r <= 8; r += 2) {
+                ctx.strokeStyle = `rgba(${140 + r * 10}, ${30 + r * 8}, ${220 + r * 4}, 0.7)`;
+                ctx.beginPath();
+                ctx.arc(8, 8, r, rng() * Math.PI, rng() * Math.PI + Math.PI * 1.5);
+                ctx.stroke();
+            }
+            addPixels(ctx, rng, 'rgba(210,130,255,0.8)', 20);
+            addPixels(ctx, rng, 'rgba(255,200,255,0.9)', 10);
             break;
         case BLOCKS.BEDROCK:
             fillBase(ctx, 40, 40, 40);
@@ -2077,13 +2119,16 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addPixels(ctx, rng, 'rgba(0,0,0,0.4)', 40); // Transparency gaps
             break;
         case BLOCKS.AETHER_PORTAL:
-            fillBase(ctx, 200, 255, 255); // Cyan portal
-            addNoise(ctx, rng, 30);
-            addPixels(ctx, rng, 'rgba(100, 200, 255, 0.8)', 60);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-            for(let i=0; i<5; i++) {
-                ctx.fillRect(rng()*TEX_SIZE, rng()*TEX_SIZE, 1+rng()*2, 4+rng()*4);
+            fillBase(ctx, 15, 60, 110);
+            addNoise(ctx, rng, 20);
+            for (let r = 2; r <= 8; r += 2) {
+                ctx.strokeStyle = `rgba(${30 + r * 10}, ${180 + r * 8}, ${240 + r * 2}, 0.7)`;
+                ctx.beginPath();
+                ctx.arc(8, 8, r, rng() * Math.PI, rng() * Math.PI + Math.PI * 1.5);
+                ctx.stroke();
             }
+            addPixels(ctx, rng, 'rgba(100,225,255,0.85)', 25);
+            addPixels(ctx, rng, 'rgba(220,250,255,0.95)', 12);
             break;
         case BLOCKS.AETHER_CLOUD:
             fillBase(ctx, 255, 255, 255);
@@ -2246,6 +2291,177 @@ function generateBlockTexture(ctx, blockType, face, rng) {
                 ctx.fillStyle = '#56ccf2'; ctx.fillRect(cx, cy, 1, 1);
                 ctx.fillStyle = '#ffffff'; ctx.fillRect(cx + 1, cy, 1, 1);
             }
+            break;
+        }
+
+        case BLOCKS.FLETCHING_TABLE: {
+            if (face === 'top') {
+                fillBase(ctx, 196, 178, 140);
+                addNoise(ctx, rng, 12);
+                ctx.strokeStyle = '#8a6e45';
+                ctx.strokeRect(3, 3, 10, 10);
+                ctx.fillStyle = '#b52b2b';
+                ctx.fillRect(7, 7, 2, 2);
+            } else {
+                fillBase(ctx, 190, 165, 125);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#e8e8e8';
+                ctx.fillRect(4, 5, 2, 7);
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(5, 4, 1, 9);
+            }
+            break;
+        }
+
+        case BLOCKS.SMITHING_TABLE: {
+            if (face === 'top') {
+                fillBase(ctx, 50, 52, 60);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#7a7e8a';
+                ctx.fillRect(2, 2, 12, 12);
+                ctx.fillStyle = '#3a3c44';
+                ctx.fillRect(6, 6, 4, 4);
+            } else {
+                fillBase(ctx, 60, 48, 38);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#22252a';
+                ctx.fillRect(0, 0, 16, 3);
+                ctx.fillStyle = '#8a8e98';
+                ctx.fillRect(5, 6, 2, 7);
+            }
+            break;
+        }
+
+        case BLOCKS.CARTOGRAPHY_TABLE: {
+            if (face === 'top') {
+                fillBase(ctx, 215, 200, 160);
+                addNoise(ctx, rng, 10);
+                ctx.strokeStyle = '#8b6f48';
+                ctx.strokeRect(2, 2, 12, 12);
+                ctx.fillStyle = '#5c8a99';
+                ctx.fillRect(4, 4, 4, 3);
+            } else {
+                fillBase(ctx, 75, 55, 40);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#402e1f';
+                ctx.fillRect(0, 0, 16, 2);
+                ctx.fillRect(0, 14, 16, 2);
+            }
+            break;
+        }
+
+        case BLOCKS.SMOKER: {
+            if (face === 'top') {
+                fillBase(ctx, 65, 65, 65);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#353535';
+                ctx.fillRect(4, 4, 8, 8);
+            } else {
+                fillBase(ctx, 80, 80, 80);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#222222';
+                ctx.fillRect(3, 4, 10, 8);
+                ctx.fillStyle = '#ff6600';
+                ctx.fillRect(5, 7, 6, 3);
+            }
+            break;
+        }
+
+        case BLOCKS.BLAST_FURNACE: {
+            if (face === 'top') {
+                fillBase(ctx, 85, 85, 85);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#444444';
+                ctx.fillRect(3, 3, 10, 10);
+            } else {
+                fillBase(ctx, 75, 75, 80);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#252528';
+                ctx.fillRect(2, 5, 12, 7);
+                ctx.fillStyle = '#ff8822';
+                ctx.fillRect(4, 7, 8, 4);
+                ctx.fillStyle = '#ffcc44';
+                ctx.fillRect(6, 8, 4, 2);
+            }
+            break;
+        }
+
+        case BLOCKS.GRINDSTONE: {
+            fillBase(ctx, 120, 120, 120);
+            addNoise(ctx, rng, 15);
+            ctx.fillStyle = '#6b5035';
+            ctx.fillRect(1, 10, 4, 6);
+            ctx.fillRect(11, 10, 4, 6);
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillRect(5, 3, 6, 8);
+            break;
+        }
+
+        case BLOCKS.LOOM: {
+            if (face === 'top') {
+                fillBase(ctx, 160, 130, 90);
+                addNoise(ctx, rng, 12);
+            } else {
+                fillBase(ctx, 150, 120, 80);
+                addNoise(ctx, rng, 12);
+                ctx.fillStyle = '#f0f0f0';
+                for (let x = 3; x <= 13; x += 2) ctx.fillRect(x, 4, 1, 8);
+            }
+            break;
+        }
+
+        case BLOCKS.STONECUTTER: {
+            fillBase(ctx, 120, 120, 125);
+            addNoise(ctx, rng, 15);
+            ctx.fillStyle = '#9095a0';
+            ctx.fillRect(0, 10, 16, 6);
+            ctx.fillStyle = '#dcdfe5';
+            ctx.fillRect(6, 2, 4, 8);
+            ctx.fillRect(4, 4, 8, 4);
+            break;
+        }
+
+        case BLOCKS.EMERALD_BLOCK: {
+            fillBase(ctx, 23, 181, 74);
+            addNoise(ctx, rng, 15);
+            ctx.strokeStyle = '#108535';
+            ctx.strokeRect(1, 1, 14, 14);
+            ctx.strokeStyle = '#32e36d';
+            ctx.strokeRect(2, 2, 12, 12);
+            ctx.fillStyle = '#108535';
+            ctx.fillRect(5, 5, 6, 6);
+            ctx.fillStyle = '#4ef588';
+            ctx.fillRect(6, 6, 4, 4);
+            break;
+        }
+
+        case BLOCKS.LAPIS_BLOCK: {
+            fillBase(ctx, 24, 58, 153);
+            addNoise(ctx, rng, 20);
+            ctx.strokeStyle = '#112a6e';
+            ctx.strokeRect(1, 1, 14, 14);
+            addPixels(ctx, rng, '#396be8', 25);
+            addPixels(ctx, rng, '#ffd700', 8);
+            break;
+        }
+
+        case BLOCKS.REDSTONE_BLOCK: {
+            fillBase(ctx, 210, 18, 18);
+            addNoise(ctx, rng, 20);
+            ctx.strokeStyle = '#b80808';
+            ctx.strokeRect(1, 1, 14, 14);
+            addPixels(ctx, rng, '#ff5555', 30);
+            addPixels(ctx, rng, '#ffffff', 8);
+            break;
+        }
+
+        case BLOCKS.COAL_BLOCK: {
+            fillBase(ctx, 22, 22, 22);
+            addNoise(ctx, rng, 20);
+            ctx.strokeStyle = '#111111';
+            ctx.strokeRect(1, 1, 14, 14);
+            addPixels(ctx, rng, '#363636', 30);
+            addPixels(ctx, rng, '#080808', 20);
             break;
         }
 
@@ -2735,6 +2951,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.IRON_BLOCK]: 'iron_block',
     [BLOCKS.GOLD_BLOCK]: 'gold_block',
     [BLOCKS.DIAMOND_BLOCK]: 'diamond_block',
+    [BLOCKS.EMERALD_BLOCK]: 'emerald_block',
     [BLOCKS.WOOL]: 'white_wool',
     [BLOCKS.FURNACE]: { top: 'furnace_top', side: 'furnace_side', bottom: 'furnace_top', front: 'furnace_front' },
     [BLOCKS.NETHERRACK]: 'netherrack',
@@ -2765,7 +2982,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.AETHER_GRASS]: { top: 'aether://aether_grass_block_top', side: 'aether://aether_grass_block_side', bottom: 'aether://aether_dirt' },
     [BLOCKS.AETHER_WOOD]: { top: 'aether://skyroot_log_top', side: 'aether://skyroot_log', bottom: 'aether://skyroot_log_top' },
     [BLOCKS.AETHER_LEAVES]: 'aether://golden_oak_leaves',
-    [BLOCKS.AETHER_PORTAL]: 'entity/end_gateway_beam',
+    [BLOCKS.AETHER_PORTAL]: 'aether_portal',
     [BLOCKS.AETHER_CLOUD]: 'white_wool',
     [BLOCKS.AETHER_TALL_GRASS]: 'aether://skyroot_leaves',
     [BLOCKS.AETHER_FLOWER]: 'aether://white_flower',
@@ -2938,6 +3155,7 @@ const LOCAL_ASSET_MAP = {
     "diorite": "assets/mc/block/diorite.png",
     "dirt": "assets/mc/block/dirt.png",
     "emerald_block": "assets/mc/block/emerald_block.png",
+    "aether_portal": "assets/mc/block/aether_portal.png",
     "end_gateway_beam": "assets/mc/block/end_gateway_beam.png",
     "end_portal_frame_side": "assets/mc/block/end_portal_frame_side.png",
     "end_portal_frame_top": "assets/mc/block/end_portal_frame_top.png",
@@ -3627,7 +3845,9 @@ const MC_ITEM_MAP = {
     'axe_gravitite': 'gravitite_axe',
     'shovel_gravitite': 'gravitite_shovel',
     'quartz': 'quartz',
-    'netherite_scrap': 'netherite_scrap'
+    'netherite_scrap': 'netherite_scrap',
+    'lapis_lazuli': 'lapis_lazuli',
+    'lapis': 'lapis_lazuli'
 };
 
 // Global cache: subtype -> canvas / data URL
@@ -3724,7 +3944,18 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         'feather': { c: '#f8f8ff', d: '#dcdcdc', h: '#ffffff' },
         'bucket': { c: '#C0C0C0', d: '#808080', h: '#E8E8E8' },
         'water_bucket': { c: '#C0C0C0', d: '#808080', h: '#E8E8E8', l: '#3366CC', w: '#66AAFF' },
-        'lava_bucket': { c: '#C0C0C0', d: '#808080', h: '#E8E8E8', l: '#CC3300', w: '#FF6600' }
+        'lava_bucket': { c: '#C0C0C0', d: '#808080', h: '#E8E8E8', l: '#CC3300', w: '#FF6600' },
+        'emerald': { c: '#17b045', d: '#0e702c', h: '#55f085' },
+        'redstone': { c: '#cc1111', d: '#880000', h: '#ff5555' },
+        'lapis_lazuli': { c: '#19429e', d: '#0e265c', h: '#3e6ce6' },
+        'flint': { c: '#444444', d: '#222222', h: '#666666' },
+        'string': { c: '#f5f5f5', d: '#cccccc', h: '#ffffff' },
+        'wheat': { c: '#e6c640', d: '#a6871c', h: '#fff385' },
+        'arrow': { c: '#ffffff', d: '#999999', h: '#f5f5f5', b: '#444444' },
+        'bow': { c: '#8d6e63', d: '#5d4037', h: '#ffffff' },
+        'compass': { c: '#888888', d: '#555555', h: '#cccccc', b: '#ff2222' },
+        'clock': { c: '#3366cc', d: '#cc9900', h: '#ffee44', b: '#222222' },
+        'golden_apple': { c: '#ffcc00', d: '#c69200', h: '#fff480' }
     };
 
     // Helper to determine material tier from subtype
@@ -3974,6 +4205,26 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 " OOOOOOOO OOOOOO",
                 "                "
             ];
+        } else if (itemSubtype === 'bow') {
+            shape = [
+                "       OOOO     ",
+                "     OOH  DO    ",
+                "    OHD   DO    ",
+                "   OHD    DO    ",
+                "  OHD     DO    ",
+                "  OD      DO    ",
+                "  OD      DO    ",
+                "  OD      DO    ",
+                "  OD      DO    ",
+                "  OD      DO    ",
+                "  OHD     DO    ",
+                "   OHD    DO    ",
+                "    OHD   DO    ",
+                "     OOH  DO    ",
+                "       OOOO     ",
+                "                "
+            ];
+            p = palettes['bow'];
         }
     } else if (itemType === 'material') {
         if (itemSubtype === 'book') {
@@ -4036,7 +4287,7 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                "
             ];
             p = { c: '#ffffff', d: '#e0e0e0', h: '#ffffff' };
-        } else if (itemSubtype === 'coal' || itemSubtype === 'diamond' || itemSubtype === 'mana_crystal' || itemSubtype === 'ruby' || itemSubtype === 'sapphire' || itemSubtype === 'zanite_gem' || itemSubtype === 'zanite_gemstone' || itemSubtype === 'ambrosium_shard' || itemSubtype === 'quartz' || itemSubtype === 'netherite_scrap') {
+        } else if (itemSubtype === 'coal' || itemSubtype === 'diamond' || itemSubtype === 'mana_crystal' || itemSubtype === 'ruby' || itemSubtype === 'sapphire' || itemSubtype === 'zanite_gem' || itemSubtype === 'zanite_gemstone' || itemSubtype === 'ambrosium_shard' || itemSubtype === 'quartz' || itemSubtype === 'netherite_scrap' || itemSubtype === 'emerald' || itemSubtype === 'lapis_lazuli' || itemSubtype === 'lapis') {
             shape = [
                 "                ",
                 "      OOOO      ",
@@ -4055,6 +4306,146 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                ",
                 "                "
             ];
+        } else if (itemSubtype === 'arrow') {
+            shape = [
+                "             OO ",
+                "            OBO ",
+                "           OBDO ",
+                "          OBDO  ",
+                "         OSDO   ",
+                "        OSDO    ",
+                "       OSDO     ",
+                "      OSDO      ",
+                "     OSDO       ",
+                "    OSDO        ",
+                "  OOODO         ",
+                " OHHDO          ",
+                " OHDDO          ",
+                " ODO            ",
+                "                ",
+                "                "
+            ];
+            p = palettes['arrow'];
+        } else if (itemSubtype === 'compass') {
+            shape = [
+                "      OOOO      ",
+                "    OOHHHHOO    ",
+                "   OOHDDDDHOO   ",
+                "  OHD  DB  DHO  ",
+                "  OHD  DB  DHO  ",
+                " OHD  BBBB  DHO ",
+                " OHD   DB   DHO ",
+                " OHD  BBD   DHO ",
+                "  OHD  DD  DHO  ",
+                "  OHD      DHO  ",
+                "   OOHDDDDHOO   ",
+                "    OOHHHHOO    ",
+                "      OOOO      ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            p = palettes['compass'];
+        } else if (itemSubtype === 'clock') {
+            shape = [
+                "      OOOO      ",
+                "    OOHHHHOO    ",
+                "   OOHDDDDHOO   ",
+                "  OHD  CB  DHO  ",
+                "  OHD  CB  DHO  ",
+                " OHD  CBBC  DHO ",
+                " OHD   CB   DHO ",
+                " OHD  CCCB  DHO ",
+                "  OHD  CC  DHO  ",
+                "  OHD      DHO  ",
+                "   OOHDDDDHOO   ",
+                "    OOHHHHOO    ",
+                "      OOOO      ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            p = palettes['clock'];
+        } else if (itemSubtype === 'wheat') {
+            shape = [
+                "            OO  ",
+                "           OHDO ",
+                "          OHCDO ",
+                "         OHCDO  ",
+                "        OHCDO   ",
+                "       OHCDO    ",
+                "      OHCDO     ",
+                "     OHCDO      ",
+                "    OHCDO       ",
+                "   OSCDO        ",
+                "  OSDO          ",
+                " OSDO           ",
+                " OSO            ",
+                "  O             ",
+                "                ",
+                "                "
+            ];
+            p = palettes['wheat'];
+        } else if (itemSubtype === 'string') {
+            shape = [
+                "                ",
+                "      OO        ",
+                "     OHDO       ",
+                "    OHCDO       ",
+                "   OHCDO        ",
+                "   OHCDO        ",
+                "    OHCDO       ",
+                "     OHCDO      ",
+                "      OHCDO     ",
+                "       OHCDO    ",
+                "       OHCDO    ",
+                "      OHCDO     ",
+                "     OHDO       ",
+                "     OO         ",
+                "                ",
+                "                "
+            ];
+            p = palettes['string'];
+        } else if (itemSubtype === 'flint') {
+            shape = [
+                "                ",
+                "       OO       ",
+                "      OHDO      ",
+                "     OHCDO      ",
+                "    OHCCCDO     ",
+                "   OHCCCCDDO    ",
+                "   OHCCCCCDO    ",
+                "  OHCCCCCCDDO   ",
+                "  OHDDDDDDDO    ",
+                "   OOOOOOOO     ",
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            p = palettes['flint'];
+        } else if (itemSubtype === 'redstone') {
+            shape = [
+                "                ",
+                "                ",
+                "                ",
+                "       OO       ",
+                "     OOHHOO     ",
+                "    OOHCCHDO    ",
+                "   OOHCCCCDDO   ",
+                "   OHCCCCCCDO   ",
+                "   OHCCCCCCDO   ",
+                "    OHDDDDDDO   ",
+                "     OODDDOO    ",
+                "       OO       ",
+                "                ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            p = palettes['redstone'];
         } else if (itemSubtype === 'iron_ingot' || itemSubtype === 'gold_ingot' || itemSubtype === 'netherite_ingot' || itemSubtype === 'gravitite_ingot' || itemSubtype === 'gravitite_ore') {
             shape = [
                 "                ",
@@ -4350,6 +4741,26 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                     "                ",
                     "                "
                 ];
+            } else if (itemSubtype === 'golden_apple') {
+                shape = [
+                    "                ",
+                    "       OO       ",
+                    "      OSSO      ",
+                    "     OSSO       ",
+                    "   OOHH  HHOO   ",
+                    "  OHHHCCCCCDDO  ",
+                    " OHHHCCCCCCCDDO ",
+                    " OHHHCCCCCCCDDO ",
+                    " OHHHCCCCCCCDDO ",
+                    "  OHHCCCCCCCDO  ",
+                    "  OHDCCCCCCDDO  ",
+                    "   OHDCCCCDDO   ",
+                    "    OODDDDOO    ",
+                    "      OOOO      ",
+                    "                ",
+                    "                "
+                ];
+                p = palettes['golden_apple'];
             } else {
                 shape = [
                     "                ",
