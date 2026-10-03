@@ -333,6 +333,17 @@ export class AudioManager {
         doFallback();
     }
 
+    playPop(position = null) {
+        const doFallback = () => {
+            this.playTone(600, 'sine', 0.08, 0.3, 200, position);
+        };
+        if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
+            this.playMC('random/pop', 0.7, position).then(s => { if(!s) doFallback(); });
+            return;
+        }
+        doFallback();
+    }
+
     playCast(position = null) {
         if (localStorage.getItem('slopcraft_mc_textures') !== 'false') {
             this.playMC('random/bow', 0.8, position);

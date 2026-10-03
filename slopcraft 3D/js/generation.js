@@ -604,6 +604,15 @@ function generateSugarcane(blocks, x, y, z, rng) {
     }
 }
 
+function generateTallFern(blocks, x, y, z) {
+    if (y + 1 < CHUNK_HEIGHT) {
+        safeSetBlock(blocks, x, y, z, BLOCKS.TALL_FERN, true);
+        safeSetBlock(blocks, x, y + 1, z, BLOCKS.TALL_FERN_TOP, true);
+    } else {
+        safeSetBlock(blocks, x, y, z, BLOCKS.FERN, true);
+    }
+}
+
 function generateOreVein(blocks, wx, y, wz, oreType, minSize, maxSize, rng) {
     const size = minSize + Math.floor(rng() * (maxSize - minSize + 1));
     let currentX = wx;
@@ -926,9 +935,6 @@ export function generateChunkTerrain(cx, cz, params) {
                 } else if (r < 0.00003) {
                     generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng, 'nether');
                     continue;
-                } else if (r < 0.00006) {
-                    generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng, 'aether');
-                    continue;
                 } else if (r < 0.0001) {
                     generateCabin(blocks, tx, surfaceY + 1, tz, floraRng);
                     continue;
@@ -984,35 +990,102 @@ export function generateChunkTerrain(cx, cz, params) {
                     if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                     else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true); // Bush
                 } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && !biome.isVolcanic && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef && !biome.isBeach) {
-                    // Normal ground flora logic
+                    // Minecraft-authentic ground flora logic
                     let fr = floraRng();
                     if (biome === BIOMES.CHERRY_GROVE && fr < 0.3) {
-                        if (fr < 0.05) {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
-                        } else if (fr < 0.1) {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
-                        } else if (fr < 0.15) {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
-                        } else {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                        }
+                        if (fr < 0.05) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
+                        else if (fr < 0.1) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
+                        else if (fr < 0.15) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
+                        else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                     } else if (biome.isMystic && fr < 0.35) {
                         if (fr < 0.12) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
                         else if (fr < 0.22) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
                         else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
-                    } else if (biome.isRedwood && fr < 0.3) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
                     } else if (biome === BIOMES.OASIS && fr < 0.2) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.OASIS_FERN, true);
-                    } else if (fr < 0.2) {
-                        // Plains and Forest biomes strictly spawn tall grass, never ferns
-                        const isNoFernBiome = (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome.name === 'Plains' || biome.name === 'Forest');
-                        const blockType = isNoFernBiome ? BLOCKS.TALL_GRASS : (floraRng() > 0.3 ? BLOCKS.TALL_GRASS : BLOCKS.FERN);
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, blockType, true);
-                    } else if (fr >= 0.2 && fr < 0.25) {
-                        const r3 = floraRng();
-                        const flowerType = r3 < 0.25 ? BLOCKS.RED_FLOWER : (r3 < 0.5 ? BLOCKS.YELLOW_FLOWER : (r3 < 0.75 ? BLOCKS.BLUE_FLOWER : BLOCKS.WHITE_FLOWER));
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);
+                    } else if (biome.isRedwood) {
+                        // Redwood Forest (Mega Taiga / Old Growth Pine): rich with short ferns, tall ferns, and tall grass
+                        if (fr < 0.35) {
+                            const fernRoll = floraRng();
+                            if (fernRoll < 0.45) {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
+                            } else if (fernRoll < 0.8) {
+                                generateTallFern(blocks, tx, surfaceY + 1, tz);
+                            } else {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                            }
+                        }
+                    } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
+                        // Taiga / Tundra: short ferns, tall ferns, and tall grass
+                        if (fr < 0.25) {
+                            const taigaRoll = floraRng();
+                            if (taigaRoll < 0.35) {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
+                            } else if (taigaRoll < 0.6) {
+                                generateTallFern(blocks, tx, surfaceY + 1, tz);
+                            } else {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                            }
+                        }
+                    } else if (biome.jungleFlora || biome === BIOMES.JUNGLE || biome.name === 'Jungle') {
+                        // Jungle: short ferns, tall ferns, tall grass, and jungle flowers
+                        if (fr < 0.32) {
+                            const jungleRoll = floraRng();
+                            if (jungleRoll < 0.35) {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
+                            } else if (jungleRoll < 0.65) {
+                                generateTallFern(blocks, tx, surfaceY + 1, tz);
+                            } else if (jungleRoll < 0.85) {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                            } else {
+                                const fl = floraRng() < 0.5 ? BLOCKS.RED_FLOWER : BLOCKS.YELLOW_FLOWER;
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, fl, true);
+                            }
+                        }
+                    } else if (biome.swampFlora || biome === BIOMES.SWAMP || biome.name === 'Swamp') {
+                        // Swamp: tall grass, blue orchids/flowers, and mushrooms — strictly zero ferns
+                        if (fr < 0.25) {
+                            const swRoll = floraRng();
+                            if (swRoll < 0.7) {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                            } else if (swRoll < 0.85) {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.BLUE_FLOWER, true);
+                            } else {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
+                            }
+                        }
+                    } else if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
+                        // Dark Forest: tall grass, mushrooms, red flowers — strictly zero ferns
+                        if (fr < 0.25) {
+                            const dfRoll = floraRng();
+                            if (dfRoll < 0.65) {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                            } else if (dfRoll < 0.85) {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
+                            } else {
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.RED_FLOWER, true);
+                            }
+                        }
+                    } else if (biome.savannaFlora || biome === BIOMES.SAVANNA || biome.name === 'Savanna') {
+                        // Savanna: tall grass only — strictly zero ferns
+                        if (fr < 0.2) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                        }
+                    } else if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains') {
+                        // Mountains: tall grass and sparse white flowers — strictly zero ferns
+                        if (fr < 0.15) {
+                            if (floraRng() < 0.8) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                            else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
+                        }
+                    } else {
+                        // Plains, Forest, etc.: Tall grass (dominant) + diverse flowers — strictly zero ferns
+                        if (fr < 0.22) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                        } else if (fr >= 0.22 && fr < 0.27) {
+                            const r3 = floraRng();
+                            const flowerType = r3 < 0.3 ? BLOCKS.RED_FLOWER : (r3 < 0.55 ? BLOCKS.YELLOW_FLOWER : (r3 < 0.75 ? BLOCKS.BLUE_FLOWER : (r3 < 0.9 ? BLOCKS.WHITE_FLOWER : BLOCKS.PURPLE_FLOWER)));
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);
+                        }
                     }
                 }
             }
@@ -1998,21 +2071,6 @@ export function generateNetherChunk(cx, cz, params) {
 
     // Fortress generation
     carveGlobalNetherStructures(blocks, cx, cz, params);
-
-    // Rare ruined aether portal in the Nether
-    if (rng() < 0.005) {
-        const px = Math.floor(rng() * CHUNK_SIZE);
-        const pz = Math.floor(rng() * CHUNK_SIZE);
-        let py = 35;
-        for (let y = 80; y > 20; y--) {
-            const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
-            if (blocks[idx] === BLOCKS.NETHERRACK || blocks[idx] === BLOCKS.CRIMSON_NYLIUM || blocks[idx] === BLOCKS.WARPED_NYLIUM) {
-                py = y;
-                break;
-            }
-        }
-        generatePortalStructure(blocks, px, py + 1, pz, rng, 'aether');
-    }
 
     return blocks;
 }

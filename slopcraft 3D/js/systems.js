@@ -654,12 +654,12 @@ class UISystem {
         if (!panel) return;
         panel.innerHTML = '';
 
-        const BLOCKS = window.BLOCKS_REF || window.BLOCKS;
-        if (!BLOCKS) return;
+        const blockDefs = (typeof BLOCKS !== 'undefined' && BLOCKS) ? BLOCKS : (window.BLOCKS_REF || window.BLOCKS);
+        if (!blockDefs) return;
 
-        // Skip AIR and internal/invisible/removed autumn & fallen leaves blocks
-        const skip = new Set([0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 194]);
-        const entries = Object.entries(BLOCKS)
+        // Skip AIR and internal/invisible/removed blocks and top-half multi-blocks (e.g. TALL_FERN_TOP: 144)
+        const skip = new Set([0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 144, 194]);
+        const entries = Object.entries(blockDefs)
             .filter(([name, id]) => !skip.has(id) && typeof id === 'number')
             .sort((a,b) => a[1] - b[1]);
 
@@ -668,10 +668,10 @@ class UISystem {
                 1, 2, 4, 6, 7, 10, 11, 12, 13, 18, 19, 21, 22, 23, 24, 29, 30, 32, 34, 36, 37, 38,
                 39, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 60, 61, 62, 63,
                 64, 65, 78, 79, 91, 92, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 110, 114, 115, 116,
-                117, 118, 120, 121, 122, 123, 125, 129, 130, 132, 133, 134, 135, 136, 137, 138, 185, 186
+                117, 118, 120, 121, 122, 123, 125, 129, 130, 132, 133, 134, 135, 136, 137, 138, 143, 185, 186
             ]);
             const lower = nameStr.toLowerCase();
-            if (naturalIds.has(id) || lower.includes('ore') || lower.includes('leaves') || lower.includes('log') || lower.includes('grass') || lower.includes('dirt') || lower.includes('flower') || lower.includes('plant') || lower.includes('vine') || lower.includes('root') || lower.includes('stem') || lower.includes('coral') || lower.includes('nylium') || lower.includes('shroom') || lower.includes('sprout') || lower.includes('soil') || lower.includes('sand') || lower.includes('cloud')) {
+            if (naturalIds.has(id) || lower.includes('ore') || lower.includes('leaves') || lower.includes('log') || lower.includes('grass') || lower.includes('dirt') || lower.includes('flower') || lower.includes('plant') || lower.includes('vine') || lower.includes('root') || lower.includes('stem') || lower.includes('coral') || lower.includes('nylium') || lower.includes('shroom') || lower.includes('sprout') || lower.includes('soil') || lower.includes('sand') || lower.includes('cloud') || lower.includes('fern')) {
                 return 'natural';
             }
             return 'building';
@@ -1017,6 +1017,123 @@ class UISystem {
             panel.appendChild(slot);
         }
 
+        // --- Spawn Eggs Section ---
+        const spawnEggs = [
+            { subtype: 'cow',             name: 'Spawn Cow',             mob: 'COW' },
+            { subtype: 'pig',             name: 'Spawn Pig',             mob: 'PIG' },
+            { subtype: 'sheep',           name: 'Spawn Sheep',           mob: 'SHEEP' },
+            { subtype: 'chicken',         name: 'Spawn Chicken',         mob: 'CHICKEN' },
+            { subtype: 'zombie',          name: 'Spawn Zombie',          mob: 'ZOMBIE' },
+            { subtype: 'skeleton',        name: 'Spawn Skeleton',        mob: 'SKELETON' },
+            { subtype: 'spider',          name: 'Spawn Spider',          mob: 'SPIDER' },
+            { subtype: 'slime',           name: 'Spawn Slime',           mob: 'SLIME' },
+            { subtype: 'lavaslime',       name: 'Spawn Magma Cube',      mob: 'LAVASLIME' },
+            { subtype: 'bat',             name: 'Spawn Bat',             mob: 'BAT' },
+            { subtype: 'piglin_bruiser',  name: 'Spawn Piglin Brute',    mob: 'PIGLIN_BRUISER' },
+            { subtype: 'turtle',          name: 'Spawn Turtle',          mob: 'TURTLE' },
+            { subtype: 'frog',            name: 'Spawn Frog',            mob: 'FROG' },
+            { subtype: 'camel',           name: 'Spawn Camel',           mob: 'CAMEL' },
+            { subtype: 'golem',           name: 'Spawn Iron Golem',      mob: 'GOLEM' },
+            { subtype: 'cod',             name: 'Spawn Cod',             mob: 'COD' },
+            { subtype: 'salmon',          name: 'Spawn Salmon',          mob: 'SALMON' },
+            { subtype: 'tropical_fish',   name: 'Spawn Tropical Fish',   mob: 'TROPICAL_FISH' },
+            { subtype: 'clownfish',       name: 'Spawn Clownfish',       mob: 'CLOWNFISH' },
+            { subtype: 'blue_tang',       name: 'Spawn Blue Tang',       mob: 'BLUE_TANG' },
+            { subtype: 'bass',            name: 'Spawn Bass',            mob: 'BASS' },
+            { subtype: 'pufferfish',      name: 'Spawn Pufferfish',      mob: 'PUFFERFISH' },
+            { subtype: 'crab',            name: 'Spawn Crab',            mob: 'CRAB' },
+            { subtype: 'bird',            name: 'Spawn Bird',            mob: 'BIRD' },
+            { subtype: 'penguin',         name: 'Spawn Penguin',         mob: 'PENGUIN' },
+            { subtype: 'lizard',          name: 'Spawn Lizard',          mob: 'LIZARD' },
+            { subtype: 'piranha',         name: 'Spawn Piranha',         mob: 'PIRANHA' },
+            { subtype: 'shark',           name: 'Spawn Shark',           mob: 'SHARK' },
+            { subtype: 'goblin',          name: 'Spawn Goblin',          mob: 'GOBLIN' },
+            { subtype: 'wisp',            name: 'Spawn Wisp',            mob: 'WISP' },
+            { subtype: 'fire_golem',      name: 'Spawn Fire Golem',      mob: 'FIRE_GOLEM' },
+            { subtype: 'ice_golem',       name: 'Spawn Ice Golem',       mob: 'ICE_GOLEM' },
+            { subtype: 'jungle_guardian', name: 'Spawn Jungle Guardian',   mob: 'JUNGLE_GUARDIAN' },
+            { subtype: 'sand_wraith',     name: 'Spawn Sand Wraith',     mob: 'SAND_WRAITH' },
+            { subtype: 'lich',            name: 'Spawn Lich',            mob: 'LICH' },
+            { subtype: 'aether_bunny',    name: 'Spawn Aether Bunny',    mob: 'AETHER_BUNNY' },
+            { subtype: 'angel',           name: 'Spawn Angel',           mob: 'ANGEL' },
+            { subtype: 'cave_crawler',    name: 'Spawn Cave Crawler',    mob: 'CAVE_CRAWLER' },
+            { subtype: 'blind_horror',    name: 'Spawn Blind Horror',    mob: 'BLIND_HORROR' },
+            { subtype: 'alien_bug',       name: 'Spawn Alien Bug',       mob: 'ALIEN_BUG' },
+        ];
+
+        for (const egg of spawnEggs) {
+            const slot = document.createElement('div');
+            slot.className = 'inv-slot creative-item-slot';
+            slot.title = egg.name;
+            slot.dataset.itemType = 'spawn_egg';
+            slot.dataset.itemSubtype = egg.subtype;
+            slot.dataset.itemName = egg.name;
+            slot.dataset.category = 'spawneggs';
+
+            const cvs = generateItemTexture('spawn_egg', egg.subtype, (updatedCvs) => {
+                const existing = slot.querySelector('img');
+                if (existing) existing.src = updatedCvs.toDataURL();
+            });
+            const img = document.createElement('img');
+            img.src = cvs.toDataURL();
+            img.className = 'item-icon';
+            img.style.imageRendering = 'pixelated';
+            img.style.width = '76%';
+            img.style.height = '76%';
+            img.style.objectFit = 'contain';
+            img.draggable = false;
+            slot.appendChild(img);
+
+            slot.onmouseenter = (e) => {
+                if (this.dragState.isDragging || !this.isOpen) return;
+                const html = `<strong style="color:#7c5cff; font-size:16px;">${egg.name}</strong><br/><span style="color:#aaccff;">Spawn Egg</span><br/><span style="color:#aaa;">Right-click ground to spawn</span>`;
+                this.elements.tooltip.innerHTML = html;
+                this.elements.tooltip.classList.remove('hidden');
+                this.elements.tooltip.style.left = (e.clientX + 15) + 'px';
+                this.elements.tooltip.style.top  = (e.clientY + 15) + 'px';
+            };
+            slot.onmouseleave = () => this.elements.tooltip.classList.add('hidden');
+
+            slot.onmousedown = (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                const fakeSlot = {
+                    item: {
+                        type: 'spawn_egg',
+                        subtype: egg.subtype,
+                        name: egg.name,
+                        id: `spawn_egg_${egg.subtype}_${Date.now()}`,
+                        stackable: true,
+                        maxStack: 64,
+                        data: { mobType: egg.mob },
+                        description: 'Right-click ground to spawn'
+                    },
+                    count: 64
+                };
+                if (e.shiftKey) {
+                    if (this.currentPlayer && this.currentPlayer.inventory) {
+                        this.currentPlayer.inventory.addItem(fakeSlot.item, fakeSlot.count);
+                        this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                        this.renderGrid(this.elements.mainHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                    }
+                    return;
+                }
+                this.dragState.isDragging = true;
+                this.dragState.sourceType = 'creative';
+                this.dragState.sourceIndex = -1;
+                this.dragState.itemData = fakeSlot;
+                this.dragState.isSplit = false;
+                this.dragState.offsetX = 0;
+                this.dragState.offsetY = 0;
+                this.elements.dragIcon.classList.remove('hidden');
+                this.renderSlotItem(this.elements.dragIcon, fakeSlot);
+                this.updateDragIconPos(e.clientX, e.clientY);
+                this.elements.tooltip.classList.add('hidden');
+            };
+
+            panel.appendChild(slot);
+        }
+
         this._initCreativeTabsAndSearch();
         this._filterCreativeSlots();
     }
@@ -1314,6 +1431,7 @@ class UISystem {
                 else if (slot.item.type === 'equipment') cvs = generateItemTexture('equipment', slot.item.subtype, updateImg);
                 else if (slot.item.type === 'modifier') cvs = generateItemTexture('modifier', slot.item.subtype, updateImg);
                 else if (slot.item.type === 'food') cvs = generateItemTexture('food', slot.item.subtype, updateImg);
+                else if (slot.item.type === 'spawn_egg') cvs = generateItemTexture('spawn_egg', slot.item.subtype, updateImg);
                 
                 if (cvs) {
                     inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 76%; height: 76%; object-fit: contain;" />`;
@@ -1742,6 +1860,8 @@ class UISystem {
                 if (mod.config && mod.config.description) html += `<span style="color:#ccc; font-style:italic;">${mod.config.description}</span><br/>`;
                 else if (mod.description) html += `<span style="color:#ccc; font-style:italic;">${mod.description}</span><br/>`;
                 if (mod.rarity) html += `<span style="color:#aaa;">Rarity: ${mod.rarity}</span>`;
+            } else if (slot.item.type === 'spawn_egg') {
+                html += `<span style="color:#aaccff;">Spawn Egg</span><br/><span style="color:#aaa;">Right-click to spawn mob</span>`;
             }
             this.elements.tooltip.innerHTML = html;
             this.elements.tooltip.classList.remove('hidden');
@@ -1972,6 +2092,7 @@ class UISystem {
         if (slot.item.type === 'block') return slot.item.subtype;
         if (slot.item.type === 'material') return slot.item.subtype;
         if (slot.item.type === 'equipment') return slot.item.subtype;
+        if (slot.item.type === 'spawn_egg') return slot.item.subtype;
         return null;
     }
 

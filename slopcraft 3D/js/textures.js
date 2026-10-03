@@ -59,6 +59,8 @@ export const BLOCKS = {
     BLUE_FLOWER: 50,
     YELLOW_FLOWER: 51,
     FERN: 52,
+    TALL_FERN: 143,
+    TALL_FERN_TOP: 144,
     WHITE_FLOWER: 53,
     PURPLE_FLOWER: 185,
     ORANGE_FLOWER: 186,
@@ -262,7 +264,9 @@ const BLOCK_PROPS = {
     [BLOCKS.CACTUS]:        { name: 'Cactus',         health: 2, transparent: true,  emissive: 0, solid: true, drops: BLOCKS.CACTUS },
     [BLOCKS.BLUE_FLOWER]:   { name: 'Blue Flower',    health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.YELLOW_FLOWER]: { name: 'Yellow Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
-    [BLOCKS.FERN]:          { name: 'Fern',           health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
+    [BLOCKS.FERN]:          { name: 'Fern',           health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true },
+    [BLOCKS.TALL_FERN]:     { name: 'Large Fern',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true },
+    [BLOCKS.TALL_FERN_TOP]: { name: 'Large Fern Top', health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true },
     [BLOCKS.WHITE_FLOWER]:  { name: 'White Flower',   health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.PURPLE_FLOWER]: { name: 'Purple Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.ORANGE_FLOWER]: { name: 'Orange Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
@@ -1278,6 +1282,28 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillStyle = '#3e9a2a';
             ctx.fillRect(8, 10, 1, 6); // Inner stem shadow
             ctx.fillRect(5, 14, 2, 1); ctx.fillRect(9, 15, 2, 1);
+            break;
+        case BLOCKS.TALL_FERN:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = '#5ac43c';
+            ctx.fillRect(7, 0, 2, 16);
+            ctx.fillRect(3, 4, 4, 2);
+            ctx.fillRect(9, 7, 4, 2);
+            ctx.fillRect(2, 11, 5, 2);
+            ctx.fillRect(9, 13, 5, 2);
+            ctx.fillStyle = '#3e9a2a';
+            ctx.fillRect(8, 2, 1, 14);
+            break;
+        case BLOCKS.TALL_FERN_TOP:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.fillStyle = '#5ac43c';
+            ctx.fillRect(7, 4, 2, 12);
+            ctx.fillRect(5, 6, 2, 2);
+            ctx.fillRect(9, 7, 2, 2);
+            ctx.fillRect(4, 10, 3, 2);
+            ctx.fillRect(9, 11, 3, 2);
+            ctx.fillStyle = '#80df60';
+            ctx.fillRect(7, 3, 2, 3);
             break;
         case BLOCKS.PLANKS:
             drawPlanks(ctx, rng, 160, 130, 75, 'rgba(90, 65, 30, 0.7)', 'rgba(120, 90, 50, 0.5)');
@@ -2835,6 +2861,8 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.BLUE_FLOWER]: 'cornflower',
     [BLOCKS.YELLOW_FLOWER]: 'dandelion',
     [BLOCKS.FERN]: 'fern',
+    [BLOCKS.TALL_FERN]: 'large_fern_bottom',
+    [BLOCKS.TALL_FERN_TOP]: 'large_fern_top',
     [BLOCKS.WHITE_FLOWER]: 'lily_of_the_valley',
     [BLOCKS.PURPLE_FLOWER]: 'allium',
     [BLOCKS.ORANGE_FLOWER]: 'orange_tulip',
@@ -3292,7 +3320,27 @@ const LOCAL_ASSET_MAP = {
     "sapphire_axe": "assets/mc/item/sapphire_axe.png",
     "sapphire_shovel": "assets/mc/item/sapphire_shovel.png",
     "quartz": "assets/mc/item/quartz.png",
-    "netherite_scrap": "assets/mc/item/netherite_scrap.png"
+    "netherite_scrap": "assets/mc/item/netherite_scrap.png",
+    "large_fern_bottom": "assets/mc/block/large_fern_bottom.png",
+    "large_fern_top": "assets/mc/block/large_fern_top.png",
+    "bat_spawn_egg": "assets/mc/item/bat_spawn_egg.png",
+    "camel_spawn_egg": "assets/mc/item/camel_spawn_egg.png",
+    "chicken_spawn_egg": "assets/mc/item/chicken_spawn_egg.png",
+    "cod_spawn_egg": "assets/mc/item/cod_spawn_egg.png",
+    "cow_spawn_egg": "assets/mc/item/cow_spawn_egg.png",
+    "frog_spawn_egg": "assets/mc/item/frog_spawn_egg.png",
+    "iron_golem_spawn_egg": "assets/mc/item/iron_golem_spawn_egg.png",
+    "magma_cube_spawn_egg": "assets/mc/item/magma_cube_spawn_egg.png",
+    "piglin_brute_spawn_egg": "assets/mc/item/piglin_brute_spawn_egg.png",
+    "pig_spawn_egg": "assets/mc/item/pig_spawn_egg.png",
+    "salmon_spawn_egg": "assets/mc/item/salmon_spawn_egg.png",
+    "sheep_spawn_egg": "assets/mc/item/sheep_spawn_egg.png",
+    "skeleton_spawn_egg": "assets/mc/item/skeleton_spawn_egg.png",
+    "slime_spawn_egg": "assets/mc/item/slime_spawn_egg.png",
+    "spider_spawn_egg": "assets/mc/item/spider_spawn_egg.png",
+    "tropical_fish_spawn_egg": "assets/mc/item/tropical_fish_spawn_egg.png",
+    "turtle_spawn_egg": "assets/mc/item/turtle_spawn_egg.png",
+    "zombie_spawn_egg": "assets/mc/item/zombie_spawn_egg.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -3813,7 +3861,90 @@ const MC_ITEM_MAP = {
     'coal_block': 'coal_block',
     'fletching_table': 'fletching_table_front',
     'smoker': 'smoker_front',
-    'stonecutter': 'stonecutter_side'
+    'stonecutter': 'stonecutter_side',
+    'bat_spawn_egg': 'bat_spawn_egg',
+    'camel_spawn_egg': 'camel_spawn_egg',
+    'chicken_spawn_egg': 'chicken_spawn_egg',
+    'cod_spawn_egg': 'cod_spawn_egg',
+    'cow_spawn_egg': 'cow_spawn_egg',
+    'frog_spawn_egg': 'frog_spawn_egg',
+    'iron_golem_spawn_egg': 'iron_golem_spawn_egg',
+    'magma_cube_spawn_egg': 'magma_cube_spawn_egg',
+    'piglin_brute_spawn_egg': 'piglin_brute_spawn_egg',
+    'pig_spawn_egg': 'pig_spawn_egg',
+    'salmon_spawn_egg': 'salmon_spawn_egg',
+    'sheep_spawn_egg': 'sheep_spawn_egg',
+    'skeleton_spawn_egg': 'skeleton_spawn_egg',
+    'slime_spawn_egg': 'slime_spawn_egg',
+    'spider_spawn_egg': 'spider_spawn_egg',
+    'tropical_fish_spawn_egg': 'tropical_fish_spawn_egg',
+    'turtle_spawn_egg': 'turtle_spawn_egg',
+    'zombie_spawn_egg': 'zombie_spawn_egg',
+    'spawn_egg_bat': 'bat_spawn_egg',
+    'spawn_egg_camel': 'camel_spawn_egg',
+    'spawn_egg_chicken': 'chicken_spawn_egg',
+    'spawn_egg_cod': 'cod_spawn_egg',
+    'spawn_egg_cow': 'cow_spawn_egg',
+    'spawn_egg_frog': 'frog_spawn_egg',
+    'spawn_egg_golem': 'iron_golem_spawn_egg',
+    'spawn_egg_lavaslime': 'magma_cube_spawn_egg',
+    'spawn_egg_piglin_bruiser': 'piglin_brute_spawn_egg',
+    'spawn_egg_pig': 'pig_spawn_egg',
+    'spawn_egg_salmon': 'salmon_spawn_egg',
+    'spawn_egg_sheep': 'sheep_spawn_egg',
+    'spawn_egg_skeleton': 'skeleton_spawn_egg',
+    'spawn_egg_slime': 'slime_spawn_egg',
+    'spawn_egg_spider': 'spider_spawn_egg',
+    'spawn_egg_tropical_fish': 'tropical_fish_spawn_egg',
+    'spawn_egg_turtle': 'turtle_spawn_egg',
+    'spawn_egg_zombie': 'zombie_spawn_egg'
+};
+
+const SPAWN_EGG_COLORS = {
+    'cow':             { c: '#443626', d: '#2b2116', h: '#5e4c36', e: '#a1a1a1' },
+    'pig':             { c: '#f0a5a2', d: '#db7d78', h: '#f7c3c1', e: '#db7d78' },
+    'sheep':           { c: '#e7e7e7', d: '#bababa', h: '#ffffff', e: '#ffb5b5' },
+    'chicken':         { c: '#a1a1a1', d: '#707070', h: '#c8c8c8', e: '#ff0000' },
+    'zombie':          { c: '#00afaf', d: '#007070', h: '#00dfdf', e: '#799c65' },
+    'skeleton':        { c: '#c1c1c1', d: '#919191', h: '#dedede', e: '#494949' },
+    'spider':          { c: '#342d27', d: '#1f1a16', h: '#4b4138', e: '#a80e0e' },
+    'slime':           { c: '#51a03e', d: '#38732a', h: '#70cf57', e: '#7eb75b' },
+    'lavaslime':       { c: '#340000', d: '#1c0000', h: '#540000', e: '#fcfc00' },
+    'magma_cube':      { c: '#340000', d: '#1c0000', h: '#540000', e: '#fcfc00' },
+    'bat':             { c: '#4c3e30', d: '#2e251b', h: '#6a5743', e: '#0f0f0f' },
+    'piglin_bruiser':  { c: '#995f40', d: '#6b3f27', h: '#bf7952', e: '#ffd83d' },
+    'piglin_brute':    { c: '#995f40', d: '#6b3f27', h: '#bf7952', e: '#ffd83d' },
+    'goblin':          { c: '#3d6e32', d: '#274720', h: '#559c46', e: '#822424' },
+    'golem':           { c: '#d0c8b0', d: '#9a9482', h: '#ece6d0', e: '#5e8238' },
+    'iron_golem':      { c: '#d0c8b0', d: '#9a9482', h: '#ece6d0', e: '#5e8238' },
+    'wisp':            { c: '#66e0ff', d: '#2db8db', h: '#a8f2ff', e: '#ffffff' },
+    'fire_golem':      { c: '#c43e00', d: '#802900', h: '#f05b18', e: '#ffd700' },
+    'ice_golem':       { c: '#70c0e8', d: '#4585a8', h: '#aae0ff', e: '#ffffff' },
+    'jungle_guardian': { c: '#23591b', d: '#14360f', h: '#35822b', e: '#d4af37' },
+    'sand_wraith':     { c: '#d2b55b', d: '#96813e', h: '#e8ce7d', e: '#4a3b1a' },
+    'lich':            { c: '#3d2856', d: '#241633', h: '#5c3d82', e: '#8aff80' },
+    'cod':             { c: '#c1a176', d: '#876e4c', h: '#dec39e', e: '#e5cbb0' },
+    'salmon':          { c: '#8f2525', d: '#5e1717', h: '#b83b3b', e: '#0e4435' },
+    'tropical_fish':   { c: '#ef6915', d: '#ab4609', h: '#ff8a42', e: '#ffffff' },
+    'clownfish':       { c: '#f07416', d: '#a64d08', h: '#ff9240', e: '#ffffff' },
+    'blue_tang':       { c: '#1d48b8', d: '#102e7d', h: '#3f6ee8', e: '#ffeb3b' },
+    'bass':            { c: '#4a6042', d: '#2e3d29', h: '#6a8a5f', e: '#8a9e7f' },
+    'crab':            { c: '#c73824', d: '#8a2415', h: '#e85843', e: '#ffffff' },
+    'pufferfish':      { c: '#e8a93a', d: '#a87720', h: '#ffc766', e: '#337ab7' },
+    'turtle':          { c: '#e7e7e7', d: '#a3a3a3', h: '#ffffff', e: '#00afaf' },
+    'bird':            { c: '#2196f3', d: '#12609e', h: '#5bb4f8', e: '#ffeb3b' },
+    'chicken':         { c: '#a1a1a1', d: '#707070', h: '#c8c8c8', e: '#ff0000' },
+    'lizard':          { c: '#3b8a32', d: '#24591e', h: '#54b849', e: '#c2a632' },
+    'piranha':         { c: '#a82c2c', d: '#6b1919', h: '#d44848', e: '#383838' },
+    'shark':           { c: '#60727d', d: '#3e4a52', h: '#849aa8', e: '#ffffff' },
+    'aether_bunny':    { c: '#8fe3ff', d: '#54a6c2', h: '#bdf0ff', e: '#ffffff' },
+    'angel':           { c: '#e8d584', d: '#a69651', h: '#fff3b0', e: '#ffffff' },
+    'cave_crawler':    { c: '#363434', d: '#1e1c1c', h: '#545050', e: '#e63946' },
+    'blind_horror':    { c: '#1c1b24', d: '#0e0d14', h: '#333140', e: '#9c27b0' },
+    'camel':           { c: '#c4975a', d: '#876435', h: '#dfb57b', e: '#6b4d24' },
+    'penguin':         { c: '#212529', d: '#0f1112', h: '#3c424a', e: '#ff9800' },
+    'frog':            { c: '#597d36', d: '#38521f', h: '#78a649', e: '#9bb869' },
+    'alien_bug':       { c: '#5d2e8c', d: '#361654', h: '#8445c4', e: '#00e5ff' }
 };
 
 // Global cache: subtype -> canvas / data URL
@@ -3839,7 +3970,10 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
 
     const useMC = localStorage.getItem('slopcraft_mc_textures') !== 'false';
     if (useMC) {
-        const mcName = MC_ITEM_MAP[itemSubtype];
+        const mcKey = (itemType === 'spawn_egg') 
+            ? (MC_ITEM_MAP['spawn_egg_' + itemSubtype] || MC_ITEM_MAP[itemSubtype + '_spawn_egg'] || MC_ITEM_MAP[itemSubtype])
+            : MC_ITEM_MAP[itemSubtype];
+        const mcName = mcKey;
         if (mcName) {
             loadMinecraftTexture(mcName).then(img => {
                 if (img) {
@@ -3948,6 +4082,9 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         p = palettes[itemSubtype] || p;
     } else if (itemType === 'wand') {
         p = palettes[itemSubtype] || palettes['wand_basic'];
+    } else if (itemType === 'spawn_egg' || itemSubtype.includes('spawn_egg')) {
+        const cleanSub = itemSubtype.replace(/^spawn_egg_/, '').replace(/_spawn_egg$/, '').toLowerCase();
+        p = SPAWN_EGG_COLORS[cleanSub] || { c: '#888888', d: '#555555', h: '#aaaaaa', e: '#ffffff' };
     }
     // Fallback if p is somehow undefined
     if (!p) p = palettes['iron_ingot'];
@@ -3969,6 +4106,7 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 else if (char === 'L') ctx.fillStyle = p.l || '#3366CC'; // liquid dark
                 else if (char === 'W') ctx.fillStyle = p.w || '#66AAFF'; // liquid light
                 else if (char === 'A') ctx.fillStyle = '#111111'; // accent/dark shade
+                else if (char === 'E') ctx.fillStyle = p.e || '#ffffff'; // egg spot
                 else continue;
                 ctx.fillRect(x, y, 1, 1);
             }
@@ -4809,6 +4947,25 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
             "      OHHO      ",
             "       OO       ",
             "                "
+        ];
+    } else if (itemType === 'spawn_egg' || itemSubtype.includes('spawn_egg')) {
+        shape = [
+            "                ",
+            "     OOOOOO     ",
+            "    OHHCCCDO    ",
+            "   OHHEECCCDO   ",
+            "  OHHCEECCCDDO  ",
+            "  OHCCCCECCCDO  ",
+            " OHCCECCCCCCCDO ",
+            " OHCCECCCCECCDO ",
+            " OCCCCCEECECCDO ",
+            " OCCEECCCCECCDO ",
+            " OCCEECCCCCCCDO ",
+            " OCCECCCCECCCDO ",
+            "  OCCECCCCCDDO  ",
+            "  ODCCEECCDDDO  ",
+            "   ODDDDDDDDO   ",
+            "    ODDDDDDO    "
         ];
     } else if (itemSubtype === 'ender_pearl') {
         // Draw ender pearl as a glowing teal orb directly

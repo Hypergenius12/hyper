@@ -2,19 +2,23 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=89';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=89';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=89';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=89';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=89';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=89';
-import { AudioManager } from './audio.js?v=89';
-import { BiomeMap } from './map.js?v=89';
-import { DevMode } from './dev.js?v=89';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=91';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=91';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=91';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=91';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=91';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=91';
+import { AudioManager } from './audio.js?v=91';
+import { BiomeMap } from './map.js?v=91';
+import { DevMode } from './dev.js?v=91';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// Expose BLOCKS globally
+window.BLOCKS = BLOCKS;
+window.BLOCKS_REF = BLOCKS;
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
@@ -382,6 +386,10 @@ class Game {
                 BLOCKS.GLASS,
                 BLOCKS.BOSS_SPAWNER,
                 BLOCKS.DUNGEON_DOOR_TOP,
+                BLOCKS.TALL_FERN_TOP,
+                BLOCKS.TALL_FERN,
+                BLOCKS.FERN,
+                BLOCKS.TALL_GRASS,
             ]);
             if (NO_DROP_BLOCKS.has(oldType)) return;
             const props = getBlockProperties(oldType);
@@ -1217,6 +1225,15 @@ class Game {
                     this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
                     
                     if (blockType === BLOCKS.TORCH || blockType === BLOCKS.GLOWSTONE) this.torchSystem.removeTorch(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    if (blockType === BLOCKS.TALL_FERN) {
+                        if (this.world.getBlock(hit.blockPos.x, hit.blockPos.y + 1, hit.blockPos.z) === BLOCKS.TALL_FERN_TOP) {
+                            this.world.setBlock(hit.blockPos.x, hit.blockPos.y + 1, hit.blockPos.z, BLOCKS.AIR);
+                        }
+                    } else if (blockType === BLOCKS.TALL_FERN_TOP) {
+                        if (this.world.getBlock(hit.blockPos.x, hit.blockPos.y - 1, hit.blockPos.z) === BLOCKS.TALL_FERN) {
+                            this.world.setBlock(hit.blockPos.x, hit.blockPos.y - 1, hit.blockPos.z, BLOCKS.AIR);
+                        }
+                    }
                     
                     this.audio.playBreak(blockType);
                     this.breakTimer = 0;
@@ -1544,6 +1561,17 @@ class Game {
                                 this.player.inventory.slots[this.player.selectedSlot] = null;
                             }
                         }
+                    } else if (slot.item.subtype === BLOCKS.TALL_FERN) {
+                        const curBlockTop = this.world.getBlock(placePos.x, placePos.y + 1, placePos.z);
+                        if (curBlockTop === BLOCKS.AIR || curBlockTop === BLOCKS.WATER || curBlockTop === BLOCKS.SWAMP_WATER || curBlockTop === BLOCKS.LAVA) {
+                            this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.TALL_FERN);
+                            this.world.setBlock(placePos.x, placePos.y + 1, placePos.z, BLOCKS.TALL_FERN_TOP);
+                            this.audio.playPlace();
+                            slot.count--;
+                            if (slot.count <= 0) {
+                                this.player.inventory.slots[this.player.selectedSlot] = null;
+                            }
+                        }
                     } else {
                         this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype);
                         if (slot.item.subtype === BLOCKS.TORCH || slot.item.subtype === BLOCKS.GLOWSTONE) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
@@ -1554,6 +1582,36 @@ class Game {
                         }
                     }
                 }
+            } else if (slot && slot.item.type === 'spawn_egg' && hit.hit) {
+                const spawnPos = new THREE.Vector3(
+                    hit.blockPos.x + hit.normal.x + 0.5,
+                    hit.blockPos.y + (hit.normal.y < 0 ? -0.5 : (hit.normal.y > 0 ? 0.05 : 0)),
+                    hit.blockPos.z + hit.normal.z + 0.5
+                );
+                let mobKey = (slot.item.data && slot.item.data.mobType) ? slot.item.data.mobType : slot.item.subtype;
+                mobKey = String(mobKey).replace(/^spawn_egg_/, '').replace(/_spawn_egg$/, '').toUpperCase();
+                if (mobKey === 'LAVASLIME' || mobKey === 'MAGMA_CUBE') mobKey = 'LAVASLIME';
+                if (mobKey === 'PIGLIN_BRUTE' || mobKey === 'PIGLIN_BRUISER') mobKey = 'PIGLIN_BRUISER';
+                if (mobKey === 'IRON_GOLEM' || mobKey === 'GOLEM') mobKey = 'GOLEM';
+
+                if (MOB_TYPES[mobKey]) {
+                    const mob = new Mob(mobKey, spawnPos);
+                    this.entityManager.addMob(mob);
+                    this.particles.emit(spawnPos, 'smoke', 10, 0xcccccc);
+                    if (this.audio && this.audio.playPop) this.audio.playPop(); else this.audio.playClick();
+                    if (!this.input.creativeMode) {
+                        slot.count--;
+                        if (slot.count <= 0) {
+                            this.player.inventory.slots[this.player.selectedSlot] = null;
+                        }
+                    }
+                    this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    if (this.ui.isOpen) {
+                        this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    }
+                }
+                this.input.mouse.rightClick = false;
+                return;
             } else if (slot && slot.item.type === 'food') {
                 if (this.player.health < this.player.maxHealth) {
                     this.player.health = Math.min(this.player.maxHealth, this.player.health + (slot.item.data.heal || 10));

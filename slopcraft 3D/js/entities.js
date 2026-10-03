@@ -3,7 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials } from './textures.js?v=89';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials } from './textures.js?v=90';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -27,7 +27,7 @@ export class Item {
         this.data = data;
         this.name = name || 'Item';
         this.description = desc || '';
-        this.stackable = type === 'block' || type === 'material' || type === 'food';
+        this.stackable = type === 'block' || type === 'material' || type === 'food' || type === 'spawn_egg';
         this.maxStack = this.stackable ? 64 : 1;
         this.id = `item_${itemIdCounter++}`;
     }
@@ -39,6 +39,7 @@ export class Item {
     static equipmentItem(subType, equipData, name, desc) { return new Item('equipment', subType, { equipData }, name, desc); }
     static materialItem(subType, name, desc) { return new Item('material', subType, {}, name, desc); }
     static foodItem(subType, healAmount, name, desc) { return new Item('food', subType, { heal: healAmount }, name, desc); }
+    static spawnEggItem(subType, mobType, name, desc) { return new Item('spawn_egg', subType, { mobType }, name || `${mobType} Spawn Egg`, desc || 'Right-click to spawn mob'); }
 }
 
 export class Inventory {
@@ -2882,7 +2883,7 @@ export class ItemEntity {
                 const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
                 this.mesh = new THREE.Sprite(mat);
                 this.mesh.scale.set(0.4, 0.4, 0.4);
-            } else if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'wand' || this.item.type === 'spell' || this.item.type === 'modifier' || this.item.type === 'food') {
+            } else if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'wand' || this.item.type === 'spell' || this.item.type === 'modifier' || this.item.type === 'food' || this.item.type === 'spawn_egg') {
                 let cvs;
                 let tex;
                 const updateTex = (canvas) => {
@@ -2891,7 +2892,7 @@ export class ItemEntity {
                         tex.needsUpdate = true;
                     }
                 };
-                if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'food') {
+                if (this.item.type === 'material' || this.item.type === 'equipment' || this.item.type === 'food' || this.item.type === 'spawn_egg') {
                     cvs = generateItemTexture(this.item.type, this.item.subtype, updateTex);
                 } else if (this.item.type === 'wand') {
                     cvs = generateItemTexture('wand', this.item.subtype || 'wand_basic', updateTex);
@@ -3015,7 +3016,11 @@ export class Mob {
             // Ensure unique materials so tinting one doesn't tint all
             this.mesh.traverse(child => {
                 if (child.isMesh && child.material) {
-                    child.material = child.material.clone();
+                    if (Array.isArray(child.material)) {
+                        child.material = child.material.map(m => m.clone());
+                    } else {
+                        child.material = child.material.clone();
+                    }
                 }
             });
 
@@ -3074,7 +3079,15 @@ export class Mob {
                 // Reset all materials to original colors
                 this.mesh.traverse(child => {
                     if (child.isMesh && child.userData.originalColor !== undefined) {
-                        child.material.color.setHex(child.userData.originalColor);
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach((mat, idx) => {
+                                if (Array.isArray(child.userData.originalColor) && child.userData.originalColor[idx] !== undefined) {
+                                    if (mat.color) mat.color.setHex(child.userData.originalColor[idx]);
+                                }
+                            });
+                        } else if (child.material && child.material.color) {
+                            child.material.color.setHex(child.userData.originalColor);
+                        }
                     }
                 });
             }
@@ -3112,11 +3125,20 @@ export class Mob {
                 // Tint green temporarily
                 if (this.mesh && this.tintTimer <= 0) {
                     this.mesh.traverse(child => {
-                        if (child.isMesh && child.material && child.material.color) {
-                            if (child.userData.originalColor === undefined) {
-                                child.userData.originalColor = child.material.color.getHex();
+                        if (child.isMesh && child.material) {
+                            if (Array.isArray(child.material)) {
+                                if (child.userData.originalColor === undefined) {
+                                    child.userData.originalColor = child.material.map(m => m.color ? m.color.getHex() : 0xffffff);
+                                }
+                                child.material.forEach(m => {
+                                    if (m.color) m.color.setHex(0x33CC33);
+                                });
+                            } else if (child.material.color) {
+                                if (child.userData.originalColor === undefined) {
+                                    child.userData.originalColor = child.material.color.getHex();
+                                }
+                                child.material.color.setHex(0x33CC33);
                             }
-                            child.material.color.setHex(0x33CC33);
                         }
                     });
                     this.tintTimer = 0.2;
@@ -3272,11 +3294,20 @@ export class Mob {
         // Damage tint — color all child meshes red
         if (this.mesh) {
             this.mesh.traverse(child => {
-                if (child.isMesh && child.material && child.material.color) {
-                    if (child.userData.originalColor === undefined) {
-                        child.userData.originalColor = child.material.color.getHex();
+                if (child.isMesh && child.material) {
+                    if (Array.isArray(child.material)) {
+                        if (child.userData.originalColor === undefined) {
+                            child.userData.originalColor = child.material.map(m => m.color ? m.color.getHex() : 0xffffff);
+                        }
+                        child.material.forEach(m => {
+                            if (m.color) m.color.setHex(0xff0000);
+                        });
+                    } else if (child.material.color) {
+                        if (child.userData.originalColor === undefined) {
+                            child.userData.originalColor = child.material.color.getHex();
+                        }
+                        child.material.color.setHex(0xff0000);
                     }
-                    child.material.color.setHex(0xff0000);
                 }
             });
             this.tintTimer = 0.2;
@@ -3297,11 +3328,20 @@ export class Mob {
         this.freezeTimer = Math.max(this.freezeTimer || 0, duration);
         if (this.mesh) {
             this.mesh.traverse(child => {
-                if (child.isMesh && child.material && child.material.color) {
-                    if (child.userData.originalColor === undefined) {
-                        child.userData.originalColor = child.material.color.getHex();
+                if (child.isMesh && child.material) {
+                    if (Array.isArray(child.material)) {
+                        if (child.userData.originalColor === undefined) {
+                            child.userData.originalColor = child.material.map(m => m.color ? m.color.getHex() : 0xffffff);
+                        }
+                        child.material.forEach(m => {
+                            if (m.color) m.color.setHex(0x88ccff);
+                        });
+                    } else if (child.material.color) {
+                        if (child.userData.originalColor === undefined) {
+                            child.userData.originalColor = child.material.color.getHex();
+                        }
+                        child.material.color.setHex(0x88ccff); // blue tint
                     }
-                    child.material.color.setHex(0x88ccff); // blue tint
                 }
             });
             this.tintTimer = Math.max(this.tintTimer, duration);
@@ -3313,8 +3353,12 @@ export class Mob {
             if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
             this.mesh.traverse(child => {
                 if (child.isMesh) {
-                    child.geometry.dispose();
-                    if (child.material) child.material.dispose();
+                    if (child.geometry) child.geometry.dispose();
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(m => m.dispose());
+                    } else if (child.material) {
+                        child.material.dispose();
+                    }
                 }
             });
         }
