@@ -2183,9 +2183,6 @@ class UISystem {
 
         // Workstations crafted in 2x2 or 3x3
         if (getCount('flint') === 2 && (countAnyPlank === 4 || countAnyPlank === 2) && totalItems === (2 + countAnyPlank)) return block(B.FLETCHING_TABLE, 'Fletching Table', 1);
-        if (getCount('iron_ingot') === 2 && (countAnyPlank === 4 || countAnyPlank === 2) && totalItems === (2 + countAnyPlank)) return block(B.SMITHING_TABLE, 'Smithing Table', 1);
-        if (getCount('paper') === 2 && (countAnyPlank === 4 || countAnyPlank === 2) && totalItems === (2 + countAnyPlank)) return block(B.CARTOGRAPHY_TABLE, 'Cartography Table', 1);
-        if (getCount('string') === 2 && countAnyPlank === 2 && totalItems === 4) return block(B.LOOM, 'Loom', 1);
 
         // Reverse Storage is 1 item -> 9 items.
         if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
@@ -2300,9 +2297,7 @@ class UISystem {
 
             // Workstations & Furniture
             if (getCount('iron_ingot') === 1 && getCount(B.STONE) === 3 && totalItems === 4) return block(B.STONECUTTER, 'Stonecutter', 1);
-            if (getCount('stick') === 2 && (getCount(B.STONE) === 1 || getCount(B.COBBLESTONE) === 1) && countAnyPlank === 2 && totalItems === 5) return block(B.GRINDSTONE, 'Grindstone', 1);
             if (getCount(B.FURNACE) === 1 && countAnyLog === 4 && totalItems === 5) return block(B.SMOKER, 'Smoker', 1);
-            if (getCount(B.FURNACE) === 1 && getCount('iron_ingot') === 5 && getCount(B.STONE) === 3 && totalItems === 9) return block(B.BLAST_FURNACE, 'Blast Furnace', 1);
 
             if (countAnyPlank === 8 && totalItems === 8) return block(B.CHEST_BLOCK, 'Chest', 1);
             if (countAnyPlank === 6 && getCount('book') === 3 && totalItems === 9) return block(B.BOOKSHELF, 'Bookshelf', 1);
@@ -2434,12 +2429,7 @@ class UISystem {
             { name: "Coal (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.COAL_BLOCK),_,_],[_,_,_]], out: mat('coal'), outCount: 9, needs3x3: false },
 
             { name: "Fletching Table", desc: "Decorative workstation.", grid: [[mat('flint'),mat('flint'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.FLETCHING_TABLE), outCount: 1, needs3x3: true },
-            { name: "Smithing Table", desc: "Workstation for tools.", grid: [[mat('iron_ingot'),mat('iron_ingot'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.SMITHING_TABLE), outCount: 1, needs3x3: true },
-            { name: "Cartography Table", desc: "Mapmaking workstation.", grid: [[mat('paper'),mat('paper'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.CARTOGRAPHY_TABLE), outCount: 1, needs3x3: true },
             { name: "Smoker", desc: "Rapidly cooks food.", grid: [[_,blk(B.WOOD),_],[blk(B.WOOD),blk(B.FURNACE),blk(B.WOOD)],[_,blk(B.WOOD),_]], out: blk(B.SMOKER), outCount: 1, needs3x3: true },
-            { name: "Blast Furnace", desc: "High-heat smelting furnace.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),blk(B.FURNACE),mat('iron_ingot')],[blk(B.STONE),blk(B.STONE),blk(B.STONE)]], out: blk(B.BLAST_FURNACE), outCount: 1, needs3x3: true },
-            { name: "Grindstone", desc: "Repairs and disenchants.", grid: [[mat('stick'),blk(B.STONE),mat('stick')],[blk(B.PLANKS),_,blk(B.PLANKS)],[_,_,_]], out: blk(B.GRINDSTONE), outCount: 1, needs3x3: true },
-            { name: "Loom", desc: "Weaves banners and patterns.", grid: [[_,_,_],[mat('string'),mat('string'),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.LOOM), outCount: 1, needs3x3: false },
             { name: "Stonecutter", desc: "Precision masonry tool.", grid: [[_,mat('iron_ingot'),_],[blk(B.STONE),blk(B.STONE),blk(B.STONE)],[_,_,_]], out: blk(B.STONECUTTER), outCount: 1, needs3x3: true },
             { name: "Bookshelf", desc: "Storage for literature.", grid: [[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[mat('book'),mat('book'),mat('book')],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.BOOKSHELF), outCount: 1, needs3x3: true },
 

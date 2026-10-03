@@ -3,7 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials } from './textures.js?v=87';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials } from './textures.js?v=89';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -753,8 +753,9 @@ function createMobMaterial(color, emissive = 0x000000, emissiveIntensity = 0) {
 }
 
 const mobTextureCache = {};
-function getMobMaterial(type) {
-    if (!mobTextureCache[type]) {
+function getMobMaterial(type, part = 'body') {
+    const key = `${type}_${part}`;
+    if (!mobTextureCache[key]) {
         let tex;
         const updateTex = (canvas) => {
             if (tex) {
@@ -762,19 +763,40 @@ function getMobMaterial(type) {
                 tex.needsUpdate = true;
             }
         };
-        const cvs = generateMobTexture(type, updateTex);
+        const cvs = generateMobTexture(type, part, updateTex);
         tex = new THREE.CanvasTexture(cvs);
         tex.magFilter = THREE.NearestFilter;
         tex.minFilter = THREE.NearestFilter;
-        mobTextureCache[type] = new THREE.MeshLambertMaterial({ map: tex });
+        mobTextureCache[key] = new THREE.MeshLambertMaterial({ map: tex });
     }
-    return mobTextureCache[type];
+    return mobTextureCache[key];
 }
 
-function createBodyPart(geo, colorOrType, emissive = 0x000000, emissiveIntensity = 0) {
+const mobHeadCache = {};
+function getMobHeadMaterials(type) {
+    if (!mobHeadCache[type]) {
+        const sideMat = getMobMaterial(type, 'head_side');
+        const topMat = getMobMaterial(type, 'head_top');
+        const bottomMat = getMobMaterial(type, 'head_bottom');
+        const frontMat = getMobMaterial(type, 'head_front');
+        const backMat = getMobMaterial(type, 'head_back');
+        // Three.js BoxGeometry face mapping: [+X, -X, +Y, -Y, +Z, -Z]
+        mobHeadCache[type] = [sideMat, sideMat, topMat, bottomMat, frontMat, backMat];
+    }
+    return mobHeadCache[type];
+}
+
+function createMobHead(geo, mobType) {
+    const mats = getMobHeadMaterials(mobType);
+    const mesh = new THREE.Mesh(geo, mats);
+    mesh.castShadow = true;
+    return mesh;
+}
+
+function createBodyPart(geo, colorOrType, emissive = 0x000000, emissiveIntensity = 0, part = 'body') {
     let mat;
     if (typeof colorOrType === 'string') {
-        mat = getMobMaterial(colorOrType);
+        mat = getMobMaterial(colorOrType, part);
         if (emissive !== 0x000000) {
             mat = mat.clone();
             mat.emissive = new THREE.Color(emissive);
@@ -798,34 +820,94 @@ export const MOB_TYPES = {
         size: 0.9, xpDrop: 4, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            const mat = getMobMaterial('COW');
-            const bodyGeo = new THREE.BoxGeometry(0.8, 0.6, 1.4);
-            const body = new THREE.Mesh(bodyGeo, mat);
-            body.position.y = 0.5;
+            // Body (black-and-white spotted)
+            const bodyGeo = new THREE.BoxGeometry(0.8, 0.6, 1.3);
+            const body = createBodyPart(bodyGeo, 'COW', 0, 0, 'body');
+            body.position.y = 0.55;
             group.add(body);
+
+            // Udder (pink on underside of body)
+            const udderGeo = new THREE.BoxGeometry(0.3, 0.15, 0.35);
+            const udder = createBodyPart(udderGeo, 'COW', 0, 0, 'snout');
+            udder.position.set(0, 0.22, -0.2);
+            group.add(udder);
+
+            // Head (faces +Z forward)
             const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-            const head = new THREE.Mesh(headGeo, mat);
-            head.position.set(0, 0.8, -0.8);
+            const head = createMobHead(headGeo, 'COW');
+            head.position.set(0, 0.8, 0.65);
+            head.name = 'head';
             group.add(head);
-            const legGeo = new THREE.BoxGeometry(0.2, 0.5, 0.2);
-            for(let i=0; i<4; i++) {
-                const leg = new THREE.Mesh(legGeo, mat);
-                leg.position.set((i%2===0?-0.3:0.3), 0.25, (i<2?-0.5:0.5));
+
+            // Horns
+            const hornGeo = new THREE.BoxGeometry(0.08, 0.18, 0.08);
+            const hornMat = getMobMaterial('COW', 'horn');
+            const leftHorn = new THREE.Mesh(hornGeo, hornMat);
+            leftHorn.position.set(-0.24, 1.08, 0.6);
+            leftHorn.rotation.z = 0.2;
+            group.add(leftHorn);
+            const rightHorn = new THREE.Mesh(hornGeo, hornMat);
+            rightHorn.position.set(0.24, 1.08, 0.6);
+            rightHorn.rotation.z = -0.2;
+            group.add(rightHorn);
+
+            // 4 Legs with hooves
+            const legGeo = new THREE.BoxGeometry(0.22, 0.5, 0.22);
+            for(let i = 0; i < 4; i++) {
+                const leg = createBodyPart(legGeo, 'COW', 0, 0, 'leg');
+                const x = (i % 2 === 0 ? -0.28 : 0.28);
+                const z = (i < 2 ? 0.38 : -0.38);
+                leg.position.set(x, 0.25, z);
+                leg.name = `leg_${i}`;
                 group.add(leg);
             }
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
+            const leg0 = mesh.getObjectByName('leg_0');
+            const leg1 = mesh.getObjectByName('leg_1');
+            const leg2 = mesh.getObjectByName('leg_2');
+            const leg3 = mesh.getObjectByName('leg_3');
+            const head = mesh.getObjectByName('head');
             if (!isMoving) {
-                // Reset legs
-                for(let i=2; i<6; i++) mesh.children[i].rotation.x = 0;
+                if (leg0) leg0.rotation.x = 0;
+                if (leg1) leg1.rotation.x = 0;
+                if (leg2) leg2.rotation.x = 0;
+                if (leg3) leg3.rotation.x = 0;
+                if (head) head.rotation.y = Math.sin(age * 1.5) * 0.05;
             } else {
-                // Walk cycle
-                const swing = Math.sin(age * 8) * 0.4;
-                mesh.children[2].rotation.x = swing;
-                mesh.children[3].rotation.x = -swing;
-                mesh.children[4].rotation.x = -swing;
-                mesh.children[5].rotation.x = swing;
+                const swing = Math.sin(age * 7) * 0.45;
+                if (leg0) leg0.rotation.x = swing;
+                if (leg1) leg1.rotation.x = -swing;
+                if (leg2) leg2.rotation.x = -swing;
+                if (leg3) leg3.rotation.x = swing;
+                if (head) head.rotation.y = 0;
+            }
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            if (mob.health < mob.maxHealth) {
+                const fleeDir = _tempVec3.subVectors(mob.position, playerPos).normalize();
+                fleeDir.y = 0;
+                mob.velocity.x = fleeDir.x * mob.speed * 1.5;
+                mob.velocity.z = fleeDir.z * mob.speed * 1.5;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z);
+            } else {
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    if (Math.random() < 0.3) {
+                        mob.wanderTimer = 2 + Math.random() * 4;
+                        const angle = Math.random() * Math.PI * 2;
+                        mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                    } else {
+                        mob.wanderTimer = 4 + Math.random() * 5;
+                        mob.wanderDir.set(0, 0, 0);
+                    }
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.3;
+                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.3;
+                if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
             }
         }
     },
@@ -835,38 +917,72 @@ export const MOB_TYPES = {
         buildMesh: () => {
             const group = new THREE.Group();
             // Body (wool)
-            const bodyGeo = new THREE.BoxGeometry(0.8, 0.6, 1.2);
-            const bodyMat = getMobMaterial('SHEEP');
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.5;
+            const bodyGeo = new THREE.BoxGeometry(0.8, 0.65, 1.2);
+            const body = createBodyPart(bodyGeo, 'SHEEP', 0, 0, 'body');
+            body.position.y = 0.55;
             group.add(body);
-            // Head
-            const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-            const headMat = getMobMaterial('SHEEP');
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.set(0, 0.7, -0.7);
+
+            // Head (faces +Z forward)
+            const headGeo = new THREE.BoxGeometry(0.45, 0.45, 0.45);
+            const head = createMobHead(headGeo, 'SHEEP');
+            head.position.set(0, 0.72, 0.6);
+            head.name = 'head';
             group.add(head);
-            // Legs
-            const legGeo = new THREE.BoxGeometry(0.2, 0.4, 0.2);
-            const legMat = getMobMaterial('SHEEP');
-            for(let i=0; i<4; i++) {
-                const leg = new THREE.Mesh(legGeo, legMat);
-                leg.position.set((i%2===0?-0.3:0.3), 0.2, (i<2?-0.4:0.4));
+
+            // 4 Legs
+            const legGeo = new THREE.BoxGeometry(0.2, 0.45, 0.2);
+            for(let i = 0; i < 4; i++) {
+                const leg = createBodyPart(legGeo, 'SHEEP', 0, 0, 'leg');
+                const x = (i % 2 === 0 ? -0.26 : 0.26);
+                const z = (i < 2 ? 0.35 : -0.35);
+                leg.position.set(x, 0.225, z);
+                leg.name = `leg_${i}`;
                 group.add(leg);
             }
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
+            const leg0 = mesh.getObjectByName('leg_0');
+            const leg1 = mesh.getObjectByName('leg_1');
+            const leg2 = mesh.getObjectByName('leg_2');
+            const leg3 = mesh.getObjectByName('leg_3');
             if (!isMoving) {
-                // Reset legs
-                for(let i=2; i<6; i++) mesh.children[i].rotation.x = 0;
+                if (leg0) leg0.rotation.x = 0;
+                if (leg1) leg1.rotation.x = 0;
+                if (leg2) leg2.rotation.x = 0;
+                if (leg3) leg3.rotation.x = 0;
             } else {
-                // Walk cycle
                 const swing = Math.sin(age * 8) * 0.4;
-                mesh.children[2].rotation.x = swing;
-                mesh.children[3].rotation.x = -swing;
-                mesh.children[4].rotation.x = -swing;
-                mesh.children[5].rotation.x = swing;
+                if (leg0) leg0.rotation.x = swing;
+                if (leg1) leg1.rotation.x = -swing;
+                if (leg2) leg2.rotation.x = -swing;
+                if (leg3) leg3.rotation.x = swing;
+            }
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            if (mob.health < mob.maxHealth) {
+                const fleeDir = _tempVec3.subVectors(mob.position, playerPos).normalize();
+                fleeDir.y = 0;
+                mob.velocity.x = fleeDir.x * mob.speed * 2.0;
+                mob.velocity.z = fleeDir.z * mob.speed * 2.0;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z);
+            } else {
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    if (Math.random() < 0.4) {
+                        mob.wanderTimer = 1.5 + Math.random() * 3;
+                        const angle = Math.random() * Math.PI * 2;
+                        mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                    } else {
+                        mob.wanderTimer = 3 + Math.random() * 4;
+                        mob.wanderDir.set(0, 0, 0);
+                    }
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.4;
+                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.4;
+                if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
             }
         }
     },
@@ -939,32 +1055,79 @@ export const MOB_TYPES = {
         size: 0.7, xpDrop: 3, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            const mat = getMobMaterial('PIG');
-            const bodyGeo = new THREE.BoxGeometry(0.7, 0.5, 1.2);
-            const body = new THREE.Mesh(bodyGeo, mat);
-            body.position.y = 0.5;
+            // Body (pink hide)
+            const bodyGeo = new THREE.BoxGeometry(0.7, 0.55, 1.1);
+            const body = createBodyPart(bodyGeo, 'PIG', 0, 0, 'body');
+            body.position.y = 0.45;
             group.add(body);
-            const headGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-            const head = new THREE.Mesh(headGeo, mat);
-            head.position.set(0, 0.6, -0.7);
+
+            // Head (faces +Z forward)
+            const headGeo = new THREE.BoxGeometry(0.45, 0.45, 0.45);
+            const head = createMobHead(headGeo, 'PIG');
+            head.position.set(0, 0.55, 0.55);
+            head.name = 'head';
             group.add(head);
-            const legGeo = new THREE.BoxGeometry(0.2, 0.3, 0.2);
-            for(let i=0; i<4; i++) {
-                const leg = new THREE.Mesh(legGeo, mat);
-                leg.position.set((i%2===0?-0.25:0.25), 0.15, (i<2?-0.4:0.4));
+
+            // 3D Protruding Snout on front of head
+            const snoutGeo = new THREE.BoxGeometry(0.25, 0.18, 0.12);
+            const snout = createBodyPart(snoutGeo, 'PIG', 0, 0, 'snout');
+            snout.position.set(0, 0.48, 0.8);
+            group.add(snout);
+
+            // 4 Legs with trotters
+            const legGeo = new THREE.BoxGeometry(0.2, 0.35, 0.2);
+            for(let i = 0; i < 4; i++) {
+                const leg = createBodyPart(legGeo, 'PIG', 0, 0, 'leg');
+                const x = (i % 2 === 0 ? -0.22 : 0.22);
+                const z = (i < 2 ? 0.32 : -0.32);
+                leg.position.set(x, 0.175, z);
+                leg.name = `leg_${i}`;
                 group.add(leg);
             }
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
+            const leg0 = mesh.getObjectByName('leg_0');
+            const leg1 = mesh.getObjectByName('leg_1');
+            const leg2 = mesh.getObjectByName('leg_2');
+            const leg3 = mesh.getObjectByName('leg_3');
             if (!isMoving) {
-                for(let i=2; i<6; i++) mesh.children[i].rotation.x = 0;
+                if (leg0) leg0.rotation.x = 0;
+                if (leg1) leg1.rotation.x = 0;
+                if (leg2) leg2.rotation.x = 0;
+                if (leg3) leg3.rotation.x = 0;
             } else {
                 const swing = Math.sin(age * 8) * 0.4;
-                mesh.children[2].rotation.x = swing;
-                mesh.children[3].rotation.x = -swing;
-                mesh.children[4].rotation.x = -swing;
-                mesh.children[5].rotation.x = swing;
+                if (leg0) leg0.rotation.x = swing;
+                if (leg1) leg1.rotation.x = -swing;
+                if (leg2) leg2.rotation.x = -swing;
+                if (leg3) leg3.rotation.x = swing;
+            }
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            if (mob.health < mob.maxHealth) {
+                const fleeDir = _tempVec3.subVectors(mob.position, playerPos).normalize();
+                fleeDir.y = 0;
+                mob.velocity.x = fleeDir.x * mob.speed * 2.5;
+                mob.velocity.z = fleeDir.z * mob.speed * 2.5;
+                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z);
+            } else {
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    if (Math.random() < 0.5) {
+                        mob.wanderTimer = 1 + Math.random() * 2;
+                        const angle = Math.random() * Math.PI * 2;
+                        mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                    } else {
+                        mob.wanderTimer = 2 + Math.random() * 3;
+                        mob.wanderDir.set(0, 0, 0);
+                    }
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.5;
+                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.5;
+                if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
             }
         }
     },
@@ -973,30 +1136,29 @@ export const MOB_TYPES = {
         size: 0.9, xpDrop: 15, lootChance: 0.6,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = createBodyPart(new THREE.BoxGeometry(0.5, 0.6, 0.3), 'PIGLIN_BRUISER'); // Dark armor
+            const body = createBodyPart(new THREE.BoxGeometry(0.5, 0.6, 0.3), 'PIGLIN_BRUISER', 0, 0, 'body'); // Dark armor
             body.position.y = 0.7;
             group.add(body);
-            const head = createBodyPart(new THREE.BoxGeometry(0.4, 0.4, 0.4), 'PIGLIN_BRUISER');
-            head.position.y = 1.2;
-            head.position.z = 0.1;
+            const head = createMobHead(new THREE.BoxGeometry(0.45, 0.45, 0.45), 'PIGLIN_BRUISER');
+            head.position.set(0, 1.25, 0.05);
             group.add(head);
             // Snout
-            const snout = createBodyPart(new THREE.BoxGeometry(0.2, 0.15, 0.1), 'PIGLIN_BRUISER');
-            snout.position.set(0, 1.1, 0.35);
+            const snout = createBodyPart(new THREE.BoxGeometry(0.2, 0.15, 0.1), 'PIGLIN_BRUISER', 0, 0, 'snout');
+            snout.position.set(0, 1.15, 0.3);
             group.add(snout);
             const armGeo = new THREE.BoxGeometry(0.15, 0.5, 0.15);
-            const lArm = createBodyPart(armGeo, 'PIGLIN_BRUISER');
+            const lArm = createBodyPart(armGeo, 'PIGLIN_BRUISER', 0, 0, 'arm');
             lArm.position.set(-0.35, 0.7, 0);
             group.add(lArm);
-            const rArm = createBodyPart(armGeo, 'PIGLIN_BRUISER');
+            const rArm = createBodyPart(armGeo, 'PIGLIN_BRUISER', 0, 0, 'arm');
             rArm.position.set(0.35, 0.7, 0);
             group.add(rArm);
-            const legGeo = new THREE.BoxGeometry(0.15, 0.4, 0.15);
-            const lLeg = createBodyPart(legGeo, 'PIGLIN_BRUISER');
-            lLeg.position.set(-0.15, 0.2, 0);
+            const legGeo = new THREE.BoxGeometry(0.15, 0.45, 0.15);
+            const lLeg = createBodyPart(legGeo, 'PIGLIN_BRUISER', 0, 0, 'leg');
+            lLeg.position.set(-0.15, 0.22, 0);
             group.add(lLeg);
-            const rLeg = createBodyPart(legGeo, 'PIGLIN_BRUISER');
-            rLeg.position.set(0.15, 0.2, 0);
+            const rLeg = createBodyPart(legGeo, 'PIGLIN_BRUISER', 0, 0, 'leg');
+            rLeg.position.set(0.15, 0.22, 0);
             group.add(rLeg);
             return group;
         },
@@ -1092,50 +1254,32 @@ export const MOB_TYPES = {
         size: 0.8, xpDrop: 15, lootChance: 0.6,
         buildMesh: () => {
             const group = new THREE.Group();
-            const boneColor = 'SKELETON';
             // Ribcage/body
-            const body = createBodyPart(new THREE.BoxGeometry(0.35, 0.45, 0.2), boneColor);
+            const body = createBodyPart(new THREE.BoxGeometry(0.35, 0.45, 0.2), 'SKELETON', 0, 0, 'body');
             body.position.y = 0.8;
             group.add(body);
-            // Dark inside
-            const inner = createBodyPart(new THREE.BoxGeometry(0.25, 0.35, 0.15), 0x222222);
-            inner.position.y = 0.8;
-            inner.position.z = 0.01;
-            group.add(inner);
             // Skull
-            const skull = createBodyPart(new THREE.BoxGeometry(0.3, 0.3, 0.25), boneColor);
-            skull.position.y = 1.2;
+            const skull = createMobHead(new THREE.BoxGeometry(0.35, 0.35, 0.35), 'SKELETON');
+            skull.position.set(0, 1.2, 0);
+            skull.name = 'head';
             group.add(skull);
-            // Eye sockets
-            const socketGeo = new THREE.BoxGeometry(0.08, 0.08, 0.05);
-            const socketMat = new THREE.MeshBasicMaterial({ color: 0xff2200 });
-            const ls = new THREE.Mesh(socketGeo, socketMat);
-            ls.position.set(-0.08, 1.23, 0.13);
-            group.add(ls);
-            const rs = new THREE.Mesh(socketGeo, socketMat);
-            rs.position.set(0.08, 1.23, 0.13);
-            group.add(rs);
-            // Jaw
-            const jaw = createBodyPart(new THREE.BoxGeometry(0.2, 0.06, 0.15), boneColor);
-            jaw.position.set(0, 1.03, 0.03);
-            group.add(jaw);
             // Arms (thin bones)
             const armGeo = new THREE.BoxGeometry(0.08, 0.5, 0.08);
-            const la = createBodyPart(armGeo, boneColor);
+            const la = createBodyPart(armGeo, 'SKELETON', 0, 0, 'arm');
             la.position.set(-0.28, 0.65, 0);
             la.name = 'leftArm';
             group.add(la);
-            const ra = createBodyPart(armGeo, boneColor);
+            const ra = createBodyPart(armGeo, 'SKELETON', 0, 0, 'arm');
             ra.position.set(0.28, 0.65, 0);
             ra.name = 'rightArm';
             group.add(ra);
             // Legs (thin bones)
             const legGeo = new THREE.BoxGeometry(0.08, 0.45, 0.08);
-            const ll = createBodyPart(legGeo, boneColor);
+            const ll = createBodyPart(legGeo, 'SKELETON', 0, 0, 'leg');
             ll.position.set(-0.1, 0.25, 0);
             ll.name = 'leftLeg';
             group.add(ll);
-            const rl = createBodyPart(legGeo, boneColor);
+            const rl = createBodyPart(legGeo, 'SKELETON', 0, 0, 'leg');
             rl.position.set(0.1, 0.25, 0);
             rl.name = 'rightLeg';
             group.add(rl);
@@ -1149,7 +1293,6 @@ export const MOB_TYPES = {
                 mesh.getObjectByName('leftLeg').rotation.x = -swing * 0.7;
                 mesh.getObjectByName('rightLeg').rotation.x = swing * 0.7;
             } else {
-                // Idle sway
                 mesh.rotation.z = Math.sin(age * 1.5) * 0.02;
                 mesh.getObjectByName('leftArm').rotation.x *= 0.9;
                 mesh.getObjectByName('rightArm').rotation.x *= 0.9;
@@ -1163,39 +1306,25 @@ export const MOB_TYPES = {
         size: 0.7, xpDrop: 8, lootChance: 0.35,
         buildMesh: () => {
             const group = new THREE.Group();
-            const spiderColor = 'SPIDER';
-            // Abdomen
-            const abdomen = createBodyPart(new THREE.SphereGeometry(0.25, 8, 6), 0x221111);
-            abdomen.position.set(0, 0.3, -0.25);
-            abdomen.scale.set(1, 0.8, 1.2);
+            // Abdomen (dark bulbous rear)
+            const abdomen = createBodyPart(new THREE.BoxGeometry(0.5, 0.4, 0.6), 'SPIDER', 0, 0, 'body');
+            abdomen.position.set(0, 0.32, -0.32);
+            abdomen.name = 'abdomen';
             group.add(abdomen);
-            // Thorax
-            const thorax = createBodyPart(new THREE.SphereGeometry(0.18, 8, 6), spiderColor);
-            thorax.position.set(0, 0.3, 0.1);
-            group.add(thorax);
-            // Eyes (8 red dots)
-            const eyeGeo = new THREE.SphereGeometry(0.03, 4, 4);
-            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-            const eyePositions = [
-                [-0.08, 0.38, 0.25], [0.08, 0.38, 0.25],
-                [-0.05, 0.35, 0.27], [0.05, 0.35, 0.27],
-                [-0.12, 0.34, 0.22], [0.12, 0.34, 0.22],
-                [-0.04, 0.42, 0.23], [0.04, 0.42, 0.23]
-            ];
-            for (const [ex, ey, ez] of eyePositions) {
-                const eye = new THREE.Mesh(eyeGeo, eyeMat);
-                eye.position.set(ex, ey, ez);
-                group.add(eye);
-            }
+            // Cephalothorax / Head with 8 glowing eyes on front face
+            const head = createMobHead(new THREE.BoxGeometry(0.38, 0.28, 0.38), 'SPIDER');
+            head.position.set(0, 0.3, 0.16);
+            head.name = 'head';
+            group.add(head);
             // 8 legs
-            const legGeo = new THREE.BoxGeometry(0.04, 0.04, 0.35);
+            const legGeo = new THREE.BoxGeometry(0.06, 0.06, 0.45);
             for (let side = -1; side <= 1; side += 2) {
                 for (let i = 0; i < 4; i++) {
-                    const leg = createBodyPart(legGeo, spiderColor);
+                    const leg = createBodyPart(legGeo, 'SPIDER', 0, 0, 'leg');
                     const zOff = -0.15 + i * 0.12;
-                    leg.position.set(side * 0.3, 0.2, zOff);
+                    leg.position.set(side * 0.32, 0.22, zOff);
                     leg.rotation.y = side * 0.3;
-                    leg.rotation.z = side * -0.8;
+                    leg.rotation.z = side * -0.7;
                     leg.name = `leg_${side > 0 ? 'r' : 'l'}_${i}`;
                     group.add(leg);
                 }
@@ -1215,9 +1344,10 @@ export const MOB_TYPES = {
                     }
                 }
             }
-            // Body bob
-            mesh.children[0].position.y = 0.3 + Math.sin(age * 4) * 0.03;
-            mesh.children[1].position.y = 0.3 + Math.sin(age * 4 + 0.5) * 0.03;
+            const ab = mesh.getObjectByName('abdomen');
+            const hd = mesh.getObjectByName('head');
+            if (ab) ab.position.y = 0.32 + Math.sin(age * 4) * 0.02;
+            if (hd) hd.position.y = 0.3 + Math.sin(age * 4 + 0.5) * 0.02;
         }
     },
     ZOMBIE: {
@@ -1225,47 +1355,36 @@ export const MOB_TYPES = {
         size: 0.9, xpDrop: 12, lootChance: 0.4,
         buildMesh: () => {
             const group = new THREE.Group();
-            const skinColor = 'ZOMBIE';
-            const darkSkin = 'ZOMBIE';
-            // Body (slightly hunched)
-            const body = createBodyPart(new THREE.BoxGeometry(0.45, 0.55, 0.3), skinColor);
+            // Torso (cyan t-shirt)
+            const body = createBodyPart(new THREE.BoxGeometry(0.45, 0.55, 0.3), 'ZOMBIE', 0, 0, 'body');
             body.position.y = 0.75;
-            body.rotation.x = 0.15;
+            body.name = 'body';
             group.add(body);
-            // Head
-            const head = createBodyPart(new THREE.BoxGeometry(0.35, 0.35, 0.3), skinColor);
-            head.position.y = 1.2;
-            head.position.z = 0.05;
+            // Head with zombie face on front
+            const head = createMobHead(new THREE.BoxGeometry(0.38, 0.38, 0.38), 'ZOMBIE');
+            head.position.set(0, 1.2, 0);
+            head.name = 'head';
             group.add(head);
-            // Eyes (one normal, one droopy)
-            const eyeGeo = new THREE.BoxGeometry(0.09, 0.06, 0.02);
-            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xccff00 }); // sickly yellow-green
-            const le = new THREE.Mesh(eyeGeo, eyeMat);
-            le.position.set(-0.09, 1.22, 0.16);
-            group.add(le);
-            const re = new THREE.Mesh(eyeGeo, eyeMat);
-            re.position.set(0.09, 1.19, 0.16); // droopy
-            group.add(re);
-            // Arms (stretched forward zombie-style)
+            // Arms (stretched forward zombie-style toward +Z)
             const armGeo = new THREE.BoxGeometry(0.12, 0.5, 0.12);
-            const la = createBodyPart(armGeo, darkSkin);
-            la.position.set(-0.35, 0.8, -0.2);
-            la.rotation.x = -Math.PI / 3; // arms stretched forward
+            const la = createBodyPart(armGeo, 'ZOMBIE', 0, 0, 'arm');
+            la.position.set(-0.32, 0.78, 0.18);
+            la.rotation.x = Math.PI / 2.2;
             la.name = 'leftArm';
             group.add(la);
-            const ra = createBodyPart(armGeo, darkSkin);
-            ra.position.set(0.35, 0.8, -0.2);
-            ra.rotation.x = -Math.PI / 3;
+            const ra = createBodyPart(armGeo, 'ZOMBIE', 0, 0, 'arm');
+            ra.position.set(0.32, 0.78, 0.18);
+            ra.rotation.x = Math.PI / 2.2;
             ra.name = 'rightArm';
             group.add(ra);
-            // Legs
-            const legGeo = new THREE.BoxGeometry(0.15, 0.4, 0.15);
-            const ll = createBodyPart(legGeo, darkSkin);
-            ll.position.set(-0.12, 0.2, 0);
+            // Legs (indigo pants)
+            const legGeo = new THREE.BoxGeometry(0.15, 0.45, 0.15);
+            const ll = createBodyPart(legGeo, 'ZOMBIE', 0, 0, 'leg');
+            ll.position.set(-0.12, 0.225, 0);
             ll.name = 'leftLeg';
             group.add(ll);
-            const rl = createBodyPart(legGeo, darkSkin);
-            rl.position.set(0.12, 0.2, 0);
+            const rl = createBodyPart(legGeo, 'ZOMBIE', 0, 0, 'leg');
+            rl.position.set(0.12, 0.225, 0);
             rl.name = 'rightLeg';
             group.add(rl);
             return group;
@@ -1273,17 +1392,24 @@ export const MOB_TYPES = {
         animate: (mesh, dt, age, isMoving) => {
             if (isMoving) {
                 // Slow shamble
-                const swing = Math.sin(age * 4) * 0.3;
-                mesh.getObjectByName('leftLeg').rotation.x = -swing;
-                mesh.getObjectByName('rightLeg').rotation.x = swing;
-                // Arms wobble slightly
-                mesh.getObjectByName('leftArm').rotation.x = -Math.PI / 3 + Math.sin(age * 4 + 1) * 0.15;
-                mesh.getObjectByName('rightArm').rotation.x = -Math.PI / 3 + Math.sin(age * 4) * 0.15;
+                const swing = Math.sin(age * 5) * 0.35;
+                const ll = mesh.getObjectByName('leftLeg');
+                const rl = mesh.getObjectByName('rightLeg');
+                if (ll) ll.rotation.x = -swing;
+                if (rl) rl.rotation.x = swing;
+                // Arms wobble slightly forward
+                const la = mesh.getObjectByName('leftArm');
+                const ra = mesh.getObjectByName('rightArm');
+                if (la) la.rotation.x = Math.PI / 2.2 + Math.sin(age * 5 + 1) * 0.1;
+                if (ra) ra.rotation.x = Math.PI / 2.2 + Math.sin(age * 5) * 0.1;
                 // Body sway
-                mesh.children[0].rotation.z = Math.sin(age * 4) * 0.05;
+                const bd = mesh.getObjectByName('body');
+                if (bd) bd.rotation.z = Math.sin(age * 5) * 0.04;
             } else {
-                mesh.getObjectByName('leftLeg').rotation.x *= 0.9;
-                mesh.getObjectByName('rightLeg').rotation.x *= 0.9;
+                const ll = mesh.getObjectByName('leftLeg');
+                const rl = mesh.getObjectByName('rightLeg');
+                if (ll) ll.rotation.x *= 0.9;
+                if (rl) rl.rotation.x *= 0.9;
             }
         }
     },
@@ -1780,13 +1906,13 @@ export const MOB_TYPES = {
         size: 0.3, xpDrop: 1, lootChance: 0.1,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = createBodyPart(new THREE.BoxGeometry(0.3, 0.15, 0.2), 0xff3333);
+            const body = createBodyPart(new THREE.BoxGeometry(0.32, 0.15, 0.24), 'CRAB', 0, 0, 'body');
             body.position.y = 0.15; group.add(body);
             
             // Legs
             for (let i = -1; i <= 1; i += 2) {
                 for (let j = 0; j < 3; j++) {
-                    const leg = createBodyPart(new THREE.BoxGeometry(0.15, 0.05, 0.05), 0xdd2222);
+                    const leg = createBodyPart(new THREE.BoxGeometry(0.15, 0.05, 0.05), 'CRAB', 0, 0, 'leg');
                     leg.position.set(i * 0.2, 0.05, j * 0.06 - 0.06);
                     leg.name = 'leg_' + i + '_' + j;
                     group.add(leg);
@@ -1794,15 +1920,15 @@ export const MOB_TYPES = {
             }
             
             // Claws
-            const lclaw = createBodyPart(new THREE.BoxGeometry(0.1, 0.1, 0.1), 0xff1111);
+            const lclaw = createBodyPart(new THREE.BoxGeometry(0.12, 0.12, 0.12), 'CRAB', 0, 0, 'claw');
             lclaw.position.set(-0.2, 0.2, 0.15); lclaw.name = 'lclaw'; group.add(lclaw);
-            const rclaw = createBodyPart(new THREE.BoxGeometry(0.12, 0.12, 0.12), 0xff1111);
+            const rclaw = createBodyPart(new THREE.BoxGeometry(0.14, 0.14, 0.14), 'CRAB', 0, 0, 'claw');
             rclaw.position.set(0.2, 0.2, 0.15); rclaw.name = 'rclaw'; group.add(rclaw);
             
-            // Eyes
+            // Eyestalks
             const eyeGeo = new THREE.BoxGeometry(0.04, 0.08, 0.04);
-            const le = createBodyPart(eyeGeo, 0x000000); le.position.set(-0.06, 0.25, 0.08); group.add(le);
-            const re = createBodyPart(eyeGeo, 0x000000); re.position.set(0.06, 0.25, 0.08); group.add(re);
+            const le = createBodyPart(eyeGeo, 0x111111); le.position.set(-0.06, 0.25, 0.08); group.add(le);
+            const re = createBodyPart(eyeGeo, 0x111111); re.position.set(0.06, 0.25, 0.08); group.add(re);
             
             return group;
         },
@@ -1958,33 +2084,33 @@ export const MOB_TYPES = {
         buildMesh: () => {
             const group = new THREE.Group();
             // Shell
-            const shell = createBodyPart(new THREE.BoxGeometry(0.6, 0.25, 0.7), 'TURTLE');
+            const shell = createBodyPart(new THREE.BoxGeometry(0.6, 0.25, 0.7), 'TURTLE', 0, 0, 'shell');
             shell.position.y = 0.3;
             group.add(shell);
             // Body (under shell)
-            const body = createBodyPart(new THREE.BoxGeometry(0.5, 0.15, 0.6), 'TURTLE');
+            const body = createBodyPart(new THREE.BoxGeometry(0.5, 0.15, 0.6), 'TURTLE', 0, 0, 'body');
             body.position.y = 0.2;
             group.add(body);
-            // Head
-            const head = createBodyPart(new THREE.BoxGeometry(0.2, 0.15, 0.2), 'TURTLE');
+            // Head with front-facing eyes and pale jaw
+            const head = createMobHead(new THREE.BoxGeometry(0.2, 0.15, 0.2), 'TURTLE');
             head.position.set(0, 0.25, 0.4);
             head.name = 'head';
             group.add(head);
             // Flippers
             const flipperGeo = new THREE.BoxGeometry(0.3, 0.05, 0.2);
-            const fl1 = createBodyPart(flipperGeo, 'TURTLE');
+            const fl1 = createBodyPart(flipperGeo, 'TURTLE', 0, 0, 'flipper');
             fl1.position.set(-0.35, 0.15, 0.2);
             fl1.name = 'fl1';
             group.add(fl1);
-            const fl2 = createBodyPart(flipperGeo, 'TURTLE');
+            const fl2 = createBodyPart(flipperGeo, 'TURTLE', 0, 0, 'flipper');
             fl2.position.set(0.35, 0.15, 0.2);
             fl2.name = 'fl2';
             group.add(fl2);
-            const fl3 = createBodyPart(flipperGeo, 'TURTLE');
+            const fl3 = createBodyPart(flipperGeo, 'TURTLE', 0, 0, 'flipper');
             fl3.position.set(-0.3, 0.15, -0.2);
             fl3.name = 'fl3';
             group.add(fl3);
-            const fl4 = createBodyPart(flipperGeo, 'TURTLE');
+            const fl4 = createBodyPart(flipperGeo, 'TURTLE', 0, 0, 'flipper');
             fl4.position.set(0.3, 0.15, -0.2);
             fl4.name = 'fl4';
             group.add(fl4);
@@ -2011,25 +2137,30 @@ export const MOB_TYPES = {
         size: 0.3, xpDrop: 1, lootChance: 0.1, flying: true,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body
-            const body = createBodyPart(new THREE.BoxGeometry(0.2, 0.15, 0.3), 'BIRD');
+            // Body (feathered)
+            const body = createBodyPart(new THREE.BoxGeometry(0.2, 0.15, 0.3), 'BIRD', 0, 0, 'body');
             body.position.y = 0.15;
             group.add(body);
-            // Head
-            const head = createBodyPart(new THREE.BoxGeometry(0.15, 0.15, 0.15), 'BIRD');
-            head.position.set(0, 0.25, -0.15);
+            // Head (facing forward +Z)
+            const head = createMobHead(new THREE.BoxGeometry(0.16, 0.16, 0.16), 'BIRD');
+            head.position.set(0, 0.25, 0.15);
+            head.name = 'head';
             group.add(head);
-            // Beak
-            const beak = createBodyPart(new THREE.BoxGeometry(0.05, 0.05, 0.1), 0xffcc00);
-            beak.position.set(0, 0.25, -0.25);
+            // Beak (pointing forward +Z)
+            const beak = createBodyPart(new THREE.BoxGeometry(0.06, 0.05, 0.08), 0xf59e0b);
+            beak.position.set(0, 0.23, 0.25);
             group.add(beak);
+            // Tail feathers
+            const tail = createBodyPart(new THREE.BoxGeometry(0.12, 0.02, 0.15), 'BIRD', 0, 0, 'wing');
+            tail.position.set(0, 0.18, -0.2);
+            group.add(tail);
             // Wings
             const wingGeo = new THREE.BoxGeometry(0.25, 0.02, 0.15);
-            const lw = createBodyPart(wingGeo, 'BIRD');
+            const lw = createBodyPart(wingGeo, 'BIRD', 0, 0, 'wing');
             lw.position.set(-0.2, 0.22, 0);
             lw.name = 'leftWing';
             group.add(lw);
-            const rw = createBodyPart(wingGeo, 'BIRD');
+            const rw = createBodyPart(wingGeo, 'BIRD', 0, 0, 'wing');
             rw.position.set(0.2, 0.22, 0);
             rw.name = 'rightWing';
             group.add(rw);
@@ -2045,95 +2176,91 @@ export const MOB_TYPES = {
             mesh.position.y += Math.sin(age * 4) * 0.005;
         }
     },
-    COW: {
-        name: 'Cow', health: 15, damage: 0, speed: 1.5, hostile: false, color: 0xe0e0e0,
-        size: 0.8, xpDrop: 2, lootChance: 0.2,
-        buildMesh: () => {
-            const group = new THREE.Group();
-            const body = createBodyPart(new THREE.BoxGeometry(0.8, 0.6, 1.2), 'COW');
-            body.position.y = 0.5; group.add(body);
-            const head = createBodyPart(new THREE.BoxGeometry(0.5, 0.5, 0.5), 'COW');
-            head.position.set(0, 0.8, 0.7); group.add(head);
-            return group;
-        },
-        updateAI: (mob, dt, world, playerPos) => {
-            if (!mob.wanderTimer) mob.wanderTimer = 0;
-            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
-            if (mob.health < mob.maxHealth) {
-                const fleeDir = _tempVec3.subVectors(mob.position, playerPos).normalize();
-                fleeDir.y = 0;
-                mob.velocity.x = fleeDir.x * mob.speed * 1.5;
-                mob.velocity.z = fleeDir.z * mob.speed * 1.5;
-                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z);
-            } else {
-                mob.wanderTimer -= dt;
-                if (mob.wanderTimer <= 0) {
-                    if (Math.random() < 0.3) {
-                        mob.wanderTimer = 2 + Math.random() * 4;
-                        const angle = Math.random() * Math.PI * 2;
-                        mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
-                    } else {
-                        mob.wanderTimer = 4 + Math.random() * 5;
-                        mob.wanderDir.set(0, 0, 0);
-                    }
-                }
-                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.3;
-                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.3;
-                if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
-            }
-        }
-    },
-    PIG: {
-        name: 'Pig', health: 10, damage: 0, speed: 2.0, hostile: false, color: 0xffbbcc,
-        size: 0.6, xpDrop: 2, lootChance: 0.2,
-        buildMesh: () => {
-            const group = new THREE.Group();
-            const body = createBodyPart(new THREE.BoxGeometry(0.6, 0.5, 0.8), 'PIG');
-            body.position.y = 0.35; group.add(body);
-            const head = createBodyPart(new THREE.BoxGeometry(0.4, 0.4, 0.4), 'PIG');
-            head.position.set(0, 0.5, 0.5); group.add(head);
-            return group;
-        },
-        updateAI: (mob, dt, world, playerPos) => {
-            if (!mob.wanderTimer) mob.wanderTimer = 0;
-            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
-            if (mob.health < mob.maxHealth) {
-                const fleeDir = _tempVec3.subVectors(mob.position, playerPos).normalize();
-                fleeDir.y = 0;
-                mob.velocity.x = fleeDir.x * mob.speed * 3.0;
-                mob.velocity.z = fleeDir.z * mob.speed * 3.0;
-                if (mob.mesh) mob.mesh.rotation.y = Math.atan2(fleeDir.x, fleeDir.z);
-            } else {
-                mob.wanderTimer -= dt;
-                if (mob.wanderTimer <= 0) {
-                    if (Math.random() < 0.7) {
-                        mob.wanderTimer = 0.5 + Math.random() * 1.5;
-                        const angle = Math.random() * Math.PI * 2;
-                        mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
-                    } else {
-                        mob.wanderTimer = 1 + Math.random() * 2;
-                        mob.wanderDir.set(0, 0, 0);
-                    }
-                }
-                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.8;
-                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.8;
-                if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
-            }
-        }
-    },
     CHICKEN: {
         name: 'Chicken', health: 4, damage: 0, speed: 2.5, hostile: false, color: 0xffffff,
         size: 0.3, xpDrop: 1, lootChance: 0.1,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = createBodyPart(new THREE.BoxGeometry(0.3, 0.3, 0.4), 'CHICKEN');
-            body.position.y = 0.2; group.add(body);
+            // Body (feathered)
+            const bodyGeo = new THREE.BoxGeometry(0.35, 0.3, 0.45);
+            const body = createBodyPart(bodyGeo, 'CHICKEN', 0, 0, 'body');
+            body.position.y = 0.32;
+            group.add(body);
+
+            // Head (faces +Z forward)
+            const headGeo = new THREE.BoxGeometry(0.22, 0.28, 0.22);
+            const head = createMobHead(headGeo, 'CHICKEN');
+            head.position.set(0, 0.55, 0.22);
+            head.name = 'head';
+            group.add(head);
+
+            // 3D Beak
+            const beakGeo = new THREE.BoxGeometry(0.12, 0.08, 0.12);
+            const beakMat = new THREE.MeshLambertMaterial({ color: 0xf5a000 });
+            const beak = new THREE.Mesh(beakGeo, beakMat);
+            beak.position.set(0, 0.52, 0.35);
+            group.add(beak);
+
+            // 3D Red Wattle
+            const wattleGeo = new THREE.BoxGeometry(0.08, 0.12, 0.08);
+            const wattleMat = new THREE.MeshLambertMaterial({ color: 0xd01010 });
+            const wattle = new THREE.Mesh(wattleGeo, wattleMat);
+            wattle.position.set(0, 0.43, 0.31);
+            group.add(wattle);
+
+            // Wings
+            const wingGeo = new THREE.BoxGeometry(0.05, 0.22, 0.32);
+            const leftWing = createBodyPart(wingGeo, 'CHICKEN', 0, 0, 'wing');
+            leftWing.position.set(-0.2, 0.34, 0);
+            leftWing.name = 'leftWing';
+            group.add(leftWing);
+            const rightWing = createBodyPart(wingGeo, 'CHICKEN', 0, 0, 'wing');
+            rightWing.position.set(0.2, 0.34, 0);
+            rightWing.name = 'rightWing';
+            group.add(rightWing);
+
+            // 2 Legs with feet
+            const legGeo = new THREE.BoxGeometry(0.08, 0.24, 0.12);
+            const leftLeg = createBodyPart(legGeo, 'CHICKEN', 0, 0, 'leg');
+            leftLeg.position.set(-0.09, 0.12, 0);
+            leftLeg.name = 'leftLeg';
+            group.add(leftLeg);
+            const rightLeg = createBodyPart(legGeo, 'CHICKEN', 0, 0, 'leg');
+            rightLeg.position.set(0.09, 0.12, 0);
+            rightLeg.name = 'rightLeg';
+            group.add(rightLeg);
+
             return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const leftLeg = mesh.getObjectByName('leftLeg');
+            const rightLeg = mesh.getObjectByName('rightLeg');
+            const leftWing = mesh.getObjectByName('leftWing');
+            const rightWing = mesh.getObjectByName('rightWing');
+            if (!isMoving) {
+                if (leftLeg) leftLeg.rotation.x = 0;
+                if (rightLeg) rightLeg.rotation.x = 0;
+                if (leftWing) leftWing.rotation.z = 0;
+                if (rightWing) rightWing.rotation.z = 0;
+            } else {
+                const swing = Math.sin(age * 12) * 0.55;
+                if (leftLeg) leftLeg.rotation.x = swing;
+                if (rightLeg) rightLeg.rotation.x = -swing;
+                const flap = Math.sin(age * 16) * 0.3;
+                if (leftWing) leftWing.rotation.z = flap;
+                if (rightWing) rightWing.rotation.z = -flap;
+            }
         },
         updateAI: (mob, dt, world, playerPos) => {
             if (!mob.wanderTimer) mob.wanderTimer = 0;
             if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
-            if (mob.velocity.y < -2) mob.velocity.y = -2;
+            if (mob.velocity.y < -2) {
+                mob.velocity.y = -2;
+                const lw = mob.mesh && mob.mesh.getObjectByName('leftWing');
+                const rw = mob.mesh && mob.mesh.getObjectByName('rightWing');
+                if (lw) lw.rotation.z = Math.sin(Date.now() * 0.03) * 0.6;
+                if (rw) rw.rotation.z = -Math.sin(Date.now() * 0.03) * 0.6;
+            }
             mob.wanderTimer -= dt;
             if (mob.wanderTimer <= 0) {
                 mob.wanderTimer = 0.5 + Math.random() * 1.5;
@@ -2151,9 +2278,30 @@ export const MOB_TYPES = {
         size: 0.2, xpDrop: 2, lootChance: 0.1,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = createBodyPart(new THREE.BoxGeometry(0.2, 0.1, 0.4), 'LIZARD');
-            body.position.y = 0.05; group.add(body);
+            const body = createBodyPart(new THREE.BoxGeometry(0.18, 0.08, 0.35), 'LIZARD', 0, 0, 'body');
+            body.position.y = 0.06; group.add(body);
+            const head = createMobHead(new THREE.BoxGeometry(0.14, 0.08, 0.14), 'LIZARD');
+            head.position.set(0, 0.08, 0.22); group.add(head);
+            const tail = createBodyPart(new THREE.BoxGeometry(0.06, 0.05, 0.25), 'LIZARD', 0, 0, 'tail');
+            tail.position.set(0, 0.06, -0.28); tail.name = 'tail'; group.add(tail);
+            const legGeo = new THREE.BoxGeometry(0.08, 0.04, 0.06);
+            for (let i = 0; i < 4; i++) {
+                const leg = createBodyPart(legGeo, 'LIZARD', 0, 0, 'body');
+                leg.position.set(i % 2 === 0 ? -0.12 : 0.12, 0.04, i < 2 ? 0.1 : -0.1);
+                leg.name = 'leg_' + i;
+                group.add(leg);
+            }
             return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const tail = mesh.getObjectByName('tail');
+            if (tail) tail.rotation.y = Math.sin(age * (isMoving ? 15 : 3)) * 0.3;
+            if (isMoving) {
+                for (let i = 0; i < 4; i++) {
+                    const leg = mesh.getObjectByName('leg_' + i);
+                    if (leg) leg.rotation.y = Math.sin(age * 15 + (i % 2 === 0 ? 0 : Math.PI)) * 0.3;
+                }
+            }
         },
         updateAI: (mob, dt, world, playerPos) => {
             if (!mob.wanderTimer) mob.wanderTimer = 0;
@@ -2179,9 +2327,19 @@ export const MOB_TYPES = {
         size: 0.3, xpDrop: 2, lootChance: 0.1, waterOnly: true,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = createBodyPart(new THREE.BoxGeometry(0.1, 0.2, 0.3), 'PIRANHA');
+            const body = createBodyPart(new THREE.BoxGeometry(0.12, 0.22, 0.3), 'PIRANHA', 0, 0, 'body');
             body.position.y = 0.15; group.add(body);
+            const head = createMobHead(new THREE.BoxGeometry(0.13, 0.2, 0.16), 'PIRANHA');
+            head.position.set(0, 0.15, 0.18); group.add(head);
+            const tail = createBodyPart(new THREE.BoxGeometry(0.02, 0.18, 0.16), 'PIRANHA', 0, 0, 'body');
+            tail.position.set(0, 0.15, -0.2); tail.name = 'tail'; group.add(tail);
+            const fin = createBodyPart(new THREE.BoxGeometry(0.02, 0.08, 0.1), 'PIRANHA', 0, 0, 'body');
+            fin.position.set(0, 0.28, -0.05); group.add(fin);
             return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const tail = mesh.getObjectByName('tail');
+            if (tail) tail.rotation.y = Math.sin(age * 22) * 0.45;
         },
         updateAI: (mob, dt, world, playerPos) => {
             if (!mob.wanderTimer) mob.wanderTimer = 0;
@@ -2216,9 +2374,24 @@ export const MOB_TYPES = {
         size: 0.8, xpDrop: 5, lootChance: 0.3, waterOnly: true,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = createBodyPart(new THREE.BoxGeometry(0.3, 0.4, 0.9), 'SHARK');
-            body.position.y = 0.2; group.add(body);
+            const body = createBodyPart(new THREE.BoxGeometry(0.38, 0.42, 0.9), 'SHARK', 0, 0, 'body');
+            body.position.y = 0.25; group.add(body);
+            const head = createMobHead(new THREE.BoxGeometry(0.36, 0.34, 0.42), 'SHARK');
+            head.position.set(0, 0.24, 0.58); group.add(head);
+            const dorsal = createBodyPart(new THREE.BoxGeometry(0.04, 0.28, 0.25), 'SHARK', 0, 0, 'fin');
+            dorsal.position.set(0, 0.52, -0.05); group.add(dorsal);
+            const tail = createBodyPart(new THREE.BoxGeometry(0.04, 0.36, 0.28), 'SHARK', 0, 0, 'fin');
+            tail.position.set(0, 0.28, -0.58); tail.name = 'tail'; group.add(tail);
+            const finGeo = new THREE.BoxGeometry(0.24, 0.03, 0.15);
+            const lf = createBodyPart(finGeo, 'SHARK', 0, 0, 'fin');
+            lf.position.set(-0.28, 0.16, 0.15); lf.rotation.z = -0.3; group.add(lf);
+            const rf = createBodyPart(finGeo, 'SHARK', 0, 0, 'fin');
+            rf.position.set(0.28, 0.16, 0.15); rf.rotation.z = 0.3; group.add(rf);
             return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const tail = mesh.getObjectByName('tail');
+            if (tail) tail.rotation.y = Math.sin(age * (isMoving ? 14 : 5)) * 0.4;
         },
         updateAI: (mob, dt, world, playerPos) => {
             if (!mob.wanderTimer) mob.wanderTimer = 0;
@@ -2252,13 +2425,49 @@ export const MOB_TYPES = {
         size: 0.5, xpDrop: 2, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.6), new THREE.MeshStandardMaterial({color: 0xffffff}));
-            body.position.y = 0.2; group.add(body);
-            const earGeo = new THREE.BoxGeometry(0.1, 0.4, 0.1);
-            const earMat = new THREE.MeshStandardMaterial({color: 0xffdddd});
-            const earL = new THREE.Mesh(earGeo, earMat); earL.position.set(-0.1, 0.6, -0.2); group.add(earL);
-            const earR = new THREE.Mesh(earGeo, earMat); earR.position.set(0.1, 0.6, -0.2); group.add(earR);
+            // Fluffy body
+            const body = createBodyPart(new THREE.BoxGeometry(0.35, 0.32, 0.45), 'AETHER_BUNNY', 0, 0, 'body');
+            body.position.set(0, 0.22, -0.05); group.add(body);
+            // Head with cute face facing forward (+Z)
+            const head = createMobHead(new THREE.BoxGeometry(0.26, 0.26, 0.26), 'AETHER_BUNNY');
+            head.position.set(0, 0.38, 0.18); group.add(head);
+            // Ears
+            const earGeo = new THREE.BoxGeometry(0.07, 0.28, 0.04);
+            const earL = createBodyPart(earGeo, 'AETHER_BUNNY', 0, 0, 'ears');
+            earL.position.set(-0.07, 0.58, 0.16); earL.name = 'earL'; group.add(earL);
+            const earR = createBodyPart(earGeo, 'AETHER_BUNNY', 0, 0, 'ears');
+            earR.position.set(0.07, 0.58, 0.16); earR.name = 'earR'; group.add(earR);
+            // Tail
+            const tail = createBodyPart(new THREE.BoxGeometry(0.12, 0.12, 0.12), 'AETHER_BUNNY', 0, 0, 'body');
+            tail.position.set(0, 0.26, -0.32); group.add(tail);
+            // 4 Paws
+            const pawGeo = new THREE.BoxGeometry(0.09, 0.1, 0.12);
+            const fl = createBodyPart(pawGeo, 'AETHER_BUNNY', 0, 0, 'leg');
+            fl.position.set(-0.11, 0.06, 0.1); fl.name = 'fl'; group.add(fl);
+            const fr = createBodyPart(pawGeo, 'AETHER_BUNNY', 0, 0, 'leg');
+            fr.position.set(0.11, 0.06, 0.1); fr.name = 'fr'; group.add(fr);
+            const bl = createBodyPart(pawGeo, 'AETHER_BUNNY', 0, 0, 'leg');
+            bl.position.set(-0.12, 0.07, -0.18); bl.name = 'bl'; group.add(bl);
+            const br = createBodyPart(pawGeo, 'AETHER_BUNNY', 0, 0, 'leg');
+            br.position.set(0.12, 0.07, -0.18); br.name = 'br'; group.add(br);
             return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const earL = mesh.getObjectByName('earL');
+            const earR = mesh.getObjectByName('earR');
+            if (earL) earL.rotation.z = Math.sin(age * 5) * 0.08;
+            if (earR) earR.rotation.z = -Math.sin(age * 5) * 0.08;
+            if (isMoving) {
+                const hop = Math.sin(age * 12) * 0.3;
+                const fl = mesh.getObjectByName('fl');
+                const fr = mesh.getObjectByName('fr');
+                const bl = mesh.getObjectByName('bl');
+                const br = mesh.getObjectByName('br');
+                if (fl) fl.rotation.x = hop;
+                if (fr) fr.rotation.x = hop;
+                if (bl) bl.rotation.x = -hop;
+                if (br) br.rotation.x = -hop;
+            }
         },
         updateAI: (mob, dt, world, playerPos) => {
             if (!mob.wanderTimer) mob.wanderTimer = 0;
@@ -2438,27 +2647,34 @@ export const MOB_TYPES = {
         size: 1.0, xpDrop: 3, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.8, 1.6), new THREE.MeshStandardMaterial({color: 0xc2b280}));
+            // Body
+            const body = createBodyPart(new THREE.BoxGeometry(1.0, 0.8, 1.5), 'CAMEL', 0, 0, 'body');
             body.position.y = 1.2; group.add(body);
-            const hump = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.6), new THREE.MeshStandardMaterial({color: 0xc2b280}));
-            hump.position.set(0, 1.7, 0); group.add(hump);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.6), new THREE.MeshStandardMaterial({color: 0xc2b280}));
-            head.position.set(0, 1.8, 1.0); group.add(head);
-            const legGeo = new THREE.BoxGeometry(0.3, 0.8, 0.3);
-            for(let i=0; i<4; i++) {
-                const leg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0xc2b280}));
-                leg.position.set((i%2===0?-0.4:0.4), 0.4, (i<2?0.6:-0.6));
+            // Hump
+            const hump = createBodyPart(new THREE.BoxGeometry(0.65, 0.5, 0.65), 'CAMEL', 0, 0, 'hump');
+            hump.position.set(0, 1.7, -0.1); group.add(hump);
+            // Neck
+            const neck = createBodyPart(new THREE.BoxGeometry(0.35, 0.7, 0.4), 'CAMEL', 0, 0, 'body');
+            neck.position.set(0, 1.55, 0.75); group.add(neck);
+            // Head (facing +Z)
+            const head = createMobHead(new THREE.BoxGeometry(0.42, 0.45, 0.55), 'CAMEL');
+            head.position.set(0, 1.95, 0.95); group.add(head);
+            // 4 Legs
+            const legGeo = new THREE.BoxGeometry(0.24, 0.85, 0.24);
+            for (let i = 0; i < 4; i++) {
+                const leg = createBodyPart(legGeo, 'CAMEL', 0, 0, 'leg');
+                leg.position.set(i % 2 === 0 ? -0.38 : 0.38, 0.42, i < 2 ? 0.55 : -0.55);
                 group.add(leg);
             }
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
             if (isMoving) {
-                for(let i=0; i<4; i++) {
-                    mesh.children[i+3].rotation.x = Math.sin(age * 5 + (i%2===0?0:Math.PI)) * 0.4;
+                for (let i = 0; i < 4; i++) {
+                    mesh.children[i + 4].rotation.x = Math.sin(age * 5 + (i % 2 === 0 ? 0 : Math.PI)) * 0.4;
                 }
             } else {
-                for(let i=0; i<4; i++) mesh.children[i+3].rotation.x = 0;
+                for (let i = 0; i < 4; i++) mesh.children[i + 4].rotation.x = 0;
             }
         }
     },
@@ -2467,17 +2683,43 @@ export const MOB_TYPES = {
         size: 0.6, xpDrop: 2, lootChance: 0.3,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.4), new THREE.MeshStandardMaterial({color: 0x111111}));
-            body.position.y = 0.5; group.add(body);
-            const belly = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.1), new THREE.MeshStandardMaterial({color: 0xffffff}));
-            belly.position.set(0, 0.4, 0.21); group.add(belly);
+            // Torso
+            const body = createBodyPart(new THREE.BoxGeometry(0.48, 0.65, 0.38), 'PENGUIN', 0, 0, 'body');
+            body.position.y = 0.42; group.add(body);
+            // White belly
+            const belly = createBodyPart(new THREE.BoxGeometry(0.34, 0.55, 0.08), 'PENGUIN', 0, 0, 'belly');
+            belly.position.set(0, 0.38, 0.18); group.add(belly);
+            // Head
+            const head = createMobHead(new THREE.BoxGeometry(0.36, 0.3, 0.32), 'PENGUIN');
+            head.position.set(0, 0.85, 0.02); group.add(head);
+            // Beak
+            const beak = createBodyPart(new THREE.BoxGeometry(0.12, 0.08, 0.14), 0xf59e0b);
+            beak.position.set(0, 0.82, 0.22); group.add(beak);
+            // Flippers
+            const wingGeo = new THREE.BoxGeometry(0.06, 0.45, 0.16);
+            const lw = createBodyPart(wingGeo, 'PENGUIN', 0, 0, 'wing');
+            lw.position.set(-0.27, 0.45, 0); lw.name = 'lw'; group.add(lw);
+            const rw = createBodyPart(wingGeo, 'PENGUIN', 0, 0, 'wing');
+            rw.position.set(0.27, 0.45, 0); rw.name = 'rw'; group.add(rw);
+            // Webbed orange feet
+            const footGeo = new THREE.BoxGeometry(0.15, 0.05, 0.2);
+            const fl = createBodyPart(footGeo, 'PENGUIN', 0, 0, 'feet');
+            fl.position.set(-0.14, 0.04, 0.06); group.add(fl);
+            const fr = createBodyPart(footGeo, 'PENGUIN', 0, 0, 'feet');
+            fr.position.set(0.14, 0.04, 0.06); group.add(fr);
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
+            const lw = mesh.getObjectByName('lw');
+            const rw = mesh.getObjectByName('rw');
             if (isMoving) {
-                mesh.rotation.z = Math.sin(age * 10) * 0.2; // Waddle
+                mesh.rotation.z = Math.sin(age * 10) * 0.18; // Waddle
+                if (lw) lw.rotation.z = Math.sin(age * 10) * 0.3;
+                if (rw) rw.rotation.z = -Math.sin(age * 10) * 0.3;
             } else {
                 mesh.rotation.z = 0;
+                if (lw) lw.rotation.z = 0;
+                if (rw) rw.rotation.z = 0;
             }
         }
     },
@@ -2486,9 +2728,43 @@ export const MOB_TYPES = {
         size: 0.3, xpDrop: 1, lootChance: 0.2,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.5), new THREE.MeshStandardMaterial({color: 0x22cc44}));
+            // Body
+            const body = createBodyPart(new THREE.BoxGeometry(0.42, 0.22, 0.42), 'FROG', 0, 0, 'body');
             body.position.y = 0.15; group.add(body);
+            // Head with wide mouth & eyes
+            const head = createMobHead(new THREE.BoxGeometry(0.4, 0.18, 0.3), 'FROG');
+            head.position.set(0, 0.22, 0.22); group.add(head);
+            // Eye bumps on top
+            const eyeGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const le = createBodyPart(eyeGeo, 'FROG', 0, 0, 'head_top');
+            le.position.set(-0.12, 0.34, 0.26); group.add(le);
+            const re = createBodyPart(eyeGeo, 'FROG', 0, 0, 'head_top');
+            re.position.set(0.12, 0.34, 0.26); group.add(re);
+            // Front legs
+            const fLegGeo = new THREE.BoxGeometry(0.08, 0.14, 0.08);
+            const fl = createBodyPart(fLegGeo, 'FROG', 0, 0, 'leg');
+            fl.position.set(-0.18, 0.07, 0.15); fl.name = 'fl'; group.add(fl);
+            const fr = createBodyPart(fLegGeo, 'FROG', 0, 0, 'leg');
+            fr.position.set(0.18, 0.07, 0.15); fr.name = 'fr'; group.add(fr);
+            // Hind legs (folded)
+            const hLegGeo = new THREE.BoxGeometry(0.12, 0.18, 0.22);
+            const hl = createBodyPart(hLegGeo, 'FROG', 0, 0, 'leg');
+            hl.position.set(-0.2, 0.1, -0.12); hl.name = 'hl'; group.add(hl);
+            const hr = createBodyPart(hLegGeo, 'FROG', 0, 0, 'leg');
+            hr.position.set(0.2, 0.1, -0.12); hr.name = 'hr'; group.add(hr);
             return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const hl = mesh.getObjectByName('hl');
+            const hr = mesh.getObjectByName('hr');
+            if (isMoving) {
+                const stretch = Math.sin(age * 12) * 0.4;
+                if (hl) hl.rotation.x = stretch;
+                if (hr) hr.rotation.x = stretch;
+            } else {
+                if (hl) hl.rotation.x = 0;
+                if (hr) hr.rotation.x = 0;
+            }
         },
         updateAI: (mob, dt, world, playerPos) => {
             if (!mob.wanderTimer) mob.wanderTimer = 0;

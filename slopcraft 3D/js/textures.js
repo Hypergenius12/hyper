@@ -192,12 +192,7 @@ export const BLOCKS = {
     RUBY_ORE: 226,
     SAPPHIRE_ORE: 227,
     FLETCHING_TABLE: 142,
-    SMITHING_TABLE: 143,
-    CARTOGRAPHY_TABLE: 144,
     SMOKER: 145,
-    BLAST_FURNACE: 146,
-    GRINDSTONE: 147,
-    LOOM: 148,
     STONECUTTER: 149,
     EMERALD_BLOCK: 150,
     LAPIS_BLOCK: 151,
@@ -208,12 +203,7 @@ export const BLOCKS = {
 // Block properties
 const BLOCK_PROPS = {
     [BLOCKS.FLETCHING_TABLE]:   { name: 'Fletching Table',   health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.SMITHING_TABLE]:    { name: 'Smithing Table',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.CARTOGRAPHY_TABLE]: { name: 'Cartography Table', health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.SMOKER]:            { name: 'Smoker',            health: 6, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.BLAST_FURNACE]:     { name: 'Blast Furnace',     health: 8, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.GRINDSTONE]:        { name: 'Grindstone',        health: 5, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.LOOM]:              { name: 'Loom',              health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.STONECUTTER]:       { name: 'Stonecutter',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.EMERALD_BLOCK]:     { name: 'Emerald Block',     health: 8, transparent: false, emissive: 0.1, solid: true, drops: null },
     [BLOCKS.LAPIS_BLOCK]:       { name: 'Lapis Block',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
@@ -2313,43 +2303,6 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         }
 
-        case BLOCKS.SMITHING_TABLE: {
-            if (face === 'top') {
-                fillBase(ctx, 50, 52, 60);
-                addNoise(ctx, rng, 15);
-                ctx.fillStyle = '#7a7e8a';
-                ctx.fillRect(2, 2, 12, 12);
-                ctx.fillStyle = '#3a3c44';
-                ctx.fillRect(6, 6, 4, 4);
-            } else {
-                fillBase(ctx, 60, 48, 38);
-                addNoise(ctx, rng, 15);
-                ctx.fillStyle = '#22252a';
-                ctx.fillRect(0, 0, 16, 3);
-                ctx.fillStyle = '#8a8e98';
-                ctx.fillRect(5, 6, 2, 7);
-            }
-            break;
-        }
-
-        case BLOCKS.CARTOGRAPHY_TABLE: {
-            if (face === 'top') {
-                fillBase(ctx, 215, 200, 160);
-                addNoise(ctx, rng, 10);
-                ctx.strokeStyle = '#8b6f48';
-                ctx.strokeRect(2, 2, 12, 12);
-                ctx.fillStyle = '#5c8a99';
-                ctx.fillRect(4, 4, 4, 3);
-            } else {
-                fillBase(ctx, 75, 55, 40);
-                addNoise(ctx, rng, 15);
-                ctx.fillStyle = '#402e1f';
-                ctx.fillRect(0, 0, 16, 2);
-                ctx.fillRect(0, 14, 16, 2);
-            }
-            break;
-        }
-
         case BLOCKS.SMOKER: {
             if (face === 'top') {
                 fillBase(ctx, 65, 65, 65);
@@ -2363,49 +2316,6 @@ function generateBlockTexture(ctx, blockType, face, rng) {
                 ctx.fillRect(3, 4, 10, 8);
                 ctx.fillStyle = '#ff6600';
                 ctx.fillRect(5, 7, 6, 3);
-            }
-            break;
-        }
-
-        case BLOCKS.BLAST_FURNACE: {
-            if (face === 'top') {
-                fillBase(ctx, 85, 85, 85);
-                addNoise(ctx, rng, 15);
-                ctx.fillStyle = '#444444';
-                ctx.fillRect(3, 3, 10, 10);
-            } else {
-                fillBase(ctx, 75, 75, 80);
-                addNoise(ctx, rng, 15);
-                ctx.fillStyle = '#252528';
-                ctx.fillRect(2, 5, 12, 7);
-                ctx.fillStyle = '#ff8822';
-                ctx.fillRect(4, 7, 8, 4);
-                ctx.fillStyle = '#ffcc44';
-                ctx.fillRect(6, 8, 4, 2);
-            }
-            break;
-        }
-
-        case BLOCKS.GRINDSTONE: {
-            fillBase(ctx, 120, 120, 120);
-            addNoise(ctx, rng, 15);
-            ctx.fillStyle = '#6b5035';
-            ctx.fillRect(1, 10, 4, 6);
-            ctx.fillRect(11, 10, 4, 6);
-            ctx.fillStyle = '#e0e0e0';
-            ctx.fillRect(5, 3, 6, 8);
-            break;
-        }
-
-        case BLOCKS.LOOM: {
-            if (face === 'top') {
-                fillBase(ctx, 160, 130, 90);
-                addNoise(ctx, rng, 12);
-            } else {
-                fillBase(ctx, 150, 120, 80);
-                addNoise(ctx, rng, 12);
-                ctx.fillStyle = '#f0f0f0';
-                for (let x = 3; x <= 13; x += 2) ctx.fillRect(x, 4, 1, 8);
             }
             break;
         }
@@ -2858,7 +2768,8 @@ function hasFaceVariants(blockType) {
         BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD, BLOCKS.DARK_OAK_WOOD,
         BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS,
         BLOCKS.CACTUS, BLOCKS.SANDSTONE, BLOCKS.BOOKSHELF, BLOCKS.MYCELIUM,
-        BLOCKS.WARPED_NYLIUM, BLOCKS.WARPED_STEM, BLOCKS.BONE_BLOCK, BLOCKS.BASALT, BLOCKS.BLACKSTONE, BLOCKS.PODZOL, BLOCKS.GOLDEN_OAK_WOOD, BLOCKS.MAGIC_WOOD, BLOCKS.REDWOOD_LOG
+        BLOCKS.WARPED_NYLIUM, BLOCKS.WARPED_STEM, BLOCKS.BONE_BLOCK, BLOCKS.BASALT, BLOCKS.BLACKSTONE, BLOCKS.PODZOL, BLOCKS.GOLDEN_OAK_WOOD, BLOCKS.MAGIC_WOOD, BLOCKS.REDWOOD_LOG,
+        BLOCKS.FLETCHING_TABLE, BLOCKS.SMOKER, BLOCKS.STONECUTTER
     ].includes(blockType);
 }
 
@@ -2952,6 +2863,12 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.GOLD_BLOCK]: 'gold_block',
     [BLOCKS.DIAMOND_BLOCK]: 'diamond_block',
     [BLOCKS.EMERALD_BLOCK]: 'emerald_block',
+    [BLOCKS.LAPIS_BLOCK]: 'lapis_block',
+    [BLOCKS.REDSTONE_BLOCK]: 'redstone_block',
+    [BLOCKS.COAL_BLOCK]: 'coal_block',
+    [BLOCKS.FLETCHING_TABLE]: { top: 'fletching_table_top', side: 'fletching_table_side', bottom: 'birch_planks', front: 'fletching_table_front' },
+    [BLOCKS.SMOKER]: { top: 'smoker_top', side: 'smoker_side', bottom: 'smoker_bottom', front: 'smoker_front' },
+    [BLOCKS.STONECUTTER]: { top: 'stonecutter_top', side: 'stonecutter_side', bottom: 'stonecutter_bottom', front: 'stonecutter_side' },
     [BLOCKS.WOOL]: 'white_wool',
     [BLOCKS.FURNACE]: { top: 'furnace_top', side: 'furnace_side', bottom: 'furnace_top', front: 'furnace_front' },
     [BLOCKS.NETHERRACK]: 'netherrack',
@@ -3155,6 +3072,34 @@ const LOCAL_ASSET_MAP = {
     "diorite": "assets/mc/block/diorite.png",
     "dirt": "assets/mc/block/dirt.png",
     "emerald_block": "assets/mc/block/emerald_block.png",
+    "lapis_block": "assets/mc/block/lapis_block.png",
+    "redstone_block": "assets/mc/block/redstone_block.png",
+    "coal_block": "assets/mc/block/coal_block.png",
+    "birch_planks": "assets/mc/block/birch_planks.png",
+    "fletching_table_top": "assets/mc/block/fletching_table_top.png",
+    "fletching_table_side": "assets/mc/block/fletching_table_side.png",
+    "fletching_table_front": "assets/mc/block/fletching_table_front.png",
+    "smoker_top": "assets/mc/block/smoker_top.png",
+    "smoker_side": "assets/mc/block/smoker_side.png",
+    "smoker_bottom": "assets/mc/block/smoker_bottom.png",
+    "smoker_front": "assets/mc/block/smoker_front.png",
+    "stonecutter_top": "assets/mc/block/stonecutter_top.png",
+    "stonecutter_side": "assets/mc/block/stonecutter_side.png",
+    "stonecutter_bottom": "assets/mc/block/stonecutter_bottom.png",
+    "emerald": "assets/mc/item/emerald.png",
+    "redstone": "assets/mc/item/redstone.png",
+    "bow": "assets/mc/item/bow.png",
+    "arrow": "assets/mc/item/arrow.png",
+    "golden_apple": "assets/mc/item/golden_apple.png",
+    "flint": "assets/mc/item/flint.png",
+    "feather": "assets/mc/item/feather.png",
+    "string": "assets/mc/item/string.png",
+    "sugar": "assets/mc/item/sugar.png",
+    "paper": "assets/mc/item/paper.png",
+    "book": "assets/mc/item/book.png",
+    "wheat": "assets/mc/item/wheat.png",
+    "compass": "assets/mc/item/compass.png",
+    "clock": "assets/mc/item/clock.png",
     "aether_portal": "assets/mc/block/aether_portal.png",
     "end_gateway_beam": "assets/mc/block/end_gateway_beam.png",
     "end_portal_frame_side": "assets/mc/block/end_portal_frame_side.png",
@@ -3847,7 +3792,28 @@ const MC_ITEM_MAP = {
     'quartz': 'quartz',
     'netherite_scrap': 'netherite_scrap',
     'lapis_lazuli': 'lapis_lazuli',
-    'lapis': 'lapis_lazuli'
+    'lapis': 'lapis_lazuli',
+    'emerald': 'emerald',
+    'redstone': 'redstone',
+    'bow': 'bow',
+    'arrow': 'arrow',
+    'golden_apple': 'golden_apple',
+    'flint': 'flint',
+    'feather': 'feather',
+    'string': 'string',
+    'sugar': 'sugar',
+    'paper': 'paper',
+    'book': 'book',
+    'wheat': 'wheat',
+    'compass': 'compass',
+    'clock': 'clock',
+    'emerald_block': 'emerald_block',
+    'lapis_block': 'lapis_block',
+    'redstone_block': 'redstone_block',
+    'coal_block': 'coal_block',
+    'fletching_table': 'fletching_table_front',
+    'smoker': 'smoker_front',
+    'stonecutter': 'stonecutter_side'
 };
 
 // Global cache: subtype -> canvas / data URL
@@ -4926,145 +4892,512 @@ export function generateSpellTexture(element) {
 }
 
 
-export function generateMobTexture(mobType, onLoaded) {
+export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
+    if (typeof part === 'function') {
+        onLoaded = part;
+        part = 'body';
+    }
+
     const canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 32;
-    const ctx = canvas.getContext('2d');
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = false;
 
-    // MC textures for mobs removed due to cursed BoxGeometry mapping
-
-    
-    // Base colors
-    let baseColor = '#cccccc';
-    let noiseRange = 20;
-    
-    if (mobType === 'COW') { baseColor = '#e0e0e0'; noiseRange = 10; }
-    else if (mobType === 'PIG') { baseColor = '#ffbbcc'; noiseRange = 15; }
-    else if (mobType === 'ZOMBIE') { baseColor = '#338844'; noiseRange = 20; }
-    else if (mobType === 'SKELETON') { baseColor = '#dddddd'; noiseRange = 10; }
-    else if (mobType === 'SHEEP') { baseColor = '#eeeeee'; noiseRange = 30; }
-    else if (mobType === 'SLIME') { baseColor = '#44ff44'; noiseRange = 10; }
-    else if (mobType === 'SPIDER') { baseColor = '#221111'; noiseRange = 15; }
-    else if (mobType === 'BAT') { baseColor = '#332222'; noiseRange = 10; }
-    else if (mobType === 'BIRD') { baseColor = '#4477dd'; noiseRange = 20; }
-    else if (mobType === 'GOBLIN') { baseColor = '#66aa22'; noiseRange = 20; }
-    else if (mobType === 'CHICKEN') { baseColor = '#ffffff'; noiseRange = 5; }
-    else if (mobType === 'LIZARD') { baseColor = '#22aa44'; noiseRange = 30; }
-    else if (mobType === 'COD') { baseColor = '#bbbb99'; noiseRange = 20; }
-    else if (mobType === 'BASS') { baseColor = '#446633'; noiseRange = 20; }
-    else if (mobType === 'TROPICAL_FISH') { baseColor = '#ff8800'; noiseRange = 10; }
-    else if (mobType === 'TURTLE') { baseColor = '#115511'; noiseRange = 25; }
-    else if (mobType === 'PIRANHA') { baseColor = '#883333'; noiseRange = 15; }
-    else if (mobType === 'SHARK') { baseColor = '#8899aa'; noiseRange = 10; }
-    else if (mobType === 'LAVASLIME') { baseColor = '#ff5500'; noiseRange = 25; }
-    else if (mobType === 'PIGLIN_BRUISER') { baseColor = '#ffa07a'; noiseRange = 20; }
-    
-    // Fill base noise
-    ctx.fillStyle = baseColor;
-    ctx.fillRect(0, 0, 32, 32);
-    
-    // Parse hex
-    const r = parseInt(baseColor.slice(1,3), 16);
-    const g = parseInt(baseColor.slice(3,5), 16);
-    const b = parseInt(baseColor.slice(5,7), 16);
-    
-    for (let x = 0; x < 32; x++) {
-        for (let y = 0; y < 32; y++) {
-            const nv = (Math.random() - 0.5) * noiseRange;
-            ctx.fillStyle = `rgb(${Math.min(255, Math.max(0, r + nv))},${Math.min(255, Math.max(0, g + nv))},${Math.min(255, Math.max(0, b + nv))})`;
+    const fill = (c) => {
+        ctx.fillStyle = c;
+        ctx.fillRect(0, 0, 16, 16);
+    };
+    const rect = (x, y, rw, rh, c) => {
+        ctx.fillStyle = c;
+        ctx.fillRect(x, y, rw, rh);
+    };
+    const dot = (x, y, c) => {
+        ctx.fillStyle = c;
+        ctx.fillRect(x, y, 1, 1);
+    };
+    const noise = (r, g, b, range = 15, count = 25) => {
+        for (let i = 0; i < count; i++) {
+            const x = Math.floor(Math.random() * 16);
+            const y = Math.floor(Math.random() * 16);
+            const delta = (Math.random() - 0.5) * range;
+            const nr = Math.min(255, Math.max(0, Math.round(r + delta)));
+            const ng = Math.min(255, Math.max(0, Math.round(g + delta)));
+            const nb = Math.min(255, Math.max(0, Math.round(b + delta)));
+            ctx.fillStyle = `rgb(${nr},${ng},${nb})`;
             ctx.fillRect(x, y, 1, 1);
         }
-    }
-    
-    // Custom Details
+    };
+
+    // --- COW ---
     if (mobType === 'COW') {
-        ctx.fillStyle = '#222222';
-        for(let i=0; i<15; i++) {
-            const sx = Math.floor(Math.random()*28);
-            const sy = Math.floor(Math.random()*28);
-            const w = 2 + Math.floor(Math.random()*4);
-            const h = 2 + Math.floor(Math.random()*4);
-            ctx.fillRect(sx, sy, w, h);
+        if (part === 'head_front') {
+            fill('#443224'); noise(68, 50, 36, 15, 30);
+            rect(6, 2, 4, 5, '#ded6cb');
+            rect(7, 1, 2, 2, '#ded6cb');
+            rect(1, 6, 3, 2, '#ffffff'); rect(2, 6, 2, 2, '#18120c');
+            rect(12, 6, 3, 2, '#ffffff'); rect(12, 6, 2, 2, '#18120c');
+            rect(3, 9, 10, 7, '#bba496'); rect(2, 11, 12, 5, '#ad9486');
+            rect(4, 11, 2, 3, '#322018'); rect(10, 11, 2, 3, '#322018');
+            rect(6, 14, 4, 1, '#786054');
+        } else if (part === 'head_top') {
+            fill('#443224'); noise(68, 50, 36, 12, 20);
+            rect(6, 4, 4, 12, '#ded6cb');
+            rect(1, 1, 2, 2, '#c4baa8'); rect(13, 1, 2, 2, '#c4baa8');
+        } else if (part === 'head_side') {
+            fill('#443224'); noise(68, 50, 36, 15, 25);
+            rect(0, 10, 4, 6, '#bba496');
+            rect(12, 2, 3, 3, '#302016');
+        } else if (part === 'head_bottom') {
+            fill('#ad9486'); noise(173, 148, 134, 10, 15);
+        } else if (part === 'horn') {
+            fill('#e6dece'); noise(230, 222, 206, 10, 20);
+            rect(0, 12, 16, 4, '#5c483a');
+        } else if (part === 'snout') { // udder
+            fill('#f4a8b8'); noise(244, 168, 184, 10, 15);
+            rect(3, 4, 3, 3, '#d87e90'); rect(10, 4, 3, 3, '#d87e90');
+            rect(3, 10, 3, 3, '#d87e90'); rect(10, 10, 3, 3, '#d87e90');
+        } else if (part === 'leg') {
+            fill('#e4ddd3'); noise(228, 221, 211, 10, 20);
+            rect(0, 0, 16, 5, '#221c18');
+            rect(0, 12, 16, 4, '#221e1c');
+            rect(0, 11, 16, 1, '#443c38');
+        } else { // body
+            fill('#e4ddd3'); noise(228, 221, 211, 12, 25);
+            rect(1, 2, 6, 5, '#221c18'); rect(2, 7, 4, 3, '#221c18');
+            rect(9, 6, 6, 7, '#221c18'); rect(8, 1, 5, 4, '#221c18');
+            rect(0, 11, 4, 4, '#221c18'); rect(12, 0, 4, 3, '#221c18');
         }
-        // Face/eyes
-        ctx.fillStyle = '#000'; ctx.fillRect(6, 6, 2, 2); ctx.fillRect(24, 6, 2, 2);
-        ctx.fillStyle = '#ffccdd'; ctx.fillRect(10, 20, 12, 6);
     }
+
+    // --- PIG ---
     else if (mobType === 'PIG') {
-        ctx.fillStyle = '#dd88aa';
-        for(let i=0; i<30; i++) ctx.fillRect(Math.floor(Math.random()*32), Math.floor(Math.random()*32), 1, 1);
-        // Face
-        ctx.fillStyle = '#000'; ctx.fillRect(8, 10, 2, 2); ctx.fillRect(22, 10, 2, 2);
-        ctx.fillStyle = '#cc6688'; ctx.fillRect(12, 16, 8, 6); // Snout
+        if (part === 'head_front') {
+            fill('#f3aab6'); noise(243, 170, 182, 12, 25);
+            rect(2, 6, 3, 2, '#2d161d'); dot(2, 6, '#ffffff');
+            rect(11, 6, 3, 2, '#2d161d'); dot(11, 6, '#ffffff');
+            rect(2, 5, 3, 1, '#e294a2'); rect(11, 5, 3, 1, '#e294a2');
+            rect(4, 9, 8, 5, '#e494a2');
+        } else if (part === 'snout') {
+            fill('#e88ea0'); noise(232, 142, 160, 10, 15);
+            rect(0, 0, 16, 1, '#cf7286'); rect(0, 15, 16, 1, '#b8586c');
+            rect(0, 0, 1, 16, '#cf7286'); rect(15, 0, 1, 16, '#b8586c');
+            rect(3, 5, 3, 6, '#5e1c28'); rect(10, 5, 3, 6, '#5e1c28');
+        } else if (part === 'leg') {
+            fill('#f3aab6'); noise(243, 170, 182, 10, 20);
+            rect(0, 12, 16, 4, '#4c222b');
+            rect(7, 11, 2, 5, '#281016');
+        } else { // body / head sides
+            fill('#f3aab6'); noise(243, 170, 182, 12, 30);
+            rect(0, 0, 16, 3, '#e699a6');
+            rect(0, 13, 16, 3, '#f9bcc6');
+        }
     }
-    else if (mobType === 'ZOMBIE') {
-        ctx.fillStyle = '#000'; ctx.fillRect(8, 8, 4, 4); ctx.fillRect(20, 8, 4, 4);
-        ctx.fillStyle = '#114422'; ctx.fillRect(12, 20, 8, 2); // Mouth
-    }
-    else if (mobType === 'SKELETON') {
-        ctx.fillStyle = '#000'; ctx.fillRect(8, 8, 6, 6); ctx.fillRect(18, 8, 6, 6);
-        ctx.fillRect(14, 16, 4, 4); // Nose
-        for(let i=0; i<4; i++) ctx.fillRect(12 + i*2, 22, 1, 4); // Teeth
-    }
+
+    // --- SHEEP ---
     else if (mobType === 'SHEEP') {
-        ctx.fillStyle = '#eebb99'; ctx.fillRect(8, 8, 16, 16); // Face
-        ctx.fillStyle = '#000'; ctx.fillRect(10, 12, 2, 2); ctx.fillRect(20, 12, 2, 2);
-        ctx.fillStyle = '#ff88aa'; ctx.fillRect(14, 20, 4, 2); // Nose
+        if (part === 'head_front') {
+            fill('#d8b898'); noise(216, 184, 152, 10, 25);
+            rect(0, 0, 16, 5, '#f0f0f0'); rect(2, 5, 12, 2, '#eaeaea');
+            rect(1, 8, 3, 2, '#ffffff'); rect(2, 8, 2, 2, '#2a1e16');
+            rect(12, 8, 3, 2, '#ffffff'); rect(12, 8, 2, 2, '#2a1e16');
+            rect(6, 12, 4, 2, '#b88274'); dot(7, 13, '#88584c'); dot(8, 13, '#88584c');
+        } else if (part === 'head_bottom') {
+            fill('#d8b898'); noise(216, 184, 152, 10, 15);
+        } else if (part === 'leg') {
+            fill('#d8b898'); noise(216, 184, 152, 10, 20);
+            rect(0, 13, 16, 3, '#38261c');
+        } else { // wool
+            fill('#ececec'); noise(236, 236, 236, 15, 40);
+            for (let i = 0; i < 16; i++) {
+                const cx = (i * 5) % 16, cy = Math.floor((i * 5) / 16) * 4;
+                rect(cx, cy, 3, 3, '#dbdbdb');
+                rect(cx + 1, cy + 1, 2, 2, '#fafafa');
+            }
+        }
     }
-    else if (mobType === 'SLIME') {
-        ctx.fillStyle = 'rgba(0,100,0,0.4)';
-        for(let i=0; i<40; i++) ctx.fillRect(Math.floor(Math.random()*32), Math.floor(Math.random()*32), 2, 2);
-        ctx.fillStyle = '#000'; ctx.fillRect(6, 10, 4, 4); ctx.fillRect(22, 10, 4, 4); // Eyes
-        ctx.fillRect(14, 16, 4, 2); // Mouth
-    }
-    else if (mobType === 'SPIDER') {
-        ctx.fillStyle = '#ff0000'; // 8 red eyes
-        ctx.fillRect(10, 14, 2, 2); ctx.fillRect(14, 12, 2, 2);
-        ctx.fillRect(18, 12, 2, 2); ctx.fillRect(22, 14, 2, 2);
-    }
+
+    // --- CHICKEN ---
     else if (mobType === 'CHICKEN') {
-        ctx.fillStyle = '#000'; ctx.fillRect(4, 12, 2, 2); ctx.fillRect(26, 12, 2, 2);
-        ctx.fillStyle = '#ffcc00'; ctx.fillRect(14, 14, 4, 4); // Beak
-        ctx.fillStyle = '#ff0000'; ctx.fillRect(14, 18, 4, 6); // Wattle
+        if (part === 'head_front') {
+            fill('#fafafa'); noise(250, 250, 250, 10, 25);
+            rect(1, 5, 2, 2, '#181818'); dot(1, 5, '#ffffff');
+            rect(13, 5, 2, 2, '#181818'); dot(13, 5, '#ffffff');
+            rect(5, 7, 6, 4, '#f5a200');
+            dot(6, 8, '#b26b00'); dot(9, 8, '#b26b00');
+            rect(6, 11, 4, 4, '#d81824'); rect(7, 15, 2, 1, '#a80c14');
+        } else if (part === 'head_side') {
+            fill('#fafafa'); noise(250, 250, 250, 10, 25);
+            rect(6, 5, 3, 3, '#181818'); dot(6, 5, '#ffffff');
+            rect(13, 7, 3, 3, '#f5a200');
+        } else if (part === 'wing') {
+            fill('#f4f4f4'); noise(244, 244, 244, 10, 25);
+            rect(0, 8, 16, 3, '#dedede'); rect(0, 12, 16, 4, '#cccccc');
+        } else if (part === 'leg') {
+            fill('#f5a200'); noise(245, 162, 0, 10, 20);
+            rect(0, 12, 16, 4, '#cf8000');
+        } else { // body
+            fill('#fafafa'); noise(250, 250, 250, 12, 35);
+            rect(2, 4, 12, 2, '#eaeaea'); rect(3, 8, 10, 2, '#e0e0e0');
+            rect(4, 12, 8, 2, '#d6d6d6');
+        }
     }
-    else if (mobType === 'LIZARD') {
-        ctx.fillStyle = '#000'; ctx.fillRect(8, 8, 2, 2); ctx.fillRect(22, 8, 2, 2);
-        ctx.fillStyle = '#ffff00'; ctx.fillRect(8, 8, 1, 1); ctx.fillRect(22, 8, 1, 1);
-        ctx.fillStyle = '#115522'; 
-        for(let i=0; i<20; i++) ctx.fillRect(Math.floor(Math.random()*32), Math.floor(Math.random()*32), 2, 1); // Scales
+
+    // --- ZOMBIE ---
+    else if (mobType === 'ZOMBIE') {
+        if (part === 'head_front') {
+            fill('#567e45'); noise(86, 126, 69, 15, 30);
+            rect(0, 0, 16, 4, '#263b1f');
+            rect(0, 4, 3, 2, '#263b1f'); rect(13, 4, 3, 2, '#263b1f'); rect(6, 4, 4, 1, '#263b1f');
+            rect(2, 6, 4, 3, '#142010'); dot(3, 7, '#d64024'); dot(4, 7, '#ead23a');
+            rect(10, 6, 4, 3, '#142010'); dot(11, 7, '#ead23a'); dot(12, 7, '#d64024');
+            rect(5, 12, 6, 2, '#182612'); dot(6, 12, '#38502a'); dot(9, 12, '#38502a');
+        } else if (part.startsWith('head_')) {
+            fill('#263b1f'); noise(38, 59, 31, 15, 30);
+            rect(2, 8, 4, 4, '#567e45');
+        } else if (part === 'body') {
+            fill('#009a9a'); noise(0, 154, 154, 12, 25);
+            rect(5, 0, 6, 4, '#567e45'); rect(6, 4, 4, 2, '#567e45');
+            rect(0, 0, 16, 1, '#007878'); rect(0, 14, 16, 2, '#006c6c');
+        } else if (part === 'arm') {
+            fill('#567e45'); noise(86, 126, 69, 15, 25);
+            rect(0, 0, 16, 5, '#009a9a'); rect(0, 4, 16, 1, '#007878');
+            rect(0, 13, 16, 3, '#466838');
+        } else if (part === 'leg') {
+            fill('#362a58'); noise(54, 42, 88, 12, 25);
+            rect(0, 12, 16, 4, '#1e1e24'); rect(0, 11, 16, 1, '#2c2246');
+        } else {
+            fill('#567e45'); noise(86, 126, 69, 15, 25);
+        }
     }
-    else if (mobType === 'GOBLIN') {
-        ctx.fillStyle = '#000'; ctx.fillRect(6, 10, 4, 2); ctx.fillRect(22, 10, 4, 2);
-        ctx.fillStyle = '#ff0000'; ctx.fillRect(8, 10, 1, 1); ctx.fillRect(24, 10, 1, 1);
-        ctx.fillStyle = '#448811'; ctx.fillRect(14, 14, 4, 6); // Big nose
+
+    // --- SKELETON ---
+    else if (mobType === 'SKELETON') {
+        if (part === 'head_front') {
+            fill('#dedad0'); noise(222, 218, 208, 12, 25);
+            rect(2, 5, 4, 4, '#101010'); rect(10, 5, 4, 4, '#101010');
+            dot(3, 6, '#301818'); dot(11, 6, '#301818');
+            rect(7, 8, 2, 2, '#101010');
+            rect(4, 11, 8, 3, '#101010');
+            for (let t = 4; t < 12; t += 2) rect(t, 11, 1, 3, '#dedad0');
+        } else if (part === 'body') {
+            fill('#141414');
+            rect(7, 0, 2, 16, '#dedad0');
+            for (let r = 2; r <= 12; r += 3) {
+                rect(1, r, 14, 1, '#dedad0');
+                rect(0, r + 1, 2, 1, '#dedad0');
+                rect(14, r + 1, 2, 1, '#dedad0');
+            }
+        } else {
+            fill('#dedad0'); noise(222, 218, 208, 10, 20);
+            rect(0, 0, 16, 2, '#b8b2a6'); rect(0, 14, 16, 2, '#b8b2a6');
+            rect(6, 2, 4, 12, '#eae6dc');
+        }
     }
-    else if (mobType === 'TROPICAL_FISH') {
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(16, 0, 4, 32); // Stripe
-        ctx.fillStyle = '#000'; ctx.fillRect(6, 12, 2, 2);
+
+    // --- SPIDER ---
+    else if (mobType === 'SPIDER') {
+        if (part === 'head_front') {
+            fill('#1a1616'); noise(26, 22, 22, 10, 25);
+            rect(5, 8, 2, 2, '#ff1800'); dot(5, 8, '#ff8800');
+            rect(9, 8, 2, 2, '#ff1800'); dot(9, 8, '#ff8800');
+            rect(2, 7, 2, 2, '#e01000'); dot(3, 7, '#ff5500');
+            rect(12, 7, 2, 2, '#e01000'); dot(12, 7, '#ff5500');
+            dot(5, 6, '#ff4400'); dot(7, 6, '#ff6600'); dot(8, 6, '#ff6600'); dot(10, 6, '#ff4400');
+            rect(5, 12, 2, 3, '#0e0b0b'); rect(9, 12, 2, 3, '#0e0b0b');
+        } else if (part === 'body') {
+            fill('#161212'); noise(22, 18, 18, 12, 35);
+            rect(5, 2, 6, 2, '#281e1e'); rect(4, 5, 8, 2, '#2c2020');
+            rect(5, 9, 6, 2, '#281e1e'); rect(6, 12, 4, 2, '#241a1a');
+        } else {
+            fill('#181414'); noise(24, 20, 20, 8, 15);
+            rect(0, 6, 16, 2, '#382626'); rect(0, 12, 16, 2, '#382626');
+        }
     }
-    else if (mobType === 'PIRANHA') {
-        ctx.fillStyle = '#000'; ctx.fillRect(6, 12, 2, 2);
-        ctx.fillStyle = '#ff0000'; ctx.fillRect(7, 13, 1, 1); // Red eye
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(4, 20, 6, 2); // Teeth
-    }
-    else if (mobType === 'SHARK') {
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 16, 32, 16); // White underbelly
-        ctx.fillStyle = '#000'; ctx.fillRect(6, 10, 2, 2); // Eye
+
+    // --- SLIME & LAVASLIME ---
+    else if (mobType === 'SLIME') {
+        fill('#3edd3e'); noise(62, 221, 62, 15, 30);
+        if (part === 'head_front' || part === 'body') {
+            rect(2, 6, 3, 3, '#0a240a'); dot(2, 6, '#ffffff');
+            rect(11, 6, 3, 3, '#0a240a'); dot(11, 6, '#ffffff');
+            rect(6, 11, 4, 2, '#0a240a');
+        }
     }
     else if (mobType === 'LAVASLIME') {
-        ctx.fillStyle = 'rgba(255,50,0,0.6)';
-        for(let i=0; i<40; i++) ctx.fillRect(Math.floor(Math.random()*32), Math.floor(Math.random()*32), 2, 2);
-        ctx.fillStyle = '#ffff00'; ctx.fillRect(6, 10, 4, 4); ctx.fillRect(22, 10, 4, 4); // Glowing Eyes
-        ctx.fillStyle = '#aa0000'; ctx.fillRect(14, 16, 4, 2); // Mouth
+        fill('#241008'); noise(36, 16, 8, 12, 25);
+        rect(0, 3, 16, 2, '#ff5500'); rect(4, 4, 8, 1, '#ffcc00');
+        rect(0, 9, 16, 2, '#ff5500'); rect(2, 10, 10, 1, '#ffcc00');
+        if (part === 'head_front' || part === 'body') {
+            rect(2, 5, 4, 3, '#ffff22'); dot(3, 6, '#ffffff');
+            rect(10, 5, 4, 3, '#ffff22'); dot(11, 6, '#ffffff');
+        }
     }
+
+    // --- AETHER_BUNNY ---
+    else if (mobType === 'AETHER_BUNNY') {
+        if (part === 'head_front') {
+            fill('#ffffff'); noise(255, 255, 255, 10, 20);
+            rect(2, 6, 3, 3, '#141414'); dot(2, 6, '#ffffff'); dot(4, 8, '#ffffff');
+            rect(11, 6, 3, 3, '#141414'); dot(11, 6, '#ffffff'); dot(13, 8, '#ffffff');
+            rect(7, 9, 2, 2, '#ff99aa'); dot(6, 11, '#ffb8c8'); dot(9, 11, '#ffb8c8');
+            dot(0, 9, '#d0d0d0'); dot(1, 9, '#d0d0d0');
+            dot(14, 9, '#d0d0d0'); dot(15, 9, '#d0d0d0');
+        } else if (part === 'ears') {
+            fill('#ffffff'); rect(3, 1, 10, 14, '#ffb0c0'); noise(255, 176, 192, 10, 15);
+        } else if (part === 'leg') {
+            fill('#ffffff'); noise(255, 255, 255, 8, 15);
+            rect(4, 13, 8, 3, '#ffc0cb');
+        } else {
+            fill('#ffffff'); noise(255, 255, 255, 12, 25);
+            rect(4, 4, 8, 8, '#f4f4f4');
+        }
+    }
+
+    // --- PIGLIN_BRUISER ---
     else if (mobType === 'PIGLIN_BRUISER') {
-        ctx.fillStyle = '#000'; ctx.fillRect(8, 10, 2, 2); ctx.fillRect(22, 10, 2, 2); // Eyes
-        ctx.fillStyle = '#ffcccc'; ctx.fillRect(12, 16, 8, 6); // Snout
-        ctx.fillStyle = '#000'; ctx.fillRect(14, 18, 1, 2); ctx.fillRect(17, 18, 1, 2); // Nostrils
-        ctx.fillStyle = '#333333'; ctx.fillRect(0, 20, 32, 12); // Armor
+        if (part === 'head_front') {
+            fill('#d87858'); noise(216, 120, 88, 15, 25);
+            rect(0, 0, 16, 3, '#e8b830');
+            rect(2, 5, 3, 2, '#ffffff'); rect(3, 5, 2, 2, '#201010');
+            rect(11, 5, 3, 2, '#ffffff'); rect(11, 5, 2, 2, '#201010');
+            rect(4, 7, 8, 5, '#e48868');
+            dot(5, 9, '#4a2018'); dot(10, 9, '#4a2018');
+            rect(2, 10, 2, 4, '#fff0b0'); dot(2, 9, '#fff0b0');
+            rect(12, 10, 2, 4, '#fff0b0'); dot(13, 9, '#fff0b0');
+        } else if (part === 'body') {
+            fill('#30282c'); noise(48, 40, 44, 10, 20);
+            rect(0, 10, 16, 3, '#947020'); rect(6, 10, 4, 3, '#f5c830');
+        } else if (part === 'arm') {
+            fill('#d87858'); noise(216, 120, 88, 12, 20);
+            rect(0, 0, 16, 5, '#30282c');
+        } else if (part === 'leg') {
+            fill('#242024'); noise(36, 32, 36, 8, 15);
+            rect(0, 12, 16, 4, '#181418');
+        } else {
+            fill('#d87858'); noise(216, 120, 88, 15, 20);
+        }
     }
-    
+
+    // --- CAMEL ---
+    else if (mobType === 'CAMEL') {
+        if (part === 'head_front') {
+            fill('#cda56b'); noise(205, 165, 107, 15, 20);
+            rect(0, 0, 3, 2, '#b88d4c'); rect(13, 0, 3, 2, '#b88d4c');
+            rect(1, 4, 3, 2, '#302010'); dot(2, 4, '#ffffff');
+            rect(12, 4, 3, 2, '#302010'); dot(13, 4, '#ffffff');
+            rect(4, 7, 8, 8, '#dfbe88'); noise(223, 190, 136, 10, 15);
+            dot(5, 10, '#3d2618'); dot(6, 10, '#3d2618');
+            dot(9, 10, '#3d2618'); dot(10, 10, '#3d2618');
+            rect(6, 12, 4, 1, '#66442c');
+        } else if (part === 'leg') {
+            fill('#cda56b'); noise(205, 165, 107, 10, 15);
+            rect(0, 12, 16, 4, '#38281e');
+        } else if (part === 'hump') {
+            fill('#ba8e4e'); noise(186, 142, 78, 15, 25);
+            rect(4, 2, 8, 6, '#dfbe88');
+        } else {
+            fill('#cda56b'); noise(205, 165, 107, 12, 22);
+            rect(2, 4, 12, 8, '#c29759');
+        }
+    }
+
+    // --- PENGUIN ---
+    else if (mobType === 'PENGUIN') {
+        if (part === 'head_front') {
+            fill('#1c1c22'); noise(28, 28, 34, 10, 15);
+            rect(1, 4, 4, 6, '#ffffff');
+            rect(11, 4, 4, 6, '#ffffff');
+            dot(3, 5, '#111111'); dot(12, 5, '#111111');
+            rect(6, 7, 4, 4, '#f59e0b');
+            dot(7, 8, '#d97706'); dot(8, 8, '#d97706');
+        } else if (part === 'belly' || part === 'head_bottom') {
+            fill('#ffffff'); noise(245, 245, 250, 8, 12);
+        } else if (part === 'wing' || part === 'arm') {
+            fill('#1c1c22'); noise(28, 28, 34, 8, 15);
+            rect(0, 0, 4, 16, '#ffffff');
+        } else if (part === 'leg' || part === 'feet') {
+            fill('#f59e0b'); noise(245, 158, 11, 10, 15);
+            dot(4, 14, '#d97706'); dot(11, 14, '#d97706');
+        } else {
+            fill('#1c1c22'); noise(28, 28, 34, 10, 20);
+        }
+    }
+
+    // --- FROG ---
+    else if (mobType === 'FROG') {
+        if (part === 'head_front') {
+            fill('#5e7c2e'); noise(94, 124, 46, 12, 20);
+            rect(1, 0, 5, 5, '#7c9e3e'); rect(10, 0, 5, 5, '#7c9e3e');
+            rect(2, 1, 3, 3, '#f59e0b'); rect(11, 1, 3, 3, '#f59e0b');
+            rect(2, 2, 3, 1, '#111111'); rect(11, 2, 3, 1, '#111111');
+            rect(3, 9, 10, 7, '#e2d5a3'); noise(226, 213, 163, 8, 12);
+            rect(2, 8, 12, 1, '#3a4e1d');
+        } else if (part === 'head_top') {
+            fill('#5e7c2e'); noise(94, 124, 46, 10, 15);
+            rect(1, 1, 5, 5, '#7c9e3e'); rect(10, 1, 5, 5, '#7c9e3e');
+        } else if (part === 'leg') {
+            fill('#5e7c2e'); noise(94, 124, 46, 10, 15);
+            rect(2, 12, 12, 4, '#b8ad80');
+        } else {
+            fill('#5e7c2e'); noise(94, 124, 46, 15, 25);
+            rect(3, 4, 10, 8, '#435a20');
+        }
+    }
+
+    // --- TURTLE ---
+    else if (mobType === 'TURTLE') {
+        if (part === 'head_front') {
+            fill('#2f7d3a'); noise(47, 125, 58, 12, 20);
+            rect(2, 5, 3, 3, '#111111'); dot(3, 5, '#ffffff');
+            rect(11, 5, 3, 3, '#111111'); dot(12, 5, '#ffffff');
+            rect(4, 10, 8, 5, '#d6cf7a');
+        } else if (part === 'body' || part === 'shell') {
+            fill('#24582a'); noise(36, 88, 42, 10, 18);
+            rect(2, 2, 5, 5, '#3b8b45'); rect(9, 2, 5, 5, '#3b8b45');
+            rect(5, 7, 6, 6, '#4e9b3a'); rect(1, 9, 3, 5, '#3b8b45'); rect(12, 9, 3, 5, '#3b8b45');
+        } else if (part === 'flipper' || part === 'leg') {
+            fill('#2f7d3a'); noise(47, 125, 58, 10, 18);
+            dot(4, 6, '#69b56f'); dot(10, 8, '#69b56f');
+        } else {
+            fill('#2f7d3a'); noise(47, 125, 58, 12, 20);
+        }
+    }
+
+    // --- SHARK ---
+    else if (mobType === 'SHARK') {
+        if (part === 'head_front') {
+            fill('#4a5b6d'); noise(74, 91, 109, 10, 15);
+            rect(0, 9, 16, 7, '#e2e8f0'); noise(226, 232, 240, 6, 10);
+            rect(1, 4, 3, 2, '#0f172a'); dot(2, 4, '#ffffff');
+            rect(12, 4, 3, 2, '#0f172a'); dot(13, 4, '#ffffff');
+            rect(3, 8, 10, 4, '#1e293b');
+            for (let i = 4; i <= 11; i += 2) { dot(i, 8, '#ffffff'); dot(i, 11, '#ffffff'); }
+        } else if (part === 'fin') {
+            fill('#3d4b5a'); noise(61, 75, 90, 8, 12);
+            rect(0, 0, 4, 16, '#64748b');
+        } else {
+            fill('#4a5b6d'); noise(74, 91, 109, 12, 18);
+            rect(0, 10, 16, 6, '#e2e8f0');
+        }
+    }
+
+    // --- LIZARD ---
+    else if (mobType === 'LIZARD') {
+        if (part === 'head_front') {
+            fill('#2e8b57'); noise(46, 139, 87, 12, 20);
+            rect(2, 4, 3, 3, '#facc15'); rect(3, 4, 1, 3, '#000000');
+            rect(11, 4, 3, 3, '#facc15'); rect(12, 4, 1, 3, '#000000');
+            dot(5, 9, '#155724'); dot(10, 9, '#155724');
+            rect(3, 11, 10, 2, '#86efac');
+        } else if (part === 'tail') {
+            fill('#2e8b57'); noise(46, 139, 87, 10, 15);
+            rect(0, 4, 16, 2, '#155724'); rect(0, 10, 16, 2, '#155724');
+        } else {
+            fill('#2e8b57'); noise(46, 139, 87, 12, 22);
+            rect(2, 3, 12, 3, '#155724'); rect(2, 9, 12, 3, '#155724');
+        }
+    }
+
+    // --- BIRD ---
+    else if (mobType === 'BIRD') {
+        if (part === 'head_front') {
+            fill('#0284c7'); noise(2, 132, 199, 12, 20);
+            rect(2, 4, 3, 3, '#0f172a'); dot(3, 4, '#ffffff');
+            rect(11, 4, 3, 3, '#0f172a'); dot(12, 4, '#ffffff');
+            rect(6, 7, 4, 4, '#f59e0b'); dot(7, 8, '#d97706'); dot(8, 8, '#d97706');
+        } else if (part === 'wing') {
+            fill('#0369a1'); noise(3, 105, 161, 10, 18);
+            rect(0, 10, 16, 6, '#082f49');
+        } else {
+            fill('#0284c7'); noise(2, 132, 199, 15, 25);
+            rect(4, 5, 8, 8, '#38bdf8');
+        }
+    }
+
+    // --- BAT ---
+    else if (mobType === 'BAT') {
+        if (part === 'head_front') {
+            fill('#292524'); noise(41, 37, 36, 10, 18);
+            rect(3, 5, 2, 2, '#ef4444'); dot(3, 5, '#ffffff');
+            rect(11, 5, 2, 2, '#ef4444'); dot(11, 5, '#ffffff');
+            dot(5, 9, '#ffffff'); dot(10, 9, '#ffffff');
+            rect(6, 8, 4, 1, '#1c1917');
+        } else if (part === 'wing') {
+            fill('#1c1917'); noise(28, 25, 23, 8, 12);
+            for (let i = 2; i < 16; i += 4) {
+                rect(i, 0, 1, 16, '#44403c');
+            }
+        } else {
+            fill('#292524'); noise(41, 37, 36, 12, 22);
+        }
+    }
+
+    // --- CRAB ---
+    else if (mobType === 'CRAB') {
+        if (part === 'head_front' || part === 'body') {
+            fill('#dc2626'); noise(220, 38, 38, 12, 22);
+            rect(3, 2, 2, 3, '#000000'); dot(3, 2, '#ffffff');
+            rect(11, 2, 2, 3, '#000000'); dot(11, 2, '#ffffff');
+            rect(2, 6, 12, 4, '#ea580c');
+        } else if (part === 'claw') {
+            fill('#ea580c'); noise(234, 88, 12, 10, 18);
+            rect(1, 1, 6, 4, '#dc2626');
+            rect(9, 1, 6, 4, '#dc2626');
+            rect(4, 5, 8, 2, '#ffffff');
+        } else {
+            fill('#dc2626'); noise(220, 38, 38, 10, 15);
+        }
+    }
+
+    // --- PIRANHA ---
+    else if (mobType === 'PIRANHA') {
+        if (part === 'head_front') {
+            fill('#71717a'); noise(113, 113, 122, 10, 15);
+            rect(0, 8, 16, 8, '#b91c1c'); noise(185, 28, 28, 10, 18);
+            rect(1, 3, 3, 3, '#dc2626'); dot(2, 4, '#000000');
+            rect(12, 3, 3, 3, '#dc2626'); dot(13, 4, '#000000');
+            rect(3, 7, 10, 3, '#000000');
+            for (let i = 3; i <= 12; i += 2) { dot(i, 7, '#ffffff'); dot(i, 9, '#ffffff'); }
+        } else {
+            fill('#71717a'); noise(113, 113, 122, 12, 18);
+            rect(0, 9, 16, 7, '#b91c1c'); noise(185, 28, 28, 12, 20);
+        }
+    }
+
+    // --- FISH (COD, BASS, SALMON, TROPICAL_FISH) ---
+    else if (mobType === 'COD' || mobType === 'BASS' || mobType === 'SALMON' || mobType === 'TROPICAL_FISH') {
+        let fishBase = '#a09880';
+        let fishR = 160, fishG = 152, fishB = 128;
+        if (mobType === 'BASS') { fishBase = '#446633'; fishR = 68; fishG = 102; fishB = 51; }
+        else if (mobType === 'SALMON') { fishBase = '#be3636'; fishR = 190; fishG = 54; fishB = 54; }
+        else if (mobType === 'TROPICAL_FISH') { fishBase = '#ff8800'; fishR = 255; fishG = 136; fishB = 0; }
+
+        fill(fishBase); noise(fishR, fishG, fishB, 12, 20);
+        if (part === 'head_front') {
+            rect(2, 5, 3, 3, '#000000'); dot(3, 5, '#ffffff');
+            rect(11, 5, 3, 3, '#000000'); dot(12, 5, '#ffffff');
+            if (mobType === 'SALMON') rect(0, 0, 16, 5, '#2f5938');
+        } else {
+            rect(0, 7, 16, 2, 'rgba(0,0,0,0.2)');
+            rect(0, 12, 16, 4, 'rgba(255,255,255,0.25)');
+        }
+    }
+
+    // --- DEFAULT & OTHER CREATURES ---
+    else {
+        let base = '#888888';
+        let r = 136, g = 136, b = 136;
+        if (mobType === 'GOBLIN') { base = '#559922'; r = 85; g = 153; b = 34; }
+
+        fill(base); noise(r, g, b, 15, 25);
+        if (part === 'head_front') {
+            rect(2, 6, 2, 2, '#000000'); dot(2, 6, '#ffffff');
+            rect(12, 6, 2, 2, '#000000'); dot(12, 6, '#ffffff');
+        }
+    }
+
+    if (onLoaded) onLoaded(canvas);
     return canvas;
 }
 
