@@ -5083,7 +5083,7 @@ export function generateSpellTexture(element) {
 // MC Entity Skin Config — maps each mob to CDN URL + face UVs
 // [sx, sy, sw, sh] = source rect in skin sheet → scaled to 16x16
 // ============================================================
-const _ENTITY_BASE = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.4/assets/minecraft/textures/entity/';
+const _ENTITY_BASE = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/textures/entity/';
 const MC_MOB_SKIN_CONFIG = {
     // --- Quadrupeds (head UVs same for all; body/leg vary) ---
     COW:  { url: _ENTITY_BASE + 'cow/cow.png',
@@ -5612,24 +5612,30 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
             };
             const _cached = _mobSkinCache[_skinCfg.url];
             if (_cached instanceof HTMLImageElement && _cached.complete && _cached.naturalWidth > 0) {
-                // Already loaded — apply immediately
+                // Already loaded — apply immediately (synchronous)
                 _applyFace(_cached);
-            } else if (!_cached) {
-                // Start loading; store a promise sentinel so concurrent calls wait
-                _mobSkinCache[_skinCfg.url] = 'loading';
+            } else if (Array.isArray(_cached)) {
+                // Currently loading — queue our callback for when image arrives
+                _cached.push(_applyFace);
+            } else if (_cached === null) {
+                // Previously failed — keep procedural fallback
+                if (onLoaded) onLoaded(canvas);
+            } else {
+                // Not started yet — begin loading and store pending callbacks array
+                const _pendingList = [_applyFace];
+                _mobSkinCache[_skinCfg.url] = _pendingList;
                 const _img = new Image();
                 _img.crossOrigin = 'anonymous';
                 _img.onload = () => {
                     _mobSkinCache[_skinCfg.url] = _img;
-                    _applyFace(_img);
+                    for (const _cb of _pendingList) _cb(_img);
                 };
-                _img.onerror = () => { _mobSkinCache[_skinCfg.url] = null; };
+                _img.onerror = () => {
+                    _mobSkinCache[_skinCfg.url] = null;
+                    if (onLoaded) onLoaded(canvas); // keep procedural
+                };
                 _img.src = _skinCfg.url;
-            } else if (_cached !== 'loading') {
-                // null = failed, keep procedural fallback
-                if (onLoaded) onLoaded(canvas);
             }
-            // If 'loading', onLoaded will be called when the image arrives
         } else {
             if (onLoaded) onLoaded(canvas);
         }

@@ -601,15 +601,11 @@ export class Chunk {
 
                             for (let i = 0; i < 4; i++) {
                                 let c = aoColor[i];
-                                // Water/swamp water: use biome tint color as vertex color so UV tile seams are invisible
-                                if (currentBlockType === BLOCKS.WATER) {
-                                    _colors[colorCount++] = 0.247; // R  #3F76E4 = MC water biome color
-                                    _colors[colorCount++] = 0.463; // G
-                                    _colors[colorCount++] = 0.894; // B
-                                } else if (currentBlockType === BLOCKS.SWAMP_WATER) {
-                                    _colors[colorCount++] = 0.239; // R  #3D5A40 swamp green
-                                    _colors[colorCount++] = 0.353; // G
-                                    _colors[colorCount++] = 0.251; // B
+                                // Water: pure white vertex color — biome tint applied via matWater.color so MC texture shows
+                                if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) {
+                                    _colors[colorCount++] = 1.0;
+                                    _colors[colorCount++] = 1.0;
+                                    _colors[colorCount++] = 1.0;
                                 } else if (waterFade > 0) {
                                     const wc = { r: 0x11/255, g: 0x33/255, b: 0x66/255 };
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.r * waterFade;
@@ -841,6 +837,7 @@ export class World {
         });
         const matWater = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
+            color: new THREE.Color(0x3F76E4), // MC default water biome color — tints the texture blue
             vertexColors: true,
             transparent: true,
             opacity: 0.80, // natural translucent water

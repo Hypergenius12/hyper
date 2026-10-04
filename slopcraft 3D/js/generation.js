@@ -158,8 +158,10 @@ export function generateAetherChunk(cx, cz, params) {
 
                         // Surface flora
                         if (biome === 'GOLDEN_FOREST') {
-                            if (colRng() < 0.035) {
+                            if (colRng() < 0.04) {
                                 generateGoldenOakTree(blocks, x, y + 1, z, rng);
+                            } else if (colRng() < 0.02) {
+                                generateAetherTree(blocks, x, y + 1, z, rng);
                             } else if (colRng() < 0.15) {
                                 safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
                             } else if (colRng() < 0.05) {
@@ -168,6 +170,8 @@ export function generateAetherChunk(cx, cz, params) {
                         } else if (biome === 'ENCHANTED_WOODLANDS') {
                             if (colRng() < 0.04) {
                                 generateEnchantedAetherTree(blocks, x, y + 1, z, rng);
+                            } else if (colRng() < 0.03) {
+                                generateAetherTree(blocks, x, y + 1, z, rng);
                             } else if (colRng() < 0.2) {
                                 safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
                             } else if (colRng() < 0.1) {
@@ -185,6 +189,8 @@ export function generateAetherChunk(cx, cz, params) {
                                         }
                                     }
                                 }
+                            } else if (colRng() < 0.02) {
+                                generateAetherTree(blocks, x, y + 1, z, rng);
                             } else if (colRng() < 0.3) {
                                 safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_FLOWER, true);
                             }
@@ -192,8 +198,19 @@ export function generateAetherChunk(cx, cz, params) {
                             if (colRng() < 0.01) {
                                 safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_CRYSTAL, true);
                                 if (colRng() < 0.5) safeSetBlock(blocks, x, y + 2, z, BLOCKS.AETHER_CRYSTAL, true);
+                            } else if (colRng() < 0.02) {
+                                generateAetherTree(blocks, x, y + 1, z, rng);
                             } else if (colRng() < 0.2) {
                                 safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
+                            }
+                        } else {
+                            // Default biome coverage (HOLYSTONE_MOUNTAINS base etc.) — sparse aether trees
+                            if (colRng() < 0.025) {
+                                generateAetherTree(blocks, x, y + 1, z, rng);
+                            } else if (colRng() < 0.1) {
+                                safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
+                            } else if (colRng() < 0.03) {
+                                safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_FLOWER, true);
                             }
                         }
                     }
