@@ -3173,6 +3173,16 @@ const LOCAL_ASSET_MAP = {
     "wheat": "assets/mc/item/wheat.png",
     "compass": "assets/mc/item/compass.png",
     "clock": "assets/mc/item/clock.png",
+    "destroy_stage_0": "assets/mc/block/destroy_stage_0.png",
+    "destroy_stage_1": "assets/mc/block/destroy_stage_1.png",
+    "destroy_stage_2": "assets/mc/block/destroy_stage_2.png",
+    "destroy_stage_3": "assets/mc/block/destroy_stage_3.png",
+    "destroy_stage_4": "assets/mc/block/destroy_stage_4.png",
+    "destroy_stage_5": "assets/mc/block/destroy_stage_5.png",
+    "destroy_stage_6": "assets/mc/block/destroy_stage_6.png",
+    "destroy_stage_7": "assets/mc/block/destroy_stage_7.png",
+    "destroy_stage_8": "assets/mc/block/destroy_stage_8.png",
+    "destroy_stage_9": "assets/mc/block/destroy_stage_9.png",
     "aether_portal": "assets/mc/block/aether_portal.png",
     "end_gateway_beam": "assets/mc/block/end_gateway_beam.png",
     "end_portal_frame_side": "assets/mc/block/end_portal_frame_side.png",
@@ -3603,7 +3613,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                                 frameInfo.isMC = true;
                                 frameInfo.img = img;
                                 frameInfo.frames = img.height / TEX_SIZE;
-                                frameInfo.tint = (!isWater && requiresTint) ? tintColor : null;
+                                frameInfo.tint = (!isWater && requiresFixedTint) ? tintColor : null;
                                 frameInfo.forceOpaque = forceOpaqueFlag;
                                 frameInfo.swampWater = (isWater && bt === BLOCKS.SWAMP_WATER);
                             } else {
@@ -3613,7 +3623,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                                     isMC: true,
                                     img: img,
                                     frames: img.height / TEX_SIZE,
-                                    tint: (!isWater && requiresTint) ? tintColor : null,
+                                    tint: (!isWater && requiresFixedTint) ? tintColor : null,
                                     forceOpaque: forceOpaqueFlag,
                                     swampWater: (isWater && bt === BLOCKS.SWAMP_WATER),
                                 });

@@ -496,11 +496,31 @@ class Game {
         this.engine.scene.add(this.blockOutline);
         this.blockOutline.visible = false;
 
-        const overlayGeo = new THREE.BoxGeometry(1.03, 1.03, 1.03);
-        const overlayMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.0 });
+        // Minecraft Block Mining Crack Textures (destroy_stage_0 to destroy_stage_9)
+        const texLoader = new THREE.TextureLoader();
+        this.destroyTextures = [];
+        for (let i = 0; i <= 9; i++) {
+            const dt = texLoader.load(`assets/mc/block/destroy_stage_${i}.png`);
+            dt.magFilter = THREE.NearestFilter;
+            dt.minFilter = THREE.NearestFilter;
+            dt.generateMipmaps = false;
+            this.destroyTextures.push(dt);
+        }
+
+        const overlayGeo = new THREE.BoxGeometry(1.004, 1.004, 1.004);
+        const overlayMat = new THREE.MeshBasicMaterial({
+            map: this.destroyTextures[0],
+            transparent: true,
+            alphaTest: 0.1,
+            depthWrite: false,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1
+        });
         this.miningOverlay = new THREE.Mesh(overlayGeo, overlayMat);
         this.engine.scene.add(this.miningOverlay);
         this.miningOverlay.visible = false;
+        this.lastMiningPos = null;
 
         // View Model (Detailed Hands/Wand)
         this.viewModel = new THREE.Group();
@@ -1218,9 +1238,23 @@ class Game {
                 
                 const breakTime = this.input.creativeMode ? 0.001 : (((blockProps.health || 1) * 0.1) / mineMult);
                 
+                // Track mining position: if target changes, reset progress
+                if (!this.lastMiningPos || this.lastMiningPos.x !== hit.blockPos.x || this.lastMiningPos.y !== hit.blockPos.y || this.lastMiningPos.z !== hit.blockPos.z) {
+                    this.breakTimer = 0;
+                    this.lastMiningPos = { x: hit.blockPos.x, y: hit.blockPos.y, z: hit.blockPos.z };
+                }
+
+                const stage = Math.min(9, Math.max(0, Math.floor((this.breakTimer / breakTime) * 10)));
+                const isSmall = blockProps.isCross || hit.blockType === BLOCKS.TORCH || hit.blockType === BLOCKS.DEAD_BUSH || hit.blockType === BLOCKS.MUSHROOM_STEM;
+                const size = isSmall ? 0.4 : 1.004;
+
                 this.miningOverlay.visible = true;
-                this.miningOverlay.position.set(hit.blockPos.x + 0.5, hit.blockPos.y + 0.5, hit.blockPos.z + 0.5);
-                this.miningOverlay.material.opacity = (this.breakTimer / breakTime) * 0.8;
+                this.miningOverlay.scale.set(size, size, size);
+                this.miningOverlay.position.set(hit.blockPos.x + 0.5, hit.blockPos.y + (isSmall ? 0.2 : 0.5), hit.blockPos.z + 0.5);
+                if (this.destroyTextures && this.destroyTextures[stage] && this.miningOverlay.material.map !== this.destroyTextures[stage]) {
+                    this.miningOverlay.material.map = this.destroyTextures[stage];
+                    this.miningOverlay.material.needsUpdate = true;
+                }
 
                 if (this.breakTimer >= breakTime) {
                     const blockType = this.world.getBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
@@ -1240,12 +1274,14 @@ class Game {
                     
                     this.audio.playBreak(blockType);
                     this.breakTimer = 0;
+                    this.lastMiningPos = null;
                     this.miningOverlay.visible = false;
                 }
             }
         } else {
             this.viewModel.rotation.x = 0;
             this.breakTimer = 0;
+            this.lastMiningPos = null;
             this.miningOverlay.visible = false;
         }
 
