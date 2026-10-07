@@ -837,7 +837,7 @@ export class World {
         });
         const matWater = new THREE.MeshPhongMaterial({
             map: textureAtlas.texture,
-            color: new THREE.Color(0x3F76E4), // MC default water biome color — tints the texture blue
+            color: new THREE.Color(0xffffff), // Authentic MC water texture colors (already colored blue in texture)
             vertexColors: true,
             transparent: true,
             opacity: 0.80, // natural translucent water
@@ -1359,6 +1359,16 @@ export class World {
 
             chunk.dirty = true;
             this.chunksToBuild.push(chunk);
+
+            // Re-mesh existing neighbor chunks to eliminate boundary seams / water walls
+            for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const nKey = this.getChunkKey(chunk.cx + dx, chunk.cz + dz);
+                const nChunk = this.chunks.get(nKey);
+                if (nChunk && nChunk.mesh && !nChunk.dirty) {
+                    nChunk.dirty = true;
+                    this.chunksToBuild.push(nChunk);
+                }
+            }
 
             // Register chests, doors, torches, and furnaces
             if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated || this.onFurnaceGenerated) {

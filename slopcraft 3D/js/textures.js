@@ -3358,27 +3358,29 @@ function loadMinecraftTexture(name) {
         const img = new Image();
         img.onload = () => resolve(img);
         img.onerror = () => {
-            // Local fallback failed, try remote
+            // Local fallback failed, try remote (jsdelivr CDN for reliability)
             const remoteImg = new Image();
             remoteImg.crossOrigin = 'anonymous';
             remoteImg.onload = () => resolve(remoteImg);
-            remoteImg.onerror = () => resolve(null);
-            if (cleanName.includes('/')) {
-                remoteImg.src = MINECRAFT_ASSETS_BASE + cleanName + '.png';
-            } else {
-                remoteImg.src = MINECRAFT_ASSETS_BASE + 'block/' + cleanName + '.png';
-            }
+            remoteImg.onerror = () => {
+                // Secondary fallback to raw github
+                const rawImg = new Image();
+                rawImg.crossOrigin = 'anonymous';
+                rawImg.onload = () => resolve(rawImg);
+                rawImg.onerror = () => resolve(null);
+                const subPath = cleanName.includes('/') ? cleanName : ('block/' + cleanName);
+                rawImg.src = MINECRAFT_ASSETS_BASE + subPath + '.png';
+            };
+            const subPath = cleanName.includes('/') ? cleanName : ('block/' + cleanName);
+            remoteImg.src = "https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/" + subPath + '.png';
         };
 
         if (localPath) {
             img.src = localPath;
         } else {
             img.crossOrigin = 'anonymous';
-            if (cleanName.includes('/')) {
-                img.src = MINECRAFT_ASSETS_BASE + cleanName + '.png';
-            } else {
-                img.src = MINECRAFT_ASSETS_BASE + 'block/' + cleanName + '.png';
-            }
+            const subPath = cleanName.includes('/') ? cleanName : ('block/' + cleanName);
+            img.src = "https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/" + subPath + '.png';
         }
     });
 }
@@ -3473,7 +3475,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                         
                         // Tint grass, leaves, and swamp water
                         const isWater = (texName === 'water_flow' || texName === 'water_still');
-                        const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || (isWater && bt === BLOCKS.SWAMP_WATER) || texName === 'vine' || texName.includes('tall_grass') || texName === 'fern' || texName === 'lily_pad');
+                        const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || (isWater && bt === BLOCKS.SWAMP_WATER) || texName === 'vine' || texName.includes('tall_grass') || texName.includes('fern') || texName === 'lily_pad');
                         
                         // Helper: force all pixels in atlas region to fully opaque
                         const forceOpaque = (ax, ay) => {
@@ -3507,12 +3509,12 @@ export async function createTextureAtlas(useMinecraft = true) {
                                 else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
                                 else if (bt === BLOCKS.HIGHLANDS_GRASS) tint = '#659c40';
                                 else if (bt === BLOCKS.AETHER_GRASS) tint = '#b3ffb3';
-                                else if (texName.includes('leaves') || texName === 'vine' || texName === 'fern' || texName.includes('tall_grass') || texName === 'lily_pad') {
+                                else if (texName.includes('leaves') || texName === 'vine' || texName.includes('fern') || texName.includes('tall_grass') || texName === 'lily_pad') {
                                     if (bt === BLOCKS.ACACIA_LEAVES) tint = '#aea42a';
                                     else if (bt === BLOCKS.PINE_LEAVES) tint = '#4f855f';
                                     else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#659c40';
                                     else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff';
-                                    else if (texName === 'fern' || texName.includes('tall_grass')) tint = '#70c942';
+                                    else if (texName.includes('fern') || texName.includes('tall_grass')) tint = '#70c942';
                                     else tint = '#6fc042';
                                 }
                                 tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
@@ -5083,73 +5085,74 @@ export function generateSpellTexture(element) {
 // MC Entity Skin Config — maps each mob to CDN URL + face UVs
 // [sx, sy, sw, sh] = source rect in skin sheet → scaled to 16x16
 // ============================================================
-const _ENTITY_BASE = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/textures/entity/';
+const _ENTITY_LOCAL_BASE = 'assets/mc/entity/';
+const _ENTITY_CDN_BASE = 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/entity/';
 const MC_MOB_SKIN_CONFIG = {
-    // --- Quadrupeds (head UVs same for all; body/leg vary) ---
-    COW:  { url: _ENTITY_BASE + 'cow/cow.png',
+    // --- Quadrupeds ---
+    COW: { path: 'cow/cow.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
-        body: [18,20,10,14], leg: [0,16,4,16], horn: [22,0,6,4], snout: [16,8,8,8] },
-    PIG:  { url: _ENTITY_BASE + 'pig/pig.png',
+        body: [18,20,10,14], leg: [0,16,4,16], horn: [22,0,4,4], snout: [1,5,4,3] },
+    PIG: { path: 'pig/pig.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
-        body: [28,16,8,14], leg: [0,16,4,16], snout: [16,8,8,8] },
-    SHEEP: { url: _ENTITY_BASE + 'sheep/sheep.png',
+        body: [28,16,8,14], leg: [0,16,4,16], snout: [16,16,4,3] },
+    SHEEP: { path: 'sheep/sheep.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
         body: [28,16,8,14], leg: [0,16,4,16] },
-    CHICKEN: { url: _ENTITY_BASE + 'chicken.png',
+    CHICKEN: { path: 'chicken.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
-        body: [20,20,8,12], leg: [0,16,4,12], wing: [24,13,8,9] },
-    // --- Humanoids (64x64 skin layout) ---
-    ZOMBIE: { url: _ENTITY_BASE + 'zombie/zombie.png',
-        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
-        body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
-    SKELETON: { url: _ENTITY_BASE + 'skeleton/skeleton.png',
+        body: [20,20,8,12], leg: [26,0,3,5], wing: [24,13,8,9] },
+    // --- Humanoids ---
+    ZOMBIE: { path: 'zombie/zombie.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
         body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
-    CREEPER: { url: _ENTITY_BASE + 'creeper/creeper.png',
-        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
-        body: [20,20,8,12], leg: [4,20,4,12] },
-    ENDERMAN: { url: _ENTITY_BASE + 'enderman/enderman.png',
+    SKELETON: { path: 'skeleton/skeleton.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
         body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
-    PIGLIN_BRUISER: { url: _ENTITY_BASE + 'piglin/piglin_brute.png',
+    CREEPER: { path: 'creeper/creeper.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [0,16,4,6] },
+    ENDERMAN: { path: 'enderman/enderman.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [20,20,8,12], leg: [56,0,2,30], arm: [56,0,2,30] },
+    PIGLIN_BRUISER: { path: 'piglin/piglin_brute.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
         body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
-    GOLEM: { url: _ENTITY_BASE + 'iron_golem/iron_golem.png',
-        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
-        body: [20,20,8,12], leg: [4,20,4,12], arm: [44,20,4,12] },
+    GOLEM: { path: 'iron_golem/iron_golem.png',
+        head_front: [6,10,8,10], head_back: [20,10,8,10], head_top: [6,0,8,6], head_bottom: [14,0,8,6], head_side: [0,10,6,10],
+        body: [18,40,18,12], leg: [37,0,6,16], arm: [60,58,8,30] },
     // --- Other ---
-    SPIDER: { url: _ENTITY_BASE + 'spider/spider.png',
+    SPIDER: { path: 'spider/spider.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
         body: [20,20,8,12], leg: [0,16,16,8] },
-    SLIME: { url: _ENTITY_BASE + 'slime/slime_outer.png',
+    SLIME: { path: 'slime/slime.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
         body: [8,8,8,8] },
-    LAVASLIME: { url: _ENTITY_BASE + 'slime/magma_cube.png',
+    LAVASLIME: { path: 'slime/magmacube.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
         body: [8,8,8,8] },
-    BAT: { url: _ENTITY_BASE + 'bat.png',
+    BAT: { path: 'bat.png',
         head_front: [0,0,6,6], head_back: [12,0,6,6], head_top: [6,0,6,6], head_bottom: [12,0,6,6], head_side: [0,0,6,6],
         body: [0,6,6,10] },
-    TURTLE: { url: _ENTITY_BASE + 'turtle/big_sea_turtle.png',
-        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
-        body: [10,10,8,8], leg: [0,16,6,6] },
-    FROG: { url: _ENTITY_BASE + 'frog/temperate_frog.png',
-        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
-        body: [0,14,8,8], leg: [0,14,4,6] },
-    CAMEL: { url: _ENTITY_BASE + 'camel/camel.png',
-        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
-        body: [26,20,8,12], leg: [0,18,4,14] },
+    TURTLE: { path: 'turtle/big_sea_turtle.png',
+        head_front: [9,6,6,5], head_back: [21,6,6,5], head_top: [9,0,6,6], head_bottom: [15,0,6,6], head_side: [3,6,6,5],
+        body: [22,24,15,13], leg: [0,16,6,6] },
+    FROG: { path: 'frog/temperate_frog.png',
+        head_front: [23,13,7,5], head_back: [35,13,7,5], head_top: [23,8,7,5], head_bottom: [23,8,7,5], head_side: [18,13,5,5],
+        body: [0,9,8,9], leg: [0,14,4,6] },
+    CAMEL: { path: 'camel/camel.png',
+        head_front: [60,24,7,8], head_back: [74,24,7,8], head_top: [60,10,7,14], head_bottom: [67,10,7,14], head_side: [46,24,14,8],
+        body: [0,40,20,27], leg: [0,18,4,14] },
     // --- Fish ---
-    COD:  { url: _ENTITY_BASE + 'fish/cod.png',
+    COD: { path: 'fish/cod.png',
         head_front: [0,0,8,8], head_back: [16,0,8,8], head_top: [8,0,8,4], head_bottom: [16,0,8,4], head_side: [0,0,4,8],
         body: [0,8,8,8] },
-    SALMON: { url: _ENTITY_BASE + 'fish/salmon.png',
+    SALMON: { path: 'fish/salmon.png',
         head_front: [0,0,8,8], head_back: [16,0,8,8], head_top: [8,0,8,4], head_bottom: [16,0,8,4], head_side: [0,0,4,8],
         body: [0,8,8,8] },
-    TROPICAL_FISH: { url: _ENTITY_BASE + 'fish/tropical_fish_a.png',
+    TROPICAL_FISH: { path: 'fish/tropical_a.png',
         head_front: [0,0,8,8], head_back: [16,0,8,8], head_top: [8,0,8,4], head_bottom: [16,0,8,4], head_side: [0,0,4,8],
         body: [0,8,8,8] },
-    PUFFERFISH: { url: _ENTITY_BASE + 'fish/pufferfish0.png',
+    PUFFERFISH: { path: 'fish/pufferfish.png',
         head_front: [0,0,8,8], head_back: [0,0,8,8], head_top: [8,0,8,4], head_bottom: [0,0,8,4], head_side: [0,0,4,8],
         body: [0,8,8,8] },
 };
@@ -5610,7 +5613,8 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
                 ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 16, 16);
                 if (onLoaded) onLoaded(canvas);
             };
-            const _cached = _mobSkinCache[_skinCfg.url];
+            const _skinKey = _skinCfg.path;
+            const _cached = _mobSkinCache[_skinKey];
             if (_cached instanceof HTMLImageElement && _cached.complete && _cached.naturalWidth > 0) {
                 // Already loaded — apply immediately (synchronous)
                 _applyFace(_cached);
@@ -5623,18 +5627,28 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
             } else {
                 // Not started yet — begin loading and store pending callbacks array
                 const _pendingList = [_applyFace];
-                _mobSkinCache[_skinCfg.url] = _pendingList;
+                _mobSkinCache[_skinKey] = _pendingList;
                 const _img = new Image();
                 _img.crossOrigin = 'anonymous';
                 _img.onload = () => {
-                    _mobSkinCache[_skinCfg.url] = _img;
+                    _mobSkinCache[_skinKey] = _img;
                     for (const _cb of _pendingList) _cb(_img);
                 };
                 _img.onerror = () => {
-                    _mobSkinCache[_skinCfg.url] = null;
-                    if (onLoaded) onLoaded(canvas); // keep procedural
+                    // Try CDN fallback if local path fails
+                    const _cdnImg = new Image();
+                    _cdnImg.crossOrigin = 'anonymous';
+                    _cdnImg.onload = () => {
+                        _mobSkinCache[_skinKey] = _cdnImg;
+                        for (const _cb of _pendingList) _cb(_cdnImg);
+                    };
+                    _cdnImg.onerror = () => {
+                        _mobSkinCache[_skinKey] = null;
+                        if (onLoaded) onLoaded(canvas);
+                    };
+                    _cdnImg.src = _ENTITY_CDN_BASE + _skinCfg.path;
                 };
-                _img.src = _skinCfg.url;
+                _img.src = _ENTITY_LOCAL_BASE + _skinCfg.path;
             }
         } else {
             if (onLoaded) onLoaded(canvas);

@@ -2,6 +2,7 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
 import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials } from './textures.js?v=90';
 
@@ -322,6 +323,60 @@ export class Player {
         if (colResult.velocity.x === 0) this.velocity.x = 0;
         if (colResult.velocity.z === 0) this.velocity.z = 0;
         if (colResult.velocity.y === 0) this.velocity.y = 0;
+
+        // Anti-stuck / spawn safety: if player is embedded inside solid blocks, nudge upward to open air
+        if (world && !flying) {
+            const hw = this.width / 2;
+            const minX = Math.floor(this.position.x - hw + 0.05);
+            const maxX = Math.floor(this.position.x + hw - 0.05);
+            const minZ = Math.floor(this.position.z - hw + 0.05);
+            const maxZ = Math.floor(this.position.z + hw - 0.05);
+            const minY = Math.floor(this.position.y);
+            const maxY = Math.floor(this.position.y + this.height - 0.05);
+
+            let isStuck = false;
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    for (let z = minZ; z <= maxZ; z++) {
+                        const b = world.getBlock(x, y, z);
+                        if (getBlockProperties(b).solid) {
+                            if (!(b === window.BLOCKS.DUNGEON_DOOR && world.isDoorOpen && world.isDoorOpen(x, y, z))) {
+                                isStuck = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (isStuck) break;
+                }
+                if (isStuck) break;
+            }
+
+            if (isStuck) {
+                // Find next clear vertical space above player
+                for (let step = 1; step <= 30; step++) {
+                    const testY = Math.floor(this.position.y) + step;
+                    let clear = true;
+                    for (let y = testY; y <= testY + 1; y++) {
+                        for (let x = minX; x <= maxX; x++) {
+                            for (let z = minZ; z <= maxZ; z++) {
+                                const b = world.getBlock(x, y, z);
+                                if (getBlockProperties(b).solid) {
+                                    clear = false;
+                                    break;
+                                }
+                            }
+                            if (!clear) break;
+                        }
+                        if (!clear) break;
+                    }
+                    if (clear) {
+                        this.position.y = testY + 0.02;
+                        this.velocity.y = 0;
+                        break;
+                    }
+                }
+            }
+        }
 
         // Fall clamp
         if (this.velocity.y < -50) this.velocity.y = -50;

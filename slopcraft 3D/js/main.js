@@ -49,10 +49,16 @@ function findSafeSpawn(params, dimension = 'overworld') {
                                 }
 
                                 if (block !== BLOCKS.AIR && block !== BLOCKS.WATER && block !== BLOCKS.LAVA && block !== BLOCKS.SWAMP_WATER) {
+                                    const bProps = getBlockProperties(block);
+                                    if (!bProps.solid) continue; // Must be solid block to stand on
                                     const idxUp1 = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                     const idxUp2 = ((y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
-                                    if (centerBlocks[idxUp1] === BLOCKS.AIR && centerBlocks[idxUp2] === BLOCKS.AIR) {
-                                        return { x: cx * CHUNK_SIZE + x, y: y + 1, z: cz * CHUNK_SIZE + z };
+                                    const bUp1 = centerBlocks[idxUp1];
+                                    const bUp2 = centerBlocks[idxUp2];
+                                    const pUp1 = getBlockProperties(bUp1);
+                                    const pUp2 = getBlockProperties(bUp2);
+                                    if (!pUp1.solid && !pUp2.solid && bUp1 !== BLOCKS.WATER && bUp1 !== BLOCKS.LAVA && bUp1 !== BLOCKS.SWAMP_WATER) {
+                                        return { x: cx * CHUNK_SIZE + x + 0.5, y: y + 1.05, z: cz * CHUNK_SIZE + z + 0.5 };
                                     } else if (dimension === 'overworld') {
                                         break; // Overworld: if the top block isn't safe, reject column. Don't look underground.
                                     }
@@ -65,7 +71,7 @@ function findSafeSpawn(params, dimension = 'overworld') {
         }
     }
 
-    return { x: CHUNK_SIZE / 2, y: (dimension === 'nether' || dimension === 'aether') ? 60 : CHUNK_HEIGHT + 10, z: CHUNK_SIZE / 2 };
+    return { x: CHUNK_SIZE / 2 + 0.5, y: (dimension === 'nether' || dimension === 'aether') ? 60 : CHUNK_HEIGHT + 10, z: CHUNK_SIZE / 2 + 0.5 };
 }
 
 let _chestMatsPromise = null;
