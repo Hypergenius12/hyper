@@ -3598,29 +3598,13 @@ export async function createTextureAtlas(useMinecraft = true) {
                             if (isWater) {
                                 tint = (bt === BLOCKS.SWAMP_WATER) ? '#617B59' : '#3F76E4';
                             } else if (texName === 'grass_block_top') {
-                                if (bt === BLOCKS.SWAMP_GRASS) tint = '#6a7039';
-                                else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
-                                else if (bt === BLOCKS.HIGHLANDS_GRASS) tint = '#659c40';
-                                else if (bt === BLOCKS.AETHER_GRASS) tint = '#b3ffb3';
-                                else tint = '#8ee066';
-                            } else if (texName === 'oak_leaves') {
-                                tint = '#59ae30';
-                            } else if (texName === 'dark_oak_leaves') {
-                                tint = '#40781e';
-                            } else if (texName === 'mangrove_leaves') {
-                                tint = '#6fa024';
-                            } else if (texName === 'vine') {
-                                tint = '#59ae30';
-                            } else if (texName.includes('fern') || texName.includes('tall_grass')) {
-                                tint = '#70c942';
+                                tint = '#79c05a'; // Standard vibrant Minecraft plains grass green
+                            } else if (texName.includes('leaves')) {
+                                tint = (bt === BLOCKS.CHERRY_LEAVES) ? '#ffffff' : (bt === BLOCKS.PINE_LEAVES ? '#4f855f' : '#59ae30');
                             } else if (texName === 'lily_pad') {
                                 tint = '#208030';
                             } else {
-                                if (bt === BLOCKS.ACACIA_LEAVES) tint = '#aea42a';
-                                else if (bt === BLOCKS.PINE_LEAVES) tint = '#4f855f';
-                                else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#659c40';
-                                else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff';
-                                else tint = '#59ae30';
+                                tint = '#79c05a';
                             }
 
                             tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
@@ -4086,12 +4070,20 @@ const _itemTextureCache = new Map();
 const _itemCanvasCache = new Map();
 
 export function generateItemTexture(itemType, itemSubtype, onLoaded) {
+    if (typeof itemSubtype !== 'string') {
+        itemSubtype = (itemSubtype !== undefined && itemSubtype !== null) ? String(itemSubtype) : '';
+    }
+
     const TEX_SIZE = 16;
     const canvas = document.createElement('canvas');
     canvas.width = TEX_SIZE;
     canvas.height = TEX_SIZE;
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
+
+    if (itemType === 'block') {
+        return canvas;
+    }
 
     // If already cached in memory, draw immediately and return synchronously
     if (_itemCanvasCache.has(itemSubtype)) {
@@ -6128,8 +6120,8 @@ const _mobBoxMaterialCache = {};
 export function getMobBoxMaterials(mobType, uvs, options = {}) {
     // mobType: e.g. 'COW', 'PIG', 'SHEEP', 'CHICKEN'
     // uvs: { u, v, w, h, d } standard MC box UV definition
-    // options: { skinKey, emissive, emissiveIntensity }
-    const key = `${mobType}_${uvs.u}_${uvs.v}_${uvs.w}_${uvs.h}_${uvs.d}_${options.skinKey || ''}`;
+    // options: { skinKey, emissive, emissiveIntensity, part, faceUVs }
+    const key = `${mobType}_${uvs.u}_${uvs.v}_${uvs.w}_${uvs.h}_${uvs.d}_${options.skinKey || ''}_${options.part || ''}`;
     if (_mobBoxMaterialCache[key]) {
         return _mobBoxMaterialCache[key];
     }
@@ -6139,7 +6131,7 @@ export function getMobBoxMaterials(mobType, uvs, options = {}) {
 
     const makeFaceCanvas = (fw, fh) => {
         const c = document.createElement('canvas');
-        c.width = fw; c.height = fh;
+        c.width = Math.max(1, fw); c.height = Math.max(1, fh);
         const cctx = c.getContext('2d', { willReadFrequently: true });
         cctx.imageSmoothingEnabled = false;
         return { c, ctx: cctx };
@@ -6152,19 +6144,21 @@ export function getMobBoxMaterials(mobType, uvs, options = {}) {
     const front  = makeFaceCanvas(w, h);
     const back   = makeFaceCanvas(w, h);
 
+    const custom = options.faceUVs;
     const faces = [
-        { name: 'right',  canvas: right.c,  ctx: right.ctx,  sx: u,             sy: v + d, sw: d, sh: h },
-        { name: 'left',   canvas: left.c,   ctx: left.ctx,   sx: u + d + w,     sy: v + d, sw: d, sh: h },
-        { name: 'top',    canvas: top.c,    ctx: top.ctx,    sx: u + d,         sy: v,     sw: w, sh: d },
-        { name: 'bottom', canvas: bottom.c, ctx: bottom.ctx, sx: u + d + w,     sy: v,     sw: w, sh: d },
-        { name: 'front',  canvas: front.c,  ctx: front.ctx,  sx: u + d,         sy: v + d, sw: w, sh: h },
-        { name: 'back',   canvas: back.c,   ctx: back.ctx,   sx: u + d + w + d, sy: v + d, sw: w, sh: h }
+        { name: 'right',  canvas: right.c,  ctx: right.ctx,  sx: custom ? custom.right[0]  : u,             sy: custom ? custom.right[1]  : v + d, sw: custom ? custom.right[2]  : d, sh: custom ? custom.right[3]  : h },
+        { name: 'left',   canvas: left.c,   ctx: left.ctx,   sx: custom ? custom.left[0]   : u + d + w,     sy: custom ? custom.left[1]   : v + d, sw: custom ? custom.left[2]   : d, sh: custom ? custom.left[3]   : h },
+        { name: 'top',    canvas: top.c,    ctx: top.ctx,    sx: custom ? custom.top[0]    : u + d,         sy: custom ? custom.top[1]    : v,     sw: custom ? custom.top[2]    : w, sh: custom ? custom.top[3]    : d },
+        { name: 'bottom', canvas: bottom.c, ctx: bottom.ctx, sx: custom ? custom.bottom[0] : u + d + w,     sy: custom ? custom.bottom[1] : v,     sw: custom ? custom.bottom[2] : w, sh: custom ? custom.bottom[3] : d },
+        { name: 'front',  canvas: front.c,  ctx: front.ctx,  sx: custom ? custom.front[0]  : u + d,         sy: custom ? custom.front[1]  : v + d, sw: custom ? custom.front[2]  : w, sh: custom ? custom.front[3]  : h },
+        { name: 'back',   canvas: back.c,   ctx: back.ctx,   sx: custom ? custom.back[0]   : u + d + w + d, sy: custom ? custom.back[1]  : v + d, sw: custom ? custom.back[2]   : w, sh: custom ? custom.back[3]   : h }
     ];
 
-    // Initialize faces with procedural fallback first
-    const procFront = generateMobTexture(mobType, 'head_front');
+    // Initialize faces with procedural fallback using appropriate part (not head_front for everything)
+    const partToUse = options.part || 'body';
+    const procFallback = generateMobTexture(mobType, partToUse);
     for (const f of faces) {
-        f.ctx.drawImage(procFront, 0, 0, 16, 16, 0, 0, f.canvas.width, f.canvas.height);
+        f.ctx.drawImage(procFallback, 0, 0, 16, 16, 0, 0, f.canvas.width, f.canvas.height);
     }
 
     const textures = faces.map(f => {

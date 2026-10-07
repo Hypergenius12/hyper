@@ -143,10 +143,13 @@ export class AudioManager {
         
         this.mcCache[path] = (async () => {
             try {
-                // Try local first if available, else jsdelivr / raw github
+                // Try local first if available, else jsdelivr CDN or mcasset.cloud (both have Access-Control-Allow-Origin: *)
                 let res = await fetch(`assets/mc/sounds/${path}.ogg`);
                 if (!res.ok) {
-                    res = await fetch(`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/sounds/${path}.ogg`);
+                    res = await fetch(`https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/sounds/${path}.ogg`);
+                }
+                if (!res.ok) {
+                    res = await fetch(`https://assets.mcasset.cloud/1.21.11/assets/minecraft/sounds/${path}.ogg`);
                 }
                 if (!res.ok) throw new Error("HTTP error");
                 const arrayBuffer = await res.arrayBuffer();

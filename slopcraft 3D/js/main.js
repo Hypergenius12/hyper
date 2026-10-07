@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=91';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=91';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=91';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=91';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=91';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=91';
-import { AudioManager } from './audio.js?v=91';
-import { BiomeMap } from './map.js?v=91';
-import { DevMode } from './dev.js?v=91';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=92';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=92';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=92';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=92';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=92';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=92';
+import { AudioManager } from './audio.js?v=92';
+import { BiomeMap } from './map.js?v=92';
+import { DevMode } from './dev.js?v=92';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -273,9 +273,13 @@ class Game {
         this._createHUDElements();
         this.input.init(canvas);
 
-        // Generate textures
-        
         this.atlas = await createTextureAtlas(true);
+
+        // Preload core Minecraft entity textures so mobs render with authentic skins immediately
+        ['COW', 'PIG', 'SHEEP', 'CHICKEN', 'ZOMBIE', 'SKELETON', 'CREEPER', 'SPIDER', 'ENDERMAN'].forEach(m => {
+            generateMobTexture(m, 'body');
+            generateMobTexture(m, 'head_front');
+        });
 
 
         // Seed: use typed value or generate random

@@ -984,25 +984,25 @@ export function generateChunkTerrain(cx, cz, params) {
             const wx = wxBase + gx * CELL_H;
             const wz = wzBase + gz * CELL_H;
 
-            // In Minecraft, erosion modulates the 3D noise:
+            // In Minecraft:
             // High erosion = gentle rolling hills & flat plains
-            // Low erosion = dramatic overhangs, hollow bluffs, and natural arches
-            let overhangStrength = 0.15;
-            if (erosion < 0.65) {
-                overhangStrength = 0.15 + ((0.65 - erosion) / 0.65) * 1.6;
-            }
-            if (biome.name === 'Mountains' || biome.name === 'Badlands' || biome.name === 'Volcanic' || biome.name === 'Savanna') {
-                overhangStrength *= 1.35;
-            }
-            if (col.contNoise < 0.3) {
-                overhangStrength *= 0.2; // oceans remain smooth basins
+            // Only extreme low erosion / mountains have dramatic cliffs and bluffs
+            const isMountainous = (biome.name === 'Mountains' || biome.name === 'Volcanic');
+            let overhangStrength = 0.06;
+            if (isMountainous) {
+                overhangStrength = 0.35 + ((0.65 - Math.min(0.65, erosion)) / 0.65) * 0.45;
+            } else if (biome.name === 'Badlands' || biome.name === 'Savanna') {
+                overhangStrength = 0.12;
+            } else if (erosion < 0.35) {
+                overhangStrength = 0.06 + ((0.35 - erosion) / 0.35) * 0.15;
             }
 
             for (let gy = 0; gy < GRID_Y; gy++) {
                 const wy = gy * CELL_V;
 
                 // 1. Base vertical height gradient (positive below targetHeight, negative above)
-                let grad = (targetHeight - wy) / 8.0;
+                // Divisor of 3.5 gives crisp authentic Minecraft rolling hills
+                let grad = (targetHeight - wy) / 3.5;
 
                 // Bedrock solid floor enforcement near world bottom
                 if (wy < 4) {
@@ -1019,7 +1019,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 const combined3D = n3D + detail3D * 0.35;
 
                 // 3. Final density
-                const density = grad + (combined3D * overhangStrength * 2.6);
+                const density = grad + (combined3D * overhangStrength);
                 densityGrid[gridIndex(gx, gy, gz)] = density;
             }
         }
@@ -1087,14 +1087,18 @@ export function generateChunkTerrain(cx, cz, params) {
     }
 
     // ============================================
-    // PASS 2: 3D Cave Carvers & Global Dungeons
+    // PASS 2: 3D Cave Carvers & Global Dungeons (Subterranean Only)
     // ============================================
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
             const wx = wxBase + x;
             const wz = wzBase + z;
+            const col = columns[x][z];
 
-            for (let y = 1; y < CHUNK_HEIGHT - 6; y++) {
+            // Subterranean rule: Caves strictly carve underground (never pierce top 5 blocks of surface)
+            const maxCaveY = Math.min(54, col.surfaceY - 5);
+
+            for (let y = 1; y <= maxCaveY; y++) {
                 const idx = blockIndex(x, y, z);
                 if (blocks[idx] !== BLOCKS.STONE) continue;
 
@@ -1800,7 +1804,7 @@ function generateMysticTree(blocks, x, y, z, rng) {
             }
         }
     }
-    safeSetBlock(blocks, x, y + height, z, BLOCKS.SHROOMLIGHT, false);
+    safeSetBlock(blocks, x, y + height, z, BLOCKS.MAGIC_WOOD, false);
 }
 
 function generateAcaciaCanopy(blocks, cx, cy, cz, maxRadius, rng) {
