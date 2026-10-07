@@ -1742,6 +1742,18 @@ function generateRedwoodTree(blocks, x, y, z, rng) {
         safeSetBlock(blocks, x, y + i, z + 1, BLOCKS.REDWOOD_LOG);
         safeSetBlock(blocks, x + 1, y + i, z + 1, BLOCKS.REDWOOD_LOG);
     }
+    const startLeaves = y + Math.floor(height * 0.38);
+    for (let ly = startLeaves; ly <= y + height + 2; ly++) {
+        const progress = (ly - startLeaves) / (height * 0.62);
+        const radius = Math.max(1, Math.floor((1 - progress * 0.65) * 4) - (ly % 2));
+        for (let dx = -radius; dx <= radius + 1; dx++) {
+            for (let dz = -radius; dz <= radius + 1; dz++) {
+                if (Math.abs(dx - 0.5) + Math.abs(dz - 0.5) > radius + 1.2) continue;
+                safeSetBlock(blocks, x + dx, ly, z + dz, BLOCKS.REDWOOD_LEAVES, true);
+            }
+        }
+    }
+}
 
 function generateBoulder(blocks, cx, cy, cz, rng) {
     const radius = 1 + Math.floor(rng() * 2); // 1 to 2 radius (3x3 to 5x5 natural boulder)
@@ -1769,18 +1781,6 @@ function generateRockPatch(blocks, cx, cy, cz, rng) {
                     const rockType = rng() < 0.35 ? BLOCKS.MOSSY_COBBLESTONE : (rng() < 0.65 ? BLOCKS.COBBLESTONE : BLOCKS.STONE);
                     safeSetBlock(blocks, cx + dx, cy, cz + dz, rockType);
                 }
-            }
-        }
-    }
-}
-    const startLeaves = y + Math.floor(height * 0.38);
-    for (let ly = startLeaves; ly <= y + height + 2; ly++) {
-        const progress = (ly - startLeaves) / (height * 0.62);
-        const radius = Math.max(1, Math.floor((1 - progress * 0.65) * 4) - (ly % 2));
-        for (let dx = -radius; dx <= radius + 1; dx++) {
-            for (let dz = -radius; dz <= radius + 1; dz++) {
-                if (Math.abs(dx - 0.5) + Math.abs(dz - 0.5) > radius + 1.2) continue;
-                safeSetBlock(blocks, x + dx, ly, z + dz, BLOCKS.REDWOOD_LEAVES, true);
             }
         }
     }
