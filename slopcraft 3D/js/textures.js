@@ -202,7 +202,12 @@ export const BLOCKS = {
     COAL_BLOCK: 153,
     RED_MUSHROOM: 228,
     BROWN_MUSHROOM: 229,
-    BROWN_MUSHROOM_BLOCK: 230
+    BROWN_MUSHROOM_BLOCK: 230,
+    MANGROVE_LOG: 231,
+    MANGROVE_LEAVES: 232,
+    MANGROVE_ROOTS: 233,
+    MUDDY_MANGROVE_ROOTS: 234,
+    MANGROVE_PLANKS: 235
 };
 
 // Block properties
@@ -210,21 +215,26 @@ const BLOCK_PROPS = {
     [BLOCKS.RED_MUSHROOM]:          { name: 'Red Mushroom',          health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.BROWN_MUSHROOM]:        { name: 'Brown Mushroom',        health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.BROWN_MUSHROOM_BLOCK]:  { name: 'Brown Mushroom Block',  health: 2, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.MANGROVE_LOG]:          { name: 'Mangrove Log',          health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
+    [BLOCKS.MANGROVE_LEAVES]:       { name: 'Mangrove Leaves',       health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true, isFoliageTinted: true },
+    [BLOCKS.MANGROVE_ROOTS]:        { name: 'Mangrove Roots',        health: 2, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.MUDDY_MANGROVE_ROOTS]:  { name: 'Muddy Mangrove Roots',  health: 3, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.MANGROVE_PLANKS]:       { name: 'Mangrove Planks',       health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.FLETCHING_TABLE]:   { name: 'Fletching Table',   health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.SMOKER]:            { name: 'Smoker',            health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.SMOKER]:            { name: 'Smoker',            health: 6, transparent: false, emissive: 0, solid: true, drops: null, hasFacing: true },
     [BLOCKS.STONECUTTER]:       { name: 'Stonecutter',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.EMERALD_BLOCK]:     { name: 'Emerald Block',     health: 8, transparent: false, emissive: 0.1, solid: true, drops: null },
     [BLOCKS.LAPIS_BLOCK]:       { name: 'Lapis Block',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.REDSTONE_BLOCK]:    { name: 'Redstone Block',    health: 6, transparent: false, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.COAL_BLOCK]:        { name: 'Coal Block',        health: 6, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.AIR]:           { name: 'Air',           health: 0, transparent: true,  emissive: 0, solid: false, drops: null },
-    [BLOCKS.GRASS]:         { name: 'Grass',         health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
+    [BLOCKS.GRASS]:         { name: 'Grass',         health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT, isGrassTinted: true },
     [BLOCKS.DIRT]:          { name: 'Dirt',           health: 3, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.STONE]:         { name: 'Stone',          health: 6, transparent: false, emissive: 0, solid: true, drops: BLOCKS.COBBLESTONE },
     [BLOCKS.SAND]:          { name: 'Sand',           health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.WATER]:         { name: 'Water',          health: 0, transparent: true,  emissive: 0, solid: false, isLiquid: true, drops: null },
-    [BLOCKS.WOOD]:          { name: 'Wood',           health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.LEAVES]:        { name: 'Leaves',         health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.WOOD]:          { name: 'Wood',           health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
+    [BLOCKS.LEAVES]:        { name: 'Leaves',         health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true, isFoliageTinted: true },
     [BLOCKS.PLANKS]:        { name: 'Planks',         health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.COBBLESTONE]:   { name: 'Cobblestone',    health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.IRON_ORE]:      { name: 'Iron Ore',       health: 8, transparent: false, emissive: 0, solid: true, drops: null },
@@ -236,7 +246,7 @@ const BLOCK_PROPS = {
     [BLOCKS.GLOWSTONE]:     { name: 'Glowstone',      health: 4, transparent: false, emissive: 1.0, solid: true, drops: null },
     [BLOCKS.DUNGEON_BRICK]: { name: 'Dungeon Brick',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DUNGEON_FLOOR]: { name: 'Dungeon Floor',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.MUSHROOM_STEM]: { name: 'Mushroom Stem',  health: 3, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.MUSHROOM_STEM]: { name: 'Mushroom Stem',  health: 3, transparent: false, emissive: 0, solid: true, drops: null, isLog: true },
     [BLOCKS.MUSHROOM_CAP]:  { name: 'Mushroom Cap',   health: 2, transparent: false, emissive: 0.2, solid: true, drops: null },
     [BLOCKS.ALIEN_STONE]:   { name: 'Alien Stone',    health: 8, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.ALIEN_GRASS]:   { name: 'Alien Grass',    health: 3, transparent: false, emissive: 0, solid: true, drops: null },
@@ -256,36 +266,36 @@ const BLOCK_PROPS = {
     [BLOCKS.TERRACOTTA]:    { name: 'Terracotta',     health: 8, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DEAD_BUSH]:     { name: 'Dead Bush',      health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.ALIEN_TALL_GRASS]:{ name: 'Alien Spores', health: 1, transparent: true,  emissive: 0.3, solid: false, isCross: true, drops: null },
-    [BLOCKS.SAVANNA_GRASS]: { name: 'Savanna Grass',  health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
-    [BLOCKS.ACACIA_WOOD]:   { name: 'Acacia Wood',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.SAVANNA_GRASS]: { name: 'Savanna Grass',  health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT, isGrassTinted: true },
+    [BLOCKS.ACACIA_WOOD]:   { name: 'Acacia Wood',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.ACACIA_LEAVES]: { name: 'Acacia Leaves',  health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.MUD]:           { name: 'Mud',            health: 2, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.SWAMP_GRASS]:   { name: 'Swamp Grass',    health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
+    [BLOCKS.SWAMP_GRASS]:   { name: 'Swamp Grass',    health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT, isGrassTinted: true },
     [BLOCKS.SWAMP_WATER]:   { name: 'Swamp Water',    health: 0, transparent: true,  emissive: 0, solid: false, isLiquid: true, drops: null },
-    [BLOCKS.ALIEN_SPORE_STEM]:{name: 'Spore Stem',    health: 4, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.ALIEN_SPORE_STEM]:{name: 'Spore Stem',    health: 4, transparent: false, emissive: 0, solid: true, drops: null, isLog: true },
     [BLOCKS.ALIEN_SPORE_BLOCK]:{name:'Spore Block',   health: 2, transparent: false, emissive: 0.1, solid: true, drops: null },
-    [BLOCKS.VINES]:         { name: 'Vines',          health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
-    [BLOCKS.TALL_GRASS]:    { name: 'Tall Grass',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.VINES]:         { name: 'Vines',          health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true, isFoliageTinted: true },
+    [BLOCKS.TALL_GRASS]:    { name: 'Tall Grass',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, isGrassTinted: true },
     [BLOCKS.RED_FLOWER]:    { name: 'Red Flower',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.CACTUS]:        { name: 'Cactus',         health: 2, transparent: true,  emissive: 0, solid: true, drops: BLOCKS.CACTUS },
     [BLOCKS.BLUE_FLOWER]:   { name: 'Blue Flower',    health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.YELLOW_FLOWER]: { name: 'Yellow Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
-    [BLOCKS.FERN]:          { name: 'Fern',           health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true },
-    [BLOCKS.TALL_FERN]:     { name: 'Large Fern',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true },
-    [BLOCKS.TALL_FERN_TOP]: { name: 'Large Fern Top', health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true },
+    [BLOCKS.FERN]:          { name: 'Fern',           health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true, isGrassTinted: true },
+    [BLOCKS.TALL_FERN]:     { name: 'Large Fern',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true, isGrassTinted: true },
+    [BLOCKS.TALL_FERN_TOP]: { name: 'Large Fern Top', health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true, isGrassTinted: true },
     [BLOCKS.WHITE_FLOWER]:  { name: 'White Flower',   health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.PURPLE_FLOWER]: { name: 'Purple Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.ORANGE_FLOWER]: { name: 'Orange Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
-    [BLOCKS.CHERRY_LOG]:    { name: 'Cherry Log',     health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.CHERRY_LOG]:    { name: 'Cherry Log',     health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.CHERRY_LEAVES]: { name: 'Cherry Leaves',  health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.PINK_PETALS]:   { name: 'Pink Petals',    health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
-    [BLOCKS.AUTUMN_WOOD]:   { name: 'Autumn Wood',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.AUTUMN_WOOD]:   { name: 'Autumn Wood',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.AUTUMN_LEAVES]: { name: 'Autumn Leaves',  health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.FALLEN_LEAVES]: { name: 'Fallen Leaves',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
     [BLOCKS.GLOW_STEM]:     { name: 'Glow Stem',      health: 4, transparent: false, emissive: 0.2, solid: true, drops: null },
     [BLOCKS.GLOW_LEAVES]:   { name: 'Glow Leaves',    health: 1, transparent: true,  emissive: 0.5, solid: true, drops: null },
     [BLOCKS.GLOW_SHROOM]:   { name: 'Glow Shroom',    health: 1, transparent: true,  emissive: 0.8, solid: false, isCross: true, drops: null },
-    [BLOCKS.PALM_WOOD]:     { name: 'Palm Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.PALM_WOOD]:     { name: 'Palm Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.PALM_LEAVES]:   { name: 'Palm Leaves',    health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.OASIS_FERN]:    { name: 'Oasis Fern',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
     [BLOCKS.DUNGEON_FIRE_BRICK]: { name: 'Fire Brick', health: 12, transparent: false, emissive: 0.1, solid: true, drops: null },
@@ -313,12 +323,12 @@ const BLOCK_PROPS = {
     [BLOCKS.GOLD_BLOCK]:    { name: 'Gold Block',     health: 10, transparent: false, emissive: 0.1, solid: true, drops: null },
     [BLOCKS.DIAMOND_BLOCK]: { name: 'Diamond Block',  health: 12, transparent: false, emissive: 0.2, solid: true, drops: null },
     [BLOCKS.WOOL]:          { name: 'Wool',           health: 2, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.FURNACE]:       { name: 'Furnace',        health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.FURNACE]:       { name: 'Furnace',        health: 6, transparent: false, emissive: 0, solid: true, drops: null, hasFacing: true },
     [BLOCKS.NETHERRACK]:    { name: 'Netherrack',     health: 3, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.SOUL_SAND]:     { name: 'Soul Sand',      health: 3, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.NETHER_BRICKS]: { name: 'Nether Bricks',  health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.CRIMSON_NYLIUM]:{ name: 'Crimson Nylium', health: 4, transparent: false, emissive: 0, solid: true, drops: 91 }, // drops netherrack
-    [BLOCKS.CRIMSON_STEM]:  { name: 'Crimson Stem',   health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true }, // Will make it drop custom wood in drops logic if needed
+    [BLOCKS.CRIMSON_STEM]:  { name: 'Crimson Stem',   health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true }, // Will make it drop custom wood in drops logic if needed
     [BLOCKS.CRIMSON_LEAVES]:{ name: 'Crimson Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.NETHER_WART_BLOCK]: { name: 'Nether Wart Block', health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.SEAGRASS]:      { name: 'Seagrass',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
@@ -333,9 +343,9 @@ const BLOCK_PROPS = {
     [BLOCKS.SEASHELL_1]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.SEASHELL_2]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.SEASHELL_3]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
-    [BLOCKS.LILY_PAD]:      { name: 'Lily Pad',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.LILY_PAD]:      { name: 'Lily Pad',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null, isGrassTinted: true },
     [BLOCKS.ALGAE]:         { name: 'Algae',          health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
-    [BLOCKS.PINE_WOOD]:     { name: 'Pine Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.PINE_WOOD]:     { name: 'Pine Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.PINE_LEAVES]:   { name: 'Pine Leaves',    health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.ACACIA_PLANKS]: { name: 'Acacia Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.CHERRY_PLANKS]: { name: 'Cherry Planks',  health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
@@ -349,9 +359,9 @@ const BLOCK_PROPS = {
     [BLOCKS.AETHER_STONE]:  { name: 'Aether Stone',   health: 10, transparent: false, emissive: 0.1, solid: true, drops: null },
     [BLOCKS.AETHER_DIRT]:   { name: 'Aether Dirt',    health: 4, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.AETHER_GRASS]:  { name: 'Aether Grass',   health: 4, transparent: false, emissive: 0.1, solid: true, drops: 115 },
-    [BLOCKS.AETHER_WOOD]:   { name: 'Aether Wood',    health: 7, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.DARK_OAK_WOOD]: { name: 'Dark Oak Wood',  health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.DARK_OAK_LEAVES]: { name: 'Dark Oak Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.AETHER_WOOD]:   { name: 'Aether Wood',    health: 7, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
+    [BLOCKS.DARK_OAK_WOOD]: { name: 'Dark Oak Wood',  health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
+    [BLOCKS.DARK_OAK_LEAVES]: { name: 'Dark Oak Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true, isFoliageTinted: true },
     [BLOCKS.DARK_OAK_PLANKS]: { name: 'Dark Oak Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.CRYING_OBSIDIAN]: { name: 'Crying Obsidian', health: 15, transparent: false, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.MYCELIUM]:      { name: 'Mycelium',       health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
@@ -371,21 +381,19 @@ const BLOCK_PROPS = {
     [BLOCKS.HIGHLANDS_PORTAL]:{ name: 'Highlands Portal',health: 0, transparent: true, emissive: 1.0, solid: false, drops: null },
     [BLOCKS.QUICKSOIL]:     { name: 'Quicksoil',      health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.HOLYSTONE]:     { name: 'Holystone',      health: 8, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.ENCHANTED_AETHER_LOG]: { name: 'Enchanted Log', health: 5, transparent: false, emissive: 0.2, solid: true, drops: null, flammable: true },
+    [BLOCKS.ENCHANTED_AETHER_LOG]: { name: 'Enchanted Log', health: 5, transparent: false, emissive: 0.2, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.ENCHANTED_AETHER_LEAVES]: { name: 'Enchanted Leaves', health: 1, transparent: true, emissive: 0.2, solid: true, drops: null, flammable: true },
-    [BLOCKS.MYCELIUM]:      { name: 'Mycelium',       health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
-    [BLOCKS.CRYING_OBSIDIAN]:{ name: 'Crying Obsidian', health: 50, transparent: false, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.WARPED_NYLIUM]: { name: 'Warped Nylium',  health: 4, transparent: false, emissive: 0.1, solid: true, drops: BLOCKS.NETHERRACK },
-    [BLOCKS.WARPED_STEM]:   { name: 'Warped Stem',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.WARPED_STEM]:   { name: 'Warped Stem',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.WARPED_WART_BLOCK]: { name: 'Warped Wart Block', health: 2, transparent: false, emissive: 0.1, solid: true, drops: null },
     [BLOCKS.WARPED_ROOTS]:  { name: 'Warped Roots',   health: 1, transparent: true, emissive: 0.2, solid: false, isCross: true, drops: null },
     [BLOCKS.TWISTING_VINES]:{ name: 'Twisting Vines', health: 1, transparent: true, emissive: 0.2, solid: false, isCross: true, drops: null },
     [BLOCKS.NETHER_SPROUTS]:{ name: 'Nether Sprouts', health: 1, transparent: true, emissive: 0.2, solid: false, isCross: true, drops: null },
     [BLOCKS.SOUL_SOIL]:     { name: 'Soul Soil',      health: 3, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.BONE_BLOCK]:    { name: 'Bone Block',     health: 4, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.BONE_BLOCK]:    { name: 'Bone Block',     health: 4, transparent: false, emissive: 0, solid: true, drops: null, isLog: true },
     [BLOCKS.SOUL_FIRE]:     { name: 'Soul Fire',      health: 0, transparent: true, emissive: 1.0, solid: false, isCross: true, drops: null },
-    [BLOCKS.BASALT]:        { name: 'Basalt',         health: 6, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.SMOOTH_BASALT]: { name: 'Smooth Basalt',  health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.BASALT]:        { name: 'Basalt',         health: 6, transparent: false, emissive: 0, solid: true, drops: null, isLog: true },
+    [BLOCKS.SMOOTH_BASALT]: { name: 'Smooth Basalt',  health: 6, transparent: false, emissive: 0, solid: true, drops: null, isLog: true },
     [BLOCKS.MAGMA]:         { name: 'Magma Block',    health: 3, transparent: false, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.BLACKSTONE]:    { name: 'Blackstone',     health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.SHROOMLIGHT]:   { name: 'Shroomlight',    health: 2, transparent: false, emissive: 1.0, solid: true, drops: null },
@@ -396,11 +404,11 @@ const BLOCK_PROPS = {
     [BLOCKS.SENTRY_STONE]:  { name: 'Sentry Stone',   health: 12, transparent: false, emissive: 0.3, solid: true, drops: null },
     [BLOCKS.BLUE_AERCLOUD]: { name: 'Blue Aercloud',  health: 1, transparent: true, emissive: 0.2, solid: true, drops: null },
     [BLOCKS.GOLDEN_AERCLOUD]: { name: 'Golden Aercloud', health: 1, transparent: true, emissive: 0.3, solid: true, drops: null },
-    [BLOCKS.GOLDEN_OAK_WOOD]: { name: 'Golden Oak Wood', health: 6, transparent: false, emissive: 0.1, solid: true, drops: null, flammable: true },
+    [BLOCKS.GOLDEN_OAK_WOOD]: { name: 'Golden Oak Wood', health: 6, transparent: false, emissive: 0.1, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.GOLDEN_OAK_LEAVES]: { name: 'Golden Oak Leaves', health: 1, transparent: true, emissive: 0.4, solid: true, drops: null, flammable: true },
-    [BLOCKS.MAGIC_WOOD]:    { name: 'Magic Wood',     health: 5, transparent: false, emissive: 0.2, solid: true, drops: null, flammable: true },
+    [BLOCKS.MAGIC_WOOD]:    { name: 'Magic Wood',     health: 5, transparent: false, emissive: 0.2, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.MAGIC_LEAVES]:  { name: 'Magic Leaves',   health: 1, transparent: true, emissive: 0.5, solid: true, drops: null, flammable: true },
-    [BLOCKS.REDWOOD_LOG]:   { name: 'Redwood Log',    health: 6, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.REDWOOD_LOG]:   { name: 'Redwood Log',    health: 6, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.REDWOOD_LEAVES]:{ name: 'Redwood Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.LAVENDER]:      { name: 'Lavender',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
     [BLOCKS.PODZOL]:        { name: 'Podzol',         health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
@@ -2823,7 +2831,8 @@ function hasFaceVariants(blockType) {
         BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS,
         BLOCKS.CACTUS, BLOCKS.SANDSTONE, BLOCKS.BOOKSHELF, BLOCKS.MYCELIUM,
         BLOCKS.WARPED_NYLIUM, BLOCKS.WARPED_STEM, BLOCKS.BONE_BLOCK, BLOCKS.BASALT, BLOCKS.BLACKSTONE, BLOCKS.PODZOL, BLOCKS.GOLDEN_OAK_WOOD, BLOCKS.MAGIC_WOOD, BLOCKS.REDWOOD_LOG,
-        BLOCKS.FLETCHING_TABLE, BLOCKS.SMOKER, BLOCKS.STONECUTTER
+        BLOCKS.FLETCHING_TABLE, BLOCKS.SMOKER, BLOCKS.STONECUTTER,
+        BLOCKS.MANGROVE_LOG, BLOCKS.MANGROVE_ROOTS, BLOCKS.MUDDY_MANGROVE_ROOTS, BLOCKS.ENCHANTED_AETHER_LOG
     ].includes(blockType);
 }
 
@@ -3015,7 +3024,12 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.REDWOOD_LEAVES]: 'spruce_leaves',
     [BLOCKS.LAVENDER]: 'allium',
     [BLOCKS.RUBY_ORE]: 'ruby_ore',
-    [BLOCKS.SAPPHIRE_ORE]: 'sapphire_ore'
+    [BLOCKS.SAPPHIRE_ORE]: 'sapphire_ore',
+    [BLOCKS.MANGROVE_LOG]: { top: 'mangrove_log_top', side: 'mangrove_log', bottom: 'mangrove_log_top' },
+    [BLOCKS.MANGROVE_LEAVES]: 'mangrove_leaves',
+    [BLOCKS.MANGROVE_ROOTS]: { top: 'mangrove_roots_top', side: 'mangrove_roots_side', bottom: 'mangrove_roots_top' },
+    [BLOCKS.MUDDY_MANGROVE_ROOTS]: { top: 'muddy_mangrove_roots_top', side: 'muddy_mangrove_roots_side', bottom: 'muddy_mangrove_roots_top' },
+    [BLOCKS.MANGROVE_PLANKS]: 'mangrove_planks'
 };
 
 let _mcChestPromise = null;
@@ -3108,7 +3122,7 @@ const LOCAL_ASSET_MAP = {
     "cherry_planks": "assets/mc/block/cherry_planks.png",
     "clay": "assets/mc/block/clay.png",
     "coal_ore": "assets/mc/block/coal_ore.png",
-    "cobblestone": "assets/mc/item/cobblestone.png",
+    "cobblestone": "assets/mc/block/cobblestone.png",
     "cornflower": "assets/mc/block/cornflower.png",
     "crafting_table_front": "assets/mc/block/crafting_table_front.png",
     "crafting_table_side": "assets/mc/block/crafting_table_side.png",
@@ -3203,9 +3217,17 @@ const LOCAL_ASSET_MAP = {
     "oak_door_bottom": "assets/mc/block/oak_door_bottom.png",
     "oak_door_top": "assets/mc/block/oak_door_top.png",
     "oak_leaves": "assets/mc/block/oak_leaves.png",
-    "oak_log": "assets/mc/item/oak_log.png",
+    "oak_log": "assets/mc/block/oak_log.png",
     "oak_log_top": "assets/mc/block/oak_log_top.png",
     "oak_planks": "assets/mc/block/oak_planks.png",
+    "mangrove_log": "assets/mc/block/mangrove_log.png",
+    "mangrove_log_top": "assets/mc/block/mangrove_log_top.png",
+    "mangrove_leaves": "assets/mc/block/mangrove_leaves.png",
+    "mangrove_roots_side": "assets/mc/block/mangrove_roots_side.png",
+    "mangrove_roots_top": "assets/mc/block/mangrove_roots_top.png",
+    "muddy_mangrove_roots_side": "assets/mc/block/muddy_mangrove_roots_side.png",
+    "muddy_mangrove_roots_top": "assets/mc/block/muddy_mangrove_roots_top.png",
+    "mangrove_planks": "assets/mc/block/mangrove_planks.png",
     "obsidian": "assets/mc/block/obsidian.png",
     "orange_tulip": "assets/mc/block/orange_tulip.png",
     "pale_oak_leaves": "assets/mc/block/pale_oak_leaves.png",
@@ -3506,9 +3528,10 @@ export async function createTextureAtlas(useMinecraft = true) {
                         if (img) {
                         ctx.clearRect(entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         
-                        // Tint grass, leaves, and swamp water
+                        // Dynamic colormap tinted textures are kept grayscale in atlas so vertex colors blend dynamically
                         const isWater = (texName === 'water_flow' || texName === 'water_still');
-                        const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || (isWater && bt === BLOCKS.SWAMP_WATER) || texName === 'vine' || texName.includes('tall_grass') || texName.includes('fern') || texName === 'lily_pad');
+                        const isDynamicTint = (texName === 'grass_block_top' || texName === 'oak_leaves' || texName === 'dark_oak_leaves' || texName === 'mangrove_leaves' || texName === 'vine' || texName.includes('fern') || texName.includes('tall_grass') || texName === 'lily_pad');
+                        const requiresFixedTint = !isDynamicTint && (texName.includes('leaves') || (isWater && bt === BLOCKS.SWAMP_WATER));
                         
                         // Helper: force all pixels in atlas region to fully opaque
                         const forceOpaque = (ax, ay) => {
@@ -3518,14 +3541,17 @@ export async function createTextureAtlas(useMinecraft = true) {
                         };
 
                         let tintColor = null;
-                        if (requiresTint) {
+                        if (isDynamicTint) {
+                            // Keep texture raw/grayscale in atlas so chunk mesh vertex colors can apply dynamic per-biome tinting and smooth biome blending
+                            ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                        } else if (requiresFixedTint) {
                             // Draw the image first to a temporary canvas so we can tint it
                             const tCanvas = document.createElement('canvas');
                             tCanvas.width = TEX_SIZE; tCanvas.height = TEX_SIZE;
                             const tCtx = tCanvas.getContext('2d');
                             
                             // Determine tint color
-                            let tint = '#8ee066'; // default grass (brightened)
+                            let tint = '#8ee066'; // default
                             
                             if (isWater) {
                                 // For swamp water: draw white base then overlay dark green so it stays visible
@@ -3542,14 +3568,12 @@ export async function createTextureAtlas(useMinecraft = true) {
                                 else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
                                 else if (bt === BLOCKS.HIGHLANDS_GRASS) tint = '#659c40';
                                 else if (bt === BLOCKS.AETHER_GRASS) tint = '#b3ffb3';
-                                else if (texName.includes('leaves') || texName === 'vine' || texName.includes('fern') || texName.includes('tall_grass') || texName === 'lily_pad') {
-                                    if (bt === BLOCKS.ACACIA_LEAVES) tint = '#aea42a';
-                                    else if (bt === BLOCKS.PINE_LEAVES) tint = '#4f855f';
-                                    else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#659c40';
-                                    else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff';
-                                    else if (texName.includes('fern') || texName.includes('tall_grass')) tint = '#70c942';
-                                    else tint = '#6fc042';
-                                }
+                                else if (bt === BLOCKS.ACACIA_LEAVES) tint = '#aea42a';
+                                else if (bt === BLOCKS.PINE_LEAVES) tint = '#4f855f';
+                                else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#659c40';
+                                else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff';
+                                else tint = '#6fc042';
+
                                 tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
                                 tCtx.globalCompositeOperation = 'multiply';
                                 tintColor = tint;
@@ -3673,6 +3697,28 @@ export async function createTextureAtlas(useMinecraft = true) {
             } else {
                 generateBlockTexture(ctx, blockType, faceKey, seededRandom(blockType * 1000 + 77));
             }
+
+            // Tint inventory icon for dynamically tinted grass and foliage blocks
+            if (props.isGrassTinted && (faceKey === 'top' || props.isCross)) {
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.fillStyle = '#8ee066';
+                ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+                ctx.globalCompositeOperation = 'destination-in';
+                if (entry && canvas) {
+                    ctx.drawImage(canvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                }
+                ctx.globalCompositeOperation = 'source-over';
+            } else if (props.isFoliageTinted) {
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.fillStyle = '#59ae30';
+                ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+                ctx.globalCompositeOperation = 'destination-in';
+                if (entry && canvas) {
+                    ctx.drawImage(canvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                }
+                ctx.globalCompositeOperation = 'source-over';
+            }
+
             return faceCvs;
         };
 

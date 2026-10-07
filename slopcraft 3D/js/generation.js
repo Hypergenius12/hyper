@@ -7,27 +7,27 @@ import { BLOCKS } from './textures.js';
 import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js';
 
 // Planet configurations
-const BIOMES = {
-    FOREST: { name: 'Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: true },
-    PLAINS: { name: 'Plains', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: false },
-    DESERT: { name: 'Desert', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, hasDeadBush: true, hasCactus: true },
-    BEACH: { name: 'Beach', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, isBeach: true },
-    BADLANDS: { name: 'Badlands', surface: BLOCKS.RED_SAND, dirt: BLOCKS.TERRACOTTA, freq: 0.5, hasTrees: false, hasDeadBush: true, hasDeadTrees: true },
-    TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true },
-    ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true },
-    MUSHROOM: { name: 'Mushroom', surface: BLOCKS.MYCELIUM, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true },
-    VOLCANIC: { name: 'Volcanic', surface: BLOCKS.BASALT, dirt: BLOCKS.BLACKSTONE, freq: 0.5, hasTrees: false, isVolcanic: true },
-    SWAMP: { name: 'Swamp', surface: BLOCKS.SWAMP_GRASS, dirt: BLOCKS.MUD, freq: 0.6, hasTrees: true, swampFlora: true },
-    JUNGLE: { name: 'Jungle', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, jungleFlora: true },
-    SAVANNA: { name: 'Savanna', surface: BLOCKS.SAVANNA_GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, savannaFlora: true },
-    MOUNTAINS: { name: 'Mountains', surface: BLOCKS.SNOW, dirt: BLOCKS.STONE, freq: 0.4, hasTrees: true },
-    DEEP_OCEAN: { name: 'Deep Ocean', surface: BLOCKS.SAND, dirt: BLOCKS.STONE, freq: 0.3, hasTrees: false },
-    CHERRY_GROVE: { name: 'Cherry Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, isCherry: true },
-    OASIS: { name: 'Oasis', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.2, hasTrees: true, isOasis: true },
-    CORAL_REEF: { name: 'Coral Reef', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.3, hasTrees: false, isCoralReef: true },
-    DARK_FOREST: { name: 'Dark Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isDark: true, hasMushrooms: true },
-    MYSTIC_GROVE: { name: 'Mystic Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.6, hasTrees: true, isMystic: true },
-    REDWOOD_FOREST: { name: 'Redwood Forest', surface: BLOCKS.PODZOL, dirt: BLOCKS.DIRT, freq: 0.5, hasTrees: true, isRedwood: true }
+export const BIOMES = {
+    FOREST: { name: 'Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: true, grassColor: [0.475, 0.753, 0.353], foliageColor: [0.349, 0.682, 0.188] },
+    PLAINS: { name: 'Plains', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: false, grassColor: [0.569, 0.741, 0.349], foliageColor: [0.467, 0.671, 0.184] },
+    DESERT: { name: 'Desert', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, hasDeadBush: true, hasCactus: true, grassColor: [0.749, 0.718, 0.333], foliageColor: [0.682, 0.643, 0.165] },
+    BEACH: { name: 'Beach', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, isBeach: true, grassColor: [0.569, 0.741, 0.349], foliageColor: [0.467, 0.671, 0.184] },
+    BADLANDS: { name: 'Badlands', surface: BLOCKS.RED_SAND, dirt: BLOCKS.TERRACOTTA, freq: 0.5, hasTrees: false, hasDeadBush: true, hasDeadTrees: true, grassColor: [0.565, 0.506, 0.302], foliageColor: [0.620, 0.506, 0.302] },
+    TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, grassColor: [0.502, 0.706, 0.592], foliageColor: [0.376, 0.631, 0.482] },
+    ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true, grassColor: [0.502, 0.706, 0.592], foliageColor: [0.376, 0.631, 0.482] },
+    MUSHROOM: { name: 'Mushroom', surface: BLOCKS.MYCELIUM, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true, grassColor: [0.333, 0.788, 0.247], foliageColor: [0.333, 0.788, 0.247] },
+    VOLCANIC: { name: 'Volcanic', surface: BLOCKS.BASALT, dirt: BLOCKS.BLACKSTONE, freq: 0.5, hasTrees: false, isVolcanic: true, grassColor: [0.333, 0.333, 0.333], foliageColor: [0.267, 0.267, 0.267] },
+    SWAMP: { name: 'Swamp', surface: BLOCKS.SWAMP_GRASS, dirt: BLOCKS.MUD, freq: 0.6, hasTrees: true, swampFlora: true, grassColor: [0.416, 0.439, 0.224], foliageColor: [0.416, 0.439, 0.224] },
+    JUNGLE: { name: 'Jungle', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, jungleFlora: true, grassColor: [0.349, 0.788, 0.235], foliageColor: [0.188, 0.733, 0.043] },
+    SAVANNA: { name: 'Savanna', surface: BLOCKS.SAVANNA_GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, savannaFlora: true, grassColor: [0.749, 0.718, 0.333], foliageColor: [0.682, 0.643, 0.165] },
+    MOUNTAINS: { name: 'Mountains', surface: BLOCKS.SNOW, dirt: BLOCKS.STONE, freq: 0.4, hasTrees: true, grassColor: [0.541, 0.714, 0.537], foliageColor: [0.427, 0.639, 0.447] },
+    DEEP_OCEAN: { name: 'Deep Ocean', surface: BLOCKS.SAND, dirt: BLOCKS.STONE, freq: 0.3, hasTrees: false, grassColor: [0.557, 0.725, 0.443], foliageColor: [0.443, 0.655, 0.302] },
+    CHERRY_GROVE: { name: 'Cherry Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, isCherry: true, grassColor: [0.714, 0.859, 0.404], foliageColor: [0.467, 0.671, 0.184] },
+    OASIS: { name: 'Oasis', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.2, hasTrees: true, isOasis: true, grassColor: [0.380, 0.776, 0.278], foliageColor: [0.282, 0.714, 0.157] },
+    CORAL_REEF: { name: 'Coral Reef', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.3, hasTrees: false, isCoralReef: true, grassColor: [0.557, 0.725, 0.443], foliageColor: [0.443, 0.655, 0.302] },
+    DARK_FOREST: { name: 'Dark Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isDark: true, hasMushrooms: true, grassColor: [0.314, 0.478, 0.196], foliageColor: [0.314, 0.478, 0.196] },
+    MYSTIC_GROVE: { name: 'Mystic Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.6, hasTrees: true, isMystic: true, grassColor: [0.478, 0.902, 0.710], foliageColor: [0.322, 0.851, 0.639] },
+    REDWOOD_FOREST: { name: 'Redwood Forest', surface: BLOCKS.PODZOL, dirt: BLOCKS.DIRT, freq: 0.5, hasTrees: true, isRedwood: true, grassColor: [0.525, 0.718, 0.514], foliageColor: [0.408, 0.647, 0.369] }
 };
 
 export function generateAetherChunk(cx, cz, params) {
@@ -604,11 +604,14 @@ export function getColumnInfo(wx, wz, params) {
     return { biome, surfaceY, colRng, bData: { isTerraced: terraceWeight > 0.5, lakeSurfaceY } };
 }
 
-function safeSetBlock(blocks, x, y, z, type, onlyAir = false) {
+function safeSetBlock(blocks, x, y, z, type, onlyAir = false, dataVal = 0) {
     if (x >= 0 && x < CHUNK_SIZE && y >= 0 && y < CHUNK_HEIGHT && z >= 0 && z < CHUNK_SIZE) {
         const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
         if (!onlyAir || blocks[idx] === BLOCKS.AIR) {
             blocks[idx] = type;
+            if (blocks.data) {
+                blocks.data[idx] = dataVal;
+            }
         }
     }
 }
@@ -645,6 +648,7 @@ function generateFallenLog(blocks, startX, startY, startZ, woodType, rng) {
     const isXAxis = rng() < 0.5;
     const dx = isXAxis ? 1 : 0;
     const dz = isXAxis ? 0 : 1;
+    const logAxisData = isXAxis ? 1 : 2; // 1 for X-axis, 2 for Z-axis
 
     for (let i = 0; i < length; i++) {
         const lx = startX + dx * i;
@@ -656,7 +660,7 @@ function generateFallenLog(blocks, startX, startY, startZ, woodType, rng) {
             groundY--;
         }
         const bAt = blocks[(groundY * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx];
-        if (bAt !== BLOCKS.GRASS && bAt !== BLOCKS.DIRT && bAt !== BLOCKS.PODZOL && bAt !== BLOCKS.MYCELIUM) continue;
+        if (bAt !== BLOCKS.GRASS && bAt !== BLOCKS.DIRT && bAt !== BLOCKS.PODZOL && bAt !== BLOCKS.MYCELIUM && bAt !== BLOCKS.MUD && bAt !== BLOCKS.SWAMP_GRASS) continue;
 
         const logY = groundY + 1;
         if (logY >= CHUNK_HEIGHT - 2) continue;
@@ -666,13 +670,91 @@ function generateFallenLog(blocks, startX, startY, startZ, woodType, rng) {
             continue;
         }
 
-        safeSetBlock(blocks, lx, logY, lz, woodType, false);
+        safeSetBlock(blocks, lx, logY, lz, woodType, false, logAxisData);
 
         // Chance of red or brown mushroom growing on top of the fallen log
         const shroomRoll = rng();
         if (shroomRoll < 0.5) {
             const shroomType = rng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
             safeSetBlock(blocks, lx, logY + 1, lz, shroomType, false);
+        }
+    }
+}
+
+function generateMangroveTree(blocks, x, y, z, rng) {
+    // Mangrove tree features arching stilt root cages (MANGROVE_ROOTS and MUDDY_MANGROVE_ROOTS),
+    // an elevated MANGROVE_LOG trunk, and a full dome canopy of MANGROVE_LEAVES with hanging VINES.
+    const rootHeight = 2 + Math.floor(rng() * 3); // 2 to 4 blocks root cage height
+    const trunkHeight = 5 + Math.floor(rng() * 4); // 5 to 8 blocks trunk
+    const hubY = y + rootHeight;
+    if (hubY + trunkHeight + 5 >= CHUNK_HEIGHT) return;
+
+    // 1. Root cage: arching tendrils descending from hubY
+    const rootDirs = [
+        [1, 0], [-1, 0], [0, 1], [0, -1],
+        [1, 1], [-1, -1], [1, -1], [-1, 1]
+    ];
+    for (const [rdx, rdz] of rootDirs) {
+        if (rng() < 0.85) {
+            let rx = x;
+            let rz = z;
+            let ry = hubY;
+            while (ry >= y - 1 && ry > 0) {
+                ry--;
+                if (rng() < 0.7) {
+                    rx += rdx;
+                    rz += rdz;
+                }
+                const cur = (rx >= 0 && rx < CHUNK_SIZE && rz >= 0 && rz < CHUNK_SIZE) ? blocks[(ry * CHUNK_SIZE * CHUNK_SIZE) + (rz * CHUNK_SIZE) + rx] : BLOCKS.AIR;
+                const isMuddy = (cur === BLOCKS.MUD || cur === BLOCKS.DIRT || cur === BLOCKS.SWAMP_GRASS);
+                const rootType = isMuddy ? BLOCKS.MUDDY_MANGROVE_ROOTS : BLOCKS.MANGROVE_ROOTS;
+                safeSetBlock(blocks, rx, ry, rz, rootType, false);
+                if (isMuddy) break;
+            }
+        }
+    }
+    // Central root core under hub
+    for (let cy = y; cy <= hubY; cy++) {
+        const cur = (x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) ? blocks[(cy * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x] : BLOCKS.AIR;
+        const rootType = (cur === BLOCKS.MUD || cur === BLOCKS.DIRT) ? BLOCKS.MUDDY_MANGROVE_ROOTS : BLOCKS.MANGROVE_ROOTS;
+        safeSetBlock(blocks, x, cy, z, rootType, false);
+    }
+
+    // 2. Elevated trunk (Mangrove Log) rising up from hubY
+    let tx = x;
+    let tz = z;
+    for (let ty = hubY; ty <= hubY + trunkHeight; ty++) {
+        safeSetBlock(blocks, tx, ty, tz, BLOCKS.MANGROVE_LOG, false, 0); // 0 = Y axis
+        // Natural organic curve in trunk
+        if (ty === hubY + Math.floor(trunkHeight * 0.5) && rng() < 0.45) {
+            const bDir = rootDirs[Math.floor(rng() * 4)];
+            tx += bDir[0];
+            tz += bDir[1];
+            safeSetBlock(blocks, tx, ty, tz, BLOCKS.MANGROVE_LOG, false, 0);
+        }
+    }
+
+    // 3. Canopy: dome of Mangrove Leaves with hanging Vines
+    const topY = hubY + trunkHeight;
+    const leafRadius = 3;
+    for (let dy = -2; dy <= 2; dy++) {
+        const r = (dy === 2) ? 1 : (dy === -2 ? 2 : leafRadius);
+        for (let ldx = -r; ldx <= r; ldx++) {
+            for (let ldz = -r; ldz <= r; ldz++) {
+                if (Math.abs(ldx) + Math.abs(ldz) > r + 1.2) continue;
+                const ly = topY + dy;
+                const lx = tx + ldx;
+                const lz = tz + ldz;
+                safeSetBlock(blocks, lx, ly, lz, BLOCKS.MANGROVE_LEAVES, true);
+
+                // Hanging vines dangling from canopy perimeter
+                if (dy <= 0 && (Math.abs(ldx) === r || Math.abs(ldz) === r) && rng() < 0.4) {
+                    const vineLen = 1 + Math.floor(rng() * 3);
+                    for (let vi = 1; vi <= vineLen; vi++) {
+                        safeSetBlock(blocks, lx, ly - vi, lz, BLOCKS.VINES, true);
+                    }
+                }
+            }
         }
     }
 }
@@ -820,397 +902,488 @@ function generateAncientPyramid(blocks, baseX, baseY, baseZ, rng) {
     safeSetBlock(blocks, baseX, baseY + 1, baseZ, BLOCKS.CHEST_BLOCK);
     safeSetBlock(blocks, baseX, baseY + 2, baseZ, BLOCKS.TORCH);
 }
-// Generate the chunk terrain
+// Generate the chunk terrain via Multi-Pass Feature Placement Pipeline
 export function generateChunkTerrain(cx, cz, params) {
     const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
+    const data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
+    blocks.data = data;
 
     const wxBase = cx * CHUNK_SIZE;
     const wzBase = cz * CHUNK_SIZE;
-
     const blockIndex = (x, y, z) => (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
 
-    // 1. Generate base terrain for chunk exactly
+    // Cache column infos for the 16x16 chunk
+    const columns = [];
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        columns[x] = [];
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            columns[x][z] = getColumnInfo(wxBase + x, wzBase + z, params);
+        }
+    }
+
+    // ============================================
+    // PASS 1: Base Terrain Shape & Ocean/Lake Water
+    // ============================================
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
-            const wx = wxBase + x;
-            const wz = wzBase + z;
-            
-            const { biome, surfaceY, colRng, bData } = getColumnInfo(wx, wz, params);
+            const { biome, surfaceY, bData } = columns[x][z];
 
             for (let y = 0; y < CHUNK_HEIGHT; y++) {
                 let type = BLOCKS.AIR;
-
                 if (y === 0) {
                     type = BLOCKS.BEDROCK;
-                } else if (y < surfaceY - 3) {
-                    type = BLOCKS.STONE;
-                    
-                    if (y > 5 && y < surfaceY - 5) {
-                        const c = fbm3D(params.caveNoise, wx / params.caveScale, y / (params.caveScale * 0.8), wz / params.caveScale, 3);
-                        if (c > params.caveThreshold) type = BLOCKS.AIR;
-                    }
-                    
-                    if (type === BLOCKS.STONE && colRng() < 0.02) {
-                        let oreType = BLOCKS.IRON_ORE;
-                        let minS = 1, maxS = 6;
-                        if (y < 15 && colRng() < 0.15) { oreType = BLOCKS.DIAMOND_ORE; minS = 1; maxS = 4; }
-                        else if (y < 22 && colRng() < 0.18) { oreType = BLOCKS.RUBY_ORE; minS = 1; maxS = 4; }
-                        else if (y < 22 && colRng() < 0.18) { oreType = BLOCKS.SAPPHIRE_ORE; minS = 1; maxS = 4; }
-                        else if (y < 20 && colRng() < 0.2) { oreType = BLOCKS.CRYSTAL_ORE; minS = 1; maxS = 3; }
-                        else if (y < 30 && colRng() < 0.3) { oreType = BLOCKS.MANA_ORE; minS = 1; maxS = 3; }
-                        else if (colRng() < 0.1) { oreType = BLOCKS.GOLD_ORE; minS = 2; maxS = 5; }
-                        else if (colRng() < 0.3) { oreType = BLOCKS.COAL_ORE; minS = 3; maxS = 10; }
-                        
-                        generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng);
-                    }
                 } else if (y <= surfaceY) {
-                    if (biome.isVolcanic) {
-                        if (y === surfaceY) {
-                            const vRoll = colRng();
-                            if (vRoll < 0.15) type = BLOCKS.MAGMA;
-                            else if (vRoll < 0.25) type = BLOCKS.SMOOTH_BASALT;
-                            else if (vRoll < 0.30) type = BLOCKS.CRYING_OBSIDIAN;
-                            else if (vRoll < 0.40) type = BLOCKS.OBSIDIAN;
-                            else type = BLOCKS.BASALT;
-                        } else {
-                            type = colRng() < 0.5 ? BLOCKS.BLACKSTONE : BLOCKS.SMOOTH_BASALT;
-                        }
-                    } else {
-                        type = (y === surfaceY) ? biome.surface : biome.dirt;
-                    }
-                    
-                    const isSurfaceLike = type === BLOCKS.GRASS || type === BLOCKS.SWAMP_GRASS || type === BLOCKS.SAVANNA_GRASS || type === BLOCKS.ALIEN_GRASS || type === BLOCKS.SNOW || type === BLOCKS.PODZOL;
-                    const isDirt = type === BLOCKS.DIRT || type === BLOCKS.COARSE_DIRT || type === BLOCKS.PODZOL || type === BLOCKS.MYCELIUM;
-                    
-                    // Replace surface under water or lake water with sand/dirt/gravel
-                    if ((y < params.seaLevel || y < bData.lakeSurfaceY) && isSurfaceLike) {
-                        type = (biome === BIOMES.PLAINS || biome === BIOMES.DESERT || biome === BIOMES.SWAMP || biome === BIOMES.TUNDRA || biome === BIOMES.BEACH) ? BLOCKS.SAND : BLOCKS.DIRT;
-                    }
-                    
-                    // Create beaches near water levels
-                    if (y <= params.seaLevel + 1 && y >= params.seaLevel - 2 && y >= surfaceY - 3 && (isSurfaceLike || isDirt)) {
-                        type = BLOCKS.SAND;
-                    }
-                    if (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY + 1 && y >= bData.lakeSurfaceY - 1 && y >= surfaceY - 2 && (isSurfaceLike || isDirt)) {
-                        type = BLOCKS.SAND; // Lake shores
-                    }
+                    type = BLOCKS.STONE;
                 } else if (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY) {
                     type = biome === BIOMES.VOLCANIC ? BLOCKS.LAVA : (biome === BIOMES.SWAMP ? BLOCKS.SWAMP_WATER : BLOCKS.WATER);
-                    // Freeze top layer in cold biomes
                     if (y === bData.lakeSurfaceY && (biome === BIOMES.TUNDRA || biome === BIOMES.ICE_SPIKES || biome === BIOMES.MOUNTAINS)) {
                         type = BLOCKS.ICE;
                     }
                 } else if (y <= params.seaLevel) {
                     type = biome === BIOMES.VOLCANIC ? BLOCKS.LAVA : (biome === BIOMES.SWAMP ? BLOCKS.SWAMP_WATER : BLOCKS.WATER);
-                    // Freeze top layer in cold biomes
                     if (y === params.seaLevel && (biome === BIOMES.TUNDRA || biome === BIOMES.ICE_SPIKES || biome === BIOMES.MOUNTAINS)) {
                         type = BLOCKS.ICE;
                     }
                 }
-
                 blocks[blockIndex(x, y, z)] = type;
             }
         }
     }
 
-    // 2. Flora Projection: Iterate over neighborhood to draw trees that overlap this chunk
-    for (let tx = -3; tx <= CHUNK_SIZE + 2; tx++) {
-        for (let tz = -3; tz <= CHUNK_SIZE + 2; tz++) {
-            const wx = wxBase + tx;
-            const wz = wzBase + tz;
-            const { biome, surfaceY, colRng, bData } = getColumnInfo(wx, wz, params);
-            
-            const floraRng = seededRandom(params.seed + wx * 7777 + wz);
+    // ============================================
+    // PASS 2: 3D Cave Carvers & Global Dungeons
+    // ============================================
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            const wx = wxBase + x;
+            const wz = wzBase + z;
+            const { surfaceY } = columns[x][z];
 
-            if (surfaceY < CHUNK_HEIGHT - 10) {
-                const r = floraRng();
-                const isUnderwater = surfaceY < params.seaLevel || (bData && bData.lakeSurfaceY && surfaceY < bData.lakeSurfaceY);
-                
-                if (isUnderwater) {
-                    if (biome.isCoralReef && r < 0.3 && surfaceY < params.seaLevel - 1) {
-                        const cRng = floraRng();
-                        let coralType;
-                        if (cRng < 0.2) coralType = BLOCKS.TUBE_CORAL;
-                        else if (cRng < 0.4) coralType = BLOCKS.BRAIN_CORAL;
-                        else if (cRng < 0.6) coralType = BLOCKS.FIRE_CORAL;
-                        else if (cRng < 0.8) coralType = BLOCKS.HORN_CORAL;
-                        else if (cRng < 0.9) coralType = BLOCKS.BUBBLE_CORAL;
-                        else coralType = BLOCKS.SAND; // Blank space
-                        if (coralType !== BLOCKS.SAND) {
-                            // Only place if the block above the surface is actually water
-                            const aboveIdx = ((surfaceY + 1) * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                            const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[aboveIdx] : BLOCKS.WATER;
-                            if (aboveBlock === BLOCKS.WATER) {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType, false);
-                            }
-                        }
-                    } else if (r < 0.2) {
-                        const cRng = floraRng();
-                        if (cRng < 0.1) {
-                            // Kelp column
-                            const kHeight = 2 + Math.floor(floraRng() * 6);
-                            const kTypeRng = floraRng();
-                            const kelpType = kTypeRng < 0.33 ? BLOCKS.RED_KELP : (kTypeRng < 0.66 ? BLOCKS.BROWN_KELP : BLOCKS.KELP);
-                            for(let i = 1; i <= kHeight; i++) {
-                                const y = surfaceY + i;
-                                if (y < params.seaLevel - 1) {
-                                    const aboveIdx = (y * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                                    const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && y < CHUNK_HEIGHT) ? blocks[aboveIdx] : BLOCKS.WATER;
-                                    if (aboveBlock === BLOCKS.WATER) {
-                                        safeSetBlock(blocks, tx, y, tz, kelpType, false);
-                                    }
-                                }
-                            }
-                        } else {
-                            const y = surfaceY + 1;
-                            const aboveIdx = (y * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                            const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && y < CHUNK_HEIGHT) ? blocks[aboveIdx] : BLOCKS.WATER;
-                            
-                            if (biome === BIOMES.SWAMP || biome === BIOMES.OASIS) {
-                                if (cRng < 0.5) {
-                                    if (aboveBlock === BLOCKS.WATER) {
-                                        safeSetBlock(blocks, tx, y, tz, BLOCKS.ALGAE, false);
-                                    }
-                                } else {
-                                    // Lily pads go on top of the water surface
-                                    const waterTopY = (bData && bData.lakeSurfaceY > 0) ? bData.lakeSurfaceY : params.seaLevel;
-                                    const padY = waterTopY + 1;
-                                    const padIdx = (padY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                                    const padBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && padY < CHUNK_HEIGHT) ? blocks[padIdx] : BLOCKS.AIR;
-                                    if (padBlock === BLOCKS.AIR || padBlock === BLOCKS.WATER) {
-                                        safeSetBlock(blocks, tx, padY, tz, BLOCKS.LILY_PAD, false);
-                                    }
-                                }
-                            } else {
-                                if (aboveBlock === BLOCKS.WATER) {
-                                    safeSetBlock(blocks, tx, y, tz, BLOCKS.SEAGRASS, false);
-                                }
-                            }
-                        }
-                    }
-                    continue; // Done with underwater flora
+            for (let y = 6; y < surfaceY - 5; y++) {
+                const c = fbm3D(params.caveNoise, wx / params.caveScale, y / (params.caveScale * 0.8), wz / params.caveScale, 3);
+                if (c > params.caveThreshold) {
+                    blocks[blockIndex(x, y, z)] = BLOCKS.AIR;
                 }
-                
-                // Sugarcane logic: strictly warm biomes (Desert, Savanna, Jungle, Swamp, Badlands, Beach, Oasis) adjacent to water
-                const isWarmBiome = (biome === BIOMES.DESERT || biome === BIOMES.SAVANNA || biome === BIOMES.JUNGLE || 
-                    biome === BIOMES.SWAMP || biome === BIOMES.BADLANDS || biome === BIOMES.BEACH || 
-                    biome === BIOMES.OASIS || biome.isBeach || biome.isOasis || biome.jungleFlora || 
-                    biome.savannaFlora || biome.swampFlora || biome.name === 'Desert' || biome.name === 'Savanna' || 
-                    biome.name === 'Jungle' || biome.name === 'Swamp' || biome.name === 'Badlands' || 
-                    biome.name === 'Beach' || biome.name === 'Oasis');
-                
-                const groundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                const groundBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[groundIdx] : BLOCKS.AIR;
-                const isSugarcaneSoil = groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.RED_SAND || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.SWAMP_GRASS || groundBlock === BLOCKS.SAVANNA_GRASS || groundBlock === BLOCKS.MUD;
-                
-                if (isWarmBiome && isSugarcaneSoil && surfaceY >= params.seaLevel && surfaceY <= params.seaLevel + 3 && r < 0.12) {
-                    const n1 = getColumnInfo(wx - 1, wz, params);
-                    const n2 = getColumnInfo(wx + 1, wz, params);
-                    const n3 = getColumnInfo(wx, wz - 1, params);
-                    const n4 = getColumnInfo(wx, wz + 1, params);
-                    const nearWater = [n1, n2, n3, n4].some(n => 
-                        n.surfaceY < params.seaLevel || 
-                        (n.bData && n.bData.lakeSurfaceY > 0 && n.surfaceY <= n.bData.lakeSurfaceY) ||
-                        n.surfaceY < surfaceY
-                    );
-                    if (nearWater) {
-                        generateSugarcane(blocks, tx, surfaceY + 1, tz, floraRng);
-                        continue; // Skip other flora here
-                    }
+            }
+        }
+    }
+    carveGlobalDungeons(blocks, cx, cz, params);
+
+    // ============================================
+    // PASS 3: Surface Soil & Biome Rules (Mud clumps, puddles, beaches)
+    // ============================================
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            const wx = wxBase + x;
+            const wz = wzBase + z;
+            const { biome, surfaceY, colRng, bData } = columns[x][z];
+            const isSwamp = (biome === BIOMES.SWAMP || biome.name === 'Swamp' || biome.swampFlora);
+
+            // Check if swamp has a rare small puddle here
+            let isSwampPuddle = false;
+            let isSwampMud = false;
+            if (isSwamp && surfaceY >= params.seaLevel && surfaceY <= params.seaLevel + 4) {
+                const pNoise = (params.noise2D(wx * 0.06 + 321, wz * 0.06 + 321) + 1) / 2;
+                if (pNoise > 0.78) {
+                    isSwampPuddle = true;
                 }
-
-                // Structures (checked first so they can spawn in any biome, not overridden by trees)
-                if (r < 0.000001) {
-                    generateWizardTower(blocks, tx, surfaceY + 1, tz, floraRng);
-                    continue;
-                } else if (biome === BIOMES.DESERT && r < 0.000003) {
-                    generateAncientPyramid(blocks, tx, surfaceY, tz, floraRng);
-                    continue;
-                } else if (r < 0.00003) {
-                    generatePortalStructure(blocks, tx, surfaceY + 1, tz, floraRng, 'nether');
-                    continue;
-                } else if (r < 0.0001) {
-                    generateCabin(blocks, tx, surfaceY + 1, tz, floraRng);
-                    continue;
+                const mNoise = (params.noise2D(wx * 0.12 + 888, wz * 0.12 + 888) + 1) / 2;
+                if (isSwampPuddle || mNoise > 0.48) {
+                    isSwampMud = true;
                 }
+            }
 
-                // Don't spawn flora if a structure overwrote the ground
-                const currentGroundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                const currentGroundBlock = blocks[currentGroundIdx];
-                const isValidGround = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.SAND || currentGroundBlock === BLOCKS.SNOW || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.ALIEN_GRASS || currentGroundBlock === BLOCKS.ALIEN_STONE || currentGroundBlock === BLOCKS.RED_SAND || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.BASALT || currentGroundBlock === BLOCKS.SMOOTH_BASALT || currentGroundBlock === BLOCKS.BLACKSTONE;
-                if (!isValidGround) continue;
+            for (let y = surfaceY; y >= Math.max(1, surfaceY - 4); y--) {
+                const idx = blockIndex(x, y, z);
+                if (blocks[idx] !== BLOCKS.STONE) continue; // Skip if carved by cave/dungeon
 
-                // Volcanic Biome Spire Columns and Fire
+                let type;
                 if (biome.isVolcanic) {
-                    if (r < 0.035) {
-                        generateBasaltColumn(blocks, tx, surfaceY + 1, tz, 10 + Math.floor(floraRng() * 15), floraRng);
-                    } else if (r < 0.08) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FIRE, true);
-                    }
-                    continue;
-                }
-
-                // Redwood Forest Trees & Fallen Logs
-                if (biome.isRedwood) {
-                    if (r < 0.025) {
-                        generateRedwoodTree(blocks, tx, surfaceY + 1, tz, floraRng);
-                        continue;
-                    } else if (r < 0.031) {
-                        generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.REDWOOD_LOG, floraRng);
-                        continue;
-                    } else if (r < 0.040) {
-                        generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
-                        continue;
-                    }
-                }
-
-                // Mystic Grove Trees
-                if (biome.isMystic && r < 0.035) {
-                    generateMysticTree(blocks, tx, surfaceY + 1, tz, floraRng);
-                    continue;
-                }
-
-                // Dark Forest Trees, Giant Mushrooms, Fallen Logs & Mushroom Clumps
-                if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
-                    if (r < 0.052) {
-                        generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
-                        continue;
-                    } else if (r < 0.056) {
-                        generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
-                        continue;
-                    } else if (r < 0.063) {
-                        generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.DARK_OAK_WOOD, floraRng);
-                        continue;
-                    } else if (r < 0.075) {
-                        generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
-                        continue;
-                    }
-                }
-
-                if (biome.hasTrees && r < 0.02) {
-                    generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
-                } else if (biome.hasDeadTrees && r < 0.005) {
-                    generateDeadTree(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (biome.hasMushrooms && r < 0.05) {
-                    generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (biome.hasCrystals && r < 0.03) {
-                    generateCrystal(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (biome.hasIceSpikes && r < 0.02) {
-                    generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (biome.hasCactus && r < 0.01) {
-                    generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
-                } else if (biome.hasDeadBush && r < 0.04) {
-                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
-                } else if (biome.isBeach && r < 0.08) {
-                    const shellRng = floraRng();
-                    const shell = shellRng < 0.33 ? BLOCKS.SEASHELL_1 : (shellRng < 0.66 ? BLOCKS.SEASHELL_2 : BLOCKS.SEASHELL_3);
-                    safeSetBlock(blocks, tx, surfaceY + 1, tz, shell, true);
-                } else if (biome.jungleFlora && r < 0.08) {
-                    if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
-                    else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true); // Bush
-                } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && !biome.isVolcanic && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef && !biome.isBeach) {
-                    // Minecraft-authentic ground flora logic
-                    let fr = floraRng();
-                    if (biome === BIOMES.CHERRY_GROVE && fr < 0.3) {
-                        if (fr < 0.05) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
-                        else if (fr < 0.1) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
-                        else if (fr < 0.15) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
-                        else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                    } else if (biome.isMystic && fr < 0.35) {
-                        if (fr < 0.12) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
-                        else if (fr < 0.22) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
-                        else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
-                    } else if (biome === BIOMES.OASIS && fr < 0.2) {
-                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
-                    } else if (biome.isRedwood) {
-                        // Redwood Forest (Mega Taiga / Old Growth Pine): cold biome, rich with short ferns, tall ferns, and tall grass
-                        if (fr < 0.35) {
-                            const fernRoll = floraRng();
-                            if (fernRoll < 0.45) {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
-                            } else if (fernRoll < 0.8) {
-                                generateTallFern(blocks, tx, surfaceY + 1, tz);
-                            } else {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                            }
-                        }
-                    } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
-                        // Taiga / Tundra: cold biome, short ferns, tall ferns, and tall grass
-                        if (fr < 0.25) {
-                            const taigaRoll = floraRng();
-                            if (taigaRoll < 0.35) {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
-                            } else if (taigaRoll < 0.6) {
-                                generateTallFern(blocks, tx, surfaceY + 1, tz);
-                            } else {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                            }
-                        }
-                    } else if (biome.jungleFlora || biome === BIOMES.JUNGLE || biome.name === 'Jungle') {
-                        // Jungle: tall grass and jungle flowers — strictly zero ferns (ferns restricted to cold biomes)
-                        if (fr < 0.32) {
-                            const jungleRoll = floraRng();
-                            if (jungleRoll < 0.65) {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                            } else {
-                                const fl = floraRng() < 0.5 ? BLOCKS.RED_FLOWER : BLOCKS.YELLOW_FLOWER;
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, fl, true);
-                            }
-                        }
-                    } else if (biome.swampFlora || biome === BIOMES.SWAMP || biome.name === 'Swamp') {
-                        // Swamp: tall grass, blue orchids/flowers, and mushrooms — strictly zero ferns
-                        if (fr < 0.25) {
-                            const swRoll = floraRng();
-                            if (swRoll < 0.7) {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                            } else if (swRoll < 0.85) {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.BLUE_FLOWER, true);
-                            } else {
-                                const swShroom = floraRng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, swShroom, true);
-                            }
-                        }
-                    } else if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
-                        // Dark Forest: tall grass, sparse red & brown mushrooms, red flowers — strictly zero ferns
-                        if (fr < 0.25) {
-                            const dfRoll = floraRng();
-                            if (dfRoll < 0.65) {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                            } else if (dfRoll < 0.85) {
-                                const shroom = floraRng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, shroom, true);
-                            } else {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.RED_FLOWER, true);
-                            }
-                        }
-                    } else if (biome.savannaFlora || biome === BIOMES.SAVANNA || biome.name === 'Savanna') {
-                        // Savanna: tall grass only — strictly zero ferns
-                        if (fr < 0.2) {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                        }
-                    } else if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains') {
-                        // Mountains: tall grass and sparse white flowers — strictly zero ferns
-                        if (fr < 0.15) {
-                            if (floraRng() < 0.8) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                            else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
-                        }
+                    if (y === surfaceY) {
+                        const vRoll = colRng();
+                        if (vRoll < 0.15) type = BLOCKS.MAGMA;
+                        else if (vRoll < 0.25) type = BLOCKS.SMOOTH_BASALT;
+                        else if (vRoll < 0.30) type = BLOCKS.CRYING_OBSIDIAN;
+                        else if (vRoll < 0.40) type = BLOCKS.OBSIDIAN;
+                        else type = BLOCKS.BASALT;
                     } else {
-                        // Plains, Forest, etc.: Tall grass (dominant) + diverse flowers — strictly zero ferns
-                        if (fr < 0.22) {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                        } else if (fr >= 0.22 && fr < 0.27) {
-                            const r3 = floraRng();
-                            const flowerType = r3 < 0.3 ? BLOCKS.RED_FLOWER : (r3 < 0.55 ? BLOCKS.YELLOW_FLOWER : (r3 < 0.75 ? BLOCKS.BLUE_FLOWER : (r3 < 0.9 ? BLOCKS.WHITE_FLOWER : BLOCKS.PURPLE_FLOWER)));
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);
-                        }
+                        type = colRng() < 0.5 ? BLOCKS.BLACKSTONE : BLOCKS.SMOOTH_BASALT;
                     }
+                } else if (isSwamp) {
+                    if (isSwampPuddle && y === surfaceY) {
+                        type = BLOCKS.SWAMP_WATER;
+                    } else if (isSwampMud || y < surfaceY) {
+                        type = BLOCKS.MUD;
+                    } else {
+                        type = BLOCKS.SWAMP_GRASS;
+                    }
+                } else {
+                    type = (y === surfaceY) ? biome.surface : biome.dirt;
+                }
+
+                const isSurfaceLike = type === BLOCKS.GRASS || type === BLOCKS.SWAMP_GRASS || type === BLOCKS.SAVANNA_GRASS || type === BLOCKS.ALIEN_GRASS || type === BLOCKS.SNOW || type === BLOCKS.PODZOL;
+                const isDirt = type === BLOCKS.DIRT || type === BLOCKS.COARSE_DIRT || type === BLOCKS.PODZOL || type === BLOCKS.MYCELIUM;
+
+                // Replace surface under water or lake water with sand/dirt/gravel
+                if ((y < params.seaLevel || y < bData.lakeSurfaceY) && isSurfaceLike) {
+                    type = (biome === BIOMES.PLAINS || biome === BIOMES.DESERT || biome === BIOMES.SWAMP || biome === BIOMES.TUNDRA || biome === BIOMES.BEACH) ? BLOCKS.SAND : BLOCKS.DIRT;
+                }
+
+                // Create beaches near water levels
+                if (y <= params.seaLevel + 1 && y >= params.seaLevel - 2 && y >= surfaceY - 3 && (isSurfaceLike || isDirt)) {
+                    type = BLOCKS.SAND;
+                }
+                if (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY + 1 && y >= bData.lakeSurfaceY - 1 && y >= surfaceY - 2 && (isSurfaceLike || isDirt)) {
+                    type = BLOCKS.SAND; // Lake shores
+                }
+
+                blocks[idx] = type;
+            }
+        }
+    }
+
+    // ============================================
+    // PASS 4: Ore Veins
+    // ============================================
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            const { surfaceY, colRng } = columns[x][z];
+            for (let y = 1; y < surfaceY - 4; y++) {
+                const idx = blockIndex(x, y, z);
+                if (blocks[idx] === BLOCKS.STONE && colRng() < 0.02) {
+                    let oreType = BLOCKS.IRON_ORE;
+                    let minS = 1, maxS = 6;
+                    if (y < 15 && colRng() < 0.15) { oreType = BLOCKS.DIAMOND_ORE; minS = 1; maxS = 4; }
+                    else if (y < 22 && colRng() < 0.18) { oreType = BLOCKS.RUBY_ORE; minS = 1; maxS = 4; }
+                    else if (y < 22 && colRng() < 0.18) { oreType = BLOCKS.SAPPHIRE_ORE; minS = 1; maxS = 4; }
+                    else if (y < 20 && colRng() < 0.2) { oreType = BLOCKS.CRYSTAL_ORE; minS = 1; maxS = 3; }
+                    else if (y < 30 && colRng() < 0.3) { oreType = BLOCKS.MANA_ORE; minS = 1; maxS = 3; }
+                    else if (colRng() < 0.1) { oreType = BLOCKS.GOLD_ORE; minS = 2; maxS = 5; }
+                    else if (colRng() < 0.3) { oreType = BLOCKS.COAL_ORE; minS = 3; maxS = 10; }
+
+                    generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng);
                 }
             }
         }
     }
 
-    // Carve Global Dungeons
-    carveGlobalDungeons(blocks, cx, cz, params);
+    // ============================================
+    // PASS 5: Structures
+    // ============================================
+    for (let tx = -3; tx <= CHUNK_SIZE + 2; tx++) {
+        for (let tz = -3; tz <= CHUNK_SIZE + 2; tz++) {
+            const wx = wxBase + tx;
+            const wz = wzBase + tz;
+            const { biome, surfaceY } = getColumnInfo(wx, wz, params);
+            if (surfaceY >= CHUNK_HEIGHT - 10) continue;
+
+            const structRng = seededRandom(params.seed + wx * 7777 + wz);
+            const r = structRng();
+
+            if (r < 0.000001) {
+                generateWizardTower(blocks, tx, surfaceY + 1, tz, structRng);
+            } else if (biome === BIOMES.DESERT && r < 0.000003) {
+                generateAncientPyramid(blocks, tx, surfaceY, tz, structRng);
+            } else if (r < 0.00003) {
+                generatePortalStructure(blocks, tx, surfaceY + 1, tz, structRng, 'nether');
+            } else if (r < 0.0001) {
+                generateCabin(blocks, tx, surfaceY + 1, tz, structRng);
+            }
+        }
+    }
+
+    // ============================================
+    // PASS 6: Large Features, Trees & Fallen Logs
+    // ============================================
+    for (let tx = -3; tx <= CHUNK_SIZE + 2; tx++) {
+        for (let tz = -3; tz <= CHUNK_SIZE + 2; tz++) {
+            const wx = wxBase + tx;
+            const wz = wzBase + tz;
+            const { biome, surfaceY, bData } = getColumnInfo(wx, wz, params);
+            if (surfaceY >= CHUNK_HEIGHT - 10) continue;
+
+            const floraRng = seededRandom(params.seed + wx * 7777 + wz);
+            const r = floraRng();
+            const isUnderwater = surfaceY < params.seaLevel || (bData && bData.lakeSurfaceY && surfaceY < bData.lakeSurfaceY);
+            if (isUnderwater) continue;
+
+            // Ground validity check
+            const currentGroundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+            const currentGroundBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[currentGroundIdx] : BLOCKS.AIR;
+            const isValidGround = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.SAND || currentGroundBlock === BLOCKS.SNOW || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.ALIEN_GRASS || currentGroundBlock === BLOCKS.ALIEN_STONE || currentGroundBlock === BLOCKS.RED_SAND || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.BASALT || currentGroundBlock === BLOCKS.SMOOTH_BASALT || currentGroundBlock === BLOCKS.BLACKSTONE || currentGroundBlock === BLOCKS.MUD || currentGroundBlock === BLOCKS.SWAMP_WATER;
+            if (!isValidGround) continue;
+
+            // Volcanic Spire Columns
+            if (biome.isVolcanic) {
+                if (r < 0.035) {
+                    generateBasaltColumn(blocks, tx, surfaceY + 1, tz, 10 + Math.floor(floraRng() * 15), floraRng);
+                } else if (r < 0.08) {
+                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FIRE, true);
+                }
+                continue;
+            }
+
+            // Swamp Biome: Mangrove Trees & Fallen Mangrove Logs
+            if (biome.swampFlora || biome === BIOMES.SWAMP || biome.name === 'Swamp') {
+                if (r < 0.038) {
+                    generateMangroveTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                } else if (r < 0.046) {
+                    generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.MANGROVE_LOG, floraRng);
+                    continue;
+                }
+            }
+
+            // Redwood Forest Trees & Fallen Logs
+            if (biome.isRedwood) {
+                if (r < 0.025) {
+                    generateRedwoodTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                } else if (r < 0.031) {
+                    generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.REDWOOD_LOG, floraRng);
+                    continue;
+                } else if (r < 0.040) {
+                    generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
+                    continue;
+                }
+            }
+
+            // Mystic Grove Trees
+            if (biome.isMystic && r < 0.035) {
+                generateMysticTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                continue;
+            }
+
+            // Dark Forest Trees, Giant Mushrooms, Fallen Logs & Mushroom Clumps
+            if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
+                if (r < 0.052) {
+                    generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                    continue;
+                } else if (r < 0.056) {
+                    generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                } else if (r < 0.063) {
+                    generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.DARK_OAK_WOOD, floraRng);
+                    continue;
+                } else if (r < 0.075) {
+                    generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
+                    continue;
+                }
+            }
+
+            // Other Biome Trees & Features
+            if (biome.hasTrees && r < 0.02) {
+                generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+            } else if (biome.hasDeadTrees && r < 0.005) {
+                generateDeadTree(blocks, tx, surfaceY + 1, tz, floraRng);
+            } else if (biome.hasMushrooms && r < 0.05) {
+                generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
+            } else if (biome.hasCrystals && r < 0.03) {
+                generateCrystal(blocks, tx, surfaceY + 1, tz, floraRng);
+            } else if (biome.hasIceSpikes && r < 0.02) {
+                generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
+            } else if (biome.hasCactus && r < 0.01) {
+                generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
+            }
+        }
+    }
+
+    // ============================================
+    // PASS 7: Ground Cover & Aquatic Flora
+    // ============================================
+    for (let tx = -3; tx <= CHUNK_SIZE + 2; tx++) {
+        for (let tz = -3; tz <= CHUNK_SIZE + 2; tz++) {
+            const wx = wxBase + tx;
+            const wz = wzBase + tz;
+            const { biome, surfaceY, bData } = getColumnInfo(wx, wz, params);
+            if (surfaceY >= CHUNK_HEIGHT - 10) continue;
+
+            const floraRng = seededRandom(params.seed + wx * 7777 + wz);
+            const r = floraRng();
+            const isUnderwater = surfaceY < params.seaLevel || (bData && bData.lakeSurfaceY && surfaceY < bData.lakeSurfaceY);
+
+            // Aquatic vegetation
+            if (isUnderwater) {
+                if (biome.isCoralReef && r < 0.3 && surfaceY < params.seaLevel - 1) {
+                    const cRng = floraRng();
+                    let coralType;
+                    if (cRng < 0.2) coralType = BLOCKS.TUBE_CORAL;
+                    else if (cRng < 0.4) coralType = BLOCKS.BRAIN_CORAL;
+                    else if (cRng < 0.6) coralType = BLOCKS.FIRE_CORAL;
+                    else if (cRng < 0.8) coralType = BLOCKS.HORN_CORAL;
+                    else if (cRng < 0.9) coralType = BLOCKS.BUBBLE_CORAL;
+                    else coralType = BLOCKS.SAND;
+                    if (coralType !== BLOCKS.SAND) {
+                        const aboveIdx = ((surfaceY + 1) * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                        const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[aboveIdx] : BLOCKS.WATER;
+                        if (aboveBlock === BLOCKS.WATER) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, coralType, false);
+                        }
+                    }
+                } else if (r < 0.2) {
+                    const cRng = floraRng();
+                    if (cRng < 0.1) {
+                        const kHeight = 2 + Math.floor(floraRng() * 6);
+                        const kTypeRng = floraRng();
+                        const kelpType = kTypeRng < 0.33 ? BLOCKS.RED_KELP : (kTypeRng < 0.66 ? BLOCKS.BROWN_KELP : BLOCKS.KELP);
+                        for (let i = 1; i <= kHeight; i++) {
+                            const y = surfaceY + i;
+                            if (y < params.seaLevel - 1) {
+                                const aboveIdx = (y * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                                const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && y < CHUNK_HEIGHT) ? blocks[aboveIdx] : BLOCKS.WATER;
+                                if (aboveBlock === BLOCKS.WATER) {
+                                    safeSetBlock(blocks, tx, y, tz, kelpType, false);
+                                }
+                            }
+                        }
+                    } else {
+                        const y = surfaceY + 1;
+                        const aboveIdx = (y * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                        const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && y < CHUNK_HEIGHT) ? blocks[aboveIdx] : BLOCKS.WATER;
+                        if (biome === BIOMES.SWAMP || biome === BIOMES.OASIS) {
+                            if (cRng < 0.5) {
+                                if (aboveBlock === BLOCKS.WATER) {
+                                    safeSetBlock(blocks, tx, y, tz, BLOCKS.ALGAE, false);
+                                }
+                            } else {
+                                const waterTopY = (bData && bData.lakeSurfaceY > 0) ? bData.lakeSurfaceY : params.seaLevel;
+                                const padY = waterTopY + 1;
+                                const padIdx = (padY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                                const padBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && padY < CHUNK_HEIGHT) ? blocks[padIdx] : BLOCKS.AIR;
+                                if (padBlock === BLOCKS.AIR || padBlock === BLOCKS.WATER) {
+                                    safeSetBlock(blocks, tx, padY, tz, BLOCKS.LILY_PAD, false);
+                                }
+                            }
+                        } else {
+                            if (aboveBlock === BLOCKS.WATER) {
+                                safeSetBlock(blocks, tx, y, tz, BLOCKS.SEAGRASS, false);
+                            }
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // Sugarcane logic along warm biomes
+            const isWarmBiome = (biome === BIOMES.DESERT || biome === BIOMES.SAVANNA || biome === BIOMES.JUNGLE || 
+                biome === BIOMES.SWAMP || biome === BIOMES.BADLANDS || biome === BIOMES.BEACH || 
+                biome === BIOMES.OASIS || biome.isBeach || biome.isOasis || biome.jungleFlora || 
+                biome.savannaFlora || biome.swampFlora || biome.name === 'Desert' || biome.name === 'Savanna' || 
+                biome.name === 'Jungle' || biome.name === 'Swamp' || biome.name === 'Badlands' || 
+                biome.name === 'Beach' || biome.name === 'Oasis');
+            
+            const groundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+            const groundBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[groundIdx] : BLOCKS.AIR;
+            const isSugarcaneSoil = groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.RED_SAND || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.SWAMP_GRASS || groundBlock === BLOCKS.SAVANNA_GRASS || groundBlock === BLOCKS.MUD;
+
+            if (isWarmBiome && isSugarcaneSoil && surfaceY >= params.seaLevel && surfaceY <= params.seaLevel + 3 && r < 0.12) {
+                const n1 = getColumnInfo(wx - 1, wz, params);
+                const n2 = getColumnInfo(wx + 1, wz, params);
+                const n3 = getColumnInfo(wx, wz - 1, params);
+                const n4 = getColumnInfo(wx, wz + 1, params);
+                const nearWater = [n1, n2, n3, n4].some(n => 
+                    n.surfaceY < params.seaLevel || 
+                    (n.bData && n.bData.lakeSurfaceY > 0 && n.surfaceY <= n.bData.lakeSurfaceY) ||
+                    n.surfaceY < surfaceY
+                );
+                if (nearWater) {
+                    generateSugarcane(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                }
+            }
+
+            // Only place ground flora on solid non-air ground
+            const curGroundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+            const curGround = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[curGroundIdx] : BLOCKS.AIR;
+            const canSupportFlora = curGround === BLOCKS.GRASS || curGround === BLOCKS.DIRT || curGround === BLOCKS.SAND || curGround === BLOCKS.SNOW || curGround === BLOCKS.MYCELIUM || curGround === BLOCKS.SWAMP_GRASS || curGround === BLOCKS.SAVANNA_GRASS || curGround === BLOCKS.PODZOL || curGround === BLOCKS.MUD;
+            if (!canSupportFlora) continue;
+
+            // Ground cover vegetation
+            if (biome.hasDeadBush && r < 0.04) {
+                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
+            } else if (biome.isBeach && r < 0.08) {
+                const shellRng = floraRng();
+                const shell = shellRng < 0.33 ? BLOCKS.SEASHELL_1 : (shellRng < 0.66 ? BLOCKS.SEASHELL_2 : BLOCKS.SEASHELL_3);
+                safeSetBlock(blocks, tx, surfaceY + 1, tz, shell, true);
+            } else if (biome.jungleFlora && r < 0.08) {
+                if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true);
+            } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && !biome.isVolcanic && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef && !biome.isBeach) {
+                let fr = floraRng();
+                if (biome === BIOMES.CHERRY_GROVE && fr < 0.3) {
+                    if (fr < 0.05) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
+                    else if (fr < 0.1) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
+                    else if (fr < 0.15) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
+                    else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                } else if (biome.isMystic && fr < 0.35) {
+                    if (fr < 0.12) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
+                    else if (fr < 0.22) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PURPLE_FLOWER, true);
+                    else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
+                } else if (biome === BIOMES.OASIS && fr < 0.2) {
+                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
+                } else if (biome.isRedwood) {
+                    if (fr < 0.35) {
+                        const fernRoll = floraRng();
+                        if (fernRoll < 0.45) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
+                        else if (fernRoll < 0.8) generateTallFern(blocks, tx, surfaceY + 1, tz);
+                        else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                    }
+                } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
+                    if (fr < 0.25) {
+                        const taigaRoll = floraRng();
+                        if (taigaRoll < 0.35) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
+                        else if (taigaRoll < 0.6) generateTallFern(blocks, tx, surfaceY + 1, tz);
+                        else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                    }
+                } else if (biome.jungleFlora || biome === BIOMES.JUNGLE || biome.name === 'Jungle') {
+                    if (fr < 0.32) {
+                        const jungleRoll = floraRng();
+                        if (jungleRoll < 0.65) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                        else {
+                            const fl = floraRng() < 0.5 ? BLOCKS.RED_FLOWER : BLOCKS.YELLOW_FLOWER;
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, fl, true);
+                        }
+                    }
+                } else if (biome.swampFlora || biome === BIOMES.SWAMP || biome.name === 'Swamp') {
+                    if (fr < 0.25) {
+                        const swRoll = floraRng();
+                        if (swRoll < 0.7) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                        else if (swRoll < 0.85) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.BLUE_FLOWER, true);
+                        else {
+                            const swShroom = floraRng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, swShroom, true);
+                        }
+                    }
+                } else if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
+                    if (fr < 0.25) {
+                        const dfRoll = floraRng();
+                        if (dfRoll < 0.65) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                        else if (dfRoll < 0.85) {
+                            const shroom = floraRng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, shroom, true);
+                        } else {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.RED_FLOWER, true);
+                        }
+                    }
+                } else if (biome.savannaFlora || biome === BIOMES.SAVANNA || biome.name === 'Savanna') {
+                    if (fr < 0.2) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                } else if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains') {
+                    if (fr < 0.15) {
+                        if (floraRng() < 0.8) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                        else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
+                    }
+                } else {
+                    if (fr < 0.22) {
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                    } else if (fr >= 0.22 && fr < 0.27) {
+                        const r3 = floraRng();
+                        const flowerType = r3 < 0.3 ? BLOCKS.RED_FLOWER : (r3 < 0.55 ? BLOCKS.YELLOW_FLOWER : (r3 < 0.75 ? BLOCKS.BLUE_FLOWER : (r3 < 0.9 ? BLOCKS.WHITE_FLOWER : BLOCKS.PURPLE_FLOWER)));
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);
+                    }
+                }
+            }
+        }
+    }
 
     return blocks;
 }

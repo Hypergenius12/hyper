@@ -292,12 +292,12 @@ export class GameEngine {
 
 // Face definitions: normal, vertices (x,y,z), ambient occlusion vertex indices
 const FACES = [
-    { dir: [0, 1, 0], v: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]], name: 'top' }, // top
-    { dir: [0, -1, 0], v: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]], name: 'bottom' }, // bottom
-    { dir: [1, 0, 0], v: [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]], name: 'side' }, // right
-    { dir: [-1, 0, 0], v: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]], name: 'side' }, // left
-    { dir: [0, 0, 1], v: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]], name: 'front' }, // front
-    { dir: [0, 0, -1], v: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]], name: 'side' }, // back
+    { dir: [0, 1, 0], v: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]], name: 'top', axis: 'y', dirSign: 1 }, // top (+Y)
+    { dir: [0, -1, 0], v: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]], name: 'bottom', axis: 'y', dirSign: -1 }, // bottom (-Y)
+    { dir: [1, 0, 0], v: [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]], name: 'side', axis: 'x', dirSign: 1 }, // right (+X, East)
+    { dir: [-1, 0, 0], v: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]], name: 'side', axis: 'x', dirSign: -1 }, // left (-X, West)
+    { dir: [0, 0, 1], v: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]], name: 'front', axis: 'z', dirSign: 1 }, // front (+Z, South)
+    { dir: [0, 0, -1], v: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]], name: 'side', axis: 'z', dirSign: -1 }, // back (-Z, North)
 ];
 // ============================================
 // Mesh Generation Buffers (Shared to eliminate GC)
@@ -354,7 +354,7 @@ export class Chunk {
         this.data[(ly * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx] = dataValue;
     }
 
-    buildMesh(atlas, neighborChunks) {
+    buildMesh(atlas, neighborChunks, planetParams = null) {
         // Create an optimized local getter to avoid Hash Map lookups across chunk boundaries
         const getBlockOptimized = (wx, wy, wz) => {
             if (wy < 0 || wy >= CHUNK_HEIGHT) return BLOCKS.AIR;
@@ -390,6 +390,74 @@ export class Chunk {
         const wxBase = this.cx * CHUNK_SIZE;
         const wzBase = this.cz * CHUNK_SIZE;
 
+        // Biome colormap 3x3 smooth blending
+        const defaultGrass = [0.475, 0.753, 0.353];
+        const defaultFoliage = [0.349, 0.682, 0.188];
+        const blendedGrass = new Float32Array(CHUNK_SIZE * CHUNK_SIZE * 3);
+        const blendedFoliage = new Float32Array(CHUNK_SIZE * CHUNK_SIZE * 3);
+
+        if (planetParams && planetParams.noise2D) {
+            const sampleWidth = CHUNK_SIZE + 2; // 18x18
+            const sampleGrass = new Float32Array(sampleWidth * sampleWidth * 3);
+            const sampleFoliage = new Float32Array(sampleWidth * sampleWidth * 3);
+
+            for (let sz = -1; sz <= CHUNK_SIZE; sz++) {
+                const rowOffset = (sz + 1) * sampleWidth;
+                for (let sx = -1; sx <= CHUNK_SIZE; sx++) {
+                    const sampleWx = wxBase + sx;
+                    const sampleWz = wzBase + sz;
+                    const { biome } = getBiomeParams(sampleWx, sampleWz, planetParams);
+                    const gCol = (biome && biome.grassColor) ? biome.grassColor : defaultGrass;
+                    const fCol = (biome && biome.foliageColor) ? biome.foliageColor : defaultFoliage;
+                    const sIdx = (rowOffset + (sx + 1)) * 3;
+                    sampleGrass[sIdx] = gCol[0];
+                    sampleGrass[sIdx + 1] = gCol[1];
+                    sampleGrass[sIdx + 2] = gCol[2];
+                    sampleFoliage[sIdx] = fCol[0];
+                    sampleFoliage[sIdx + 1] = fCol[1];
+                    sampleFoliage[sIdx + 2] = fCol[2];
+                }
+            }
+
+            const inv9 = 1.0 / 9.0;
+            for (let z = 0; z < CHUNK_SIZE; z++) {
+                for (let x = 0; x < CHUNK_SIZE; x++) {
+                    let gR = 0, gG = 0, gB = 0;
+                    let fR = 0, fG = 0, fB = 0;
+                    for (let dz = -1; dz <= 1; dz++) {
+                        const row = (z + 1 + dz) * sampleWidth;
+                        for (let dx = -1; dx <= 1; dx++) {
+                            const col = x + 1 + dx;
+                            const sIdx = (row + col) * 3;
+                            gR += sampleGrass[sIdx];
+                            gG += sampleGrass[sIdx + 1];
+                            gB += sampleGrass[sIdx + 2];
+                            fR += sampleFoliage[sIdx];
+                            fG += sampleFoliage[sIdx + 1];
+                            fB += sampleFoliage[sIdx + 2];
+                        }
+                    }
+                    const colIdx = (z * CHUNK_SIZE + x) * 3;
+                    blendedGrass[colIdx] = gR * inv9;
+                    blendedGrass[colIdx + 1] = gG * inv9;
+                    blendedGrass[colIdx + 2] = gB * inv9;
+                    blendedFoliage[colIdx] = fR * inv9;
+                    blendedFoliage[colIdx + 1] = fG * inv9;
+                    blendedFoliage[colIdx + 2] = fB * inv9;
+                }
+            }
+        } else {
+            for (let i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++) {
+                const idx = i * 3;
+                blendedGrass[idx] = defaultGrass[0];
+                blendedGrass[idx + 1] = defaultGrass[1];
+                blendedGrass[idx + 2] = defaultGrass[2];
+                blendedFoliage[idx] = defaultFoliage[0];
+                blendedFoliage[idx + 1] = defaultFoliage[1];
+                blendedFoliage[idx + 2] = defaultFoliage[2];
+            }
+        }
+
         for (let y = 0; y < CHUNK_HEIGHT; y++) {
             for (let z = 0; z < CHUNK_SIZE; z++) {
                 for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -400,8 +468,20 @@ export class Chunk {
                     const wz = wzBase + z;
                     const props = getBlockProperties(blockType);
 
+                    const colIdx = (z * CHUNK_SIZE + x) * 3;
+                    const gR = blendedGrass[colIdx], gG = blendedGrass[colIdx + 1], gB = blendedGrass[colIdx + 2];
+                    const fR = blendedFoliage[colIdx], fG = blendedFoliage[colIdx + 1], fB = blendedFoliage[colIdx + 2];
+
                     if (props.isCross) {
                         const uvInfo = atlas.getUV(blockType, 'side');
+
+                        let cR = 1, cG = 1, cB = 1;
+                        if (props.isGrassTinted) {
+                            cR = gR; cG = gG; cB = gB;
+                        } else if (props.isFoliageTinted) {
+                            cR = fR; cG = fG; cB = fB;
+                        }
+
                         // Diagonal 1
                         _positions[posCount++] = x; _positions[posCount++] = y; _positions[posCount++] = z;
                         _positions[posCount++] = x + 1; _positions[posCount++] = y; _positions[posCount++] = z + 1;
@@ -418,10 +498,10 @@ export class Chunk {
                         _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
                         _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
 
-                        _colors[colorCount++] = 1; _colors[colorCount++] = 1; _colors[colorCount++] = 1;
-                        _colors[colorCount++] = 1; _colors[colorCount++] = 1; _colors[colorCount++] = 1;
-                        _colors[colorCount++] = 1; _colors[colorCount++] = 1; _colors[colorCount++] = 1;
-                        _colors[colorCount++] = 1; _colors[colorCount++] = 1; _colors[colorCount++] = 1;
+                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
+                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
+                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
+                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
 
                         // Diagonal 2
                         _positions[posCount++] = x; _positions[posCount++] = y; _positions[posCount++] = z + 1;
@@ -439,10 +519,10 @@ export class Chunk {
                         _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
                         _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
 
-                        _colors[colorCount++] = 1; _colors[colorCount++] = 1; _colors[colorCount++] = 1;
-                        _colors[colorCount++] = 1; _colors[colorCount++] = 1; _colors[colorCount++] = 1;
-                        _colors[colorCount++] = 1; _colors[colorCount++] = 1; _colors[colorCount++] = 1;
-                        _colors[colorCount++] = 1; _colors[colorCount++] = 1; _colors[colorCount++] = 1;
+                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
+                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
+                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
+                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
 
                         if (blockType === BLOCKS.TORCH) {
                             _glowCrossIndices[glowCrossIndexCount++] = vertexCount; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 1; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 2;
@@ -547,7 +627,44 @@ export class Chunk {
 
                         // Render face if visible
                         if (shouldRenderFace) {
-                            const uvInfo = atlas.getUV(currentBlockType, face.name);
+                            let texName = face.name;
+                            let rotateUV = false;
+                            const curData = this.data[(y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x];
+
+                            if (currentProps.isLog) {
+                                // 0 = Y axis (vertical), 1 = X axis (east-west), 2 = Z axis (north-south)
+                                const logAxis = curData === 1 ? 'x' : (curData === 2 ? 'z' : 'y');
+                                if (face.axis === logAxis) {
+                                    texName = 'top'; // Log rings end cap
+                                } else {
+                                    texName = 'side'; // Bark
+                                    if (logAxis === 'x') {
+                                        rotateUV = true;
+                                    } else if (logAxis === 'z') {
+                                        if (face.axis === 'x') {
+                                            rotateUV = true;
+                                        }
+                                    }
+                                }
+                            } else if (currentProps.hasFacing) {
+                                // 0: South (+Z), 1: West (-X), 2: North (-Z), 3: East (+X)
+                                const facingDirs = [
+                                    { axis: 'z', dirSign: 1 },
+                                    { axis: 'x', dirSign: -1 },
+                                    { axis: 'z', dirSign: -1 },
+                                    { axis: 'x', dirSign: 1 }
+                                ];
+                                const targetFacing = facingDirs[curData % 4];
+                                if (face.axis === targetFacing.axis && face.dirSign === targetFacing.dirSign) {
+                                    texName = 'front';
+                                } else if (face.name === 'top' || face.name === 'bottom') {
+                                    texName = face.name;
+                                } else {
+                                    texName = 'side';
+                                }
+                            }
+
+                            const uvInfo = atlas.getUV(currentBlockType, texName);
 
                             // 4 vertices per face
                             for (let i = 0; i < 4; i++) {
@@ -576,7 +693,12 @@ export class Chunk {
                             }
 
                             // UVs mapping
-                            if (isLiquidStep) {
+                            if (rotateUV) {
+                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
+                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
+                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                            } else if (isLiquidStep) {
                                 const v0 = uvInfo.v + uvInfo.vSize * (1 - liquidTopY);
                                 const v1 = uvInfo.v + uvInfo.vSize * (1 - nTop);
                                 _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = v1;
@@ -611,6 +733,14 @@ export class Chunk {
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.r * waterFade;
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.g * waterFade;
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.b * waterFade;
+                                } else if (currentProps.isFoliageTinted) {
+                                    _colors[colorCount++] = c * fR;
+                                    _colors[colorCount++] = c * fG;
+                                    _colors[colorCount++] = c * fB;
+                                } else if (currentProps.isGrassTinted && face.name === 'top') {
+                                    _colors[colorCount++] = c * gR;
+                                    _colors[colorCount++] = c * gG;
+                                    _colors[colorCount++] = c * gB;
                                 } else {
                                     _colors[colorCount++] = c;
                                     _colors[colorCount++] = c;
@@ -794,6 +924,7 @@ export class World {
         this.onDoorRemoved = null;
         this.onTorchPlaced = null;
         this.onTorchRemoved = null;
+        this.planetParams = null;
 
         // Ambient Occlusion settings
         this.enableAO = true;
@@ -1097,7 +1228,7 @@ export class World {
         this._updateDepth--;
     }
 
-    setBlock(wx, wy, wz, type) {
+    setBlock(wx, wy, wz, type, dataValue = 0) {
         wx = Math.floor(wx); wy = Math.floor(wy); wz = Math.floor(wz);
         if (wy < 0 || wy >= CHUNK_HEIGHT) return;
 
@@ -1116,18 +1247,18 @@ export class World {
         const idx = (wy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
         let mod = mods.get(idx);
         if (!mod) {
-            const chunk = this.getChunkAt(wx, wz);
-            const data = chunk ? chunk.getData(lx, wy, lz) : 0;
-            mod = { block: type, data: data };
+            mod = { block: type, data: dataValue };
             mods.set(idx, mod);
         } else {
             mod.block = type;
+            mod.data = dataValue;
         }
 
         const chunk = this.getChunkAt(wx, wz);
         if (chunk) {
             const oldType = chunk.getBlock(lx, wy, lz);
             chunk.setBlock(lx, wy, lz, type);
+            chunk.setData(lx, wy, lz, dataValue);
             
             if (this.onBlockDestroyed) {
                 this.onBlockDestroyed(wx, wy, wz, oldType, type);
@@ -1345,7 +1476,11 @@ export class World {
             // Don't generate if it was removed
             if (!this.chunks.has(this.getChunkKey(chunk.cx, chunk.cz))) continue;
 
-            chunk.blocks = terrainGenerator(chunk.cx, chunk.cz);
+            const genResult = terrainGenerator(chunk.cx, chunk.cz);
+            chunk.blocks = genResult;
+            if (genResult && genResult.data) {
+                chunk.data.set(genResult.data);
+            }
             
             // Apply persistent modifications
             const chunkKey = this.getChunkKey(chunk.cx, chunk.cz);
@@ -1353,7 +1488,7 @@ export class World {
             if (mods) {
                 for (const [idx, mod] of mods.entries()) {
                     chunk.blocks[idx] = mod.block;
-                    chunk.data[idx] = mod.data;
+                    chunk.data[idx] = mod.data !== undefined ? mod.data : 0;
                 }
             }
 
@@ -1460,7 +1595,7 @@ export class World {
                         neighborChunks[dx + 1][dz + 1] = this.chunks.get(key) || null;
                     }
                 }
-                const mesh = chunk.buildMesh(this.textureAtlas, neighborChunks);
+                const mesh = chunk.buildMesh(this.textureAtlas, neighborChunks, this.planetParams);
                 if (mesh && !mesh.parent) {
                     this.scene.add(mesh);
                 }

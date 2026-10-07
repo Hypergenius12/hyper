@@ -1588,12 +1588,34 @@ class Game {
                             }
                         }
                     } else {
-                        this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype);
+                        let blockData = 0;
+                        const placeProps = getBlockProperties(slot.item.subtype);
+                        if (placeProps.isLog) {
+                            if (Math.abs(hit.normal.x) > 0.5) {
+                                blockData = 1; // X axis
+                            } else if (Math.abs(hit.normal.z) > 0.5) {
+                                blockData = 2; // Z axis
+                            } else {
+                                blockData = 0; // Y axis
+                            }
+                        } else if (placeProps.hasFacing) {
+                            const forward = new THREE.Vector3();
+                            this.engine.camera.getWorldDirection(forward);
+                            if (Math.abs(forward.x) > Math.abs(forward.z)) {
+                                blockData = forward.x > 0 ? 1 : 3; // looking East -> faces West; looking West -> faces East
+                            } else {
+                                blockData = forward.z > 0 ? 2 : 0; // looking South -> faces North; looking North -> faces South
+                            }
+                        }
+
+                        this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype, blockData);
                         if (slot.item.subtype === BLOCKS.TORCH || slot.item.subtype === BLOCKS.GLOWSTONE) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
                         this.audio.playPlace();
-                        slot.count--;
-                        if (slot.count <= 0) {
-                            this.player.inventory.slots[this.player.selectedSlot] = null;
+                        if (!this.input.creativeMode) {
+                            slot.count--;
+                            if (slot.count <= 0) {
+                                this.player.inventory.slots[this.player.selectedSlot] = null;
+                            }
                         }
                     }
                 }
@@ -2770,7 +2792,9 @@ class Game {
             while (this.world.chunksToGenerate.length > 0) {
                 const chunk = this.world.chunksToGenerate.shift();
                 if (!this.world.chunks.has(this.world.getChunkKey(chunk.cx, chunk.cz))) continue;
-                chunk.blocks = chunkGenFn(chunk.cx, chunk.cz, this.planetParams);
+                const genRes = chunkGenFn(chunk.cx, chunk.cz, this.planetParams);
+                chunk.blocks = genRes;
+                if (genRes && genRes.data) chunk.data.set(genRes.data);
                 chunk.dirty = true;
                 this.world.chunksToBuild.push(chunk);
             }
@@ -2789,7 +2813,7 @@ class Game {
                             neighborChunks[dx + 1][dz + 1] = this.world.chunks.get(key) || null;
                         }
                     }
-                    const mesh = chunk.buildMesh(this.world.textureAtlas, neighborChunks);
+                    const mesh = chunk.buildMesh(this.world.textureAtlas, neighborChunks, this.world.planetParams);
                     if (mesh && !mesh.parent) {
                         this.world.scene.add(mesh);
                     }
