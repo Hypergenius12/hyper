@@ -199,11 +199,17 @@ export const BLOCKS = {
     EMERALD_BLOCK: 150,
     LAPIS_BLOCK: 151,
     REDSTONE_BLOCK: 152,
-    COAL_BLOCK: 153
+    COAL_BLOCK: 153,
+    RED_MUSHROOM: 228,
+    BROWN_MUSHROOM: 229,
+    BROWN_MUSHROOM_BLOCK: 230
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.RED_MUSHROOM]:          { name: 'Red Mushroom',          health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.BROWN_MUSHROOM]:        { name: 'Brown Mushroom',        health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.BROWN_MUSHROOM_BLOCK]:  { name: 'Brown Mushroom Block',  health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.FLETCHING_TABLE]:   { name: 'Fletching Table',   health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.SMOKER]:            { name: 'Smoker',            health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.STONECUTTER]:       { name: 'Stonecutter',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
@@ -886,6 +892,11 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addNoise(ctx, rng, 15);
             addPixels(ctx, rng, 'rgba(255,255,255,0.7)', 4);
             break;
+        case BLOCKS.BROWN_MUSHROOM_BLOCK:
+            fillBase(ctx, 138, 92, 56);
+            addNoise(ctx, rng, 15);
+            addPixels(ctx, rng, 'rgba(110,70,40,0.5)', 6);
+            break;
         case BLOCKS.ALIEN_STONE:
             fillBase(ctx, 50, 70, 80);
             addNoise(ctx, rng, 15);
@@ -1255,6 +1266,23 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             if (blockType === BLOCKS.ORANGE_FLOWER) ctx.fillStyle = '#cc5500';
             else ctx.fillStyle = '#ddaa00'; // center
             ctx.fillRect(7, 6, 2, 2);
+            break;
+        case BLOCKS.RED_MUSHROOM:
+        case BLOCKS.BROWN_MUSHROOM:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            // Stem
+            ctx.fillStyle = '#ded9ce';
+            ctx.fillRect(7, 9, 2, 7);
+            // Cap
+            ctx.fillStyle = blockType === BLOCKS.RED_MUSHROOM ? '#d42c2c' : '#8a5c38';
+            ctx.fillRect(4, 5, 8, 4);
+            ctx.fillRect(5, 4, 6, 1);
+            if (blockType === BLOCKS.RED_MUSHROOM) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(5, 6, 1, 1);
+                ctx.fillRect(9, 6, 1, 1);
+                ctx.fillRect(7, 5, 1, 1);
+            }
             break;
         case BLOCKS.FERN:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
@@ -2827,6 +2855,9 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.DUNGEON_DOOR_TOP]: 'oak_door_top',
     [BLOCKS.MUSHROOM_STEM]: 'mushroom_stem',
     [BLOCKS.MUSHROOM_CAP]: 'red_mushroom_block',
+    [BLOCKS.RED_MUSHROOM]: 'red_mushroom',
+    [BLOCKS.BROWN_MUSHROOM]: 'brown_mushroom',
+    [BLOCKS.BROWN_MUSHROOM_BLOCK]: 'brown_mushroom_block',
     [BLOCKS.ALIEN_STONE]: 'end_stone',
     [BLOCKS.ALIEN_GRASS]: { top: 'mycelium_top', side: 'mycelium_side', bottom: 'end_stone' },
     [BLOCKS.MYCELIUM]: { top: 'mycelium_top', side: 'mycelium_side', bottom: 'dirt' },
@@ -3188,6 +3219,8 @@ const LOCAL_ASSET_MAP = {
     "redstone_ore": "assets/mc/block/redstone_ore.png",
     "red_mushroom": "assets/mc/block/red_mushroom.png",
     "red_mushroom_block": "assets/mc/block/red_mushroom_block.png",
+    "brown_mushroom": "assets/mc/block/brown_mushroom.png",
+    "brown_mushroom_block": "assets/mc/block/brown_mushroom_block.png",
     "red_sand": "assets/mc/block/red_sand.png",
     "sand": "assets/mc/block/sand.png",
     "sandstone": "assets/mc/block/sandstone.png",

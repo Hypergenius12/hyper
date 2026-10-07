@@ -630,6 +630,76 @@ function generateTallFern(blocks, x, y, z) {
     }
 }
 
+function isFloraOrAir(b) {
+    return b === BLOCKS.AIR || b === BLOCKS.TALL_GRASS || b === BLOCKS.FERN || 
+           b === BLOCKS.TALL_FERN || b === BLOCKS.TALL_FERN_TOP || 
+           b === BLOCKS.RED_FLOWER || b === BLOCKS.YELLOW_FLOWER || 
+           b === BLOCKS.BLUE_FLOWER || b === BLOCKS.WHITE_FLOWER || 
+           b === BLOCKS.PURPLE_FLOWER || b === BLOCKS.DEAD_BUSH || 
+           b === BLOCKS.PINK_PETALS || b === BLOCKS.RED_MUSHROOM || 
+           b === BLOCKS.BROWN_MUSHROOM;
+}
+
+function generateFallenLog(blocks, startX, startY, startZ, woodType, rng) {
+    const length = 3 + Math.floor(rng() * 3); // 3 to 5 blocks
+    const isXAxis = rng() < 0.5;
+    const dx = isXAxis ? 1 : 0;
+    const dz = isXAxis ? 0 : 1;
+
+    for (let i = 0; i < length; i++) {
+        const lx = startX + dx * i;
+        const lz = startZ + dz * i;
+        if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE) break;
+
+        let groundY = Math.min(CHUNK_HEIGHT - 3, startY + 2);
+        while (groundY > 1 && isFloraOrAir(blocks[(groundY * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx])) {
+            groundY--;
+        }
+        const bAt = blocks[(groundY * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx];
+        if (bAt !== BLOCKS.GRASS && bAt !== BLOCKS.DIRT && bAt !== BLOCKS.PODZOL && bAt !== BLOCKS.MYCELIUM) continue;
+
+        const logY = groundY + 1;
+        if (logY >= CHUNK_HEIGHT - 2) continue;
+
+        const currentAtLog = blocks[(logY * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx];
+        if (currentAtLog !== BLOCKS.AIR && !isFloraOrAir(currentAtLog)) {
+            continue;
+        }
+
+        safeSetBlock(blocks, lx, logY, lz, woodType, false);
+
+        // Chance of red or brown mushroom growing on top of the fallen log
+        const shroomRoll = rng();
+        if (shroomRoll < 0.5) {
+            const shroomType = rng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
+            safeSetBlock(blocks, lx, logY + 1, lz, shroomType, false);
+        }
+    }
+}
+
+function generateMushroomClump(blocks, centerX, startY, centerZ, rng) {
+    const count = 2 + Math.floor(rng() * 3); // 2 to 4 mushrooms in a sparse clump
+    const baseType = rng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
+
+    for (let i = 0; i < count; i++) {
+        const ox = Math.floor((rng() - 0.5) * 4);
+        const oz = Math.floor((rng() - 0.5) * 4);
+        const mx = centerX + ox;
+        const mz = centerZ + oz;
+        if (mx < 0 || mx >= CHUNK_SIZE || mz < 0 || mz >= CHUNK_SIZE) continue;
+
+        let groundY = Math.min(CHUNK_HEIGHT - 3, startY + 2);
+        while (groundY > 1 && isFloraOrAir(blocks[(groundY * CHUNK_SIZE * CHUNK_SIZE) + (mz * CHUNK_SIZE) + mx])) {
+            groundY--;
+        }
+        const groundB = blocks[(groundY * CHUNK_SIZE * CHUNK_SIZE) + (mz * CHUNK_SIZE) + mx];
+        if (groundB === BLOCKS.GRASS || groundB === BLOCKS.DIRT || groundB === BLOCKS.PODZOL || groundB === BLOCKS.MYCELIUM || groundB === BLOCKS.DARK_OAK_WOOD || groundB === BLOCKS.REDWOOD_LOG || groundB === BLOCKS.WOOD) {
+            const shroomType = rng() < 0.3 ? (baseType === BLOCKS.BROWN_MUSHROOM ? BLOCKS.RED_MUSHROOM : BLOCKS.BROWN_MUSHROOM) : baseType;
+            safeSetBlock(blocks, mx, groundY + 1, mz, shroomType, false);
+        }
+    }
+}
+
 function generateOreVein(blocks, wx, y, wz, oreType, minSize, maxSize, rng) {
     const size = minSize + Math.floor(rng() * (maxSize - minSize + 1));
     let currentX = wx;
@@ -980,10 +1050,18 @@ export function generateChunkTerrain(cx, cz, params) {
                     continue;
                 }
 
-                // Redwood Forest Trees
-                if (biome.isRedwood && r < 0.025) {
-                    generateRedwoodTree(blocks, tx, surfaceY + 1, tz, floraRng);
-                    continue;
+                // Redwood Forest Trees & Fallen Logs
+                if (biome.isRedwood) {
+                    if (r < 0.025) {
+                        generateRedwoodTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                        continue;
+                    } else if (r < 0.031) {
+                        generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.REDWOOD_LOG, floraRng);
+                        continue;
+                    } else if (r < 0.040) {
+                        generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
+                        continue;
+                    }
                 }
 
                 // Mystic Grove Trees
@@ -992,7 +1070,24 @@ export function generateChunkTerrain(cx, cz, params) {
                     continue;
                 }
 
-                if (biome.hasTrees && r < (biome.isDark ? 0.06 : 0.02)) {
+                // Dark Forest Trees, Giant Mushrooms, Fallen Logs & Mushroom Clumps
+                if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
+                    if (r < 0.052) {
+                        generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                        continue;
+                    } else if (r < 0.056) {
+                        generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
+                        continue;
+                    } else if (r < 0.063) {
+                        generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.DARK_OAK_WOOD, floraRng);
+                        continue;
+                    } else if (r < 0.075) {
+                        generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
+                        continue;
+                    }
+                }
+
+                if (biome.hasTrees && r < 0.02) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                 } else if (biome.hasDeadTrees && r < 0.005) {
                     generateDeadTree(blocks, tx, surfaceY + 1, tz, floraRng);
@@ -1071,17 +1166,19 @@ export function generateChunkTerrain(cx, cz, params) {
                             } else if (swRoll < 0.85) {
                                 safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.BLUE_FLOWER, true);
                             } else {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
+                                const swShroom = floraRng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, swShroom, true);
                             }
                         }
                     } else if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
-                        // Dark Forest: tall grass, mushrooms, red flowers — strictly zero ferns
+                        // Dark Forest: tall grass, sparse red & brown mushrooms, red flowers — strictly zero ferns
                         if (fr < 0.25) {
                             const dfRoll = floraRng();
                             if (dfRoll < 0.65) {
                                 safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                             } else if (dfRoll < 0.85) {
-                                safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.GLOW_SHROOM, true);
+                                const shroom = floraRng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
+                                safeSetBlock(blocks, tx, surfaceY + 1, tz, shroom, true);
                             } else {
                                 safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.RED_FLOWER, true);
                             }
@@ -1359,12 +1456,33 @@ function generateTree(blocks, x, y, z, biome, rng) {
 }
 
 function generateMushroom(blocks, x, y, z, rng) {
-    const height = 3 + Math.floor((rng ? rng() : Math.random()) * 3);
+    const rFunc = rng || Math.random;
+    const isBrown = rFunc() < 0.5;
+    const height = 4 + Math.floor(rFunc() * 4);
     for (let i = 0; i < height; i++) safeSetBlock(blocks, x, y + i, z, BLOCKS.MUSHROOM_STEM);
     
-    for (let lx = x - 1; lx <= x + 1; lx++) {
-        for (let lz = z - 1; lz <= z + 1; lz++) {
-            safeSetBlock(blocks, lx, y + height, lz, BLOCKS.MUSHROOM_CAP);
+    const capBlock = isBrown ? BLOCKS.BROWN_MUSHROOM_BLOCK : BLOCKS.MUSHROOM_CAP;
+    if (isBrown) {
+        // Minecraft-style flat brown mushroom cap (5x5 with clipped corners)
+        for (let lx = x - 2; lx <= x + 2; lx++) {
+            for (let lz = z - 2; lz <= z + 2; lz++) {
+                if (Math.abs(lx - x) === 2 && Math.abs(lz - z) === 2) continue; // Clipped corners
+                safeSetBlock(blocks, lx, y + height, lz, capBlock);
+            }
+        }
+    } else {
+        // Minecraft-style curved red mushroom cap (3x3 top with 5x5 drooping skirt)
+        for (let lx = x - 1; lx <= x + 1; lx++) {
+            for (let lz = z - 1; lz <= z + 1; lz++) {
+                safeSetBlock(blocks, lx, y + height, lz, capBlock);
+            }
+        }
+        for (let lx = x - 2; lx <= x + 2; lx++) {
+            for (let lz = z - 2; lz <= z + 2; lz++) {
+                if (Math.abs(lx - x) === 2 && Math.abs(lz - z) === 2) continue; // Corners
+                if (Math.abs(lx - x) < 2 && Math.abs(lz - z) < 2) continue; // Skip inner under top
+                safeSetBlock(blocks, lx, y + height - 1, lz, capBlock);
+            }
         }
     }
 }
