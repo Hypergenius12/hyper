@@ -216,7 +216,7 @@ const BLOCK_PROPS = {
     [BLOCKS.BROWN_MUSHROOM]:        { name: 'Brown Mushroom',        health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.BROWN_MUSHROOM_BLOCK]:  { name: 'Brown Mushroom Block',  health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.MANGROVE_LOG]:          { name: 'Mangrove Log',          health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
-    [BLOCKS.MANGROVE_LEAVES]:       { name: 'Mangrove Leaves',       health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true, isFoliageTinted: true },
+    [BLOCKS.MANGROVE_LEAVES]:       { name: 'Mangrove Leaves',       health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.MANGROVE_ROOTS]:        { name: 'Mangrove Roots',        health: 2, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.MUDDY_MANGROVE_ROOTS]:  { name: 'Muddy Mangrove Roots',  health: 3, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.MANGROVE_PLANKS]:       { name: 'Mangrove Planks',       health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
@@ -228,13 +228,13 @@ const BLOCK_PROPS = {
     [BLOCKS.REDSTONE_BLOCK]:    { name: 'Redstone Block',    health: 6, transparent: false, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.COAL_BLOCK]:        { name: 'Coal Block',        health: 6, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.AIR]:           { name: 'Air',           health: 0, transparent: true,  emissive: 0, solid: false, drops: null },
-    [BLOCKS.GRASS]:         { name: 'Grass',         health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT, isGrassTinted: true },
+    [BLOCKS.GRASS]:         { name: 'Grass',         health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
     [BLOCKS.DIRT]:          { name: 'Dirt',           health: 3, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.STONE]:         { name: 'Stone',          health: 6, transparent: false, emissive: 0, solid: true, drops: BLOCKS.COBBLESTONE },
     [BLOCKS.SAND]:          { name: 'Sand',           health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.WATER]:         { name: 'Water',          health: 0, transparent: true,  emissive: 0, solid: false, isLiquid: true, drops: null },
     [BLOCKS.WOOD]:          { name: 'Wood',           health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
-    [BLOCKS.LEAVES]:        { name: 'Leaves',         health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true, isFoliageTinted: true },
+    [BLOCKS.LEAVES]:        { name: 'Leaves',         health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.PLANKS]:        { name: 'Planks',         health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.COBBLESTONE]:   { name: 'Cobblestone',    health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.IRON_ORE]:      { name: 'Iron Ore',       health: 8, transparent: false, emissive: 0, solid: true, drops: null },
@@ -266,23 +266,23 @@ const BLOCK_PROPS = {
     [BLOCKS.TERRACOTTA]:    { name: 'Terracotta',     health: 8, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DEAD_BUSH]:     { name: 'Dead Bush',      health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.ALIEN_TALL_GRASS]:{ name: 'Alien Spores', health: 1, transparent: true,  emissive: 0.3, solid: false, isCross: true, drops: null },
-    [BLOCKS.SAVANNA_GRASS]: { name: 'Savanna Grass',  health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT, isGrassTinted: true },
+    [BLOCKS.SAVANNA_GRASS]: { name: 'Savanna Grass',  health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
     [BLOCKS.ACACIA_WOOD]:   { name: 'Acacia Wood',    health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.ACACIA_LEAVES]: { name: 'Acacia Leaves',  health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.MUD]:           { name: 'Mud',            health: 2, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.SWAMP_GRASS]:   { name: 'Swamp Grass',    health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT, isGrassTinted: true },
+    [BLOCKS.SWAMP_GRASS]:   { name: 'Swamp Grass',    health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
     [BLOCKS.SWAMP_WATER]:   { name: 'Swamp Water',    health: 0, transparent: true,  emissive: 0, solid: false, isLiquid: true, drops: null },
     [BLOCKS.ALIEN_SPORE_STEM]:{name: 'Spore Stem',    health: 4, transparent: false, emissive: 0, solid: true, drops: null, isLog: true },
     [BLOCKS.ALIEN_SPORE_BLOCK]:{name:'Spore Block',   health: 2, transparent: false, emissive: 0.1, solid: true, drops: null },
-    [BLOCKS.VINES]:         { name: 'Vines',          health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true, isFoliageTinted: true },
-    [BLOCKS.TALL_GRASS]:    { name: 'Tall Grass',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, isGrassTinted: true },
+    [BLOCKS.VINES]:         { name: 'Vines',          health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
+    [BLOCKS.TALL_GRASS]:    { name: 'Tall Grass',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.RED_FLOWER]:    { name: 'Red Flower',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.CACTUS]:        { name: 'Cactus',         health: 2, transparent: true,  emissive: 0, solid: true, drops: BLOCKS.CACTUS },
     [BLOCKS.BLUE_FLOWER]:   { name: 'Blue Flower',    health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.YELLOW_FLOWER]: { name: 'Yellow Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
-    [BLOCKS.FERN]:          { name: 'Fern',           health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true, isGrassTinted: true },
-    [BLOCKS.TALL_FERN]:     { name: 'Large Fern',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true, isGrassTinted: true },
-    [BLOCKS.TALL_FERN_TOP]: { name: 'Large Fern Top', health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true, isGrassTinted: true },
+    [BLOCKS.FERN]:          { name: 'Fern',           health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true },
+    [BLOCKS.TALL_FERN]:     { name: 'Large Fern',     health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true },
+    [BLOCKS.TALL_FERN_TOP]: { name: 'Large Fern Top', health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: BLOCKS.AIR, flammable: true },
     [BLOCKS.WHITE_FLOWER]:  { name: 'White Flower',   health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.PURPLE_FLOWER]: { name: 'Purple Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.ORANGE_FLOWER]: { name: 'Orange Flower',  health: 1, transparent: true,  emissive: 0, solid: false, isCross: true, drops: null },
@@ -343,7 +343,7 @@ const BLOCK_PROPS = {
     [BLOCKS.SEASHELL_1]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.SEASHELL_2]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.SEASHELL_3]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
-    [BLOCKS.LILY_PAD]:      { name: 'Lily Pad',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null, isGrassTinted: true },
+    [BLOCKS.LILY_PAD]:      { name: 'Lily Pad',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.ALGAE]:         { name: 'Algae',          health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.PINE_WOOD]:     { name: 'Pine Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.PINE_LEAVES]:   { name: 'Pine Leaves',    health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
@@ -361,7 +361,7 @@ const BLOCK_PROPS = {
     [BLOCKS.AETHER_GRASS]:  { name: 'Aether Grass',   health: 4, transparent: false, emissive: 0.1, solid: true, drops: 115 },
     [BLOCKS.AETHER_WOOD]:   { name: 'Aether Wood',    health: 7, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.DARK_OAK_WOOD]: { name: 'Dark Oak Wood',  health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
-    [BLOCKS.DARK_OAK_LEAVES]: { name: 'Dark Oak Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true, isFoliageTinted: true },
+    [BLOCKS.DARK_OAK_LEAVES]: { name: 'Dark Oak Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.DARK_OAK_PLANKS]: { name: 'Dark Oak Planks', health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.CRYING_OBSIDIAN]: { name: 'Crying Obsidian', health: 15, transparent: false, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.MYCELIUM]:      { name: 'Mycelium',       health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
@@ -3540,8 +3540,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                         
                         // Dynamic colormap tinted textures are kept grayscale in atlas so vertex colors blend dynamically
                         const isWater = (texName === 'water_flow' || texName === 'water_still');
-                        const isDynamicTint = (texName === 'grass_block_top' || texName === 'oak_leaves' || texName === 'dark_oak_leaves' || texName === 'mangrove_leaves' || texName === 'vine' || texName.includes('fern') || texName.includes('tall_grass') || texName === 'lily_pad');
-                        const requiresFixedTint = !isDynamicTint && (texName.includes('leaves') || isWater);
+                        const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || texName === 'vine' || texName.includes('fern') || texName.includes('tall_grass') || texName === 'lily_pad' || isWater);
                         
                         // Helper: force all pixels in atlas region to fully opaque
                         const forceOpaque = (ax, ay) => {
@@ -3551,30 +3550,41 @@ export async function createTextureAtlas(useMinecraft = true) {
                         };
 
                         let tintColor = null;
-                        if (isDynamicTint) {
-                            // Keep texture raw/grayscale in atlas so chunk mesh vertex colors can apply dynamic per-biome tinting and smooth biome blending
-                            ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
-                        } else if (requiresFixedTint) {
+                        if (requiresTint) {
                             // Draw the image first to a temporary canvas so we can tint it
                             const tCanvas = document.createElement('canvas');
                             tCanvas.width = TEX_SIZE; tCanvas.height = TEX_SIZE;
                             const tCtx = tCanvas.getContext('2d');
                             
-                            // Determine tint color
-                            let tint = '#8ee066'; // default
+                            // Determine authentic Minecraft tint color
+                            let tint = '#8ee066'; // Default lush Minecraft plains grass green
                             
                             if (isWater) {
                                 tint = (bt === BLOCKS.SWAMP_WATER) ? '#617B59' : '#3F76E4';
-                            } else {
+                            } else if (texName === 'grass_block_top') {
                                 if (bt === BLOCKS.SWAMP_GRASS) tint = '#6a7039';
                                 else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
                                 else if (bt === BLOCKS.HIGHLANDS_GRASS) tint = '#659c40';
                                 else if (bt === BLOCKS.AETHER_GRASS) tint = '#b3ffb3';
-                                else if (bt === BLOCKS.ACACIA_LEAVES) tint = '#aea42a';
+                                else tint = '#8ee066';
+                            } else if (texName === 'oak_leaves') {
+                                tint = '#59ae30';
+                            } else if (texName === 'dark_oak_leaves') {
+                                tint = '#40781e';
+                            } else if (texName === 'mangrove_leaves') {
+                                tint = '#6fa024';
+                            } else if (texName === 'vine') {
+                                tint = '#59ae30';
+                            } else if (texName.includes('fern') || texName.includes('tall_grass')) {
+                                tint = '#70c942';
+                            } else if (texName === 'lily_pad') {
+                                tint = '#208030';
+                            } else {
+                                if (bt === BLOCKS.ACACIA_LEAVES) tint = '#aea42a';
                                 else if (bt === BLOCKS.PINE_LEAVES) tint = '#4f855f';
                                 else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#659c40';
                                 else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff';
-                                else tint = '#6fc042';
+                                else tint = '#59ae30';
                             }
 
                             tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
@@ -3699,27 +3709,6 @@ export async function createTextureAtlas(useMinecraft = true) {
                 ctx.drawImage(canvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
             } else {
                 generateBlockTexture(ctx, blockType, faceKey, seededRandom(blockType * 1000 + 77));
-            }
-
-            // Tint inventory icon for dynamically tinted grass and foliage blocks
-            if (props.isGrassTinted && (faceKey === 'top' || props.isCross)) {
-                ctx.globalCompositeOperation = 'multiply';
-                ctx.fillStyle = '#8ee066';
-                ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-                ctx.globalCompositeOperation = 'destination-in';
-                if (entry && canvas) {
-                    ctx.drawImage(canvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
-                }
-                ctx.globalCompositeOperation = 'source-over';
-            } else if (props.isFoliageTinted) {
-                ctx.globalCompositeOperation = 'multiply';
-                ctx.fillStyle = '#59ae30';
-                ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-                ctx.globalCompositeOperation = 'destination-in';
-                if (entry && canvas) {
-                    ctx.drawImage(canvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
-                }
-                ctx.globalCompositeOperation = 'source-over';
             }
 
             return faceCvs;
@@ -6091,5 +6080,115 @@ export function generateWandShaftTexture() {
     ctx.putImageData(id, 0, 0);
 
     return canvas;
+}
+
+// ============================================================
+// Authentic Minecraft Mob Box UV Materials
+// Maps standard Minecraft entity skin box UVs onto Three.js BoxGeometry
+// Face order for BoxGeometry: [+X (right), -X (left), +Y (top), -Y (bottom), +Z (front), -Z (back)]
+// ============================================================
+const _mobBoxMaterialCache = {};
+
+export function getMobBoxMaterials(mobType, uvs, options = {}) {
+    // mobType: e.g. 'COW', 'PIG', 'SHEEP', 'CHICKEN'
+    // uvs: { u, v, w, h, d } standard MC box UV definition
+    // options: { skinKey, emissive, emissiveIntensity }
+    const key = `${mobType}_${uvs.u}_${uvs.v}_${uvs.w}_${uvs.h}_${uvs.d}_${options.skinKey || ''}`;
+    if (_mobBoxMaterialCache[key]) {
+        return _mobBoxMaterialCache[key];
+    }
+
+    const { u, v, w, h, d } = uvs;
+    const skinPath = options.skinKey || (MC_MOB_SKIN_CONFIG[mobType] ? MC_MOB_SKIN_CONFIG[mobType].path : null);
+
+    const makeFaceCanvas = (fw, fh) => {
+        const c = document.createElement('canvas');
+        c.width = fw; c.height = fh;
+        const cctx = c.getContext('2d', { willReadFrequently: true });
+        cctx.imageSmoothingEnabled = false;
+        return { c, ctx: cctx };
+    };
+
+    const right  = makeFaceCanvas(d, h);
+    const left   = makeFaceCanvas(d, h);
+    const top    = makeFaceCanvas(w, d);
+    const bottom = makeFaceCanvas(w, d);
+    const front  = makeFaceCanvas(w, h);
+    const back   = makeFaceCanvas(w, h);
+
+    const faces = [
+        { name: 'right',  canvas: right.c,  ctx: right.ctx,  sx: u,             sy: v + d, sw: d, sh: h },
+        { name: 'left',   canvas: left.c,   ctx: left.ctx,   sx: u + d + w,     sy: v + d, sw: d, sh: h },
+        { name: 'top',    canvas: top.c,    ctx: top.ctx,    sx: u + d,         sy: v,     sw: w, sh: d },
+        { name: 'bottom', canvas: bottom.c, ctx: bottom.ctx, sx: u + d + w,     sy: v,     sw: w, sh: d },
+        { name: 'front',  canvas: front.c,  ctx: front.ctx,  sx: u + d,         sy: v + d, sw: w, sh: h },
+        { name: 'back',   canvas: back.c,   ctx: back.ctx,   sx: u + d + w + d, sy: v + d, sw: w, sh: h }
+    ];
+
+    // Initialize faces with procedural fallback first
+    const procFront = generateMobTexture(mobType, 'head_front');
+    for (const f of faces) {
+        f.ctx.drawImage(procFront, 0, 0, 16, 16, 0, 0, f.canvas.width, f.canvas.height);
+    }
+
+    const textures = faces.map(f => {
+        const tex = new THREE.CanvasTexture(f.canvas);
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+    });
+
+    const applySkinImage = (img) => {
+        for (let i = 0; i < faces.length; i++) {
+            const f = faces[i];
+            f.ctx.clearRect(0, 0, f.canvas.width, f.canvas.height);
+            f.ctx.drawImage(img, f.sx, f.sy, f.sw, f.sh, 0, 0, f.canvas.width, f.canvas.height);
+            textures[i].needsUpdate = true;
+        }
+    };
+
+    if (skinPath) {
+        const cached = _mobSkinCache[skinPath];
+        if (cached instanceof HTMLImageElement && cached.complete && cached.naturalWidth > 0) {
+            applySkinImage(cached);
+        } else if (Array.isArray(cached)) {
+            cached.push(applySkinImage);
+        } else {
+            const pending = [applySkinImage];
+            _mobSkinCache[skinPath] = pending;
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                _mobSkinCache[skinPath] = img;
+                for (const cb of pending) cb(img);
+            };
+            img.onerror = () => {
+                const cdnImg = new Image();
+                cdnImg.crossOrigin = 'anonymous';
+                cdnImg.onload = () => {
+                    _mobSkinCache[skinPath] = cdnImg;
+                    for (const cb of pending) cb(cdnImg);
+                };
+                cdnImg.onerror = () => {
+                    _mobSkinCache[skinPath] = null;
+                };
+                cdnImg.src = _ENTITY_CDN_BASE + skinPath;
+            };
+            img.src = _ENTITY_LOCAL_BASE + skinPath;
+        }
+    }
+
+    const emissive = options.emissive ? new THREE.Color(options.emissive) : new THREE.Color(0x000000);
+    const emissiveIntensity = options.emissiveIntensity || 0;
+
+    const materials = textures.map(tex => new THREE.MeshLambertMaterial({
+        map: tex,
+        emissive,
+        emissiveIntensity
+    }));
+
+    _mobBoxMaterialCache[key] = materials;
+    return materials;
 }
 

@@ -406,74 +406,6 @@ export class Chunk {
         const wxBase = this.cx * CHUNK_SIZE;
         const wzBase = this.cz * CHUNK_SIZE;
 
-        // Biome colormap 3x3 smooth blending
-        const defaultGrass = [0.475, 0.753, 0.353];
-        const defaultFoliage = [0.349, 0.682, 0.188];
-        const blendedGrass = new Float32Array(CHUNK_SIZE * CHUNK_SIZE * 3);
-        const blendedFoliage = new Float32Array(CHUNK_SIZE * CHUNK_SIZE * 3);
-
-        if (planetParams && planetParams.noise2D) {
-            const sampleWidth = CHUNK_SIZE + 2; // 18x18
-            const sampleGrass = new Float32Array(sampleWidth * sampleWidth * 3);
-            const sampleFoliage = new Float32Array(sampleWidth * sampleWidth * 3);
-
-            for (let sz = -1; sz <= CHUNK_SIZE; sz++) {
-                const rowOffset = (sz + 1) * sampleWidth;
-                for (let sx = -1; sx <= CHUNK_SIZE; sx++) {
-                    const sampleWx = wxBase + sx;
-                    const sampleWz = wzBase + sz;
-                    const { biome } = getBiomeParams(sampleWx, sampleWz, planetParams);
-                    const gCol = (biome && biome.grassColor) ? biome.grassColor : defaultGrass;
-                    const fCol = (biome && biome.foliageColor) ? biome.foliageColor : defaultFoliage;
-                    const sIdx = (rowOffset + (sx + 1)) * 3;
-                    sampleGrass[sIdx] = gCol[0];
-                    sampleGrass[sIdx + 1] = gCol[1];
-                    sampleGrass[sIdx + 2] = gCol[2];
-                    sampleFoliage[sIdx] = fCol[0];
-                    sampleFoliage[sIdx + 1] = fCol[1];
-                    sampleFoliage[sIdx + 2] = fCol[2];
-                }
-            }
-
-            const inv9 = 1.0 / 9.0;
-            for (let z = 0; z < CHUNK_SIZE; z++) {
-                for (let x = 0; x < CHUNK_SIZE; x++) {
-                    let gR = 0, gG = 0, gB = 0;
-                    let fR = 0, fG = 0, fB = 0;
-                    for (let dz = -1; dz <= 1; dz++) {
-                        const row = (z + 1 + dz) * sampleWidth;
-                        for (let dx = -1; dx <= 1; dx++) {
-                            const col = x + 1 + dx;
-                            const sIdx = (row + col) * 3;
-                            gR += sampleGrass[sIdx];
-                            gG += sampleGrass[sIdx + 1];
-                            gB += sampleGrass[sIdx + 2];
-                            fR += sampleFoliage[sIdx];
-                            fG += sampleFoliage[sIdx + 1];
-                            fB += sampleFoliage[sIdx + 2];
-                        }
-                    }
-                    const colIdx = (z * CHUNK_SIZE + x) * 3;
-                    blendedGrass[colIdx] = gR * inv9;
-                    blendedGrass[colIdx + 1] = gG * inv9;
-                    blendedGrass[colIdx + 2] = gB * inv9;
-                    blendedFoliage[colIdx] = fR * inv9;
-                    blendedFoliage[colIdx + 1] = fG * inv9;
-                    blendedFoliage[colIdx + 2] = fB * inv9;
-                }
-            }
-        } else {
-            for (let i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++) {
-                const idx = i * 3;
-                blendedGrass[idx] = defaultGrass[0];
-                blendedGrass[idx + 1] = defaultGrass[1];
-                blendedGrass[idx + 2] = defaultGrass[2];
-                blendedFoliage[idx] = defaultFoliage[0];
-                blendedFoliage[idx + 1] = defaultFoliage[1];
-                blendedFoliage[idx + 2] = defaultFoliage[2];
-            }
-        }
-
         for (let y = 0; y < CHUNK_HEIGHT; y++) {
             for (let z = 0; z < CHUNK_SIZE; z++) {
                 for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -484,19 +416,9 @@ export class Chunk {
                     const wz = wzBase + z;
                     const props = getBlockProperties(blockType);
 
-                    const colIdx = (z * CHUNK_SIZE + x) * 3;
-                    const gR = blendedGrass[colIdx], gG = blendedGrass[colIdx + 1], gB = blendedGrass[colIdx + 2];
-                    const fR = blendedFoliage[colIdx], fG = blendedFoliage[colIdx + 1], fB = blendedFoliage[colIdx + 2];
-
                     if (props.isCross) {
                         const uvInfo = atlas.getUV(blockType, 'side');
-
-                        let cR = 1, cG = 1, cB = 1;
-                        if (props.isGrassTinted) {
-                            cR = gR; cG = gG; cB = gB;
-                        } else if (props.isFoliageTinted) {
-                            cR = fR; cG = fG; cB = fB;
-                        }
+                        const cR = 1, cG = 1, cB = 1;
 
                         // Diagonal 1
                         _positions[posCount++] = x; _positions[posCount++] = y; _positions[posCount++] = z;
@@ -765,14 +687,6 @@ export class Chunk {
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.r * waterFade;
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.g * waterFade;
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.b * waterFade;
-                                } else if (currentProps.isFoliageTinted) {
-                                    _colors[colorCount++] = c * fR;
-                                    _colors[colorCount++] = c * fG;
-                                    _colors[colorCount++] = c * fB;
-                                } else if (currentProps.isGrassTinted && face.name === 'top') {
-                                    _colors[colorCount++] = c * gR;
-                                    _colors[colorCount++] = c * gG;
-                                    _colors[colorCount++] = c * gB;
                                 } else {
                                     _colors[colorCount++] = c;
                                     _colors[colorCount++] = c;

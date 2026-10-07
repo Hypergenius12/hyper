@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials } from './textures.js?v=90';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials } from './textures.js?v=90';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -872,49 +872,58 @@ function createBodyPart(geo, colorOrType, emissive = 0x000000, emissiveIntensity
 
 export const MOB_TYPES = {
     COW: {
-        name: 'Cow', health: 20, damage: 0, speed: 1.5, hostile: false, color: 0xcccccc,
+        name: 'Cow', health: 20, damage: 0, speed: 1.5, hostile: false, color: 0xffffff,
         size: 0.9, xpDrop: 4, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body (black-and-white spotted)
-            const bodyGeo = new THREE.BoxGeometry(0.8, 0.6, 1.3);
-            const body = createBodyPart(bodyGeo, 'COW', 0, 0, 'body');
+            // Authentic Minecraft Cow Body: Box (12, 18, 10) in MC coords -> (0.8, 0.65, 1.2)
+            // Vanilla MC Cow Body UV: { u: 18, v: 4, w: 12, h: 18, d: 10 }
+            const bodyGeo = new THREE.BoxGeometry(0.8, 0.65, 1.2);
+            const bodyMats = getMobBoxMaterials('COW', { u: 18, v: 4, w: 12, h: 18, d: 10 });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
             body.position.y = 0.55;
+            body.castShadow = true;
             group.add(body);
 
-            // Udder (pink on underside of body)
-            const udderGeo = new THREE.BoxGeometry(0.3, 0.15, 0.35);
-            const udder = createBodyPart(udderGeo, 'COW', 0, 0, 'snout');
-            udder.position.set(0, 0.22, -0.2);
+            // Udder: Vanilla MC Udder UV: { u: 52, v: 0, w: 4, h: 6, d: 2 }
+            const udderGeo = new THREE.BoxGeometry(0.25, 0.12, 0.35);
+            const udderMats = getMobBoxMaterials('COW', { u: 52, v: 0, w: 4, h: 6, d: 2 });
+            const udder = new THREE.Mesh(udderGeo, udderMats);
+            udder.position.set(0, 0.21, -0.2);
+            udder.castShadow = true;
             group.add(udder);
 
-            // Head (faces +Z forward)
+            // Head (faces +Z forward): Vanilla MC Cow Head UV: { u: 0, v: 0, w: 8, h: 8, d: 6 }
             const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-            const head = createMobHead(headGeo, 'COW');
+            const headMats = getMobBoxMaterials('COW', { u: 0, v: 0, w: 8, h: 8, d: 6 });
+            const head = new THREE.Mesh(headGeo, headMats);
             head.position.set(0, 0.8, 0.65);
             head.name = 'head';
+            head.castShadow = true;
             group.add(head);
 
-            // Horns
+            // Horns: Vanilla MC Horn UV: { u: 22, v: 0, w: 1, h: 3, d: 1 }
             const hornGeo = new THREE.BoxGeometry(0.08, 0.18, 0.08);
-            const hornMat = getMobMaterial('COW', 'horn');
-            const leftHorn = new THREE.Mesh(hornGeo, hornMat);
-            leftHorn.position.set(-0.24, 1.08, 0.6);
-            leftHorn.rotation.z = 0.2;
+            const hornMats = getMobBoxMaterials('COW', { u: 22, v: 0, w: 1, h: 3, d: 1 });
+            const leftHorn = new THREE.Mesh(hornGeo, hornMats);
+            leftHorn.position.set(-0.25, 1.05, 0.62);
+            leftHorn.rotation.z = 0.15;
             group.add(leftHorn);
-            const rightHorn = new THREE.Mesh(hornGeo, hornMat);
-            rightHorn.position.set(0.24, 1.08, 0.6);
-            rightHorn.rotation.z = -0.2;
+            const rightHorn = new THREE.Mesh(hornGeo, hornMats);
+            rightHorn.position.set(0.25, 1.05, 0.62);
+            rightHorn.rotation.z = -0.15;
             group.add(rightHorn);
 
-            // 4 Legs with hooves
+            // 4 Legs: Vanilla MC Cow Leg UV: { u: 0, v: 16, w: 4, h: 12, d: 4 }
             const legGeo = new THREE.BoxGeometry(0.22, 0.5, 0.22);
+            const legMats = getMobBoxMaterials('COW', { u: 0, v: 16, w: 4, h: 12, d: 4 });
             for(let i = 0; i < 4; i++) {
-                const leg = createBodyPart(legGeo, 'COW', 0, 0, 'leg');
-                const x = (i % 2 === 0 ? -0.28 : 0.28);
+                const leg = new THREE.Mesh(legGeo, legMats);
+                const x = (i % 2 === 0 ? -0.26 : 0.26);
                 const z = (i < 2 ? 0.38 : -0.38);
                 leg.position.set(x, 0.25, z);
                 leg.name = `leg_${i}`;
+                leg.castShadow = true;
                 group.add(leg);
             }
             return group;
@@ -972,27 +981,34 @@ export const MOB_TYPES = {
         size: 0.8, xpDrop: 2, lootChance: 1.0,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body (wool)
+            // Authentic Minecraft Sheep Body (Fleece Wool coat)
+            // Vanilla MC Sheep Wool body UV: { u: 28, v: 8, w: 12, h: 16, d: 8 }
             const bodyGeo = new THREE.BoxGeometry(0.8, 0.65, 1.2);
-            const body = createBodyPart(bodyGeo, 'SHEEP', 0, 0, 'body');
+            const bodyMats = getMobBoxMaterials('SHEEP', { u: 28, v: 8, w: 12, h: 16, d: 8 }, { skinKey: 'sheep/sheep_fur.png' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
             body.position.y = 0.55;
+            body.castShadow = true;
             group.add(body);
 
-            // Head (faces +Z forward)
+            // Head (faces +Z forward): Vanilla MC Sheep Head UV: { u: 0, v: 0, w: 6, h: 6, d: 8 } on sheep.png skin
             const headGeo = new THREE.BoxGeometry(0.45, 0.45, 0.45);
-            const head = createMobHead(headGeo, 'SHEEP');
+            const headMats = getMobBoxMaterials('SHEEP', { u: 0, v: 0, w: 6, h: 6, d: 8 }, { skinKey: 'sheep/sheep.png' });
+            const head = new THREE.Mesh(headGeo, headMats);
             head.position.set(0, 0.72, 0.6);
             head.name = 'head';
+            head.castShadow = true;
             group.add(head);
 
-            // 4 Legs
+            // 4 Legs: Vanilla MC Sheep Leg UV: { u: 0, v: 16, w: 4, h: 12, d: 4 } on sheep.png skin
             const legGeo = new THREE.BoxGeometry(0.2, 0.45, 0.2);
+            const legMats = getMobBoxMaterials('SHEEP', { u: 0, v: 16, w: 4, h: 12, d: 4 }, { skinKey: 'sheep/sheep.png' });
             for(let i = 0; i < 4; i++) {
-                const leg = createBodyPart(legGeo, 'SHEEP', 0, 0, 'leg');
+                const leg = new THREE.Mesh(legGeo, legMats);
                 const x = (i % 2 === 0 ? -0.26 : 0.26);
                 const z = (i < 2 ? 0.35 : -0.35);
                 leg.position.set(x, 0.225, z);
                 leg.name = `leg_${i}`;
+                leg.castShadow = true;
                 group.add(leg);
             }
             return group;
@@ -1197,37 +1213,46 @@ export const MOB_TYPES = {
         }
     },
     PIG: {
-        name: 'Pig', health: 15, damage: 0, speed: 2.0, hostile: false, color: 0xffaacc,
+        name: 'Pig', health: 15, damage: 0, speed: 2.0, hostile: false, color: 0xffffff,
         size: 0.7, xpDrop: 3, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body (pink hide)
+            // Authentic Minecraft Pig Body: Box (10, 16, 8) in MC coords -> (0.7, 0.55, 1.1)
+            // Vanilla MC Pig Body UV: { u: 28, v: 8, w: 10, h: 16, d: 8 }
             const bodyGeo = new THREE.BoxGeometry(0.7, 0.55, 1.1);
-            const body = createBodyPart(bodyGeo, 'PIG', 0, 0, 'body');
+            const bodyMats = getMobBoxMaterials('PIG', { u: 28, v: 8, w: 10, h: 16, d: 8 });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
             body.position.y = 0.45;
+            body.castShadow = true;
             group.add(body);
 
-            // Head (faces +Z forward)
+            // Head (faces +Z forward): Vanilla MC Pig Head UV: { u: 0, v: 0, w: 8, h: 8, d: 8 }
             const headGeo = new THREE.BoxGeometry(0.45, 0.45, 0.45);
-            const head = createMobHead(headGeo, 'PIG');
+            const headMats = getMobBoxMaterials('PIG', { u: 0, v: 0, w: 8, h: 8, d: 8 });
+            const head = new THREE.Mesh(headGeo, headMats);
             head.position.set(0, 0.55, 0.55);
             head.name = 'head';
+            head.castShadow = true;
             group.add(head);
 
-            // 3D Protruding Snout on front of head
-            const snoutGeo = new THREE.BoxGeometry(0.25, 0.18, 0.12);
-            const snout = createBodyPart(snoutGeo, 'PIG', 0, 0, 'snout');
-            snout.position.set(0, 0.48, 0.8);
+            // 3D Protruding Snout on front of head: Vanilla MC Pig Snout UV: { u: 16, v: 16, w: 4, h: 3, d: 1 }
+            const snoutGeo = new THREE.BoxGeometry(0.22, 0.16, 0.08);
+            const snoutMats = getMobBoxMaterials('PIG', { u: 16, v: 16, w: 4, h: 3, d: 1 });
+            const snout = new THREE.Mesh(snoutGeo, snoutMats);
+            snout.position.set(0, 0.48, 0.81);
+            snout.castShadow = true;
             group.add(snout);
 
-            // 4 Legs with trotters
+            // 4 Legs with trotters: Vanilla MC Pig Leg UV: { u: 0, v: 16, w: 4, h: 6, d: 4 }
             const legGeo = new THREE.BoxGeometry(0.2, 0.35, 0.2);
+            const legMats = getMobBoxMaterials('PIG', { u: 0, v: 16, w: 4, h: 6, d: 4 });
             for(let i = 0; i < 4; i++) {
-                const leg = createBodyPart(legGeo, 'PIG', 0, 0, 'leg');
+                const leg = new THREE.Mesh(legGeo, legMats);
                 const x = (i % 2 === 0 ? -0.22 : 0.22);
                 const z = (i < 2 ? 0.32 : -0.32);
                 leg.position.set(x, 0.175, z);
                 leg.name = `leg_${i}`;
+                leg.castShadow = true;
                 group.add(leg);
             }
             return group;
@@ -2141,53 +2166,66 @@ export const MOB_TYPES = {
         size: 0.3, xpDrop: 1, lootChance: 0.1,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body (feathered)
+            // Authentic Minecraft Chicken Body: Box (6, 8, 6) in MC coords -> (0.35, 0.3, 0.45)
+            // Vanilla MC Chicken Body UV: { u: 0, v: 9, w: 6, h: 8, d: 6 }
             const bodyGeo = new THREE.BoxGeometry(0.35, 0.3, 0.45);
-            const body = createBodyPart(bodyGeo, 'CHICKEN', 0, 0, 'body');
+            const bodyMats = getMobBoxMaterials('CHICKEN', { u: 0, v: 9, w: 6, h: 8, d: 6 });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
             body.position.y = 0.32;
+            body.castShadow = true;
             group.add(body);
 
-            // Head (faces +Z forward)
+            // Head (faces +Z forward): Vanilla MC Chicken Head UV: { u: 0, v: 0, w: 4, h: 6, d: 3 }
             const headGeo = new THREE.BoxGeometry(0.22, 0.28, 0.22);
-            const head = createMobHead(headGeo, 'CHICKEN');
+            const headMats = getMobBoxMaterials('CHICKEN', { u: 0, v: 0, w: 4, h: 6, d: 3 });
+            const head = new THREE.Mesh(headGeo, headMats);
             head.position.set(0, 0.55, 0.22);
             head.name = 'head';
+            head.castShadow = true;
             group.add(head);
 
-            // 3D Beak
-            const beakGeo = new THREE.BoxGeometry(0.12, 0.08, 0.12);
-            const beakMat = new THREE.MeshLambertMaterial({ color: 0xf5a000 });
-            const beak = new THREE.Mesh(beakGeo, beakMat);
-            beak.position.set(0, 0.52, 0.35);
+            // 3D Beak: Vanilla MC Chicken Beak UV: { u: 14, v: 0, w: 4, h: 2, d: 2 }
+            const beakGeo = new THREE.BoxGeometry(0.14, 0.08, 0.1);
+            const beakMats = getMobBoxMaterials('CHICKEN', { u: 14, v: 0, w: 4, h: 2, d: 2 });
+            const beak = new THREE.Mesh(beakGeo, beakMats);
+            beak.position.set(0, 0.51, 0.35);
+            beak.castShadow = true;
             group.add(beak);
 
-            // 3D Red Wattle
-            const wattleGeo = new THREE.BoxGeometry(0.08, 0.12, 0.08);
-            const wattleMat = new THREE.MeshLambertMaterial({ color: 0xd01010 });
-            const wattle = new THREE.Mesh(wattleGeo, wattleMat);
+            // 3D Red Wattle: Vanilla MC Chicken Wattle UV: { u: 14, v: 4, w: 2, h: 2, d: 2 }
+            const wattleGeo = new THREE.BoxGeometry(0.08, 0.1, 0.08);
+            const wattleMats = getMobBoxMaterials('CHICKEN', { u: 14, v: 4, w: 2, h: 2, d: 2 });
+            const wattle = new THREE.Mesh(wattleGeo, wattleMats);
             wattle.position.set(0, 0.43, 0.31);
+            wattle.castShadow = true;
             group.add(wattle);
 
-            // Wings
+            // Wings: Vanilla MC Chicken Wing UV: { u: 24, v: 13, w: 1, h: 4, d: 6 }
             const wingGeo = new THREE.BoxGeometry(0.05, 0.22, 0.32);
-            const leftWing = createBodyPart(wingGeo, 'CHICKEN', 0, 0, 'wing');
+            const wingMats = getMobBoxMaterials('CHICKEN', { u: 24, v: 13, w: 1, h: 4, d: 6 });
+            const leftWing = new THREE.Mesh(wingGeo, wingMats);
             leftWing.position.set(-0.2, 0.34, 0);
             leftWing.name = 'leftWing';
+            leftWing.castShadow = true;
             group.add(leftWing);
-            const rightWing = createBodyPart(wingGeo, 'CHICKEN', 0, 0, 'wing');
+            const rightWing = new THREE.Mesh(wingGeo, wingMats);
             rightWing.position.set(0.2, 0.34, 0);
             rightWing.name = 'rightWing';
+            rightWing.castShadow = true;
             group.add(rightWing);
 
-            // 2 Legs with feet
+            // 2 Legs with yellow feet: Vanilla MC Chicken Leg UV: { u: 26, v: 0, w: 3, h: 5, d: 3 }
             const legGeo = new THREE.BoxGeometry(0.08, 0.24, 0.12);
-            const leftLeg = createBodyPart(legGeo, 'CHICKEN', 0, 0, 'leg');
+            const legMats = getMobBoxMaterials('CHICKEN', { u: 26, v: 0, w: 3, h: 5, d: 3 });
+            const leftLeg = new THREE.Mesh(legGeo, legMats);
             leftLeg.position.set(-0.09, 0.12, 0);
             leftLeg.name = 'leftLeg';
+            leftLeg.castShadow = true;
             group.add(leftLeg);
-            const rightLeg = createBodyPart(legGeo, 'CHICKEN', 0, 0, 'leg');
+            const rightLeg = new THREE.Mesh(legGeo, legMats);
             rightLeg.position.set(0.09, 0.12, 0);
             rightLeg.name = 'rightLeg';
+            rightLeg.castShadow = true;
             group.add(rightLeg);
 
             return group;
