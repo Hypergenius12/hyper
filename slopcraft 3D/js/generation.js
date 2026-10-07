@@ -465,6 +465,22 @@ export function getColumnInfo(wx, wz, params) {
     else if (erosionNoise > 0.3) factor = 0.5 + ((0.5 - erosionNoise) / 0.2) * 0.7; // 0.5 to 1.2
     else factor = 1.2 + ((0.3 - erosionNoise) / 0.3) * 2.8; // 1.2 to 4.0 (Mountains)
 
+    // Biome-specific terrain shaping:
+    // Deserts are smoother and flatter with gentle expansive dunes
+    // Plains are quite flat and open
+    // Swamps are very flat lowlands near water level
+    if (biome === BIOMES.DESERT || biome.name === 'Desert') {
+        factor *= 0.35;
+    } else if (biome === BIOMES.PLAINS || biome.name === 'Plains') {
+        factor *= 0.30;
+    } else if (biome === BIOMES.SWAMP || biome.name === 'Swamp' || biome.swampFlora) {
+        factor *= 0.20;
+    } else if (biome === BIOMES.SAVANNA || biome.name === 'Savanna') {
+        factor *= 0.65;
+    } else if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains' || biome === BIOMES.ICE_SPIKES) {
+        factor *= 1.25;
+    }
+
     // Reduce roughness in oceans and coastlines
     if (contNoise < 0.3) {
         factor *= 0.1;
@@ -1119,6 +1135,9 @@ export function generateChunkTerrain(cx, cz, params) {
                 }
             }
 
+            const isColdBiome = (biome === BIOMES.TUNDRA || biome === BIOMES.ICE_SPIKES || biome === BIOMES.MOUNTAINS || biome.name === 'Tundra' || biome.name === 'Ice Spikes' || biome.name === 'Mountains');
+            const hasSandyBeach = (biome === BIOMES.BEACH || biome === BIOMES.DESERT || biome === BIOMES.OASIS || biome.name === 'Beach' || biome.name === 'Desert');
+
             let depth = -1;
             for (let y = CHUNK_HEIGHT - 2; y >= 1; y--) {
                 const idx = blockIndex(x, y, z);
@@ -1144,9 +1163,25 @@ export function generateChunkTerrain(cx, cz, params) {
 
                     let type;
                     if (isUnderwater) {
-                        type = (biome === BIOMES.PLAINS || biome === BIOMES.DESERT || isSwamp || biome === BIOMES.TUNDRA || biome === BIOMES.BEACH) ? BLOCKS.SAND : BLOCKS.DIRT;
+                        if (isColdBiome) {
+                            type = BLOCKS.GRAVEL;
+                        } else if (hasSandyBeach || biome === BIOMES.PLAINS) {
+                            type = BLOCKS.SAND;
+                        } else if (isSwamp) {
+                            type = isSwampMud ? BLOCKS.MUD : BLOCKS.DIRT;
+                        } else {
+                            type = BLOCKS.DIRT;
+                        }
                     } else if (isNearSeaShore || isNearLakeShore) {
-                        type = BLOCKS.SAND;
+                        if (isColdBiome) {
+                            type = BLOCKS.GRAVEL;
+                        } else if (hasSandyBeach) {
+                            type = BLOCKS.SAND;
+                        } else if (isSwamp) {
+                            type = isSwampMud ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
+                        } else {
+                            type = biome.surface;
+                        }
                     } else if (biome.isVolcanic) {
                         const vRoll = colRng();
                         if (vRoll < 0.15) type = BLOCKS.MAGMA;
@@ -1176,7 +1211,9 @@ export function generateChunkTerrain(cx, cz, params) {
                         type = colRng() < 0.5 ? BLOCKS.BLACKSTONE : BLOCKS.SMOOTH_BASALT;
                     } else if (isSwamp) {
                         type = BLOCKS.MUD;
-                    } else if (isNearShore) {
+                    } else if (isNearShore && isColdBiome) {
+                        type = BLOCKS.GRAVEL;
+                    } else if (isNearShore && hasSandyBeach) {
                         type = BLOCKS.SAND;
                     } else {
                         type = biome.dirt;
@@ -1185,6 +1222,22 @@ export function generateChunkTerrain(cx, cz, params) {
                 } else {
                     // Deep interior: remain stone!
                     depth++;
+                }
+            }
+            // In cold biomes, freeze surface water exposed directly to air
+            if (isColdBiome) {
+                for (let y = CHUNK_HEIGHT - 2; y >= 1; y--) {
+                    const idx = blockIndex(x, y, z);
+                    const b = blocks[idx];
+                    if (b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER) {
+                        const aboveIdx = blockIndex(x, y + 1, z);
+                        if (blocks[aboveIdx] === BLOCKS.AIR) {
+                            blocks[idx] = BLOCKS.ICE;
+                        }
+                        break; // Only the top water layer freezes!
+                    } else if (b !== BLOCKS.AIR) {
+                        break;
+                    }
                 }
             }
         }
