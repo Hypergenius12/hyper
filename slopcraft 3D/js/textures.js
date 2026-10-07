@@ -3541,7 +3541,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                         // Dynamic colormap tinted textures are kept grayscale in atlas so vertex colors blend dynamically
                         const isWater = (texName === 'water_flow' || texName === 'water_still');
                         const isDynamicTint = (texName === 'grass_block_top' || texName === 'oak_leaves' || texName === 'dark_oak_leaves' || texName === 'mangrove_leaves' || texName === 'vine' || texName.includes('fern') || texName.includes('tall_grass') || texName === 'lily_pad');
-                        const requiresFixedTint = !isDynamicTint && (texName.includes('leaves') || (isWater && bt === BLOCKS.SWAMP_WATER));
+                        const requiresFixedTint = !isDynamicTint && (texName.includes('leaves') || isWater);
                         
                         // Helper: force all pixels in atlas region to fully opaque
                         const forceOpaque = (ax, ay) => {
@@ -3564,15 +3564,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                             let tint = '#8ee066'; // default
                             
                             if (isWater) {
-                                // For swamp water: draw white base then overlay dark green so it stays visible
-                                tCtx.fillStyle = '#3d5a40';
-                                tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-                                tCtx.globalAlpha = 0.6;
-                                tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
-                                tCtx.globalAlpha = 1.0;
-                                ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
-                                forceOpaque(entry.col * TEX_SIZE, entry.row * TEX_SIZE);
-                                tintColor = '#3d5a40';
+                                tint = (bt === BLOCKS.SWAMP_WATER) ? '#617B59' : '#3F76E4';
                             } else {
                                 if (bt === BLOCKS.SWAMP_GRASS) tint = '#6a7039';
                                 else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755';
@@ -3583,16 +3575,19 @@ export async function createTextureAtlas(useMinecraft = true) {
                                 else if (bt === BLOCKS.AUTUMN_LEAVES) tint = '#659c40';
                                 else if (bt === BLOCKS.CHERRY_LEAVES) tint = '#ffffff';
                                 else tint = '#6fc042';
+                            }
 
-                                tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
-                                tCtx.globalCompositeOperation = 'multiply';
-                                tintColor = tint;
-                                tCtx.fillStyle = tint;
-                                tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-                                // Restore alpha channel using destination-in
-                                tCtx.globalCompositeOperation = 'destination-in';
-                                tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
-                                ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
+                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                            tCtx.globalCompositeOperation = 'multiply';
+                            tintColor = tint;
+                            tCtx.fillStyle = tint;
+                            tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+                            // Restore alpha channel using destination-in
+                            tCtx.globalCompositeOperation = 'destination-in';
+                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                            ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
+                            if (isWater) {
+                                forceOpaque(entry.col * TEX_SIZE, entry.row * TEX_SIZE);
                             }
                         } else if (texName === 'end_portal_frame_side') {
                             ctx.drawImage(img, 0, 3, TEX_SIZE, 13, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
@@ -3601,7 +3596,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                         }
 
                         // For water blocks: force all atlas pixels fully opaque so material opacity controls transparency
-                        if (isWater && bt !== BLOCKS.SWAMP_WATER) {
+                        if (isWater) {
                             forceOpaque(entry.col * TEX_SIZE, entry.row * TEX_SIZE);
                         }
                         
@@ -3613,9 +3608,8 @@ export async function createTextureAtlas(useMinecraft = true) {
                                 frameInfo.isMC = true;
                                 frameInfo.img = img;
                                 frameInfo.frames = img.height / TEX_SIZE;
-                                frameInfo.tint = (!isWater && requiresFixedTint) ? tintColor : null;
+                                frameInfo.tint = tintColor;
                                 frameInfo.forceOpaque = forceOpaqueFlag;
-                                frameInfo.swampWater = (isWater && bt === BLOCKS.SWAMP_WATER);
                             } else {
                                 animatedFrames.push({
                                     x: entry.col * TEX_SIZE,
@@ -3623,9 +3617,8 @@ export async function createTextureAtlas(useMinecraft = true) {
                                     isMC: true,
                                     img: img,
                                     frames: img.height / TEX_SIZE,
-                                    tint: (!isWater && requiresFixedTint) ? tintColor : null,
+                                    tint: tintColor,
                                     forceOpaque: forceOpaqueFlag,
-                                    swampWater: (isWater && bt === BLOCKS.SWAMP_WATER),
                                 });
                             }
                         }
@@ -3805,20 +3798,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                 ctx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
                 
                 // If it requires tint, multiply tint color over it
-                if (frame.swampWater) {
-                    tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-                    tmpCtx.fillStyle = '#3d5a40';
-                    tmpCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-                    tmpCtx.globalAlpha = 0.6;
-                    tmpCtx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
-                    tmpCtx.globalAlpha = 1.0;
-                    ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
-                    ctx.drawImage(tmp, 0, 0, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
-                    // Force opaque
-                    const pd2 = ctx.getImageData(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
-                    for (let pi = 3; pi < pd2.data.length; pi += 4) pd2.data[pi] = 255;
-                    ctx.putImageData(pd2, frame.x, frame.y);
-                } else if (frame.tint) {
+                if (frame.tint) {
                     tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
                     tmpCtx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
                     tmpCtx.globalCompositeOperation = 'multiply';

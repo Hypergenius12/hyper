@@ -330,6 +330,7 @@ export class Chunk {
         this.blocks = new Uint16Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
         this.data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
         this.mesh = null;
+        this.waterMesh = null;
         this.dirty = false;
     }
 
@@ -369,6 +370,21 @@ export class Chunk {
                 }
             }
             return BLOCKS.AIR;
+        };
+
+        const getDataOptimized = (wx, wy, wz) => {
+            if (wy < 0 || wy >= CHUNK_HEIGHT) return 0;
+            const dcx = Math.floor(wx / CHUNK_SIZE) - this.cx;
+            const dcz = Math.floor(wz / CHUNK_SIZE) - this.cz;
+            if (dcx >= -1 && dcx <= 1 && dcz >= -1 && dcz <= 1) {
+                const c = neighborChunks[dcx + 1][dcz + 1];
+                if (c) {
+                    const lx = wx - (this.cx + dcx) * CHUNK_SIZE;
+                    const lz = wz - (this.cz + dcz) * CHUNK_SIZE;
+                    return c.data[(wy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx];
+                }
+            }
+            return 0;
         };
 
         let posCount = 0;
@@ -587,11 +603,15 @@ export class Chunk {
                         let effectiveNeighborProps = neighborProps;
                         
                         if (neighborProps.isWaterlogged) {
-                            effectiveNeighborType = window.BLOCKS.WATER;
-                            effectiveNeighborProps = getBlockProperties(window.BLOCKS.WATER);
+                            effectiveNeighborType = BLOCKS.WATER;
+                            effectiveNeighborProps = getBlockProperties(BLOCKS.WATER);
                         }
 
-                        const bothLiquids = currentProps.isLiquid && effectiveNeighborProps.isLiquid;
+                        const isCurWater = (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER);
+                        const isCurLava = (currentBlockType === BLOCKS.LAVA);
+                        const isNeighWater = (effectiveNeighborType === BLOCKS.WATER || effectiveNeighborType === BLOCKS.SWAMP_WATER);
+                        const isNeighLava = (effectiveNeighborType === BLOCKS.LAVA);
+                        const sameLiquid = (isCurWater && isNeighWater) || (isCurLava && isNeighLava);
 
                         let isLiquidStep = false;
                         let nTop = 0;
@@ -603,23 +623,35 @@ export class Chunk {
                                 // Cactus sides are inset 1/16th, visible unless touching another cactus
                                 shouldRenderFace = (effectiveNeighborType !== BLOCKS.CACTUS);
                             }
-                        } else if (bothLiquids) {
-                            if (face.name !== 'top' && face.name !== 'bottom' && currentBlockType === effectiveNeighborType) {
-                                let nData = 0;
-                                if (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE && ny >= 0 && ny < CHUNK_HEIGHT) {
-                                    nData = this.data[(ny * CHUNK_SIZE * CHUNK_SIZE) + (nz * CHUNK_SIZE) + nx];
+                        } else if (currentProps.isLiquid) {
+                            if (sameLiquid) {
+                                if (face.name === 'top' || face.name === 'bottom') {
+                                    shouldRenderFace = false; // Never render top/bottom between same liquid
                                 } else {
-                                    nData = this.getData ? this.getData(wx + face.dir[0], ny, wz + face.dir[2]) : 0;
+                                    // Side face between same liquid: only render if current block is higher than neighbor (waterfall drop)
+                                    let nData = 0;
+                                    if (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE && ny >= 0 && ny < CHUNK_HEIGHT) {
+                                        nData = this.data[(ny * CHUNK_SIZE * CHUNK_SIZE) + (nz * CHUNK_SIZE) + nx];
+                                    } else {
+                                        nData = getDataOptimized(wx + face.dir[0], ny, wz + face.dir[2]);
+                                    }
+                                    const maxLevel = isCurLava ? 3 : 7;
+                                    nTop = (nData === 0) ? 0.88 : (nData === 8 ? 1.0 : (0.18 + (nData / maxLevel) * 0.70));
+                                    if (liquidTopY > nTop + 0.05) {
+                                        shouldRenderFace = true;
+                                        isLiquidStep = true;
+                                    }
                                 }
-                                const isLava = (currentBlockType === BLOCKS.LAVA);
-                                const maxLevel = isLava ? 3 : 7;
-                                nTop = (nData === 0) ? 0.88 : (nData === 8 ? 1.0 : (0.18 + (nData / maxLevel) * 0.70));
-                                if (liquidTopY > nTop + 0.05) {
+                            } else {
+                                // Liquid touching non-same liquid:
+                                // Render face if exposed to AIR or a transparent non-solid block (e.g. glass) or different liquid (e.g. water touching lava)
+                                if (effectiveNeighborType === BLOCKS.AIR) {
                                     shouldRenderFace = true;
-                                    isLiquidStep = true;
+                                } else if (effectiveNeighborProps.isLiquid) {
+                                    shouldRenderFace = true; // Liquid boundary (e.g. water next to lava)
+                                } else if (effectiveNeighborProps.transparent && !effectiveNeighborProps.solid) {
+                                    shouldRenderFace = true;
                                 }
-                            } else if (currentBlockType !== effectiveNeighborType) {
-                                shouldRenderFace = true;
                             }
                         } else {
                             shouldRenderFace = (effectiveNeighborType === BLOCKS.AIR || (effectiveNeighborProps.transparent && currentBlockType !== effectiveNeighborType));
@@ -784,15 +816,14 @@ export class Chunk {
 
         const geometry = new THREE.BufferGeometry();
         
-        // Merge indices into one big index array
-        const totalIndices = opaqueIndexCount + crossIndexCount + glowCrossIndexCount + waterIndexCount + transparentIndexCount + glowOpaqueIndexCount + glowTransparentIndexCount + slightGlowOpaqueIndexCount + slightGlowTransparentIndexCount;
+        // Merge indices into one big index array (water is separated into dedicated waterMesh for correct transparent sorting)
+        const totalIndices = opaqueIndexCount + crossIndexCount + glowCrossIndexCount + transparentIndexCount + glowOpaqueIndexCount + glowTransparentIndexCount + slightGlowOpaqueIndexCount + slightGlowTransparentIndexCount;
         const allIndices = new Uint32Array(totalIndices);
         
         let offset = 0;
         allIndices.set(_opaqueIndices.subarray(0, opaqueIndexCount), offset); offset += opaqueIndexCount;
         allIndices.set(_crossIndices.subarray(0, crossIndexCount), offset); offset += crossIndexCount;
         allIndices.set(_glowCrossIndices.subarray(0, glowCrossIndexCount), offset); offset += glowCrossIndexCount;
-        allIndices.set(_waterIndices.subarray(0, waterIndexCount), offset); offset += waterIndexCount;
         allIndices.set(_transparentIndices.subarray(0, transparentIndexCount), offset); offset += transparentIndexCount;
         allIndices.set(_glowOpaqueIndices.subarray(0, glowOpaqueIndexCount), offset); offset += glowOpaqueIndexCount;
         allIndices.set(_glowTransparentIndices.subarray(0, glowTransparentIndexCount), offset); offset += glowTransparentIndexCount;
@@ -805,7 +836,7 @@ export class Chunk {
         geometry.addGroup(groupOffset, opaqueIndexCount, 0); groupOffset += opaqueIndexCount;
         geometry.addGroup(groupOffset, crossIndexCount, 1); groupOffset += crossIndexCount;
         geometry.addGroup(groupOffset, glowCrossIndexCount, 2); groupOffset += glowCrossIndexCount;
-        geometry.addGroup(groupOffset, waterIndexCount, 3); groupOffset += waterIndexCount;
+        geometry.addGroup(groupOffset, 0, 3); // index 3 reserved for water material compatibility
         geometry.addGroup(groupOffset, transparentIndexCount, 4); groupOffset += transparentIndexCount;
         geometry.addGroup(groupOffset, glowOpaqueIndexCount, 5); groupOffset += glowOpaqueIndexCount;
         geometry.addGroup(groupOffset, glowTransparentIndexCount, 6); groupOffset += glowTransparentIndexCount;
@@ -841,6 +872,40 @@ export class Chunk {
         }
         this.mesh.userData.isChunkMesh = true;
         this.mesh.visible = true;
+
+        // Dedicated water mesh in transparent render pass
+        if (waterIndexCount > 0) {
+            const waterGeometry = new THREE.BufferGeometry();
+            waterGeometry.setIndex(new THREE.BufferAttribute(_waterIndices.slice(0, waterIndexCount), 1));
+            waterGeometry.setAttribute('position', geometry.attributes.position);
+            waterGeometry.setAttribute('normal', geometry.attributes.normal);
+            waterGeometry.setAttribute('uv', geometry.attributes.uv);
+            waterGeometry.setAttribute('color', geometry.attributes.color);
+            waterGeometry.boundingSphere = geometry.boundingSphere;
+            waterGeometry.boundingBox = geometry.boundingBox;
+
+            const waterMat = atlas.matWater || materials[3];
+
+            if (this.waterMesh) {
+                this.waterMesh.geometry.dispose();
+                this.waterMesh.geometry = waterGeometry;
+                this.waterMesh.material = waterMat;
+            } else {
+                this.waterMesh = new THREE.Mesh(waterGeometry, waterMat);
+                this.waterMesh.position.set(this.cx * CHUNK_SIZE, 0, this.cz * CHUNK_SIZE);
+                this.waterMesh.userData.isChunkMesh = true;
+                this.waterMesh.renderOrder = 1;
+            }
+            this.waterMesh.visible = true;
+            if (this.mesh && this.mesh.parent && !this.waterMesh.parent) {
+                this.mesh.parent.add(this.waterMesh);
+            }
+        } else if (this.waterMesh) {
+            if (this.waterMesh.parent) this.waterMesh.parent.remove(this.waterMesh);
+            this.waterMesh.geometry.dispose();
+            this.waterMesh = null;
+        }
+
         this.dirty = false;
         return this.mesh;
     }
@@ -853,6 +918,11 @@ export class Chunk {
             // DO NOT dispose materials since they are shared globally
             _meshPool.push(this.mesh);
             this.mesh = null;
+        }
+        if (this.waterMesh) {
+            if (this.waterMesh.parent) this.waterMesh.parent.remove(this.waterMesh);
+            this.waterMesh.geometry.dispose();
+            this.waterMesh = null;
         }
     }
 }
@@ -971,7 +1041,7 @@ export class World {
             color: new THREE.Color(0xffffff), // Authentic MC water texture colors (already colored blue in texture)
             vertexColors: true,
             transparent: true,
-            opacity: 0.80, // natural translucent water
+            opacity: 0.65, // Authentic translucent water
             depthWrite: false, // Prevents z-sorting fighting and clipping underwater terrain
             side: THREE.DoubleSide,
             shininess: 0, // Eliminate harsh blocky quad specular glare grid
@@ -1027,6 +1097,8 @@ export class World {
             emissiveIntensity: 0.2,
             shininess: 0, specular: new THREE.Color(0x000000)
         });
+        this.matWater = matWater;
+        textureAtlas.matWater = matWater;
         this.sharedMaterials = [matOpaque, matCross, matGlowCross, matWater, matTransparent, matGlowOpaque, matGlowTransparent, matSlightGlowOpaque, matSlightGlowTransparent];
 
 
@@ -1599,6 +1671,9 @@ export class World {
                 if (mesh && !mesh.parent) {
                     this.scene.add(mesh);
                 }
+                if (chunk.waterMesh && !chunk.waterMesh.parent) {
+                    this.scene.add(chunk.waterMesh);
+                }
                 buildsThisFrame++;
             }
         }
@@ -1616,7 +1691,9 @@ export class World {
                     const cz = chunk.cz * 16;
                     _box.min.set(cx, 0, cz);
                     _box.max.set(cx + 16, 128, cz + 16);
-                    chunk.mesh.visible = this.frustum.intersectsBox(_box);
+                    const isVis = this.frustum.intersectsBox(_box);
+                    chunk.mesh.visible = isVis;
+                    if (chunk.waterMesh) chunk.waterMesh.visible = isVis;
                 }
             }
         }

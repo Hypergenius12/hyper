@@ -509,8 +509,10 @@ class Game {
 
         const overlayGeo = new THREE.BoxGeometry(1.004, 1.004, 1.004);
         const overlayMat = new THREE.MeshBasicMaterial({
+            color: 0x000000,
             map: this.destroyTextures[0],
             transparent: true,
+            opacity: 0.85,
             alphaTest: 0.1,
             depthWrite: false,
             polygonOffset: true,
@@ -1253,6 +1255,7 @@ class Game {
                 this.miningOverlay.position.set(hit.blockPos.x + 0.5, hit.blockPos.y + (isSmall ? 0.2 : 0.5), hit.blockPos.z + 0.5);
                 if (this.destroyTextures && this.destroyTextures[stage] && this.miningOverlay.material.map !== this.destroyTextures[stage]) {
                     this.miningOverlay.material.map = this.destroyTextures[stage];
+                    this.miningOverlay.material.color.setHex(0x000000);
                     this.miningOverlay.material.needsUpdate = true;
                 }
 
@@ -2553,6 +2556,7 @@ class Game {
             if (!isUnderground) {
                 for (const chunk of this.world.chunks.values()) {
                     if (chunk.mesh) chunk.mesh.visible = true;
+                    if (chunk.waterMesh) chunk.waterMesh.visible = true;
                 }
                 
                 this.engine.renderer.render(this.engine.scene, this.minimapCamera);
