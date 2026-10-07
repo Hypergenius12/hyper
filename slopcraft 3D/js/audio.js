@@ -8,15 +8,133 @@ export class AudioManager {
     constructor() {
         this.ctx = null;
         this.masterGain = null;
+        this.underwaterFilter = null;
         this.camera = null;
+        this._isUnderwater = false;
+
+        // Background music player
+        this.musicGain = null;
+        this.musicAudio = null;
+        this.isMusicPlaying = false;
+        this.musicTimer = null;
+        this.musicTracks = [
+            'sweden',
+            'subwoofer_lullaby',
+            'wet_hands',
+            'dry_hands',
+            'minecraft',
+            'clark',
+            'haggstrom',
+            'living_mice',
+            'mice_on_venus'
+        ];
+        this.lastTrackIndex = -1;
     }
 
     _ensureContext() {
         if (this.ctx) return;
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Master gain connects to underwater lowpass filter, which connects to destination
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.value = 1.0;
-        this.masterGain.connect(this.ctx.destination);
+
+        this.underwaterFilter = this.ctx.createBiquadFilter();
+        this.underwaterFilter.type = 'lowpass';
+        this.underwaterFilter.frequency.setValueAtTime(22000, this.ctx.currentTime);
+        this.underwaterFilter.Q.setValueAtTime(1.0, this.ctx.currentTime);
+
+        this.masterGain.connect(this.underwaterFilter);
+        this.underwaterFilter.connect(this.ctx.destination);
+
+        // Music gain (routed through underwater filter as well, so underwater muffles ambient music like Minecraft!)
+        this.musicGain = this.ctx.createGain();
+        this.musicGain.gain.value = 0.45;
+        this.musicGain.connect(this.underwaterFilter);
+
+        this.startMusicScheduler();
+    }
+
+    setUnderwater(isUnderwater) {
+        if (this._isUnderwater === isUnderwater) return;
+        this._isUnderwater = isUnderwater;
+        if (!this.underwaterFilter || !this.ctx) return;
+
+        const targetFreq = isUnderwater ? 380 : 22000;
+        const now = this.ctx.currentTime;
+        this.underwaterFilter.frequency.cancelScheduledValues(now);
+        this.underwaterFilter.frequency.setTargetAtTime(targetFreq, now, 0.12);
+    }
+
+    startMusicScheduler() {
+        if (this.musicTimer) return;
+        // First track starts after a short initial ambience delay (15-30s)
+        const initialDelay = 15000 + Math.random() * 15000;
+        this.musicTimer = setTimeout(() => this._playNextMusicTrack(), initialDelay);
+    }
+
+    _playNextMusicTrack() {
+        if (!this.musicTracks || this.musicTracks.length === 0) return;
+        let nextIdx = Math.floor(Math.random() * this.musicTracks.length);
+        if (this.musicTracks.length > 1 && nextIdx === this.lastTrackIndex) {
+            nextIdx = (nextIdx + 1) % this.musicTracks.length;
+        }
+        this.lastTrackIndex = nextIdx;
+        const trackName = this.musicTracks[nextIdx];
+        const localSrc = `assets/mc/sounds/music/game/${trackName}.ogg`;
+        const cdnSrc = `https://assets.mcasset.cloud/1.21.11/assets/minecraft/sounds/music/game/${trackName}.ogg`;
+
+        if (this.musicAudio) {
+            try { this.musicAudio.pause(); } catch(e) {}
+            this.musicAudio = null;
+        }
+
+        const audio = new Audio();
+        audio.crossOrigin = 'anonymous';
+        audio.src = localSrc;
+        this.musicAudio = audio;
+        this.isMusicPlaying = true;
+
+        let sourceNode = null;
+        try {
+            sourceNode = this.ctx.createMediaElementSource(audio);
+            sourceNode.connect(this.musicGain);
+        } catch(e) {
+            // If already connected or CORS fallback
+        }
+
+        const onTrackEnded = () => {
+            this.isMusicPlaying = false;
+            // Minecraft pauses 1 to 4 minutes between songs (60s to 240s)
+            const gapMs = (60 + Math.random() * 180) * 1000;
+            this.musicTimer = setTimeout(() => this._playNextMusicTrack(), gapMs);
+        };
+
+        audio.addEventListener('ended', onTrackEnded, { once: true });
+        audio.addEventListener('error', () => {
+            if (audio.src !== cdnSrc) {
+                audio.src = cdnSrc;
+                audio.play().catch(() => onTrackEnded());
+            } else {
+                onTrackEnded();
+            }
+        }, { once: true });
+
+        // Resume audio context if user has interacted
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+        }
+        audio.play().catch(() => {
+            // Autoplay policy: retry on user interaction
+            const retryPlay = () => {
+                window.removeEventListener('click', retryPlay);
+                window.removeEventListener('keydown', retryPlay);
+                if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+                audio.play().catch(() => onTrackEnded());
+            };
+            window.addEventListener('click', retryPlay, { once: true });
+            window.addEventListener('keydown', retryPlay, { once: true });
+        });
     }
 
     _loadMCFile(path) {
@@ -25,7 +143,11 @@ export class AudioManager {
         
         this.mcCache[path] = (async () => {
             try {
-                const res = await fetch(`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/sounds/${path}.ogg`);
+                // Try local first if available, else jsdelivr / raw github
+                let res = await fetch(`assets/mc/sounds/${path}.ogg`);
+                if (!res.ok) {
+                    res = await fetch(`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/sounds/${path}.ogg`);
+                }
                 if (!res.ok) throw new Error("HTTP error");
                 const arrayBuffer = await res.arrayBuffer();
                 const audioBuffer = await new Promise((resolve, reject) => {

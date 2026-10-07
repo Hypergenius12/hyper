@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials } from './textures.js?v=90';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=90';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -640,10 +640,66 @@ export class Player {
         if (leftLeg) leftLeg.rotation.x = -swing;
         if (rightLeg) rightLeg.rotation.x = swing;
         if (leftArm) leftArm.rotation.x = swing;
-        if (rightArm) rightArm.rotation.x = -swing;
+
+        // Animate Steve's right arm with swing arc during mining/attacking
+        if (rightArm) {
+            if (this.isSwinging && this.swingProgress !== undefined) {
+                // Minecraft attack/mining swing: raise up and chop forward
+                const s = Math.sin(this.swingProgress * Math.PI);
+                rightArm.rotation.x = -Math.PI / 2.5 * s - (1 - s) * swing;
+                rightArm.rotation.y = -Math.PI / 6 * s;
+                rightArm.rotation.z = Math.PI / 8 * s;
+            } else {
+                rightArm.rotation.set(-swing, 0, 0);
+            }
+        }
+
+        // Sync held item mesh on Steve's right hand in 3rd person
+        this.syncHeldItemDisplay(this.mesh);
 
         // Sync armor visibility and colors
         this.syncArmorDisplay(this.mesh);
+    }
+
+    syncHeldItemDisplay(targetModel) {
+        if (!targetModel) return;
+        const rightArm = targetModel.getObjectByName('rightArm');
+        if (!rightArm) return;
+
+        let heldContainer = rightArm.getObjectByName('heldItemContainer');
+        if (!heldContainer) {
+            heldContainer = new THREE.Group();
+            heldContainer.name = 'heldItemContainer';
+            // Position at Steve's hand (bottom of arm)
+            heldContainer.position.set(0, -0.32, 0.05);
+            rightArm.add(heldContainer);
+        }
+
+        const slot = this.inventory ? this.inventory.slots[this.selectedSlot] : null;
+        if (!slot) {
+            heldContainer.clear();
+            heldContainer.userData.currentSubtype = null;
+            return;
+        }
+
+        const currentKey = `${slot.item.type}_${slot.item.subtype}`;
+        if (heldContainer.userData.currentKey === currentKey) return;
+
+        heldContainer.clear();
+        heldContainer.userData.currentKey = currentKey;
+
+        const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype, (c) => {
+            if (heldContainer.userData.currentKey === currentKey) {
+                heldContainer.clear();
+                const m = createExtrudedItemMesh(c, 0.45, 0.035);
+                m.rotation.set(Math.PI / 4, 0, -Math.PI / 4);
+                heldContainer.add(m);
+            }
+        });
+
+        const mesh = createExtrudedItemMesh(iconCanvas, 0.45, 0.035);
+        mesh.rotation.set(Math.PI / 4, 0, -Math.PI / 4);
+        heldContainer.add(mesh);
     }
 
     syncArmorDisplay(targetModel) {

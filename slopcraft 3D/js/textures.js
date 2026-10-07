@@ -207,11 +207,29 @@ export const BLOCKS = {
     MANGROVE_LEAVES: 232,
     MANGROVE_ROOTS: 233,
     MUDDY_MANGROVE_ROOTS: 234,
-    MANGROVE_PLANKS: 235
+    MANGROVE_PLANKS: 235,
+    MOSS_BLOCK: 236,
+    ROOTED_DIRT: 237,
+    CAVE_VINES: 238,
+    SPORE_BLOSSOM: 239,
+    AZALEA_LEAVES: 240,
+    FLOWERING_AZALEA_LEAVES: 241,
+    DRIPSTONE_BLOCK: 242,
+    POINTED_DRIPSTONE_DOWN: 243,
+    POINTED_DRIPSTONE_UP: 244
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.MOSS_BLOCK]:              { name: 'Moss Block',              health: 2, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.ROOTED_DIRT]:             { name: 'Rooted Dirt',             health: 3, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.CAVE_VINES]:              { name: 'Cave Vines',              health: 1, transparent: true, emissive: 0.8, solid: false, isCross: true, drops: null },
+    [BLOCKS.SPORE_BLOSSOM]:           { name: 'Spore Blossom',           health: 1, transparent: true, emissive: 0.3, solid: false, isCross: true, drops: null },
+    [BLOCKS.AZALEA_LEAVES]:           { name: 'Azalea Leaves',           health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.FLOWERING_AZALEA_LEAVES]: { name: 'Flowering Azalea Leaves', health: 1, transparent: true, emissive: 0.1, solid: true, drops: null, flammable: true },
+    [BLOCKS.DRIPSTONE_BLOCK]:         { name: 'Dripstone Block',         health: 4, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.POINTED_DRIPSTONE_DOWN]:  { name: 'Pointed Dripstone',       health: 2, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.POINTED_DRIPSTONE_UP]:    { name: 'Pointed Dripstone',       health: 2, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.RED_MUSHROOM]:          { name: 'Red Mushroom',          health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.BROWN_MUSHROOM]:        { name: 'Brown Mushroom',        health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.BROWN_MUSHROOM_BLOCK]:  { name: 'Brown Mushroom Block',  health: 2, transparent: false, emissive: 0, solid: true, drops: null },
@@ -3029,7 +3047,16 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.MANGROVE_LEAVES]: 'mangrove_leaves',
     [BLOCKS.MANGROVE_ROOTS]: { top: 'mangrove_roots_top', side: 'mangrove_roots_side', bottom: 'mangrove_roots_top' },
     [BLOCKS.MUDDY_MANGROVE_ROOTS]: { top: 'muddy_mangrove_roots_top', side: 'muddy_mangrove_roots_side', bottom: 'muddy_mangrove_roots_top' },
-    [BLOCKS.MANGROVE_PLANKS]: 'mangrove_planks'
+    [BLOCKS.MANGROVE_PLANKS]: 'mangrove_planks',
+    [BLOCKS.MOSS_BLOCK]: 'moss_block',
+    [BLOCKS.ROOTED_DIRT]: 'rooted_dirt',
+    [BLOCKS.CAVE_VINES]: 'cave_vines',
+    [BLOCKS.SPORE_BLOSSOM]: 'spore_blossom',
+    [BLOCKS.AZALEA_LEAVES]: 'azalea_leaves',
+    [BLOCKS.FLOWERING_AZALEA_LEAVES]: 'flowering_azalea_leaves',
+    [BLOCKS.DRIPSTONE_BLOCK]: 'dripstone_block',
+    [BLOCKS.POINTED_DRIPSTONE_DOWN]: 'pointed_dripstone_down_tip',
+    [BLOCKS.POINTED_DRIPSTONE_UP]: 'pointed_dripstone_up_tip'
 };
 
 let _mcChestPromise = null;
@@ -3214,6 +3241,15 @@ const LOCAL_ASSET_MAP = {
     "lily_of_the_valley": "assets/mc/block/lily_of_the_valley.png",
     "lily_pad": "assets/mc/block/lily_pad.png",
     "magma": "assets/mc/block/magma.png",
+    "moss_block": "assets/mc/block/moss_block.png",
+    "rooted_dirt": "assets/mc/block/rooted_dirt.png",
+    "dripstone_block": "assets/mc/block/dripstone_block.png",
+    "pointed_dripstone_down_tip": "assets/mc/block/pointed_dripstone_down_tip.png",
+    "pointed_dripstone_up_tip": "assets/mc/block/pointed_dripstone_up_tip.png",
+    "spore_blossom": "assets/mc/block/spore_blossom.png",
+    "cave_vines": "assets/mc/block/cave_vines.png",
+    "azalea_leaves": "assets/mc/block/azalea_leaves.png",
+    "flowering_azalea_leaves": "assets/mc/block/flowering_azalea_leaves.png",
     "mossy_cobblestone": "assets/mc/block/mossy_cobblestone.png",
     "mushroom_stem": "assets/mc/block/mushroom_stem.png",
     "mycelium_side": "assets/mc/block/mycelium_side.png",
@@ -6191,4 +6227,150 @@ export function getMobBoxMaterials(mobType, uvs, options = {}) {
     _mobBoxMaterialCache[key] = materials;
     return materials;
 }
+
+/**
+ * Creates an authentic 3D pixelated extruded mesh from a 16x16 item texture canvas
+ * Generates front/back faces plus side edge quads with vertex colors matching the item pixels.
+ */
+export function createExtrudedItemMesh(sourceCanvas, scale = 0.5, thickness = 0.04) {
+    const width = 16;
+    const height = 16;
+    const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    ctx.canvas.width = width;
+    ctx.canvas.height = height;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(sourceCanvas, 0, 0, width, height);
+
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const d = imgData.data;
+
+    // Helper: is pixel solid
+    const isSolid = (x, y) => {
+        if (x < 0 || x >= width || y < 0 || y >= height) return false;
+        return d[(y * width + x) * 4 + 3] > 32; // Alpha threshold
+    };
+
+    const getPixelColor = (x, y) => {
+        const i = (y * width + x) * 4;
+        return [d[i] / 255, d[i + 1] / 255, d[i + 2] / 255];
+    };
+
+    const positions = [];
+    const normals = [];
+    const colors = [];
+
+    const pixelW = scale / width;
+    const pixelH = scale / height;
+    const halfThick = thickness / 2;
+
+    const addQuad = (p1, p2, p3, p4, norm, col) => {
+        // Two triangles: p1, p2, p3 and p1, p3, p4
+        positions.push(
+            p1[0], p1[1], p1[2],
+            p2[0], p2[1], p2[2],
+            p3[0], p3[1], p3[2],
+            p1[0], p1[1], p1[2],
+            p3[0], p3[1], p3[2],
+            p4[0], p4[1], p4[2]
+        );
+        for (let i = 0; i < 6; i++) {
+            normals.push(norm[0], norm[1], norm[2]);
+            colors.push(col[0], col[1], col[2]);
+        }
+    };
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            if (!isSolid(x, y)) continue;
+
+            const col = getPixelColor(x, y);
+            const x0 = (x / width - 0.5) * scale;
+            const x1 = x0 + pixelW;
+            const y0 = ((height - 1 - y) / height - 0.5) * scale;
+            const y1 = y0 + pixelH;
+
+            // Front face (+Z)
+            addQuad(
+                [x0, y0, halfThick],
+                [x1, y0, halfThick],
+                [x1, y1, halfThick],
+                [x0, y1, halfThick],
+                [0, 0, 1],
+                col
+            );
+
+            // Back face (-Z)
+            addQuad(
+                [x1, y0, -halfThick],
+                [x0, y0, -halfThick],
+                [x0, y1, -halfThick],
+                [x1, y1, -halfThick],
+                [0, 0, -1],
+                [col[0] * 0.85, col[1] * 0.85, col[2] * 0.85] // Slight shading for back
+            );
+
+            // Left edge (-X) if adjacent is empty
+            if (!isSolid(x - 1, y)) {
+                addQuad(
+                    [x0, y0, -halfThick],
+                    [x0, y0, halfThick],
+                    [x0, y1, halfThick],
+                    [x0, y1, -halfThick],
+                    [-1, 0, 0],
+                    [col[0] * 0.75, col[1] * 0.75, col[2] * 0.75]
+                );
+            }
+
+            // Right edge (+X) if adjacent is empty
+            if (!isSolid(x + 1, y)) {
+                addQuad(
+                    [x1, y0, halfThick],
+                    [x1, y0, -halfThick],
+                    [x1, y1, -halfThick],
+                    [x1, y1, halfThick],
+                    [1, 0, 0],
+                    [col[0] * 0.75, col[1] * 0.75, col[2] * 0.75]
+                );
+            }
+
+            // Top edge (+Y) if adjacent above (y - 1) is empty
+            if (!isSolid(x, y - 1)) {
+                addQuad(
+                    [x0, y1, halfThick],
+                    [x1, y1, halfThick],
+                    [x1, y1, -halfThick],
+                    [x0, y1, -halfThick],
+                    [0, 1, 0],
+                    [col[0] * 0.9, col[1] * 0.9, col[2] * 0.9]
+                );
+            }
+
+            // Bottom edge (-Y) if adjacent below (y + 1) is empty
+            if (!isSolid(x, y + 1)) {
+                addQuad(
+                    [x0, y0, -halfThick],
+                    [x1, y0, -halfThick],
+                    [x1, y0, halfThick],
+                    [x0, y0, halfThick],
+                    [0, -1, 0],
+                    [col[0] * 0.65, col[1] * 0.65, col[2] * 0.65]
+                );
+            }
+        }
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+    const material = new THREE.MeshLambertMaterial({
+        vertexColors: true,
+        side: THREE.FrontSide
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    return mesh;
+}
+
 

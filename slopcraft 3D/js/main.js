@@ -3,7 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=91';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials } from './textures.js?v=91';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=91';
 import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=91';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=91';
 import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=91';
@@ -1139,18 +1139,25 @@ class Game {
                 this.heldItemMesh.rotation.x = Math.PI / 4;
             } else {
                 const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype, (c) => {
-                    if (this.heldItemMesh && this.heldItemMesh.material && this.heldItemMesh.material.map) {
-                        this.heldItemMesh.material.map.needsUpdate = true;
+                    // Update extruded mesh if texture loads asynchronously
+                    if (this.heldItemMesh && this.heldItemMesh.userData && this.heldItemMesh.userData.item === slot.item) {
+                        const newExtruded = createExtrudedItemMesh(c, 0.45, 0.035);
+                        newExtruded.position.copy(this.heldItemMesh.position);
+                        newExtruded.rotation.copy(this.heldItemMesh.rotation);
+                        newExtruded.userData.item = slot.item;
+                        this.viewModel.remove(this.heldItemMesh);
+                        if (this.heldItemMesh.geometry) this.heldItemMesh.geometry.dispose();
+                        if (this.heldItemMesh.material) this.heldItemMesh.material.dispose();
+                        this.heldItemMesh = newExtruded;
+                        this.viewModel.add(this.heldItemMesh);
                     }
                 });
-                const tex = new THREE.CanvasTexture(iconCanvas);
-                tex.magFilter = THREE.NearestFilter;
-                tex.minFilter = THREE.NearestFilter;
-                tex.colorSpace = THREE.SRGBColorSpace;
 
-                const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide });
-                this.heldItemMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), mat);
-                this.heldItemMesh.position.set(0.4, -0.2, -0.8);
+                // Create extruded 3D pixelated mesh
+                this.heldItemMesh = createExtrudedItemMesh(iconCanvas, 0.45, 0.035);
+                // Position diagonally in Steve's hand pointing forward and slightly tilted
+                this.heldItemMesh.position.set(0.35, -0.32, -0.58);
+                this.heldItemMesh.rotation.set(-0.2, 0.35, -0.75); // Diagonal sword/tool grip
             }
             this.heldItemMesh.userData.item = slot.item;
             this.viewModel.add(this.heldItemMesh);
@@ -1159,9 +1166,40 @@ class Game {
         // Ensure first-person hand & held weapon are strictly hidden in 3rd person
         this.viewModel.visible = (this.cameraMode === 0);
 
+        // Track and animate authentic Minecraft swing arc
+        if (!this.swingProgress) this.swingProgress = 0;
+        if (!this.isSwinging) this.isSwinging = false;
+
+        if (this.input.mouse.leftClick) {
+            this.isSwinging = true;
+        }
+
+        if (this.isSwinging) {
+            this.swingProgress += dt * 4.5; // Fast snappy Minecraft swing cycle
+            if (this.swingProgress >= 1.0) {
+                if (this.input.mouse.leftClick) {
+                    this.swingProgress = 0; // Continuous mining swing cycle
+                } else {
+                    this.swingProgress = 0;
+                    this.isSwinging = false;
+                }
+            }
+        } else {
+            this.swingProgress = 0;
+        }
+
+        // Apply authentic Minecraft swing arc to viewModel: dip down, chop inward, rotate forward
+        const swingSin = Math.sin(this.swingProgress * Math.PI);
+        const swingCos = Math.sin(Math.sqrt(this.swingProgress) * Math.PI * 2);
+        this.viewModel.rotation.x = -swingSin * 0.75;
+        this.viewModel.rotation.y = swingSin * 0.45;
+        this.viewModel.rotation.z = -swingCos * 0.25;
+        this.viewModel.position.x = -swingSin * 0.12;
+        this.viewModel.position.y = -swingSin * 0.08;
+        this.viewModel.position.z = -swingSin * 0.15;
+
         // Left click (Attack / Mine / Magic)
         if (this.input.mouse.leftClick) {
-            this.viewModel.rotation.x += (-0.5 - this.viewModel.rotation.x) * 0.2; // swing animation (lerp)
 
             if (slot && slot.item.type === 'wand') {
                 const castInfo = slot.item.data.wand.castCombined(this.player);
@@ -1282,7 +1320,6 @@ class Game {
                 }
             }
         } else {
-            this.viewModel.rotation.x = 0;
             this.breakTimer = 0;
             this.lastMiningPos = null;
             this.miningOverlay.visible = false;
@@ -1924,6 +1961,11 @@ class Game {
             } else {
                 this.engine.camera.lookAt(eyePos.clone().addScaledVector(lookDir, 5));
             }
+
+            // Update Steve's 3rd person model pose and arm swing
+            this.player.isSwinging = this.isSwinging;
+            this.player.swingProgress = this.swingProgress;
+            this.player.updatePlayerModel(dt, this.input.keys);
         }
         // Check Portal Warp
         const pbx = Math.floor(this.player.position.x);
@@ -1953,6 +1995,10 @@ class Game {
         const headBlock = this.world.getBlock(headX, headY, headZ);
         const headProps = window.getBlockProperties ? window.getBlockProperties(headBlock) : (getBlockProperties ? getBlockProperties(headBlock) : null);
         const isUnderwater = headProps ? (headProps.isLiquid || headProps.isWaterlogged) : false;
+
+        if (this.audio && this.audio.setUnderwater) {
+            this.audio.setUnderwater(isUnderwater);
+        }
 
         this.lighting.update(dt, this.engine.camera.position, isUnderwater, this.currentDimension);
 

@@ -18,10 +18,24 @@ export class LightingSystem {
         this.sunLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.sunLight);
 
-        // Sun Mesh
-        const sunGeo = new THREE.SphereGeometry(3, 16, 16);
-        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffffdd });
+        // Load Sun Texture (assets/mc/environment/sun.png)
+        const texLoader = new THREE.TextureLoader();
+        const sunTexture = texLoader.load('assets/mc/environment/sun.png');
+        sunTexture.magFilter = THREE.NearestFilter;
+        sunTexture.minFilter = THREE.NearestFilter;
+        sunTexture.generateMipmaps = false;
+
+        // Sun Mesh: Authentic square Minecraft celestial plane
+        const sunGeo = new THREE.PlaneGeometry(24, 24);
+        const sunMat = new THREE.MeshBasicMaterial({
+            map: sunTexture,
+            transparent: true,
+            depthWrite: false,
+            fog: false,
+            side: THREE.DoubleSide
+        });
         this.sunMesh = new THREE.Mesh(sunGeo, sunMat);
+        this.sunMesh.renderOrder = -1; // Render before other transparent geometry
         this.scene.add(this.sunMesh);
 
         // Moon Light
@@ -29,10 +43,29 @@ export class LightingSystem {
         this.moonLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.moonLight);
 
-        // Moon Mesh
-        const moonGeo = new THREE.SphereGeometry(2.5, 16, 16);
-        const moonMat = new THREE.MeshBasicMaterial({ color: 0xccddff });
+        // Load Moon Phases Texture (assets/mc/environment/moon_phases.png, 4 columns x 2 rows = 8 phases)
+        const moonTexture = texLoader.load('assets/mc/environment/moon_phases.png');
+        moonTexture.magFilter = THREE.NearestFilter;
+        moonTexture.minFilter = THREE.NearestFilter;
+        moonTexture.generateMipmaps = false;
+        moonTexture.wrapS = THREE.RepeatWrapping;
+        moonTexture.wrapT = THREE.RepeatWrapping;
+        moonTexture.repeat.set(0.25, 0.5); // 1 cell in 4x2 grid
+        moonTexture.offset.set(0, 0.5);   // Full moon default (top left)
+        this.moonTexture = moonTexture;
+        this.moonPhase = 0; // 0 to 7
+
+        // Moon Mesh: Authentic square Minecraft celestial plane
+        const moonGeo = new THREE.PlaneGeometry(20, 20);
+        const moonMat = new THREE.MeshBasicMaterial({
+            map: moonTexture,
+            transparent: true,
+            depthWrite: false,
+            fog: false,
+            side: THREE.DoubleSide
+        });
         this.moonMesh = new THREE.Mesh(moonGeo, moonMat);
+        this.moonMesh.renderOrder = -1;
         this.scene.add(this.moonMesh);
 
         // SkyDome Shader
@@ -113,26 +146,47 @@ export class LightingSystem {
         const angle = (this.timeOfDay - 0.5) * Math.PI * 2;
         const moonAngle = angle + Math.PI;
         
-        // Sun position
-        const sunDist = 80;
+        // In Minecraft, the celestial axis rotates east-to-west across the sky dome
+        const celestialDist = 280; // Distance towards sky dome for authentic scale
         this.sunLight.position.set(
-            cameraPos.x + Math.sin(angle) * sunDist,
-            cameraPos.y + Math.cos(angle) * sunDist,
+            cameraPos.x + Math.sin(angle) * 80,
+            cameraPos.y + Math.cos(angle) * 80,
             cameraPos.z
         );
         this.sunLight.target.position.copy(cameraPos);
         this.sunLight.target.updateMatrixWorld();
-        this.sunMesh.position.copy(this.sunLight.position);
+
+        this.sunMesh.position.set(
+            cameraPos.x + Math.sin(angle) * celestialDist,
+            cameraPos.y + Math.cos(angle) * celestialDist,
+            cameraPos.z
+        );
+        this.sunMesh.lookAt(cameraPos);
 
         // Moon position
         this.moonLight.position.set(
-            cameraPos.x + Math.sin(moonAngle) * sunDist,
-            cameraPos.y + Math.cos(moonAngle) * sunDist,
+            cameraPos.x + Math.sin(moonAngle) * 80,
+            cameraPos.y + Math.cos(moonAngle) * 80,
             cameraPos.z
         );
         this.moonLight.target.position.copy(cameraPos);
         this.moonLight.target.updateMatrixWorld();
-        this.moonMesh.position.copy(this.moonLight.position);
+
+        this.moonMesh.position.set(
+            cameraPos.x + Math.sin(moonAngle) * celestialDist,
+            cameraPos.y + Math.cos(moonAngle) * celestialDist,
+            cameraPos.z
+        );
+        this.moonMesh.lookAt(cameraPos);
+
+        // Advance moon phase each in-game day (8 lunar phases in 4x2 grid)
+        if (this.moonTexture) {
+            const dayIndex = Math.floor(this.timeOfDay * 8) % 8;
+            // 4 columns, 2 rows: cols 0-3 on row 0 (v offset 0.5), cols 0-3 on row 1 (v offset 0.0)
+            const col = dayIndex % 4;
+            const row = Math.floor(dayIndex / 4);
+            this.moonTexture.offset.set(col * 0.25, row === 0 ? 0.5 : 0.0);
+        }
 
         this.skyDome.position.copy(cameraPos);
 

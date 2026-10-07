@@ -1112,6 +1112,118 @@ export function generateChunkTerrain(cx, cz, params) {
     carveGlobalDungeons(blocks, cx, cz, params);
 
     // ============================================
+    // PASS 2B: Lush Caves & Dripstone Caves Biome Decorators
+    // ============================================
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            const wx = wxBase + x;
+            const wz = wzBase + z;
+
+            // Cave biome 3D noise: lush caves vs dripstone caves underground (y: 10 to 55)
+            const lushNoiseVal = fbm3D(params.caveNoise, wx * 0.02 + 450, 25 * 0.02, wz * 0.02 + 450, 2);
+            const dripNoiseVal = fbm3D(params.caveNoise, wx * 0.02 + 820, 25 * 0.02, wz * 0.02 + 820, 2);
+
+            const isLushCave = lushNoiseVal > 0.18;
+            const isDripstoneCave = !isLushCave && (dripNoiseVal > 0.18);
+
+            if (!isLushCave && !isDripstoneCave) continue;
+
+            for (let y = 10; y < 55; y++) {
+                const idx = blockIndex(x, y, z);
+                if (blocks[idx] !== BLOCKS.AIR) continue;
+
+                const belowIdx = blockIndex(x, y - 1, z);
+                const aboveIdx = blockIndex(x, y + 1, z);
+
+                const belowBlock = blocks[belowIdx];
+                const aboveBlock = blocks[aboveIdx];
+
+                const caveRng = seededRandom(params.seed + wx * 31337 + y * 7919 + wz);
+
+                // --- LUSH CAVES ---
+                if (isLushCave) {
+                    // Cave floor (moss, azalea bushes, rooted dirt)
+                    if (belowBlock === BLOCKS.STONE || belowBlock === BLOCKS.DIRT) {
+                        const r = caveRng();
+                        if (r < 0.65) {
+                            blocks[belowIdx] = BLOCKS.MOSS_BLOCK;
+                            // Rare flora on top of moss
+                            if (r < 0.12) {
+                                blocks[idx] = BLOCKS.AZALEA_LEAVES;
+                            } else if (r < 0.22) {
+                                blocks[idx] = BLOCKS.FLOWERING_AZALEA_LEAVES;
+                            } else if (r < 0.38) {
+                                blocks[idx] = BLOCKS.TALL_GRASS;
+                            }
+                        } else if (r < 0.85) {
+                            blocks[belowIdx] = BLOCKS.ROOTED_DIRT;
+                        }
+                    }
+
+                    // Cave ceiling (moss, cave vines with glow berries, hanging spore blossoms)
+                    if (aboveBlock === BLOCKS.STONE) {
+                        const cr = caveRng();
+                        if (cr < 0.55) {
+                            blocks[aboveIdx] = BLOCKS.MOSS_BLOCK;
+                            // Hanging cave vines (with glow)
+                            if (cr < 0.35) {
+                                const vineLen = 1 + Math.floor(caveRng() * 3);
+                                for (let v = 0; v < vineLen && y - v > 10; v++) {
+                                    const vIdx = blockIndex(x, y - v, z);
+                                    if (blocks[vIdx] === BLOCKS.AIR) {
+                                        blocks[vIdx] = BLOCKS.CAVE_VINES;
+                                    } else break;
+                                }
+                            } else if (cr < 0.42) {
+                                blocks[idx] = BLOCKS.SPORE_BLOSSOM;
+                            }
+                        }
+                    }
+                }
+
+                // --- DRIPSTONE CAVES ---
+                if (isDripstoneCave) {
+                    // Floor: dripstone block + stalagmites pointing UP
+                    if (belowBlock === BLOCKS.STONE) {
+                        const dr = caveRng();
+                        if (dr < 0.70) {
+                            blocks[belowIdx] = BLOCKS.DRIPSTONE_BLOCK;
+                            // Form stalagmite pointing up (1 to 3 blocks high)
+                            if (dr < 0.35) {
+                                const spikeHeight = 1 + Math.floor(caveRng() * 3);
+                                for (let s = 0; s < spikeHeight && y + s < 55; s++) {
+                                    const sIdx = blockIndex(x, y + s, z);
+                                    if (blocks[sIdx] === BLOCKS.AIR) {
+                                        blocks[sIdx] = (s === spikeHeight - 1) ? BLOCKS.POINTED_DRIPSTONE_UP : BLOCKS.DRIPSTONE_BLOCK;
+                                    } else break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Ceiling: dripstone block + stalactites pointing DOWN
+                    if (aboveBlock === BLOCKS.STONE) {
+                        const dr = caveRng();
+                        if (dr < 0.70) {
+                            blocks[aboveIdx] = BLOCKS.DRIPSTONE_BLOCK;
+                            // Form stalactite pointing down (1 to 3 blocks long)
+                            if (dr < 0.35) {
+                                const spikeHeight = 1 + Math.floor(caveRng() * 3);
+                                for (let s = 0; s < spikeHeight && y - s > 10; s++) {
+                                    const sIdx = blockIndex(x, y - s, z);
+                                    if (blocks[sIdx] === BLOCKS.AIR) {
+                                        blocks[sIdx] = (s === spikeHeight - 1) ? BLOCKS.POINTED_DRIPSTONE_DOWN : BLOCKS.DRIPSTONE_BLOCK;
+                                    } else break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ============================================
     // PASS 3: Multi-Layer Surface Rules (Arches, Overhangs, Soil, Mud, Beaches)
     // ============================================
     for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -1392,6 +1504,12 @@ export function generateChunkTerrain(cx, cz, params) {
                 generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if (biome.hasCactus && r < 0.01) {
                 generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
+            } else if (r >= 0.08 && r < 0.084) {
+                // Rare Minecraft natural boulders (giant mossy/cobblestone rock formations)
+                generateBoulder(blocks, tx, surfaceY, tz, floraRng);
+            } else if (r >= 0.084 && r < 0.089) {
+                // Rare rock patches on soil/grass
+                generateRockPatch(blocks, tx, surfaceY, tz, floraRng);
             }
         }
     }
@@ -1624,6 +1742,37 @@ function generateRedwoodTree(blocks, x, y, z, rng) {
         safeSetBlock(blocks, x, y + i, z + 1, BLOCKS.REDWOOD_LOG);
         safeSetBlock(blocks, x + 1, y + i, z + 1, BLOCKS.REDWOOD_LOG);
     }
+
+function generateBoulder(blocks, cx, cy, cz, rng) {
+    const radius = 1 + Math.floor(rng() * 2); // 1 to 2 radius (3x3 to 5x5 natural boulder)
+    const isMossy = rng() < 0.45;
+    const blockType = isMossy ? BLOCKS.MOSSY_COBBLESTONE : (rng() < 0.5 ? BLOCKS.COBBLESTONE : BLOCKS.STONE);
+
+    for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -1; dy <= radius; dy++) {
+            for (let dz = -radius; dz <= radius; dz++) {
+                const dist = Math.sqrt(dx * dx + dy * dy * 1.3 + dz * dz);
+                if (dist <= radius + (rng() * 0.4 - 0.2)) {
+                    safeSetBlock(blocks, cx + dx, cy + dy, cz + dz, blockType);
+                }
+            }
+        }
+    }
+}
+
+function generateRockPatch(blocks, cx, cy, cz, rng) {
+    const size = 2 + Math.floor(rng() * 2);
+    for (let dx = -size; dx <= size; dx++) {
+        for (let dz = -size; dz <= size; dz++) {
+            if (dx * dx + dz * dz <= size * size + (rng() * 0.6)) {
+                if (rng() < 0.75) {
+                    const rockType = rng() < 0.35 ? BLOCKS.MOSSY_COBBLESTONE : (rng() < 0.65 ? BLOCKS.COBBLESTONE : BLOCKS.STONE);
+                    safeSetBlock(blocks, cx + dx, cy, cz + dz, rockType);
+                }
+            }
+        }
+    }
+}
     const startLeaves = y + Math.floor(height * 0.38);
     for (let ly = startLeaves; ly <= y + height + 2; ly++) {
         const progress = (ly - startLeaves) / (height * 0.62);
