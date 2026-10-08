@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=94';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=94';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=94';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=94';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=94';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=94';
-import { AudioManager } from './audio.js?v=94';
-import { BiomeMap } from './map.js?v=94';
-import { DevMode } from './dev.js?v=94';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=95';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=95';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=95';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=95';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=95';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=95';
+import { AudioManager } from './audio.js?v=95';
+import { BiomeMap } from './map.js?v=95';
+import { DevMode } from './dev.js?v=95';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -103,15 +103,13 @@ function initChestEntityMaterials(atlas) {
     // Load actual Minecraft chest entity texture
     if (!_chestMatsPromise) {
         _chestMatsPromise = new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
+            const applyChestTexture = (sourceImg) => {
                 const sliceMat = (sx, sy, sw, sh) => {
                     const c = document.createElement('canvas');
                     c.width = sw; c.height = sh;
                     const ctx = c.getContext('2d');
                     ctx.imageSmoothingEnabled = false;
-                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+                    ctx.drawImage(sourceImg, sx, sy, sw, sh, 0, 0, sw, sh);
                     const t = new THREE.CanvasTexture(c);
                     t.magFilter = THREE.NearestFilter;
                     t.minFilter = THREE.NearestFilter;
@@ -142,6 +140,7 @@ function initChestEntityMaterials(atlas) {
                 const updateMats = (mats, newMats) => {
                     for (let i = 0; i < 6; i++) {
                         mats[i].map = newMats[i].map;
+                        mats[i].color.setHex(0xffffff);
                         mats[i].needsUpdate = true;
                     }
                 };
@@ -150,26 +149,19 @@ function initChestEntityMaterials(atlas) {
                 _chestLatchMaterial.map = latch.map;
                 _chestLatchMaterial.color.setHex(0xffffff);
                 _chestLatchMaterial.needsUpdate = true;
+            };
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                applyChestTexture(img);
                 resolve();
             };
             img.onerror = () => {
                 const cdnImg = new Image();
                 cdnImg.crossOrigin = 'anonymous';
                 cdnImg.onload = () => {
-                    const { baseRight, baseLeft, baseTop, baseBot, baseFront, baseBack,
-                            lidRight, lidLeft, lidTop, lidBot, lidFront, lidBack, latch } = createIndividualChestCanvases(cdnImg);
-                    const updateMats = (mats, canvases) => {
-                        for (let i = 0; i < 6; i++) {
-                            mats[i].map = canvases[i].map;
-                            mats[i].color.setHex(0xffffff);
-                            mats[i].needsUpdate = true;
-                        }
-                    };
-                    updateMats(_chestBaseMaterials, [baseRight, baseLeft, baseTop, baseBot, baseFront, baseBack]);
-                    updateMats(_chestLidMaterials, [lidRight, lidLeft, lidTop, lidBot, lidFront, lidBack]);
-                    _chestLatchMaterial.map = latch.map;
-                    _chestLatchMaterial.color.setHex(0xffffff);
-                    _chestLatchMaterial.needsUpdate = true;
+                    applyChestTexture(cdnImg);
                     resolve();
                 };
                 cdnImg.onerror = () => resolve();

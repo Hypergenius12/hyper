@@ -27,7 +27,8 @@ export const BIOMES = {
     CORAL_REEF: { name: 'Coral Reef', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.3, hasTrees: false, isCoralReef: true, grassColor: [0.557, 0.725, 0.443], foliageColor: [0.443, 0.655, 0.302] },
     DARK_FOREST: { name: 'Dark Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isDark: true, hasMushrooms: true, grassColor: [0.314, 0.478, 0.196], foliageColor: [0.314, 0.478, 0.196] },
     MYSTIC_GROVE: { name: 'Mystic Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.6, hasTrees: true, isMystic: true, grassColor: [0.478, 0.902, 0.710], foliageColor: [0.322, 0.851, 0.639] },
-    REDWOOD_FOREST: { name: 'Redwood Forest', surface: BLOCKS.PODZOL, dirt: BLOCKS.DIRT, freq: 0.5, hasTrees: true, isRedwood: true, grassColor: [0.525, 0.718, 0.514], foliageColor: [0.408, 0.647, 0.369] }
+    TAIGA: { name: 'Taiga', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isTaiga: true, grassColor: [0.410, 0.680, 0.440], foliageColor: [0.340, 0.580, 0.360] },
+    REDWOOD_FOREST: { name: 'Redwood Forest', surface: BLOCKS.PODZOL, dirt: BLOCKS.DIRT, freq: 0.5, hasTrees: true, isRedwood: true, isTaiga: true, grassColor: [0.525, 0.718, 0.514], foliageColor: [0.408, 0.647, 0.369] }
 };
 
 export function generateAetherChunk(cx, cz, params) {
@@ -392,7 +393,8 @@ export function getBiomeParams(wx, wz, params) {
         else if (temp < 0.25) biome = BIOMES.TUNDRA; // Frozen ocean equivalent
         else biome = BIOMES.DEEP_OCEAN; // Default ocean
     } else if (isCoast) {
-        if (temp < 0.25) biome = BIOMES.TUNDRA;
+        if (temp < 0.12) biome = BIOMES.TUNDRA;
+        else if (temp < 0.26) biome = BIOMES.TAIGA;
         else if (temp > 0.4) biome = BIOMES.BEACH; // Sandy beach
         else biome = BIOMES.PLAINS; // Grassy/stony shore
     } else if (isMountain) {
@@ -419,9 +421,15 @@ export function getBiomeParams(wx, wz, params) {
             } else {
                 biome = BIOMES.SAVANNA;
             }
-        } else if (temp < 0.2) { // Cold
-            biome = (weirdness > 0.6 && moist > 0.4) ? BIOMES.ICE_SPIKES : BIOMES.TUNDRA;
-        } else { // Temperate (0.2 to 0.75)
+        } else if (temp < 0.26) { // Cold / Cool
+            if (weirdness > 0.6 && moist > 0.4) {
+                biome = BIOMES.ICE_SPIKES;
+            } else if (temp < 0.12) {
+                biome = BIOMES.TUNDRA;
+            } else {
+                biome = BIOMES.TAIGA;
+            }
+        } else { // Temperate (0.26 to 0.75)
             if (moist < 0.35) {
                 biome = weirdness > 0.7 ? BIOMES.MUSHROOM : BIOMES.PLAINS;
             } else if (moist > 0.65) {
@@ -1425,11 +1433,11 @@ export function generateChunkTerrain(cx, cz, params) {
                 generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if (biome.hasCactus && r < 0.01) {
                 generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
-            } else if (r >= 0.08 && r < 0.084) {
-                // Rare Minecraft natural boulders (giant mossy/cobblestone rock formations)
+            } else if ((biome.isTaiga || biome.isRedwood || biome === BIOMES.TAIGA || biome.name === 'Taiga' || biome.name === 'Redwood Forest') && r >= 0.08 && r < 0.086) {
+                // Rare Minecraft natural boulders (giant mossy/cobblestone rock formations) - Taiga exclusive
                 generateBoulder(blocks, tx, surfaceY, tz, floraRng);
-            } else if (r >= 0.084 && r < 0.089) {
-                // Rare rock patches on soil/grass
+            } else if ((biome.isTaiga || biome.isRedwood || biome === BIOMES.TAIGA || biome.name === 'Taiga' || biome.name === 'Redwood Forest') && r >= 0.086 && r < 0.091) {
+                // Rare rock patches on soil/grass - in Taiga
                 generateRockPatch(blocks, tx, surfaceY, tz, floraRng);
             }
         }
@@ -1579,7 +1587,7 @@ export function generateChunkTerrain(cx, cz, params) {
                         else if (fernRoll < 0.8) generateTallFern(blocks, tx, surfaceY + 1, tz);
                         else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                     }
-                } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
+                } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra' || biome === BIOMES.TAIGA || biome.name === 'Taiga' || biome.isTaiga) {
                     if (fr < 0.25) {
                         const taigaRoll = floraRng();
                         if (taigaRoll < 0.35) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
@@ -2137,7 +2145,7 @@ function generateTree(blocks, x, y, z, biome, rng) {
     if (biome.isMystic) { generateMysticTree(blocks, x, y, z, rng); return; }
     if (biome.isRedwood) { generateRedwoodTree(blocks, x, y, z, rng); return; }
     if (biome.savannaFlora || biome.name === 'Savanna') { generateAcaciaTree(blocks, x, y, z, rng); return; }
-    if (biome.name === 'Tundra' || biome.name === 'Ice Spikes' || biome.name === 'Mountains') { generatePineTree(blocks, x, y, z, rng); return; }
+    if (biome.name === 'Tundra' || biome.name === 'Ice Spikes' || biome.name === 'Mountains' || biome.name === 'Taiga' || biome.isTaiga) { generatePineTree(blocks, x, y, z, rng); return; }
     if (biome.isDark || biome.name === 'Dark Forest') { generateDarkOakTree(blocks, x, y, z, rng); return; }
     if (biome.isCherry || biome.name === 'Cherry Grove') { generateCherryTree(blocks, x, y, z, rng); return; }
     if (biome.isOasis || biome.name === 'Oasis') { generatePalmTree(blocks, x, y, z, rng); return; }

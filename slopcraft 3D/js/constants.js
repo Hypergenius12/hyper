@@ -12,6 +12,7 @@ export const BLOCKS = {
     LEAVES: 7,
     PLANKS: 8,
     COBBLESTONE: 9,
+    MOSSY_COBBLESTONE: 83,
     IRON_ORE: 10,
     GOLD_ORE: 11,
     DIAMOND_ORE: 12,

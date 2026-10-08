@@ -257,6 +257,7 @@ export class BiomeMap {
                     case 'Dark Forest': color = '#1C3312'; break;
                     case 'Cherry Grove': color = '#FFB7C5'; break;
                     case 'Tundra': color = '#FFFFFF'; break;
+                    case 'Taiga': color = '#2d5a27'; break;
                     case 'Ice Spikes': color = '#B3E6FF'; break;
                     case 'Mountains': color = '#A0A0A0'; break;
                     case 'Volcanic': color = '#331111'; break;
