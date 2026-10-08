@@ -2,7 +2,7 @@
 // audio.js — SFX Synthesizer using Web Audio API
 // ============================================
 
-import { BLOCKS } from './textures.js';
+import { BLOCKS, getBlockProperties } from './textures.js';
 
 export class AudioManager {
     constructor() {
@@ -281,7 +281,32 @@ export class AudioManager {
     }
 
     _getMCBlockMaterial(blockType) {
-        if (!blockType) return 'stone';
+        if (blockType === undefined || blockType === null) return 'stone';
+        
+        let props = null;
+        try {
+            if (typeof getBlockProperties === 'function') {
+                props = getBlockProperties(blockType);
+            }
+        } catch (e) {}
+
+        const name = (props && props.name) ? props.name.toLowerCase() : '';
+        
+        if (props && props.isLog) return 'wood';
+        if (name.includes('wood') || name.includes('plank') || name.includes('log') || name.includes('door') || name.includes('chest') || name.includes('table') || name.includes('barrel') || name.includes('fence') || name.includes('slab')) {
+            if (!name.includes('stone') && !name.includes('brick') && !name.includes('cobble')) return 'wood';
+        }
+        if (name.includes('leaves') || name.includes('grass') || name.includes('fern') || name.includes('flower') || name.includes('bush') || name.includes('plant') || name.includes('vine') || name.includes('spore') || name.includes('moss') || name.includes('crop') || name.includes('sapling') || name.includes('wart') || name.includes('pad') || name.includes('algae') || name.includes('roots') || name.includes('cactus')) {
+            return 'grass';
+        }
+        if (name.includes('dirt') || name.includes('mud') || name.includes('podzol') || name.includes('mycelium') || name.includes('farmland') || name.includes('soul')) {
+            return 'gravel';
+        }
+        if (name.includes('sand')) return 'sand';
+        if (name.includes('gravel')) return 'gravel';
+        if (name.includes('snow')) return 'snow';
+        if (name.includes('ice') || name.includes('glass')) return 'glass';
+
         const woods = [BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.ACACIA_WOOD, BLOCKS.ACACIA_PLANKS, BLOCKS.CHERRY_LOG, BLOCKS.CHERRY_PLANKS, BLOCKS.AUTUMN_WOOD, BLOCKS.AUTUMN_PLANKS, BLOCKS.PALM_WOOD, BLOCKS.PALM_PLANKS, BLOCKS.PINE_WOOD, BLOCKS.PINE_PLANKS, BLOCKS.DARK_OAK_WOOD, BLOCKS.DARK_OAK_PLANKS, BLOCKS.CRIMSON_STEM, BLOCKS.CRIMSON_PLANKS, BLOCKS.MUSHROOM_STEM, BLOCKS.CRAFTING_TABLE, BLOCKS.CHEST_BLOCK, BLOCKS.BARREL, BLOCKS.ENCHANTED_AETHER_LOG, BLOCKS.PORTAL_FRAME];
         if (woods.includes(blockType)) return 'wood';
         
@@ -318,9 +343,9 @@ export class AudioManager {
         this.playMC(`liquid/swim${v}`, 0.6, position).then(s => { if(!s) this.playNoise(0.1, 0.2, position); });
     }
 
-    playWaterSplash() {
-        const doFallback = () => { this.playNoise(0.3, 0.4); };
-        this.playMC('random/splash', 0.6).then(s => { if(!s) doFallback(); });
+    playWaterSplash(position = null) {
+        const doFallback = () => { this.playNoise(0.3, 0.4, position); };
+        this.playMC('random/splash', 0.6, position).then(s => { if(!s) doFallback(); });
     }
 
     playBreak(blockType) {
@@ -343,9 +368,15 @@ export class AudioManager {
             this.playNoise(0.1, 0.2, position);
         };
         let mat = this._getMCBlockMaterial(blockType);
-        if (mat === 'glass') mat = 'stone'; // placing glass sounds like stone
+        if (mat === 'glass') mat = 'stone'; // placing glass sounds like stone in MC
         const v = Math.floor(Math.random() * 4) + 1;
-        this.playMC(`dig/${mat}${v}`, 0.4, position).then(s => { if(!s) doFallback(); });
+        this.playMC(`step/${mat}${v}`, 0.6, position).then(s => {
+            if (!s) {
+                this.playMC(`dig/${mat}${v}`, 0.4, position).then(s2 => {
+                    if (!s2) doFallback();
+                });
+            }
+        });
     }
 
     playExplode(position = null) {

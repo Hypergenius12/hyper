@@ -491,7 +491,7 @@ export function getColumnInfo(wx, wz, params) {
     // In Minecraft, swamps are sea-level wetlands:
     // When swampInfluence > 0 and contNoise >= 0.35, smoothly pull inland baseElevation down to sea level
     if (swampInfluence > 0 && contNoise >= 0.35) {
-        const targetSwampElev = params.seaLevel - 0.2;
+        const targetSwampElev = params.seaLevel - 1.2;
         baseElevation = baseElevation * (1.0 - swampInfluence) + targetSwampElev * swampInfluence;
     }
 
@@ -501,7 +501,7 @@ export function getColumnInfo(wx, wz, params) {
     factor *= climateMultiplier;
     // For swamps, guarantee gentle rolling wetland relief (channels dipping 1-2 blocks below seaLevel, banks 1-2 blocks above)
     if (swampInfluence > 0) {
-        factor = factor * (1.0 - swampInfluence) + 0.16 * swampInfluence;
+        factor = factor * (1.0 - swampInfluence) + 0.18 * swampInfluence;
     }
 
     // Reduce roughness in oceans and coastlines

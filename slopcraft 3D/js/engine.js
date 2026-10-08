@@ -547,26 +547,10 @@ export class Chunk {
                             }
                         } else if (currentProps.isLiquid) {
                             if (sameLiquid) {
-                                if (face.name === 'top' || face.name === 'bottom') {
-                                    shouldRenderFace = false; // Never render top/bottom between same liquid
-                                } else {
-                                    // Side face between same liquid: only render if current block is higher than neighbor (waterfall drop)
-                                    let nData = 0;
-                                    if (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE && ny >= 0 && ny < CHUNK_HEIGHT) {
-                                        nData = this.data[(ny * CHUNK_SIZE * CHUNK_SIZE) + (nz * CHUNK_SIZE) + nx];
-                                    } else {
-                                        nData = getDataOptimized(wx + face.dir[0], ny, wz + face.dir[2]);
-                                    }
-                                    const maxLevel = isCurLava ? 3 : 7;
-                                    nTop = (nData === 0) ? 0.88 : (nData === 8 ? 1.0 : (0.18 + (nData / maxLevel) * 0.70));
-                                    if (liquidTopY > nTop + 0.05) {
-                                        shouldRenderFace = true;
-                                        isLiquidStep = true;
-                                    }
-                                }
+                                shouldRenderFace = false; // Never render any face between blocks of the same liquid!
                             } else {
                                 // Liquid touching non-same liquid:
-                                // Render face if exposed to AIR or a transparent non-solid block (e.g. glass) or different liquid (e.g. water touching lava)
+                                // Render face if exposed to AIR or a transparent block or different liquid
                                 if (effectiveNeighborType === BLOCKS.AIR) {
                                     shouldRenderFace = true;
                                 } else if (effectiveNeighborProps.isLiquid) {
@@ -629,7 +613,6 @@ export class Chunk {
 
                                 if (currentProps.isLiquid) {
                                     if (v[1] === 1) vy = y + liquidTopY;
-                                    else if (isLiquidStep && v[1] === 0) vy = y + nTop;
                                 } else if (currentBlockType === BLOCKS.CACTUS) {
                                     if (v[0] === 0) vx = x + 0.0625;
                                     else if (v[0] === 1) vx = x + 0.9375;

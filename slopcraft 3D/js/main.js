@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=97';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=97';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=97';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=97';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=97';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=97';
-import { AudioManager } from './audio.js?v=97';
-import { BiomeMap } from './map.js?v=97';
-import { DevMode } from './dev.js?v=97';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=98';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=98';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=98';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=98';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=98';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=98';
+import { AudioManager } from './audio.js?v=98';
+import { BiomeMap } from './map.js?v=98';
+import { DevMode } from './dev.js?v=98';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -19,6 +19,30 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 // Expose BLOCKS globally
 window.BLOCKS = BLOCKS;
 window.BLOCKS_REF = BLOCKS;
+
+const FOOD_HEAL_MAP = {
+    'apple': 15,
+    'golden_apple': 40,
+    'bread': 20,
+    'raw_beef': 12,
+    'cooked_beef': 30,
+    'raw_porkchop': 12,
+    'cooked_porkchop': 30,
+    'raw_chicken': 8,
+    'cooked_chicken': 24,
+    'raw_mutton': 10,
+    'cooked_mutton': 25,
+    'raw_fish': 10,
+    'cooked_fish': 25,
+    'cookie': 10,
+    'carrot': 15,
+    'baked_potato': 20,
+    'melon_slice': 10,
+    'sweet_berries': 10,
+    'glow_shroom': 10,
+    'brown_mushroom': 5,
+    'red_mushroom': 5
+};
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
@@ -443,6 +467,12 @@ class Game {
                 matItem.maxStack = 64;
                 this.entityManager.spawnItem(matItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
             } else {
+                if (oldType === BLOCKS.LEAVES && Math.random() < 0.10) {
+                    const appleItem = new Item('food', 'apple', { heal: 15 }, 'Apple', 'Sweet and crunchy.');
+                    appleItem.stackable = true;
+                    appleItem.maxStack = 64;
+                    this.entityManager.spawnItem(appleItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
                 const dropType = (props.drops !== undefined && props.drops !== null) ? props.drops : oldType;
                 if (dropType !== BLOCKS.AIR) {
                     this.entityManager.spawnItem(Item.blockItem(dropType, getBlockName(dropType)), 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
@@ -1591,14 +1621,16 @@ class Game {
                             this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
                             // Replace bucket with water bucket
                             slot.item = { type: 'material', subtype: 'water_bucket', name: 'Water Bucket', stackable: false, maxStack: 1, data: {} };
-                            this.audio.playPlace();
+                            this.audio.playWaterSplash(hit.blockPos);
+                            this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                         }
                     } else if (targetBlock === BLOCKS.LAVA) {
                         const data = this.world.getData(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                         if (data === 0) {
                             this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
                             slot.item = { type: 'material', subtype: 'lava_bucket', name: 'Lava Bucket', stackable: false, maxStack: 1, data: {} };
-                            this.audio.playPlace();
+                            this.audio.playFizz(hit.blockPos);
+                            this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                         }
                     }
                 } else if (bucketType === 'water_bucket') {
@@ -1620,7 +1652,8 @@ class Game {
                         }
                         // Convert back to empty bucket
                         slot.item = { type: 'material', subtype: 'bucket', name: 'Bucket', stackable: true, maxStack: 16, data: {} };
-                        this.audio.playPlace();
+                        this.audio.playWaterSplash(placePos);
+                        this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                     }
                 } else if (bucketType === 'lava_bucket') {
                     // Place lava source block
@@ -1637,7 +1670,8 @@ class Game {
                         }
                         // Convert back to empty bucket
                         slot.item = { type: 'material', subtype: 'bucket', name: 'Bucket', stackable: true, maxStack: 16, data: {} };
-                        this.audio.playPlace();
+                        this.audio.playFizz(placePos);
+                        this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                     }
                 }
                 this.input.mouse.rightClick = false;
@@ -1664,10 +1698,14 @@ class Game {
                         if (!_topOverlap && (curBlockTop === BLOCKS.AIR || curBlockTop === BLOCKS.WATER || curBlockTop === BLOCKS.SWAMP_WATER || curBlockTop === BLOCKS.LAVA)) {
                             this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype);
                             this.world.setBlock(placePos.x, placePos.y + 1, placePos.z, slot.item.subtype);
-                            this.audio.playPlace();
+                            this.audio.playPlace(slot.item.subtype, placePos);
                             slot.count--;
                             if (slot.count <= 0) {
                                 this.player.inventory.slots[this.player.selectedSlot] = null;
+                            }
+                            this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                            if (this.ui.isOpen) {
+                                this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                             }
                         }
                     } else if (slot.item.subtype === BLOCKS.TALL_FERN) {
@@ -1675,10 +1713,14 @@ class Game {
                         if (curBlockTop === BLOCKS.AIR || curBlockTop === BLOCKS.WATER || curBlockTop === BLOCKS.SWAMP_WATER || curBlockTop === BLOCKS.LAVA) {
                             this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.TALL_FERN);
                             this.world.setBlock(placePos.x, placePos.y + 1, placePos.z, BLOCKS.TALL_FERN_TOP);
-                            this.audio.playPlace();
+                            this.audio.playPlace(BLOCKS.TALL_FERN, placePos);
                             slot.count--;
                             if (slot.count <= 0) {
                                 this.player.inventory.slots[this.player.selectedSlot] = null;
+                            }
+                            this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                            if (this.ui.isOpen) {
+                                this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                             }
                         }
                     } else {
@@ -1704,12 +1746,16 @@ class Game {
 
                         this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype, blockData);
                         if (slot.item.subtype === BLOCKS.TORCH || slot.item.subtype === BLOCKS.GLOWSTONE) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
-                        this.audio.playPlace();
+                        this.audio.playPlace(slot.item.subtype, placePos);
                         if (!this.input.creativeMode) {
                             slot.count--;
                             if (slot.count <= 0) {
                                 this.player.inventory.slots[this.player.selectedSlot] = null;
                             }
+                        }
+                        this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        if (this.ui.isOpen) {
+                            this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                         }
                     }
                 }
@@ -1743,15 +1789,25 @@ class Game {
                 }
                 this.input.mouse.rightClick = false;
                 return;
-            } else if (slot && slot.item.type === 'food') {
-                if (this.player.health < this.player.maxHealth) {
-                    this.player.health = Math.min(this.player.maxHealth, this.player.health + (slot.item.data.heal || 10));
-                    this.audio.playEat();
-                    this.particles.emit(this.player.position, 'explosion', 10, 0x33cc33);
+            } else if (slot && (slot.item.type === 'food' || FOOD_HEAL_MAP[slot.item.subtype] !== undefined || (slot.item.data && slot.item.data.heal > 0))) {
+                const subtype = slot.item.subtype;
+                const healAmount = (slot.item.data && slot.item.data.heal) || FOOD_HEAL_MAP[subtype] || 15;
+                this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
+                if (subtype === 'golden_apple') {
+                    this.player.health = Math.min(this.player.maxHealth + 20, this.player.health + 20);
+                }
+                this.audio.playEat(this.player.position);
+                const mouthPos = new THREE.Vector3(this.player.position.x, this.player.position.y + 1.2, this.player.position.z);
+                this.particles.emit(mouthPos, 'explosion', 12, 0x88cc44);
+                if (!this.input.creativeMode) {
                     slot.count--;
                     if (slot.count <= 0) {
                         this.player.inventory.slots[this.player.selectedSlot] = null;
                     }
+                }
+                this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                if (this.ui.isOpen) {
+                    this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                 }
             }
             this.input.mouse.rightClick = false; // single action
