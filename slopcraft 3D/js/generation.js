@@ -1116,112 +1116,29 @@ export function generateChunkTerrain(cx, cz, params) {
     carveGlobalDungeons(blocks, cx, cz, params);
 
     // ============================================
-    // PASS 2B: Lush Caves & Dripstone Caves Biome Decorators
+    // PASS 2B: Rare Underground Dripstone Clumps
     // ============================================
-    for (let x = 0; x < CHUNK_SIZE; x++) {
-        for (let z = 0; z < CHUNK_SIZE; z++) {
-            const wx = wxBase + x;
-            const wz = wzBase + z;
-
-            // Cave biome 3D noise: lush caves vs dripstone caves underground (y: 10 to 55)
-            const lushNoiseVal = fbm3D(params.caveNoise, wx * 0.02 + 450, 25 * 0.02, wz * 0.02 + 450, 2);
-            const dripNoiseVal = fbm3D(params.caveNoise, wx * 0.02 + 820, 25 * 0.02, wz * 0.02 + 820, 2);
-
-            const isLushCave = lushNoiseVal > 0.18;
-            const isDripstoneCave = !isLushCave && (dripNoiseVal > 0.18);
-
-            if (!isLushCave && !isDripstoneCave) continue;
-
-            for (let y = 10; y < 55; y++) {
-                const idx = blockIndex(x, y, z);
-                if (blocks[idx] !== BLOCKS.AIR) continue;
-
-                const belowIdx = blockIndex(x, y - 1, z);
-                const aboveIdx = blockIndex(x, y + 1, z);
-
-                const belowBlock = blocks[belowIdx];
-                const aboveBlock = blocks[aboveIdx];
-
-                const caveRng = seededRandom(params.seed + wx * 31337 + y * 7919 + wz);
-
-                // --- LUSH CAVES ---
-                if (isLushCave) {
-                    // Cave floor (moss, azalea bushes, rooted dirt)
-                    if (belowBlock === BLOCKS.STONE || belowBlock === BLOCKS.DIRT) {
-                        const r = caveRng();
-                        if (r < 0.65) {
-                            blocks[belowIdx] = BLOCKS.MOSS_BLOCK;
-                            // Rare flora on top of moss
-                            if (r < 0.12) {
-                                blocks[idx] = BLOCKS.AZALEA_LEAVES;
-                            } else if (r < 0.22) {
-                                blocks[idx] = BLOCKS.FLOWERING_AZALEA_LEAVES;
-                            } else if (r < 0.38) {
-                                blocks[idx] = BLOCKS.TALL_GRASS;
-                            }
-                        } else if (r < 0.85) {
-                            blocks[belowIdx] = BLOCKS.ROOTED_DIRT;
-                        }
-                    }
-
-                    // Cave ceiling (moss, cave vines with glow berries, hanging spore blossoms)
-                    if (aboveBlock === BLOCKS.STONE) {
-                        const cr = caveRng();
-                        if (cr < 0.55) {
-                            blocks[aboveIdx] = BLOCKS.MOSS_BLOCK;
-                            // Hanging cave vines (with glow)
-                            if (cr < 0.35) {
-                                const vineLen = 1 + Math.floor(caveRng() * 3);
-                                for (let v = 0; v < vineLen && y - v > 10; v++) {
-                                    const vIdx = blockIndex(x, y - v, z);
-                                    if (blocks[vIdx] === BLOCKS.AIR) {
-                                        blocks[vIdx] = BLOCKS.CAVE_VINES;
-                                    } else break;
-                                }
-                            } else if (cr < 0.42) {
-                                blocks[idx] = BLOCKS.SPORE_BLOSSOM;
-                            }
+    const dripRng = seededRandom(params.seed + cx * 7919 + cz * 31337);
+    if (dripRng() < 0.22) { // Rare chance per chunk (~22%)
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const rx = 3 + Math.floor(dripRng() * (CHUNK_SIZE - 6));
+            const rz = 3 + Math.floor(dripRng() * (CHUNK_SIZE - 6));
+            const ry = 14 + Math.floor(dripRng() * 32);
+            const idx = blockIndex(rx, ry, rz);
+            if (blocks[idx] === BLOCKS.AIR) {
+                let hasStoneNearby = false;
+                for (let dy = -3; dy <= 3; dy++) {
+                    const checkY = ry + dy;
+                    if (checkY > 0 && checkY < CHUNK_HEIGHT) {
+                        if (blocks[blockIndex(rx, checkY, rz)] === BLOCKS.STONE) {
+                            hasStoneNearby = true;
+                            break;
                         }
                     }
                 }
-
-                // --- DRIPSTONE CAVES ---
-                if (isDripstoneCave) {
-                    // Floor: dripstone block + stalagmites pointing UP
-                    if (belowBlock === BLOCKS.STONE) {
-                        const dr = caveRng();
-                        if (dr < 0.70) {
-                            blocks[belowIdx] = BLOCKS.DRIPSTONE_BLOCK;
-                            // Form stalagmite pointing up (1 to 3 blocks high)
-                            if (dr < 0.35) {
-                                const spikeHeight = 1 + Math.floor(caveRng() * 3);
-                                for (let s = 0; s < spikeHeight && y + s < 55; s++) {
-                                    const sIdx = blockIndex(x, y + s, z);
-                                    if (blocks[sIdx] === BLOCKS.AIR) {
-                                        blocks[sIdx] = (s === spikeHeight - 1) ? BLOCKS.POINTED_DRIPSTONE_UP : BLOCKS.DRIPSTONE_BLOCK;
-                                    } else break;
-                                }
-                            }
-                        }
-                    }
-
-                    // Ceiling: dripstone block + stalactites pointing DOWN
-                    if (aboveBlock === BLOCKS.STONE) {
-                        const dr = caveRng();
-                        if (dr < 0.70) {
-                            blocks[aboveIdx] = BLOCKS.DRIPSTONE_BLOCK;
-                            // Form stalactite pointing down (1 to 3 blocks long)
-                            if (dr < 0.35) {
-                                const spikeHeight = 1 + Math.floor(caveRng() * 3);
-                                for (let s = 0; s < spikeHeight && y - s > 10; s++) {
-                                    const sIdx = blockIndex(x, y - s, z);
-                                    if (blocks[sIdx] === BLOCKS.AIR) {
-                                        blocks[sIdx] = (s === spikeHeight - 1) ? BLOCKS.POINTED_DRIPSTONE_DOWN : BLOCKS.DRIPSTONE_BLOCK;
-                                    } else break;
-                                }
-                            }
-                        }
-                    }
+                if (hasStoneNearby) {
+                    generateDripstoneClump(blocks, rx, ry, rz, dripRng);
+                    break;
                 }
             }
         }
@@ -1784,6 +1701,56 @@ function generateRockPatch(blocks, cx, cy, cz, rng) {
                 if (rng() < 0.75) {
                     const rockType = rng() < 0.35 ? BLOCKS.MOSSY_COBBLESTONE : (rng() < 0.65 ? BLOCKS.COBBLESTONE : BLOCKS.STONE);
                     safeSetBlock(blocks, cx + dx, cy, cz + dz, rockType);
+                }
+            }
+        }
+    }
+}
+
+function generateDripstoneClump(blocks, cx, cy, cz, rng) {
+    const radius = 2 + Math.floor(rng() * 2); // 2 to 3 radius clump
+    for (let dx = -radius; dx <= radius; dx++) {
+        for (let dz = -radius; dz <= radius; dz++) {
+            const px = cx + dx;
+            const pz = cz + dz;
+            if (px < 0 || px >= CHUNK_SIZE || pz < 0 || pz >= CHUNK_SIZE) continue;
+            const distSq = dx * dx + dz * dz;
+            if (distSq > radius * radius + (rng() * 0.7)) continue;
+
+            // Search column around cy for subterranean cave ceiling and cave floor
+            for (let y = Math.max(8, cy - 7); y <= Math.min(50, cy + 7); y++) {
+                const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
+                if (blocks[idx] !== BLOCKS.AIR) continue;
+
+                const belowIdx = ((y - 1) * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
+                const aboveIdx = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
+
+                // Floor stalagmite (pointing UP)
+                if (blocks[belowIdx] === BLOCKS.STONE && rng() < 0.65) {
+                    blocks[belowIdx] = BLOCKS.DRIPSTONE_BLOCK;
+                    if (rng() < 0.5) {
+                        const spikeH = 1 + (rng() < 0.35 ? 1 : 0);
+                        for (let s = 0; s < spikeH && y + s <= 50; s++) {
+                            const sIdx = ((y + s) * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
+                            if (blocks[sIdx] === BLOCKS.AIR) {
+                                blocks[sIdx] = (s === spikeH - 1) ? BLOCKS.POINTED_DRIPSTONE_UP : BLOCKS.DRIPSTONE_BLOCK;
+                            } else break;
+                        }
+                    }
+                }
+
+                // Ceiling stalactite (pointing DOWN)
+                if (blocks[aboveIdx] === BLOCKS.STONE && rng() < 0.65) {
+                    blocks[aboveIdx] = BLOCKS.DRIPSTONE_BLOCK;
+                    if (rng() < 0.6) {
+                        const spikeH = 1 + (rng() < 0.4 ? (rng() < 0.5 ? 2 : 1) : 0);
+                        for (let s = 0; s < spikeH && y - s >= 8; s++) {
+                            const sIdx = ((y - s) * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
+                            if (blocks[sIdx] === BLOCKS.AIR) {
+                                blocks[sIdx] = (s === spikeH - 1) ? BLOCKS.POINTED_DRIPSTONE_DOWN : BLOCKS.DRIPSTONE_BLOCK;
+                            } else break;
+                        }
+                    }
                 }
             }
         }
