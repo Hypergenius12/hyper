@@ -445,25 +445,33 @@ export function getBiomeParams(wx, wz, params) {
         }
     }
 
-    return { biome, terraceWeight, contNoise, erosionNoise, weirdness };
+    return { biome, terraceWeight, contNoise, erosionNoise, weirdness, temp, moist };
 }
 
 export function getColumnInfo(wx, wz, params) {
     const colRng = seededRandom(params.seed + wx * 3141 + wz);
     
-    let { biome, terraceWeight, contNoise, erosionNoise, weirdness } = getBiomeParams(wx, wz, params);
+    let { biome, terraceWeight, contNoise, erosionNoise, weirdness, temp, moist } = getBiomeParams(wx, wz, params);
     
-    // 1. Continentalness Base
+    const smoothstep = (min, max, v) => {
+        const t = Math.max(0, Math.min(1, (v - min) / (max - min)));
+        return t * t * (3 - 2 * t);
+    };
+
+    // 1. Continentalness Base with smooth cubic hermite curves (eliminates coastline angle kinks)
     let baseElevation = params.seaLevel;
     if (contNoise < 0.3) {
         // Ocean (deep to shallow)
-        baseElevation = (params.seaLevel - 25) + (contNoise / 0.3) * 23; // e.g. -25 to -2 below sea level
+        const t = smoothstep(0, 0.3, contNoise);
+        baseElevation = (params.seaLevel - 25) + t * 23; // e.g. -25 to -2 below sea level
     } else if (contNoise < 0.4) {
         // Coastline/Beach
-        baseElevation = (params.seaLevel - 2) + ((contNoise - 0.3) / 0.1) * 6; // e.g. -2 to +4 relative to sea level
+        const t = smoothstep(0.3, 0.4, contNoise);
+        baseElevation = (params.seaLevel - 2) + t * 6; // e.g. -2 to +4 relative to sea level
     } else {
         // Inland
-        baseElevation = (params.seaLevel + 4) + ((contNoise - 0.4) / 0.6) * 30; // e.g. +4 to +34 relative to sea level
+        const t = smoothstep(0.4, 1.0, contNoise);
+        baseElevation = (params.seaLevel + 4) + t * 30; // e.g. +4 to +34 relative to sea level
     }
 
     // 2. Erosion Factor
@@ -473,21 +481,18 @@ export function getColumnInfo(wx, wz, params) {
     else if (erosionNoise > 0.3) factor = 0.5 + ((0.5 - erosionNoise) / 0.2) * 0.7; // 0.5 to 1.2
     else factor = 1.2 + ((0.3 - erosionNoise) / 0.3) * 2.8; // 1.2 to 4.0 (Mountains)
 
-    // Biome-specific terrain shaping:
-    // Deserts are smoother and flatter with gentle expansive dunes
-    // Plains are quite flat and open
-    // Swamps are very flat lowlands near water level
-    if (biome === BIOMES.DESERT || biome.name === 'Desert') {
-        factor *= 0.35;
-    } else if (biome === BIOMES.PLAINS || biome.name === 'Plains') {
-        factor *= 0.30;
-    } else if (biome === BIOMES.SWAMP || biome.name === 'Swamp' || biome.swampFlora) {
-        factor *= 0.20;
-    } else if (biome === BIOMES.SAVANNA || biome.name === 'Savanna') {
-        factor *= 0.65;
-    } else if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains' || biome === BIOMES.ICE_SPIKES) {
-        factor *= 1.25;
-    }
+    // Smooth continuous climate shaping:
+    // Replaces abrupt per-biome step functions with continuous smoothstep gradients,
+    // ensuring seamless, cliff-free terrain height transitions between biomes like Minecraft.
+    const desertInfluence = smoothstep(0.68, 0.78, temp) * (1.0 - smoothstep(0.25, 0.45, moist));
+    const swampInfluence = smoothstep(0.40, 0.65, temp) * smoothstep(0.55, 0.75, moist);
+    const plainsInfluence = smoothstep(0.55, 0.75, erosionNoise) * (1.0 - smoothstep(0.45, 0.65, weirdness));
+
+    let climateMultiplier = 1.0;
+    climateMultiplier = climateMultiplier * (1.0 - desertInfluence) + 0.35 * desertInfluence;
+    climateMultiplier = climateMultiplier * (1.0 - swampInfluence) + 0.20 * swampInfluence;
+    climateMultiplier = climateMultiplier * (1.0 - plainsInfluence * 0.45) + 0.30 * (plainsInfluence * 0.45);
+    factor *= climateMultiplier;
 
     // Reduce roughness in oceans and coastlines
     if (contNoise < 0.3) {
@@ -632,6 +637,8 @@ export function getColumnInfo(wx, wz, params) {
         erosionNoise,
         contNoise,
         weirdness,
+        temp,
+        moist,
         factor,
         colRng,
         bData: { isTerraced: terraceWeight > 0.5, lakeSurfaceY }
@@ -1159,7 +1166,7 @@ export function generateChunkTerrain(cx, cz, params) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
             const wx = wxBase + x;
             const wz = wzBase + z;
-            const { biome, colRng, bData } = columns[x][z];
+            const { biome, colRng, bData, temp, moist, contNoise, erosionNoise, weirdness } = columns[x][z];
             const isSwamp = (biome === BIOMES.SWAMP || biome.name === 'Swamp' || biome.swampFlora);
 
             // Check if swamp has a rare small puddle here
@@ -1178,6 +1185,14 @@ export function generateChunkTerrain(cx, cz, params) {
 
             const isColdBiome = (biome === BIOMES.TUNDRA || biome === BIOMES.ICE_SPIKES || biome === BIOMES.MOUNTAINS || biome.name === 'Tundra' || biome.name === 'Ice Spikes' || biome.name === 'Mountains');
             const hasSandyBeach = (biome === BIOMES.BEACH || biome === BIOMES.DESERT || biome === BIOMES.OASIS || biome.name === 'Beach' || biome.name === 'Desert');
+
+            // High-frequency surface dither noise (3 to 6 block patch wavelength) for organic Minecraft-like boundary blending
+            const dither1 = params.noise2D(wx * 0.22 + 400, wz * 0.22 + 400);
+            const dither2 = params.noise2D(wx * 0.44 + 800, wz * 0.44 + 800) * 0.4;
+            const surfaceNoise = dither1 + dither2;
+
+            // Organic topsoil depth (2 to 4 blocks deep, varies by slope and noise like Minecraft)
+            const soilLimit = 2 + Math.floor((params.noise2D(wx * 0.08 + 111, wz * 0.08 + 111) + 1.0) * 1.1);
 
             let depth = -1;
             for (let y = CHUNK_HEIGHT - 2; y >= 1; y--) {
@@ -1204,20 +1219,22 @@ export function generateChunkTerrain(cx, cz, params) {
 
                     let type;
                     if (isUnderwater) {
+                        const waterDepth = Math.max(0, params.seaLevel - y);
                         if (isColdBiome) {
                             type = BLOCKS.GRAVEL;
                         } else if (hasSandyBeach || biome === BIOMES.PLAINS) {
-                            type = BLOCKS.SAND;
+                            // Shallow water shelf is mostly sand; deeper transitions to gravel like Minecraft
+                            type = (waterDepth <= 2 || surfaceNoise > -0.3) ? BLOCKS.SAND : BLOCKS.GRAVEL;
                         } else if (isSwamp) {
-                            type = isSwampMud ? BLOCKS.MUD : BLOCKS.DIRT;
+                            type = isSwampMud ? BLOCKS.MUD : (surfaceNoise > 0 ? BLOCKS.MUD : BLOCKS.DIRT);
                         } else {
-                            type = BLOCKS.DIRT;
+                            type = (waterDepth > 3 && surfaceNoise < 0) ? BLOCKS.GRAVEL : BLOCKS.DIRT;
                         }
                     } else if (isNearSeaShore || isNearLakeShore) {
                         if (isColdBiome) {
-                            type = BLOCKS.GRAVEL;
-                        } else if (hasSandyBeach) {
-                            type = BLOCKS.SAND;
+                            type = (surfaceNoise > 0.2) ? BLOCKS.GRAVEL : BLOCKS.STONE;
+                        } else if (hasSandyBeach || biome === BIOMES.PLAINS) {
+                            type = (surfaceNoise < -0.7) ? BLOCKS.GRAVEL : BLOCKS.SAND;
                         } else if (isSwamp) {
                             type = isSwampMud ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
                         } else {
@@ -1233,35 +1250,86 @@ export function generateChunkTerrain(cx, cz, params) {
                     } else if (isSwamp) {
                         if (isSwampPuddle && y <= params.seaLevel + 3) {
                             type = BLOCKS.SWAMP_WATER;
-                        } else if (isSwampMud) {
+                        } else if (isSwampMud || surfaceNoise < -0.4) {
                             type = BLOCKS.MUD;
                         } else {
                             type = BLOCKS.SWAMP_GRASS;
                         }
                     } else {
                         type = biome.surface;
+
+                        // Minecraft-like Organic Border Dithering:
+                        // 1. Desert / Savanna / Plains border dithering
+                        if (moist < 0.48 && temp > 0.68 && temp < 0.82) {
+                            const sandScore = (temp - 0.74) * 20.0 + surfaceNoise * 1.5;
+                            if (sandScore > 0.3) {
+                                type = BLOCKS.SAND;
+                            } else if (sandScore < -0.3) {
+                                type = (temp > 0.72) ? BLOCKS.SAVANNA_GRASS : BLOCKS.GRASS;
+                            } else {
+                                type = (colRng() < (sandScore + 0.3) / 0.6) ? BLOCKS.SAND : ((temp > 0.72) ? BLOCKS.SAVANNA_GRASS : BLOCKS.GRASS);
+                            }
+                        }
+                        // 2. Beach sand extending inland organically
+                        else if (contNoise >= 0.32 && contNoise <= 0.42 && y <= params.seaLevel + 2) {
+                            const beachScore = (0.37 - contNoise) * 35.0 + surfaceNoise * 1.4;
+                            if (beachScore > 0.2) {
+                                type = (surfaceNoise < -0.7) ? BLOCKS.GRAVEL : BLOCKS.SAND;
+                            } else if (beachScore > -0.4 && colRng() < 0.35) {
+                                type = BLOCKS.SAND;
+                            }
+                        }
+                        // 3. Tundra / Snowy biome border dithering
+                        else if (temp >= 0.08 && temp <= 0.18) {
+                            const snowScore = (0.13 - temp) * 22.0 + surfaceNoise * 1.5;
+                            if (snowScore > 0.25) {
+                                type = BLOCKS.SNOW;
+                            } else if (snowScore < -0.25) {
+                                type = BLOCKS.GRASS;
+                            } else {
+                                type = (colRng() < (snowScore + 0.25) / 0.5) ? BLOCKS.SNOW : BLOCKS.GRASS;
+                            }
+                        }
+                        // 4. Redwood Forest (Mega Taiga) Podzol & Coarse Dirt dithering
+                        else if (biome.isRedwood || (weirdness >= 0.50 && weirdness <= 0.62 && moist >= 0.35 && moist <= 0.65)) {
+                            if (biome.isRedwood) {
+                                type = (surfaceNoise < -0.55) ? BLOCKS.DIRT : BLOCKS.PODZOL;
+                            }
+                            if (weirdness >= 0.50 && weirdness <= 0.60) {
+                                const podzolScore = (weirdness - 0.55) * 22.0 + surfaceNoise * 1.5;
+                                if (podzolScore < -0.2) {
+                                    type = BLOCKS.GRASS;
+                                } else if (podzolScore < 0.2) {
+                                    type = (colRng() < 0.5) ? BLOCKS.PODZOL : BLOCKS.GRASS;
+                                }
+                            }
+                        }
+                        // 5. Badlands Terracotta & Red Sand dithering
+                        else if (biome === BIOMES.BADLANDS || biome.name === 'Badlands') {
+                            type = (surfaceNoise > 0.25) ? BLOCKS.RED_SAND : BLOCKS.TERRACOTTA;
+                        }
                     }
                     blocks[idx] = type;
-                } else if (depth < 3) {
-                    // Subsurface soil layer (depth 1 to 3)
+                } else if (depth < soilLimit) {
+                    // Subsurface soil layer (depth 1 to soilLimit)
                     depth++;
-                    const isNearShore = (y <= params.seaLevel + 1 && y >= params.seaLevel - 2) || (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY + 1 && y >= bData.lakeSurfaceY - 1);
-
+                    const surfaceBlock = blocks[blockIndex(x, y + depth, z)];
                     let type;
                     if (biome.isVolcanic) {
                         type = colRng() < 0.5 ? BLOCKS.BLACKSTONE : BLOCKS.SMOOTH_BASALT;
-                    } else if (isSwamp) {
-                        type = BLOCKS.MUD;
-                    } else if (isNearShore && isColdBiome) {
+                    } else if (surfaceBlock === BLOCKS.SAND) {
+                        type = (depth >= 3) ? BLOCKS.SANDSTONE : BLOCKS.SAND;
+                    } else if (surfaceBlock === BLOCKS.RED_SAND || surfaceBlock === BLOCKS.TERRACOTTA) {
+                        type = BLOCKS.TERRACOTTA;
+                    } else if (surfaceBlock === BLOCKS.MUD) {
+                        type = (colRng() < 0.6) ? BLOCKS.MUD : BLOCKS.DIRT;
+                    } else if (surfaceBlock === BLOCKS.GRAVEL) {
                         type = BLOCKS.GRAVEL;
-                    } else if (isNearShore && hasSandyBeach) {
-                        type = BLOCKS.SAND;
                     } else {
                         type = biome.dirt;
                     }
                     blocks[idx] = type;
                 } else {
-                    // Deep interior: remain stone!
                     depth++;
                 }
             }
@@ -1420,8 +1488,20 @@ export function generateChunkTerrain(cx, cz, params) {
                 }
             }
 
-            // Other Biome Trees & Features
-            if (biome.hasTrees && r < 0.02) {
+            // Other Biome Trees & Features (with smooth woodland border density feathering)
+            let treeProbability = 0;
+            if (biome.hasTrees) {
+                treeProbability = 0.022;
+                // Feather tree density as we approach flat open plains
+                if (colInfo.erosionNoise > 0.60) {
+                    treeProbability *= Math.max(0.35, 1.0 - (colInfo.erosionNoise - 0.60) / 0.15 * 0.65);
+                }
+            } else if (biome === BIOMES.PLAINS || biome.name === 'Plains') {
+                // Rare solitary oak trees in plains, slightly more common near forest borders (like vanilla Minecraft)
+                treeProbability = (colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.005 : 0.002;
+            }
+
+            if (treeProbability > 0 && r < treeProbability) {
                 generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
             } else if (biome.hasDeadTrees && r < 0.005) {
                 generateDeadTree(blocks, tx, surfaceY + 1, tz, floraRng);
@@ -1431,7 +1511,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 generateCrystal(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if (biome.hasIceSpikes && r < 0.02) {
                 generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
-            } else if (biome.hasCactus && r < 0.01) {
+            } else if (biome.hasCactus && r < 0.01 && currentGroundBlock === BLOCKS.SAND) {
                 generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if ((biome.isTaiga || biome.isRedwood || biome === BIOMES.TAIGA || biome.name === 'Taiga' || biome.name === 'Redwood Forest') && r >= 0.08 && r < 0.086) {
                 // Rare Minecraft natural boulders (giant mossy/cobblestone rock formations) - Taiga exclusive

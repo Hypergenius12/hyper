@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=95';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=95';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=95';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=95';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=95';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=95';
-import { AudioManager } from './audio.js?v=95';
-import { BiomeMap } from './map.js?v=95';
-import { DevMode } from './dev.js?v=95';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=96';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=96';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=96';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=96';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=96';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=96';
+import { AudioManager } from './audio.js?v=96';
+import { BiomeMap } from './map.js?v=96';
+import { DevMode } from './dev.js?v=96';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';

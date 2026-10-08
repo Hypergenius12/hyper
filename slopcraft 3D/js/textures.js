@@ -3619,7 +3619,9 @@ export async function createTextureAtlas(useMinecraft = true) {
                             if (isWater) {
                                 tint = (bt === BLOCKS.SWAMP_WATER) ? '#617B59' : '#3F76E4';
                             } else if (texName === 'grass_block_top') {
-                                tint = '#79c05a'; // Standard vibrant Minecraft plains grass green
+                                if (bt === BLOCKS.SWAMP_GRASS) tint = '#6a7039'; // Murky dark swamp grass
+                                else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755'; // Warm golden-olive savanna grass
+                                else tint = '#79c05a'; // Standard vibrant Minecraft plains grass green
                             } else if (texName.includes('leaves')) {
                                 tint = (bt === BLOCKS.CHERRY_LEAVES) ? '#ffffff' : (bt === BLOCKS.PINE_LEAVES ? '#4f855f' : '#59ae30');
                             } else if (texName === 'lily_pad') {
