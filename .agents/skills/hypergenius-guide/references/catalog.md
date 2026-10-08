@@ -123,3 +123,9 @@ This reference lists all 22 active interactive projects in the `hypergenius12.co
 - **Display Title:** Interactive US History Timeline
 - **Stack:** Horizontal Pan/Zoom Engine
 - **Features:** Chronological US History explorer with draggable era navigation, rich documentary cards, and embedded mini-games.
+
+### [color-pallete-generator](file:///c:/Users/Caleb.Abbe/Downloads/hyper-main/hyper-main/color-pallete-generator/index.html)
+- **Display Title:** ChromaCraft
+- **Stack:** React, Tailwind CSS, Lucide Icons, Canvas Confetti
+- **Features:** Lightning-fast color palette generator with shades inspection, WCAG contrast testing, color blindness simulation, theme presets, image color extraction, and exports.
+

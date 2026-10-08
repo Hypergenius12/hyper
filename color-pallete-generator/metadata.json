@@ -1,0 +1,6 @@
+{
+  "name": "ChromaCraft - Color Palette Generator",
+  "description": "Lightning-fast color palette generator inspired by Coolors. Lock colors, press spacebar to generate, inspect shades, test color blindness, export, and preview in mockups.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

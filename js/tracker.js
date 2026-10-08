@@ -66,6 +66,7 @@ const PROJECT_NAMES = {
     'dvd': 'DVD Logo Simulator',
     'rubiks': '2x2 Rubik\'s Cube',
     'synesthesia': 'Synesthesia Color Mixer',
+    'color-pallete-generator': 'ChromaCraft',
     'neurotrack': 'NeuroTrack AI Racing',
     'dust': 'Dust Sandbox'
 };
