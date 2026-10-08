@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=93';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=94';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -275,9 +275,10 @@ export class Player {
         this.velocity.x += moveDir.x * speed * 10 * dt;
         this.velocity.z += moveDir.z * speed * 10 * dt;
 
-        // Drag (friction)
-        this.velocity.x -= this.velocity.x * drag * dt;
-        this.velocity.z -= this.velocity.z * drag * dt;
+        // Drag (friction) — exponential decay for 100% numerical stability against lag spikes
+        const friction = Math.exp(-drag * dt);
+        this.velocity.x *= friction;
+        this.velocity.z *= friction;
 
         // Y velocity update (gravity)
         this.velocity.y += gravity * dt;
@@ -289,7 +290,7 @@ export class Player {
             } else if (keys.crouch) {
                 this.velocity.y = -3.5;
             } else {
-                this.velocity.y -= this.velocity.y * drag * dt; // Stop vertical movement if not climbing
+                this.velocity.y *= friction; // Stop vertical movement if not climbing
             }
         } else if (flying) {
             if (keys.jump) {
@@ -297,7 +298,7 @@ export class Player {
             } else if (keys.crouch) {
                 this.velocity.y = -12;
             } else {
-                this.velocity.y -= this.velocity.y * drag * dt;
+                this.velocity.y *= friction;
             }
         } else if (keys.jump) {
             if (this.grounded) {
@@ -415,9 +416,6 @@ export class Player {
                 }
             }
         }
-
-        // Animate Player 3D Character Model
-        this.updatePlayerModel(dt, keys);
     }
 
     createPlayerMesh(assignToPlayer = true) {
@@ -675,9 +673,22 @@ export class Player {
             rightArm.add(heldContainer);
         }
 
+        const clearHeld = () => {
+            while (heldContainer.children.length > 0) {
+                const child = heldContainer.children[0];
+                heldContainer.remove(child);
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                    else child.material.dispose();
+                }
+            }
+        };
+
         const slot = this.inventory ? this.inventory.slots[this.selectedSlot] : null;
         if (!slot) {
-            heldContainer.clear();
+            clearHeld();
+            heldContainer.userData.currentKey = null;
             heldContainer.userData.currentSubtype = null;
             return;
         }
@@ -685,7 +696,7 @@ export class Player {
         const currentKey = `${slot.item.type}_${slot.item.subtype}`;
         if (heldContainer.userData.currentKey === currentKey) return;
 
-        heldContainer.clear();
+        clearHeld();
         heldContainer.userData.currentKey = currentKey;
 
         if (slot.item.type === 'block') {
@@ -742,7 +753,7 @@ export class Player {
         const safeSubtype = String(slot.item.subtype || '');
         const iconCanvas = generateItemTexture(slot.item.type, safeSubtype, (c) => {
             if (heldContainer.userData.currentKey === currentKey) {
-                heldContainer.clear();
+                clearHeld();
                 const m = createExtrudedItemMesh(c, 0.45, 0.035);
                 m.rotation.set(Math.PI / 4, 0, -Math.PI / 4);
                 heldContainer.add(m);
@@ -984,27 +995,21 @@ export const MOB_TYPES = {
         size: 0.9, xpDrop: 4, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Authentic Minecraft Cow Body: Box (12, 18, 10) in MC coords -> (0.75, 0.625, 1.125)
+            // Authentic Minecraft Cow Body: Box (12, 18, 10) in MC coords -> (0.75, 1.125, 0.625) rotated PI/2 around X
             // Vanilla MC Cow Body UV: { u: 18, v: 4, w: 12, h: 18, d: 10 }
-            const cowBodyFaceUVs = {
-                top: [28, 14, 12, 18],
-                bottom: [50, 14, 12, 18],
-                front: [28, 4, 12, 10],
-                back: [40, 4, 12, 10],
-                right: [18, 14, 10, 18],
-                left: [40, 14, 10, 18]
-            };
-            const bodyGeo = new THREE.BoxGeometry(0.75, 0.625, 1.125);
-            const bodyMats = getMobBoxMaterials('COW', { u: 18, v: 4, w: 12, h: 18, d: 10 }, { part: 'body', faceUVs: cowBodyFaceUVs });
+            const bodyGeo = new THREE.BoxGeometry(0.75, 1.125, 0.625);
+            const bodyMats = getMobBoxMaterials('COW', { u: 18, v: 4, w: 12, h: 18, d: 10 }, { part: 'body' });
             const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.rotation.x = Math.PI / 2;
             body.position.y = 0.55;
             body.castShadow = true;
             group.add(body);
 
-            // Udder: Vanilla MC Udder UV: { u: 52, v: 0, w: 4, h: 6, d: 2 }
-            const udderGeo = new THREE.BoxGeometry(0.25, 0.12, 0.35);
+            // Udder: Vanilla MC Udder UV: { u: 52, v: 0, w: 4, h: 6, d: 2 } rotated PI/2 around X
+            const udderGeo = new THREE.BoxGeometry(0.25, 0.375, 0.125);
             const udderMats = getMobBoxMaterials('COW', { u: 52, v: 0, w: 4, h: 6, d: 2 }, { part: 'snout' });
             const udder = new THREE.Mesh(udderGeo, udderMats);
+            udder.rotation.x = Math.PI / 2;
             udder.position.set(0, 0.21, -0.2);
             udder.castShadow = true;
             group.add(udder);
@@ -1097,19 +1102,12 @@ export const MOB_TYPES = {
         size: 0.8, xpDrop: 2, lootChance: 1.0,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Authentic Minecraft Sheep Body (Fleece Wool coat)
+            // Authentic Minecraft Sheep Body (Fleece Wool coat): Box (12, 16, 8) in MC coords -> (0.75, 1.0, 0.5) rotated PI/2 around X
             // Vanilla MC Sheep Wool body UV: { u: 28, v: 8, w: 12, h: 16, d: 8 }
-            const sheepBodyFaceUVs = {
-                top: [36, 16, 12, 16],
-                bottom: [56, 16, 12, 16],
-                front: [36, 8, 12, 8],
-                back: [48, 8, 12, 8],
-                right: [28, 16, 8, 16],
-                left: [48, 16, 8, 16]
-            };
-            const bodyGeo = new THREE.BoxGeometry(0.75, 0.5, 1.0);
-            const bodyMats = getMobBoxMaterials('SHEEP', { u: 28, v: 8, w: 12, h: 16, d: 8 }, { skinKey: 'sheep/sheep_fur.png', part: 'body', faceUVs: sheepBodyFaceUVs });
+            const bodyGeo = new THREE.BoxGeometry(0.75, 1.0, 0.5);
+            const bodyMats = getMobBoxMaterials('SHEEP', { u: 28, v: 8, w: 12, h: 16, d: 8 }, { skinKey: 'sheep/sheep_fur.png', part: 'body' });
             const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.rotation.x = Math.PI / 2;
             body.position.y = 0.55;
             body.castShadow = true;
             group.add(body);
@@ -1341,19 +1339,12 @@ export const MOB_TYPES = {
         size: 0.7, xpDrop: 3, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Authentic Minecraft Pig Body: Box (10, 16, 8) in MC coords -> (0.625, 0.5, 1.0)
+            // Authentic Minecraft Pig Body: Box (10, 16, 8) in MC coords -> (0.625, 1.0, 0.5) rotated PI/2 around X
             // Vanilla MC Pig Body UV: { u: 28, v: 8, w: 10, h: 16, d: 8 }
-            const pigBodyFaceUVs = {
-                top: [36, 16, 10, 16],
-                bottom: [54, 16, 10, 16],
-                front: [36, 8, 10, 8],
-                back: [46, 8, 10, 8],
-                right: [28, 16, 8, 16],
-                left: [46, 16, 8, 16]
-            };
-            const bodyGeo = new THREE.BoxGeometry(0.625, 0.5, 1.0);
-            const bodyMats = getMobBoxMaterials('PIG', { u: 28, v: 8, w: 10, h: 16, d: 8 }, { part: 'body', faceUVs: pigBodyFaceUVs });
+            const bodyGeo = new THREE.BoxGeometry(0.625, 1.0, 0.5);
+            const bodyMats = getMobBoxMaterials('PIG', { u: 28, v: 8, w: 10, h: 16, d: 8 }, { part: 'body' });
             const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.rotation.x = Math.PI / 2;
             body.position.y = 0.45;
             body.castShadow = true;
             group.add(body);
@@ -2298,11 +2289,12 @@ export const MOB_TYPES = {
         size: 0.3, xpDrop: 1, lootChance: 0.1,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Authentic Minecraft Chicken Body: Box (6, 8, 6) in MC coords -> (0.35, 0.3, 0.45)
+            // Authentic Minecraft Chicken Body: Box (6, 8, 6) in MC coords -> (0.375, 0.5, 0.375) rotated PI/2 around X
             // Vanilla MC Chicken Body UV: { u: 0, v: 9, w: 6, h: 8, d: 6 }
-            const bodyGeo = new THREE.BoxGeometry(0.35, 0.3, 0.45);
+            const bodyGeo = new THREE.BoxGeometry(0.375, 0.5, 0.375);
             const bodyMats = getMobBoxMaterials('CHICKEN', { u: 0, v: 9, w: 6, h: 8, d: 6 }, { part: 'body' });
             const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.rotation.x = Math.PI / 2;
             body.position.y = 0.32;
             body.castShadow = true;
             group.add(body);

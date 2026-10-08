@@ -2858,8 +2858,8 @@ function hasFaceVariants(blockType) {
 // For uniform blocks, store 1 texture and use the same UV for all faces
 
 
-const MINECRAFT_ASSETS_BASE = "https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/textures/";
-const AETHER_ASSETS_BASE = "https://raw.githubusercontent.com/The-Aether-Team/The-Aether/1.21.1-develop/src/main/resources/assets/aether/textures/block/natural/";
+const MINECRAFT_ASSETS_BASE = "https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/";
+const AETHER_ASSETS_BASE = "https://cdn.jsdelivr.net/gh/The-Aether-Team/The-Aether@1.21.1-develop/src/main/resources/assets/aether/textures/block/natural/";
 
 const MC_TEXTURE_MAP = {
     [BLOCKS.GRASS]: { top: 'grass_block_top', side: 'grass_block_side', bottom: 'dirt' },
@@ -3056,7 +3056,22 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.FLOWERING_AZALEA_LEAVES]: 'flowering_azalea_leaves',
     [BLOCKS.DRIPSTONE_BLOCK]: 'dripstone_block',
     [BLOCKS.POINTED_DRIPSTONE_DOWN]: 'pointed_dripstone_down_tip',
-    [BLOCKS.POINTED_DRIPSTONE_UP]: 'pointed_dripstone_up_tip'
+    [BLOCKS.POINTED_DRIPSTONE_UP]: 'pointed_dripstone_up_tip',
+    [BLOCKS.DUNGEON_BRICK]: 'deepslate_bricks',
+    [BLOCKS.DUNGEON_FLOOR]: 'deepslate_tiles',
+    [BLOCKS.PALM_WOOD]: { top: 'jungle_log_top', side: 'jungle_log', bottom: 'jungle_log_top' },
+    [BLOCKS.PALM_LEAVES]: 'jungle_leaves',
+    [BLOCKS.OASIS_FERN]: 'fern',
+    [BLOCKS.DUNGEON_FIRE_BRICK]: 'red_nether_bricks',
+    [BLOCKS.DUNGEON_FIRE_FLOOR]: 'nether_bricks',
+    [BLOCKS.DUNGEON_ICE_BRICK]: 'prismarine_bricks',
+    [BLOCKS.DUNGEON_ICE_FLOOR]: 'blue_ice',
+    [BLOCKS.DUNGEON_JUNGLE_BRICK]: 'mossy_stone_bricks',
+    [BLOCKS.DUNGEON_JUNGLE_FLOOR]: 'mossy_cobblestone',
+    [BLOCKS.DUNGEON_DESERT_BRICK]: 'cut_sandstone',
+    [BLOCKS.DUNGEON_DESERT_FLOOR]: 'sandstone',
+    [BLOCKS.DUNGEON_UNDEAD_BRICK]: 'polished_blackstone_bricks',
+    [BLOCKS.DUNGEON_UNDEAD_FLOOR]: 'polished_blackstone'
 };
 
 let _mcChestPromise = null;
@@ -3066,8 +3081,14 @@ function loadMinecraftChestTexture(face) {
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = () => resolve(img);
-            img.onerror = () => resolve(null);
-            img.src = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/textures/entity/chest/normal.png';
+            img.onerror = () => {
+                const cdnImg = new Image();
+                cdnImg.crossOrigin = 'anonymous';
+                cdnImg.onload = () => resolve(cdnImg);
+                cdnImg.onerror = () => resolve(null);
+                cdnImg.src = 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/entity/chest/normal.png';
+            };
+            img.src = 'assets/mc/entity/chest/normal.png';
         });
     }
     return _mcChestPromise.then(img => {
@@ -5319,61 +5340,56 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
             rect(3, 4, 3, 3, '#d87e90'); rect(10, 4, 3, 3, '#d87e90');
             rect(3, 10, 3, 3, '#d87e90'); rect(10, 10, 3, 3, '#d87e90');
         } else if (part === 'leg') {
-            fill('#e4ddd3'); noise(228, 221, 211, 10, 20);
-            rect(0, 0, 16, 5, '#221c18');
-            rect(0, 12, 16, 4, '#221e1c');
-            rect(0, 11, 16, 1, '#443c38');
+            fill('#443224'); noise(68, 50, 36, 12, 25);
+            rect(0, 11, 16, 5, '#221c18');
+            rect(2, 2, 5, 4, '#ded6cb');
         } else { // body
-            fill('#e4ddd3'); noise(228, 221, 211, 12, 25);
-            rect(1, 2, 6, 5, '#221c18'); rect(2, 7, 4, 3, '#221c18');
-            rect(9, 6, 6, 7, '#221c18'); rect(8, 1, 5, 4, '#221c18');
-            rect(0, 11, 4, 4, '#221c18'); rect(12, 0, 4, 3, '#221c18');
+            fill('#443224'); noise(68, 50, 36, 15, 30);
+            rect(1, 2, 6, 5, '#ded6cb'); rect(2, 7, 4, 3, '#ded6cb');
+            rect(9, 6, 6, 7, '#ded6cb'); rect(8, 1, 5, 4, '#ded6cb');
+            rect(0, 11, 4, 4, '#ded6cb'); rect(12, 0, 4, 3, '#ded6cb');
         }
     }
 
     // --- PIG ---
     else if (mobType === 'PIG') {
         if (part === 'head_front') {
-            fill('#f3aab6'); noise(243, 170, 182, 12, 25);
+            fill('#f0a0a8'); noise(240, 160, 168, 12, 25);
             rect(2, 6, 3, 2, '#2d161d'); dot(2, 6, '#ffffff');
             rect(11, 6, 3, 2, '#2d161d'); dot(11, 6, '#ffffff');
-            rect(2, 5, 3, 1, '#e294a2'); rect(11, 5, 3, 1, '#e294a2');
-            rect(4, 9, 8, 5, '#e494a2');
+            rect(4, 9, 8, 5, '#e48090');
+            dot(6, 11, '#602028'); dot(9, 11, '#602028');
         } else if (part === 'snout') {
-            fill('#e88ea0'); noise(232, 142, 160, 10, 15);
-            rect(0, 0, 16, 1, '#cf7286'); rect(0, 15, 16, 1, '#b8586c');
-            rect(0, 0, 1, 16, '#cf7286'); rect(15, 0, 1, 16, '#b8586c');
-            rect(3, 5, 3, 6, '#5e1c28'); rect(10, 5, 3, 6, '#5e1c28');
+            fill('#e48090'); noise(228, 128, 144, 10, 15);
+            rect(3, 5, 3, 6, '#602028'); rect(10, 5, 3, 6, '#602028');
         } else if (part === 'leg') {
-            fill('#f3aab6'); noise(243, 170, 182, 10, 20);
-            rect(0, 12, 16, 4, '#4c222b');
-            rect(7, 11, 2, 5, '#281016');
+            fill('#f0a0a8'); noise(240, 160, 168, 10, 20);
+            rect(0, 12, 16, 4, '#402028');
         } else { // body / head sides
-            fill('#f3aab6'); noise(243, 170, 182, 12, 30);
-            rect(0, 0, 16, 3, '#e699a6');
-            rect(0, 13, 16, 3, '#f9bcc6');
+            fill('#f0a0a8'); noise(240, 160, 168, 12, 30);
+            rect(0, 0, 16, 2, '#e8949c');
         }
     }
 
     // --- SHEEP ---
     else if (mobType === 'SHEEP') {
         if (part === 'head_front') {
-            fill('#d8b898'); noise(216, 184, 152, 10, 25);
-            rect(0, 0, 16, 5, '#f0f0f0'); rect(2, 5, 12, 2, '#eaeaea');
-            rect(1, 8, 3, 2, '#ffffff'); rect(2, 8, 2, 2, '#2a1e16');
-            rect(12, 8, 3, 2, '#ffffff'); rect(12, 8, 2, 2, '#2a1e16');
-            rect(6, 12, 4, 2, '#b88274'); dot(7, 13, '#88584c'); dot(8, 13, '#88584c');
-        } else if (part === 'head_bottom') {
-            fill('#d8b898'); noise(216, 184, 152, 10, 15);
+            fill('#c8a888'); noise(200, 168, 136, 10, 25);
+            rect(0, 0, 16, 4, '#eae8e2');
+            rect(1, 7, 3, 2, '#ffffff'); rect(2, 7, 2, 2, '#2a1e16');
+            rect(12, 7, 3, 2, '#ffffff'); rect(12, 7, 2, 2, '#2a1e16');
+            rect(6, 11, 4, 2, '#b88274'); dot(7, 12, '#88584c'); dot(8, 12, '#88584c');
+        } else if (part === 'head_bottom' || part === 'head_side') {
+            fill('#c8a888'); noise(200, 168, 136, 10, 15);
         } else if (part === 'leg') {
-            fill('#d8b898'); noise(216, 184, 152, 10, 20);
+            fill('#c8a888'); noise(200, 168, 136, 10, 20);
             rect(0, 13, 16, 3, '#38261c');
         } else { // wool
-            fill('#ececec'); noise(236, 236, 236, 15, 40);
+            fill('#eae8e2'); noise(234, 232, 226, 12, 35);
             for (let i = 0; i < 16; i++) {
                 const cx = (i * 5) % 16, cy = Math.floor((i * 5) / 16) * 4;
-                rect(cx, cy, 3, 3, '#dbdbdb');
-                rect(cx + 1, cy + 1, 2, 2, '#fafafa');
+                rect(cx, cy, 3, 3, '#dedcd4');
+                rect(cx + 1, cy + 1, 2, 2, '#f6f4ee');
             }
         }
     }
@@ -5381,26 +5397,25 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
     // --- CHICKEN ---
     else if (mobType === 'CHICKEN') {
         if (part === 'head_front') {
-            fill('#fafafa'); noise(250, 250, 250, 10, 25);
+            fill('#f6f6f6'); noise(246, 246, 246, 8, 20);
             rect(1, 5, 2, 2, '#181818'); dot(1, 5, '#ffffff');
             rect(13, 5, 2, 2, '#181818'); dot(13, 5, '#ffffff');
-            rect(5, 7, 6, 4, '#f5a200');
+            rect(5, 7, 6, 4, '#e89010');
             dot(6, 8, '#b26b00'); dot(9, 8, '#b26b00');
-            rect(6, 11, 4, 4, '#d81824'); rect(7, 15, 2, 1, '#a80c14');
+            rect(6, 11, 4, 4, '#cc1824'); rect(7, 15, 2, 1, '#900c14');
         } else if (part === 'head_side') {
-            fill('#fafafa'); noise(250, 250, 250, 10, 25);
+            fill('#f6f6f6'); noise(246, 246, 246, 8, 20);
             rect(6, 5, 3, 3, '#181818'); dot(6, 5, '#ffffff');
-            rect(13, 7, 3, 3, '#f5a200');
+            rect(13, 7, 3, 3, '#e89010');
         } else if (part === 'wing') {
-            fill('#f4f4f4'); noise(244, 244, 244, 10, 25);
+            fill('#f2f2f2'); noise(242, 242, 242, 8, 20);
             rect(0, 8, 16, 3, '#dedede'); rect(0, 12, 16, 4, '#cccccc');
         } else if (part === 'leg') {
-            fill('#f5a200'); noise(245, 162, 0, 10, 20);
-            rect(0, 12, 16, 4, '#cf8000');
+            fill('#e89010'); noise(232, 144, 16, 10, 20);
+            rect(0, 12, 16, 4, '#b26b00');
         } else { // body
-            fill('#fafafa'); noise(250, 250, 250, 12, 35);
-            rect(2, 4, 12, 2, '#eaeaea'); rect(3, 8, 10, 2, '#e0e0e0');
-            rect(4, 12, 8, 2, '#d6d6d6');
+            fill('#f6f6f6'); noise(246, 246, 246, 10, 30);
+            rect(2, 4, 12, 2, '#e8e8e8'); rect(3, 8, 10, 2, '#dedede');
         }
     }
 
@@ -6137,21 +6152,34 @@ export function getMobBoxMaterials(mobType, uvs, options = {}) {
         return { c, ctx: cctx };
     };
 
-    const right  = makeFaceCanvas(d, h);
-    const left   = makeFaceCanvas(d, h);
-    const top    = makeFaceCanvas(w, d);
-    const bottom = makeFaceCanvas(w, d);
-    const front  = makeFaceCanvas(w, h);
-    const back   = makeFaceCanvas(w, h);
-
     const custom = options.faceUVs;
+    const rw = custom ? custom.right[2]  : d;
+    const rh = custom ? custom.right[3]  : h;
+    const lw = custom ? custom.left[2]   : d;
+    const lh = custom ? custom.left[3]   : h;
+    const tw = custom ? custom.top[2]    : w;
+    const th = custom ? custom.top[3]    : d;
+    const bw = custom ? custom.bottom[2] : w;
+    const bh = custom ? custom.bottom[3] : d;
+    const fw = custom ? custom.front[2]  : w;
+    const fh = custom ? custom.front[3]  : h;
+    const kw = custom ? custom.back[2]   : w;
+    const kh = custom ? custom.back[3]   : h;
+
+    const right  = makeFaceCanvas(rw, rh);
+    const left   = makeFaceCanvas(lw, lh);
+    const top    = makeFaceCanvas(tw, th);
+    const bottom = makeFaceCanvas(bw, bh);
+    const front  = makeFaceCanvas(fw, fh);
+    const back   = makeFaceCanvas(kw, kh);
+
     const faces = [
-        { name: 'right',  canvas: right.c,  ctx: right.ctx,  sx: custom ? custom.right[0]  : u,             sy: custom ? custom.right[1]  : v + d, sw: custom ? custom.right[2]  : d, sh: custom ? custom.right[3]  : h },
-        { name: 'left',   canvas: left.c,   ctx: left.ctx,   sx: custom ? custom.left[0]   : u + d + w,     sy: custom ? custom.left[1]   : v + d, sw: custom ? custom.left[2]   : d, sh: custom ? custom.left[3]   : h },
-        { name: 'top',    canvas: top.c,    ctx: top.ctx,    sx: custom ? custom.top[0]    : u + d,         sy: custom ? custom.top[1]    : v,     sw: custom ? custom.top[2]    : w, sh: custom ? custom.top[3]    : d },
-        { name: 'bottom', canvas: bottom.c, ctx: bottom.ctx, sx: custom ? custom.bottom[0] : u + d + w,     sy: custom ? custom.bottom[1] : v,     sw: custom ? custom.bottom[2] : w, sh: custom ? custom.bottom[3] : d },
-        { name: 'front',  canvas: front.c,  ctx: front.ctx,  sx: custom ? custom.front[0]  : u + d,         sy: custom ? custom.front[1]  : v + d, sw: custom ? custom.front[2]  : w, sh: custom ? custom.front[3]  : h },
-        { name: 'back',   canvas: back.c,   ctx: back.ctx,   sx: custom ? custom.back[0]   : u + d + w + d, sy: custom ? custom.back[1]  : v + d, sw: custom ? custom.back[2]   : w, sh: custom ? custom.back[3]   : h }
+        { name: 'right',  canvas: right.c,  ctx: right.ctx,  sx: custom ? custom.right[0]  : u,             sy: custom ? custom.right[1]  : v + d, sw: rw, sh: rh },
+        { name: 'left',   canvas: left.c,   ctx: left.ctx,   sx: custom ? custom.left[0]   : u + d + w,     sy: custom ? custom.left[1]   : v + d, sw: lw, sh: lh },
+        { name: 'top',    canvas: top.c,    ctx: top.ctx,    sx: custom ? custom.top[0]    : u + d,         sy: custom ? custom.top[1]    : v,     sw: tw, sh: th },
+        { name: 'bottom', canvas: bottom.c, ctx: bottom.ctx, sx: custom ? custom.bottom[0] : u + d + w,     sy: custom ? custom.bottom[1] : v,     sw: bw, sh: bh },
+        { name: 'front',  canvas: front.c,  ctx: front.ctx,  sx: custom ? custom.front[0]  : u + d,         sy: custom ? custom.front[1]  : v + d, sw: fw, sh: fh },
+        { name: 'back',   canvas: back.c,   ctx: back.ctx,   sx: custom ? custom.back[0]   : u + d + w + d, sy: custom ? custom.back[1]  : v + d, sw: kw, sh: kh }
     ];
 
     // Initialize faces with procedural fallback using appropriate part (not head_front for everything)

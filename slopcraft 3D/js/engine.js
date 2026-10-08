@@ -571,8 +571,8 @@ export class Chunk {
                                     shouldRenderFace = true;
                                 } else if (effectiveNeighborProps.isLiquid) {
                                     shouldRenderFace = true; // Liquid boundary (e.g. water next to lava)
-                                } else if (effectiveNeighborProps.transparent && !effectiveNeighborProps.solid) {
-                                    shouldRenderFace = true;
+                                } else if (effectiveNeighborProps.transparent) {
+                                    shouldRenderFace = true; // Transparent block boundary (e.g. glass, ice, doors)
                                 }
                             }
                         } else {
@@ -695,30 +695,38 @@ export class Chunk {
                             }
 
                             // Add indices — use currentProps/currentBlockType so waterlogged blocks sort as water
+                            // Flip quad triangulation if diagonal 0-2 has higher AO than 1-3 to eliminate diagonal shadow creases
+                            const flipQuad = (aoColor[0] + aoColor[2] > aoColor[1] + aoColor[3]);
+                            const i0 = vertexCount, i1 = vertexCount + 1, i2 = vertexCount + 2, i3 = vertexCount + 3;
+
+                            const pushQuadIndices = (arr, count) => {
+                                if (flipQuad) {
+                                    arr[count++] = i1; arr[count++] = i2; arr[count++] = i3;
+                                    arr[count++] = i1; arr[count++] = i3; arr[count++] = i0;
+                                } else {
+                                    arr[count++] = i0; arr[count++] = i1; arr[count++] = i2;
+                                    arr[count++] = i0; arr[count++] = i2; arr[count++] = i3;
+                                }
+                                return count;
+                            };
+
                             if (currentProps.transparent) {
                                 if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER || currentBlockType === BLOCKS.LAVA) {
-                                    _waterIndices[waterIndexCount++] = vertexCount; _waterIndices[waterIndexCount++] = vertexCount + 1; _waterIndices[waterIndexCount++] = vertexCount + 2;
-                                    _waterIndices[waterIndexCount++] = vertexCount; _waterIndices[waterIndexCount++] = vertexCount + 2; _waterIndices[waterIndexCount++] = vertexCount + 3;
+                                    waterIndexCount = pushQuadIndices(_waterIndices, waterIndexCount);
                                 } else if (currentProps.emissive >= 0.8) {
-                                    _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 1; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 2;
-                                    _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 2; _glowTransparentIndices[glowTransparentIndexCount++] = vertexCount + 3;
+                                    glowTransparentIndexCount = pushQuadIndices(_glowTransparentIndices, glowTransparentIndexCount);
                                 } else if (currentProps.emissive > 0) {
-                                    _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount; _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount + 1; _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount + 2;
-                                    _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount; _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount + 2; _slightGlowTransparentIndices[slightGlowTransparentIndexCount++] = vertexCount + 3;
+                                    slightGlowTransparentIndexCount = pushQuadIndices(_slightGlowTransparentIndices, slightGlowTransparentIndexCount);
                                 } else {
-                                    _transparentIndices[transparentIndexCount++] = vertexCount; _transparentIndices[transparentIndexCount++] = vertexCount + 1; _transparentIndices[transparentIndexCount++] = vertexCount + 2;
-                                    _transparentIndices[transparentIndexCount++] = vertexCount; _transparentIndices[transparentIndexCount++] = vertexCount + 2; _transparentIndices[transparentIndexCount++] = vertexCount + 3;
+                                    transparentIndexCount = pushQuadIndices(_transparentIndices, transparentIndexCount);
                                 }
                             } else {
                                 if (currentProps.emissive >= 0.8) {
-                                    _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 1; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 2;
-                                    _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 2; _glowOpaqueIndices[glowOpaqueIndexCount++] = vertexCount + 3;
+                                    glowOpaqueIndexCount = pushQuadIndices(_glowOpaqueIndices, glowOpaqueIndexCount);
                                 } else if (currentProps.emissive > 0) {
-                                    _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount; _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount + 1; _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount + 2;
-                                    _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount; _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount + 2; _slightGlowOpaqueIndices[slightGlowOpaqueIndexCount++] = vertexCount + 3;
+                                    slightGlowOpaqueIndexCount = pushQuadIndices(_slightGlowOpaqueIndices, slightGlowOpaqueIndexCount);
                                 } else {
-                                    _opaqueIndices[opaqueIndexCount++] = vertexCount; _opaqueIndices[opaqueIndexCount++] = vertexCount + 1; _opaqueIndices[opaqueIndexCount++] = vertexCount + 2;
-                                    _opaqueIndices[opaqueIndexCount++] = vertexCount; _opaqueIndices[opaqueIndexCount++] = vertexCount + 2; _opaqueIndices[opaqueIndexCount++] = vertexCount + 3;
+                                    opaqueIndexCount = pushQuadIndices(_opaqueIndices, opaqueIndexCount);
                                 }
                             }
                             vertexCount += 4;
@@ -845,8 +853,9 @@ const _aoResult = [1, 1, 1, 1];
 
 function _isSolid(wx, wy, wz, dx, dy, dz, getNeighborBlock) {
     const type = getNeighborBlock(wx + dx, wy + dy, wz + dz);
+    if (!type || type === BLOCKS.AIR) return false;
     const props = getBlockProperties(type);
-    if (type === window.BLOCKS.AIR || props.isLiquid || type === window.BLOCKS.GLASS || type === window.BLOCKS.LEAVES || type === window.BLOCKS.TORCH || props.isCross || type === window.BLOCKS.CHEST_BLOCK || type === window.BLOCKS.DUNGEON_DOOR) return false;
+    if (!props.solid || props.transparent || props.isLiquid || props.isCross) return false;
     return true;
 }
 
@@ -1809,7 +1818,8 @@ export class World {
             const props = getBlockProperties(blockType);
 
             const isLiquidHit = hitLiquids && props.isLiquid;
-            if (blockType !== BLOCKS.AIR && (isLiquidHit || (blockType !== BLOCKS.WATER && blockType !== BLOCKS.LAVA && blockType !== BLOCKS.SWAMP_WATER && (props.solid || props.isCross)))) {
+            const isSolidOrInteractable = props.solid || props.isCross || blockType === BLOCKS.PORTAL || blockType === BLOCKS.BOSS_SPAWNER || (window.BLOCKS && (blockType === window.BLOCKS.AETHER_PORTAL || blockType === window.BLOCKS.CAVERN_PORTAL || blockType === window.BLOCKS.HIGHLANDS_PORTAL));
+            if (blockType !== BLOCKS.AIR && (isLiquidHit || (!props.isLiquid && isSolidOrInteractable))) {
                 const hitNormal = new THREE.Vector3(0, 0, 0);
                 if (steppedIndex === 0) hitNormal.x = -stepX;
                 if (steppedIndex === 1) hitNormal.y = -stepY;
@@ -1905,9 +1915,51 @@ export class World {
             velocity.y = 0;
             if (targetY < position.y) { // Falling down
                 grounded = true;
-                targetY = Math.floor(targetY) + 1.0;
+                const minX = Math.floor(position.x - hw + 0.01);
+                const maxX = Math.floor(position.x + hw - 0.01);
+                const minZ = Math.floor(position.z - hw + 0.01);
+                const maxZ = Math.floor(position.z + hw - 0.01);
+                const startY = Math.floor(position.y);
+                const endY = Math.floor(targetY);
+                let highestSurfaceY = null;
+                for (let y = startY; y >= endY; y--) {
+                    for (let x = minX; x <= maxX; x++) {
+                        for (let z = minZ; z <= maxZ; z++) {
+                            const block = this.getBlock(x, y, z);
+                            if (getBlockProperties(block).solid) {
+                                if (block === window.BLOCKS.DUNGEON_DOOR && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
+                                if (highestSurfaceY === null || (y + 1.0) > highestSurfaceY) {
+                                    highestSurfaceY = y + 1.0;
+                                }
+                            }
+                        }
+                    }
+                    if (highestSurfaceY !== null) break;
+                }
+                targetY = highestSurfaceY !== null ? highestSurfaceY : (Math.floor(position.y) + 1.0);
             } else { // Jumping up and hitting ceiling
-                const ceilingBlockY = Math.floor(targetY + entityHeight - 0.01);
+                const minX = Math.floor(position.x - hw + 0.01);
+                const maxX = Math.floor(position.x + hw - 0.01);
+                const minZ = Math.floor(position.z - hw + 0.01);
+                const maxZ = Math.floor(position.z + hw - 0.01);
+                const startY = Math.floor(position.y + entityHeight);
+                const endY = Math.floor(targetY + entityHeight - 0.01);
+                let lowestCeilingY = null;
+                for (let y = startY; y <= endY; y++) {
+                    for (let x = minX; x <= maxX; x++) {
+                        for (let z = minZ; z <= maxZ; z++) {
+                            const block = this.getBlock(x, y, z);
+                            if (getBlockProperties(block).solid) {
+                                if (block === window.BLOCKS.DUNGEON_DOOR && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
+                                if (lowestCeilingY === null || y < lowestCeilingY) {
+                                    lowestCeilingY = y;
+                                }
+                            }
+                        }
+                    }
+                    if (lowestCeilingY !== null) break;
+                }
+                const ceilingBlockY = lowestCeilingY !== null ? lowestCeilingY : Math.floor(targetY + entityHeight - 0.01);
                 targetY = Math.min(position.y, ceilingBlockY - entityHeight - 0.001);
             }
         }

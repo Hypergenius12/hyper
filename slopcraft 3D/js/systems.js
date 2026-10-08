@@ -18,9 +18,20 @@ export class LightingSystem {
         this.sunLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.sunLight);
 
-        // Load Sun Texture (assets/mc/environment/sun.png)
+        // Load Sun Texture (assets/mc/environment/sun.png with jsdelivr CDN fallback)
         const texLoader = new THREE.TextureLoader();
-        const sunTexture = texLoader.load('assets/mc/environment/sun.png');
+        const cdnSunUrl = 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/environment/sun.png';
+        const cdnMoonUrl = 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/environment/moon_phases.png';
+
+        const sunTexture = texLoader.load('assets/mc/environment/sun.png', undefined, undefined, () => {
+            texLoader.load(cdnSunUrl, (loadedTex) => {
+                loadedTex.magFilter = THREE.NearestFilter;
+                loadedTex.minFilter = THREE.NearestFilter;
+                loadedTex.generateMipmaps = false;
+                sunMat.map = loadedTex;
+                sunMat.needsUpdate = true;
+            });
+        });
         sunTexture.magFilter = THREE.NearestFilter;
         sunTexture.minFilter = THREE.NearestFilter;
         sunTexture.generateMipmaps = false;
@@ -44,7 +55,21 @@ export class LightingSystem {
         this.scene.add(this.moonLight);
 
         // Load Moon Phases Texture (assets/mc/environment/moon_phases.png, 4 columns x 2 rows = 8 phases)
-        const moonTexture = texLoader.load('assets/mc/environment/moon_phases.png');
+        const moonTexture = texLoader.load('assets/mc/environment/moon_phases.png', undefined, undefined, () => {
+            texLoader.load(cdnMoonUrl, (loadedTex) => {
+                loadedTex.magFilter = THREE.NearestFilter;
+                loadedTex.minFilter = THREE.NearestFilter;
+                loadedTex.generateMipmaps = false;
+                loadedTex.wrapS = THREE.RepeatWrapping;
+                loadedTex.wrapT = THREE.RepeatWrapping;
+                loadedTex.repeat.set(0.25, 0.5);
+                const dayIndex = Math.floor(this.timeOfDay * 8) % 8;
+                loadedTex.offset.set((dayIndex % 4) * 0.25, Math.floor(dayIndex / 4) === 0 ? 0.5 : 0.0);
+                moonMat.map = loadedTex;
+                moonMat.needsUpdate = true;
+                this.moonTexture = loadedTex;
+            });
+        });
         moonTexture.magFilter = THREE.NearestFilter;
         moonTexture.minFilter = THREE.NearestFilter;
         moonTexture.generateMipmaps = false;

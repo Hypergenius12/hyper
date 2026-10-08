@@ -2,15 +2,15 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=93';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=93';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=93';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=93';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=93';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=93';
-import { AudioManager } from './audio.js?v=93';
-import { BiomeMap } from './map.js?v=93';
-import { DevMode } from './dev.js?v=93';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=94';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=94';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=94';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=94';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=94';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=94';
+import { AudioManager } from './audio.js?v=94';
+import { BiomeMap } from './map.js?v=94';
+import { DevMode } from './dev.js?v=94';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -152,8 +152,30 @@ function initChestEntityMaterials(atlas) {
                 _chestLatchMaterial.needsUpdate = true;
                 resolve();
             };
-            img.onerror = () => resolve();
-            img.src = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.21.11/assets/minecraft/textures/entity/chest/normal.png';
+            img.onerror = () => {
+                const cdnImg = new Image();
+                cdnImg.crossOrigin = 'anonymous';
+                cdnImg.onload = () => {
+                    const { baseRight, baseLeft, baseTop, baseBot, baseFront, baseBack,
+                            lidRight, lidLeft, lidTop, lidBot, lidFront, lidBack, latch } = createIndividualChestCanvases(cdnImg);
+                    const updateMats = (mats, canvases) => {
+                        for (let i = 0; i < 6; i++) {
+                            mats[i].map = canvases[i].map;
+                            mats[i].color.setHex(0xffffff);
+                            mats[i].needsUpdate = true;
+                        }
+                    };
+                    updateMats(_chestBaseMaterials, [baseRight, baseLeft, baseTop, baseBot, baseFront, baseBack]);
+                    updateMats(_chestLidMaterials, [lidRight, lidLeft, lidTop, lidBot, lidFront, lidBack]);
+                    _chestLatchMaterial.map = latch.map;
+                    _chestLatchMaterial.color.setHex(0xffffff);
+                    _chestLatchMaterial.needsUpdate = true;
+                    resolve();
+                };
+                cdnImg.onerror = () => resolve();
+                cdnImg.src = 'https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/entity/chest/normal.png';
+            };
+            img.src = 'assets/mc/entity/chest/normal.png';
         });
     }
 }
@@ -429,7 +451,7 @@ class Game {
                 matItem.maxStack = 64;
                 this.entityManager.spawnItem(matItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
             } else {
-                const dropType = (props.drops !== undefined && props.drops !== null && props.drops !== BLOCKS.AIR) ? props.drops : oldType;
+                const dropType = (props.drops !== undefined && props.drops !== null) ? props.drops : oldType;
                 if (dropType !== BLOCKS.AIR) {
                     this.entityManager.spawnItem(Item.blockItem(dropType, getBlockName(dropType)), 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
                 }
@@ -1888,6 +1910,11 @@ class Game {
             this.player.update(dt, this.input.keys, this.input.mouse, this.world);
             this.handleInput(dt);
 
+            // Sync fresh swing state and update Steve's 3D model exactly once per frame
+            this.player.isSwinging = this.isSwinging;
+            this.player.swingProgress = this.swingProgress;
+            this.player.updatePlayerModel(dt, this.input.keys);
+
             // Falling from Aether sky islands into the Overworld sky
             if (this.currentDimension === 'aether' && this.player.position.y < -3 && !this.isWarping) {
                 const targetX = this.player.position.x;
@@ -1965,11 +1992,6 @@ class Game {
             } else {
                 this.engine.camera.lookAt(eyePos.clone().addScaledVector(lookDir, 5));
             }
-
-            // Update Steve's 3rd person model pose and arm swing
-            this.player.isSwinging = this.isSwinging;
-            this.player.swingProgress = this.swingProgress;
-            this.player.updatePlayerModel(dt, this.input.keys);
         }
         // Check Portal Warp
         const pbx = Math.floor(this.player.position.x);
