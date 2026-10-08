@@ -485,14 +485,24 @@ export function getColumnInfo(wx, wz, params) {
     // Replaces abrupt per-biome step functions with continuous smoothstep gradients,
     // ensuring seamless, cliff-free terrain height transitions between biomes like Minecraft.
     const desertInfluence = smoothstep(0.68, 0.78, temp) * (1.0 - smoothstep(0.25, 0.45, moist));
-    const swampInfluence = smoothstep(0.40, 0.65, temp) * smoothstep(0.55, 0.75, moist);
+    const swampInfluence = smoothstep(0.25, 0.35, temp) * smoothstep(0.55, 0.70, moist) * (1.0 - smoothstep(0.40, 0.60, weirdness));
     const plainsInfluence = smoothstep(0.55, 0.75, erosionNoise) * (1.0 - smoothstep(0.45, 0.65, weirdness));
+
+    // In Minecraft, swamps are sea-level wetlands:
+    // When swampInfluence > 0 and contNoise >= 0.35, smoothly pull inland baseElevation down to sea level
+    if (swampInfluence > 0 && contNoise >= 0.35) {
+        const targetSwampElev = params.seaLevel - 0.2;
+        baseElevation = baseElevation * (1.0 - swampInfluence) + targetSwampElev * swampInfluence;
+    }
 
     let climateMultiplier = 1.0;
     climateMultiplier = climateMultiplier * (1.0 - desertInfluence) + 0.35 * desertInfluence;
-    climateMultiplier = climateMultiplier * (1.0 - swampInfluence) + 0.20 * swampInfluence;
     climateMultiplier = climateMultiplier * (1.0 - plainsInfluence * 0.45) + 0.30 * (plainsInfluence * 0.45);
     factor *= climateMultiplier;
+    // For swamps, guarantee gentle rolling wetland relief (channels dipping 1-2 blocks below seaLevel, banks 1-2 blocks above)
+    if (swampInfluence > 0) {
+        factor = factor * (1.0 - swampInfluence) + 0.16 * swampInfluence;
+    }
 
     // Reduce roughness in oceans and coastlines
     if (contNoise < 0.3) {
@@ -538,94 +548,6 @@ export function getColumnInfo(wx, wz, params) {
         const targetTerraced = elevation * 0.2 + terracedElevation * 0.8;
         elevation = elevation * (1.0 - terraceWeight) + targetTerraced * terraceWeight;
     }
-    // Rare Lakes in non-ocean biomes (Grid-based to prevent biome spread issues)
-    let lakeSurfaceY = 0;
-    let inLake = false;
-    let lakeDepth = 0;
-    
-    // Size of the lake cells
-    const cellSize = 80;
-    const cx = Math.floor(wx / cellSize);
-    const cz = Math.floor(wz / cellSize);
-    
-    // Check neighboring cells for lakes that might overlap
-    /*
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dz = -1; dz <= 1; dz++) {
-            const nx = cx + dx;
-            const nz = cz + dz;
-            // Predictable random for this cell
-            const cellSeed = params.seed + nx * 13371 + nz * 918273;
-            const rng = seededRandom(cellSeed);
-            
-            // 20% chance for a lake in this cell
-            if (rng() < 0.2) {
-                const lx = nx * cellSize + rng() * cellSize;
-                const lz = nz * cellSize + rng() * cellSize;
-                
-                // Get the biome and elevation strictly at the center of the lake
-                const lContNoise = (params.noise2D(lx * 0.00028, lz * 0.00028) + 1) / 2;
-                if (lContNoise >= 0.3) {
-                    const lBaseElev = (params.seaLevel + 4) + ((lContNoise - 0.4) / 0.6) * 30;
-                    // Get biome params just for the center point
-                    const temp = (params.tempNoise(lx * 0.00028 + 5000, lz * 0.00028 + 5000) + 1) / 2;
-                    const moist = (params.moistNoise(lx * 0.00028 + 8000, lz * 0.00028 + 8000) + 1) / 2;
-                    const weird = (params.noise2D(lx * 0.0006 + 15000, lz * 0.0006 + 15000) + 1) / 2;
-                    
-                    let lBiome = BIOMES.PLAINS;
-                    if (temp < 0.2) lBiome = BIOMES.TUNDRA;
-                    else if (temp > 0.75 && moist < 0.3) lBiome = BIOMES.BADLANDS; // hot & very dry → Badlands
-                    else if (temp > 0.75 && moist < 0.4) lBiome = BIOMES.DESERT;
-                    else if (temp > 0.75 && moist > 0.6) lBiome = BIOMES.SWAMP;
-                    else if (moist > 0.7 && weird > 0.75) lBiome = BIOMES.MYSTIC_GROVE;
-                    else if (temp > 0.75) lBiome = BIOMES.SAVANNA;
-                    
-                    const isNoLakeBiome = lBiome.name === 'Volcanic' || lBiome.name === 'Badlands' || lBiome.name === 'Ice Spikes';
-                    if (!isNoLakeBiome) {
-                        const maxR = 12 + rng() * 10;
-                        const dist = Math.hypot(wx - lx, wz - lz);
-                        const distortedDist = dist + params.noise2D(wx / 10, wz / 10) * (maxR * 0.3); // organic shape
-                        
-                        if (distortedDist < maxR) {
-                            inLake = true;
-                            lakeSurfaceY = Math.floor(lBaseElev);
-                            lakeDepth = (1 - (distortedDist / maxR)) * 7;
-                            biome = lBiome; // Override the entire lake to the central biome!
-                        }
-                    }
-                }
-            }
-        }
-    }
-    */
-    
-    // Check for biome-specific puddles — only on very flat terrain to avoid pedestals
-    const isSwamp = biome.name === 'Swamp';
-    const isOasis = biome.name === 'Oasis';
-    let puddleNoise = 0;
-    if (isSwamp || isOasis) {
-        puddleNoise = fbm2D(params.noise2D, wx / 12, wz / 12, 2);
-    }
-    
-    // erosionNoise > 0.65 means the erosion factor is very small (nearly flat ground only)
-    const hasPuddle = (isSwamp || isOasis) && puddleNoise > 0.35 && erosionNoise > 0.65;
-    
-    if (inLake || hasPuddle) {
-        let depth;
-        if (inLake) {
-            depth = lakeDepth; 
-        } else {
-            depth = (puddleNoise - 0.35) * 8; // shallower puddles, max ~5 deep
-            // Use ONLY baseElevation (no noise) so all puddle columns share the same flat water surface
-            lakeSurfaceY = Math.floor(baseElevation);
-        }
-        
-        elevation = lakeSurfaceY - depth;
-        
-        // Flatten the bottom a bit
-        if (depth > 2) elevation += 1;
-    }
-
     let surfaceY = Math.floor(elevation);
     if (surfaceY < 1) surfaceY = 1;
     if (surfaceY >= CHUNK_HEIGHT - 1) surfaceY = CHUNK_HEIGHT - 2;
@@ -641,7 +563,7 @@ export function getColumnInfo(wx, wz, params) {
         moist,
         factor,
         colRng,
-        bData: { isTerraced: terraceWeight > 0.5, lakeSurfaceY }
+        bData: { isTerraced: terraceWeight > 0.5, lakeSurfaceY: 0 }
     };
 }
 
@@ -1169,16 +1091,11 @@ export function generateChunkTerrain(cx, cz, params) {
             const { biome, colRng, bData, temp, moist, contNoise, erosionNoise, weirdness } = columns[x][z];
             const isSwamp = (biome === BIOMES.SWAMP || biome.name === 'Swamp' || biome.swampFlora);
 
-            // Check if swamp has a rare small puddle here
-            let isSwampPuddle = false;
+            // Check if swamp has mud patches here
             let isSwampMud = false;
             if (isSwamp) {
-                const pNoise = (params.noise2D(wx * 0.06 + 321, wz * 0.06 + 321) + 1) / 2;
-                if (pNoise > 0.78) {
-                    isSwampPuddle = true;
-                }
                 const mNoise = (params.noise2D(wx * 0.12 + 888, wz * 0.12 + 888) + 1) / 2;
-                if (isSwampPuddle || mNoise > 0.48) {
+                if (mNoise > 0.45) {
                     isSwampMud = true;
                 }
             }
@@ -1215,14 +1132,13 @@ export function generateChunkTerrain(cx, cz, params) {
                     const aboveBlock = blocks[aboveIdx];
                     const isUnderwater = aboveBlock === BLOCKS.WATER || aboveBlock === BLOCKS.SWAMP_WATER || aboveBlock === BLOCKS.ICE;
                     const isNearSeaShore = (y <= params.seaLevel + 1 && y >= params.seaLevel - 2);
-                    const isNearLakeShore = (bData.lakeSurfaceY > 0 && y <= bData.lakeSurfaceY + 1 && y >= bData.lakeSurfaceY - 1);
 
                     let type;
                     if (isUnderwater) {
                         const waterDepth = Math.max(0, params.seaLevel - y);
                         if (isColdBiome) {
                             type = BLOCKS.GRAVEL;
-                        } else if (hasSandyBeach || biome === BIOMES.PLAINS) {
+                        } else if (hasSandyBeach) {
                             // Shallow water shelf is mostly sand; deeper transitions to gravel like Minecraft
                             type = (waterDepth <= 2 || surfaceNoise > -0.3) ? BLOCKS.SAND : BLOCKS.GRAVEL;
                         } else if (isSwamp) {
@@ -1230,10 +1146,10 @@ export function generateChunkTerrain(cx, cz, params) {
                         } else {
                             type = (waterDepth > 3 && surfaceNoise < 0) ? BLOCKS.GRAVEL : BLOCKS.DIRT;
                         }
-                    } else if (isNearSeaShore || isNearLakeShore) {
+                    } else if (isNearSeaShore) {
                         if (isColdBiome) {
                             type = (surfaceNoise > 0.2) ? BLOCKS.GRAVEL : BLOCKS.STONE;
-                        } else if (hasSandyBeach || biome === BIOMES.PLAINS) {
+                        } else if (hasSandyBeach) {
                             type = (surfaceNoise < -0.7) ? BLOCKS.GRAVEL : BLOCKS.SAND;
                         } else if (isSwamp) {
                             type = isSwampMud ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
@@ -1248,66 +1164,13 @@ export function generateChunkTerrain(cx, cz, params) {
                         else if (vRoll < 0.40) type = BLOCKS.OBSIDIAN;
                         else type = BLOCKS.BASALT;
                     } else if (isSwamp) {
-                        if (isSwampPuddle && y <= params.seaLevel + 3) {
-                            type = BLOCKS.SWAMP_WATER;
-                        } else if (isSwampMud || surfaceNoise < -0.4) {
-                            type = BLOCKS.MUD;
-                        } else {
-                            type = BLOCKS.SWAMP_GRASS;
-                        }
+                        type = (isSwampMud || surfaceNoise < -0.3) ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
+                    } else if (biome === BIOMES.BADLANDS || biome.name === 'Badlands') {
+                        type = (surfaceNoise > 0.25) ? BLOCKS.RED_SAND : BLOCKS.TERRACOTTA;
+                    } else if (biome.isRedwood) {
+                        type = (surfaceNoise < -0.55) ? BLOCKS.DIRT : BLOCKS.PODZOL;
                     } else {
                         type = biome.surface;
-
-                        // Minecraft-like Organic Border Dithering:
-                        // 1. Desert / Savanna / Plains border dithering
-                        if (moist < 0.48 && temp > 0.68 && temp < 0.82) {
-                            const sandScore = (temp - 0.74) * 20.0 + surfaceNoise * 1.5;
-                            if (sandScore > 0.3) {
-                                type = BLOCKS.SAND;
-                            } else if (sandScore < -0.3) {
-                                type = (temp > 0.72) ? BLOCKS.SAVANNA_GRASS : BLOCKS.GRASS;
-                            } else {
-                                type = (colRng() < (sandScore + 0.3) / 0.6) ? BLOCKS.SAND : ((temp > 0.72) ? BLOCKS.SAVANNA_GRASS : BLOCKS.GRASS);
-                            }
-                        }
-                        // 2. Beach sand extending inland organically
-                        else if (contNoise >= 0.32 && contNoise <= 0.42 && y <= params.seaLevel + 2) {
-                            const beachScore = (0.37 - contNoise) * 35.0 + surfaceNoise * 1.4;
-                            if (beachScore > 0.2) {
-                                type = (surfaceNoise < -0.7) ? BLOCKS.GRAVEL : BLOCKS.SAND;
-                            } else if (beachScore > -0.4 && colRng() < 0.35) {
-                                type = BLOCKS.SAND;
-                            }
-                        }
-                        // 3. Tundra / Snowy biome border dithering
-                        else if (temp >= 0.08 && temp <= 0.18) {
-                            const snowScore = (0.13 - temp) * 22.0 + surfaceNoise * 1.5;
-                            if (snowScore > 0.25) {
-                                type = BLOCKS.SNOW;
-                            } else if (snowScore < -0.25) {
-                                type = BLOCKS.GRASS;
-                            } else {
-                                type = (colRng() < (snowScore + 0.25) / 0.5) ? BLOCKS.SNOW : BLOCKS.GRASS;
-                            }
-                        }
-                        // 4. Redwood Forest (Mega Taiga) Podzol & Coarse Dirt dithering
-                        else if (biome.isRedwood || (weirdness >= 0.50 && weirdness <= 0.62 && moist >= 0.35 && moist <= 0.65)) {
-                            if (biome.isRedwood) {
-                                type = (surfaceNoise < -0.55) ? BLOCKS.DIRT : BLOCKS.PODZOL;
-                            }
-                            if (weirdness >= 0.50 && weirdness <= 0.60) {
-                                const podzolScore = (weirdness - 0.55) * 22.0 + surfaceNoise * 1.5;
-                                if (podzolScore < -0.2) {
-                                    type = BLOCKS.GRASS;
-                                } else if (podzolScore < 0.2) {
-                                    type = (colRng() < 0.5) ? BLOCKS.PODZOL : BLOCKS.GRASS;
-                                }
-                            }
-                        }
-                        // 5. Badlands Terracotta & Red Sand dithering
-                        else if (biome === BIOMES.BADLANDS || biome.name === 'Badlands') {
-                            type = (surfaceNoise > 0.25) ? BLOCKS.RED_SAND : BLOCKS.TERRACOTTA;
-                        }
                     }
                     blocks[idx] = type;
                 } else if (depth < soilLimit) {
@@ -1581,15 +1444,17 @@ export function generateChunkTerrain(cx, cz, params) {
                         const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && y < CHUNK_HEIGHT) ? blocks[aboveIdx] : BLOCKS.WATER;
                         if (biome === BIOMES.SWAMP || biome === BIOMES.OASIS) {
                             if (cRng < 0.5) {
-                                if (aboveBlock === BLOCKS.WATER) {
+                                if (aboveBlock === BLOCKS.WATER || aboveBlock === BLOCKS.SWAMP_WATER) {
                                     safeSetBlock(blocks, tx, y, tz, BLOCKS.ALGAE, false);
                                 }
                             } else {
                                 const waterTopY = (bData && bData.lakeSurfaceY > 0) ? bData.lakeSurfaceY : params.seaLevel;
                                 const padY = waterTopY + 1;
+                                const waterIdx = (waterTopY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                                const waterBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && waterTopY < CHUNK_HEIGHT) ? blocks[waterIdx] : BLOCKS.AIR;
                                 const padIdx = (padY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
                                 const padBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && padY < CHUNK_HEIGHT) ? blocks[padIdx] : BLOCKS.AIR;
-                                if (padBlock === BLOCKS.AIR || padBlock === BLOCKS.WATER) {
+                                if ((waterBlock === BLOCKS.WATER || waterBlock === BLOCKS.SWAMP_WATER) && (padBlock === BLOCKS.AIR || padBlock === BLOCKS.WATER || padBlock === BLOCKS.SWAMP_WATER)) {
                                     safeSetBlock(blocks, tx, padY, tz, BLOCKS.LILY_PAD, false);
                                 }
                             }

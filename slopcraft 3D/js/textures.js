@@ -1153,8 +1153,8 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
         case BLOCKS.MUD:
-            fillBase(ctx, 70, 50, 40);
-            addNoise(ctx, rng, 10);
+            fillBase(ctx, 60, 57, 56); // Authentic Minecraft dark slate mud
+            addNoise(ctx, rng, 8);
             break;
         case BLOCKS.SWAMP_GRASS:
             if (face === 'top') {
@@ -3619,9 +3619,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                             if (isWater) {
                                 tint = (bt === BLOCKS.SWAMP_WATER) ? '#617B59' : '#3F76E4';
                             } else if (texName === 'grass_block_top') {
-                                if (bt === BLOCKS.SWAMP_GRASS) tint = '#6a7039'; // Murky dark swamp grass
-                                else if (bt === BLOCKS.SAVANNA_GRASS) tint = '#bfb755'; // Warm golden-olive savanna grass
-                                else tint = '#79c05a'; // Standard vibrant Minecraft plains grass green
+                                tint = '#79c05a'; // Standard vibrant Minecraft plains grass green
                             } else if (texName.includes('leaves')) {
                                 tint = (bt === BLOCKS.CHERRY_LEAVES) ? '#ffffff' : (bt === BLOCKS.PINE_LEAVES ? '#4f855f' : '#59ae30');
                             } else if (texName === 'lily_pad') {
