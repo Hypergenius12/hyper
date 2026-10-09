@@ -66,11 +66,6 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://hypergenius12.com/style/index.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://hypergenius12.com/dvd/index.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
