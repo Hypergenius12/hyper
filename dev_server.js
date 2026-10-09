@@ -52,10 +52,18 @@ function createStaticServer(rootDir, port) {
             const range = req.headers.range;
             if (range) {
                 const parts = range.replace(/bytes=/, "").split("-");
-                const start = parseInt(parts[0], 10);
-                const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+                let start = parseInt(parts[0], 10);
+                let end = parseInt(parts[1], 10);
 
-                if (start >= totalSize || end >= totalSize || start > end) {
+                if (isNaN(start)) {
+                    // Suffix byte range: bytes=-500 means last 500 bytes
+                    start = isNaN(end) ? 0 : Math.max(0, totalSize - end);
+                    end = totalSize - 1;
+                } else if (isNaN(end)) {
+                    end = totalSize - 1;
+                }
+
+                if (start >= totalSize || end >= totalSize || start > end || start < 0) {
                     res.writeHead(416, { 'Content-Range': `bytes */${totalSize}` });
                     res.end();
                     return;
