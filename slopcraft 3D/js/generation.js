@@ -9,6 +9,7 @@ import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js';
 // Planet configurations
 export const BIOMES = {
     FOREST: { name: 'Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: true, grassColor: [0.475, 0.753, 0.353], foliageColor: [0.349, 0.682, 0.188] },
+    BIRCH_FOREST: { name: 'Birch Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isBirch: true, grassColor: [0.502, 0.765, 0.373], foliageColor: [0.380, 0.690, 0.220] },
     PLAINS: { name: 'Plains', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: false, grassColor: [0.569, 0.741, 0.349], foliageColor: [0.467, 0.671, 0.184] },
     DESERT: { name: 'Desert', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, hasDeadBush: true, hasCactus: true, grassColor: [0.749, 0.718, 0.333], foliageColor: [0.682, 0.643, 0.165] },
     BEACH: { name: 'Beach', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, isBeach: true, grassColor: [0.569, 0.741, 0.349], foliageColor: [0.467, 0.671, 0.184] },
@@ -440,6 +441,7 @@ export function getBiomeParams(wx, wz, params) {
                 if (weirdness > 0.78) biome = BIOMES.CHERRY_GROVE;
                 else if (weirdness > 0.55) biome = BIOMES.REDWOOD_FOREST;
                 else if (isFlat) biome = BIOMES.PLAINS;
+                else if (weirdness > 0.30) biome = BIOMES.BIRCH_FOREST;
                 else biome = BIOMES.FOREST;
             }
         }
@@ -613,6 +615,8 @@ function generateFallenLog(blocks, startX, startY, startZ, woodType, rng) {
     const dz = isXAxis ? 0 : 1;
     const logAxisData = isXAxis ? 1 : 2; // 1 for X-axis, 2 for Z-axis
 
+    const placedLogBlocks = [];
+
     for (let i = 0; i < length; i++) {
         const lx = startX + dx * i;
         const lz = startZ + dz * i;
@@ -634,12 +638,23 @@ function generateFallenLog(blocks, startX, startY, startZ, woodType, rng) {
         }
 
         safeSetBlock(blocks, lx, logY, lz, woodType, false, logAxisData);
+        placedLogBlocks.push({ lx, logY, lz });
+    }
 
-        // Chance of red or brown mushroom growing on top of the fallen log
-        const shroomRoll = rng();
-        if (shroomRoll < 0.5) {
+    // Place red or brown mushrooms on top of the fallen log (guarantee at least one)
+    if (placedLogBlocks.length > 0) {
+        let shroomCount = 0;
+        for (const pos of placedLogBlocks) {
+            if (rng() < 0.45) {
+                const shroomType = rng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
+                safeSetBlock(blocks, pos.lx, pos.logY + 1, pos.lz, shroomType, false);
+                shroomCount++;
+            }
+        }
+        if (shroomCount === 0 && placedLogBlocks.length > 0) {
+            const pick = placedLogBlocks[Math.floor(rng() * placedLogBlocks.length)];
             const shroomType = rng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
-            safeSetBlock(blocks, lx, logY + 1, lz, shroomType, false);
+            safeSetBlock(blocks, pick.lx, pick.logY + 1, pick.lz, shroomType, false);
         }
     }
 }
@@ -1303,26 +1318,20 @@ export function generateChunkTerrain(cx, cz, params) {
                 continue;
             }
 
-            // Swamp Biome: Mangrove Trees & Fallen Mangrove Logs
+            // Swamp Biome: Mangrove Trees (No fallen logs)
             if (biome.swampFlora || biome === BIOMES.SWAMP || biome.name === 'Swamp') {
                 if (r < 0.038) {
                     generateMangroveTree(blocks, tx, surfaceY + 1, tz, floraRng);
                     continue;
-                } else if (r < 0.046) {
-                    generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.MANGROVE_LOG, floraRng);
-                    continue;
                 }
             }
 
-            // Redwood Forest Trees & Fallen Logs
+            // Redwood Forest Trees & Mushroom Clumps (No fallen logs)
             if (biome.isRedwood) {
                 if (r < 0.025) {
                     generateRedwoodTree(blocks, tx, surfaceY + 1, tz, floraRng);
                     continue;
-                } else if (r < 0.031) {
-                    generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.REDWOOD_LOG, floraRng);
-                    continue;
-                } else if (r < 0.040) {
+                } else if (r < 0.035) {
                     generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
                     continue;
                 }
@@ -1334,7 +1343,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 continue;
             }
 
-            // Dark Forest Trees, Giant Mushrooms, Fallen Logs & Mushroom Clumps
+            // Dark Forest: Trees, Giant Mushrooms, Fallen Logs with mushrooms & Mushroom Clumps
             if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
                 if (r < 0.052) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
@@ -1347,6 +1356,47 @@ export function generateChunkTerrain(cx, cz, params) {
                     continue;
                 } else if (r < 0.075) {
                     generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
+                    continue;
+                }
+            }
+
+            // Birch Forest: Birch Trees & Fallen Birch Logs with mushrooms
+            if (biome.isBirch || biome === BIOMES.BIRCH_FOREST || biome.name === 'Birch Forest') {
+                if (r < 0.028) {
+                    generateBirchTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                } else if (r < 0.034) {
+                    generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.BIRCH_WOOD, floraRng);
+                    continue;
+                }
+            }
+
+            // Taiga (Tiaga): Pine Trees, Fallen Pine Logs with mushrooms & Boulders
+            if ((biome === BIOMES.TAIGA || biome.name === 'Taiga' || (biome.isTaiga && !biome.isRedwood))) {
+                if (r < 0.028) {
+                    generatePineTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                } else if (r < 0.034) {
+                    generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.PINE_WOOD, floraRng);
+                    continue;
+                } else if (r >= 0.08 && r < 0.086) {
+                    // Rare Minecraft natural boulders - Taiga exclusive
+                    generateBoulder(blocks, tx, surfaceY, tz, floraRng);
+                    continue;
+                } else if (r >= 0.086 && r < 0.091) {
+                    // Rare rock patches - Taiga exclusive
+                    generateRockPatch(blocks, tx, surfaceY, tz, floraRng);
+                    continue;
+                }
+            }
+
+            // Normal Forest: Trees & Fallen Oak Logs with mushrooms
+            if (biome === BIOMES.FOREST || biome.name === 'Forest') {
+                if (r < 0.028) {
+                    generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                    continue;
+                } else if (r < 0.034) {
+                    generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.WOOD, floraRng);
                     continue;
                 }
             }
@@ -1376,12 +1426,6 @@ export function generateChunkTerrain(cx, cz, params) {
                 generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if (biome.hasCactus && r < 0.01 && currentGroundBlock === BLOCKS.SAND) {
                 generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
-            } else if ((biome.isTaiga || biome.isRedwood || biome === BIOMES.TAIGA || biome.name === 'Taiga' || biome.name === 'Redwood Forest') && r >= 0.08 && r < 0.086) {
-                // Rare Minecraft natural boulders (giant mossy/cobblestone rock formations) - Taiga exclusive
-                generateBoulder(blocks, tx, surfaceY, tz, floraRng);
-            } else if ((biome.isTaiga || biome.isRedwood || biome === BIOMES.TAIGA || biome.name === 'Taiga' || biome.name === 'Redwood Forest') && r >= 0.086 && r < 0.091) {
-                // Rare rock patches on soil/grass - in Taiga
-                generateRockPatch(blocks, tx, surfaceY, tz, floraRng);
             }
         }
     }
@@ -2086,12 +2130,46 @@ function generateJungleTree(blocks, x, y, z, rng) {
     }
 }
 
+function generateBirchTree(blocks, x, y, z, rng) {
+    const height = 5 + Math.floor(rng() * 3); // 5 to 7 blocks tall slender birch trunk
+    for (let i = 0; i < height; i++) {
+        safeSetBlock(blocks, x, y + i, z, BLOCKS.BIRCH_WOOD, false, 0);
+    }
+
+    const topY = y + height;
+    // Lower 2 layers: 5x5 with clipped corners
+    for (let ly = topY - 2; ly <= topY - 1; ly++) {
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dz = -2; dz <= 2; dz++) {
+                if (Math.abs(dx) === 2 && Math.abs(dz) === 2) {
+                    if (ly === topY - 1 || rng() < 0.6) continue;
+                }
+                safeSetBlock(blocks, x + dx, ly, z + dz, BLOCKS.BIRCH_LEAVES, true);
+            }
+        }
+    }
+    // Upper layer: 3x3 with clipped corners
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+            if (Math.abs(dx) === 1 && Math.abs(dz) === 1 && rng() < 0.45) continue;
+            safeSetBlock(blocks, x + dx, topY, z + dz, BLOCKS.BIRCH_LEAVES, true);
+        }
+    }
+    // Top cross cap at topY + 1
+    safeSetBlock(blocks, x, topY + 1, z, BLOCKS.BIRCH_LEAVES, true);
+    safeSetBlock(blocks, x + 1, topY + 1, z, BLOCKS.BIRCH_LEAVES, true);
+    safeSetBlock(blocks, x - 1, topY + 1, z, BLOCKS.BIRCH_LEAVES, true);
+    safeSetBlock(blocks, x, topY + 1, z + 1, BLOCKS.BIRCH_LEAVES, true);
+    safeSetBlock(blocks, x, topY + 1, z - 1, BLOCKS.BIRCH_LEAVES, true);
+}
+
 function generateTree(blocks, x, y, z, biome, rng) {
     if (biome.isMystic) { generateMysticTree(blocks, x, y, z, rng); return; }
     if (biome.isRedwood) { generateRedwoodTree(blocks, x, y, z, rng); return; }
     if (biome.savannaFlora || biome.name === 'Savanna') { generateAcaciaTree(blocks, x, y, z, rng); return; }
     if (biome.name === 'Tundra' || biome.name === 'Ice Spikes' || biome.name === 'Mountains' || biome.name === 'Taiga' || biome.isTaiga) { generatePineTree(blocks, x, y, z, rng); return; }
     if (biome.isDark || biome.name === 'Dark Forest') { generateDarkOakTree(blocks, x, y, z, rng); return; }
+    if (biome.isBirch || biome.name === 'Birch Forest' || biome === BIOMES.BIRCH_FOREST) { generateBirchTree(blocks, x, y, z, rng); return; }
     if (biome.isCherry || biome.name === 'Cherry Grove') { generateCherryTree(blocks, x, y, z, rng); return; }
     if (biome.isOasis || biome.name === 'Oasis') { generatePalmTree(blocks, x, y, z, rng); return; }
     if (biome.jungleFlora || biome.name === 'Jungle') { generateJungleTree(blocks, x, y, z, rng); return; }

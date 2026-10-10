@@ -896,6 +896,7 @@ class Game {
                 subtype === window.BLOCKS.PINE_WOOD ||
                 subtype === window.BLOCKS.AETHER_WOOD ||
                 subtype === window.BLOCKS.DARK_OAK_WOOD ||
+                subtype === window.BLOCKS.BIRCH_WOOD ||
                 subtype === window.BLOCKS.CHERRY_LOG ||
                 subtype === window.BLOCKS.CRIMSON_STEM
             )) {
@@ -918,6 +919,8 @@ class Game {
                 s === window.BLOCKS.PINE_WOOD ||
                 s === window.BLOCKS.AETHER_WOOD ||
                 s === window.BLOCKS.DARK_OAK_WOOD ||
+                s === window.BLOCKS.BIRCH_WOOD ||
+                s === window.BLOCKS.BIRCH_PLANKS ||
                 s === window.BLOCKS.CHERRY_LOG ||
                 s === window.BLOCKS.CRIMSON_STEM ||
                 s === window.BLOCKS.LEAVES ||
@@ -926,6 +929,7 @@ class Game {
                 s === window.BLOCKS.AUTUMN_LEAVES ||
                 s === window.BLOCKS.PALM_LEAVES ||
                 s === window.BLOCKS.GLOW_LEAVES ||
+                s === window.BLOCKS.BIRCH_LEAVES ||
                 s === window.BLOCKS.CRAFTING_TABLE ||
                 s === window.BLOCKS.BOOKSHELF ||
                 s === window.BLOCKS.CHEST_BLOCK ||

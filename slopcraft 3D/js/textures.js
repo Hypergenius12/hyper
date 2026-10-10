@@ -216,11 +216,17 @@ export const BLOCKS = {
     FLOWERING_AZALEA_LEAVES: 241,
     DRIPSTONE_BLOCK: 242,
     POINTED_DRIPSTONE_DOWN: 243,
-    POINTED_DRIPSTONE_UP: 244
+    POINTED_DRIPSTONE_UP: 244,
+    BIRCH_WOOD: 245,
+    BIRCH_LEAVES: 246,
+    BIRCH_PLANKS: 247
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.BIRCH_WOOD]:              { name: 'Birch Wood',              health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
+    [BLOCKS.BIRCH_LEAVES]:            { name: 'Birch Leaves',            health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.BIRCH_PLANKS]:            { name: 'Birch Planks',            health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.MOSS_BLOCK]:              { name: 'Moss Block',              health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.ROOTED_DIRT]:             { name: 'Rooted Dirt',             health: 3, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.CAVE_VINES]:              { name: 'Cave Vines',              health: 1, transparent: true, emissive: 0.8, solid: false, isCross: true, drops: null },
@@ -1054,6 +1060,43 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addNoise(ctx, rng, 20);
             addPixels(ctx, rng, 'rgba(10, 40, 15, 0.9)', 80);
             addPixels(ctx, rng, 'rgba(40, 90, 50, 0.6)', 40);
+            break;
+        case BLOCKS.BIRCH_WOOD:
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 215, 200, 155);
+                addNoise(ctx, rng, 15);
+                ctx.strokeStyle = 'rgba(180, 160, 115, 0.8)';
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(8, 8, 3, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(8, 8, 6, 0, Math.PI * 2); ctx.stroke();
+                ctx.strokeStyle = 'rgba(235, 235, 230, 0.95)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(0, 0, TEX_SIZE, TEX_SIZE);
+            } else {
+                fillBase(ctx, 230, 230, 225);
+                addNoise(ctx, rng, 8);
+                ctx.fillStyle = 'rgba(30, 30, 30, 0.85)';
+                for (let i = 0; i < 4; i++) {
+                    const by = Math.floor(rng() * 14) + 1;
+                    const bx = Math.floor(rng() * 12);
+                    const bw = 2 + Math.floor(rng() * 3);
+                    ctx.fillRect(bx, by, bw, 1);
+                }
+            }
+            break;
+        case BLOCKS.BIRCH_LEAVES:
+            fillBase(ctx, 80, 160, 60);
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, 'rgba(50, 120, 35, 0.85)', 70);
+            addPixels(ctx, rng, 'rgba(120, 200, 90, 0.6)', 40);
+            break;
+        case BLOCKS.BIRCH_PLANKS:
+            fillBase(ctx, 216, 196, 148);
+            addNoise(ctx, rng, 10);
+            ctx.fillStyle = 'rgba(175, 150, 100, 0.5)';
+            for (let y = 3; y < 16; y += 4) {
+                ctx.fillRect(0, y, 16, 1);
+            }
             break;
         case BLOCKS.RED_SAND:
             fillBase(ctx, 180, 80, 30);
@@ -2850,7 +2893,8 @@ function hasFaceVariants(blockType) {
         BLOCKS.CACTUS, BLOCKS.SANDSTONE, BLOCKS.BOOKSHELF, BLOCKS.MYCELIUM,
         BLOCKS.WARPED_NYLIUM, BLOCKS.WARPED_STEM, BLOCKS.BONE_BLOCK, BLOCKS.BASALT, BLOCKS.BLACKSTONE, BLOCKS.PODZOL, BLOCKS.GOLDEN_OAK_WOOD, BLOCKS.MAGIC_WOOD, BLOCKS.REDWOOD_LOG,
         BLOCKS.FLETCHING_TABLE, BLOCKS.SMOKER, BLOCKS.STONECUTTER,
-        BLOCKS.MANGROVE_LOG, BLOCKS.MANGROVE_ROOTS, BLOCKS.MUDDY_MANGROVE_ROOTS, BLOCKS.ENCHANTED_AETHER_LOG
+        BLOCKS.MANGROVE_LOG, BLOCKS.MANGROVE_ROOTS, BLOCKS.MUDDY_MANGROVE_ROOTS, BLOCKS.ENCHANTED_AETHER_LOG,
+        BLOCKS.BIRCH_WOOD
     ].includes(blockType);
 }
 
@@ -2932,6 +2976,9 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.DARK_OAK_WOOD]: { top: 'dark_oak_log_top', side: 'dark_oak_log', bottom: 'dark_oak_log_top' },
     [BLOCKS.DARK_OAK_LEAVES]: 'dark_oak_leaves',
     [BLOCKS.DARK_OAK_PLANKS]: 'dark_oak_planks',
+    [BLOCKS.BIRCH_WOOD]: { top: 'birch_log_top', side: 'birch_log', bottom: 'birch_log_top' },
+    [BLOCKS.BIRCH_LEAVES]: 'birch_leaves',
+    [BLOCKS.BIRCH_PLANKS]: 'birch_planks',
     [BLOCKS.FALLEN_LEAVES]: 'podzol_top',
     [BLOCKS.GLOW_STEM]: 'crimson_stem',
     [BLOCKS.GLOW_LEAVES]: 'shroomlight',
@@ -3197,6 +3244,9 @@ const LOCAL_ASSET_MAP = {
     "redstone_block": "assets/mc/block/redstone_block.png",
     "coal_block": "assets/mc/block/coal_block.png",
     "birch_planks": "assets/mc/block/birch_planks.png",
+    "birch_log": "assets/mc/block/birch_log.png",
+    "birch_log_top": "assets/mc/block/birch_log_top.png",
+    "birch_leaves": "assets/mc/block/birch_leaves.png",
     "fletching_table_top": "assets/mc/block/fletching_table_top.png",
     "fletching_table_side": "assets/mc/block/fletching_table_side.png",
     "fletching_table_front": "assets/mc/block/fletching_table_front.png",

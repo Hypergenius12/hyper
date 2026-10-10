@@ -252,6 +252,7 @@ export class BiomeMap {
                     case 'Savanna': color = '#A8A64B'; break;
                     case 'Plains': color = '#6BCC47'; break;
                     case 'Forest': color = '#2E8C19'; break;
+                    case 'Birch Forest': color = '#78b548'; break;
                     case 'Jungle': color = '#156105'; break;
                     case 'Swamp': color = '#38592A'; break;
                     case 'Dark Forest': color = '#1C3312'; break;

@@ -2220,6 +2220,7 @@ class UISystem {
             [B.PINE_WOOD]: { block: B.PINE_PLANKS, name: 'Pine Planks' },
             [B.CRIMSON_STEM]: { block: B.CRIMSON_PLANKS, name: 'Crimson Planks' },
             [B.DARK_OAK_WOOD]: { block: B.DARK_OAK_PLANKS, name: 'Dark Oak Planks' },
+            [B.BIRCH_WOOD]: { block: B.BIRCH_PLANKS, name: 'Birch Planks' },
             [B.MAGIC_WOOD]: { block: B.MAGIC_PLANKS, name: 'Magic Planks' },
             [B.REDWOOD_LOG]: { block: B.REDWOOD_PLANKS, name: 'Redwood Planks' },
             [B.WARPED_STEM]: { block: B.WARPED_PLANKS, name: 'Warped Planks' },
@@ -2229,7 +2230,7 @@ class UISystem {
         const woodType = s.find(x => x !== null && woodToPlankMap[x]);
         const isPlank = (t) => [
             B.PLANKS, B.ACACIA_PLANKS, B.CHERRY_PLANKS, B.AUTUMN_PLANKS, B.PALM_PLANKS,
-            B.PINE_PLANKS, B.CRIMSON_PLANKS, B.DARK_OAK_PLANKS, B.MAGIC_PLANKS,
+            B.PINE_PLANKS, B.CRIMSON_PLANKS, B.DARK_OAK_PLANKS, B.BIRCH_PLANKS, B.MAGIC_PLANKS,
             B.REDWOOD_PLANKS, B.WARPED_PLANKS, B.GOLDEN_OAK_PLANKS, B.AETHER_PLANKS
         ].includes(t);
         const countAnyPlank = s.filter(x => x !== null && isPlank(x)).length;
