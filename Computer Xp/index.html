@@ -2113,9 +2113,7 @@
                 <div class="app-menu-dropdown">
                     <div class="app-menu-item" onclick="if(typeof openHelpTopic==='function') openHelpTopic('calculator'); else { window.openProgram('help-window'); showHelpTopic('calculator'); }">Help Topics</div>
                     <div class="app-menu-divider"></div>
-                    <div class="app-menu-item" onclick="xpDialog('Calculator', 'Windows XP Style Calculator\nVersion 5.1 (Build 2600.xpsp_sp2)
-
-Includes new multi-instance and Programmer view support!', 'info')">
+                    <div class="app-menu-item" onclick="xpDialog('Calculator', 'Windows XP Style Calculator\nVersion 5.1 (Build 2600.xpsp_sp2)\n\nIncludes new multi-instance and Programmer view support!', 'info')">
                         About Calculator</div>
                 </div>
             </div>
@@ -2640,7 +2638,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
                 
                 <div class="start-menu-item" id="start-menu-item-help" onclick="if(typeof openHelpForSelected==='function'){openHelpForSelected();}else{openProgram('help-window'); showHelpTopic('home');} toggleStartMenu();">
                     <img src="Windows XP Icons/Help and Support.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Help and Support</span></div>
-                <div class="start-menu-item" id="start-menu-item-tour" onclick="if(typeof window.initXpTour === 'function') { window.openProgram('xptour-window'); window.initXpTour(); } toggleStartMenu();">
+                <div class="start-menu-item" id="start-menu-item-tour" onclick="openProgram('xptour-window'); toggleStartMenu();">
                     <img src="Windows XP Icons/Tour XP.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Tour Windows XP</span></div>
                 <div class="start-menu-item" id="start-menu-item-search" onclick="if(typeof window.triggerSearch==='function'){window.triggerSearch();}toggleStartMenu();">
                     <img src="Windows XP Icons/Search.png" class="sys-icon-small" style="margin-right:8px;" onerror="this.style.display='none'"> <span>Search</span></div>
@@ -2907,7 +2905,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
                         <img src="Windows XP Icons/Search.png" style="width:14px; height:14px;"
                             onerror="this.style.display='none'"> See Also</div>
                     <div style="font-size:11px; color:#215DC6; cursor:pointer; padding:2px 0;"
-                        onclick="openProgram('folder-window'); navigateTo('C:\\\'); closeWindow('controlpanel-window');">
+                        onclick="openProgram('folder-window'); navigateTo('C:\\\\'); closeWindow('controlpanel-window');">
                         Windows Explorer</div>
                     <div style="font-size:11px; color:#215DC6; cursor:pointer; padding:2px 0;"
                         onclick="if(typeof openTaskManager==='function') openTaskManager(); closeWindow('controlpanel-window');">
@@ -3094,7 +3092,7 @@ Includes new multi-instance and Programmer view support!', 'info')">
                     <div style="background: #DEE7F8; padding: 10px; color: #003399; font-size: 11px; flex: 1;">
                         <div style="margin-bottom: 8px; cursor: pointer; display: flex; align-items: center;" onclick="openProgram('controlpanel-window'); closeWindow('printers-window');"><img src="Windows XP Icons/Control Panel.png" style="width:16px;margin-right:5px;" onerror="this.style.display='none'"> Control Panel</div>
                         <div style="margin-bottom: 8px; cursor: pointer; display: flex; align-items: center;" onclick="openProgram('folder-window'); navigateTo('C:\\\\Documents and Settings\\\\Guest\\\\My Documents'); closeWindow('printers-window');"><img src="Windows XP Icons/My Documents.png" style="width:16px;margin-right:5px;" onerror="this.style.display='none'"> My Documents</div>
-                        <div style="margin-bottom: 8px; cursor: pointer; display: flex; align-items: center;" onclick="openProgram('folder-window'); navigateTo('C:\\\'); closeWindow('printers-window');"><img src="Windows XP Icons/My Computer.png" style="width:16px;margin-right:5px;" onerror="this.style.display='none'"> My Computer</div>
+                        <div style="margin-bottom: 8px; cursor: pointer; display: flex; align-items: center;" onclick="openProgram('folder-window'); navigateTo('C:\\\\'); closeWindow('printers-window');"><img src="Windows XP Icons/My Computer.png" style="width:16px;margin-right:5px;" onerror="this.style.display='none'"> My Computer</div>
                         <div style="margin-bottom: 8px; cursor: pointer; display: flex; align-items: center;" onclick="xpDialog('My Network Places', 'You are not connected to a network.', 'error')"><img src="Windows XP Icons/My Network Places.png" style="width:16px;margin-right:5px;" onerror="this.style.display='none'"> My Network Places</div>
                     </div>
                 </div>

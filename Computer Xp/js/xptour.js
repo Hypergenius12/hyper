@@ -1,8 +1,21 @@
 window.rufflePlayer = null;
+window.xptourLoading = false;
+var ruffleScriptLoading = false;
 
 window.initXpTour = function() {
     let content = document.getElementById('xptour-content');
     if (!content) return;
+
+    // Prevent duplicate re-initialization if already loaded or loading
+    if (window.rufflePlayer && content.contains(window.rufflePlayer)) {
+        console.log('[XP Tour] Tour is already initialized and running.');
+        return;
+    }
+    if (window.xptourLoading) {
+        console.log('[XP Tour] Tour initialization already in progress.');
+        return;
+    }
+    window.xptourLoading = true;
 
     // Build absolute base URL for the xptour directory so Ruffle can resolve
     // relative loadMovie/loadVariables calls from within the SWF files.
@@ -31,14 +44,19 @@ window.initXpTour = function() {
     };
 
     if (!window.RufflePlayer.newest) {
+        if (ruffleScriptLoading) return;
+        ruffleScriptLoading = true;
         content.innerHTML = '<div style="color:white; text-align:center; padding-top:100px; font-family:Tahoma; font-size:14px;">Loading Windows XP Tour...</div>';
         var script = document.createElement('script');
-        script.src = 'https://unpkg.com/@ruffle-rs/ruffle@0.3.0/ruffle.js';
+        script.src = 'https://unpkg.com/@ruffle-rs/ruffle/ruffle.js';
         script.onload = function() {
-            console.log('[XP Tour] Ruffle script loaded');
-            setTimeout(function() { startTour(content, swfUrl, swfBase); }, 500);
+            ruffleScriptLoading = false;
+            console.log('[XP Tour] Modern Ruffle script loaded');
+            setTimeout(function() { startTour(content, swfUrl, swfBase); }, 300);
         };
         script.onerror = function() {
+            ruffleScriptLoading = false;
+            window.xptourLoading = false;
             console.error('[XP Tour] Failed to load Ruffle script');
             content.innerHTML = '<div style="color:red; text-align:center; padding-top:100px; font-family:Tahoma;">Failed to load Flash emulator.</div>';
         };
@@ -51,9 +69,12 @@ window.initXpTour = function() {
 function startTour(content, swfUrl, swfBase) {
     console.log('[XP Tour] Starting tour...');
 
-    // Always create a fresh player
+    // Fully tear down any previous player and audio
     if (window.rufflePlayer) {
         try {
+            window.rufflePlayer.pause();
+            window.rufflePlayer.volume = 0;
+            if (typeof window.rufflePlayer.mute === 'function') window.rufflePlayer.mute();
             window.rufflePlayer.remove();
         } catch(e) {}
         window.rufflePlayer = null;
@@ -66,6 +87,7 @@ function startTour(content, swfUrl, swfBase) {
         if (!ruffle) {
             console.error('[XP Tour] RufflePlayer.newest() returned null');
             content.innerHTML = '<div style="color:red; text-align:center; padding-top:100px; font-family:Tahoma;">Ruffle player not available.</div>';
+            window.xptourLoading = false;
             return;
         }
 
@@ -89,15 +111,17 @@ function startTour(content, swfUrl, swfBase) {
             splashScreen: false
         }).then(function() {
             console.log('[XP Tour] SWF loaded successfully');
+            window.xptourLoading = false;
             if (typeof player.unmute === 'function') player.unmute();
             if (player.audioContext && player.audioContext.state === 'suspended') {
                 player.audioContext.resume().catch(function(){});
             }
         }).catch(function(e) {
             console.error('[XP Tour] SWF load error:', e);
+            window.xptourLoading = false;
         });
 
-        // Ensure user gestures unlock audio
+        // Ensure user gestures unlock audio once without multiplying event listeners
         var unlockTourAudio = function() {
             try {
                 if (window.rufflePlayer) {
@@ -109,18 +133,22 @@ function startTour(content, swfUrl, swfBase) {
             } catch(e) {}
         };
         ['click', 'mousedown', 'keydown'].forEach(function(evt) {
-            window.addEventListener(evt, unlockTourAudio, { passive: true });
+            window.addEventListener(evt, unlockTourAudio, { passive: true, once: true });
         });
     } catch(e) {
+        window.xptourLoading = false;
         console.error('[XP Tour] Error creating player:', e);
         content.innerHTML = '<div style="color:yellow; text-align:center; padding-top:100px; font-family:Tahoma;">Error: ' + e.message + '</div>';
     }
 }
 
 window.stopXpTour = function() {
+    window.xptourLoading = false;
     if (window.rufflePlayer) {
         try {
             window.rufflePlayer.pause();
+            window.rufflePlayer.volume = 0;
+            if (typeof window.rufflePlayer.mute === 'function') window.rufflePlayer.mute();
             window.rufflePlayer.remove();
         } catch(e) {}
         window.rufflePlayer = null;

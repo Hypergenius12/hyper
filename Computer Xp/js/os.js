@@ -2083,6 +2083,11 @@ window.forceCloseWindow = function(id) {
     let taskBtn = document.getElementById('task-' + id);
     if(taskBtn) { taskBtn.remove(); delete activeWindows[id]; }
     
+    // XP Tour audio shutdown
+    if (id === 'xptour-window' && typeof window.stopXpTour === 'function') {
+        window.stopXpTour();
+    }
+
     // Outlook Express custom closing logic
     if (id === 'email-window' && window.emailOptions && window.emailOptions.emptyDeleted && window.emailData) {
         window.emailData.deleted = [];
