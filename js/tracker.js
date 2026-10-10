@@ -67,6 +67,7 @@ const PROJECT_NAMES = {
     'rubiks': '2x2 Rubik\'s Cube',
     'synesthesia': 'Synesthesia Color Mixer',
     'color-pallete-generator': 'ChromaCraft',
+    'joyful-rutherford': 'Seleste Pixel',
     'neurotrack': 'NeuroTrack AI Racing',
     'dust': 'Dust Sandbox'
 };

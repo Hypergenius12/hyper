@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32" shape-rendering="crispEdges">
+  <!-- Strawberry Pixel Art Favicon for Seleste -->
+  <!-- Left Wing -->
+  <rect x="0" y="4" width="2" height="1" fill="#a0e7e5"/>
+  <rect x="1" y="3" width="2" height="1" fill="#ffffff"/>
+  <rect x="1" y="4" width="2" height="2" fill="#ffffff"/>
+  <rect x="2" y="5" width="1" height="1" fill="#a0e7e5"/>
+
+  <!-- Right Wing -->
+  <rect x="14" y="4" width="2" height="1" fill="#a0e7e5"/>
+  <rect x="13" y="3" width="2" height="1" fill="#ffffff"/>
+  <rect x="13" y="4" width="2" height="2" fill="#ffffff"/>
+  <rect x="13" y="5" width="1" height="1" fill="#a0e7e5"/>
+
+  <!-- Stem & Calyx Leaves -->
+  <rect x="7" y="0" width="2" height="2" fill="#238636"/>
+  <rect x="5" y="1" width="2" height="1" fill="#48ca4b"/>
+  <rect x="9" y="1" width="2" height="1" fill="#48ca4b"/>
+  <rect x="4" y="2" width="8" height="1" fill="#48ca4b"/>
+  <rect x="5" y="3" width="6" height="1" fill="#238636"/>
+
+  <!-- Berry Dark Outline -->
+  <rect x="3" y="3" width="2" height="1" fill="#1c050c"/>
+  <rect x="11" y="3" width="2" height="1" fill="#1c050c"/>
+  <rect x="3" y="4" width="1" height="4" fill="#1c050c"/>
+  <rect x="12" y="4" width="1" height="4" fill="#1c050c"/>
+  <rect x="4" y="8" width="1" height="2" fill="#1c050c"/>
+  <rect x="11" y="8" width="1" height="2" fill="#1c050c"/>
+  <rect x="5" y="10" width="1" height="2" fill="#1c050c"/>
+  <rect x="10" y="10" width="1" height="2" fill="#1c050c"/>
+  <rect x="6" y="12" width="1" height="1" fill="#1c050c"/>
+  <rect x="9" y="12" width="1" height="1" fill="#1c050c"/>
+  <rect x="7" y="13" width="2" height="1" fill="#1c050c"/>
+
+  <!-- Berry Red Flesh -->
+  <rect x="4" y="4" width="8" height="4" fill="#ff2a4a"/>
+  <rect x="5" y="8" width="6" height="2" fill="#ff2a4a"/>
+  <rect x="6" y="10" width="4" height="2" fill="#ff2a4a"/>
+  <rect x="7" y="12" width="2" height="1" fill="#ff2a4a"/>
+
+  <!-- Shading on Right Side -->
+  <rect x="10" y="4" width="2" height="4" fill="#b31230"/>
+  <rect x="9" y="8" width="2" height="2" fill="#b31230"/>
+  <rect x="8" y="10" width="2" height="2" fill="#b31230"/>
+
+  <!-- Specular Shine Upper Left -->
+  <rect x="5" y="4" width="1" height="2" fill="#ffffff"/>
+  <rect x="6" y="4" width="1" height="1" fill="#ffffff"/>
+
+  <!-- Golden Seeds -->
+  <rect x="8" y="4" width="1" height="1" fill="#ffe600"/>
+  <rect x="6" y="6" width="1" height="1" fill="#ffe600"/>
+  <rect x="10" y="6" width="1" height="1" fill="#ffe600"/>
+  <rect x="8" y="7" width="1" height="1" fill="#ffe600"/>
+  <rect x="6" y="8" width="1" height="1" fill="#ffe600"/>
+  <rect x="8" y="9" width="1" height="1" fill="#ffe600"/>
+  <rect x="7" y="11" width="1" height="1" fill="#ffe600"/>
+</svg>

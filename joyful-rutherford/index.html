@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Seleste Pixel // 9-Color Art Platformer</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <script type="module" crossorigin src="./assets/index-BKK462dH.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-Bq_nttVQ.css">
+</head>
+<body>
+  <div id="app-container">
+    
+    <!-- Minimalist Floating Top Bar -->
+    <header class="top-nav-bar">
+      <div class="brand-chip">
+        <span class="gem-icon"></span>
+        <span class="brand-text">SELESTE</span>
+      </div>
+
+      <!-- Quick Palette Switcher -->
+      <div class="quick-palette-selector">
+        <button id="btn-pal-prev" class="pixel-mini-btn" title="Previous Palette">&lt;</button>
+        <span id="active-palette-name" class="palette-title-text">01. Cyber Neon (Default)</span>
+        <button id="btn-pal-next" class="pixel-mini-btn" title="Next Palette">&gt;</button>
+        <div id="palette-swatches" class="mini-swatches-strip"></div>
+      </div>
+
+      <!-- Character Select Trigger Button -->
+      <button id="btn-open-roster" class="pixel-mini-btn" title="Choose Character">
+        <span class="pixel-icon icon-hero"></span>HEROES
+      </button>
+      <button id="btn-open-chapters" class="pixel-mini-btn" title="Level Select & Chapter Hub">
+        <span class="pixel-icon icon-map"></span>CHAPTERS
+      </button>
+      <button id="btn-open-editor" class="pixel-mini-btn" title="In-Game Level Builder & Editor" style="display: none;">
+        <span class="pixel-icon icon-edit"></span>BUILDER
+      </button>
+      <button id="btn-open-settings" class="pixel-mini-btn settings-trigger-btn" title="Open Settings">
+        <span class="pixel-icon icon-gear"></span>SETTINGS
+      </button>
+    </header>
+
+    <!-- Full-Screen Sized Game Viewport -->
+    <main class="game-viewport">
+      <canvas id="game-canvas" width="320" height="180"></canvas>
+      <div id="crt-overlay" class="crt-overlay"></div>
+    </main>
+
+  </div>
+
+  <!-- Small Compact Settings Popover / Modal -->
+  <div id="settings-modal" class="pixel-modal-backdrop hidden">
+    <div class="pixel-modal compact-modal">
+      <div class="modal-header">
+        <h2 class="modal-title"><span class="pixel-icon icon-gear icon-lg"></span>SETTINGS &amp; OPTIONS</h2>
+        <button id="btn-close-settings" class="pixel-mini-btn modal-close-btn" aria-label="Close">X</button>
+      </div>
+
+      <div class="settings-grid">
+        <button id="btn-sound" class="pixel-btn"><span class="pixel-icon icon-sound"></span>SFX: ON</button>
+        <button id="btn-music" class="pixel-btn"><span class="pixel-icon icon-music"></span>BGM: ON</button>
+        <button id="btn-crt" class="pixel-btn"><span class="pixel-icon icon-crt"></span>CRT: ON</button>
+        <button id="btn-fullscreen" class="pixel-btn"><span class="pixel-icon icon-expand"></span>FULLSCREEN</button>
+        <button id="btn-doppelganger" class="pixel-btn"><span class="pixel-icon icon-shadow"></span>BADELINE: OFF</button>
+        <button id="btn-speedrun-hud" class="pixel-btn">SPLITS HUD: ON</button>
+      </div>
+
+      <div style="border-top: 2px solid var(--p2); padding-top: 8px;">
+        <button id="btn-settings-editor" class="pixel-btn w-full" style="background: var(--p6); color: #000; margin-bottom: 6px; display: none;">
+          <span class="pixel-icon icon-edit"></span>LEVEL BUILDER &amp; ROOM EDITOR
+        </button>
+        <button id="btn-settings-roster" class="pixel-btn w-full" style="background: var(--p5); color: #000; margin-bottom: 6px;">
+          <span class="pixel-icon icon-hero"></span>CHOOSE HERO (6 CHARACTERS)
+        </button>
+        <button id="btn-settings-chapters" class="pixel-btn w-full" style="background: var(--p3); color: #fff; margin-bottom: 6px;">
+          <span class="pixel-icon icon-map"></span>CHAPTER SELECT &amp; HUB
+        </button>
+        <button id="btn-open-palette-studio" class="pixel-btn w-full" style="background: var(--p4); color: #fff;">
+          <span class="pixel-icon icon-palette"></span>CUSTOM PALETTE STUDIO
+        </button>
+      </div>
+
+      <!-- Compact Controls Legend -->
+      <div class="controls-legend-card">
+        <div class="legend-title">CONTROLS &amp; SELESTE TECH:</div>
+        <div class="legend-row"><span>ARROWS / WASD</span><span>MOVE / AIM 360 DEG</span></div>
+        <div class="legend-row"><span>Z / SPACE</span><span>JUMP &amp; CONFIRM</span></div>
+        <div class="legend-row"><span>X / SHIFT</span><span>8-WAY SELESTE DASH</span></div>
+        <div class="legend-row"><span>C</span><span>WALL CLIMB &amp; GRAB</span></div>
+        <div class="legend-row"><span>V</span><span>CYCLE HERO (6 HEROES)</span></div>
+        <div class="legend-row"><span>E</span><span>OPEN LEVEL BUILDER</span></div>
+        <div class="legend-row"><span>WAVEDASH</span><span>DIAG-DOWN DASH + JUMP</span></div>
+        <div class="legend-row"><span>WALL BOUNCE</span><span>UP-DASH NEAR WALL + JUMP</span></div>
+        <div class="legend-row"><span>R</span><span>RESTART ROOM</span></div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-settings-done" class="pixel-btn">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Palette Studio Modal -->
+  <div id="palette-modal" class="pixel-modal-backdrop hidden">
+    <div class="pixel-modal">
+      <div class="modal-header">
+        <h2 class="modal-title"><span class="pixel-icon icon-palette icon-lg"></span>9-COLOR PALETTE STUDIO</h2>
+        <button id="btn-close-palette-modal" class="pixel-mini-btn modal-close-btn" aria-label="Close">X</button>
+      </div>
+
+      <div>
+        <div style="font-size: 9px; color: var(--p7); margin-bottom: 6px;">AVAILABLE PRESETS (12 PRESETS):</div>
+        <div id="preset-list" class="preset-list-box"></div>
+      </div>
+
+      <!-- Custom 9-Color Form -->
+      <div class="creator-box">
+        <div style="font-size: 9px; color: var(--p8); font-weight: bold;">ADD CUSTOM 9-COLOR PALETTE:</div>
+        <div class="form-row">
+          <input type="text" id="custom-palette-name" class="pixel-input" placeholder="PALETTE NAME" maxlength="24">
+        </div>
+
+        <div style="font-size: 8px; color: var(--p6); margin-top: 4px;">
+          9 HEX CODES (Darkest 0 -> Brightest 8):
+        </div>
+        <div id="hex-inputs-grid" class="hex-grid"></div>
+
+        <div class="modal-actions" style="margin-top: 8px;">
+          <button id="btn-test-custom" class="pixel-btn">PREVIEW LIVE</button>
+          <button id="btn-save-custom" class="pixel-btn" style="background: var(--p5);">SAVE PRESET</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-delete-palette" class="pixel-btn" style="display: none; background: var(--p5);">DELETE PRESET</button>
+        <button id="btn-palette-done" class="pixel-btn">DONE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level Builder & Room Editor Modal -->
+  <div id="editor-modal" class="pixel-modal-backdrop hidden">
+    <div class="pixel-modal editor-modal-box">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <span class="pixel-icon icon-edit icon-lg"></span>
+          <h2 class="modal-title">CUSTOM LEVEL BUILDER</h2>
+          <button id="btn-editor-open-saved" class="pixel-btn btn-highlight-play" style="margin-left: 10px; font-size: 8px; padding: 2px 8px; cursor: pointer;">
+            <span class="pixel-icon icon-map"></span> SAVED LEVELS
+          </button>
+        </div>
+        <button id="btn-close-editor" class="pixel-mini-btn modal-close-btn" aria-label="Close">X</button>
+      </div>
+
+      <!-- Top Room Navigation & Metadata Bar -->
+      <div class="editor-top-controls">
+        <div class="editor-room-nav">
+          <button id="btn-editor-room-prev" class="pixel-mini-btn" title="Previous Custom Level">&lt;</button>
+          <select id="editor-room-select" class="pixel-select editor-room-dropdown"></select>
+          <button id="btn-editor-room-next" class="pixel-mini-btn" title="Next Custom Level">&gt;</button>
+          <button id="btn-editor-new-level" class="pixel-mini-btn" title="Create New Custom Level" style="background: var(--p6); color: #000; font-weight: bold; margin-left: 4px;">+ NEW</button>
+          <button id="btn-editor-delete-level" class="pixel-mini-btn" title="Delete Custom Level" style="background: var(--p3); color: #fff; margin-left: 2px;">DEL</button>
+        </div>
+
+        <div class="editor-field">
+          <label>NAME:</label>
+          <input type="text" id="editor-room-name" class="pixel-input editor-name-input">
+        </div>
+
+        <div class="editor-field">
+          <label>BIOME:</label>
+          <select id="editor-biome-select" class="pixel-select">
+            <option value="0">01. FORSAKEN CITY</option>
+            <option value="1">02. OLD SITE</option>
+            <option value="2">03. RESORT</option>
+            <option value="3">04. GOLDEN RIDGE</option>
+            <option value="4">05. MIRROR TEMPLE</option>
+            <option value="5">06. CHASM ABYSS</option>
+            <option value="6">07. MOLTEN CORE</option>
+            <option value="7">08. CELESTIAL APEX</option>
+          </select>
+        </div>
+
+        <div class="editor-field">
+          <label>WIND:</label>
+          <select id="editor-wind-select" class="pixel-select">
+            <option value="0">CALM (NONE)</option>
+            <option value="20">STRONG EAST &gt;&gt; (+20)</option>
+            <option value="35">GALE EAST &gt;&gt;&gt; (+35)</option>
+            <option value="-20">&lt;&lt; STRONG WEST (-20)</option>
+            <option value="-35">&lt;&lt;&lt; GALE WEST (-35)</option>
+          </select>
+        </div>
+
+        <div class="editor-field">
+          <label>SIZE:</label>
+          <input type="number" id="editor-room-cols" min="16" max="120" step="1" class="pixel-input" style="width: 36px; padding: 2px 3px; font-size: 8px; text-align: center;" title="Width in Tiles (Columns)">
+          <span style="font-size: 8px; color: var(--p6);">x</span>
+          <input type="number" id="editor-room-rows" min="12" max="60" step="1" class="pixel-input" style="width: 36px; padding: 2px 3px; font-size: 8px; text-align: center;" title="Height in Tiles (Rows)">
+        </div>
+
+        <div class="editor-field">
+          <label>FEATHER:</label>
+          <input type="number" id="editor-room-feather" min="0.5" max="30" step="0.5" class="pixel-input" style="width: 38px; padding: 2px 3px; font-size: 8px; text-align: center;" title="Feather Flight Duration in seconds for this level">
+          <span style="font-size: 8px; color: var(--p6);">s</span>
+        </div>
+
+        <div class="editor-zoom-controls">
+          <button id="btn-editor-zoom-out" class="pixel-mini-btn" title="Zoom Out">-</button>
+          <span id="editor-zoom-level" class="editor-zoom-text">12px</span>
+          <button id="btn-editor-zoom-in" class="pixel-mini-btn" title="Zoom In">+</button>
+        </div>
+      </div>
+
+      <!-- Tile Palette Tools -->
+      <div class="editor-palette-bar">
+        <div class="editor-palette-title">TILES:</div>
+        <div id="editor-tile-buttons" class="editor-tile-grid"></div>
+      </div>
+
+      <!-- Canvas Scroll Container -->
+      <div class="editor-canvas-wrap">
+        <canvas id="editor-canvas" width="384" height="216"></canvas>
+      </div>
+
+      <!-- Moving Platforms Manager Bar -->
+      <div id="editor-platforms-panel" class="editor-platforms-bar">
+        <div class="editor-platforms-header">
+          <span class="pixel-icon icon-gear"></span>
+          <span style="font-weight: bold; color: var(--p8);">LIFTS (<span id="editor-platform-count">0</span>):</span>
+          <button id="btn-editor-add-platform" class="pixel-mini-btn" title="Add Moving Platform">+ ADD LIFT</button>
+        </div>
+        <div id="editor-platforms-list" class="editor-platforms-list"></div>
+      </div>
+
+      <!-- Status and Coordinate Row -->
+      <div class="editor-status-row">
+        <span id="editor-hover-coord">COL: 0, ROW: 0 | TILE: Solid (#)</span>
+        <span id="editor-status-msg" style="color: var(--p7);">LEFT-CLICK: PAINT // RIGHT-CLICK: ERASE</span>
+      </div>
+
+      <!-- Primary Action Buttons -->
+      <div class="editor-actions-row">
+        <button id="btn-editor-saved-levels-bottom" class="pixel-btn btn-highlight-play"><span class="pixel-icon icon-map"></span> SAVED LEVELS</button>
+        <button id="btn-editor-playtest" class="pixel-btn">TEST CURRENT &gt;&gt;</button>
+        <button id="btn-editor-copy" class="pixel-btn">COPY ROOM</button>
+        <button id="btn-editor-export-all" class="pixel-btn btn-highlight-export">EXPORT CUSTOM</button>
+        <button id="btn-editor-export-import" class="pixel-btn">CODE / IMPORT</button>
+        <button id="btn-editor-reset" class="pixel-btn" style="background: var(--p5);">RESET ROOM</button>
+        <button id="btn-editor-done" class="pixel-btn">CLOSE</button>
+      </div>
+
+      <!-- Export / Import Box (collapsed by default) -->
+      <div id="editor-export-box" class="editor-export-drawer hidden">
+        <div class="editor-export-header">
+          <span id="editor-export-title" style="font-weight: bold; color: var(--p8);">LEVEL CODE:</span>
+          <button id="btn-editor-close-drawer" class="pixel-mini-btn">X</button>
+        </div>
+        <textarea id="editor-export-text" class="pixel-textarea editor-code-box" rows="7"></textarea>
+        <div class="editor-export-btns">
+          <button id="btn-editor-copy-raw" class="pixel-btn" style="background: var(--p6); color: #000;">COPY CLIPBOARD</button>
+          <button id="btn-editor-download-file" class="pixel-btn" style="background: var(--p8); color: #000;">DOWNLOAD LEVELS.JS</button>
+          <button id="btn-editor-download-json" class="pixel-btn">DOWNLOAD JSON</button>
+          <button id="btn-editor-import-apply" class="pixel-btn" style="background: var(--p7); color: #000;">APPLY IMPORT CODE</button>
+          <button id="btn-editor-import-file" class="pixel-btn" style="background: var(--p5); color: #fff;">IMPORT FROM FILE</button>
+          <input type="file" id="editor-file-input" accept=".js,.json,.txt" style="display: none;">
+        </div>
+      </div>
+
+      <!-- Saved Levels Browser Modal Overlay -->
+      <div id="editor-saved-levels-box" class="saved-levels-overlay hidden">
+        <div class="pixel-modal saved-levels-modal">
+          <div class="modal-header">
+            <div class="modal-header-left">
+              <span class="pixel-icon icon-map icon-lg"></span>
+              <h2 class="modal-title">SAVED CUSTOM LEVELS</h2>
+            </div>
+            <button id="btn-close-saved-levels" class="pixel-mini-btn modal-close-btn" aria-label="Close">X</button>
+          </div>
+          <div style="font-size: 8px; color: var(--p7); margin-bottom: 6px;">
+            CLICK &quot;PLAY&quot; ON ANY LEVEL YOU HAVE MADE TO LAUNCH IT:
+          </div>
+          <div id="editor-saved-levels-list" class="saved-levels-list-grid"></div>
+          <div class="modal-actions" style="margin-top: 10px; display: flex; justify-content: space-between;">
+            <button id="btn-saved-levels-new" class="pixel-btn" style="background: var(--p6); color: #000; font-weight: bold;">+ CREATE NEW LEVEL</button>
+            <button id="btn-saved-levels-close" class="pixel-btn">BACK TO BUILDER</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chapter Select & Level Hub Modal -->
+  <div id="chapters-modal" class="pixel-modal-backdrop hidden">
+    <div class="pixel-modal chapter-modal">
+      <div class="modal-header">
+        <h2 class="modal-title"><span class="pixel-icon icon-map icon-lg"></span>CHAPTER SELECT // 40 CHAPTERS</h2>
+        <button id="btn-close-chapters" class="pixel-mini-btn modal-close-btn" aria-label="Close">X</button>
+      </div>
+
+      <div style="font-size: 8px; color: var(--p7); margin-bottom: 2px;">
+        40 HANDCRAFTED CHAPTERS // 8 BIOMES (5 CHAPTERS EACH) // TRACK STRAWBERRIES &amp; SECRETS:
+      </div>
+
+      <div id="chapter-list-grid" class="chapter-list-grid"></div>
+
+      <div class="modal-actions">
+        <button id="btn-chapters-done" class="pixel-btn">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6-Hero Character Roster Modal -->
+  <div id="roster-modal" class="pixel-modal-backdrop hidden">
+    <div class="pixel-modal roster-modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title"><span class="pixel-icon icon-hero icon-lg"></span>HERO ROSTER // 6 CHARACTERS</h2>
+        <button id="btn-close-roster" class="pixel-mini-btn modal-close-btn" aria-label="Close">X</button>
+      </div>
+
+      <div class="roster-sub-banner" style="font-size: 8px; color: var(--p7); margin-bottom: 6px;">
+        CHOOSE YOUR HERO // EACH HERO HAS UNIQUE SPRITES, ANIMATIONS &amp; TRAILS:
+      </div>
+
+      <div id="roster-list-grid" class="roster-list-grid"></div>
+
+      <div class="modal-actions">
+        <button id="btn-roster-done" class="pixel-btn">READY TO CLIMB &gt;&gt;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Central Playtime Tracker & Firebase Telemetry -->
+  <script type="module" src="../js/firebase-config.js"></script>
+  <script type="module" src="../js/tracker.js"></script>
+</body>
+</html>
