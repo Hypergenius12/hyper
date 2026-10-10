@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Seleste // 9-Color Art Platformer</title>
+  <title>Seleste Pixel // 9-Color Art Platformer</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <script type="module" crossorigin src="./assets/index-CmPnsI9D.js"></script>
+  <script type="module" crossorigin src="./assets/index-Bjbpq6SS.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-Bq_nttVQ.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
       <button id="btn-open-chapters" class="pixel-mini-btn" title="Level Select & Chapter Hub">
         <span class="pixel-icon icon-map"></span>CHAPTERS
       </button>
-      <button id="btn-open-editor" class="pixel-mini-btn" title="In-Game Level Builder & Editor" style="display: none;">
+      <button id="btn-open-editor" class="pixel-mini-btn" title="In-Game Level Builder & Editor">
         <span class="pixel-icon icon-edit"></span>BUILDER
       </button>
       <button id="btn-open-settings" class="pixel-mini-btn settings-trigger-btn" title="Open Settings">
@@ -67,7 +67,7 @@
       </div>
 
       <div style="border-top: 2px solid var(--p2); padding-top: 8px;">
-        <button id="btn-settings-editor" class="pixel-btn w-full" style="background: var(--p6); color: #000; margin-bottom: 6px; display: none;">
+        <button id="btn-settings-editor" class="pixel-btn w-full" style="background: var(--p6); color: #000; margin-bottom: 6px;">
           <span class="pixel-icon icon-edit"></span>LEVEL BUILDER &amp; ROOM EDITOR
         </button>
         <button id="btn-settings-roster" class="pixel-btn w-full" style="background: var(--p5); color: #000; margin-bottom: 6px;">
@@ -146,10 +146,7 @@
       <div class="modal-header">
         <div class="modal-header-left">
           <span class="pixel-icon icon-edit icon-lg"></span>
-          <h2 class="modal-title">CUSTOM LEVEL BUILDER</h2>
-          <button id="btn-editor-open-saved" class="pixel-btn btn-highlight-play" style="margin-left: 10px; font-size: 8px; padding: 2px 8px; cursor: pointer;">
-            <span class="pixel-icon icon-map"></span> SAVED LEVELS
-          </button>
+          <h2 class="modal-title">SELESTE LEVEL BUILDER // ROOM EDITOR</h2>
         </div>
         <button id="btn-close-editor" class="pixel-mini-btn modal-close-btn" aria-label="Close">X</button>
       </div>
@@ -157,11 +154,9 @@
       <!-- Top Room Navigation & Metadata Bar -->
       <div class="editor-top-controls">
         <div class="editor-room-nav">
-          <button id="btn-editor-room-prev" class="pixel-mini-btn" title="Previous Custom Level">&lt;</button>
+          <button id="btn-editor-room-prev" class="pixel-mini-btn" title="Previous Room">&lt;</button>
           <select id="editor-room-select" class="pixel-select editor-room-dropdown"></select>
-          <button id="btn-editor-room-next" class="pixel-mini-btn" title="Next Custom Level">&gt;</button>
-          <button id="btn-editor-new-level" class="pixel-mini-btn" title="Create New Custom Level" style="background: var(--p6); color: #000; font-weight: bold; margin-left: 4px;">+ NEW</button>
-          <button id="btn-editor-delete-level" class="pixel-mini-btn" title="Delete Custom Level" style="background: var(--p3); color: #fff; margin-left: 2px;">DEL</button>
+          <button id="btn-editor-room-next" class="pixel-mini-btn" title="Next Room">&gt;</button>
         </div>
 
         <div class="editor-field">
@@ -243,10 +238,9 @@
 
       <!-- Primary Action Buttons -->
       <div class="editor-actions-row">
-        <button id="btn-editor-saved-levels-bottom" class="pixel-btn btn-highlight-play"><span class="pixel-icon icon-map"></span> SAVED LEVELS</button>
-        <button id="btn-editor-playtest" class="pixel-btn">TEST CURRENT &gt;&gt;</button>
+        <button id="btn-editor-playtest" class="pixel-btn btn-highlight-play">PLAYTEST &gt;&gt;</button>
         <button id="btn-editor-copy" class="pixel-btn">COPY ROOM</button>
-        <button id="btn-editor-export-all" class="pixel-btn btn-highlight-export">EXPORT CUSTOM</button>
+        <button id="btn-editor-export-all" class="pixel-btn btn-highlight-export">EXPORT ALL (40 ROOMS)</button>
         <button id="btn-editor-export-import" class="pixel-btn">CODE / IMPORT</button>
         <button id="btn-editor-reset" class="pixel-btn" style="background: var(--p5);">RESET ROOM</button>
         <button id="btn-editor-done" class="pixel-btn">CLOSE</button>
@@ -266,27 +260,6 @@
           <button id="btn-editor-import-apply" class="pixel-btn" style="background: var(--p7); color: #000;">APPLY IMPORT CODE</button>
           <button id="btn-editor-import-file" class="pixel-btn" style="background: var(--p5); color: #fff;">IMPORT FROM FILE</button>
           <input type="file" id="editor-file-input" accept=".js,.json,.txt" style="display: none;">
-        </div>
-      </div>
-
-      <!-- Saved Levels Browser Modal Overlay -->
-      <div id="editor-saved-levels-box" class="saved-levels-overlay hidden">
-        <div class="pixel-modal saved-levels-modal">
-          <div class="modal-header">
-            <div class="modal-header-left">
-              <span class="pixel-icon icon-map icon-lg"></span>
-              <h2 class="modal-title">SAVED CUSTOM LEVELS</h2>
-            </div>
-            <button id="btn-close-saved-levels" class="pixel-mini-btn modal-close-btn" aria-label="Close">X</button>
-          </div>
-          <div style="font-size: 8px; color: var(--p7); margin-bottom: 6px;">
-            CLICK &quot;PLAY&quot; ON ANY LEVEL YOU HAVE MADE TO LAUNCH IT:
-          </div>
-          <div id="editor-saved-levels-list" class="saved-levels-list-grid"></div>
-          <div class="modal-actions" style="margin-top: 10px; display: flex; justify-content: space-between;">
-            <button id="btn-saved-levels-new" class="pixel-btn" style="background: var(--p6); color: #000; font-weight: bold;">+ CREATE NEW LEVEL</button>
-            <button id="btn-saved-levels-close" class="pixel-btn">BACK TO BUILDER</button>
-          </div>
         </div>
       </div>
     </div>
@@ -332,8 +305,5 @@
     </div>
   </div>
 
-  <!-- Central Playtime Tracker & Firebase Telemetry -->
-  <script type="module" src="../js/firebase-config.js"></script>
-  <script type="module" src="../js/tracker.js"></script>
 </body>
 </html>
