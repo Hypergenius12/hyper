@@ -17,15 +17,16 @@ window.addEventListener('DOMContentLoaded', () => {
   const btnSettingsEditor = document.getElementById('btn-settings-editor');
 
   function isEditorUnlocked() {
-    return true;
+    return localStorage.getItem('seleste_editor_unlocked') === 'true' || (game.completedRooms && game.completedRooms.size >= LEVEL_DATA.length);
   }
 
   function updateEditorVisibility() {
+    const unlocked = isEditorUnlocked();
     if (btnOpenEditor) {
-      btnOpenEditor.style.display = '';
+      btnOpenEditor.style.display = unlocked ? '' : 'none';
     }
     if (btnSettingsEditor) {
-      btnSettingsEditor.style.display = '';
+      btnSettingsEditor.style.display = unlocked ? '' : 'none';
     }
   }
 

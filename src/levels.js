@@ -1419,13 +1419,7 @@ export class Level {
   loadRoom(index) {
     this.isCustomPlaytest = false;
     this.currentRoomIndex = Math.max(0, Math.min(LEVEL_DATA.length - 1, index));
-    let room = LEVEL_DATA[this.currentRoomIndex];
-    try {
-      const customRooms = JSON.parse(localStorage.getItem('seleste_custom_rooms') || '{}');
-      if (customRooms[this.currentRoomIndex] && Array.isArray(customRooms[this.currentRoomIndex].map)) {
-        room = customRooms[this.currentRoomIndex];
-      }
-    } catch (_) {}
+    const room = LEVEL_DATA[this.currentRoomIndex];
 
     this.name = room.name || `Room ${this.currentRoomIndex + 1}`;
     this.sub = room.sub || 'EXPEDITION';
@@ -2582,15 +2576,9 @@ export class Level {
   }
 }
 
-// Calculate the exact total number of strawberries across all 40 campaign rooms (incorporating editor changes)
+// Calculate the exact total number of strawberries across all 40 campaign rooms
 export function getTotalStrawberries() {
-  let customRooms = {};
-  try {
-    customRooms = JSON.parse(localStorage.getItem('seleste_custom_rooms') || '{}');
-  } catch (_) {}
-
-  return LEVEL_DATA.reduce((sum, lvl, idx) => {
-    const room = (customRooms[idx] && Array.isArray(customRooms[idx].map)) ? customRooms[idx] : lvl;
-    return sum + room.map.reduce((rSum, r) => rSum + (r.split('*').length - 1), 0);
+  return LEVEL_DATA.reduce((sum, lvl) => {
+    return sum + lvl.map.reduce((rSum, r) => rSum + (r.split('*').length - 1), 0);
   }, 0);
 }
