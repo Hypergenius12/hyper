@@ -212,14 +212,26 @@ window.addEventListener('DOMContentLoaded', () => {
       const card = document.createElement('div');
       card.className = `chapter-card ${idx === currentIdx ? 'active-chapter' : ''}`;
 
-      // Check if berry in room was collected
-      const berryPrefix = `berry-${idx}`;
-      let hasBerry = false;
-      for (const collected of game.level.collectedBerries) {
-        if (collected.startsWith(berryPrefix)) {
-          hasBerry = true;
-          break;
+      // Count strawberries in this room's map
+      const totalRoomBerries = lvl.map ? lvl.map.reduce((sum, r) => sum + (r.split('*').length - 1), 0) : 0;
+      let berryStatus = '';
+      if (totalRoomBerries > 0) {
+        const berryPrefix = `berry-${idx}-`;
+        let collectedInRoom = 0;
+        for (const collected of game.level.collectedBerries) {
+          if (collected.startsWith(berryPrefix)) {
+            collectedInRoom++;
+          }
         }
+        const hasBerry = collectedInRoom >= totalRoomBerries;
+        const berryLabel = hasBerry
+          ? 'COLLECTED'
+          : (totalRoomBerries > 1 ? `${collectedInRoom}/${totalRoomBerries} STRAWBERRIES` : 'STRAWBERRY');
+        berryStatus = `
+          <span style="color: ${hasBerry ? 'var(--p7)' : 'var(--p6)'}; font-size: 9px; display: inline-flex; align-items: center;">
+            <span class="pixel-icon icon-strawberry"></span>${berryLabel}
+          </span>
+        `;
       }
 
       const isCompleted = game.completedRooms && game.completedRooms.has(idx);
@@ -236,9 +248,7 @@ window.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="chapter-stats">
             ${isCompleted ? '<span style="color: #29ffb6; font-size: 9px; font-weight: bold; display: inline-flex; align-items: center; gap: 3px;">&#10003; COMPLETED</span>' : ''}
-            <span style="color: ${hasBerry ? 'var(--p7)' : 'var(--p6)'}; font-size: 9px; display: inline-flex; align-items: center;">
-              <span class="pixel-icon icon-strawberry"></span>${hasBerry ? 'COLLECTED' : 'STRAWBERRY'}
-            </span>
+            ${berryStatus}
             ${heartStatus ? `<span style="color: var(--p6); font-size: 9px; display: inline-flex; align-items: center;">${heartStatus}</span>` : ''}
           </div>
         </div>

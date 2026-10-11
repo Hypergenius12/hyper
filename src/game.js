@@ -366,6 +366,9 @@ export class Game {
 
   playtestCustomLevel(customRoom) {
     this.currentCustomRoom = customRoom;
+    this.totalBerriesCount = (customRoom && customRoom.map)
+      ? customRoom.map.reduce((sum, r) => sum + (r.split('*').length - 1), 0)
+      : 0;
     this.level.loadCustomRoom(customRoom);
     this.player.reset(this.level.spawnX, this.level.spawnY, this.level);
     this.camera.x = Math.max(0, Math.min(this.level.width - 320, this.player.x - 160));
@@ -761,17 +764,21 @@ export class Game {
       ctx.restore();
     }
 
-    // Top-left Strawberries
-    drawSprite(ctx, SPRITES.strawberry[0], 5, 5, p, false, 1);
-    drawPixelText(ctx, `${this.level.collectedBerries.size}/${this.totalBerriesCount}`, 19, 6, '#ffffff', 1);
+    // Top-left Strawberries (hide if custom playtest room has no strawberries)
+    const showBerries = !this.level.isCustomPlaytest || this.totalBerriesCount > 0;
+    if (showBerries) {
+      drawSprite(ctx, SPRITES.strawberry[0], 5, 5, p, false, 1);
+      drawPixelText(ctx, `${this.level.collectedBerries.size}/${this.totalBerriesCount}`, 19, 6, '#ffffff', 1);
+    }
 
     // Secret Crystal Heart indicator
+    const heartX = showBerries ? 46 : 5;
     if (this.level.collectedHeart) {
-      drawSprite(ctx, SPRITES.heart[0], 46, 5, p, false, 0.8);
+      drawSprite(ctx, SPRITES.heart[0], heartX, 5, p, false, 0.8);
     }
 
     // Deaths
-    const deathX = this.level.collectedHeart ? 62 : 48;
+    const deathX = this.level.collectedHeart ? (heartX + 16) : (showBerries ? 48 : 6);
     ctx.fillStyle = p.getColor(5);
     ctx.fillRect(deathX, 7, 4, 4);
     ctx.fillRect(deathX + 1, 11, 2, 2);
