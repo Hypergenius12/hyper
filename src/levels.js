@@ -1389,8 +1389,14 @@ export class Level {
     this.spawnY = 100;
     this.exitArea = null;
     this.flagPos = null;
-    this.collectedBerries = new Set();
-    this.collectedHeart = false;
+    try {
+      const savedBerries = localStorage.getItem('seleste_collected_berries');
+      this.collectedBerries = savedBerries ? new Set(JSON.parse(savedBerries)) : new Set();
+      this.collectedHeart = localStorage.getItem('seleste_collected_heart') === 'true';
+    } catch (e) {
+      this.collectedBerries = new Set();
+      this.collectedHeart = false;
+    }
     this.roomTitleTimer = 2.8;
     this.wind = 0;
     this.biome = 0;
@@ -1941,6 +1947,9 @@ export class Level {
         player.y < this.heartPos.y + 12
       ) {
         this.collectedHeart = true;
+        try {
+          localStorage.setItem('seleste_collected_heart', 'true');
+        } catch (e) {}
         sfx.playHeartCollect();
         if (onHaptic) onHaptic('heart');
         screenShake.add(4);
@@ -2014,6 +2023,11 @@ export class Level {
             if (berry.safeLandTimer >= 0.40) {
               // Cashed in!
               this.collectedBerries.add(berry.id);
+              if (!this.isCustomPlaytest) {
+                try {
+                  localStorage.setItem('seleste_collected_berries', JSON.stringify(Array.from(this.collectedBerries)));
+                } catch (e) {}
+              }
               this.collectibles.splice(i, 1);
               sfx.playBerryCollect();
               if (onHaptic) onHaptic('berry');
