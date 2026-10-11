@@ -884,7 +884,7 @@ export const LEVEL_DATA = [
     "sub": "CHAIN DUAL BUMPERS ACROSS DEEP SUB-AQUATIC TRENCHES",
     "biome": 5,
     "wind": 0,
-    "featherTime": 2.5,
+    "featherTime": 0.5,
     "movingPlatforms": [],
     "map": [
       "####################################",
