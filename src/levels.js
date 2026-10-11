@@ -2234,13 +2234,20 @@ export class Level {
           const hasSeam = ((r + c) % 2 === 0);
           const isBrickStart = !hasSeam || c === 0;
 
-          // Top highlight bevel along the brick course
+          // Top highlight bevel with weathered stone chips
           ctx.fillStyle = p.getColor(3);
-          ctx.fillRect(x, y, hasSeam ? TILE_SIZE - 1 : TILE_SIZE, 1);
+          for (let dx = 0; dx < (hasSeam ? TILE_SIZE - 1 : TILE_SIZE); dx++) {
+            if (dx === 4 && ((c * 17 + r * 31) % 5 === 0)) continue;
+            if (dx === 7 && ((c * 23 + r * 13) % 7 === 0)) continue;
+            ctx.fillRect(x + dx, y, 1, 1);
+          }
 
-          // Left highlight bevel at the start of each brick
+          // Left highlight bevel at the start of each brick with slight weathering
           if (isBrickStart) {
-            ctx.fillRect(x, y + 1, 1, TILE_SIZE - 2);
+            for (let dy = 1; dy < TILE_SIZE - 2; dy++) {
+              if (dy === 3 && ((c * 29 + r * 11) % 6 === 0)) continue;
+              ctx.fillRect(x, y + dy, 1, 1);
+            }
           }
 
           // Bottom horizontal mortar seam
@@ -2250,6 +2257,38 @@ export class Level {
           // Vertical mortar seam
           if (hasSeam) {
             ctx.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE);
+            // Chiseled corner indent at mortar junction
+            ctx.fillRect(x + TILE_SIZE - 2, y + TILE_SIZE - 2, 1, 1);
+          }
+
+          // Pixel-art stone wear, fissures, and chiseled micro-cracks
+          const wearType = (c * 37 + r * 19) % 4;
+          if (wearType === 0) {
+            // Horizontal hairline fissure with specular edge
+            ctx.fillStyle = p.getColor(1);
+            ctx.fillRect(x + 3, y + 4, 2, 1);
+            ctx.fillRect(x + 5, y + 5, 1, 1);
+            ctx.fillStyle = p.getColor(3);
+            ctx.fillRect(x + 5, y + 4, 1, 1);
+          } else if (wearType === 1) {
+            // Pitted stone cleft
+            ctx.fillStyle = p.getColor(1);
+            ctx.fillRect(x + 5, y + 3, 2, 1);
+            ctx.fillStyle = p.getColor(3);
+            ctx.fillRect(x + 6, y + 2, 1, 1);
+          } else if (wearType === 2) {
+            // Diagonal micro-fissure
+            ctx.fillStyle = p.getColor(1);
+            ctx.fillRect(x + 3, y + 6, 1, 1);
+            ctx.fillRect(x + 4, y + 5, 1, 1);
+            ctx.fillStyle = p.getColor(3);
+            ctx.fillRect(x + 5, y + 5, 1, 1);
+          } else {
+            // Subtle mineral grain fleck & pitted shadow
+            ctx.fillStyle = p.getColor(3);
+            ctx.fillRect(x + 2, y + 5, 1, 1);
+            ctx.fillStyle = p.getColor(1);
+            ctx.fillRect(x + 7, y + 3, 1, 1);
           }
 
           // Top surface trim based on Biome
