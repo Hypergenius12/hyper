@@ -66,6 +66,9 @@ export class LevelEditor {
     this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
     if (this.ctx) this.ctx.imageSmoothingEnabled = false;
 
+    // Mode toggle button
+    this.btnModeToggle = document.getElementById('btn-editor-mode-toggle');
+
     // Room navigation
     this.roomSelect = document.getElementById('editor-room-select');
     this.btnRoomPrev = document.getElementById('btn-editor-room-prev');
@@ -128,7 +131,12 @@ export class LevelEditor {
     this.fileInputEl = document.getElementById('editor-file-input');
     this.btnCloseDrawer = document.getElementById('btn-editor-close-drawer');
 
-    // Editor state (modifies custom user levels only and persists to localStorage)
+    // Editor state (supports Dev Editor for 40 campaign levels and Custom Level Builder)
+    this.isDevMode = localStorage.getItem('seleste_is_dev_editor') === 'true';
+    this.currentRoomIndex = 0;
+    this.originalCampaignData = JSON.parse(JSON.stringify(LEVEL_DATA));
+    this.loadDevCampaignOverrides();
+
     this.customLevels = this.loadCustomLevelsFromStorage();
     this.currentCustomIndex = 0;
     this.selectedTile = '#';
@@ -150,6 +158,7 @@ export class LevelEditor {
 
     this.setupUI();
     this.setupCanvasEvents();
+    this.updateModeUI();
   }
 
   loadCustomLevelsFromStorage() {
@@ -177,10 +186,88 @@ export class LevelEditor {
     }
   }
 
+  loadDevCampaignOverrides() {
+    try {
+      const overrides = JSON.parse(localStorage.getItem('seleste_dev_campaign_overrides') || '{}');
+      if (overrides && typeof overrides === 'object') {
+        for (const idxStr in overrides) {
+          const idx = parseInt(idxStr, 10);
+          if (!isNaN(idx) && idx >= 0 && idx < LEVEL_DATA.length) {
+            const data = overrides[idxStr];
+            if (data && Array.isArray(data.map)) {
+              LEVEL_DATA[idx] = {
+                name: data.name || LEVEL_DATA[idx].name,
+                sub: data.sub || LEVEL_DATA[idx].sub,
+                biome: typeof data.biome === 'number' ? data.biome : LEVEL_DATA[idx].biome,
+                wind: typeof data.wind === 'number' ? data.wind : LEVEL_DATA[idx].wind,
+                featherTime: typeof data.featherTime === 'number' ? data.featherTime : (LEVEL_DATA[idx].featherTime || 2.5),
+                movingPlatforms: Array.isArray(data.movingPlatforms) ? data.movingPlatforms : (LEVEL_DATA[idx].movingPlatforms || []),
+                map: data.map
+              };
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load dev campaign overrides', e);
+    }
+  }
+
+  saveDevCampaignOverrides() {
+    try {
+      const overrides = JSON.parse(localStorage.getItem('seleste_dev_campaign_overrides') || '{}');
+      overrides[this.currentRoomIndex] = this.getRoomData();
+      localStorage.setItem('seleste_dev_campaign_overrides', JSON.stringify(overrides));
+    } catch (e) {
+      console.warn('Failed to save dev campaign overrides', e);
+    }
+  }
+
+  setDevMode(isDev) {
+    this.saveCurrentToStorage();
+    this.isDevMode = !!isDev;
+    try {
+      localStorage.setItem('seleste_is_dev_editor', this.isDevMode ? 'true' : 'false');
+    } catch (_) {}
+    this.updateModeUI();
+    this.refreshRoomSelect();
+    this.loadRoom(this.isDevMode ? this.currentRoomIndex : this.currentCustomIndex);
+  }
+
+  toggleDevMode() {
+    this.setDevMode(!this.isDevMode);
+    sfx.playClick();
+    this.updateStatusMsg(this.isDevMode ? 'SWITCHED TO DEV MODE (40 CAMPAIGN ROOMS)' : 'SWITCHED TO CUSTOM LEVEL BUILDER', true);
+  }
+
+  updateModeUI() {
+    const titleEl = this.modal ? this.modal.querySelector('.modal-title') : null;
+    if (titleEl) {
+      titleEl.textContent = this.isDevMode ? 'DEV LEVEL BUILDER (CAMPAIGN)' : 'CUSTOM LEVEL BUILDER';
+    }
+    if (this.btnModeToggle) {
+      this.btnModeToggle.textContent = this.isDevMode ? 'DEV MODE' : 'CUSTOM MODE';
+      this.btnModeToggle.style.background = this.isDevMode ? 'var(--p6)' : 'var(--p2)';
+      this.btnModeToggle.style.color = this.isDevMode ? '#000000' : '#ffffff';
+    }
+    if (this.btnNewLevel) this.btnNewLevel.style.display = this.isDevMode ? 'none' : '';
+    if (this.btnDeleteLevel) this.btnDeleteLevel.style.display = this.isDevMode ? 'none' : '';
+    if (this.btnOpenSaved) this.btnOpenSaved.style.display = this.isDevMode ? 'none' : '';
+    if (this.btnSavedBottom) this.btnSavedBottom.style.display = this.isDevMode ? 'none' : '';
+    if (this.btnCopy) this.btnCopy.style.display = this.isDevMode ? 'none' : '';
+    if (this.btnExportAll) this.btnExportAll.textContent = this.isDevMode ? 'EXPORT CAMPAIGN' : 'EXPORT CUSTOM';
+  }
+
   setupUI() {
     if (!this.modal) return;
 
-    // Populate custom levels selector
+    if (this.btnModeToggle) {
+      this.btnModeToggle.addEventListener('click', () => {
+        this.toggleDevMode();
+      });
+    }
+
+    // Populate levels selector
     if (this.roomSelect) {
       this.refreshRoomSelect();
 
@@ -196,8 +283,13 @@ export class LevelEditor {
       this.btnRoomPrev.addEventListener('click', () => {
         sfx.playClick();
         this.saveCurrentToStorage();
-        const prevIdx = (this.currentCustomIndex - 1 + this.customLevels.length) % this.customLevels.length;
-        this.loadRoom(prevIdx);
+        if (this.isDevMode) {
+          const prevIdx = (this.currentRoomIndex - 1 + LEVEL_DATA.length) % LEVEL_DATA.length;
+          this.loadRoom(prevIdx);
+        } else {
+          const prevIdx = (this.currentCustomIndex - 1 + this.customLevels.length) % this.customLevels.length;
+          this.loadRoom(prevIdx);
+        }
       });
     }
 
@@ -205,8 +297,13 @@ export class LevelEditor {
       this.btnRoomNext.addEventListener('click', () => {
         sfx.playClick();
         this.saveCurrentToStorage();
-        const nextIdx = (this.currentCustomIndex + 1) % this.customLevels.length;
-        this.loadRoom(nextIdx);
+        if (this.isDevMode) {
+          const nextIdx = (this.currentRoomIndex + 1) % LEVEL_DATA.length;
+          this.loadRoom(nextIdx);
+        } else {
+          const nextIdx = (this.currentCustomIndex + 1) % this.customLevels.length;
+          this.loadRoom(nextIdx);
+        }
       });
     }
 
@@ -412,7 +509,11 @@ export class LevelEditor {
       this.btnPlaytest.addEventListener('click', () => {
         sfx.playJump();
         this.saveCurrentToStorage();
-        this.game.playtestCustomLevel(this.getRoomData());
+        if (this.isDevMode) {
+          this.game.warpToLevel(this.currentRoomIndex);
+        } else {
+          this.game.playtestCustomLevel(this.getRoomData());
+        }
         this.close();
       });
     }
@@ -420,6 +521,7 @@ export class LevelEditor {
     // Copy single level button
     if (this.btnCopy) {
       this.btnCopy.addEventListener('click', () => {
+        if (this.isDevMode) return;
         sfx.playBerryCollect();
         this.saveCurrentToStorage();
         const copyLvl = JSON.parse(JSON.stringify(this.getRoomData()));
@@ -434,7 +536,7 @@ export class LevelEditor {
       });
     }
 
-    // Export ALL custom levels button
+    // Export ALL levels button
     if (this.btnExportAll) {
       this.btnExportAll.addEventListener('click', () => {
         sfx.playClick();
@@ -449,7 +551,8 @@ export class LevelEditor {
         if (this.exportBox) {
           this.exportBox.classList.toggle('hidden');
           if (!this.exportBox.classList.contains('hidden')) {
-            if (this.exportTitle) this.exportTitle.textContent = `CUSTOM LEVEL ${this.currentCustomIndex + 1} CODE:`;
+            const title = this.isDevMode ? `ROOM ${this.currentRoomIndex + 1} CODE:` : `CUSTOM LEVEL ${this.currentCustomIndex + 1} CODE:`;
+            if (this.exportTitle) this.exportTitle.textContent = title;
             this.exportText.value = this.generateLevelCode();
             this.exportText.select();
           }
@@ -476,23 +579,34 @@ export class LevelEditor {
       });
     }
 
-    // Download custom_levels.js file
+    // Download levels file
     if (this.btnDownloadFile) {
       this.btnDownloadFile.addEventListener('click', () => {
         sfx.playClick();
-        const fullCode = this.generateAllLevelsCode();
-        this.downloadFile(fullCode, 'custom_levels.js', 'text/javascript');
-        this.updateStatusMsg('DOWNLOADED custom_levels.js SUCCESSFULLY!', true);
+        if (this.isDevMode) {
+          const fullCode = this.generateCampaignCode();
+          this.downloadFile(fullCode, 'levels.js', 'text/javascript');
+          this.updateStatusMsg('DOWNLOADED levels.js SUCCESSFULLY!', true);
+        } else {
+          const fullCode = this.generateAllLevelsCode();
+          this.downloadFile(fullCode, 'custom_levels.js', 'text/javascript');
+          this.updateStatusMsg('DOWNLOADED custom_levels.js SUCCESSFULLY!', true);
+        }
       });
     }
 
-    // Download custom_levels.json file
+    // Download json file
     if (this.btnDownloadJson) {
       this.btnDownloadJson.addEventListener('click', () => {
         sfx.playClick();
-        const allData = this.getAllRoomsData();
-        this.downloadFile(JSON.stringify(allData, null, 2), 'custom_levels.json', 'application/json');
-        this.updateStatusMsg('DOWNLOADED custom_levels.json SUCCESSFULLY!', true);
+        if (this.isDevMode) {
+          this.downloadFile(JSON.stringify(LEVEL_DATA, null, 2), 'levels.json', 'application/json');
+          this.updateStatusMsg('DOWNLOADED levels.json SUCCESSFULLY!', true);
+        } else {
+          const allData = this.getAllRoomsData();
+          this.downloadFile(JSON.stringify(allData, null, 2), 'custom_levels.json', 'application/json');
+          this.updateStatusMsg('DOWNLOADED custom_levels.json SUCCESSFULLY!', true);
+        }
       });
     }
 
@@ -829,28 +943,51 @@ export class LevelEditor {
   refreshRoomSelect() {
     if (!this.roomSelect) return;
     this.roomSelect.innerHTML = '';
-    this.customLevels.forEach((lvl, idx) => {
-      const opt = document.createElement('option');
-      opt.value = idx.toString();
-      const c = (lvl.map && lvl.map[0]) ? lvl.map[0].length : 32;
-      const r = lvl.map ? lvl.map.length : 18;
-      opt.textContent = `Custom ${idx + 1}: ${lvl.name || 'Untitled'} (${c}x${r})`;
-      this.roomSelect.appendChild(opt);
-    });
-    this.roomSelect.value = this.currentCustomIndex.toString();
+    if (this.isDevMode) {
+      LEVEL_DATA.forEach((lvl, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx.toString();
+        const c = (lvl.map && lvl.map[0]) ? lvl.map[0].length : 32;
+        const r = lvl.map ? lvl.map.length : 18;
+        opt.textContent = `Room ${idx + 1}: ${lvl.name || 'Untitled'} (${c}x${r})`;
+        this.roomSelect.appendChild(opt);
+      });
+      this.roomSelect.value = this.currentRoomIndex.toString();
+    } else {
+      this.customLevels.forEach((lvl, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx.toString();
+        const c = (lvl.map && lvl.map[0]) ? lvl.map[0].length : 32;
+        const r = lvl.map ? lvl.map.length : 18;
+        opt.textContent = `Custom ${idx + 1}: ${lvl.name || 'Untitled'} (${c}x${r})`;
+        this.roomSelect.appendChild(opt);
+      });
+      this.roomSelect.value = this.currentCustomIndex.toString();
+    }
   }
 
-  open(customIndex = null) {
+  open(index = null) {
     sfx.playClick();
     sfx.setLowPass(true);
     this.customLevels = this.loadCustomLevelsFromStorage();
-    if (customIndex !== null) {
-      this.currentCustomIndex = Math.max(0, Math.min(this.customLevels.length - 1, customIndex));
+    this.updateModeUI();
+    if (this.isDevMode) {
+      if (index !== null) {
+        this.currentRoomIndex = Math.max(0, Math.min(LEVEL_DATA.length - 1, index));
+      } else {
+        this.currentRoomIndex = Math.max(0, Math.min(LEVEL_DATA.length - 1, this.currentRoomIndex));
+      }
+      this.refreshRoomSelect();
+      this.loadRoom(this.currentRoomIndex);
     } else {
-      this.currentCustomIndex = Math.max(0, Math.min(this.customLevels.length - 1, this.currentCustomIndex));
+      if (index !== null) {
+        this.currentCustomIndex = Math.max(0, Math.min(this.customLevels.length - 1, index));
+      } else {
+        this.currentCustomIndex = Math.max(0, Math.min(this.customLevels.length - 1, this.currentCustomIndex));
+      }
+      this.refreshRoomSelect();
+      this.loadRoom(this.currentCustomIndex);
     }
-    this.refreshRoomSelect();
-    this.loadRoom(this.currentCustomIndex);
     if (this.modal) this.modal.classList.remove('hidden');
   }
 
@@ -863,13 +1000,19 @@ export class LevelEditor {
   }
 
   loadRoom(index) {
-    this.currentCustomIndex = Math.max(0, Math.min(this.customLevels.length - 1, index));
-    if (this.roomSelect) this.roomSelect.value = this.currentCustomIndex.toString();
+    let lvl;
+    if (this.isDevMode) {
+      this.currentRoomIndex = Math.max(0, Math.min(LEVEL_DATA.length - 1, index));
+      if (this.roomSelect) this.roomSelect.value = this.currentRoomIndex.toString();
+      lvl = LEVEL_DATA[this.currentRoomIndex];
+    } else {
+      this.currentCustomIndex = Math.max(0, Math.min(this.customLevels.length - 1, index));
+      if (this.roomSelect) this.roomSelect.value = this.currentCustomIndex.toString();
+      lvl = this.customLevels[this.currentCustomIndex] || DEFAULT_CUSTOM_LEVEL;
+    }
 
-    const lvl = this.customLevels[this.currentCustomIndex] || DEFAULT_CUSTOM_LEVEL;
-
-    this.roomName = lvl.name || `Custom Level ${this.currentCustomIndex + 1}`;
-    this.roomSub = lvl.sub || 'CUSTOM ASCENT';
+    this.roomName = lvl.name || (this.isDevMode ? `Room ${this.currentRoomIndex + 1}` : `Custom Level ${this.currentCustomIndex + 1}`);
+    this.roomSub = lvl.sub || (this.isDevMode ? 'EXPEDITION' : 'CUSTOM ASCENT');
     this.biome = typeof lvl.biome === 'number' ? lvl.biome : 0;
     this.wind = typeof lvl.wind === 'number' ? lvl.wind : 0;
     this.featherTime = (typeof lvl.featherTime === 'number' && lvl.featherTime > 0) ? lvl.featherTime : 2.5;
@@ -904,7 +1047,11 @@ export class LevelEditor {
     this.undoStack = [];
     this.renderPlatformList();
     this.render();
-    this.updateStatusMsg(`LOADED CUSTOM LEVEL #${this.currentCustomIndex + 1}: ${this.roomName} (${this.cols}x${this.rows})`);
+    if (this.isDevMode) {
+      this.updateStatusMsg(`LOADED DEV CAMPAIGN ROOM #${this.currentRoomIndex + 1}: ${this.roomName} (${this.cols}x${this.rows})`);
+    } else {
+      this.updateStatusMsg(`LOADED CUSTOM LEVEL #${this.currentCustomIndex + 1}: ${this.roomName} (${this.cols}x${this.rows})`);
+    }
   }
 
   setDimensions(newCols, newRows) {
@@ -949,28 +1096,60 @@ export class LevelEditor {
   }
 
   saveCurrentToStorage() {
-    if (!this.customLevels[this.currentCustomIndex]) return;
-    this.customLevels[this.currentCustomIndex] = {
-      name: this.roomName,
-      sub: this.roomSub,
-      biome: this.biome,
-      wind: this.wind,
-      featherTime: this.featherTime,
-      movingPlatforms: this.movingPlatforms,
-      map: this.map.map(r => r.join(''))
-    };
-    this.saveCustomLevelsToStorage();
-    if (this.roomSelect && this.roomSelect.options[this.currentCustomIndex]) {
-      this.roomSelect.options[this.currentCustomIndex].textContent = `Custom ${this.currentCustomIndex + 1}: ${this.roomName || 'Untitled'} (${this.cols}x${this.rows})`;
+    if (this.isDevMode) {
+      if (this.currentRoomIndex < 0 || this.currentRoomIndex >= LEVEL_DATA.length) return;
+      LEVEL_DATA[this.currentRoomIndex] = {
+        name: this.roomName,
+        sub: this.roomSub,
+        biome: this.biome,
+        wind: this.wind,
+        featherTime: this.featherTime,
+        movingPlatforms: this.movingPlatforms,
+        map: this.map.map(r => r.join(''))
+      };
+      this.saveDevCampaignOverrides();
+      if (this.roomSelect && this.roomSelect.options[this.currentRoomIndex]) {
+        this.roomSelect.options[this.currentRoomIndex].textContent = `Room ${this.currentRoomIndex + 1}: ${this.roomName || 'Untitled'} (${this.cols}x${this.rows})`;
+      }
+    } else {
+      if (!this.customLevels[this.currentCustomIndex]) return;
+      this.customLevels[this.currentCustomIndex] = {
+        name: this.roomName,
+        sub: this.roomSub,
+        biome: this.biome,
+        wind: this.wind,
+        featherTime: this.featherTime,
+        movingPlatforms: this.movingPlatforms,
+        map: this.map.map(r => r.join(''))
+      };
+      this.saveCustomLevelsToStorage();
+      if (this.roomSelect && this.roomSelect.options[this.currentCustomIndex]) {
+        this.roomSelect.options[this.currentCustomIndex].textContent = `Custom ${this.currentCustomIndex + 1}: ${this.roomName || 'Untitled'} (${this.cols}x${this.rows})`;
+      }
     }
   }
 
   resetRoomToDefault() {
-    this.customLevels[this.currentCustomIndex] = JSON.parse(JSON.stringify(DEFAULT_CUSTOM_LEVEL));
-    this.saveCustomLevelsToStorage();
-    this.refreshRoomSelect();
-    this.loadRoom(this.currentCustomIndex);
-    this.updateStatusMsg('CUSTOM LEVEL RESTORED TO TEMPLATE!', true);
+    this.saveUndoState();
+    if (this.isDevMode) {
+      const orig = this.originalCampaignData[this.currentRoomIndex];
+      if (orig) {
+        LEVEL_DATA[this.currentRoomIndex] = JSON.parse(JSON.stringify(orig));
+        try {
+          const overrides = JSON.parse(localStorage.getItem('seleste_dev_campaign_overrides') || '{}');
+          delete overrides[this.currentRoomIndex];
+          localStorage.setItem('seleste_dev_campaign_overrides', JSON.stringify(overrides));
+        } catch (_) {}
+        this.loadRoom(this.currentRoomIndex);
+        this.updateStatusMsg(`RESET CAMPAIGN ROOM #${this.currentRoomIndex + 1} TO ORIGINAL CODE!`, true);
+      }
+    } else {
+      this.customLevels[this.currentCustomIndex] = JSON.parse(JSON.stringify(DEFAULT_CUSTOM_LEVEL));
+      this.saveCustomLevelsToStorage();
+      this.refreshRoomSelect();
+      this.loadRoom(this.currentCustomIndex);
+      this.updateStatusMsg('CUSTOM LEVEL RESTORED TO TEMPLATE!', true);
+    }
   }
 
   getRoomData() {
@@ -987,27 +1166,71 @@ export class LevelEditor {
 
   generateLevelCode() {
     const mapStrings = this.map.map(r => `      "${r.join('')}"`).join(',\n');
+    const moving = JSON.stringify(this.movingPlatforms || [], null, 2).replace(/\n/g, '\n    ');
+    const featherLine = (typeof this.featherTime === 'number' && this.featherTime > 0) ? `\n    featherTime: ${this.featherTime},` : '';
+    if (this.isDevMode) {
+      return `  // ROOM ${this.currentRoomIndex + 1}: ${this.roomName.toUpperCase()} (${this.cols}x${this.rows})
+  {
+    name: ${JSON.stringify(this.roomName)},
+    sub: ${JSON.stringify(this.roomSub)},
+    biome: ${this.biome},
+    wind: ${this.wind},${featherLine}
+    movingPlatforms: ${moving},
+    map: [
+${mapStrings}
+    ]
+  }`;
+    }
     return `  // CUSTOM LEVEL ${this.currentCustomIndex + 1}: ${this.roomName.toUpperCase()} (${this.cols}x${this.rows})
   {
     name: ${JSON.stringify(this.roomName)},
     sub: ${JSON.stringify(this.roomSub)},
     biome: ${this.biome},
-    wind: ${this.wind},
-    featherTime: ${this.featherTime},
-    movingPlatforms: ${JSON.stringify(this.movingPlatforms, null, 2).replace(/\n/g, '\n    ')},
+    wind: ${this.wind},${featherLine}
+    movingPlatforms: ${moving},
     map: [
 ${mapStrings}
     ]
   }`;
   }
 
+  generateCampaignCode() {
+    this.saveCurrentToStorage();
+    const roomsFormatted = LEVEL_DATA.map((room, idx) => {
+      const rows = room.map.map(r => `      "${r}"`).join(',\n');
+      const moving = JSON.stringify(room.movingPlatforms || [], null, 2).replace(/\n/g, '\n    ');
+      const featherLine = (typeof room.featherTime === 'number' && room.featherTime > 0) ? `\n    featherTime: ${room.featherTime},` : '';
+      return `  // ROOM ${idx + 1}: ${(room.name || `Room ${idx + 1}`).toUpperCase()} (${(room.map[0] || '').length}x${room.map.length})
+  {
+    name: ${JSON.stringify(room.name || `Room ${idx + 1}`)},
+    sub: ${JSON.stringify(room.sub || 'EXPEDITION')},
+    biome: ${room.biome || 0},
+    wind: ${room.wind || 0},${featherLine}
+    movingPlatforms: ${moving},
+    map: [
+${rows}
+    ]
+  }`;
+    }).join(',\n\n');
+
+    return `// Handcrafted Level Rooms with Scrolling, Multi-Biomes & Celeste Mechanics
+// Grid: 10x10 pixel tiles. Supports arbitrary width and height for horizontal/vertical scrolling!
+
+export const LEVEL_DATA = [
+${roomsFormatted}
+];
+`;
+  }
+
   getAllRoomsData() {
     this.saveCurrentToStorage();
-    return this.customLevels;
+    return this.isDevMode ? LEVEL_DATA : this.customLevels;
   }
 
   generateAllLevelsCode() {
     this.saveCurrentToStorage();
+    if (this.isDevMode) return this.generateCampaignCode();
+
     const roomsFormatted = this.customLevels.map((room, idx) => {
       const rows = room.map.map(r => `      "${r}"`).join(',\n');
       const moving = JSON.stringify(room.movingPlatforms || [], null, 2).replace(/\n/g, '\n    ');
@@ -1034,11 +1257,12 @@ ${roomsFormatted}
 
   copyLevelCodeToClipboard() {
     const code = this.generateLevelCode();
-    if (this.exportTitle) this.exportTitle.textContent = `CUSTOM LEVEL ${this.currentCustomIndex + 1} CODE:`;
+    const titleText = this.isDevMode ? `ROOM ${this.currentRoomIndex + 1} CODE:` : `CUSTOM LEVEL ${this.currentCustomIndex + 1} CODE:`;
+    if (this.exportTitle) this.exportTitle.textContent = titleText;
     if (this.exportText) this.exportText.value = code;
 
     navigator.clipboard.writeText(code).then(() => {
-      this.updateStatusMsg('CUSTOM LEVEL CODE COPIED!', true);
+      this.updateStatusMsg(this.isDevMode ? 'ROOM CODE COPIED!' : 'CUSTOM LEVEL CODE COPIED!', true);
     }).catch(() => {
       if (this.exportBox) {
         this.exportBox.classList.remove('hidden');
@@ -1049,16 +1273,17 @@ ${roomsFormatted}
   }
 
   copyAllLevelsToClipboard() {
-    const allCode = this.generateAllLevelsCode();
-    if (this.exportTitle) this.exportTitle.textContent = `ALL CUSTOM LEVELS (${this.customLevels.length} LEVELS):`;
+    const allCode = this.isDevMode ? this.generateCampaignCode() : this.generateAllLevelsCode();
+    const titleText = this.isDevMode ? `ALL CAMPAIGN ROOMS (${LEVEL_DATA.length} ROOMS):` : `ALL CUSTOM LEVELS (${this.customLevels.length} LEVELS):`;
+    if (this.exportTitle) this.exportTitle.textContent = titleText;
     if (this.exportText) this.exportText.value = allCode;
     if (this.exportBox) this.exportBox.classList.remove('hidden');
 
     navigator.clipboard.writeText(allCode).then(() => {
-      this.updateStatusMsg('CUSTOM LEVELS COPIED!', true);
+      this.updateStatusMsg(this.isDevMode ? 'CAMPAIGN LEVEL_DATA COPIED!' : 'CUSTOM LEVELS COPIED!', true);
     }).catch(() => {
       this.exportText.select();
-      this.updateStatusMsg('CUSTOM LEVELS READY BELOW - PLEASE COPY OR DOWNLOAD:');
+      this.updateStatusMsg('CODE READY BELOW - PLEASE COPY OR DOWNLOAD:');
     });
   }
 
@@ -1259,6 +1484,31 @@ ${roomsFormatted}
       // 1. Check if importing multiple rooms
       const parsedRooms = this.parseCampaign(trimmed);
       if (parsedRooms && parsedRooms.length > 0) {
+        if (this.isDevMode) {
+          const count = Math.min(LEVEL_DATA.length, parsedRooms.length);
+          for (let i = 0; i < count; i++) {
+            const rm = parsedRooms[i];
+            if (rm && Array.isArray(rm.map)) {
+              LEVEL_DATA[i] = {
+                name: rm.name || LEVEL_DATA[i].name,
+                sub: rm.sub || LEVEL_DATA[i].sub,
+                biome: typeof rm.biome === 'number' ? rm.biome : (LEVEL_DATA[i].biome || 0),
+                wind: typeof rm.wind === 'number' ? rm.wind : (LEVEL_DATA[i].wind || 0),
+                featherTime: typeof rm.featherTime === 'number' ? rm.featherTime : (LEVEL_DATA[i].featherTime || 2.5),
+                movingPlatforms: Array.isArray(rm.movingPlatforms) ? rm.movingPlatforms : (LEVEL_DATA[i].movingPlatforms || []),
+                map: rm.map
+              };
+            }
+          }
+          this.saveDevCampaignOverrides();
+          this.refreshRoomSelect();
+          this.loadRoom(this.currentRoomIndex);
+          sfx.playBerryCollect();
+          this.updateStatusMsg(`SUCCESSFULLY IMPORTED ${count} CAMPAIGN ROOMS!`, true);
+          alert(`Success! Imported ${count} campaign rooms into LEVEL_DATA.`);
+          return;
+        }
+
         const imported = parsedRooms.filter(rm => rm && Array.isArray(rm.map)).map((rm, i) => ({
           name: rm.name || `Custom Level ${i + 1}`,
           sub: rm.sub || 'CUSTOM ASCENT',

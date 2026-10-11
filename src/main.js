@@ -66,14 +66,35 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Rolling buffer for secret cheat code: "leveleditor"
+  function unlockDevEditor() {
+    localStorage.setItem('seleste_editor_unlocked', 'true');
+    localStorage.setItem('seleste_is_dev_editor', 'true');
+    editor.setDevMode(true);
+    updateEditorVisibility();
+    sfx.playHeartCollect();
+    if (game.screenShake) game.screenShake.add(6);
+    if (game.particles) {
+      game.particles.emitBerryCollect(160, 90);
+      game.particles.addFloater('DEV LEVEL EDITOR ACTIVATED!', 85, 60, 8);
+    }
+    closeSettings();
+    closeChapters();
+    closeRoster();
+    closeStudio();
+    editor.open();
+  }
+
+  // Rolling buffer for secret cheat codes: "leveleditor", "imadev"
   let secretCheatBuffer = '';
   window.addEventListener('keydown', (e) => {
     const tag = document.activeElement ? document.activeElement.tagName : '';
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
     if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      secretCheatBuffer = (secretCheatBuffer + e.key.toLowerCase()).slice(-15);
-      if (secretCheatBuffer.endsWith('leveleditor')) {
+      secretCheatBuffer = (secretCheatBuffer + e.key.toLowerCase()).slice(-20);
+      if (secretCheatBuffer.endsWith('imadev')) {
+        secretCheatBuffer = '';
+        unlockDevEditor();
+      } else if (secretCheatBuffer.endsWith('leveleditor')) {
         secretCheatBuffer = '';
         unlockEditor(true);
       }
