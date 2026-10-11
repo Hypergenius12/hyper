@@ -195,7 +195,6 @@ export class Player {
     if (!this.dashAvailable) {
       this.dashAvailable = true;
       sfx.playCrystalRefill();
-      particleSystem.addFloater('DASH READY', this.x - 12, this.y - 12, 8);
       for (let i = 0; i < 6; i++) {
         particleSystem.emit(
           this.x + this.width / 2,

@@ -771,14 +771,8 @@ export class Game {
       drawPixelText(ctx, `${this.level.collectedBerries.size}/${this.totalBerriesCount}`, 19, 6, '#ffffff', 1);
     }
 
-    // Secret Crystal Heart indicator
-    const heartX = showBerries ? 46 : 5;
-    if (this.level.collectedHeart) {
-      drawSprite(ctx, SPRITES.heart[0], heartX, 5, p, false, 0.8);
-    }
-
     // Deaths
-    const deathX = this.level.collectedHeart ? (heartX + 16) : (showBerries ? 48 : 6);
+    const deathX = showBerries ? 48 : 6;
     ctx.fillStyle = p.getColor(5);
     ctx.fillRect(deathX, 7, 4, 4);
     ctx.fillRect(deathX + 1, 11, 2, 2);

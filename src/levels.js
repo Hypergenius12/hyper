@@ -1945,7 +1945,6 @@ export class Level {
         if (onHaptic) onHaptic('heart');
         screenShake.add(4);
         if (onFreeze) onFreeze(0.08);
-        particleSystem.addFloater('CRYSTAL HEART!', this.heartPos.x - 24, this.heartPos.y - 10, 8);
         for (let i = 0; i < 20; i++) {
           particleSystem.emit(
             this.heartPos.x + 5, this.heartPos.y + 5,
