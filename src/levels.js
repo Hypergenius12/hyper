@@ -2230,18 +2230,25 @@ export class Level {
           ctx.fillStyle = p.getColor(2);
           ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
-          // Authentic brick mortar seams
+          // Authentic brick mortar seams (5px course height)
           ctx.fillStyle = p.getColor(1);
           ctx.fillRect(x, y + 4, TILE_SIZE, 1);
-          if ((r % 2 === 0 && c % 2 === 0) || (r % 2 !== 0 && c % 2 !== 0)) {
-            ctx.fillRect(x + 5, y, 1, 4);
-          } else {
-            ctx.fillRect(x + 8, y + 5, 1, 4);
-          }
+          ctx.fillRect(x, y + 9, TILE_SIZE, 1);
 
-          // Subtle stone bevel highlight
-          ctx.fillStyle = p.getColor(3);
-          ctx.fillRect(x + 1, y + 1, 2, 2);
+          // Perfectly aligned 20x5 masonry bricks with 50% running bond
+          if (c % 2 === 0) {
+            // Top course vertical seam
+            ctx.fillRect(x + 5, y, 1, 4);
+            // Bottom course centered stone highlight
+            ctx.fillStyle = p.getColor(3);
+            ctx.fillRect(x + 4, y + 6, 2, 2);
+          } else {
+            // Bottom course vertical seam
+            ctx.fillRect(x + 5, y + 5, 1, 4);
+            // Top course centered stone highlight
+            ctx.fillStyle = p.getColor(3);
+            ctx.fillRect(x + 4, y + 1, 2, 2);
+          }
 
           // Top surface trim based on Biome
           if (topAir) {
