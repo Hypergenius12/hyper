@@ -1662,7 +1662,7 @@ export class Level {
     return false;
   }
 
-  update(dt, player, particleSystem, screenShake, onNextRoom, onVictory, onFreeze) {
+  update(dt, player, particleSystem, screenShake, onNextRoom, onVictory, onFreeze, onHaptic = null) {
     if (this.roomTitleTimer > 0) this.roomTitleTimer -= dt;
 
     // Wind particles
@@ -1805,6 +1805,7 @@ export class Level {
           player.scaleY = 1.6;
 
           sfx.playSpring();
+          if (onHaptic) onHaptic('spring');
           screenShake.add(3.5);
           if (onFreeze) onFreeze(0.04);
           particleSystem.addShockwave(bCenterX, bCenterY, 8);
@@ -1847,6 +1848,7 @@ export class Level {
           player.scaleX = 0.55;
           player.scaleY = 1.65;
           sfx.playSpring();
+          if (onHaptic) onHaptic('spring');
           screenShake.add(2.5);
           if (onFreeze) onFreeze(0.03);
           particleSystem.emitDustPuff(sp.x + TILE_SIZE / 2, sp.y + 4, 7, 0, 8);
@@ -1940,6 +1942,7 @@ export class Level {
       ) {
         this.collectedHeart = true;
         sfx.playHeartCollect();
+        if (onHaptic) onHaptic('heart');
         screenShake.add(4);
         if (onFreeze) onFreeze(0.08);
         particleSystem.addFloater('CRYSTAL HEART!', this.heartPos.x - 24, this.heartPos.y - 10, 8);
@@ -2014,6 +2017,7 @@ export class Level {
               this.collectedBerries.add(berry.id);
               this.collectibles.splice(i, 1);
               sfx.playBerryCollect();
+              if (onHaptic) onHaptic('berry');
               screenShake.add(2.5);
               if (onFreeze) onFreeze(0.05);
               particleSystem.emitBerryCollect(berry.x + 5, berry.y + 5);
@@ -2053,6 +2057,7 @@ export class Level {
           ftr.respawnTimer = 3.5;
           player.startFeatherFlight(particleSystem, this.featherTime);
           sfx.playFeatherCollect();
+          if (onHaptic) onHaptic('feather');
           screenShake.add(3);
           if (onFreeze) onFreeze(0.05);
           particleSystem.addShockwave(ftr.x + 5, ftr.y + 5, 10);

@@ -8,6 +8,7 @@ import { Player } from './player.js';
 import { Level, LEVEL_DATA, getTotalStrawberries } from './levels.js';
 import { Background } from './background.js';
 import { CharacterManager, CHARACTERS } from './characters.js';
+import { GamepadManager } from './gamepad.js';
 
 export class Game {
   constructor(canvas) {
@@ -20,6 +21,7 @@ export class Game {
     this.particles = new ParticleSystem();
     this.screenShake = new ScreenShake();
     this.background = new Background();
+    this.gamepad = new GamepadManager(this);
 
     this.onPaletteChanged = null;
     this.palette.onPaletteChanged = (cur) => {
@@ -29,8 +31,8 @@ export class Game {
     // Camera with smooth tracking
     this.camera = { x: 0, y: 0 };
 
-    // Input state
-    this.input = {
+    // Keyboard input state (separated from merged input)
+    this.keyboardInput = {
       left: false,
       right: false,
       up: false,
@@ -42,6 +44,21 @@ export class Game {
       climb: false
     };
 
+    // Merged input state (keyboard + gamepad)
+    this.input = {
+      left: false,
+      right: false,
+      up: false,
+      down: false,
+      jump: false,
+      jumpPressed: false,
+      dash: false,
+      dashPressed: false,
+      climb: false,
+      analogX: 0,
+      analogY: 0
+    };
+
     // Game state: 'title', 'playing', 'room_transition', 'victory'
     this.state = 'title';
 
@@ -50,6 +67,7 @@ export class Game {
     this.palette.setBiome(this.level.biome);
     this.player = new Player(this.level.spawnX, this.level.spawnY, this.characters.getCurrent());
     this.player.reset(this.level.spawnX, this.level.spawnY, this.level);
+    this.player.onHaptic = (type) => this.handleHaptic(type);
 
     // Stats
     this.deaths = 0;
@@ -130,14 +148,14 @@ export class Game {
 
       sfx.ensureContext();
 
-      if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.input.left = true;
-      if (e.code === 'ArrowRight' || e.code === 'KeyD') this.input.right = true;
-      if (e.code === 'ArrowUp' || e.code === 'KeyW') this.input.up = true;
-      if (e.code === 'ArrowDown' || e.code === 'KeyS') this.input.down = true;
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.keyboardInput.left = true;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') this.keyboardInput.right = true;
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') this.keyboardInput.up = true;
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') this.keyboardInput.down = true;
 
       if (e.code === 'Space' || e.code === 'KeyZ') {
-        if (!this.input.jump) this.input.jumpPressed = true;
-        this.input.jump = true;
+        if (!this.keyboardInput.jump) this.keyboardInput.jumpPressed = true;
+        this.keyboardInput.jump = true;
 
         if (this.state === 'title') {
           this.startGame();
@@ -147,12 +165,12 @@ export class Game {
       }
 
       if (e.code === 'KeyX' || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyJ') {
-        if (!this.input.dash) this.input.dashPressed = true;
-        this.input.dash = true;
+        if (!this.keyboardInput.dash) this.keyboardInput.dashPressed = true;
+        this.keyboardInput.dash = true;
       }
 
       if (e.code === 'KeyC' || e.code === 'KeyK') {
-        this.input.climb = true;
+        this.keyboardInput.climb = true;
       }
 
       if (e.code === 'KeyR' && this.state === 'playing') {
@@ -167,14 +185,14 @@ export class Game {
     });
 
     window.addEventListener('keyup', (e) => {
-      if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.input.left = false;
-      if (e.code === 'ArrowRight' || e.code === 'KeyD') this.input.right = false;
-      if (e.code === 'ArrowUp' || e.code === 'KeyW') this.input.up = false;
-      if (e.code === 'ArrowDown' || e.code === 'KeyS') this.input.down = false;
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.keyboardInput.left = false;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') this.keyboardInput.right = false;
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') this.keyboardInput.up = false;
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') this.keyboardInput.down = false;
 
-      if (e.code === 'Space' || e.code === 'KeyZ') this.input.jump = false;
-      if (e.code === 'KeyX' || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyJ') this.input.dash = false;
-      if (e.code === 'KeyC' || e.code === 'KeyK') this.input.climb = false;
+      if (e.code === 'Space' || e.code === 'KeyZ') this.keyboardInput.jump = false;
+      if (e.code === 'KeyX' || e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyJ') this.keyboardInput.dash = false;
+      if (e.code === 'KeyC' || e.code === 'KeyK') this.keyboardInput.climb = false;
     });
 
     this.canvas.addEventListener('pointerdown', (e) => {
@@ -256,6 +274,7 @@ export class Game {
     this.totalBerriesCount = getTotalStrawberries();
     this.player = new Player(this.level.spawnX, this.level.spawnY, this.characters.getCurrent());
     this.player.reset(this.level.spawnX, this.level.spawnY, this.level);
+    this.player.onHaptic = (type) => this.handleHaptic(type);
     this.state = 'playing';
     this.victoryTimer = 0;
     this.particles.clear();
@@ -316,6 +335,19 @@ export class Game {
     this.hitstopTimer = Math.max(this.hitstopTimer, duration);
   }
 
+  handleHaptic(type) {
+    if (!this.gamepad) return;
+    switch (type) {
+      case 'dash':    this.gamepad.vibrate(70,  0.5, 0.8); break;
+      case 'death':   this.gamepad.vibrate(300, 0.8, 1.0); break;
+      case 'spring':  this.gamepad.vibrate(120, 0.3, 0.6); break;
+      case 'berry':   this.gamepad.vibrate(60,  0.2, 0.4); break;
+      case 'heart':   this.gamepad.vibrate(500, 0.6, 0.9); break;
+      case 'feather': this.gamepad.vibrate(200, 0.3, 0.6); break;
+      default:        this.gamepad.vibrate(50,  0.2, 0.3); break;
+    }
+  }
+
   triggerVictory() {
     if (!this.level.isCustomPlaytest) {
       this.markRoomCompleted(this.level.currentRoomIndex);
@@ -364,8 +396,46 @@ export class Game {
   }
 
   update(dt) {
+    // Poll gamepad and merge with keyboard input every frame
+    const gpInput = this.gamepad.poll();
+
+    this.input.left  = this.keyboardInput.left  || gpInput.left;
+    this.input.right = this.keyboardInput.right || gpInput.right;
+    this.input.up    = this.keyboardInput.up    || gpInput.up;
+    this.input.down  = this.keyboardInput.down  || gpInput.down;
+    this.input.jump  = this.keyboardInput.jump  || gpInput.jump;
+    this.input.dash  = this.keyboardInput.dash  || gpInput.dash;
+    this.input.climb = this.keyboardInput.climb || gpInput.climb;
+    this.input.jumpPressed  = this.keyboardInput.jumpPressed  || gpInput.jumpPressed;
+    this.input.dashPressed  = this.keyboardInput.dashPressed  || gpInput.dashPressed;
+    this.input.analogX = gpInput.analogX;
+    this.input.analogY = gpInput.analogY;
+
+    // Gamepad shortcuts: Start/A on title → start game; on victory → restart
+    if (gpInput.startPressed || (gpInput.jumpPressed && this.state === 'title')) {
+      if (this.state === 'title') {
+        sfx.ensureContext();
+        this.startGame();
+      } else if (this.state === 'victory' && this.victoryTimer > 2.0) {
+        this.restartGame();
+      }
+    }
+
+    // Gamepad shortcut: Select/Back/R3 → restart room (kill player)
+    if (gpInput.restartPressed && this.state === 'playing' && !this.player.dead) {
+      this.player.kill(this.particles, this.screenShake, (t) => this.freeze(t));
+    }
+
+    // Gamepad shortcut: L3 → cycle character
+    if (gpInput.cyclePressed) {
+      this.cycleCharacter();
+    }
+
     if (this.hitstopTimer > 0) {
       this.hitstopTimer -= dt;
+      // Still clear pressed flags so they don't queue up during hitstop
+      this.keyboardInput.jumpPressed = false;
+      this.keyboardInput.dashPressed = false;
       return;
     }
 
@@ -390,7 +460,8 @@ export class Game {
         this.screenShake,
         () => this.nextRoom(),
         () => this.triggerVictory(),
-        (t) => this.freeze(t)
+        (t) => this.freeze(t),
+        (type) => this.handleHaptic(type)
       );
 
       this.player.update(dt, this.input, this.level, this.particles, this.screenShake, (t) => this.freeze(t));
@@ -502,8 +573,8 @@ export class Game {
       }
     }
 
-    this.input.jumpPressed = false;
-    this.input.dashPressed = false;
+    this.keyboardInput.jumpPressed = false;
+    this.keyboardInput.dashPressed = false;
   }
 
   render() {
@@ -823,18 +894,20 @@ export class Game {
     drawPixelText(ctx, heroTag, 160 - measurePixelText(heroTag, 1) / 2, 122, p.getColor(8), 1);
 
     // Controls Legend Banner
-    const ctrl1 = 'ARROWS/WASD: MOVE   Z/SPACE: JUMP';
-    const ctrl2 = 'X/SHIFT: DASH   C: CLIMB   V: HERO';
+    const isPad = this.gamepad && this.gamepad.connected;
+    const ctrl1 = isPad ? 'PAD: STICK/D-PAD: MOVE   A: JUMP' : 'ARROWS/WASD: MOVE   Z/SPACE: JUMP';
+    const ctrl2 = isPad ? 'X/B/RB: DASH   Y/LB: CLIMB   L3: HERO' : 'X/SHIFT: DASH   C: CLIMB   V: HERO';
     const c1W = measurePixelText(ctrl1, 1);
     const c2W = measurePixelText(ctrl2, 1);
+    const maxW = Math.max(c1W, c2W);
 
     ctx.fillStyle = '#000000';
-    ctx.fillRect(160 - c1W / 2 - 8, 132, c1W + 16, 26);
-    ctx.fillStyle = p.getColor(4);
-    ctx.strokeRect(160 - c1W / 2 - 8, 132, c1W + 16, 26);
+    ctx.fillRect(160 - maxW / 2 - 8, 132, maxW + 16, 26);
+    ctx.fillStyle = isPad ? '#00ffaa' : p.getColor(4);
+    ctx.strokeRect(160 - maxW / 2 - 8, 132, maxW + 16, 26);
 
     drawPixelText(ctx, ctrl1, 160 - c1W / 2, 136, '#ffffff', 1);
-    drawPixelText(ctx, ctrl2, 160 - c2W / 2, 146, p.getColor(7), 1);
+    drawPixelText(ctx, ctrl2, 160 - c2W / 2, 146, isPad ? '#00ffaa' : p.getColor(7), 1);
   }
 
   renderVictoryOverlay(ctx, p) {
@@ -888,7 +961,7 @@ export class Game {
     ctx.fillStyle = '#000000';
     ctx.fillRect(rX + 1, rY + rH - 3, rW - 2, 2);
 
-    const playAgain = 'PLAY AGAIN [Z]';
+    const playAgain = (this.gamepad && this.gamepad.connected) ? 'PLAY AGAIN [A / Z]' : 'PLAY AGAIN [Z]';
     const pW = measurePixelText(playAgain, 1);
     drawPixelText(ctx, playAgain, 160 - pW / 2, rY + 9, '#ffffff', 1);
   }

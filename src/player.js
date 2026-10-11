@@ -95,6 +95,9 @@ export class Player {
     this.featherTimer = 0;
     const savedFeatherTime = parseFloat(localStorage.getItem('seleste_feather_duration') || '2.0');
     this.featherMaxTimer = (!isNaN(savedFeatherTime) && savedFeatherTime > 0) ? savedFeatherTime : 2.0;
+
+    // Haptic vibration callback (Gamepad dual-rumble)
+    this.onHaptic = null;
   }
 
   setCharacter(character) {
@@ -171,6 +174,7 @@ export class Player {
     this.respawnTimer = 0.35;
     sfx.setLowPass(true);
     sfx.playDeath();
+    if (this.onHaptic) this.onHaptic('death');
     particleSystem.emitDeathBurst(this.x + this.width / 2, this.y + this.height / 2);
     screenShake.add(4.5);
     if (onFreeze) onFreeze(0.06);
@@ -218,10 +222,15 @@ export class Player {
 
       let fx = 0;
       let fy = 0;
-      if (input.left) fx -= 1;
-      if (input.right) fx += 1;
-      if (input.up) fy -= 1;
-      if (input.down) fy += 1;
+      if (input.analogX !== undefined && Math.hypot(input.analogX, input.analogY) > 0.2) {
+        fx = input.analogX;
+        fy = input.analogY;
+      } else {
+        if (input.left) fx -= 1;
+        if (input.right) fx += 1;
+        if (input.up) fy -= 1;
+        if (input.down) fy += 1;
+      }
 
       const fLen = Math.hypot(fx, fy);
       const targetVx = fLen > 0 ? (fx / fLen) * 135 : 0;
@@ -441,6 +450,7 @@ export class Player {
       this.dashCooldown = 0.18;
 
       sfx.playDash();
+      if (this.onHaptic) this.onHaptic('dash');
       screenShake.add(3);
       if (onFreeze) onFreeze(0.04);
       particleSystem.addShockwave(this.x + this.width / 2, this.y + this.height / 2, 8);

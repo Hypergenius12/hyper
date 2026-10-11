@@ -454,6 +454,79 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // --- Gamepad / Controller UI Wiring ---
+  const btnControllerIndicator = document.getElementById('btn-controller-indicator');
+  const controllerIndicatorText = document.getElementById('controller-indicator-text');
+  const btnRumble = document.getElementById('btn-rumble');
+  const btnGamepadStatus = document.getElementById('btn-gamepad-status');
+  const gamepadStatusText = document.getElementById('gamepad-status-text');
+
+  function updateGamepadUI(connected, name) {
+    if (btnControllerIndicator) {
+      if (connected) {
+        btnControllerIndicator.style.display = 'inline-flex';
+        btnControllerIndicator.classList.add('pad-connected');
+        if (controllerIndicatorText) {
+          const shortName = (name || 'PAD').split(' ')[0];
+          controllerIndicatorText.textContent = shortName;
+        }
+      } else {
+        btnControllerIndicator.style.display = 'none';
+        btnControllerIndicator.classList.remove('pad-connected');
+        if (controllerIndicatorText) controllerIndicatorText.textContent = 'PAD';
+      }
+    }
+    if (gamepadStatusText) {
+      gamepadStatusText.textContent = connected ? (name || 'CONNECTED') : 'NO PAD';
+    }
+    if (btnGamepadStatus) {
+      btnGamepadStatus.classList.toggle('btn-badeline-active', connected);
+    }
+  }
+
+  if (game.gamepad) {
+    game.gamepad.onStateChange = (connected, name) => {
+      updateGamepadUI(connected, name);
+    };
+    if (game.gamepad.connected) {
+      updateGamepadUI(true, game.gamepad.displayName);
+    }
+  }
+
+  if (btnControllerIndicator) {
+    btnControllerIndicator.addEventListener('click', () => {
+      openSettings();
+    });
+  }
+
+  if (btnRumble && game.gamepad) {
+    const updateRumbleBtn = () => {
+      btnRumble.innerHTML = `<span class="pixel-icon icon-gamepad"></span>RUMBLE: ${game.gamepad.rumbleEnabled ? 'ON' : 'OFF'}`;
+    };
+    updateRumbleBtn();
+    btnRumble.addEventListener('click', () => {
+      sfx.playClick();
+      game.gamepad.toggleRumble();
+      updateRumbleBtn();
+    });
+  }
+
+  if (btnGamepadStatus && game.gamepad) {
+    btnGamepadStatus.addEventListener('click', () => {
+      sfx.playClick();
+      if (game.gamepad.connected) {
+        game.gamepad.vibrate(150, 0.6, 0.6);
+        if (game.particles) {
+          game.particles.addFloater('TEST RUMBLE OK!', 80, 50, 7);
+        }
+      } else {
+        if (game.particles) {
+          game.particles.addFloater('PRESS ANY BUTTON ON CONTROLLER', 40, 50, 6);
+        }
+      }
+    });
+  }
+
   // --- Palette Bar Update ---
   function updatePaletteUI() {
     const cur = game.palette.getCurrent();
