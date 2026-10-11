@@ -2230,24 +2230,26 @@ export class Level {
           ctx.fillStyle = p.getColor(2);
           ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
-          // Authentic brick mortar seams (5px course height)
-          ctx.fillStyle = p.getColor(1);
-          ctx.fillRect(x, y + 4, TILE_SIZE, 1);
-          ctx.fillRect(x, y + 9, TILE_SIZE, 1);
+          // Authentic running-bond masonry (20x10 bricks, 1 full course per tile)
+          const hasSeam = ((r + c) % 2 === 0);
+          const isBrickStart = !hasSeam || c === 0;
 
-          // Perfectly aligned 20x5 masonry bricks with 50% running bond
-          if (c % 2 === 0) {
-            // Top course vertical seam
-            ctx.fillRect(x + 5, y, 1, 4);
-            // Bottom course centered stone highlight
-            ctx.fillStyle = p.getColor(3);
-            ctx.fillRect(x + 4, y + 6, 2, 2);
-          } else {
-            // Bottom course vertical seam
-            ctx.fillRect(x + 5, y + 5, 1, 4);
-            // Top course centered stone highlight
-            ctx.fillStyle = p.getColor(3);
-            ctx.fillRect(x + 4, y + 1, 2, 2);
+          // Top highlight bevel along the brick course
+          ctx.fillStyle = p.getColor(3);
+          ctx.fillRect(x, y, hasSeam ? TILE_SIZE - 1 : TILE_SIZE, 1);
+
+          // Left highlight bevel at the start of each brick
+          if (isBrickStart) {
+            ctx.fillRect(x, y + 1, 1, TILE_SIZE - 2);
+          }
+
+          // Bottom horizontal mortar seam
+          ctx.fillStyle = p.getColor(1);
+          ctx.fillRect(x, y + TILE_SIZE - 1, TILE_SIZE, 1);
+
+          // Vertical mortar seam
+          if (hasSeam) {
+            ctx.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE);
           }
 
           // Top surface trim based on Biome
