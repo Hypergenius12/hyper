@@ -176,6 +176,13 @@ export class Player {
     if (this.dead) return;
     this.dead = true;
     this.respawnTimer = 0.35;
+    this.vx = 0;
+    this.vy = 0;
+    this.isDashing = false;
+    this.isDreamPhasing = false;
+    this.isFeatherFlying = false;
+    this.dashBuffer = 0;
+    sfx.stopDreamDrone();
     sfx.setLowPass(true);
     sfx.playDeath();
     if (this.onHaptic) this.onHaptic('death');
