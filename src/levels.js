@@ -850,7 +850,7 @@ export const LEVEL_DATA = [
     "sub": "CHIMNEY WALL-CLIMB BETWEEN ALTERNATING SPIKE TEETH",
     "biome": 5,
     "wind": 0,
-    "featherTime": 5,
+    "featherTime": 7,
     "movingPlatforms": [],
     "map": [
       "##################################",
@@ -1611,6 +1611,18 @@ export class Level {
       }
       this.grid.push(row);
     }
+
+    // Link spikes to their supporting crumble block (if attached to one)
+    for (const spk of this.spikes) {
+      let baseX = spk.x;
+      let baseY = spk.y;
+      if (spk.dir === 'up') baseY += TILE_SIZE;
+      else if (spk.dir === 'down') baseY -= TILE_SIZE;
+      else if (spk.dir === 'left') baseX += TILE_SIZE;
+      else if (spk.dir === 'right') baseX -= TILE_SIZE;
+
+      spk.attachedCrumbler = this.crumblers.find(cb => cb.x === baseX && cb.y === baseY) || null;
+    }
   }
 
   isSolidTile(c, r, isDreamPhasing = false, isDashing = false) {
@@ -2082,6 +2094,9 @@ export class Level {
     // Spikes (Fair, generous hitbox margins!)
     if (!player.dead) {
       for (const spk of this.spikes) {
+        // Disappear with attached crumble block
+        if (spk.attachedCrumbler && !spk.attachedCrumbler.active) continue;
+
         let hit = false;
         const px = player.x;
         const py = player.y;
@@ -2376,9 +2391,15 @@ export class Level {
 
     // 5. Spikes
     for (const spk of this.spikes) {
+      // Disappear with attached crumble block
+      if (spk.attachedCrumbler && !spk.attachedCrumbler.active) continue;
+
+      const ox = (spk.attachedCrumbler && spk.attachedCrumbler.shaking) ? (Math.random() * 2 - 1) : 0;
+      const oy = (spk.attachedCrumbler && spk.attachedCrumbler.shaking) ? (Math.random() * 2 - 1) : 0;
+
       const sprite = SPRITES.spikes[spk.dir];
       if (sprite) {
-        drawSprite(ctx, sprite, spk.x + 1, spk.y + 1, palette);
+        drawSprite(ctx, sprite, Math.round(spk.x + 1 + ox), Math.round(spk.y + 1 + oy), palette);
       }
     }
 
