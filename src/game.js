@@ -802,7 +802,7 @@ export class Game {
       ctx.strokeRect(6, 142, 108, 32);
       ctx.globalAlpha = 1.0;
 
-      const roomSecs = Math.floor(this.roomTimer % 60).toString().padStart(2, '0');
+      const roomSecs = Math.floor(this.roomTimer).toString().padStart(2, '0');
       const roomMs = Math.floor((this.roomTimer % 1) * 100).toString().padStart(2, '0');
       drawPixelText(ctx, `ROOM: ${roomSecs}.${roomMs}s`, 10, 146, p.getColor(7), 1);
 

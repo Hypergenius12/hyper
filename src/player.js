@@ -98,6 +98,9 @@ export class Player {
 
     // Haptic vibration callback (Gamepad dual-rumble)
     this.onHaptic = null;
+
+    // Dash buffer: stores a queued dash pressed during dream block phasing
+    this.dashBuffer = 0;
   }
 
   setCharacter(character) {
@@ -143,6 +146,7 @@ export class Player {
     this.dead = false;
     this.stamina = this.maxStamina;
     this.springBounceTimer = 0;
+    this.dashBuffer = 0;
     this.leafParticles = [];
 
     // If level provided, dock player cleanly onto floor if overlapping
@@ -275,6 +279,10 @@ export class Player {
     // ---------------------------------------------------------
     // DASH & DREAM BLOCK PHASING
     // ---------------------------------------------------------
+
+    // Tick down dash buffer timer each frame
+    if (this.dashBuffer > 0) this.dashBuffer -= dt;
+
     if (this.isDashing) {
       this.dashTimer -= dt;
       this.ghostTimer -= dt;
@@ -317,6 +325,11 @@ export class Player {
           );
         }
 
+        // Buffer a dash press made while inside the dream block
+        if (input.dashPressed && this.dashCooldown <= 0) {
+          this.dashBuffer = 0.15;
+        }
+
         if (!inDream) {
           // Exited Dream Block!
           this.isDreamPhasing = false;
@@ -336,6 +349,34 @@ export class Player {
             this.scaleY = 1.6;
             particleSystem.emitDustPuff(this.x + this.width / 2, this.y + this.height, 8, -this.facing, 8);
             sfx.playJump();
+          } else if (this.dashBuffer > 0) {
+            // Dash was buffered during dream phasing — fire it immediately on exit!
+            this.dashBuffer = 0;
+
+            let bdx = input.left ? -1 : (input.right ? 1 : 0);
+            let bdy = input.up ? -1 : (input.down ? 1 : 0);
+            if (bdx === 0 && bdy === 0) bdx = this.facing;
+
+            const bLen = Math.hypot(bdx, bdy) || 1;
+            this.dashDirX = bdx / bLen;
+            this.dashDirY = bdy / bLen;
+            this.vx = this.dashDirX * this.dashSpeed;
+            this.vy = this.dashDirY * this.dashSpeed;
+
+            this.isDashing = true;
+            this.dashAvailable = false;
+            this.dashTimer = this.dashDuration;
+            this.ghostTimer = 0;
+            this.dashCooldown = 0.18;
+
+            sfx.playDash();
+            if (this.onHaptic) this.onHaptic('dash');
+            screenShake.add(3);
+            if (onFreeze) onFreeze(0.04);
+            particleSystem.addShockwave(this.x + this.width / 2, this.y + this.height / 2, 8);
+            particleSystem.emitDustPuff(this.x + this.width / 2, this.y + this.height / 2, 8, -this.dashDirX, 7);
+            this.scaleX = Math.abs(this.dashDirX) > 0.5 ? 1.4 : 0.8;
+            this.scaleY = Math.abs(this.dashDirY) > 0.5 ? 1.4 : 0.8;
           } else {
             this.vx *= 1.15;
             this.vy *= 1.15;

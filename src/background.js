@@ -582,20 +582,14 @@ export class Background {
     ctx.fillStyle = p.getColor(0);
     ctx.fillRect(0, 0, 320, 180);
 
-    // Radiant Giant Pixel Moon with aura ring
-    const mx = 240 - Math.round(camX * 0.05);
-    const my = 42;
+    // Twinkling stars (drawn first so moon renders on top)
+    for (const s of this.stars) {
+      const bright = Math.sin(s.phase) > 0.1;
+      ctx.fillStyle = bright ? '#ffffff' : p.getColor(8);
+      ctx.fillRect((s.x - Math.round(camX * 0.05) + 320) % 320, s.y, s.size, s.size);
+    }
 
-    ctx.fillStyle = p.getColor(2);
-    this.drawPixelCircle(ctx, mx, my, 26);
-    ctx.fillStyle = '#ffffff';
-    this.drawPixelCircle(ctx, mx, my, 21);
-    ctx.fillStyle = p.getColor(5);
-    ctx.fillRect(mx - 8, my - 6, 5, 4);
-    ctx.fillRect(mx + 4, my + 3, 4, 3);
-    ctx.fillRect(mx - 3, my + 7, 3, 2);
-
-    // Triple-Layer Waving Aurora Borealis Curtains
+    // Triple-Layer Waving Aurora Borealis Curtains (drawn before moon so moon renders on top)
     for (let layer = 0; layer < 3; layer++) {
       const col = layer === 0 ? p.getColor(5) : layer === 1 ? p.getColor(6) : p.getColor(7);
       ctx.fillStyle = col;
@@ -609,12 +603,25 @@ export class Background {
     }
     ctx.globalAlpha = 1.0;
 
-    // Twinkling stars
-    for (const s of this.stars) {
-      const bright = Math.sin(s.phase) > 0.1;
-      ctx.fillStyle = bright ? '#ffffff' : p.getColor(8);
-      ctx.fillRect((s.x - Math.round(camX * 0.05) + 320) % 320, s.y, s.size, s.size);
-    }
+    // Radiant Giant Pixel Moon with aura ring (drawn AFTER aurora so it's always visible on top)
+    const mx = 240 - Math.round(camX * 0.05);
+    const my = 38 + Math.round(camY * 0.03); // slight camY parallax keeps moon anchored to sky
+
+    // Soft outer glow halo
+    ctx.fillStyle = p.getColor(2);
+    ctx.globalAlpha = 0.55;
+    this.drawPixelCircle(ctx, mx, my, 28);
+    ctx.globalAlpha = 1.0;
+
+    // Moon body
+    ctx.fillStyle = '#ffffff';
+    this.drawPixelCircle(ctx, mx, my, 22);
+
+    // Moon craters (dark grey, not palette color which could be wrong tone)
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(mx - 8, my - 6, 5, 3);
+    ctx.fillRect(mx + 5, my + 3, 4, 3);
+    ctx.fillRect(mx - 3, my + 8, 3, 2);
 
     // High mountain silhouettes at base
     ctx.fillStyle = p.getColor(1);
