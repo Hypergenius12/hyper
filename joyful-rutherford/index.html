@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Seleste Pixel // 9-Color Art Platformer</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <script type="module" crossorigin src="./assets/index-C7gkIQBT.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-Bq_nttVQ.css">
+  <script type="module" crossorigin src="./assets/index-B03jFSb9.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-D9HS_Y8h.css">
 </head>
 <body>
   <div id="app-container">
@@ -36,6 +36,9 @@
       <button id="btn-open-editor" class="pixel-mini-btn" title="In-Game Level Builder & Editor" style="display: none;">
         <span class="pixel-icon icon-edit"></span>BUILDER
       </button>
+      <button id="btn-controller-indicator" class="pixel-mini-btn" title="Controller Status" style="display: none;">
+        <span class="pixel-icon icon-gamepad"></span><span id="controller-indicator-text">PAD</span>
+      </button>
       <button id="btn-open-settings" class="pixel-mini-btn settings-trigger-btn" title="Open Settings">
         <span class="pixel-icon icon-gear"></span>SETTINGS
       </button>
@@ -64,6 +67,8 @@
         <button id="btn-fullscreen" class="pixel-btn"><span class="pixel-icon icon-expand"></span>FULLSCREEN</button>
         <button id="btn-doppelganger" class="pixel-btn"><span class="pixel-icon icon-shadow"></span>BADELINE: OFF</button>
         <button id="btn-speedrun-hud" class="pixel-btn">SPLITS HUD: ON</button>
+        <button id="btn-rumble" class="pixel-btn"><span class="pixel-icon icon-gamepad"></span>RUMBLE: ON</button>
+        <button id="btn-gamepad-status" class="pixel-btn" style="font-size: 9px;"><span class="pixel-icon icon-gamepad"></span><span id="gamepad-status-text">NO PAD</span></button>
       </div>
 
       <div style="border-top: 2px solid var(--p2); padding-top: 8px;">
@@ -93,6 +98,14 @@
         <div class="legend-row"><span>WAVEDASH</span><span>DIAG-DOWN DASH + JUMP</span></div>
         <div class="legend-row"><span>WALL BOUNCE</span><span>UP-DASH NEAR WALL + JUMP</span></div>
         <div class="legend-row"><span>R</span><span>RESTART ROOM</span></div>
+        <div class="legend-title" style="margin-top: 8px;">CONTROLLER (XBOX / PS / SWITCH):</div>
+        <div class="legend-row"><span>L-STICK / D-PAD</span><span>MOVE &amp; AIM</span></div>
+        <div class="legend-row"><span>A / CROSS</span><span>JUMP &amp; CONFIRM</span></div>
+        <div class="legend-row"><span>X / SQUARE / RB / RT</span><span>DASH</span></div>
+        <div class="legend-row"><span>Y / TRIANGLE / LB / LT</span><span>WALL CLIMB</span></div>
+        <div class="legend-row"><span>L3 (STICK CLICK)</span><span>CYCLE HERO</span></div>
+        <div class="legend-row"><span>SELECT / BACK / R3</span><span>RESTART ROOM</span></div>
+        <div class="legend-row"><span>START / MENU</span><span>START / PAUSE</span></div>
       </div>
 
       <div class="modal-actions">
