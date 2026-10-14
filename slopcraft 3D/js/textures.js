@@ -234,11 +234,78 @@ export const BLOCKS = {
     COBBLESTONE_WALL: 259,
     STONE_BRICK_WALL: 260,
     OAK_FENCE_GATE: 261,
-    BIRCH_FENCE_GATE: 262
+    BIRCH_FENCE_GATE: 262,
+    WHITE_WOOL: 89,
+    RED_WOOL: 263,
+    BLUE_WOOL: 264,
+    YELLOW_WOOL: 265,
+    GREEN_WOOL: 266,
+    BLACK_WOOL: 267,
+    PURPLE_WOOL: 268,
+    ORANGE_WOOL: 269,
+    PINK_WOOL: 270,
+    CYAN_WOOL: 271,
+    LIME_WOOL: 272,
+    GRAY_WOOL: 273,
+    LIGHT_BLUE_WOOL: 274,
+    BROWN_WOOL: 275,
+    MAGENTA_WOOL: 276,
+    LIGHT_GRAY_WOOL: 277,
+    RED_BED: 278,
+    WHITE_BED: 279,
+    BLUE_BED: 280,
+    YELLOW_BED: 281,
+    GREEN_BED: 282,
+    BLACK_BED: 283,
+    PURPLE_BED: 284,
+    ORANGE_BED: 285,
+    PINK_BED: 286,
+    CYAN_BED: 287,
+    LIME_BED: 288,
+    GRAY_BED: 289,
+    LIGHT_BLUE_BED: 290,
+    BROWN_BED: 291,
+    MAGENTA_BED: 292,
+    LIGHT_GRAY_BED: 293,
+    BED_HEAD: 294
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.RED_WOOL]:              { name: 'Red Wool',              health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.RED_WOOL, flammable: true, isWool: true },
+    [BLOCKS.BLUE_WOOL]:             { name: 'Blue Wool',             health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.BLUE_WOOL, flammable: true, isWool: true },
+    [BLOCKS.YELLOW_WOOL]:           { name: 'Yellow Wool',           health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.YELLOW_WOOL, flammable: true, isWool: true },
+    [BLOCKS.GREEN_WOOL]:            { name: 'Green Wool',            health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.GREEN_WOOL, flammable: true, isWool: true },
+    [BLOCKS.BLACK_WOOL]:            { name: 'Black Wool',            health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.BLACK_WOOL, flammable: true, isWool: true },
+    [BLOCKS.PURPLE_WOOL]:           { name: 'Purple Wool',           health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.PURPLE_WOOL, flammable: true, isWool: true },
+    [BLOCKS.ORANGE_WOOL]:           { name: 'Orange Wool',           health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.ORANGE_WOOL, flammable: true, isWool: true },
+    [BLOCKS.PINK_WOOL]:             { name: 'Pink Wool',             health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.PINK_WOOL, flammable: true, isWool: true },
+    [BLOCKS.CYAN_WOOL]:             { name: 'Cyan Wool',             health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.CYAN_WOOL, flammable: true, isWool: true },
+    [BLOCKS.LIME_WOOL]:             { name: 'Lime Wool',             health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.LIME_WOOL, flammable: true, isWool: true },
+    [BLOCKS.GRAY_WOOL]:             { name: 'Gray Wool',             health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.GRAY_WOOL, flammable: true, isWool: true },
+    [BLOCKS.LIGHT_BLUE_WOOL]:       { name: 'Light Blue Wool',       health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.LIGHT_BLUE_WOOL, flammable: true, isWool: true },
+    [BLOCKS.BROWN_WOOL]:            { name: 'Brown Wool',            health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.BROWN_WOOL, flammable: true, isWool: true },
+    [BLOCKS.MAGENTA_WOOL]:          { name: 'Magenta Wool',          health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.MAGENTA_WOOL, flammable: true, isWool: true },
+    [BLOCKS.LIGHT_GRAY_WOOL]:       { name: 'Light Gray Wool',       health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.LIGHT_GRAY_WOOL, flammable: true, isWool: true },
+
+    [BLOCKS.RED_BED]:               { name: 'Red Bed',               health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.RED_BED, flammable: true, isBed: true, bedColor: 'red', hasFacing: true },
+    [BLOCKS.WHITE_BED]:             { name: 'White Bed',             health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.WHITE_BED, flammable: true, isBed: true, bedColor: 'white', hasFacing: true },
+    [BLOCKS.BLUE_BED]:              { name: 'Blue Bed',              health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BLUE_BED, flammable: true, isBed: true, bedColor: 'blue', hasFacing: true },
+    [BLOCKS.YELLOW_BED]:            { name: 'Yellow Bed',            health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.YELLOW_BED, flammable: true, isBed: true, bedColor: 'yellow', hasFacing: true },
+    [BLOCKS.GREEN_BED]:             { name: 'Green Bed',             health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.GREEN_BED, flammable: true, isBed: true, bedColor: 'green', hasFacing: true },
+    [BLOCKS.BLACK_BED]:             { name: 'Black Bed',             health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BLACK_BED, flammable: true, isBed: true, bedColor: 'black', hasFacing: true },
+    [BLOCKS.PURPLE_BED]:            { name: 'Purple Bed',            health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.PURPLE_BED, flammable: true, isBed: true, bedColor: 'purple', hasFacing: true },
+    [BLOCKS.ORANGE_BED]:            { name: 'Orange Bed',            health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.ORANGE_BED, flammable: true, isBed: true, bedColor: 'orange', hasFacing: true },
+    [BLOCKS.PINK_BED]:              { name: 'Pink Bed',              health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.PINK_BED, flammable: true, isBed: true, bedColor: 'pink', hasFacing: true },
+    [BLOCKS.CYAN_BED]:              { name: 'Cyan Bed',              health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.CYAN_BED, flammable: true, isBed: true, bedColor: 'cyan', hasFacing: true },
+    [BLOCKS.LIME_BED]:              { name: 'Lime Bed',              health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.LIME_BED, flammable: true, isBed: true, bedColor: 'lime', hasFacing: true },
+    [BLOCKS.GRAY_BED]:              { name: 'Gray Bed',              health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.GRAY_BED, flammable: true, isBed: true, bedColor: 'gray', hasFacing: true },
+    [BLOCKS.LIGHT_BLUE_BED]:        { name: 'Light Blue Bed',        health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.LIGHT_BLUE_BED, flammable: true, isBed: true, bedColor: 'light_blue', hasFacing: true },
+    [BLOCKS.BROWN_BED]:             { name: 'Brown Bed',             health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BROWN_BED, flammable: true, isBed: true, bedColor: 'brown', hasFacing: true },
+    [BLOCKS.MAGENTA_BED]:           { name: 'Magenta Bed',           health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.MAGENTA_BED, flammable: true, isBed: true, bedColor: 'magenta', hasFacing: true },
+    [BLOCKS.LIGHT_GRAY_BED]:        { name: 'Light Gray Bed',        health: 3, transparent: true, emissive: 0, solid: true, drops: BLOCKS.LIGHT_GRAY_BED, flammable: true, isBed: true, bedColor: 'light_gray', hasFacing: true },
+    [BLOCKS.BED_HEAD]:              { name: 'Bed Head',              health: 3, transparent: true, emissive: 0, solid: true, drops: null, flammable: true, isBedHead: true },
+
     [BLOCKS.OAK_SLAB]:              { name: 'Oak Slab',              health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.OAK_SLAB, flammable: true, isSlab: true },
     [BLOCKS.COBBLESTONE_SLAB]:        { name: 'Cobblestone Slab',        health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.COBBLESTONE_SLAB, isSlab: true },
     [BLOCKS.STONE_SLAB]:              { name: 'Stone Slab',              health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.STONE_SLAB, isSlab: true },
@@ -1950,9 +2017,45 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.strokeRect(0, 0, TEX_SIZE, TEX_SIZE);
             break;
         case BLOCKS.WOOL:
-            fillBase(ctx, 235, 235, 235);
-            addNoise(ctx, rng, 10);
-            addPixels(ctx, rng, 'rgba(200, 200, 200, 0.5)', 40);
+        case BLOCKS.RED_WOOL:
+        case BLOCKS.BLUE_WOOL:
+        case BLOCKS.YELLOW_WOOL:
+        case BLOCKS.GREEN_WOOL:
+        case BLOCKS.BLACK_WOOL:
+        case BLOCKS.PURPLE_WOOL:
+        case BLOCKS.ORANGE_WOOL:
+        case BLOCKS.PINK_WOOL:
+        case BLOCKS.CYAN_WOOL:
+        case BLOCKS.LIME_WOOL:
+        case BLOCKS.GRAY_WOOL:
+        case BLOCKS.LIGHT_BLUE_WOOL:
+        case BLOCKS.BROWN_WOOL:
+        case BLOCKS.MAGENTA_WOOL:
+        case BLOCKS.LIGHT_GRAY_WOOL:
+            {
+                const woolColors = {
+                    [BLOCKS.WOOL]: [235, 235, 235],
+                    [BLOCKS.RED_WOOL]: [176, 46, 38],
+                    [BLOCKS.BLUE_WOOL]: [60, 68, 170],
+                    [BLOCKS.YELLOW_WOOL]: [254, 216, 61],
+                    [BLOCKS.GREEN_WOOL]: [94, 124, 22],
+                    [BLOCKS.BLACK_WOOL]: [29, 29, 33],
+                    [BLOCKS.PURPLE_WOOL]: [137, 50, 184],
+                    [BLOCKS.ORANGE_WOOL]: [249, 128, 29],
+                    [BLOCKS.PINK_WOOL]: [243, 139, 170],
+                    [BLOCKS.CYAN_WOOL]: [22, 156, 156],
+                    [BLOCKS.LIME_WOOL]: [128, 199, 31],
+                    [BLOCKS.GRAY_WOOL]: [71, 79, 82],
+                    [BLOCKS.LIGHT_BLUE_WOOL]: [58, 179, 218],
+                    [BLOCKS.BROWN_WOOL]: [131, 84, 50],
+                    [BLOCKS.MAGENTA_WOOL]: [199, 78, 189],
+                    [BLOCKS.LIGHT_GRAY_WOOL]: [157, 157, 151]
+                };
+                const rgb = woolColors[blockType] || [235, 235, 235];
+                fillBase(ctx, rgb[0], rgb[1], rgb[2]);
+                addNoise(ctx, rng, 10);
+                addPixels(ctx, rng, 'rgba(0, 0, 0, 0.15)', 35);
+            }
             break;
         case BLOCKS.FURNACE:
             if (face === 'top' || face === 'bottom') {
@@ -3044,6 +3147,21 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.SMOKER]: { top: 'smoker_top', side: 'smoker_side', bottom: 'smoker_bottom', front: 'smoker_front' },
     [BLOCKS.STONECUTTER]: { top: 'stonecutter_top', side: 'stonecutter_side', bottom: 'stonecutter_bottom', front: 'stonecutter_side' },
     [BLOCKS.WOOL]: 'white_wool',
+    [BLOCKS.RED_WOOL]: 'red_wool',
+    [BLOCKS.BLUE_WOOL]: 'blue_wool',
+    [BLOCKS.YELLOW_WOOL]: 'yellow_wool',
+    [BLOCKS.GREEN_WOOL]: 'green_wool',
+    [BLOCKS.BLACK_WOOL]: 'black_wool',
+    [BLOCKS.PURPLE_WOOL]: 'purple_wool',
+    [BLOCKS.ORANGE_WOOL]: 'orange_wool',
+    [BLOCKS.PINK_WOOL]: 'pink_wool',
+    [BLOCKS.CYAN_WOOL]: 'cyan_wool',
+    [BLOCKS.LIME_WOOL]: 'lime_wool',
+    [BLOCKS.GRAY_WOOL]: 'gray_wool',
+    [BLOCKS.LIGHT_BLUE_WOOL]: 'light_blue_wool',
+    [BLOCKS.BROWN_WOOL]: 'brown_wool',
+    [BLOCKS.MAGENTA_WOOL]: 'magenta_wool',
+    [BLOCKS.LIGHT_GRAY_WOOL]: 'light_gray_wool',
     [BLOCKS.FURNACE]: { top: 'furnace_top', side: 'furnace_side', bottom: 'furnace_top', front: 'furnace_front' },
     [BLOCKS.NETHERRACK]: 'netherrack',
     [BLOCKS.SOUL_SAND]: 'soul_sand',
@@ -3460,6 +3578,39 @@ const LOCAL_ASSET_MAP = {
     "water_flow": "assets/mc/block/water_flow.png",
     "water_still": "assets/mc/block/water_still.png",
     "white_wool": "assets/mc/block/white_wool.png",
+    "red_wool": "assets/mc/block/red_wool.png",
+    "blue_wool": "assets/mc/block/blue_wool.png",
+    "yellow_wool": "assets/mc/block/yellow_wool.png",
+    "green_wool": "assets/mc/block/green_wool.png",
+    "black_wool": "assets/mc/block/black_wool.png",
+    "purple_wool": "assets/mc/block/purple_wool.png",
+    "orange_wool": "assets/mc/block/orange_wool.png",
+    "pink_wool": "assets/mc/block/pink_wool.png",
+    "cyan_wool": "assets/mc/block/cyan_wool.png",
+    "lime_wool": "assets/mc/block/lime_wool.png",
+    "gray_wool": "assets/mc/block/gray_wool.png",
+    "light_blue_wool": "assets/mc/block/light_blue_wool.png",
+    "brown_wool": "assets/mc/block/brown_wool.png",
+    "magenta_wool": "assets/mc/block/magenta_wool.png",
+    "light_gray_wool": "assets/mc/block/light_gray_wool.png",
+    "oak_boat": "assets/mc/item/oak_boat.png",
+    "boat": "assets/mc/item/oak_boat.png",
+    "red_dye": "assets/mc/item/red_dye.png",
+    "yellow_dye": "assets/mc/item/yellow_dye.png",
+    "blue_dye": "assets/mc/item/blue_dye.png",
+    "white_dye": "assets/mc/item/white_dye.png",
+    "black_dye": "assets/mc/item/black_dye.png",
+    "green_dye": "assets/mc/item/green_dye.png",
+    "purple_dye": "assets/mc/item/purple_dye.png",
+    "orange_dye": "assets/mc/item/orange_dye.png",
+    "pink_dye": "assets/mc/item/pink_dye.png",
+    "cyan_dye": "assets/mc/item/cyan_dye.png",
+    "lime_dye": "assets/mc/item/lime_dye.png",
+    "magenta_dye": "assets/mc/item/magenta_dye.png",
+    "brown_dye": "assets/mc/item/brown_dye.png",
+    "gray_dye": "assets/mc/item/gray_dye.png",
+    "light_blue_dye": "assets/mc/item/light_blue_dye.png",
+    "light_gray_dye": "assets/mc/item/light_gray_dye.png",
     "apple": "assets/mc/item/apple.png",
     "beef": "assets/mc/item/beef.png",
     "blaze_rod": "assets/mc/item/blaze_rod.png",
@@ -3884,6 +4035,42 @@ export async function createTextureAtlas(useMinecraft = true) {
             }
         }
 
+        if (props.isBed) {
+            const bedColorsHex = {
+                white: '#eaeded', orange: '#f9801d', magenta: '#c74ebd', light_blue: '#3ab3da',
+                yellow: '#fed83d', lime: '#80c71f', pink: '#f38baa', gray: '#474f52',
+                light_gray: '#9d9d97', cyan: '#169c9c', purple: '#8932b8', blue: '#3c44aa',
+                brown: '#835432', green: '#5e7c16', red: '#b02e26', black: '#1d1d21'
+            };
+            const blanketColor = bedColorsHex[props.bedColor || 'red'] || '#b02e26';
+            const s = iconCanvas.width / 16;
+            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
+            // Pillow
+            iconCtx.fillStyle = '#ffffff';
+            iconCtx.fillRect(2 * s, 4 * s, 4 * s, 3.5 * s);
+            iconCtx.fillStyle = '#d5d5d5';
+            iconCtx.fillRect(2 * s, 7 * s, 4 * s, 0.8 * s);
+            // Blanket
+            iconCtx.fillStyle = blanketColor;
+            iconCtx.fillRect(6 * s, 4 * s, 8 * s, 3.8 * s);
+            // Blanket shadow edge
+            iconCtx.fillStyle = 'rgba(0,0,0,0.22)';
+            iconCtx.fillRect(2 * s, 7.5 * s, 12 * s, 0.7 * s);
+            // Wooden base
+            iconCtx.fillStyle = '#80552b';
+            iconCtx.fillRect(1.5 * s, 8.2 * s, 13 * s, 1.8 * s);
+            iconCtx.fillStyle = '#553618';
+            iconCtx.fillRect(1.5 * s, 9.5 * s, 13 * s, 0.5 * s);
+            // Legs
+            iconCtx.fillStyle = '#432912';
+            iconCtx.fillRect(2 * s, 10 * s, 1.4 * s, 2.5 * s);
+            iconCtx.fillRect(12.6 * s, 10 * s, 1.4 * s, 2.5 * s);
+            iconCtx.fillStyle = '#2d1b0b';
+            iconCtx.fillRect(3.8 * s, 10 * s, 1.1 * s, 1.5 * s);
+            iconCtx.fillRect(11.1 * s, 10 * s, 1.1 * s, 1.5 * s);
+            return iconCanvas;
+        }
+
         // Generate 3 faces from atlas
         const top = getFaceCanvas('top');
         const side1 = getFaceCanvas('side');
@@ -4016,6 +4203,24 @@ const MC_ITEM_MAP = {
     'dungeon_door': 'oak_door',
     'oak_door': 'oak_door',
     'iron_door': 'iron_door',
+    'oak_boat': 'oak_boat',
+    'boat': 'oak_boat',
+    'red_dye': 'red_dye',
+    'yellow_dye': 'yellow_dye',
+    'blue_dye': 'blue_dye',
+    'white_dye': 'white_dye',
+    'black_dye': 'black_dye',
+    'green_dye': 'green_dye',
+    'purple_dye': 'purple_dye',
+    'orange_dye': 'orange_dye',
+    'pink_dye': 'pink_dye',
+    'cyan_dye': 'cyan_dye',
+    'lime_dye': 'lime_dye',
+    'magenta_dye': 'magenta_dye',
+    'brown_dye': 'brown_dye',
+    'gray_dye': 'gray_dye',
+    'light_blue_dye': 'light_blue_dye',
+    'light_gray_dye': 'light_gray_dye',
     'iron_ingot': 'iron_ingot',
     'gold_ingot': 'gold_ingot',
     'diamond': 'diamond',

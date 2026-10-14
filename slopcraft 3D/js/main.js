@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=100';
 import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=100';
 import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=100';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=100';
+import { Player, EntityManager, Mob, MOB_TYPES, Item, BoatEntity } from './entities.js?v=100';
 import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=100';
 import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=100';
 import { AudioManager } from './audio.js?v=100';
@@ -270,6 +270,8 @@ class Game {
         this.breakTimer = 0;
         this.primedTNT = [];
         this.thrownPearls = [];
+        this.beds = new Map();
+        this.boats = new Set();
         this.isPaused = false;
         
         this._boundLoop = this.loop.bind(this);
@@ -407,6 +409,18 @@ class Game {
             return g ? g.isOpen : false;
         };
 
+        // Bed management
+        this.beds = new Map();
+        this.world.onBedPlaced = (x, y, z, bt) => {
+            if (!this.beds.has(`${x},${y},${z}`)) {
+                this._addBed(x, y, z, x, y, z - 1, bt, 0);
+            }
+        };
+        this.world.onBedRemoved = (x, y, z) => this._removeBed(x, y, z);
+
+        // Boat management
+        this.boats = new Set();
+
         this.world.onChestRemoved = (x, y, z) => {
             const key = `${x},${y},${z}`;
             if (this.chestVisuals.has(key)) {
@@ -454,6 +468,7 @@ class Game {
                 BLOCKS.GLASS,
                 BLOCKS.BOSS_SPAWNER,
                 BLOCKS.DUNGEON_DOOR_TOP,
+                BLOCKS.BED_HEAD,
                 BLOCKS.TALL_FERN_TOP,
                 BLOCKS.TALL_FERN,
                 BLOCKS.FERN,
@@ -974,6 +989,235 @@ class Game {
         this.engine.scene.add(gateGroup);
     }
 
+    _addBed(footX, footY, footZ, headX, headY, headZ, blockType, dir = 0) {
+        const footKey = `${footX},${footY},${footZ}`;
+        const headKey = `${headX},${headY},${headZ}`;
+        if (this.beds.has(footKey) || this.beds.has(headKey)) return;
+
+        const bedGroup = new THREE.Group();
+        const mat = new THREE.MeshLambertMaterial({
+            map: this.atlas.texture,
+            transparent: true,
+            alphaTest: 0.5,
+            side: THREE.DoubleSide
+        });
+
+        const createCustomBoxGeom = (w, h, d, uvRect) => {
+            const geom = new THREE.BoxGeometry(w, h, d).toNonIndexed();
+            const uvs = geom.attributes.uv.array;
+            for (let f = 0; f < 6; f++) {
+                for (let v = 0; v < 6; v++) {
+                    const idx = (f * 6 + v) * 2;
+                    let baseU = uvs[idx];
+                    let baseV = uvs[idx + 1];
+                    uvs[idx] = uvRect.u + baseU * uvRect.uSize;
+                    uvs[idx + 1] = uvRect.v + baseV * uvRect.vSize;
+                }
+            }
+            geom.attributes.uv.needsUpdate = true;
+            return geom;
+        };
+
+        const BED_TO_WOOL = {
+            [window.BLOCKS.RED_BED]: window.BLOCKS.RED_WOOL,
+            [window.BLOCKS.WHITE_BED]: window.BLOCKS.WHITE_WOOL,
+            [window.BLOCKS.BLUE_BED]: window.BLOCKS.BLUE_WOOL,
+            [window.BLOCKS.YELLOW_BED]: window.BLOCKS.YELLOW_WOOL,
+            [window.BLOCKS.GREEN_BED]: window.BLOCKS.GREEN_WOOL,
+            [window.BLOCKS.BLACK_BED]: window.BLOCKS.BLACK_WOOL,
+            [window.BLOCKS.BROWN_BED]: window.BLOCKS.BROWN_WOOL,
+            [window.BLOCKS.CYAN_BED]: window.BLOCKS.CYAN_WOOL,
+            [window.BLOCKS.GRAY_BED]: window.BLOCKS.GRAY_WOOL,
+            [window.BLOCKS.LIGHT_BLUE_BED]: window.BLOCKS.LIGHT_BLUE_WOOL,
+            [window.BLOCKS.LIGHT_GRAY_BED]: window.BLOCKS.LIGHT_GRAY_WOOL,
+            [window.BLOCKS.LIME_BED]: window.BLOCKS.LIME_WOOL,
+            [window.BLOCKS.MAGENTA_BED]: window.BLOCKS.MAGENTA_WOOL,
+            [window.BLOCKS.ORANGE_BED]: window.BLOCKS.ORANGE_WOOL,
+            [window.BLOCKS.PINK_BED]: window.BLOCKS.PINK_WOOL,
+            [window.BLOCKS.PURPLE_BED]: window.BLOCKS.PURPLE_WOOL,
+        };
+
+        const uvOak = this.atlas.getUV(window.BLOCKS.OAK_PLANKS, 'side');
+        const woolType = BED_TO_WOOL[blockType] || window.BLOCKS.RED_WOOL;
+        const uvWool = this.atlas.getUV(woolType, 'side');
+        const uvPillow = this.atlas.getUV(window.BLOCKS.WHITE_WOOL, 'side');
+
+        // 4 Legs (3/16 x 3/16 x 3/16)
+        const legGeom = createCustomBoxGeom(3/16, 3/16, 3/16, uvOak);
+        const legFL = new THREE.Mesh(legGeom, mat);
+        legFL.position.set(-6.5/16, 1.5/16, 14.5/16);
+        bedGroup.add(legFL);
+
+        const legFR = new THREE.Mesh(legGeom.clone(), mat);
+        legFR.position.set(6.5/16, 1.5/16, 14.5/16);
+        bedGroup.add(legFR);
+
+        const legHL = new THREE.Mesh(legGeom.clone(), mat);
+        legHL.position.set(-6.5/16, 1.5/16, -14.5/16);
+        bedGroup.add(legHL);
+
+        const legHR = new THREE.Mesh(legGeom.clone(), mat);
+        legHR.position.set(6.5/16, 1.5/16, -14.5/16);
+        bedGroup.add(legHR);
+
+        // Wooden base frame (16/16 wide, 3/16 tall, 32/16 long)
+        const baseGeom = createCustomBoxGeom(1.0, 3/16, 2.0, uvOak);
+        const baseMesh = new THREE.Mesh(baseGeom, mat);
+        baseMesh.position.set(0, 4.5/16, 0);
+        bedGroup.add(baseMesh);
+
+        // Mattress & colored blanket: Foot half
+        const footGeom = createCustomBoxGeom(1.0, 3/16, 1.0, uvWool);
+        const footMesh = new THREE.Mesh(footGeom, mat);
+        footMesh.position.set(0, 7.5/16, 0.5);
+        bedGroup.add(footMesh);
+
+        // Head half
+        const headGeom = createCustomBoxGeom(1.0, 3/16, 1.0, uvWool);
+        const headMesh = new THREE.Mesh(headGeom, mat);
+        headMesh.position.set(0, 7.5/16, -0.5);
+        bedGroup.add(headMesh);
+
+        // 3D White Pillow on Head (12/16 wide, 1.5/16 tall, 7/16 long)
+        const pillowGeom = createCustomBoxGeom(12/16, 1.5/16, 7/16, uvPillow);
+        const pillowMesh = new THREE.Mesh(pillowGeom, mat);
+        pillowMesh.position.set(0, 9.75/16, -11.5/16);
+        bedGroup.add(pillowMesh);
+
+        // Midpoint and rotation
+        const midX = (footX + headX + 1) / 2;
+        const midY = footY;
+        const midZ = (footZ + headZ + 1) / 2;
+        bedGroup.position.set(midX, midY, midZ);
+
+        let rotY = 0;
+        if (dir === 1) rotY = -Math.PI / 2;
+        else if (dir === 2) rotY = Math.PI;
+        else if (dir === 3) rotY = Math.PI / 2;
+        bedGroup.rotation.y = rotY;
+
+        const bedData = {
+            mesh: bedGroup,
+            blockType,
+            footPos: { x: footX, y: footY, z: footZ },
+            headPos: { x: headX, y: headY, z: headZ },
+            dir
+        };
+
+        this.beds.set(footKey, bedData);
+        this.beds.set(headKey, bedData);
+        this.engine.scene.add(bedGroup);
+    }
+
+    _removeBed(x, y, z) {
+        const key = `${x},${y},${z}`;
+        const bedData = this.beds.get(key);
+        if (!bedData) return;
+
+        this.engine.scene.remove(bedData.mesh);
+        bedData.mesh.traverse(child => {
+            if (child.geometry) child.geometry.dispose();
+        });
+
+        const footKey = `${bedData.footPos.x},${bedData.footPos.y},${bedData.footPos.z}`;
+        const headKey = `${bedData.headPos.x},${bedData.headPos.y},${bedData.headPos.z}`;
+        this.beds.delete(footKey);
+        this.beds.delete(headKey);
+
+        if (key === footKey) {
+            if (this.world.getBlock(bedData.headPos.x, bedData.headPos.y, bedData.headPos.z) === window.BLOCKS.BED_HEAD) {
+                this.world.setBlock(bedData.headPos.x, bedData.headPos.y, bedData.headPos.z, window.BLOCKS.AIR);
+            }
+        } else {
+            const curFoot = this.world.getBlock(bedData.footPos.x, bedData.footPos.y, bedData.footPos.z);
+            const p = getBlockProperties(curFoot);
+            if (p && p.isBed) {
+                this.world.setBlock(bedData.footPos.x, bedData.footPos.y, bedData.footPos.z, window.BLOCKS.AIR);
+            }
+        }
+    }
+
+    interactBed(x, y, z, blockType) {
+        if (this.currentDimension === 'nether' || this.currentDimension === 'aether') {
+            this._removeBed(x, y, z);
+            this.world.setBlock(x, y, z, window.BLOCKS.AIR);
+            this.explode(x + 0.5, y + 0.5, z + 0.5, 5);
+            this.showToast("Intentional Game Design", 2500);
+            return;
+        }
+
+        const key = `${x},${y},${z}`;
+        const bedData = this.beds.get(key);
+        const spawnX = bedData ? bedData.footPos.x + 0.5 : x + 0.5;
+        const spawnY = bedData ? bedData.footPos.y + 0.6 : y + 0.6;
+        const spawnZ = bedData ? bedData.footPos.z + 0.5 : z + 0.5;
+
+        this.player.spawnPoint = { x: spawnX, y: spawnY, z: spawnZ };
+
+        const time = this.lighting.timeOfDay;
+        const isNight = (time > 0.72 || time < 0.23);
+
+        if (!isNight) {
+            this.showToast("Respawn point set. You can only sleep at night or during thunderstorms.", 2500);
+            if (this.audio && this.audio.playPop) this.audio.playPop();
+            return;
+        }
+
+        this.showToast("Sleeping...", 2000);
+        if (this.audio && this.audio.playMC) this.audio.playMC('random/levelup', 0.5);
+
+        let fade = document.getElementById('bed-sleep-overlay');
+        if (!fade) {
+            fade = document.createElement('div');
+            fade.id = 'bed-sleep-overlay';
+            fade.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#000;opacity:0;transition:opacity 0.8s ease-in-out;pointer-events:none;z-index:9998;';
+            document.body.appendChild(fade);
+        }
+        fade.style.opacity = '1';
+
+        setTimeout(() => {
+            this.lighting.timeOfDay = 0.28;
+            if (this.player.health < this.player.maxHealth) {
+                this.player.health = Math.min(this.player.maxHealth, this.player.health + 6);
+            }
+            this.showToast("Good morning! Respawn point set.", 2500);
+            setTimeout(() => {
+                fade.style.opacity = '0';
+            }, 300);
+        }, 1000);
+    }
+
+    mountBoat(boat) {
+        if (this.player.inBoat) return;
+        this.player.inBoat = boat;
+        boat.passenger = this.player;
+        this.showToast("Press Shift to exit boat", 2500);
+        if (this.audio && this.audio.playPop) this.audio.playPop();
+    }
+
+    dismountBoat() {
+        if (!this.player.inBoat) return;
+        const boat = this.player.inBoat;
+        boat.passenger = null;
+        this.player.inBoat = null;
+        const side = new THREE.Vector3(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw)).multiplyScalar(1.2);
+        this.player.position.add(side);
+        this.player.position.y += 0.5;
+        this.player.velocity.set(0, 0, 0);
+        this.player.fallDistance = 0;
+    }
+
+    showToast(msg, duration = 2500) {
+        const el = document.getElementById('creative-toast');
+        if (!el) return;
+        el.innerText = msg;
+        el.classList.remove('hidden');
+        if (this._toastTimer) clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => {
+            el.classList.add('hidden');
+        }, duration);
+    }
+
     _updateFurnaces(dt) {
         // Simple smelting recipes
         const getSmeltResult = (inputItem) => {
@@ -1178,6 +1422,25 @@ class Game {
         const isHoldingBucket = invSlot && invSlot.item && invSlot.item.type === 'material' && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket');
         const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingBucket);
         const entityHit = this.entityManager.raycast(eyePos, lookDir, 4); // Melee range
+
+        let boatHit = null;
+        if (this.boats && this.boats.size > 0) {
+            for (const b of this.boats) {
+                if (b.alive && b !== this.player.inBoat) {
+                    if (b.raycast(eyePos, lookDir, 4.5)) {
+                        const d = eyePos.distanceTo(b.position);
+                        if (!boatHit || d < boatHit.dist) {
+                            boatHit = { boat: b, dist: d };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Shift to dismount boat
+        if (this.player.inBoat && (this.input.keys['ShiftLeft'] || this.input.keys['ShiftRight'] || this.input.keys['shift'])) {
+            this.dismountBoat();
+        }
 
         // View model bobbing and item display
         const speed = Math.sqrt(this.player.velocity.x ** 2 + this.player.velocity.z ** 2);
@@ -1403,6 +1666,11 @@ class Game {
                 this.particles.emit({x: hit.blockPos.x + 0.5, y: hit.blockPos.y + 0.5, z: hit.blockPos.z + 0.5}, 'smoke', 8, 0x888888);
                 this.breakTimer = 0;
                 this.input.mouse.leftClick = false;
+            } else if (boatHit && (!hit.hit || boatHit.dist < hit.distance) && (!entityHit.hit || boatHit.dist < entityHit.distance)) {
+                boatHit.boat.takeDamage(10, this.particles, this.entityManager);
+                if (this.audio) this.audio.playHit();
+                this.input.mouse.leftClick = false;
+                this.breakTimer = 0.4;
             } else if (entityHit.hit && this.breakTimer === 0) { // Attack entity
                 let damage = 5; // Unarmed base damage
                 let appliedDir = lookDir.clone();
@@ -1528,6 +1796,43 @@ class Game {
         // Right click actions
         if (this.input.mouse.rightClick) {
             const slot = this.player.inventory.slots[this.player.selectedSlot];
+
+            // Mount Boat
+            if (boatHit && !this.player.inBoat && (!hit.hit || boatHit.dist < hit.distance)) {
+                this.mountBoat(boatHit.boat);
+                this.input.mouse.rightClick = false;
+                return;
+            }
+
+            // Place Boat
+            if (slot && slot.item.subtype === 'oak_boat' && hit.hit) {
+                const placePos = new THREE.Vector3(
+                    hit.blockPos.x + hit.normal.x + 0.5,
+                    hit.blockPos.y + (hit.normal.y > 0 ? 0.05 : hit.normal.y),
+                    hit.blockPos.z + hit.normal.z + 0.5
+                );
+                const forward = new THREE.Vector3();
+                this.engine.camera.getWorldDirection(forward);
+                const yaw = Math.atan2(-forward.x, -forward.z);
+
+                const boat = new BoatEntity(placePos, yaw, this.engine.scene, this.audio);
+                this.boats.add(boat);
+                if (this.audio && this.audio.playWaterSplash) this.audio.playWaterSplash(placePos);
+                else if (this.audio) this.audio.playClick();
+
+                if (!this.input.creativeMode) {
+                    slot.count--;
+                    if (slot.count <= 0) {
+                        this.player.inventory.slots[this.player.selectedSlot] = null;
+                    }
+                }
+                this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                if (this.ui.isOpen) {
+                    this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                }
+                this.input.mouse.rightClick = false;
+                return;
+            }
 
             // Ender Pearl throw
             if (slot && slot.item.subtype === 'ender_pearl') {
@@ -1731,6 +2036,15 @@ class Game {
                 return;
             }
 
+            if (hit.hit) {
+                const hitProps = getBlockProperties(hit.blockType);
+                if (hitProps && (hitProps.isBed || hitProps.isBedHead)) {
+                    this.interactBed(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, hit.blockType);
+                    this.input.mouse.rightClick = false;
+                    return;
+                }
+            }
+
             if (hit.hit && hit.blockType === window.BLOCKS.BOOKSHELF) {
                 // Restore Mana
                 if (this.player.mana < this.player.maxMana) {
@@ -1861,7 +2175,65 @@ class Game {
                 );
 
                 if (!_playerOverlap && (curBlock === BLOCKS.AIR || curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER || curBlock === BLOCKS.LAVA)) {
-                    if (slot.item.subtype === BLOCKS.DUNGEON_DOOR) {
+                    if (placeProps.isBed) {
+                        const forward = new THREE.Vector3();
+                        this.engine.camera.getWorldDirection(forward);
+                        let dir = 0;
+                        let headPos = { x: placePos.x, y: placePos.y, z: placePos.z };
+                        if (Math.abs(forward.x) > Math.abs(forward.z)) {
+                            if (forward.x > 0) {
+                                dir = 1; // East (+X)
+                                headPos.x += 1;
+                            } else {
+                                dir = 3; // West (-X)
+                                headPos.x -= 1;
+                            }
+                        } else {
+                            if (forward.z > 0) {
+                                dir = 2; // South (+Z)
+                                headPos.z += 1;
+                            } else {
+                                dir = 0; // North (-Z)
+                                headPos.z -= 1;
+                            }
+                        }
+
+                        const curBlockHead = this.world.getBlock(headPos.x, headPos.y, headPos.z);
+                        const canReplace = (b) => b === BLOCKS.AIR || b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER || b === BLOCKS.LAVA;
+
+                        if (!canReplace(curBlock) || !canReplace(curBlockHead)) {
+                            this.input.mouse.rightClick = false;
+                            return;
+                        }
+
+                        const overlapHead = (
+                            _pp.x - 0.3 < headPos.x + 1 && _pp.x + 0.3 > headPos.x &&
+                            _pp.y       < headPos.y + 0.6 && _pp.y + 1.8  > headPos.y &&
+                            _pp.z - 0.3 < headPos.z + 1 && _pp.z + 0.3  > headPos.z
+                        );
+                        if (overlapHead) {
+                            this.input.mouse.rightClick = false;
+                            return;
+                        }
+
+                        this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype, dir);
+                        this.world.setBlock(headPos.x, headPos.y, headPos.z, BLOCKS.BED_HEAD, dir);
+                        this._addBed(placePos.x, placePos.y, placePos.z, headPos.x, headPos.y, headPos.z, slot.item.subtype, dir);
+                        this.audio.playPlace(BLOCKS.OAK_PLANKS, placePos);
+
+                        if (!this.input.creativeMode) {
+                            slot.count--;
+                            if (slot.count <= 0) {
+                                this.player.inventory.slots[this.player.selectedSlot] = null;
+                            }
+                        }
+                        this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        if (this.ui.isOpen) {
+                            this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        }
+                        this.input.mouse.rightClick = false;
+                        return;
+                    } else if (slot.item.subtype === BLOCKS.DUNGEON_DOOR) {
                         const curBlockTop = this.world.getBlock(placePos.x, placePos.y + 1, placePos.z);
                         const _topOverlap = (
                             _pp.x - 0.3 < placePos.x + 1 && _pp.x + 0.3 > placePos.x &&
@@ -2163,9 +2535,24 @@ class Game {
                     return; // Skip standard respawn logic since warp handles it
                 }
                 
-                const spawnPos = findSafeSpawn(this.planetParams, this.currentDimension);
+                let spawnPos = null;
+                if (this.player.spawnPoint && this.currentDimension === 'overworld') {
+                    const sp = this.player.spawnPoint;
+                    const b = this.world.getBlock(Math.floor(sp.x), Math.floor(sp.y - 0.5), Math.floor(sp.z));
+                    const bp = getBlockProperties(b);
+                    if (bp && (bp.isBed || bp.isBedHead)) {
+                        spawnPos = { x: sp.x, y: sp.y + 0.1, z: sp.z };
+                    } else {
+                        this.showToast("Your home bed was missing or obstructed", 3000);
+                        this.player.spawnPoint = null;
+                    }
+                }
+                if (!spawnPos) {
+                    spawnPos = findSafeSpawn(this.planetParams, this.currentDimension);
+                }
                 this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
                 this.player.velocity.set(0, 0, 0);
+                this.player.fallDistance = 0;
                 this.audio.playMC('random/levelup', 0.6);
             }
         }
@@ -2375,6 +2762,19 @@ class Game {
         this.entityManager.update(dt, this.world, this.player.position, this.player.inventory, this.player, this.lighting.timeOfDay, this.currentDimension);
         if (this.player.health < prevHealth) {
             this.audio.playHurt(this.player.position);
+        }
+
+        // Update boats
+        if (this.boats && this.boats.size > 0) {
+            for (const boat of this.boats) {
+                if (!boat.alive) {
+                    this.boats.delete(boat);
+                    continue;
+                }
+                const isRidden = (this.player.inBoat === boat);
+                const keys = isRidden ? this.input.keys : null;
+                boat.update(dt, this.world, keys, this.particles);
+            }
         }
 
         // Process mob spell casting

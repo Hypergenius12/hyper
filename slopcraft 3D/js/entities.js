@@ -131,6 +131,8 @@ export class Player {
         this.isCreative = false;
         this.fallStartY = this.position.y;
         this.fallDistance = 0;
+        this.inBoat = null;
+        this.spawnPoint = null;
     }
 
     update(dt, keys, mouse, world, sensitivity = 0.002) {
@@ -145,6 +147,17 @@ export class Player {
         this.rotation.yaw -= mouse.dx * sensitivity;
         this.rotation.pitch -= mouse.dy * sensitivity;
         this.rotation.pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, this.rotation.pitch));
+
+        if (this.inBoat) {
+            // Anchor player position to boat
+            this.position.copy(this.inBoat.position);
+            this.position.y += 0.32;
+            this.velocity.set(0, 0, 0);
+            this.grounded = true;
+            this.fallDistance = 0;
+            this.fallStartY = this.position.y;
+            return;
+        }
 
         // Direction vectors
         const forward = _tempVec1.set(-Math.sin(this.rotation.yaw), 0, -Math.cos(this.rotation.yaw)).normalize();
@@ -3579,3 +3592,295 @@ export class EntityManager {
         return this.raycast(origin, direction, maxDist);
     }
 }
+
+// ============================================
+// Boat Entity
+// ============================================
+
+export class BoatEntity {
+    constructor(position, yaw = 0, scene = null, audio = null) {
+        this.position = position.clone();
+        this.velocity = new THREE.Vector3(0, 0, 0);
+        this.yaw = yaw;
+        this.angularVelocity = 0;
+        this.health = 4;
+        this.maxHealth = 4;
+        this.alive = true;
+        this.isBoat = true;
+        this.passenger = null;
+        this.scene = scene;
+        this.audio = audio;
+        this.splashTimer = 0;
+
+        this.leftOarTime = 0;
+        this.rightOarTime = 0;
+        this.rowingLeft = false;
+        this.rowingRight = false;
+
+        this.width = 1.4;
+        this.length = 1.4;
+        this.height = 0.6;
+
+        this.mesh = this.buildMesh();
+        if (this.scene) this.scene.add(this.mesh);
+    }
+
+    buildMesh() {
+        const group = new THREE.Group();
+        
+        // Load official Minecraft boat texture with fallback
+        const texLoader = new THREE.TextureLoader();
+        const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide });
+        texLoader.load(
+            'assets/mc/entity/boat_oak.png',
+            (tex) => {
+                tex.magFilter = THREE.NearestFilter;
+                tex.minFilter = THREE.NearestFilter;
+                mat.map = tex;
+                mat.needsUpdate = true;
+            },
+            undefined,
+            () => {
+                texLoader.load('https://assets.mcasset.cloud/1.21.4/assets/minecraft/textures/entity/boat/oak.png', (cdnTex) => {
+                    cdnTex.magFilter = THREE.NearestFilter;
+                    cdnTex.minFilter = THREE.NearestFilter;
+                    mat.map = cdnTex;
+                    mat.needsUpdate = true;
+                });
+            }
+        );
+
+        // 1. Boat Bottom Hull (Flat plank floor)
+        const bottomGeo = new THREE.BoxGeometry(0.88, 0.0625, 1.35);
+        const bottomMesh = new THREE.Mesh(bottomGeo, mat);
+        bottomMesh.position.set(0, 0.03125, 0);
+        bottomMesh.castShadow = true;
+        group.add(bottomMesh);
+
+        // 2. Left Wall (Port side)
+        const leftWallGeo = new THREE.BoxGeometry(0.125, 0.38, 1.35);
+        const leftWallMesh = new THREE.Mesh(leftWallGeo, mat);
+        leftWallMesh.position.set(-0.44, 0.22, 0);
+        leftWallMesh.castShadow = true;
+        group.add(leftWallMesh);
+
+        // 3. Right Wall (Starboard side)
+        const rightWallGeo = new THREE.BoxGeometry(0.125, 0.38, 1.35);
+        const rightWallMesh = new THREE.Mesh(rightWallGeo, mat);
+        rightWallMesh.position.set(0.44, 0.22, 0);
+        rightWallMesh.castShadow = true;
+        group.add(rightWallMesh);
+
+        // 4. Back Wall (Stern)
+        const backWallGeo = new THREE.BoxGeometry(0.76, 0.38, 0.125);
+        const backWallMesh = new THREE.Mesh(backWallGeo, mat);
+        backWallMesh.position.set(0, 0.22, 0.61);
+        backWallMesh.castShadow = true;
+        group.add(backWallMesh);
+
+        // 5. Front Wall (Bow)
+        const frontWallGeo = new THREE.BoxGeometry(0.76, 0.38, 0.125);
+        const frontWallMesh = new THREE.Mesh(frontWallGeo, mat);
+        frontWallMesh.position.set(0, 0.22, -0.61);
+        frontWallMesh.castShadow = true;
+        group.add(frontWallMesh);
+
+        // 6. Left Oar
+        this.leftOarPivot = new THREE.Group();
+        this.leftOarPivot.position.set(-0.48, 0.36, -0.05);
+        
+        const shaftGeo = new THREE.BoxGeometry(0.06, 0.06, 0.95);
+        const lShaft = new THREE.Mesh(shaftGeo, mat);
+        lShaft.position.set(-0.42, 0, 0.08);
+        lShaft.rotation.y = -0.3;
+        this.leftOarPivot.add(lShaft);
+
+        const bladeGeo = new THREE.BoxGeometry(0.18, 0.03, 0.38);
+        const lBlade = new THREE.Mesh(bladeGeo, mat);
+        lBlade.position.set(-0.82, 0, 0.22);
+        lBlade.rotation.y = -0.3;
+        this.leftOarPivot.add(lBlade);
+
+        this.leftOarPivot.rotation.set(0.1, 0.35, -0.15);
+        group.add(this.leftOarPivot);
+
+        // 7. Right Oar
+        this.rightOarPivot = new THREE.Group();
+        this.rightOarPivot.position.set(0.48, 0.36, -0.05);
+
+        const rShaft = new THREE.Mesh(shaftGeo, mat);
+        rShaft.position.set(0.42, 0, 0.08);
+        rShaft.rotation.y = 0.3;
+        this.rightOarPivot.add(rShaft);
+
+        const rBlade = new THREE.Mesh(bladeGeo, mat);
+        rBlade.position.set(0.82, 0, 0.22);
+        rBlade.rotation.y = 0.3;
+        this.rightOarPivot.add(rBlade);
+
+        this.rightOarPivot.rotation.set(0.1, -0.35, 0.15);
+        group.add(this.rightOarPivot);
+
+        group.position.copy(this.position);
+        group.rotation.y = this.yaw;
+        return group;
+    }
+
+    checkRayHit(origin, direction, maxDist = 4.5) {
+        const min = new THREE.Vector3(this.position.x - 0.7, this.position.y - 0.1, this.position.z - 0.7);
+        const max = new THREE.Vector3(this.position.x + 0.7, this.position.y + 0.6, this.position.z + 0.7);
+        const box = new THREE.Box3(min, max);
+        const ray = new THREE.Ray(origin, direction);
+        const hit = new THREE.Vector3();
+        if (ray.intersectBox(box, hit)) {
+            return origin.distanceTo(hit) <= maxDist;
+        }
+        return false;
+    }
+
+    takeDamage(amt, particles = null, entityManager = null) {
+        this.health -= amt;
+        if (this.health <= 0) {
+            this.destroy(particles, entityManager);
+        } else {
+            if (this.mesh) {
+                this.mesh.rotation.z = 0.15;
+                setTimeout(() => { if (this.mesh) this.mesh.rotation.z = 0; }, 120);
+            }
+            if (this.audio) this.audio.playHit();
+        }
+    }
+
+    destroy(particles = null, entityManager = null) {
+        this.alive = false;
+        if (this.mesh && this.scene) {
+            this.scene.remove(this.mesh);
+            this.mesh.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                    else child.material.dispose();
+                }
+            });
+        }
+        if (particles) {
+            particles.emit(this.position.clone().add(new THREE.Vector3(0, 0.3, 0)), 'block_break', 12, 0x8b5a2b);
+        }
+        if (this.audio) this.audio.playHit();
+        if (entityManager) {
+            entityManager.spawnItem(
+                { type: 'material', subtype: 'oak_boat', name: 'Oak Boat', stackable: true, maxStack: 1, data: {} },
+                1,
+                this.position.clone().add(new THREE.Vector3(0, 0.3, 0))
+            );
+        }
+    }
+
+    update(dt, world, keys = null, particles = null) {
+        if (!this.alive) return;
+
+        const bx = Math.floor(this.position.x);
+        const by = Math.floor(this.position.y);
+        const bz = Math.floor(this.position.z);
+        const blockCur = world ? world.getBlock(bx, by, bz) : 0;
+        const blockBelow = world ? world.getBlock(bx, by - 1, bz) : 0;
+        const isWater = (b) => b === window.BLOCKS.WATER || b === window.BLOCKS.SWAMP_WATER;
+        const inWater = isWater(blockCur) || isWater(blockBelow);
+
+        this.rowingLeft = false;
+        this.rowingRight = false;
+
+        const forwardAccel = inWater ? 20.0 * dt : 5.5 * dt;
+        const turnSpeed = inWater ? 2.5 * dt : 1.3 * dt;
+        const drag = inWater ? Math.pow(0.965, dt * 60) : Math.pow(0.72, dt * 60);
+
+        if (inWater) {
+            const waterSurfaceY = isWater(blockCur) ? by + 0.85 : (by - 1) + 0.85;
+            const diffY = waterSurfaceY - this.position.y;
+            this.velocity.y += diffY * 18 * dt;
+            this.velocity.y *= Math.pow(0.5, dt * 10);
+        } else {
+            this.velocity.y -= 26 * dt;
+        }
+
+        if (keys) {
+            if (keys.forward) {
+                this.rowingLeft = true;
+                this.rowingRight = true;
+                this.velocity.x -= Math.sin(this.yaw) * forwardAccel;
+                this.velocity.z -= Math.cos(this.yaw) * forwardAccel;
+            }
+            if (keys.backward) {
+                this.rowingLeft = true;
+                this.rowingRight = true;
+                this.velocity.x += Math.sin(this.yaw) * (forwardAccel * 0.4);
+                this.velocity.z += Math.cos(this.yaw) * (forwardAccel * 0.4);
+            }
+            if (keys.left) {
+                this.rowingRight = true;
+                this.yaw += turnSpeed;
+            }
+            if (keys.right) {
+                this.rowingLeft = true;
+                this.yaw -= turnSpeed;
+            }
+        }
+
+        this.velocity.x *= drag;
+        this.velocity.z *= drag;
+
+        const rowSpeed = 10.0;
+        if (this.rowingLeft) {
+            this.leftOarTime += dt * rowSpeed;
+            const swing = Math.sin(this.leftOarTime);
+            const dip = Math.cos(this.leftOarTime);
+            this.leftOarPivot.rotation.y = 0.35 + swing * 0.45;
+            this.leftOarPivot.rotation.z = -0.15 + dip * 0.22;
+        } else {
+            this.leftOarPivot.rotation.y += (0.35 - this.leftOarPivot.rotation.y) * dt * 5;
+            this.leftOarPivot.rotation.z += (-0.15 - this.leftOarPivot.rotation.z) * dt * 5;
+        }
+
+        if (this.rowingRight) {
+            this.rightOarTime += dt * rowSpeed;
+            const swing = Math.sin(this.rightOarTime);
+            const dip = Math.cos(this.rightOarTime);
+            this.rightOarPivot.rotation.y = -0.35 - swing * 0.45;
+            this.rightOarPivot.rotation.z = 0.15 - dip * 0.22;
+        } else {
+            this.rightOarPivot.rotation.y += (-0.35 - this.rightOarPivot.rotation.y) * dt * 5;
+            this.rightOarPivot.rotation.z += (0.15 - this.rightOarPivot.rotation.z) * dt * 5;
+        }
+
+        const step = this.velocity.clone().multiplyScalar(dt);
+        if (world && world.collide) {
+            const col = world.collide(this.position, step, 1.1, 0.5);
+            this.position.copy(col.position);
+            if (col.velocity.x === 0) this.velocity.x = 0;
+            if (col.velocity.z === 0) this.velocity.z = 0;
+            if (col.velocity.y === 0) this.velocity.y = 0;
+        } else {
+            this.position.add(step);
+        }
+
+        if (this.mesh) {
+            this.mesh.position.copy(this.position);
+            this.mesh.rotation.y = this.yaw;
+        }
+
+        const speed = Math.hypot(this.velocity.x, this.velocity.z);
+        if (inWater && speed > 1.8) {
+            this.splashTimer += dt;
+            if (this.splashTimer > 0.4) {
+                this.splashTimer = 0;
+                if (this.audio && this.audio.playWaterSplash) {
+                    this.audio.playWaterSplash(this.position);
+                }
+                if (particles) {
+                    particles.emit(this.position.clone().add(new THREE.Vector3(0, 0.1, 0)), 'splash', 4, 0xffffff);
+                }
+            }
+        }
+    }
+}
+

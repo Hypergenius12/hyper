@@ -2388,6 +2388,101 @@ class UISystem {
         if (getCount('wheat') === 3 && totalItems === 3) return mat('bread', 'Bread', 1);
         if (getCount('flint') === 1 && getCount('stick') === 1 && getCount('feather') === 1 && totalItems === 3) return mat('arrow', 'Arrow', 4);
 
+        // Flowers to Dyes (1 flower -> 1 dye)
+        if (getCount(B.RED_FLOWER) === 1 && totalItems === 1) return mat('red_dye', 'Red Dye', 1);
+        if (getCount(B.YELLOW_FLOWER) === 1 && totalItems === 1) return mat('yellow_dye', 'Yellow Dye', 1);
+        if (getCount(B.BLUE_FLOWER) === 1 && totalItems === 1) return mat('blue_dye', 'Blue Dye', 1);
+        if (getCount(B.WHITE_FLOWER) === 1 && totalItems === 1) return mat('white_dye', 'White Dye', 1);
+        if (getCount(B.PURPLE_FLOWER) === 1 && totalItems === 1) return mat('purple_dye', 'Purple Dye', 1);
+        if (getCount(B.ORANGE_FLOWER) === 1 && totalItems === 1) return mat('orange_dye', 'Orange Dye', 1);
+        if (getCount(B.AETHER_FLOWER) === 1 && totalItems === 1) return mat('cyan_dye', 'Cyan Dye', 1);
+        if (getCount(B.CACTUS) === 1 && totalItems === 1) return mat('green_dye', 'Green Dye', 1);
+
+        // Dye Mixing (2 dyes -> 2 mixed dyes)
+        if (getCount('red_dye') === 1 && getCount('yellow_dye') === 1 && totalItems === 2) return mat('orange_dye', 'Orange Dye', 2);
+        if (getCount('red_dye') === 1 && getCount('blue_dye') === 1 && totalItems === 2) return mat('purple_dye', 'Purple Dye', 2);
+        if (getCount('red_dye') === 1 && getCount('white_dye') === 1 && totalItems === 2) return mat('pink_dye', 'Pink Dye', 2);
+        if (getCount('blue_dye') === 1 && getCount('yellow_dye') === 1 && totalItems === 2) return mat('green_dye', 'Green Dye', 2);
+        if (getCount('blue_dye') === 1 && getCount('white_dye') === 1 && totalItems === 2) return mat('light_blue_dye', 'Light Blue Dye', 2);
+        if (getCount('blue_dye') === 1 && getCount('green_dye') === 1 && totalItems === 2) return mat('cyan_dye', 'Cyan Dye', 2);
+        if (getCount('black_dye') === 1 && getCount('white_dye') === 1 && totalItems === 2) return mat('gray_dye', 'Gray Dye', 2);
+        if (getCount('gray_dye') === 1 && getCount('white_dye') === 1 && totalItems === 2) return mat('light_gray_dye', 'Light Gray Dye', 2);
+        if (getCount('green_dye') === 1 && getCount('white_dye') === 1 && totalItems === 2) return mat('lime_dye', 'Lime Dye', 2);
+        if (getCount('purple_dye') === 1 && getCount('pink_dye') === 1 && totalItems === 2) return mat('magenta_dye', 'Magenta Dye', 2);
+        if (getCount('orange_dye') === 1 && getCount('black_dye') === 1 && totalItems === 2) return mat('brown_dye', 'Brown Dye', 2);
+
+        // Wool Dyeing: any wool + dye -> colored wool (1x)
+        const dyeToWoolMap = {
+            'red_dye': { block: B.RED_WOOL, name: 'Red Wool' },
+            'blue_dye': { block: B.BLUE_WOOL, name: 'Blue Wool' },
+            'yellow_dye': { block: B.YELLOW_WOOL, name: 'Yellow Wool' },
+            'green_dye': { block: B.GREEN_WOOL, name: 'Green Wool' },
+            'black_dye': { block: B.BLACK_WOOL, name: 'Black Wool' },
+            'purple_dye': { block: B.PURPLE_WOOL, name: 'Purple Wool' },
+            'orange_dye': { block: B.ORANGE_WOOL, name: 'Orange Wool' },
+            'pink_dye': { block: B.PINK_WOOL, name: 'Pink Wool' },
+            'cyan_dye': { block: B.CYAN_WOOL, name: 'Cyan Wool' },
+            'lime_dye': { block: B.LIME_WOOL, name: 'Lime Wool' },
+            'gray_dye': { block: B.GRAY_WOOL, name: 'Gray Wool' },
+            'light_blue_dye': { block: B.LIGHT_BLUE_WOOL, name: 'Light Blue Wool' },
+            'brown_dye': { block: B.BROWN_WOOL, name: 'Brown Wool' },
+            'magenta_dye': { block: B.MAGENTA_WOOL, name: 'Magenta Wool' },
+            'light_gray_dye': { block: B.LIGHT_GRAY_WOOL, name: 'Light Gray Wool' },
+            'white_dye': { block: B.WOOL, name: 'White Wool' }
+        };
+        const allWoolsList = [
+            B.WOOL, B.WHITE_WOOL, B.RED_WOOL, B.BLUE_WOOL, B.YELLOW_WOOL, B.GREEN_WOOL,
+            B.BLACK_WOOL, B.PURPLE_WOOL, B.ORANGE_WOOL, B.PINK_WOOL, B.CYAN_WOOL,
+            B.LIME_WOOL, B.GRAY_WOOL, B.LIGHT_BLUE_WOOL, B.BROWN_WOOL, B.MAGENTA_WOOL, B.LIGHT_GRAY_WOOL
+        ];
+        if (totalItems === 2) {
+            for (const [dyeSubtype, woolInfo] of Object.entries(dyeToWoolMap)) {
+                if (getCount(dyeSubtype) === 1) {
+                    for (const w of allWoolsList) {
+                        if (getCount(w) === 1) {
+                            return block(woolInfo.block, woolInfo.name, 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bed Dyeing: any bed + dye -> colored bed (1x)
+        const dyeToBedMap = {
+            'red_dye': { block: B.RED_BED, name: 'Red Bed' },
+            'white_dye': { block: B.WHITE_BED, name: 'White Bed' },
+            'blue_dye': { block: B.BLUE_BED, name: 'Blue Bed' },
+            'yellow_dye': { block: B.YELLOW_BED, name: 'Yellow Bed' },
+            'green_dye': { block: B.GREEN_BED, name: 'Green Bed' },
+            'black_dye': { block: B.BLACK_BED, name: 'Black Bed' },
+            'purple_dye': { block: B.PURPLE_BED, name: 'Purple Bed' },
+            'orange_dye': { block: B.ORANGE_BED, name: 'Orange Bed' },
+            'pink_dye': { block: B.PINK_BED, name: 'Pink Bed' },
+            'cyan_dye': { block: B.CYAN_BED, name: 'Cyan Bed' },
+            'lime_dye': { block: B.LIME_BED, name: 'Lime Bed' },
+            'gray_dye': { block: B.GRAY_BED, name: 'Gray Bed' },
+            'light_blue_dye': { block: B.LIGHT_BLUE_BED, name: 'Light Blue Bed' },
+            'brown_dye': { block: B.BROWN_BED, name: 'Brown Bed' },
+            'magenta_dye': { block: B.MAGENTA_BED, name: 'Magenta Bed' },
+            'light_gray_dye': { block: B.LIGHT_GRAY_BED, name: 'Light Gray Bed' }
+        };
+        const allBedsList = [
+            B.RED_BED, B.WHITE_BED, B.BLUE_BED, B.YELLOW_BED, B.GREEN_BED, B.BLACK_BED,
+            B.PURPLE_BED, B.ORANGE_BED, B.PINK_BED, B.CYAN_BED, B.LIME_BED, B.GRAY_BED,
+            B.LIGHT_BLUE_BED, B.BROWN_BED, B.MAGENTA_BED, B.LIGHT_GRAY_BED
+        ];
+        if (totalItems === 2) {
+            for (const [dyeSubtype, bedInfo] of Object.entries(dyeToBedMap)) {
+                if (getCount(dyeSubtype) === 1) {
+                    for (const bd of allBedsList) {
+                        if (getCount(bd) === 1) {
+                            return block(bedInfo.block, bedInfo.name, 1);
+                        }
+                    }
+                }
+            }
+        }
+
         if (!this.is3x3Crafting) return null;
 
         // ONLY 3x3 recipes
@@ -2562,6 +2657,43 @@ class UISystem {
             if (isStairMat(B.COBBLESTONE)) return block(B.COBBLESTONE_STAIRS, 'Cobblestone Stairs', 4);
             if (isStairMat(B.STONE)) return block(B.STONE_STAIRS, 'Stone Stairs', 4);
 
+            // Oak Boat (5 planks in U-shape)
+            if (isPlank(s[0]) && !s[1] && isPlank(s[2]) && isPlank(s[3]) && isPlank(s[4]) && isPlank(s[5]) && totalItems === 5) return mat('oak_boat', 'Oak Boat', 1);
+            if (isPlank(s[3]) && !s[4] && isPlank(s[5]) && isPlank(s[6]) && isPlank(s[7]) && isPlank(s[8]) && totalItems === 5) return mat('oak_boat', 'Oak Boat', 1);
+
+            // Beds (3 matching wool in row, 3 planks directly below)
+            const woolBedList = [
+                { wool: B.RED_WOOL, bed: B.RED_BED, name: 'Red Bed' },
+                { wool: B.WOOL, bed: B.WHITE_BED, name: 'White Bed' },
+                { wool: B.WHITE_WOOL, bed: B.WHITE_BED, name: 'White Bed' },
+                { wool: B.BLUE_WOOL, bed: B.BLUE_BED, name: 'Blue Bed' },
+                { wool: B.YELLOW_WOOL, bed: B.YELLOW_BED, name: 'Yellow Bed' },
+                { wool: B.GREEN_WOOL, bed: B.GREEN_BED, name: 'Green Bed' },
+                { wool: B.BLACK_WOOL, bed: B.BLACK_BED, name: 'Black Bed' },
+                { wool: B.PURPLE_WOOL, bed: B.PURPLE_BED, name: 'Purple Bed' },
+                { wool: B.ORANGE_WOOL, bed: B.ORANGE_BED, name: 'Orange Bed' },
+                { wool: B.PINK_WOOL, bed: B.PINK_BED, name: 'Pink Bed' },
+                { wool: B.CYAN_WOOL, bed: B.CYAN_BED, name: 'Cyan Bed' },
+                { wool: B.LIME_WOOL, bed: B.LIME_BED, name: 'Lime Bed' },
+                { wool: B.GRAY_WOOL, bed: B.GRAY_BED, name: 'Gray Bed' },
+                { wool: B.LIGHT_BLUE_WOOL, bed: B.LIGHT_BLUE_BED, name: 'Light Blue Bed' },
+                { wool: B.BROWN_WOOL, bed: B.BROWN_BED, name: 'Brown Bed' },
+                { wool: B.MAGENTA_WOOL, bed: B.MAGENTA_BED, name: 'Magenta Bed' },
+                { wool: B.LIGHT_GRAY_WOOL, bed: B.LIGHT_GRAY_BED, name: 'Light Gray Bed' }
+            ];
+            for (const wb of woolBedList) {
+                // Rows 0 and 1
+                if (s[0] === wb.wool && s[1] === wb.wool && s[2] === wb.wool &&
+                    isPlank(s[3]) && isPlank(s[4]) && isPlank(s[5]) && totalItems === 6) {
+                    return block(wb.bed, wb.name, 1);
+                }
+                // Rows 1 and 2
+                if (s[3] === wb.wool && s[4] === wb.wool && s[5] === wb.wool &&
+                    isPlank(s[6]) && isPlank(s[7]) && isPlank(s[8]) && totalItems === 6) {
+                    return block(wb.bed, wb.name, 1);
+                }
+            }
+
             return null;
     }
 
@@ -2710,7 +2842,16 @@ class UISystem {
             { name: "Bread", desc: "Filling baked food.", grid: [[_,_,_],[mat('wheat'),mat('wheat'),mat('wheat')],[_,_,_]], out: mat('bread'), outCount: 1, needs3x3: true },
             { name: "Golden Apple", desc: "Powerful restorative food.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('apple'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: mat('golden_apple'), outCount: 1, needs3x3: true },
             { name: "Compass", desc: "Navigation instrument.", grid: [[_,mat('iron_ingot'),_],[mat('iron_ingot'),mat('redstone'),mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('compass'), outCount: 1, needs3x3: true },
-            { name: "Clock", desc: "Tracks day and night cycle.", grid: [[_,mat('gold_ingot'),_],[mat('gold_ingot'),mat('redstone'),mat('gold_ingot')],[_,mat('gold_ingot'),_]], out: mat('clock'), outCount: 1, needs3x3: true }
+            { name: "Clock", desc: "Tracks day and night cycle.", grid: [[_,mat('gold_ingot'),_],[mat('gold_ingot'),mat('redstone'),mat('gold_ingot')],[_,mat('gold_ingot'),_]], out: mat('clock'), outCount: 1, needs3x3: true },
+            { name: "Oak Boat", desc: "Fast water transportation.", grid: [[_,_,_],[blk(B.PLANKS),_,blk(B.PLANKS)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: mat('oak_boat'), outCount: 1, needs3x3: true },
+            { name: "Red Bed", desc: "Sleep at night and set your spawn point.", grid: [[_,_,_],[blk(B.RED_WOOL),blk(B.RED_WOOL),blk(B.RED_WOOL)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.RED_BED), outCount: 1, needs3x3: true },
+            { name: "White Bed", desc: "Sleep at night and set your spawn point.", grid: [[_,_,_],[blk(B.WOOL),blk(B.WOOL),blk(B.WOOL)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.WHITE_BED), outCount: 1, needs3x3: true },
+            { name: "Blue Bed", desc: "Sleep at night and set your spawn point.", grid: [[_,_,_],[blk(B.BLUE_WOOL),blk(B.BLUE_WOOL),blk(B.BLUE_WOOL)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.BLUE_BED), outCount: 1, needs3x3: true },
+            { name: "Red Dye", desc: "Crafted from red flowers.", grid: [[_,_,_],[_,blk(B.RED_FLOWER),_],[_,_,_]], out: mat('red_dye'), outCount: 1, needs3x3: false },
+            { name: "Yellow Dye", desc: "Crafted from yellow flowers.", grid: [[_,_,_],[_,blk(B.YELLOW_FLOWER),_],[_,_,_]], out: mat('yellow_dye'), outCount: 1, needs3x3: false },
+            { name: "Blue Dye", desc: "Crafted from blue flowers.", grid: [[_,_,_],[_,blk(B.BLUE_FLOWER),_],[_,_,_]], out: mat('blue_dye'), outCount: 1, needs3x3: false },
+            { name: "Red Wool", desc: "Dye wool with red dye.", grid: [[_,_,_],[_,blk(B.WOOL),mat('red_dye')],[_,_,_]], out: blk(B.RED_WOOL), outCount: 1, needs3x3: false },
+            { name: "Blue Wool", desc: "Dye wool with blue dye.", grid: [[_,_,_],[_,blk(B.WOOL),mat('blue_dye')],[_,_,_]], out: blk(B.BLUE_WOOL), outCount: 1, needs3x3: false }
         ];
 
         const filteredRecipes = recipes.filter(r => this.is3x3Crafting ? true : !r.needs3x3);

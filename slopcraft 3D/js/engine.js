@@ -555,11 +555,11 @@ export class Chunk {
             for (let z = 0; z < CHUNK_SIZE; z++) {
                 for (let x = 0; x < CHUNK_SIZE; x++) {
                     const blockType = this.getBlock(x, y, z);
-                    if (blockType === BLOCKS.AIR || blockType === BLOCKS.CHEST_BLOCK || blockType === BLOCKS.DUNGEON_DOOR || blockType === BLOCKS.DUNGEON_DOOR_TOP || blockType === BLOCKS.OAK_FENCE_GATE || blockType === BLOCKS.BIRCH_FENCE_GATE) continue;
+                    const props = getBlockProperties(blockType);
+                    if (blockType === BLOCKS.AIR || blockType === BLOCKS.CHEST_BLOCK || blockType === BLOCKS.DUNGEON_DOOR || blockType === BLOCKS.DUNGEON_DOOR_TOP || blockType === BLOCKS.OAK_FENCE_GATE || blockType === BLOCKS.BIRCH_FENCE_GATE || props.isBed || props.isBedHead) continue;
 
                     const wx = wxBase + x;
                     const wz = wzBase + z;
-                    const props = getBlockProperties(blockType);
 
                     if (props.isCross) {
                         const uvInfo = atlas.getUV(blockType, 'side');
@@ -1516,6 +1516,17 @@ export class World {
                 if (this.onGatePlaced) this.onGatePlaced(wx, wy, wz, type);
             }
 
+            // Register bed placement/removal
+            const isBedBlock = (b) => {
+                const p = getBlockProperties(b);
+                return p.isBed || p.isBedHead;
+            };
+            if (isBedBlock(oldType) && !isBedBlock(type)) {
+                if (this.onBedRemoved) this.onBedRemoved(wx, wy, wz);
+            } else if (!isBedBlock(oldType) && isBedBlock(type)) {
+                if (this.onBedPlaced) this.onBedPlaced(wx, wy, wz, type);
+            }
+
             if (oldType !== type) {
                 this.checkAdjacentSupports(wx, wy, wz);
             }
@@ -2156,6 +2167,10 @@ export class World {
                                 if (py < y + 0.5 && py + entityHeight > y) return true;
                                 continue;
                             }
+                            if (bProps.isBed || bProps.isBedHead) {
+                                if (py < y + 0.5625 && py + entityHeight > y) return true;
+                                continue;
+                            }
                             if (bProps.isFence || bProps.isWall || bProps.isFenceGate) {
                                 if (py < y + 1.5 && py + entityHeight > y) return true;
                                 continue;
@@ -2202,6 +2217,7 @@ export class World {
                                 if ((block === window.BLOCKS.OAK_FENCE_GATE || block === window.BLOCKS.BIRCH_FENCE_GATE) && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
                                 let surfH = 1.0;
                                 if (bProps.isSlab) surfH = 0.5;
+                                else if (bProps.isBed || bProps.isBedHead) surfH = 0.5625;
                                 else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) surfH = 1.5;
                                 if (highestSurfaceY === null || (y + surfH) > highestSurfaceY) {
                                     highestSurfaceY = y + surfH;
