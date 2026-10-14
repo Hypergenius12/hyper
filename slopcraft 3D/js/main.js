@@ -413,7 +413,12 @@ class Game {
         this.beds = new Map();
         this.world.onBedPlaced = (x, y, z, bt) => {
             if (!this.beds.has(`${x},${y},${z}`)) {
-                this._addBed(x, y, z, x, y, z - 1, bt, 0);
+                let hx = x, hz = z - 1, dir = 0;
+                if (this.world.getBlock(x, y, z - 1) === window.BLOCKS.BED_HEAD) { hx = x; hz = z - 1; dir = 0; }
+                else if (this.world.getBlock(x + 1, y, z) === window.BLOCKS.BED_HEAD) { hx = x + 1; hz = z; dir = 1; }
+                else if (this.world.getBlock(x, y, z + 1) === window.BLOCKS.BED_HEAD) { hx = x; hz = z + 1; dir = 2; }
+                else if (this.world.getBlock(x - 1, y, z) === window.BLOCKS.BED_HEAD) { hx = x - 1; hz = z; dir = 3; }
+                this._addBed(x, y, z, hx, y, hz, bt, dir);
             }
         };
         this.world.onBedRemoved = (x, y, z) => this._removeBed(x, y, z);
@@ -1025,104 +1030,125 @@ class Game {
         const headKey = `${headX},${headY},${headZ}`;
         if (this.beds.has(footKey) || this.beds.has(headKey)) return;
 
-        const bedGroup = new THREE.Group();
-        const mat = new THREE.MeshLambertMaterial({
-            map: this.atlas.texture,
-            transparent: true,
-            alphaTest: 0.5,
-            side: THREE.DoubleSide
-        });
+        if (!this._bedMaterialCache) {
+            this._bedMaterialCache = new Map();
+            this._bedTextureLoader = new THREE.TextureLoader();
+        }
 
-        const createCustomBoxGeom = (w, h, d, uvRect) => {
+        const props = getBlockProperties(blockType);
+        const bedColor = (props && props.bedColor) ? props.bedColor : 'red';
+        let mat = this._bedMaterialCache.get(bedColor);
+        if (!mat) {
+            const texPath = `assets/mc/entity/bed_${bedColor}.png`;
+            const tex = this._bedTextureLoader.load(texPath);
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            tex.colorSpace = THREE.SRGBColorSpace;
+            mat = new THREE.MeshLambertMaterial({
+                map: tex,
+                transparent: true,
+                alphaTest: 0.1
+            });
+            this._bedMaterialCache.set(bedColor, mat);
+        }
+
+        const bedGroup = new THREE.Group();
+
+        // Custom box UV builder: maps each face to exact pixel coordinates [0..64, 0..64]
+        // Corners order for BoxGeometry: [a (ix=0,iy=0), b (ix=0,iy=1), c (ix=1,iy=1), d (ix=1,iy=0)]
+        const createCustomUVBox = (w, h, d, faceCorners) => {
             const geom = new THREE.BoxGeometry(w, h, d).toNonIndexed();
             const uvs = geom.attributes.uv.array;
-            if (!uvRect) uvRect = { u: 0, v: 0, uSize: 1/16, vSize: 1/16 };
-            const faceDims = [
-                [d, h], [d, h], // +X, -X
-                [w, d], [w, d], // +Y, -Y
-                [w, h], [w, h]  // +Z, -Z
-            ];
             for (let f = 0; f < 6; f++) {
-                const [fw, fh] = faceDims[f];
-                for (let v = 0; v < 6; v++) {
-                    const idx = (f * 6 + v) * 2;
-                    let baseU = uvs[idx] * fw;
-                    let baseV = uvs[idx + 1] * fh;
-                    uvs[idx] = uvRect.u + baseU * uvRect.uSize;
-                    uvs[idx + 1] = uvRect.v + baseV * uvRect.vSize;
-                }
+                const corners = faceCorners[f];
+                if (!corners) continue;
+                const [a, b, c, d] = corners;
+                const uv_a = [a[0] / 64, 1.0 - a[1] / 64];
+                const uv_b = [b[0] / 64, 1.0 - b[1] / 64];
+                const uv_c = [c[0] / 64, 1.0 - c[1] / 64];
+                const uv_d = [d[0] / 64, 1.0 - d[1] / 64];
+
+                const fOffset = f * 12; // 6 vertices * 2 coords
+                // Triangle 1: a, b, d
+                uvs[fOffset + 0] = uv_a[0]; uvs[fOffset + 1] = uv_a[1];
+                uvs[fOffset + 2] = uv_b[0]; uvs[fOffset + 3] = uv_b[1];
+                uvs[fOffset + 4] = uv_d[0]; uvs[fOffset + 5] = uv_d[1];
+                // Triangle 2: b, c, d
+                uvs[fOffset + 6] = uv_b[0]; uvs[fOffset + 7] = uv_b[1];
+                uvs[fOffset + 8] = uv_c[0]; uvs[fOffset + 9] = uv_c[1];
+                uvs[fOffset + 10] = uv_d[0]; uvs[fOffset + 11] = uv_d[1];
             }
             geom.attributes.uv.needsUpdate = true;
             return geom;
         };
 
-        const BED_TO_WOOL = {
-            [window.BLOCKS.RED_BED]: window.BLOCKS.RED_WOOL,
-            [window.BLOCKS.WHITE_BED]: window.BLOCKS.WHITE_WOOL,
-            [window.BLOCKS.BLUE_BED]: window.BLOCKS.BLUE_WOOL,
-            [window.BLOCKS.YELLOW_BED]: window.BLOCKS.YELLOW_WOOL,
-            [window.BLOCKS.GREEN_BED]: window.BLOCKS.GREEN_WOOL,
-            [window.BLOCKS.BLACK_BED]: window.BLOCKS.BLACK_WOOL,
-            [window.BLOCKS.BROWN_BED]: window.BLOCKS.BROWN_WOOL,
-            [window.BLOCKS.CYAN_BED]: window.BLOCKS.CYAN_WOOL,
-            [window.BLOCKS.GRAY_BED]: window.BLOCKS.GRAY_WOOL,
-            [window.BLOCKS.LIGHT_BLUE_BED]: window.BLOCKS.LIGHT_BLUE_WOOL,
-            [window.BLOCKS.LIGHT_GRAY_BED]: window.BLOCKS.LIGHT_GRAY_WOOL,
-            [window.BLOCKS.LIME_BED]: window.BLOCKS.LIME_WOOL,
-            [window.BLOCKS.MAGENTA_BED]: window.BLOCKS.MAGENTA_WOOL,
-            [window.BLOCKS.ORANGE_BED]: window.BLOCKS.ORANGE_WOOL,
-            [window.BLOCKS.PINK_BED]: window.BLOCKS.PINK_WOOL,
-            [window.BLOCKS.PURPLE_BED]: window.BLOCKS.PURPLE_WOOL,
+        // Head piece (1.0 wide, 6/16 tall, 1.0 long)
+        // Authentic Minecraft entity UV coordinates from 64x64 texture:
+        // +X (right):          a:[22, 22], b:[28, 22], c:[28, 6],  d:[22, 6]
+        // -X (left):           a:[6, 6],   b:[0, 6],   c:[0, 22],  d:[6, 22]
+        // +Y (top / pillow):   a:[6, 6],   b:[6, 22],  c:[22, 22], d:[22, 6]
+        // -Y (bottom):         a:[28, 22], b:[28, 6],  c:[44, 6],  d:[44, 22]
+        // +Z (front / seam):   a:[22, 22], b:[22, 28], c:[38, 28], d:[38, 22]
+        // -Z (back / head):    a:[22, 6],  b:[22, 0],  c:[6, 0],   d:[6, 6]
+        const headGeom = createCustomUVBox(1.0, 6/16, 1.0, [
+            [[22, 22], [28, 22], [28, 6],  [22, 6]],
+            [[6, 6],   [0, 6],   [0, 22],  [6, 22]],
+            [[6, 6],   [6, 22],  [22, 22], [22, 6]],
+            [[28, 22], [28, 6],  [44, 6],  [44, 22]],
+            [[22, 22], [22, 28], [38, 28], [38, 22]],
+            [[22, 6],  [22, 0],  [6, 0],   [6, 6]]
+        ]);
+        const headMesh = new THREE.Mesh(headGeom, mat);
+        headMesh.position.set(0, 6/16, -0.5);
+        bedGroup.add(headMesh);
+
+        // Foot piece (1.0 wide, 6/16 tall, 1.0 long)
+        // +X (right):          a:[22, 44], b:[28, 44], c:[28, 28], d:[22, 28]
+        // -X (left):           a:[6, 28],  b:[0, 28],  c:[0, 44],  d:[6, 44]
+        // +Y (top / blanket):  a:[6, 28],  b:[6, 44],  c:[22, 44], d:[22, 28]
+        // -Y (bottom):         a:[28, 44], b:[28, 28], c:[44, 28], d:[44, 44]
+        // +Z (front / foot):   a:[22, 28], b:[22, 22], c:[38, 22], d:[38, 28]
+        // -Z (back / seam):    a:[22, 22], b:[22, 28], c:[38, 28], d:[38, 22]
+        const footGeom = createCustomUVBox(1.0, 6/16, 1.0, [
+            [[22, 44], [28, 44], [28, 28], [22, 28]],
+            [[6, 28],  [0, 28],  [0, 44],  [6, 44]],
+            [[6, 28],  [6, 44],  [22, 44], [22, 28]],
+            [[28, 44], [28, 28], [44, 28], [44, 44]],
+            [[22, 28], [22, 22], [38, 22], [38, 28]],
+            [[22, 22], [22, 28], [38, 28], [38, 22]]
+        ]);
+        const footMesh = new THREE.Mesh(footGeom, mat);
+        footMesh.position.set(0, 6/16, 0.5);
+        bedGroup.add(footMesh);
+
+        // 4 Corner Legs (3/16 x 3/16 x 3/16), height from y=0 to y=3/16 (center y=1.5/16)
+        const createLegGeom = (v0) => {
+            return createCustomUVBox(3/16, 3/16, 3/16, [
+                [[50, v0 + 3], [50, v0 + 6], [53, v0 + 6], [53, v0 + 3]],
+                [[56, v0 + 3], [56, v0 + 6], [59, v0 + 6], [59, v0 + 3]],
+                [[53, v0],     [53, v0 + 3], [56, v0 + 3], [56, v0]],
+                [[56, v0 + 3], [56, v0],     [59, v0],     [59, v0 + 3]],
+                [[53, v0 + 3], [53, v0 + 6], [56, v0 + 6], [56, v0 + 3]],
+                [[62, v0 + 3], [62, v0 + 6], [59, v0 + 6], [59, v0 + 3]]
+            ]);
         };
-
-        const uvOak = this.atlas.getUV(window.BLOCKS.OAK_PLANKS || window.BLOCKS.PLANKS || 8, 'side');
-        const woolType = BED_TO_WOOL[blockType] || window.BLOCKS.RED_WOOL;
-        const uvWool = this.atlas.getUV(woolType, 'side');
-        const uvPillow = this.atlas.getUV(window.BLOCKS.WHITE_WOOL, 'side');
-
-        // 4 Legs (3/16 x 3/16 x 3/16)
-        const legGeom = createCustomBoxGeom(3/16, 3/16, 3/16, uvOak);
-        const legFL = new THREE.Mesh(legGeom, mat);
+        const legFL = new THREE.Mesh(createLegGeom(0), mat);
         legFL.position.set(-6.5/16, 1.5/16, 14.5/16);
         bedGroup.add(legFL);
 
-        const legFR = new THREE.Mesh(legGeom.clone(), mat);
+        const legFR = new THREE.Mesh(createLegGeom(6), mat);
         legFR.position.set(6.5/16, 1.5/16, 14.5/16);
         bedGroup.add(legFR);
 
-        const legHL = new THREE.Mesh(legGeom.clone(), mat);
+        const legHL = new THREE.Mesh(createLegGeom(12), mat);
         legHL.position.set(-6.5/16, 1.5/16, -14.5/16);
         bedGroup.add(legHL);
 
-        const legHR = new THREE.Mesh(legGeom.clone(), mat);
+        const legHR = new THREE.Mesh(createLegGeom(18), mat);
         legHR.position.set(6.5/16, 1.5/16, -14.5/16);
         bedGroup.add(legHR);
 
-        // Wooden base frame (16/16 wide, 3/16 tall, 32/16 long)
-        const baseGeom = createCustomBoxGeom(1.0, 3/16, 2.0, uvOak);
-        const baseMesh = new THREE.Mesh(baseGeom, mat);
-        baseMesh.position.set(0, 4.5/16, 0);
-        bedGroup.add(baseMesh);
-
-        // Mattress & colored blanket: Foot half
-        const footGeom = createCustomBoxGeom(1.0, 3/16, 1.0, uvWool);
-        const footMesh = new THREE.Mesh(footGeom, mat);
-        footMesh.position.set(0, 7.5/16, 0.5);
-        bedGroup.add(footMesh);
-
-        // Head half
-        const headGeom = createCustomBoxGeom(1.0, 3/16, 1.0, uvWool);
-        const headMesh = new THREE.Mesh(headGeom, mat);
-        headMesh.position.set(0, 7.5/16, -0.5);
-        bedGroup.add(headMesh);
-
-        // 3D White Pillow on Head (12/16 wide, 1.5/16 tall, 7/16 long)
-        const pillowGeom = createCustomBoxGeom(12/16, 1.5/16, 7/16, uvPillow);
-        const pillowMesh = new THREE.Mesh(pillowGeom, mat);
-        pillowMesh.position.set(0, 9.75/16, -11.5/16);
-        bedGroup.add(pillowMesh);
-
-        // Midpoint and rotation
+        // Midpoint and rotation (total height is 9/16 = 0.5625 blocks, flush with Minecraft bounding box)
         const midX = (footX + headX + 1) / 2;
         const midY = footY;
         const midZ = (footZ + headZ + 1) / 2;

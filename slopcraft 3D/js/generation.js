@@ -372,9 +372,12 @@ export function getBiomeParams(wx, wz, params) {
     const contNoise = (noise2D(wx * 0.00028, wz * 0.00028) + 1) / 2;
     const erosionNoise = (noise2D(wx * 0.0004 + 1000, wz * 0.0004 + 1000) + 1) / 2;
 
-    // Domain warp the coordinates slightly to make biome borders wavy/organic
-    const warpX = noise2D(wx * 0.003 + 2000, wz * 0.003 + 2000) * 60;
-    const warpZ = noise2D(wz * 0.003 + 3000, wx * 0.003 + 3000) * 60;
+    // Domain warp the coordinates to make biome borders wavy and organically fractal
+    let warpX = noise2D(wx * 0.003 + 2000, wz * 0.003 + 2000) * 60;
+    let warpZ = noise2D(wz * 0.003 + 3000, wx * 0.003 + 3000) * 60;
+    // High-frequency micro domain warping (eliminates rectilinear grid seams between biomes)
+    warpX += noise2D(wx * 0.015 + 4000, wz * 0.015 + 4000) * 14;
+    warpZ += noise2D(wz * 0.015 + 7000, wx * 0.015 + 7000) * 14;
     
     // Kept large offsets to prevent spawning exactly at (0.5, 0.5) forest every seed
     const temp = (tempNoise((wx + warpX) * 0.00028 + 5000, (wz + warpZ) * 0.00028 + 5000) + 1) / 2;
@@ -938,15 +941,12 @@ export function generateChunkTerrain(cx, cz, params) {
 
             // In Minecraft:
             // High erosion = gentle rolling hills & flat plains
-            // Only extreme low erosion / mountains have dramatic cliffs and bluffs
-            const isMountainous = (biome.name === 'Mountains' || biome.name === 'Volcanic');
-            let overhangStrength = 0.06;
-            if (isMountainous) {
-                overhangStrength = 0.35 + ((0.65 - Math.min(0.65, erosion)) / 0.65) * 0.45;
-            } else if (biome.name === 'Badlands' || biome.name === 'Savanna') {
-                overhangStrength = 0.12;
-            } else if (erosion < 0.35) {
-                overhangStrength = 0.06 + ((0.35 - erosion) / 0.35) * 0.15;
+            // Low erosion = dramatic cliffs, bluffs, and mountain ranges.
+            // Continuous overhang strength ensures seamless blends without cliff seams at biome borders:
+            const mountainBlend = Math.max(0, Math.min(1, (0.42 - erosion) / 0.16));
+            let overhangStrength = 0.06 + mountainBlend * 0.45;
+            if (biome.name === 'Badlands' || biome.name === 'Savanna') {
+                overhangStrength = Math.max(overhangStrength, 0.12);
             }
 
             for (let gy = 0; gy < GRID_Y; gy++) {
@@ -1179,13 +1179,63 @@ export function generateChunkTerrain(cx, cz, params) {
                         else if (vRoll < 0.40) type = BLOCKS.OBSIDIAN;
                         else type = BLOCKS.BASALT;
                     } else if (isSwamp) {
-                        type = (isSwampMud || surfaceNoise < -0.3) ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
+                        // Swamp border dither: swamp grass & mud naturally buffer into regular grass/dirt
+                        if (moist < 0.63 && surfaceNoise < -0.3) {
+                            type = BLOCKS.GRASS;
+                        } else {
+                            type = (isSwampMud || surfaceNoise < -0.3) ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
+                        }
                     } else if (biome === BIOMES.BADLANDS || biome.name === 'Badlands') {
-                        type = (surfaceNoise > 0.25) ? BLOCKS.RED_SAND : BLOCKS.TERRACOTTA;
+                        // Badlands border dither: blend red sand / terracotta into sand, savanna grass, and dirt
+                        if (weirdness < 0.44 && surfaceNoise < -0.2) {
+                            type = (temp > 0.74) ? BLOCKS.SAND : BLOCKS.SAVANNA_GRASS;
+                        } else {
+                            type = (surfaceNoise > 0.25) ? BLOCKS.RED_SAND : BLOCKS.TERRACOTTA;
+                        }
                     } else if (biome.isRedwood) {
-                        type = (surfaceNoise < -0.55) ? BLOCKS.DIRT : BLOCKS.PODZOL;
+                        // Redwood border dither: podzol buffers into dirt and grass
+                        type = (surfaceNoise < -0.55) ? BLOCKS.DIRT : (surfaceNoise < -0.3 ? BLOCKS.GRASS : BLOCKS.PODZOL);
                     } else {
-                        type = biome.surface;
+                        // Natural Biome Transition Zones (Dithering & Organic Blending)
+                        // 1. Hot / Desert transition (temp ~0.70 to 0.77, low moisture)
+                        const isDesertMargin = (temp >= 0.69 && temp <= 0.78 && moist < 0.48);
+                        // 2. Cold / Snow transition (temp ~0.18 to 0.28)
+                        const isSnowMargin = (temp >= 0.18 && temp <= 0.28);
+
+                        if (isDesertMargin) {
+                            const dFactor = (temp - 0.69) / (0.78 - 0.69); // 0 at edge, 1 in desert
+                            const dScore = dFactor + surfaceNoise * 0.35;
+                            if (dScore > 0.60) {
+                                type = BLOCKS.SAND;
+                            } else if (dScore > 0.35) {
+                                type = BLOCKS.DIRT;
+                            } else if (dScore > 0.15) {
+                                type = BLOCKS.SAVANNA_GRASS;
+                            } else {
+                                type = biome.surface;
+                            }
+                        } else if (isSnowMargin) {
+                            const sFactor = (0.28 - temp) / (0.28 - 0.18); // 0 at edge, 1 in snow core
+                            const sScore = sFactor + surfaceNoise * 0.35;
+                            if (sScore > 0.55) {
+                                type = BLOCKS.SNOW;
+                            } else if (sScore > 0.28) {
+                                type = BLOCKS.DIRT;
+                            } else {
+                                type = BLOCKS.GRASS;
+                            }
+                        } else if (biome.name === 'Mountains') {
+                            // High altitude exposed rock and alpine grass blending
+                            if (surfaceNoise > 0.4 || y > CHUNK_HEIGHT - 35) {
+                                type = (surfaceNoise > 0.68) ? BLOCKS.STONE : BLOCKS.SNOW;
+                            } else if (surfaceNoise < -0.4) {
+                                type = BLOCKS.GRASS;
+                            } else {
+                                type = BLOCKS.SNOW;
+                            }
+                        } else {
+                            type = biome.surface;
+                        }
                     }
                     blocks[idx] = type;
                 } else if (depth < soilLimit) {
@@ -1196,13 +1246,17 @@ export function generateChunkTerrain(cx, cz, params) {
                     if (biome.isVolcanic) {
                         type = colRng() < 0.5 ? BLOCKS.BLACKSTONE : BLOCKS.SMOOTH_BASALT;
                     } else if (surfaceBlock === BLOCKS.SAND) {
-                        type = (depth >= 3) ? BLOCKS.SANDSTONE : BLOCKS.SAND;
+                        type = (depth >= 3 && temp > 0.75) ? BLOCKS.SANDSTONE : ((colRng() < 0.35) ? BLOCKS.DIRT : BLOCKS.SAND);
                     } else if (surfaceBlock === BLOCKS.RED_SAND || surfaceBlock === BLOCKS.TERRACOTTA) {
                         type = BLOCKS.TERRACOTTA;
                     } else if (surfaceBlock === BLOCKS.MUD) {
                         type = (colRng() < 0.6) ? BLOCKS.MUD : BLOCKS.DIRT;
                     } else if (surfaceBlock === BLOCKS.GRAVEL) {
                         type = BLOCKS.GRAVEL;
+                    } else if (surfaceBlock === BLOCKS.DIRT || surfaceBlock === BLOCKS.ROOTED_DIRT) {
+                        type = BLOCKS.DIRT;
+                    } else if (surfaceBlock === BLOCKS.SNOW && biome.name === 'Mountains') {
+                        type = (colRng() < 0.4) ? BLOCKS.STONE : BLOCKS.DIRT;
                     } else {
                         type = biome.dirt;
                     }
@@ -1344,6 +1398,12 @@ export function generateChunkTerrain(cx, cz, params) {
             const currentGroundBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[currentGroundIdx] : BLOCKS.AIR;
             const isValidGround = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.SAND || currentGroundBlock === BLOCKS.SNOW || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.ALIEN_GRASS || currentGroundBlock === BLOCKS.ALIEN_STONE || currentGroundBlock === BLOCKS.RED_SAND || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.BASALT || currentGroundBlock === BLOCKS.SMOOTH_BASALT || currentGroundBlock === BLOCKS.BLACKSTONE || currentGroundBlock === BLOCKS.MUD || currentGroundBlock === BLOCKS.SWAMP_WATER;
             if (!isValidGround) continue;
+
+            // Border tree density feathering (prevents abrupt walls of trees hitting desert borders)
+            if (colInfo.temp > 0.69 && !biome.jungleFlora && biome !== BIOMES.JUNGLE && biome.name !== 'Jungle') {
+                const heatTaper = Math.max(0, Math.min(1, (0.76 - colInfo.temp) / 0.07));
+                if (floraRng() > heatTaper) continue;
+            }
 
             // Volcanic Spire Columns
             if (biome.isVolcanic) {
