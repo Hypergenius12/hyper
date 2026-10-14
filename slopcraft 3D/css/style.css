@@ -11,6 +11,22 @@
 }
 
 @font-face {
+    font-family: 'Minecrafter Alt';
+    src: url('fonts/Minecrafter.Alt.woff') format('woff'),
+         url('https://fonts.cdnfonts.com/s/15048/Minecrafter.Alt.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Minecrafter';
+    src: url('fonts/Minecrafter.Reg.woff') format('woff'),
+         url('https://fonts.cdnfonts.com/s/15048/Minecrafter.Reg.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
     font-family: 'Minecraft';
     src: url('fonts/MinecraftTen.woff') format('woff'),
          url('https://fonts.cdnfonts.com/s/36662/MinecraftTen-VGORe.woff') format('woff');
@@ -21,7 +37,7 @@
 :root {
     --font-main: 'Minecraftia', monospace, sans-serif;
     --font-mono: 'Minecraftia', monospace, sans-serif;
-    --font-title: 'Minecraft', 'Minecraftia', sans-serif;
+    --font-title: 'Minecrafter Alt', 'Minecrafter', 'Minecraft', sans-serif;
 
     /* Vanilla Minecraft GUI Colors */
     --mc-gui-bg: #c6c6c6;
@@ -56,6 +72,18 @@
     -webkit-font-smoothing: none;
     font-smooth: never;
     text-rendering: pixelated;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar, html::-webkit-scrollbar, body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+*:focus, *:focus-visible {
+    outline: none !important;
 }
 
 html, body {
@@ -66,6 +94,8 @@ html, body {
     font-family: var(--font-main);
     color: var(--text-primary);
     cursor: default;
+    border: none;
+    outline: none;
     user-select: none;
     -webkit-user-select: none;
 }
@@ -78,6 +108,8 @@ canvas#game-canvas {
     height: 100%;
     display: block;
     z-index: 0;
+    border: none;
+    outline: none;
 }
 
 .hidden { display: none !important; }
@@ -540,25 +572,22 @@ canvas#game-canvas {
 }
 
 .mc-game-title {
-    font-family: 'Minecraft', 'Minecraftia', sans-serif;
+    font-family: 'Minecrafter Alt', 'Minecrafter', 'Minecraft', 'Minecraftia', sans-serif;
     font-size: 5rem;
     font-weight: normal;
-    letter-spacing: 5px;
+    letter-spacing: 4px;
     color: #e0e0e0;
     text-transform: uppercase;
     margin: 0;
     padding: 0;
     text-shadow:
-        0 2px 0 #999999,
-        0 4px 0 #777777,
-        0 6px 0 #555555,
-        0 8px 0 #333333,
-        0 10px 0 #111111,
-        3px 3px 0 #000000,
-        -3px -3px 0 #000000,
-        3px -3px 0 #000000,
-        -3px 3px 0 #000000,
-        0 14px 16px rgba(0,0,0,0.85);
+        3px 3px 0 #1b1b1b,
+        -1px -1px 0 #2a2a2a,
+        1px -1px 0 #2a2a2a,
+        -1px 1px 0 #2a2a2a,
+        1px 1px 0 #2a2a2a,
+        5px 5px 0 #000000,
+        0 14px 18px rgba(0,0,0,0.85);
     user-select: none;
 }
 
@@ -569,21 +598,21 @@ canvas#game-canvas {
     letter-spacing: 6px;
     color: #ffff55;
     text-shadow: 2px 2px 0 #3f3f00;
-    margin-top: -6px;
+    margin-top: -4px;
     user-select: none;
 }
 
 /* Bouncing Yellow Splash Text */
 .mc-splash-text {
     position: absolute;
-    bottom: -6px;
-    right: -24px;
+    bottom: -16px;
+    right: -60px;
     color: #ffff00;
     font-family: 'Minecraftia', monospace, sans-serif;
     font-size: 1.25rem;
     text-shadow: 2px 2px 0 #3f3f00;
-    transform-origin: center center;
-    transform: rotate(-15deg);
+    transform-origin: 25% 50%;
+    transform: rotate(-20deg);
     animation: mc-splash-bounce 0.5s ease-in-out infinite alternate;
     white-space: nowrap;
     pointer-events: none;
@@ -591,8 +620,8 @@ canvas#game-canvas {
 }
 
 @keyframes mc-splash-bounce {
-    0% { transform: rotate(-15deg) scale(1); }
-    100% { transform: rotate(-15deg) scale(1.08); }
+    0% { transform: rotate(-20deg) scale(1); }
+    100% { transform: rotate(-20deg) scale(1.08); }
 }
 
 .start-actions {

@@ -4412,19 +4412,21 @@ export async function createTextureAtlas(useMinecraft = true) {
         }
 
         if (blockType === BLOCKS.PORTAL_FRAME) {
-            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
-            const s = iconCanvas.width / 16;
-            // 13/16 height end portal frame
-            iconCtx.drawImage(side1Scaled, 1 * s, 3 * s, 14 * s, 13 * s, 1 * s, 3 * s, 14 * s, 13 * s);
-            iconCtx.fillStyle = 'rgba(255,255,255,0.2)';
-            iconCtx.fillRect(1 * s, 3 * s, 14 * s, s);
-            iconCtx.fillStyle = 'rgba(0,0,0,0.4)';
-            iconCtx.fillRect(1 * s, 15 * s, 14 * s, s);
-            // Eye socket
-            iconCtx.fillStyle = '#0652dd';
-            iconCtx.fillRect(5 * s, 2 * s, 6 * s, 3 * s);
-            iconCtx.fillStyle = '#2ed573';
-            iconCtx.fillRect(6 * s, 2.5 * s, 4 * s, 2 * s);
+            iconCtx.save();
+            const yOffset = 3 * SCALE;
+            // Top face (recessed down by 3 pixels to match 13/16 block height)
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, yOffset);
+            iconCtx.drawImage(topScaled, 0, 0);
+
+            // Left face (side1 texture already has transparent rows 0..2 for 13/16 height)
+            iconCtx.setTransform(1, 0.5, 0, 1, 0, TEX_SIZE * SCALE * 0.5);
+            iconCtx.drawImage(side1Scaled, 0, 0);
+
+            // Right face (shaded)
+            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, TEX_SIZE * SCALE);
+            iconCtx.drawImage(side2Scaled, 0, 0);
+
+            iconCtx.restore();
             return iconCanvas;
         }
 
