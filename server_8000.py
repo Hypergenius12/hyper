@@ -14,8 +14,8 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     PORT = 8000
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    socketserver.TCPServer.allow_reuse_address = True
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
     print(f"Starting server on port {PORT}...", flush=True)
-    with socketserver.TCPServer(("", PORT), NoCacheHandler) as httpd:
+    with socketserver.ThreadingTCPServer(("", PORT), NoCacheHandler) as httpd:
         print(f"Server successfully running at http://localhost:{PORT}/", flush=True)
         httpd.serve_forever()

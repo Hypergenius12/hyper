@@ -1690,9 +1690,9 @@ export class World {
                                 }
                             }
                         }
-                    }
                 }
-            } }
+            }
+        }
     }
 
     update(playerPos, terrainGenerator, dt) {
