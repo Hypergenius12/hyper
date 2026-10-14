@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js';
-import { Spell, SPELL_TYPES } from './magic.js';
+import { BLOCKS, generateItemTexture } from './textures.js?v=100';
+import { Spell, SPELL_TYPES } from './magic.js?v=100';
 
 export class LightingSystem {
     constructor(scene) {
@@ -2532,6 +2532,7 @@ class UISystem {
         // Structured recipes for visual grid
         const recipes = [
             { name: "Planks (4)", desc: "Basic building block.", grid: [[_,_,_],[_,blk(B.WOOD),_],[_,_,_]], out: blk(B.PLANKS), outCount: 4, needs3x3: false },
+            { name: "Birch Planks (4)", desc: "Light wood building block.", grid: [[_,_,_],[_,blk(B.BIRCH_WOOD),_],[_,_,_]], out: blk(B.BIRCH_PLANKS), outCount: 4, needs3x3: false },
             { name: "Stick (4)", desc: "Used for tools.", grid: [[_,_,_],[_,blk(B.PLANKS),_],[_,blk(B.PLANKS),_]], out: mat('stick'), outCount: 4, needs3x3: false },
             { name: "Crafting Table", desc: "Unlocks 3x3 crafting.", grid: [[_,_,_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.CRAFTING_TABLE), outCount: 1, needs3x3: false },
             { name: "Torch (4)", desc: "Lights up the dark.", grid: [[_,_,_],[_,mat('coal'),_],[_,mat('stick'),_]], out: blk(B.TORCH), outCount: 4, needs3x3: false },

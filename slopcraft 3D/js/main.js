@@ -2,23 +2,29 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=98';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=98';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=98';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=98';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=98';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=98';
-import { AudioManager } from './audio.js?v=98';
-import { BiomeMap } from './map.js?v=98';
-import { DevMode } from './dev.js?v=98';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=100';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=100';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=100';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=100';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=100';
+import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=100';
+import { AudioManager } from './audio.js?v=100';
+import { BiomeMap } from './map.js?v=100';
+import { DevMode } from './dev.js?v=100';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-// Expose BLOCKS globally
+// Expose BLOCKS and systems globally
 window.BLOCKS = BLOCKS;
 window.BLOCKS_REF = BLOCKS;
+window.THREE = THREE;
+window.Mob = Mob;
+window.MOB_TYPES = MOB_TYPES;
+window.Item = Item;
+window.getBlockProperties = getBlockProperties;
+window.getBlockName = getBlockName;
 
 const FOOD_HEAL_MAP = {
     'apple': 15,
@@ -506,6 +512,7 @@ class Game {
         this.biomeMap = new BiomeMap(this);
         this.devMode = new DevMode(this);
         this.audio = new AudioManager();
+        this.audio.camera = this.engine.camera;
 
         // Entities
         this.player = new Player();
