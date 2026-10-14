@@ -220,11 +220,35 @@ export const BLOCKS = {
     BIRCH_WOOD: 245,
     BIRCH_LEAVES: 246,
     BIRCH_PLANKS: 247,
-    KELP_PLANT: 248
+    KELP_PLANT: 248,
+    OAK_SLAB: 249,
+    COBBLESTONE_SLAB: 250,
+    STONE_SLAB: 251,
+    BIRCH_SLAB: 252,
+    OAK_STAIRS: 253,
+    COBBLESTONE_STAIRS: 254,
+    STONE_STAIRS: 255,
+    BIRCH_STAIRS: 256,
+    OAK_FENCE: 257,
+    BIRCH_FENCE: 258,
+    COBBLESTONE_WALL: 259,
+    STONE_BRICK_WALL: 260
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.OAK_SLAB]:              { name: 'Oak Slab',              health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.OAK_SLAB, flammable: true, isSlab: true },
+    [BLOCKS.COBBLESTONE_SLAB]:        { name: 'Cobblestone Slab',        health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.COBBLESTONE_SLAB, isSlab: true },
+    [BLOCKS.STONE_SLAB]:              { name: 'Stone Slab',              health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.STONE_SLAB, isSlab: true },
+    [BLOCKS.BIRCH_SLAB]:            { name: 'Birch Slab',            health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BIRCH_SLAB, flammable: true, isSlab: true },
+    [BLOCKS.OAK_STAIRS]:            { name: 'Oak Stairs',            health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.OAK_STAIRS, flammable: true, isStair: true, hasFacing: true },
+    [BLOCKS.COBBLESTONE_STAIRS]:    { name: 'Cobblestone Stairs',    health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.COBBLESTONE_STAIRS, isStair: true, hasFacing: true },
+    [BLOCKS.STONE_STAIRS]:          { name: 'Stone Stairs',          health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.STONE_STAIRS, isStair: true, hasFacing: true },
+    [BLOCKS.BIRCH_STAIRS]:          { name: 'Birch Stairs',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BIRCH_STAIRS, flammable: true, isStair: true, hasFacing: true },
+    [BLOCKS.OAK_FENCE]:             { name: 'Oak Fence',             health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.OAK_FENCE, flammable: true, isFence: true },
+    [BLOCKS.BIRCH_FENCE]:           { name: 'Birch Fence',           health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BIRCH_FENCE, flammable: true, isFence: true },
+    [BLOCKS.COBBLESTONE_WALL]:      { name: 'Cobblestone Wall',      health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.COBBLESTONE_WALL, isWall: true },
+    [BLOCKS.STONE_BRICK_WALL]:      { name: 'Stone Brick Wall',      health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.STONE_BRICK_WALL, isWall: true },
     [BLOCKS.BIRCH_WOOD]:              { name: 'Birch Wood',              health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.BIRCH_LEAVES]:            { name: 'Birch Leaves',            health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.BIRCH_PLANKS]:            { name: 'Birch Planks',            health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
@@ -3122,7 +3146,19 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.DUNGEON_DESERT_BRICK]: 'cut_sandstone',
     [BLOCKS.DUNGEON_DESERT_FLOOR]: 'sandstone',
     [BLOCKS.DUNGEON_UNDEAD_BRICK]: 'polished_blackstone_bricks',
-    [BLOCKS.DUNGEON_UNDEAD_FLOOR]: 'polished_blackstone'
+    [BLOCKS.DUNGEON_UNDEAD_FLOOR]: 'polished_blackstone',
+    [BLOCKS.OAK_SLAB]: 'oak_planks',
+    [BLOCKS.COBBLESTONE_SLAB]: 'cobblestone',
+    [BLOCKS.STONE_SLAB]: { top: 'smooth_stone', side: 'smooth_stone_slab_side', bottom: 'smooth_stone' },
+    [BLOCKS.BIRCH_SLAB]: 'birch_planks',
+    [BLOCKS.OAK_STAIRS]: 'oak_planks',
+    [BLOCKS.COBBLESTONE_STAIRS]: 'cobblestone',
+    [BLOCKS.STONE_STAIRS]: 'stone',
+    [BLOCKS.BIRCH_STAIRS]: 'birch_planks',
+    [BLOCKS.OAK_FENCE]: 'oak_planks',
+    [BLOCKS.BIRCH_FENCE]: 'birch_planks',
+    [BLOCKS.COBBLESTONE_WALL]: 'cobblestone',
+    [BLOCKS.STONE_BRICK_WALL]: 'stone_bricks'
 };
 
 let _mcChestPromise = null;
@@ -3373,6 +3409,8 @@ const LOCAL_ASSET_MAP = {
     "sea_lantern": "assets/mc/block/sea_lantern.png",
     "shroomlight": "assets/mc/block/shroomlight.png",
     "smooth_basalt": "assets/mc/block/smooth_basalt.png",
+    "smooth_stone": "assets/mc/block/smooth_stone.png",
+    "smooth_stone_slab_side": "assets/mc/block/smooth_stone_slab_side.png",
     "snow": "assets/mc/block/snow.png",
     "soul_fire_0": "assets/mc/block/soul_fire_0.png",
     "soul_sand": "assets/mc/block/soul_sand.png",
@@ -3846,6 +3884,23 @@ export async function createTextureAtlas(useMinecraft = true) {
         const side2Scaled = document.createElement('canvas'); side2Scaled.width = TEX_SIZE * SCALE; side2Scaled.height = TEX_SIZE * SCALE;
         const s2sCtx = side2Scaled.getContext('2d'); s2sCtx.imageSmoothingEnabled = false;
         s2sCtx.drawImage(side2, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE * SCALE, TEX_SIZE * SCALE);
+
+        if (props.isSlab) {
+            iconCtx.save();
+            // Lower top face by half height
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.4);
+            iconCtx.drawImage(topScaled, 0, 0);
+
+            // Left face (half height)
+            iconCtx.setTransform(1, 0.5, 0, 1, 0, TEX_SIZE * SCALE * 0.9);
+            iconCtx.drawImage(side1Scaled, 0, TEX_SIZE * SCALE * 0.5, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.5, 0, 0, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.5);
+
+            // Right face (half height)
+            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 1.4);
+            iconCtx.drawImage(side2Scaled, 0, TEX_SIZE * SCALE * 0.5, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.5, 0, 0, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.5);
+            iconCtx.restore();
+            return iconCanvas;
+        }
 
         iconCtx.save();
         

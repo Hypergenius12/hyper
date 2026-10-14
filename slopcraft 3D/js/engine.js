@@ -406,6 +406,151 @@ export class Chunk {
         const wxBase = this.cx * CHUNK_SIZE;
         const wzBase = this.cz * CHUNK_SIZE;
 
+        const pushCustomBox = (minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, uvTop, uvSide, uvBottom, cullMask = 0, aoMult = 1.0) => {
+            // Top (+Y)
+            if (!(cullMask & 1)) {
+                _positions[posCount++] = minX; _positions[posCount++] = maxY; _positions[posCount++] = maxZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = maxY; _positions[posCount++] = maxZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = maxY; _positions[posCount++] = minZ;
+                _positions[posCount++] = minX; _positions[posCount++] = maxY; _positions[posCount++] = minZ;
+
+                for (let k = 0; k < 4; k++) {
+                    _normals[posCount - 12 + k * 3] = 0; _normals[posCount - 11 + k * 3] = 1; _normals[posCount - 10 + k * 3] = 0;
+                    _colors[colorCount++] = aoMult; _colors[colorCount++] = aoMult; _colors[colorCount++] = aoMult;
+                }
+
+                _uvs[uvCount++] = uvTop.u + (minX - bx) * uvTop.uSize; _uvs[uvCount++] = uvTop.v + (minZ - bz) * uvTop.vSize;
+                _uvs[uvCount++] = uvTop.u + (maxX - bx) * uvTop.uSize; _uvs[uvCount++] = uvTop.v + (minZ - bz) * uvTop.vSize;
+                _uvs[uvCount++] = uvTop.u + (maxX - bx) * uvTop.uSize; _uvs[uvCount++] = uvTop.v + (maxZ - bz) * uvTop.vSize;
+                _uvs[uvCount++] = uvTop.u + (minX - bx) * uvTop.uSize; _uvs[uvCount++] = uvTop.v + (maxZ - bz) * uvTop.vSize;
+
+                const base = vertexCount;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                vertexCount += 4;
+            }
+
+            // Bottom (-Y)
+            if (!(cullMask & 2)) {
+                _positions[posCount++] = minX; _positions[posCount++] = minY; _positions[posCount++] = minZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = minY; _positions[posCount++] = minZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = minY; _positions[posCount++] = maxZ;
+                _positions[posCount++] = minX; _positions[posCount++] = minY; _positions[posCount++] = maxZ;
+
+                for (let k = 0; k < 4; k++) {
+                    _normals[posCount - 12 + k * 3] = 0; _normals[posCount - 11 + k * 3] = -1; _normals[posCount - 10 + k * 3] = 0;
+                    const c = aoMult * 0.6;
+                    _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
+                }
+
+                _uvs[uvCount++] = uvBottom.u + (minX - bx) * uvBottom.uSize; _uvs[uvCount++] = uvBottom.v + (minZ - bz) * uvBottom.vSize;
+                _uvs[uvCount++] = uvBottom.u + (maxX - bx) * uvBottom.uSize; _uvs[uvCount++] = uvBottom.v + (minZ - bz) * uvBottom.vSize;
+                _uvs[uvCount++] = uvBottom.u + (maxX - bx) * uvBottom.uSize; _uvs[uvCount++] = uvBottom.v + (maxZ - bz) * uvBottom.vSize;
+                _uvs[uvCount++] = uvBottom.u + (minX - bx) * uvBottom.uSize; _uvs[uvCount++] = uvBottom.v + (maxZ - bz) * uvBottom.vSize;
+
+                const base = vertexCount;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                vertexCount += 4;
+            }
+
+            // East (+X)
+            if (!(cullMask & 4)) {
+                _positions[posCount++] = maxX; _positions[posCount++] = minY; _positions[posCount++] = maxZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = minY; _positions[posCount++] = minZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = maxY; _positions[posCount++] = minZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = maxY; _positions[posCount++] = maxZ;
+
+                for (let k = 0; k < 4; k++) {
+                    _normals[posCount - 12 + k * 3] = 1; _normals[posCount - 11 + k * 3] = 0; _normals[posCount - 10 + k * 3] = 0;
+                    const c = aoMult * 0.8;
+                    _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
+                }
+
+                _uvs[uvCount++] = uvSide.u + (minZ - bz) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (maxZ - bz) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (maxZ - bz) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (minZ - bz) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+
+                const base = vertexCount;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                vertexCount += 4;
+            }
+
+            // West (-X)
+            if (!(cullMask & 8)) {
+                _positions[posCount++] = minX; _positions[posCount++] = minY; _positions[posCount++] = minZ;
+                _positions[posCount++] = minX; _positions[posCount++] = minY; _positions[posCount++] = maxZ;
+                _positions[posCount++] = minX; _positions[posCount++] = maxY; _positions[posCount++] = maxZ;
+                _positions[posCount++] = minX; _positions[posCount++] = maxY; _positions[posCount++] = minZ;
+
+                for (let k = 0; k < 4; k++) {
+                    _normals[posCount - 12 + k * 3] = -1; _normals[posCount - 11 + k * 3] = 0; _normals[posCount - 10 + k * 3] = 0;
+                    const c = aoMult * 0.8;
+                    _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
+                }
+
+                _uvs[uvCount++] = uvSide.u + (1 - (maxZ - bz)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (1 - (minZ - bz)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (1 - (minZ - bz)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (1 - (maxZ - bz)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+
+                const base = vertexCount;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                vertexCount += 4;
+            }
+
+            // South (+Z)
+            if (!(cullMask & 16)) {
+                _positions[posCount++] = minX; _positions[posCount++] = minY; _positions[posCount++] = maxZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = minY; _positions[posCount++] = maxZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = maxY; _positions[posCount++] = maxZ;
+                _positions[posCount++] = minX; _positions[posCount++] = maxY; _positions[posCount++] = maxZ;
+
+                for (let k = 0; k < 4; k++) {
+                    _normals[posCount - 12 + k * 3] = 0; _normals[posCount - 11 + k * 3] = 0; _normals[posCount - 10 + k * 3] = 1;
+                    const c = aoMult * 0.7;
+                    _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
+                }
+
+                _uvs[uvCount++] = uvSide.u + (minX - bx) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (maxX - bx) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (maxX - bx) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (minX - bx) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+
+                const base = vertexCount;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                vertexCount += 4;
+            }
+
+            // North (-Z)
+            if (!(cullMask & 32)) {
+                _positions[posCount++] = maxX; _positions[posCount++] = minY; _positions[posCount++] = minZ;
+                _positions[posCount++] = minX; _positions[posCount++] = minY; _positions[posCount++] = minZ;
+                _positions[posCount++] = minX; _positions[posCount++] = maxY; _positions[posCount++] = minZ;
+                _positions[posCount++] = maxX; _positions[posCount++] = maxY; _positions[posCount++] = minZ;
+
+                for (let k = 0; k < 4; k++) {
+                    _normals[posCount - 12 + k * 3] = 0; _normals[posCount - 11 + k * 3] = 0; _normals[posCount - 10 + k * 3] = -1;
+                    const c = aoMult * 0.7;
+                    _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
+                }
+
+                _uvs[uvCount++] = uvSide.u + (1 - (maxX - bx)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (1 - (minX - bx)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (1 - (minX - bx)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+                _uvs[uvCount++] = uvSide.u + (1 - (maxX - bx)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+
+                const base = vertexCount;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
+                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                vertexCount += 4;
+            }
+        };
+
         for (let y = 0; y < CHUNK_HEIGHT; y++) {
             for (let z = 0; z < CHUNK_SIZE; z++) {
                 for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -486,6 +631,87 @@ export class Chunk {
                         } else {
                             continue;
                         }
+                    }
+
+                    if (props.isSlab || props.isStair || props.isFence || props.isWall) {
+                        const uvTop = atlas.getUV(blockType, 'top');
+                        const uvSide = atlas.getUV(blockType, 'side');
+                        const uvBottom = atlas.getUV(blockType, 'bottom');
+                        const curData = this.data ? this.data[(y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x] : 0;
+
+                        if (props.isSlab) {
+                            const belowBlock = (y > 0) ? this.getBlock(x, y - 1, z) : getBlockOptimized(wx, y - 1, wz);
+                            const cullBottom = getBlockProperties(belowBlock).solid && !getBlockProperties(belowBlock).isSlab;
+                            pushCustomBox(x, y, z, x + 1, y + 0.5, z + 1, x, y, z, uvTop, uvSide, uvBottom, cullBottom ? 2 : 0, 1.0);
+                        } else if (props.isStair) {
+                            // Step 1: Base half slab
+                            pushCustomBox(x, y, z, x + 1, y + 0.5, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
+
+                            // Step 2: Upper step based on facing
+                            // 0: North (-Z), 1: East (+X), 2: South (+Z), 3: West (-X)
+                            const facing = curData & 3;
+                            let sx0 = x, sz0 = z, sx1 = x + 1, sz1 = z + 1;
+                            if (facing === 0) sz1 = z + 0.5;
+                            else if (facing === 1) sx0 = x + 0.5;
+                            else if (facing === 2) sz0 = z + 0.5;
+                            else sx1 = x + 0.5;
+                            pushCustomBox(sx0, y + 0.5, sz0, sx1, y + 1.0, sz1, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+
+                            // Connecting stairs wrap logic
+                            const nN = getBlockOptimized(wx, y, wz - 1);
+                            const nS = getBlockOptimized(wx, y, wz + 1);
+                            const nW = getBlockOptimized(wx - 1, y, wz);
+                            const nE = getBlockOptimized(wx + 1, y, wz);
+                            const pN = getBlockProperties(nN);
+                            const pS = getBlockProperties(nS);
+                            const pW = getBlockProperties(nW);
+                            const pE = getBlockProperties(nE);
+
+                            if (facing === 0) {
+                                if (pE.isStair) pushCustomBox(x + 0.5, y + 0.5, z + 0.5, x + 1.0, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                                if (pW.isStair) pushCustomBox(x, y + 0.5, z + 0.5, x + 0.5, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                            } else if (facing === 2) {
+                                if (pE.isStair) pushCustomBox(x + 0.5, y + 0.5, z, x + 1.0, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                                if (pW.isStair) pushCustomBox(x, y + 0.5, z, x + 0.5, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                            } else if (facing === 1) {
+                                if (pN.isStair) pushCustomBox(x, y + 0.5, z, x + 0.5, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                                if (pS.isStair) pushCustomBox(x, y + 0.5, z + 0.5, x + 0.5, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                            } else {
+                                if (pN.isStair) pushCustomBox(x + 0.5, y + 0.5, z, x + 1.0, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                                if (pS.isStair) pushCustomBox(x + 0.5, y + 0.5, z + 0.5, x + 1.0, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                            }
+                        } else if (props.isFence) {
+                            // Center post
+                            pushCustomBox(x + 6/16, y, z + 6/16, x + 10/16, y + 1.0, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
+
+                            const canConn = (b) => { const p = getBlockProperties(b); return p.solid || p.isFence || p.isWall; };
+                            if (canConn(getBlockOptimized(wx, y, wz - 1))) {
+                                pushCustomBox(x + 7/16, y + 12/16, z, x + 9/16, y + 15/16, z + 6/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                                pushCustomBox(x + 7/16, y + 6/16, z, x + 9/16, y + 9/16, z + 6/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                            }
+                            if (canConn(getBlockOptimized(wx, y, wz + 1))) {
+                                pushCustomBox(x + 7/16, y + 12/16, z + 10/16, x + 9/16, y + 15/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                                pushCustomBox(x + 7/16, y + 6/16, z + 10/16, x + 9/16, y + 9/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                            }
+                            if (canConn(getBlockOptimized(wx - 1, y, wz))) {
+                                pushCustomBox(x, y + 12/16, z + 7/16, x + 6/16, y + 15/16, z + 9/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                                pushCustomBox(x, y + 6/16, z + 7/16, x + 6/16, y + 9/16, z + 9/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                            }
+                            if (canConn(getBlockOptimized(wx + 1, y, wz))) {
+                                pushCustomBox(x + 10/16, y + 12/16, z + 7/16, x + 1, y + 15/16, z + 9/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                                pushCustomBox(x + 10/16, y + 6/16, z + 7/16, x + 1, y + 9/16, z + 9/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                            }
+                        } else if (props.isWall) {
+                            // Center post
+                            pushCustomBox(x + 4/16, y, z + 4/16, x + 12/16, y + 1.0, z + 12/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
+
+                            const canConn = (b) => { const p = getBlockProperties(b); return p.solid || p.isWall || p.isFence; };
+                            if (canConn(getBlockOptimized(wx, y, wz - 1))) pushCustomBox(x + 5/16, y, z, x + 11/16, y + 14/16, z + 4/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                            if (canConn(getBlockOptimized(wx, y, wz + 1))) pushCustomBox(x + 5/16, y, z + 12/16, x + 11/16, y + 14/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                            if (canConn(getBlockOptimized(wx - 1, y, wz))) pushCustomBox(x, y, z + 5/16, x + 4/16, y + 14/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                            if (canConn(getBlockOptimized(wx + 1, y, wz))) pushCustomBox(x + 12/16, y, z + 5/16, x + 1, y + 14/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
+                        }
+                        continue;
                     }
 
                     let liquidTopY = 1.0;
@@ -1907,8 +2133,17 @@ export class World {
                 for (let x = minX; x <= maxX; x++) {
                     for (let z = minZ; z <= maxZ; z++) {
                         const block = this.getBlock(x, y, z);
-                        if (getBlockProperties(block).solid) {
+                        const bProps = getBlockProperties(block);
+                        if (bProps.solid) {
                             if (block === window.BLOCKS.DUNGEON_DOOR && this.isDoorOpen && this.isDoorOpen(x, y, z)) {
+                                continue;
+                            }
+                            if (bProps.isSlab) {
+                                if (py < y + 0.5 && py + entityHeight > y) return true;
+                                continue;
+                            }
+                            if (bProps.isFence || bProps.isWall) {
+                                if (py < y + 1.5 && py + entityHeight > y) return true;
                                 continue;
                             }
                             return true;
@@ -1947,10 +2182,14 @@ export class World {
                     for (let x = minX; x <= maxX; x++) {
                         for (let z = minZ; z <= maxZ; z++) {
                             const block = this.getBlock(x, y, z);
-                            if (getBlockProperties(block).solid) {
+                            const bProps = getBlockProperties(block);
+                            if (bProps.solid) {
                                 if (block === window.BLOCKS.DUNGEON_DOOR && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
-                                if (highestSurfaceY === null || (y + 1.0) > highestSurfaceY) {
-                                    highestSurfaceY = y + 1.0;
+                                let surfH = 1.0;
+                                if (bProps.isSlab) surfH = 0.5;
+                                else if (bProps.isFence || bProps.isWall) surfH = 1.5;
+                                if (highestSurfaceY === null || (y + surfH) > highestSurfaceY) {
+                                    highestSurfaceY = y + surfH;
                                 }
                             }
                         }
@@ -1987,14 +2226,24 @@ export class World {
 
         // X-axis
         if (checkCollision(targetX, targetY, position.z)) {
-            velocity.x = 0;
-            targetX = position.x;
+            // Auto step-up for slabs and stairs (0.5 blocks)
+            if (grounded && !checkCollision(targetX, targetY + 0.51, position.z)) {
+                targetY += 0.5;
+            } else {
+                velocity.x = 0;
+                targetX = position.x;
+            }
         }
 
         // Z-axis
         if (checkCollision(targetX, targetY, targetZ)) {
-            velocity.z = 0;
-            targetZ = position.z;
+            // Auto step-up for slabs and stairs (0.5 blocks)
+            if (grounded && !checkCollision(targetX, targetY + 0.51, targetZ)) {
+                targetY += 0.5;
+            } else {
+                velocity.z = 0;
+                targetZ = position.z;
+            }
         }
 
         position.set(targetX, targetY, targetZ);

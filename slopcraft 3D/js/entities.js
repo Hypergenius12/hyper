@@ -129,6 +129,8 @@ export class Player {
         this.burnTickTimer = 0;
         this.naturalRegenTimer = 0;
         this.isCreative = false;
+        this.fallStartY = this.position.y;
+        this.fallDistance = 0;
     }
 
     update(dt, keys, mouse, world, sensitivity = 0.002) {
@@ -312,7 +314,21 @@ export class Player {
             }
         }
 
+        // Track falling height
+        if (flying || this.isCreative || inWater || inLava || onLadder) {
+            this.fallStartY = this.position.y;
+            this.fallDistance = 0;
+        } else if (!this.grounded) {
+            if (this.velocity.y > 0) {
+                this.fallStartY = this.position.y;
+                this.fallDistance = 0;
+            } else if (this.velocity.y < 0) {
+                this.fallDistance = Math.max(this.fallDistance, this.fallStartY - this.position.y);
+            }
+        }
+
         // Collision
+        const wasGrounded = this.grounded;
         const velStep = this.velocity.clone().multiplyScalar(dt);
         const colResult = world.collide(this.position, velStep, this.width, this.height, keys.crouch && this.grounded);
         
@@ -324,6 +340,26 @@ export class Player {
         if (colResult.velocity.x === 0) this.velocity.x = 0;
         if (colResult.velocity.z === 0) this.velocity.z = 0;
         if (colResult.velocity.y === 0) this.velocity.y = 0;
+
+        if (!wasGrounded && this.grounded) {
+            // Player just touched down
+            if (!this.isCreative && !flying && !inWater && !inLava && !onLadder) {
+                const dist = this.fallDistance;
+                if (dist > 15) {
+                    // Fall damage: only when falling from > 15 blocks. Kill height is 70 blocks.
+                    // 15 blocks = 0 dmg, 70 blocks = 100 dmg (lethal, kill height)
+                    const dmg = ((dist - 15) / (70 - 15)) * this.maxHealth;
+                    this.takeDamage(dmg);
+                    const d = document.getElementById('damage-flash');
+                    if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                    if (window.game && window.game.audio && window.game.audio.playHit) {
+                        window.game.audio.playHit(this.position);
+                    }
+                }
+            }
+            this.fallStartY = this.position.y;
+            this.fallDistance = 0;
+        }
 
         // Anti-stuck / spawn safety: if player is embedded inside solid blocks, nudge upward to open air
         if (world && !flying) {

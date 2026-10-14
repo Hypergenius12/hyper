@@ -33,7 +33,7 @@ export const BIOMES = {
 };
 
 export function generateAetherChunk(cx, cz, params) {
-    const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
+    const blocks = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
     const rng = seededRandom(params.seed + cx * 314159 + cz);
 
     for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -882,7 +882,7 @@ function generateAncientPyramid(blocks, baseX, baseY, baseZ, rng) {
 }
 // Generate the chunk terrain via Multi-Pass Feature Placement Pipeline
 export function generateChunkTerrain(cx, cz, params) {
-    const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
+    const blocks = new Uint16Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
     const data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
     blocks.data = data;
 
@@ -2876,7 +2876,7 @@ function carveGlobalNetherStructures(blocks, cx, cz, params) {
 }
 
 export function generateNetherChunk(cx, cz, params) {
-    const blocks = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
+    const blocks = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
     const rng = seededRandom(params.seed + cx * 314159 + cz);
 
     const seaLevel = 32;

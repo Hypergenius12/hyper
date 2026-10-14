@@ -123,6 +123,18 @@ export class BiomeMap {
         window.addEventListener('resize', () => {
             if (this.isOpen) this.resizeCanvas();
         });
+
+        // Keydown controls while map is open
+        window.addEventListener('keydown', (e) => {
+            if (!this.isOpen) return;
+            if (e.code === 'KeyC') {
+                if (this.game.player) {
+                    this.offsetX = this.game.player.position.x;
+                    this.offsetZ = this.game.player.position.z;
+                    this.draw();
+                }
+            }
+        });
     }
 
     resizeCanvas() {
@@ -170,30 +182,35 @@ export class BiomeMap {
         return this.game.planetParams;
     }
 
-    getMapBiome(worldX, worldZ) {
+    getMapBiomeInfo(worldX, worldZ) {
         const params = this.getGenerationParams();
-        if (!params) return 'Unknown';
+        if (!params) return { name: 'Unknown', surfaceY: 64 };
         
         const dim = this.game.currentDimension || 'overworld';
         
         if (dim === 'nether') {
             const bNoise = params.tempNoise(worldX * 0.003, worldZ * 0.003);
-            if (bNoise < -0.35) return 'Basalt Deltas';
-            if (bNoise < -0.05) return 'Soul Sand Valley';
-            if (bNoise < 0.25) return 'Warped Forest';
-            if (bNoise < 0.55) return 'Crimson Forest';
-            return 'Nether Wastes';
+            if (bNoise < -0.35) return { name: 'Basalt Deltas', surfaceY: 32 };
+            if (bNoise < -0.05) return { name: 'Soul Sand Valley', surfaceY: 32 };
+            if (bNoise < 0.25) return { name: 'Warped Forest', surfaceY: 48 };
+            if (bNoise < 0.55) return { name: 'Crimson Forest', surfaceY: 48 };
+            return { name: 'Nether Wastes', surfaceY: 32 };
         } 
         if (dim === 'aether') {
-            return 'Aether Islands';
+            return { name: 'Aether Islands', surfaceY: 96 };
         }
         
         // Overworld
         const colInfo = getColumnInfo(worldX, worldZ, params);
+        let name = colInfo.biome ? colInfo.biome.name : 'Plains';
         if (colInfo.bData && colInfo.bData.lakeSurfaceY > 0 && colInfo.surfaceY <= colInfo.bData.lakeSurfaceY) {
-            return 'Lake';
+            name = 'Lake';
         }
-        return colInfo.biome.name;
+        return { name, surfaceY: colInfo.surfaceY };
+    }
+
+    getMapBiome(worldX, worldZ) {
+        return this.getMapBiomeInfo(worldX, worldZ).name;
     }
 
     updateTooltip(e) {
@@ -206,12 +223,12 @@ export class BiomeMap {
         const worldX = Math.floor(this.offsetX + (mouseX - this.canvas.width / 2) / this.zoom);
         const worldZ = Math.floor(this.offsetZ + (mouseZ - this.canvas.height / 2) / this.zoom);
         
-        const biomeName = this.getMapBiome(worldX, worldZ);
+        const info = this.getMapBiomeInfo(worldX, worldZ);
         
-        this.tooltip.style.left = (e.clientX + 10) + 'px';
-        this.tooltip.style.top = (e.clientY + 10) + 'px';
+        this.tooltip.style.left = (e.clientX + 12) + 'px';
+        this.tooltip.style.top = (e.clientY + 12) + 'px';
         this.tooltip.style.display = 'block';
-        this.tooltip.innerText = `${biomeName}`;
+        this.tooltip.innerText = `${info.name} (Y: ${Math.round(info.surfaceY)})`;
 
         const coordsEl = document.getElementById('biome-map-coords');
         if (coordsEl) {
@@ -230,63 +247,76 @@ export class BiomeMap {
         
         // Define rendering resolution (pixels per sample to improve performance)
         const sampleSize = Math.max(1, Math.floor(4 / this.zoom)); 
+        const isOverworld = (this.game.currentDimension || 'overworld') === 'overworld';
         
         for (let x = 0; x < w; x += sampleSize) {
             for (let z = 0; z < h; z += sampleSize) {
                 const worldX = this.offsetX + (x - w / 2) / this.zoom;
                 const worldZ = this.offsetZ + (z - h / 2) / this.zoom;
                 
-                const biomeName = this.getMapBiome(worldX, worldZ);
+                const info = this.getMapBiomeInfo(worldX, worldZ);
+                const biomeName = info.name;
                 
                 // Base color based on biome name
-                let color = '#000000';
+                let r = 85, g = 85, b = 85;
                 switch (biomeName) {
-                    case 'Deep Ocean': color = '#000055'; break;
-                    case 'Ocean': color = '#0000AA'; break;
-                    case 'Lake': color = '#2277BB'; break;
-                    case 'Coral Reef': color = '#3333AA'; break;
-                    case 'Beach': color = '#E6D28A'; break;
-                    case 'Desert': color = '#D9B340'; break;
-                    case 'Oasis': color = '#33CC33'; break;
-                    case 'Badlands': color = '#D98A40'; break;
-                    case 'Savanna': color = '#A8A64B'; break;
-                    case 'Plains': color = '#6BCC47'; break;
-                    case 'Forest': color = '#2E8C19'; break;
-                    case 'Birch Forest': color = '#78b548'; break;
-                    case 'Jungle': color = '#156105'; break;
-                    case 'Swamp': color = '#38592A'; break;
-                    case 'Dark Forest': color = '#1C3312'; break;
-                    case 'Cherry Grove': color = '#FFB7C5'; break;
-                    case 'Tundra': color = '#FFFFFF'; break;
-                    case 'Taiga': color = '#2d5a27'; break;
-                    case 'Ice Spikes': color = '#B3E6FF'; break;
-                    case 'Mountains': color = '#A0A0A0'; break;
-                    case 'Volcanic': color = '#331111'; break;
-                    case 'Mystic Grove': color = '#d8b4e2'; break;
-                    case 'Redwood Forest': color = '#78350f'; break;
-                    case 'Mushroom': color = '#FF66FF'; break;
+                    case 'Deep Ocean': r = 0; g = 0; b = 85; break;
+                    case 'Ocean': r = 0; g = 30; b = 170; break;
+                    case 'Lake': r = 34; g = 119; b = 187; break;
+                    case 'Coral Reef': r = 40; g = 80; b = 190; break;
+                    case 'Beach': r = 230; g = 210; b = 138; break;
+                    case 'Desert': r = 217; g = 179; b = 64; break;
+                    case 'Oasis': r = 51; g = 204; b = 51; break;
+                    case 'Badlands': r = 217; g = 138; b = 64; break;
+                    case 'Savanna': r = 168; g = 166; b = 75; break;
+                    case 'Plains': r = 107; g = 204; b = 71; break;
+                    case 'Forest': r = 46; g = 140; b = 25; break;
+                    case 'Birch Forest': r = 120; g = 181; b = 72; break;
+                    case 'Jungle': r = 21; g = 97; b = 5; break;
+                    case 'Swamp': r = 56; g = 89; b = 42; break;
+                    case 'Dark Forest': r = 28; g = 51; b = 18; break;
+                    case 'Cherry Grove': r = 255; g = 183; b = 197; break;
+                    case 'Tundra': r = 240; g = 245; b = 255; break;
+                    case 'Taiga': r = 45; g = 90; b = 39; break;
+                    case 'Ice Spikes': r = 179; g = 230; b = 255; break;
+                    case 'Mountains': r = 160; g = 160; b = 160; break;
+                    case 'Volcanic': r = 51; g = 17; b = 17; break;
+                    case 'Mystic Grove': r = 216; g = 180; b = 226; break;
+                    case 'Redwood Forest': r = 120; g = 53; b = 15; break;
+                    case 'Mushroom': r = 255; g = 102; b = 255; break;
                     // Nether
-                    case 'Nether Wastes': color = '#5c1717'; break;
-                    case 'Crimson Forest': color = '#8a0a1a'; break;
-                    case 'Warped Forest': color = '#0d9488'; break;
-                    case 'Soul Sand Valley': color = '#4e3f36'; break;
-                    case 'Basalt Deltas': color = '#27272a'; break;
+                    case 'Nether Wastes': r = 92; g = 23; b = 23; break;
+                    case 'Crimson Forest': r = 138; g = 10; b = 26; break;
+                    case 'Warped Forest': r = 13; g = 148; b = 136; break;
+                    case 'Soul Sand Valley': r = 78; g = 63; b = 54; break;
+                    case 'Basalt Deltas': r = 39; g = 39; b = 42; break;
                     // Aether
-                    case 'Aether Islands': color = '#FFFFEE'; break;
-                    
-                    default: color = '#555555'; break;
+                    case 'Aether Islands': r = 255; g = 255; b = 238; break;
+                    default: r = 85; g = 85; b = 85; break;
                 }
                 
-                this.ctx.fillStyle = color;
+                // Topographic relief shading (highlights north slopes, shadows south slopes)
+                if (isOverworld && params) {
+                    const northY = this.getMapBiomeInfo(worldX, worldZ - 2).surfaceY;
+                    const slope = info.surfaceY - northY;
+                    let factor = 1.0;
+                    if (slope > 0) factor = 0.88; // Shadow on drop
+                    else if (slope < 0) factor = 1.12; // Sun highlight on rise
+                    r = Math.min(255, Math.floor(r * factor));
+                    g = Math.min(255, Math.floor(g * factor));
+                    b = Math.min(255, Math.floor(b * factor));
+                }
+
+                this.ctx.fillStyle = `rgb(${r},${g},${b})`;
                 this.ctx.fillRect(x, z, sampleSize, sampleSize);
             }
         }
         
-        // Draw structure markers (houses & nether portals)
+        // Draw structure markers
         if (this.game.currentDimension === 'overworld') {
             const params = this.getGenerationParams();
             if (params) {
-                const iconSize = Math.max(6, Math.min(14, this.zoom * 8));
+                const iconSize = Math.max(7, Math.min(16, this.zoom * 9));
                 const step = 16;
                 const viewLeft   = Math.floor((this.offsetX - (w/2) / this.zoom) / step) * step;
                 const viewRight  = Math.ceil((this.offsetX  + (w/2) / this.zoom) / step) * step;
@@ -298,8 +328,10 @@ export class BiomeMap {
                         const floraRng = seededRandom(params.seed + wx * 7777 + wz);
                         const r = floraRng();
                         let structType = null;
-                        if (r < 0.00008) structType = 'nether';
-                        else if (r < 0.00013) structType = 'cabin';
+                        if (r < 0.000022) structType = 'nether';
+                        else if (r < 0.000022 + 0.000075) structType = 'cabin';
+                        else if (r < 0.000022 + 0.000075 + 0.0000025) structType = 'pyramid';
+                        else if (r < 0.000022 + 0.000075 + 0.0000025 + 0.0000008) structType = 'tower';
                         if (!structType) continue;
 
                         const sx = w / 2 + (wx - this.offsetX) * this.zoom;
@@ -312,11 +344,11 @@ export class BiomeMap {
                         this.ctx.strokeStyle = '#fff';
 
                         if (structType === 'nether') {
-                            this.ctx.fillStyle = 'rgba(130,0,220,0.9)';
+                            this.ctx.fillStyle = 'rgba(145,0,240,0.95)';
                             this.ctx.fillRect(sx - half * 0.6, sz - half, half * 1.2, iconSize);
                             this.ctx.strokeRect(sx - half * 0.6, sz - half, half * 1.2, iconSize);
-                        } else {
-                            this.ctx.fillStyle = 'rgba(180,120,60,0.9)';
+                        } else if (structType === 'cabin') {
+                            this.ctx.fillStyle = 'rgba(180,120,60,0.95)';
                             this.ctx.fillRect(sx - half * 0.8, sz, half * 1.6, half);
                             this.ctx.strokeRect(sx - half * 0.8, sz, half * 1.6, half);
                             this.ctx.beginPath();
@@ -324,49 +356,55 @@ export class BiomeMap {
                             this.ctx.lineTo(sx, sz - half);
                             this.ctx.lineTo(sx + half, sz);
                             this.ctx.closePath();
-                            this.ctx.fillStyle = 'rgba(200,80,50,0.95)';
+                            this.ctx.fillStyle = 'rgba(215,85,50,0.95)';
                             this.ctx.fill();
                             this.ctx.stroke();
+                        } else if (structType === 'pyramid') {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(sx, sz - half);
+                            this.ctx.lineTo(sx + half, sz + half);
+                            this.ctx.lineTo(sx - half, sz + half);
+                            this.ctx.closePath();
+                            this.ctx.fillStyle = 'rgba(240,195,60,0.95)';
+                            this.ctx.fill();
+                            this.ctx.stroke();
+                        } else if (structType === 'tower') {
+                            this.ctx.fillStyle = 'rgba(40,160,240,0.95)';
+                            this.ctx.fillRect(sx - half * 0.4, sz - half, half * 0.8, iconSize);
+                            this.ctx.strokeRect(sx - half * 0.4, sz - half, half * 0.8, iconSize);
                         }
                         this.ctx.restore();
                     }
                 }
 
-                if (this.zoom >= 0.4) {
+                // Legend at bottom left
+                if (this.zoom >= 0.35) {
                     this.ctx.save();
-                    const lx = 12, ly = h - 50;
-                    this.ctx.fillStyle = 'rgba(0,0,0,0.6)';
-                    this.ctx.fillRect(lx - 4, ly - 14, 130, 44);
-                    this.ctx.fillStyle = 'rgba(200,80,50,0.95)';
-                    this.ctx.fillRect(lx, ly, 10, 10);
-                    this.ctx.fillStyle = '#fff';
-                    this.ctx.font = '11px sans-serif';
-                    this.ctx.textAlign = 'left';
-                    this.ctx.fillText('House', lx + 14, ly + 9);
-                    this.ctx.fillStyle = 'rgba(130,0,220,0.9)';
-                    this.ctx.fillRect(lx, ly + 16, 10, 10);
-                    this.ctx.fillStyle = '#fff';
-                    this.ctx.fillText('Nether Portal', lx + 14, ly + 25);
+                    const lx = 14, ly = h - 85;
+                    this.ctx.fillStyle = 'rgba(15,20,25,0.75)';
+                    this.ctx.fillRect(lx - 4, ly - 14, 140, 85);
+                    this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(lx - 4, ly - 14, 140, 85);
+
+                    const items = [
+                        { name: 'House / Cabin', color: 'rgba(215,85,50,0.95)' },
+                        { name: 'Nether Portal', color: 'rgba(145,0,240,0.95)' },
+                        { name: 'Desert Pyramid', color: 'rgba(240,195,60,0.95)' },
+                        { name: 'Wizard Tower', color: 'rgba(40,160,240,0.95)' }
+                    ];
+                    items.forEach((item, idx) => {
+                        const iy = ly + idx * 18;
+                        this.ctx.fillStyle = item.color;
+                        this.ctx.fillRect(lx, iy, 10, 10);
+                        this.ctx.fillStyle = '#fff';
+                        this.ctx.font = '11px sans-serif';
+                        this.ctx.textAlign = 'left';
+                        this.ctx.fillText(item.name, lx + 16, iy + 9);
+                    });
                     this.ctx.restore();
                 }
             }
-        }
-        
-        // Draw player indicator
-        if (this.game.player) {
-            const px = this.game.player.position.x;
-            const pz = this.game.player.position.z;
-            
-            const screenX = w / 2 + (px - this.offsetX) * this.zoom;
-            const screenY = h / 2 + (pz - this.offsetZ) * this.zoom;
-            
-            this.ctx.fillStyle = 'red';
-            this.ctx.beginPath();
-            this.ctx.arc(screenX, screenY, 5, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.strokeStyle = 'white';
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
         }
         
         // Draw waypoints
@@ -376,20 +414,105 @@ export class BiomeMap {
                 const screenX = w / 2 + (wp.x - this.offsetX) * this.zoom;
                 const screenY = h / 2 + (wp.z - this.offsetZ) * this.zoom;
                 
-                this.ctx.fillStyle = '#00FF00';
+                this.ctx.fillStyle = '#00FF66';
                 this.ctx.beginPath();
                 this.ctx.moveTo(screenX, screenY);
-                this.ctx.lineTo(screenX - 5, screenY - 10);
-                this.ctx.lineTo(screenX + 5, screenY - 10);
+                this.ctx.lineTo(screenX - 6, screenY - 12);
+                this.ctx.lineTo(screenX + 6, screenY - 12);
                 this.ctx.fill();
                 
                 this.ctx.beginPath();
-                this.ctx.arc(screenX, screenY - 10, 5, 0, Math.PI * 2);
+                this.ctx.arc(screenX, screenY - 12, 6, 0, Math.PI * 2);
                 this.ctx.fill();
-                this.ctx.strokeStyle = 'black';
-                this.ctx.lineWidth = 1;
+                this.ctx.strokeStyle = '#000000';
+                this.ctx.lineWidth = 1.5;
                 this.ctx.stroke();
             }
         }
+
+        // Draw Player Directional Arrow (Minecraft Map style)
+        if (this.game.player) {
+            const px = this.game.player.position.x;
+            const pz = this.game.player.position.z;
+            const py = this.game.player.position.y;
+            
+            const screenX = w / 2 + (px - this.offsetX) * this.zoom;
+            const screenY = h / 2 + (pz - this.offsetZ) * this.zoom;
+            
+            this.ctx.save();
+            this.ctx.translate(screenX, screenY);
+
+            // Pulsing radar wave
+            const pulse = (Date.now() % 1500) / 1500;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, 7 + pulse * 14, 0, Math.PI * 2);
+            this.ctx.strokeStyle = `rgba(230, 40, 40, ${0.7 * (1 - pulse)})`;
+            this.ctx.lineWidth = 1.5;
+            this.ctx.stroke();
+
+            // Rotated directional chevron
+            const yaw = this.game.player.rotation ? this.game.player.rotation.yaw : 0;
+            this.ctx.rotate(-yaw);
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, -10);
+            this.ctx.lineTo(7, 8);
+            this.ctx.lineTo(0, 4);
+            this.ctx.lineTo(-7, 8);
+            this.ctx.closePath();
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#e53935';
+            this.ctx.lineWidth = 2.5;
+            this.ctx.stroke();
+
+            this.ctx.restore();
+
+            // Live HUD Card in top-left
+            this.ctx.save();
+            const cardX = 14, cardY = 14;
+            const curBiome = this.getMapBiome(px, pz);
+            const dimName = (this.game.currentDimension || 'overworld').toUpperCase();
+            this.ctx.fillStyle = 'rgba(15,20,25,0.85)';
+            this.ctx.fillRect(cardX, cardY, 230, 68);
+            this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(cardX, cardY, 230, 68);
+
+            this.ctx.fillStyle = '#4ade80';
+            this.ctx.font = 'bold 12px sans-serif';
+            this.ctx.fillText(`XYZ: ${Math.round(px)}, ${Math.round(py)}, ${Math.round(pz)}`, cardX + 10, cardY + 18);
+
+            this.ctx.fillStyle = '#e2e8f0';
+            this.ctx.font = '11px sans-serif';
+            this.ctx.fillText(`Biome: ${curBiome}  [${dimName}]`, cardX + 10, cardY + 36);
+
+            this.ctx.fillStyle = '#94a3b8';
+            this.ctx.font = '10px sans-serif';
+            this.ctx.fillText(`[C] Center  •  [R-Click] Waypoint  •  ${Math.round(this.zoom * 100)}%`, cardX + 10, cardY + 54);
+            this.ctx.restore();
+
+            // Compass Rose in top-right
+            this.ctx.save();
+            const crX = w - 35, crY = 35;
+            this.ctx.fillStyle = 'rgba(15,20,25,0.7)';
+            this.ctx.beginPath();
+            this.ctx.arc(crX, crY, 20, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            this.ctx.stroke();
+
+            this.ctx.font = 'bold 11px sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillStyle = '#ef4444';
+            this.ctx.fillText('N', crX, crY - 11);
+            this.ctx.fillStyle = '#94a3b8';
+            this.ctx.fillText('S', crX, crY + 11);
+            this.ctx.fillText('E', crX + 11, crY);
+            this.ctx.fillText('W', crX - 11, crY);
+            this.ctx.restore();
+        }
     }
+}
 }

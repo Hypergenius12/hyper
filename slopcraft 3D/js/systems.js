@@ -2629,6 +2629,26 @@ class UISystem {
             { name: "Mangrove Planks (4)", desc: "Warm reddish planks.", grid: [[_,_,_],[_,blk(B.MANGROVE_LOG),_],[_,_,_]], out: blk(B.MANGROVE_PLANKS), outCount: 4, needs3x3: false },
             { name: "Dark Oak Planks (4)", desc: "Deep rich planks.", grid: [[_,_,_],[_,blk(B.DARK_OAK_WOOD),_],[_,_,_]], out: blk(B.DARK_OAK_PLANKS), outCount: 4, needs3x3: false },
 
+            // Slabs
+            { name: "Oak Slab (6)", desc: "Half wooden block.", grid: [[_,_,_],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[_,_,_]], out: blk(B.OAK_SLAB), outCount: 6, needs3x3: true },
+            { name: "Cobblestone Slab (6)", desc: "Half stone block.", grid: [[_,_,_],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[_,_,_]], out: blk(B.COBBLESTONE_SLAB), outCount: 6, needs3x3: true },
+            { name: "Stone Slab (6)", desc: "Smooth stone slab.", grid: [[_,_,_],[blk(B.STONE),blk(B.STONE),blk(B.STONE)],[_,_,_]], out: blk(B.STONE_SLAB), outCount: 6, needs3x3: true },
+            { name: "Birch Slab (6)", desc: "Half birch block.", grid: [[_,_,_],[blk(B.BIRCH_PLANKS),blk(B.BIRCH_PLANKS),blk(B.BIRCH_PLANKS)],[_,_,_]], out: blk(B.BIRCH_SLAB), outCount: 6, needs3x3: true },
+
+            // Stairs
+            { name: "Oak Stairs (4)", desc: "Ascending wooden steps.", grid: [[blk(B.PLANKS),_,_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.OAK_STAIRS), outCount: 4, needs3x3: true },
+            { name: "Cobblestone Stairs (4)", desc: "Ascending stone steps.", grid: [[blk(B.COBBLESTONE),_,_],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),_],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)]], out: blk(B.COBBLESTONE_STAIRS), outCount: 4, needs3x3: true },
+            { name: "Stone Stairs (4)", desc: "Ascending smooth stone steps.", grid: [[blk(B.STONE),_,_],[blk(B.STONE),blk(B.STONE),_],[blk(B.STONE),blk(B.STONE),blk(B.STONE)]], out: blk(B.STONE_STAIRS), outCount: 4, needs3x3: true },
+            { name: "Birch Stairs (4)", desc: "Ascending birch steps.", grid: [[blk(B.BIRCH_PLANKS),_,_],[blk(B.BIRCH_PLANKS),blk(B.BIRCH_PLANKS),_],[blk(B.BIRCH_PLANKS),blk(B.BIRCH_PLANKS),blk(B.BIRCH_PLANKS)]], out: blk(B.BIRCH_STAIRS), outCount: 4, needs3x3: true },
+
+            // Fences
+            { name: "Oak Fence (3)", desc: "Connecting wooden barrier.", grid: [[_,_,_],[blk(B.PLANKS),mat('stick'),blk(B.PLANKS)],[blk(B.PLANKS),mat('stick'),blk(B.PLANKS)]], out: blk(B.OAK_FENCE), outCount: 3, needs3x3: true },
+            { name: "Birch Fence (3)", desc: "Connecting birch barrier.", grid: [[_,_,_],[blk(B.BIRCH_PLANKS),mat('stick'),blk(B.BIRCH_PLANKS)],[blk(B.BIRCH_PLANKS),mat('stick'),blk(B.BIRCH_PLANKS)]], out: blk(B.BIRCH_FENCE), outCount: 3, needs3x3: true },
+
+            // Walls
+            { name: "Cobblestone Wall (6)", desc: "Connecting cobblestone barrier.", grid: [[_,_,_],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)]], out: blk(B.COBBLESTONE_WALL), outCount: 6, needs3x3: true },
+            { name: "Stone Brick Wall (6)", desc: "Connecting stone brick barrier.", grid: [[_,_,_],[blk(B.STONE_BRICKS),blk(B.STONE_BRICKS),blk(B.STONE_BRICKS)],[blk(B.STONE_BRICKS),blk(B.STONE_BRICKS),blk(B.STONE_BRICKS)]], out: blk(B.STONE_BRICK_WALL), outCount: 6, needs3x3: true },
+
             { name: "Fletching Table", desc: "Decorative workstation.", grid: [[mat('flint'),mat('flint'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.FLETCHING_TABLE), outCount: 1, needs3x3: true },
             { name: "Smoker", desc: "Rapidly cooks food.", grid: [[_,blk(B.WOOD),_],[blk(B.WOOD),blk(B.FURNACE),blk(B.WOOD)],[_,blk(B.WOOD),_]], out: blk(B.SMOKER), outCount: 1, needs3x3: true },
             { name: "Stonecutter", desc: "Precision masonry tool.", grid: [[_,mat('iron_ingot'),_],[blk(B.STONE),blk(B.STONE),blk(B.STONE)],[_,_,_]], out: blk(B.STONECUTTER), outCount: 1, needs3x3: true },

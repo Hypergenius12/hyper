@@ -555,7 +555,18 @@ class Game {
         const texLoader = new THREE.TextureLoader();
         this.destroyTextures = [];
         for (let i = 0; i <= 9; i++) {
-            const dt = texLoader.load(`assets/mc/block/destroy_stage_${i}.png`);
+            const dt = texLoader.load(
+                `assets/mc/block/destroy_stage_${i}.png`,
+                undefined,
+                undefined,
+                () => {
+                    texLoader.load(`https://assets.mcasset.cloud/1.21.4/assets/minecraft/textures/block/destroy_stage_${i}.png`, (cdnTex) => {
+                        cdnTex.magFilter = THREE.NearestFilter;
+                        cdnTex.minFilter = THREE.NearestFilter;
+                        this.destroyTextures[i] = cdnTex;
+                    });
+                }
+            );
             dt.magFilter = THREE.NearestFilter;
             dt.minFilter = THREE.NearestFilter;
             dt.generateMipmaps = false;
@@ -564,11 +575,11 @@ class Game {
 
         const overlayGeo = new THREE.BoxGeometry(1.004, 1.004, 1.004);
         const overlayMat = new THREE.MeshBasicMaterial({
-            color: 0x000000,
+            color: 0xffffff,
             map: this.destroyTextures[0],
             transparent: true,
-            opacity: 0.85,
-            alphaTest: 0.1,
+            opacity: 0.95,
+            alphaTest: 0.05,
             depthWrite: false,
             polygonOffset: true,
             polygonOffsetFactor: -1,
@@ -1352,7 +1363,7 @@ class Game {
                 this.miningOverlay.position.set(hit.blockPos.x + 0.5, hit.blockPos.y + (isSmall ? 0.2 : 0.5), hit.blockPos.z + 0.5);
                 if (this.destroyTextures && this.destroyTextures[stage] && this.miningOverlay.material.map !== this.destroyTextures[stage]) {
                     this.miningOverlay.material.map = this.destroyTextures[stage];
-                    this.miningOverlay.material.color.setHex(0x000000);
+                    this.miningOverlay.material.color.setHex(0xffffff);
                     this.miningOverlay.material.needsUpdate = true;
                 }
 
@@ -1696,12 +1707,42 @@ class Game {
                 const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
                 const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
                 // Prevent placing blocks inside the player's AABB (0.6 wide × 1.8 tall)
+                const placeProps = getBlockProperties(slot.item.subtype);
+                const isWaterPlant = placeProps.isWaterlogged || [
+                    BLOCKS.SEAGRASS, BLOCKS.KELP, BLOCKS.KELP_PLANT, BLOCKS.RED_KELP, BLOCKS.BROWN_KELP,
+                    BLOCKS.TUBE_CORAL, BLOCKS.BRAIN_CORAL, BLOCKS.BUBBLE_CORAL, BLOCKS.FIRE_CORAL, BLOCKS.HORN_CORAL,
+                    BLOCKS.SEASHELL_1, BLOCKS.SEASHELL_2, BLOCKS.SEASHELL_3, BLOCKS.ALGAE
+                ].includes(slot.item.subtype);
+
+                if (isWaterPlant) {
+                    // Water plants can ONLY be placed inside water! Never on dry land / air
+                    if (curBlock !== BLOCKS.WATER && curBlock !== BLOCKS.SWAMP_WATER) {
+                        this.input.mouse.rightClick = false;
+                        return;
+                    }
+                    const belowType = this.world.getBlock(placePos.x, placePos.y - 1, placePos.z);
+                    const belowP = getBlockProperties(belowType);
+                    const kelpAllowed = (slot.item.subtype === BLOCKS.KELP && (belowType === BLOCKS.KELP || belowType === BLOCKS.KELP_PLANT));
+                    if (!belowP.solid && !kelpAllowed) {
+                        this.input.mouse.rightClick = false;
+                        return;
+                    }
+                }
+
+                if (slot.item.subtype === BLOCKS.LILY_PAD) {
+                    // Lily pad must be placed on top of water
+                    const belowType = this.world.getBlock(placePos.x, placePos.y - 1, placePos.z);
+                    if ((belowType !== BLOCKS.WATER && belowType !== BLOCKS.SWAMP_WATER) || curBlock !== BLOCKS.AIR) {
+                        this.input.mouse.rightClick = false;
+                        return;
+                    }
                 const _pp = this.player.position;
                 const _playerOverlap = (
                     _pp.x - 0.3 < placePos.x + 1 && _pp.x + 0.3 > placePos.x &&
                     _pp.y       < placePos.y + 1 && _pp.y + 1.8  > placePos.y &&
                     _pp.z - 0.3 < placePos.z + 1 && _pp.z + 0.3  > placePos.z
                 );
+
                 if (!_playerOverlap && (curBlock === BLOCKS.AIR || curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER || curBlock === BLOCKS.LAVA)) {
                     if (slot.item.subtype === BLOCKS.DUNGEON_DOOR) {
                         const curBlockTop = this.world.getBlock(placePos.x, placePos.y + 1, placePos.z);
