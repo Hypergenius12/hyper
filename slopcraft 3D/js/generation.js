@@ -1470,17 +1470,26 @@ export function generateChunkTerrain(cx, cz, params) {
                     const cRng = floraRng();
                     if (cRng < 0.1) {
                         const kHeight = 2 + Math.floor(floraRng() * 6);
-                        const kTypeRng = floraRng();
-                        const kelpType = kTypeRng < 0.33 ? BLOCKS.RED_KELP : (kTypeRng < 0.66 ? BLOCKS.BROWN_KELP : BLOCKS.KELP);
+                        let maxHeight = 0;
                         for (let i = 1; i <= kHeight; i++) {
                             const y = surfaceY + i;
                             if (y < params.seaLevel - 1) {
                                 const aboveIdx = (y * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
                                 const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && y < CHUNK_HEIGHT) ? blocks[aboveIdx] : BLOCKS.WATER;
                                 if (aboveBlock === BLOCKS.WATER) {
-                                    safeSetBlock(blocks, tx, y, tz, kelpType, false);
+                                    maxHeight = i;
+                                } else {
+                                    break;
                                 }
+                            } else {
+                                break;
                             }
+                        }
+                        for (let i = 1; i <= maxHeight; i++) {
+                            const y = surfaceY + i;
+                            // Use kelp_plant for middle and bottom kelps, kelp on top
+                            const kelpBlock = (i === maxHeight) ? BLOCKS.KELP : BLOCKS.KELP_PLANT;
+                            safeSetBlock(blocks, tx, y, tz, kelpBlock, false);
                         }
                     } else {
                         const y = surfaceY + 1;

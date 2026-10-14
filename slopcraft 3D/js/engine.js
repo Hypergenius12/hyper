@@ -1181,10 +1181,28 @@ export class World {
             }
             if (!hasSupport) needsBreak = true;
         }
+        else if (type === window.BLOCKS.KELP || type === window.BLOCKS.KELP_PLANT) {
+            const validSupports = [
+                window.BLOCKS.KELP,
+                window.BLOCKS.KELP_PLANT,
+                window.BLOCKS.SAND,
+                window.BLOCKS.RED_SAND,
+                window.BLOCKS.GRAVEL,
+                window.BLOCKS.DIRT,
+                window.BLOCKS.STONE,
+                window.BLOCKS.CLAY,
+                window.BLOCKS.MUD
+            ];
+            if (!validSupports.includes(blockBelow)) {
+                needsBreak = true;
+            }
+        }
 
         if (needsBreak) {
-            // Break the block and spawn item (setBlock triggers onBlockDestroyed which spawns the item)
-            this.setBlock(x, y, z, window.BLOCKS.AIR);
+            const props = getBlockProperties(type);
+            const replacement = (props && props.isWaterlogged) ? window.BLOCKS.WATER : window.BLOCKS.AIR;
+            this.setBlock(x, y, z, replacement);
+            this.checkAdjacentSupports(x, y, z);
         }
     }
 
@@ -1648,6 +1666,26 @@ export class World {
                         }
                         if (height < 3 && Math.random() < 0.2) { // Grow!
                             this.setBlock(wx, wy + 1, wz, window.BLOCKS.SUGARCANE);
+                        }
+                    }
+                } else if (block === window.BLOCKS.KELP) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    // Kelp grows upward underwater
+                    const blockAbove = (wy < CHUNK_HEIGHT - 1) ? this.getBlock(wx, wy + 1, wz) : window.BLOCKS.AIR;
+                    const blockAbove2 = (wy < CHUNK_HEIGHT - 2) ? this.getBlock(wx, wy + 2, wz) : window.BLOCKS.AIR;
+                    if (blockAbove === window.BLOCKS.WATER && blockAbove2 === window.BLOCKS.WATER) {
+                        let height = 1;
+                        let checkY = wy - 1;
+                        while (checkY > 0 && (this.getBlock(wx, checkY, wz) === window.BLOCKS.KELP_PLANT || this.getBlock(wx, checkY, wz) === window.BLOCKS.KELP)) {
+                            height++;
+                            checkY--;
+                        }
+                        if (height < 15 && Math.random() < 0.15) {
+                            // Turn current kelp top into kelp_plant, new block above becomes kelp!
+                            this.setBlock(wx, wy, wz, window.BLOCKS.KELP_PLANT);
+                            this.setBlock(wx, wy + 1, wz, window.BLOCKS.KELP);
                         }
                     }
                 } else if (block === window.BLOCKS.FIRE || block === window.BLOCKS.SOUL_FIRE) {

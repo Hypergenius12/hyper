@@ -219,7 +219,8 @@ export const BLOCKS = {
     POINTED_DRIPSTONE_UP: 244,
     BIRCH_WOOD: 245,
     BIRCH_LEAVES: 246,
-    BIRCH_PLANKS: 247
+    BIRCH_PLANKS: 247,
+    KELP_PLANT: 248
 };
 
 // Block properties
@@ -356,7 +357,8 @@ const BLOCK_PROPS = {
     [BLOCKS.CRIMSON_LEAVES]:{ name: 'Crimson Leaves', health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.NETHER_WART_BLOCK]: { name: 'Nether Wart Block', health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.SEAGRASS]:      { name: 'Seagrass',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
-    [BLOCKS.KELP]:          { name: 'Green Kelp',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
+    [BLOCKS.KELP]:          { name: 'Kelp',           health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: BLOCKS.KELP },
+    [BLOCKS.KELP_PLANT]:    { name: 'Kelp Plant',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: BLOCKS.KELP },
     [BLOCKS.RED_KELP]:        { name: 'Red Kelp',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.BROWN_KELP]:      { name: 'Brown Kelp',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.TUBE_CORAL]:    { name: 'Tube Coral',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
@@ -1745,6 +1747,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         case BLOCKS.SEAGRASS:
         case BLOCKS.KELP:
+        case BLOCKS.KELP_PLANT:
         case BLOCKS.RED_KELP:
         case BLOCKS.BROWN_KELP:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
@@ -3047,6 +3050,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.HIGHLANDS_PORTAL]: 'emerald_block',
     [BLOCKS.SEAGRASS]: 'seagrass',
     [BLOCKS.KELP]: 'kelp',
+    [BLOCKS.KELP_PLANT]: 'kelp_plant',
     [BLOCKS.BUBBLE_CORAL]: 'bubble_coral',
     [BLOCKS.SEASHELL_1]: 'bone_block_top',
     [BLOCKS.SEASHELL_2]: 'item/nautilus_shell',

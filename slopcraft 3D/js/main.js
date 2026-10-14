@@ -1358,8 +1358,10 @@ class Game {
 
                 if (this.breakTimer >= breakTime) {
                     const blockType = this.world.getBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    const props = getBlockProperties(blockType);
+                    const replaceType = (props && props.isWaterlogged) ? BLOCKS.WATER : BLOCKS.AIR;
                     // The setBlock call will trigger onBlockDestroyed which spawns the item
-                    this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
+                    this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, replaceType);
                     
                     if (blockType === BLOCKS.TORCH || blockType === BLOCKS.GLOWSTONE) this.torchSystem.removeTorch(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                     if (blockType === BLOCKS.TALL_FERN) {
@@ -1370,6 +1372,8 @@ class Game {
                         if (this.world.getBlock(hit.blockPos.x, hit.blockPos.y - 1, hit.blockPos.z) === BLOCKS.TALL_FERN) {
                             this.world.setBlock(hit.blockPos.x, hit.blockPos.y - 1, hit.blockPos.z, BLOCKS.AIR);
                         }
+                    } else if (blockType === BLOCKS.KELP || blockType === BLOCKS.KELP_PLANT) {
+                        this.world.checkAdjacentSupports(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                     }
                     
                     this.audio.playBreak(blockType);
@@ -1752,6 +1756,13 @@ class Game {
                                 blockData = forward.x > 0 ? 1 : 3; // looking East -> faces West; looking West -> faces East
                             } else {
                                 blockData = forward.z > 0 ? 2 : 0; // looking South -> faces North; looking North -> faces South
+                            }
+                        }
+
+                        if (slot.item.subtype === BLOCKS.KELP) {
+                            const belowBlock = this.world.getBlock(placePos.x, placePos.y - 1, placePos.z);
+                            if (belowBlock === BLOCKS.KELP) {
+                                this.world.setBlock(placePos.x, placePos.y - 1, placePos.z, BLOCKS.KELP_PLANT);
                             }
                         }
 

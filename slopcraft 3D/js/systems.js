@@ -736,8 +736,8 @@ class UISystem {
         const blockDefs = (typeof BLOCKS !== 'undefined' && BLOCKS) ? BLOCKS : (window.BLOCKS_REF || window.BLOCKS);
         if (!blockDefs) return;
 
-        // Skip AIR and internal/invisible/removed blocks and top-half multi-blocks (e.g. TALL_FERN_TOP: 144)
-        const skip = new Set([0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 144, 194]);
+        // Skip AIR and internal/invisible/removed blocks and multi-part sub-blocks (e.g. TALL_FERN_TOP: 144, KELP_PLANT: 248)
+        const skip = new Set([0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 144, 194, 248]);
         const entries = Object.entries(blockDefs)
             .filter(([name, id]) => !skip.has(id) && typeof id === 'number')
             .sort((a,b) => a[1] - b[1]);
