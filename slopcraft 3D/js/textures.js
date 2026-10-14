@@ -267,11 +267,61 @@ export const BLOCKS = {
     BROWN_BED: 291,
     MAGENTA_BED: 292,
     LIGHT_GRAY_BED: 293,
-    BED_HEAD: 294
+    BED_HEAD: 294,
+
+    // Additional Wood Fences & Gates
+    SPRUCE_FENCE: 295,
+    JUNGLE_FENCE: 296,
+    ACACIA_FENCE: 297,
+    DARK_OAK_FENCE: 298,
+    MANGROVE_FENCE: 299,
+    CHERRY_FENCE: 300,
+    CRIMSON_FENCE: 301,
+    AUTUMN_FENCE: 302,
+
+    SPRUCE_FENCE_GATE: 303,
+    JUNGLE_FENCE_GATE: 304,
+    ACACIA_FENCE_GATE: 305,
+    DARK_OAK_FENCE_GATE: 306,
+    MANGROVE_FENCE_GATE: 307,
+    CHERRY_FENCE_GATE: 308,
+    CRIMSON_FENCE_GATE: 309,
+    AUTUMN_FENCE_GATE: 310,
+
+    // Additional Stone Walls
+    MOSSY_COBBLESTONE_WALL: 311,
+    STONE_WALL: 312,
+    SANDSTONE_WALL: 313,
+    BLACKSTONE_WALL: 314,
+    HOLYSTONE_WALL: 315
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.SPRUCE_FENCE]:          { name: 'Spruce Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.SPRUCE_FENCE, flammable: true, isFence: true },
+    [BLOCKS.JUNGLE_FENCE]:          { name: 'Jungle Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.JUNGLE_FENCE, flammable: true, isFence: true },
+    [BLOCKS.ACACIA_FENCE]:          { name: 'Acacia Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.ACACIA_FENCE, flammable: true, isFence: true },
+    [BLOCKS.DARK_OAK_FENCE]:        { name: 'Dark Oak Fence',        health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.DARK_OAK_FENCE, flammable: true, isFence: true },
+    [BLOCKS.MANGROVE_FENCE]:        { name: 'Mangrove Fence',        health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.MANGROVE_FENCE, flammable: true, isFence: true },
+    [BLOCKS.CHERRY_FENCE]:          { name: 'Cherry Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.CHERRY_FENCE, flammable: true, isFence: true },
+    [BLOCKS.CRIMSON_FENCE]:         { name: 'Crimson Fence',         health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.CRIMSON_FENCE, flammable: true, isFence: true },
+    [BLOCKS.AUTUMN_FENCE]:          { name: 'Autumn Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.AUTUMN_FENCE, flammable: true, isFence: true },
+
+    [BLOCKS.SPRUCE_FENCE_GATE]:     { name: 'Spruce Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.SPRUCE_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+    [BLOCKS.JUNGLE_FENCE_GATE]:     { name: 'Jungle Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.JUNGLE_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+    [BLOCKS.ACACIA_FENCE_GATE]:     { name: 'Acacia Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.ACACIA_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+    [BLOCKS.DARK_OAK_FENCE_GATE]:   { name: 'Dark Oak Fence Gate',   health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.DARK_OAK_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+    [BLOCKS.MANGROVE_FENCE_GATE]:   { name: 'Mangrove Fence Gate',   health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.MANGROVE_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+    [BLOCKS.CHERRY_FENCE_GATE]:     { name: 'Cherry Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.CHERRY_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+    [BLOCKS.CRIMSON_FENCE_GATE]:    { name: 'Crimson Fence Gate',    health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.CRIMSON_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+    [BLOCKS.AUTUMN_FENCE_GATE]:     { name: 'Autumn Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.AUTUMN_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+
+    [BLOCKS.MOSSY_COBBLESTONE_WALL]:{ name: 'Mossy Cobblestone Wall',health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.MOSSY_COBBLESTONE_WALL, isWall: true },
+    [BLOCKS.STONE_WALL]:            { name: 'Stone Wall',            health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.STONE_WALL, isWall: true },
+    [BLOCKS.SANDSTONE_WALL]:        { name: 'Sandstone Wall',        health: 5, transparent: true, emissive: 0, solid: true, drops: BLOCKS.SANDSTONE_WALL, isWall: true },
+    [BLOCKS.BLACKSTONE_WALL]:       { name: 'Blackstone Wall',       health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BLACKSTONE_WALL, isWall: true },
+    [BLOCKS.HOLYSTONE_WALL]:        { name: 'Holystone Wall',        health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.HOLYSTONE_WALL, isWall: true },
+
     [BLOCKS.RED_WOOL]:              { name: 'Red Wool',              health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.RED_WOOL, flammable: true, isWool: true },
     [BLOCKS.BLUE_WOOL]:             { name: 'Blue Wool',             health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.BLUE_WOOL, flammable: true, isWool: true },
     [BLOCKS.YELLOW_WOOL]:           { name: 'Yellow Wool',           health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.YELLOW_WOOL, flammable: true, isWool: true },
@@ -3289,10 +3339,33 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.BIRCH_STAIRS]: 'birch_planks',
     [BLOCKS.OAK_FENCE]: 'oak_planks',
     [BLOCKS.BIRCH_FENCE]: 'birch_planks',
-    [BLOCKS.COBBLESTONE_WALL]: 'cobblestone',
-    [BLOCKS.STONE_BRICK_WALL]: 'stone_bricks',
+    [BLOCKS.SPRUCE_FENCE]: 'spruce_planks',
+    [BLOCKS.JUNGLE_FENCE]: 'jungle_planks',
+    [BLOCKS.ACACIA_FENCE]: 'acacia_planks',
+    [BLOCKS.DARK_OAK_FENCE]: 'dark_oak_planks',
+    [BLOCKS.MANGROVE_FENCE]: 'mangrove_planks',
+    [BLOCKS.CHERRY_FENCE]: 'cherry_planks',
+    [BLOCKS.CRIMSON_FENCE]: 'crimson_planks',
+    [BLOCKS.AUTUMN_FENCE]: 'spruce_planks',
+
     [BLOCKS.OAK_FENCE_GATE]: 'oak_planks',
-    [BLOCKS.BIRCH_FENCE_GATE]: 'birch_planks'
+    [BLOCKS.BIRCH_FENCE_GATE]: 'birch_planks',
+    [BLOCKS.SPRUCE_FENCE_GATE]: 'spruce_planks',
+    [BLOCKS.JUNGLE_FENCE_GATE]: 'jungle_planks',
+    [BLOCKS.ACACIA_FENCE_GATE]: 'acacia_planks',
+    [BLOCKS.DARK_OAK_FENCE_GATE]: 'dark_oak_planks',
+    [BLOCKS.MANGROVE_FENCE_GATE]: 'mangrove_planks',
+    [BLOCKS.CHERRY_FENCE_GATE]: 'cherry_planks',
+    [BLOCKS.CRIMSON_FENCE_GATE]: 'crimson_planks',
+    [BLOCKS.AUTUMN_FENCE_GATE]: 'spruce_planks',
+
+    [BLOCKS.COBBLESTONE_WALL]: 'cobblestone',
+    [BLOCKS.MOSSY_COBBLESTONE_WALL]: 'mossy_cobblestone',
+    [BLOCKS.STONE_BRICK_WALL]: 'stone_bricks',
+    [BLOCKS.STONE_WALL]: 'stone',
+    [BLOCKS.SANDSTONE_WALL]: 'sandstone',
+    [BLOCKS.BLACKSTONE_WALL]: 'blackstone',
+    [BLOCKS.HOLYSTONE_WALL]: 'aether://holystone'
 };
 
 let _mcChestPromise = null;
@@ -4100,20 +4173,58 @@ export async function createTextureAtlas(useMinecraft = true) {
         const s2sCtx = side2Scaled.getContext('2d'); s2sCtx.imageSmoothingEnabled = false;
         s2sCtx.drawImage(side2, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE * SCALE, TEX_SIZE * SCALE);
 
-        if (props.isSlab) {
+        const renderIsoBox = (x0, y0, z0, x1, y1, z1) => {
+            // Top face (at height y1)
             iconCtx.save();
-            // Lower top face by half height
-            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.4);
-            iconCtx.drawImage(topScaled, 0, 0);
-
-            // Left face (half height)
-            iconCtx.setTransform(1, 0.5, 0, 1, 0, TEX_SIZE * SCALE * 0.9);
-            iconCtx.drawImage(side1Scaled, 0, TEX_SIZE * SCALE * 0.5, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.5, 0, 0, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.5);
-
-            // Right face (half height)
-            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 1.4);
-            iconCtx.drawImage(side2Scaled, 0, TEX_SIZE * SCALE * 0.5, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.5, 0, 0, TEX_SIZE * SCALE, TEX_SIZE * SCALE * 0.5);
+            iconCtx.setTransform(1, 0.5, -1, 0.5, 16 * SCALE, (16 - y1) * SCALE);
+            iconCtx.drawImage(topScaled, x0 * SCALE, z0 * SCALE, (x1 - x0) * SCALE, (z1 - z0) * SCALE, x0 * SCALE, z0 * SCALE, (x1 - x0) * SCALE, (z1 - z0) * SCALE);
             iconCtx.restore();
+
+            // Left face (at z = z1)
+            iconCtx.save();
+            iconCtx.setTransform(1, 0.5, 0, 1, (16 - z1) * SCALE, (16 - y1 + 0.5 * z1) * SCALE);
+            iconCtx.drawImage(side1Scaled, x0 * SCALE, (16 - y1) * SCALE, (x1 - x0) * SCALE, (y1 - y0) * SCALE, x0 * SCALE, 0, (x1 - x0) * SCALE, (y1 - y0) * SCALE);
+            iconCtx.restore();
+
+            // Right face (at x = x1)
+            iconCtx.save();
+            iconCtx.setTransform(1, -0.5, 0, 1, x1 * SCALE, (24 - y1 + 0.5 * x1) * SCALE);
+            iconCtx.drawImage(side2Scaled, (16 - z1) * SCALE, (16 - y1) * SCALE, (z1 - z0) * SCALE, (y1 - y0) * SCALE, (16 - z1) * SCALE, 0, (z1 - z0) * SCALE, (y1 - y0) * SCALE);
+            iconCtx.restore();
+        };
+
+        if (props.isFence) {
+            renderIsoBox(6, 0, 2, 10, 16, 6);   // Back post
+            renderIsoBox(7, 4, 2, 9, 7, 14);    // Lower rail
+            renderIsoBox(7, 11, 2, 9, 14, 14);  // Upper rail
+            renderIsoBox(6, 0, 10, 10, 16, 14); // Front post
+            return iconCanvas;
+        }
+
+        if (props.isFenceGate) {
+            renderIsoBox(7, 4, 0, 9, 16, 3);    // Back post
+            renderIsoBox(7, 5, 3, 9, 8, 13);    // Lower rail
+            renderIsoBox(7, 10, 3, 9, 13, 13);  // Upper rail
+            renderIsoBox(6, 5, 7, 10, 14, 9);   // Center latch
+            renderIsoBox(7, 4, 13, 9, 16, 16);  // Front post
+            return iconCanvas;
+        }
+
+        if (props.isWall) {
+            renderIsoBox(5, 0, 0, 11, 13, 4);   // Back shoulder
+            renderIsoBox(4, 0, 4, 12, 16, 12);  // Center post
+            renderIsoBox(5, 0, 12, 11, 13, 16); // Front shoulder
+            return iconCanvas;
+        }
+
+        if (props.isStair) {
+            renderIsoBox(0, 0, 0, 16, 8, 16);   // Bottom base
+            renderIsoBox(0, 8, 0, 16, 16, 8);   // Upper back step
+            return iconCanvas;
+        }
+
+        if (props.isSlab) {
+            renderIsoBox(0, 0, 0, 16, 8, 16);   // Slab
             return iconCanvas;
         }
 

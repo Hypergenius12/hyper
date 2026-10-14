@@ -885,15 +885,15 @@ class Game {
         doorGroup.add(meshTop);
         
         // Determine orientation by checking neighbors
-        const isWallX = (this.world.getBlock(x - 1, y, z) !== window.BLOCKS.AIR && this.world.getBlock(x + 1, y, z) !== window.BLOCKS.AIR);
-        const isWallZ = (this.world.getBlock(x, y, z - 1) !== window.BLOCKS.AIR && this.world.getBlock(x, y, z + 1) !== window.BLOCKS.AIR);
+        const hasWallX = (this.world.getBlock(x - 1, y, z) !== window.BLOCKS.AIR || this.world.getBlock(x + 1, y, z) !== window.BLOCKS.AIR);
+        const hasWallZ = (this.world.getBlock(x, y, z - 1) !== window.BLOCKS.AIR || this.world.getBlock(x, y, z + 1) !== window.BLOCKS.AIR);
         
         let baseRot = 0;
         let posX = x;
-        let posZ = z + 0.5;
-        if (isWallZ && !isWallX) {
+        let posZ = z + 0.0625;
+        if (hasWallZ && !hasWallX) {
             baseRot = Math.PI / 2;
-            posX = x + 0.5;
+            posX = x + 0.0625;
             posZ = z;
         }
         doorGroup.position.set(posX, y, posZ);
@@ -919,11 +919,18 @@ class Game {
         const createCustomBoxGeom = (w, h, d, uvRect) => {
             const geom = new THREE.BoxGeometry(w, h, d).toNonIndexed();
             const uvs = geom.attributes.uv.array;
+            // Proportional UV scaling based on face dimensions
+            const faceDims = [
+                [d, h], [d, h], // +X, -X
+                [w, d], [w, d], // +Y, -Y
+                [w, h], [w, h]  // +Z, -Z
+            ];
             for (let f = 0; f < 6; f++) {
+                const [fw, fh] = faceDims[f];
                 for (let v = 0; v < 6; v++) {
                     const idx = (f * 6 + v) * 2;
-                    let baseU = uvs[idx];
-                    let baseV = uvs[idx + 1];
+                    let baseU = uvs[idx] * fw;
+                    let baseV = uvs[idx + 1] * fh;
                     uvs[idx] = uvRect.u + baseU * uvRect.uSize;
                     uvs[idx + 1] = uvRect.v + baseV * uvRect.vSize;
                 }
@@ -945,19 +952,43 @@ class Game {
         // Left swinging door
         const leftDoorGroup = new THREE.Group();
         leftDoorGroup.position.set(-6/16, 0, 0); // hinge at left post
-        const leafGeomLeft = createCustomBoxGeom(6/16, 8/16, 2/16, uvInfo);
-        leafGeomLeft.translate(3/16, 7/16, 0); // center offset from hinge
-        const leftDoorMesh = new THREE.Mesh(leafGeomLeft, mat);
-        leftDoorGroup.add(leftDoorMesh);
+        
+        // Top rail (6/16 wide, 2.5/16 high, 2/16 deep)
+        const topRailGeomLeft = createCustomBoxGeom(6/16, 2.5/16, 2/16, uvInfo);
+        topRailGeomLeft.translate(3/16, 9.5/16, 0);
+        leftDoorGroup.add(new THREE.Mesh(topRailGeomLeft, mat));
+
+        // Bottom rail (6/16 wide, 2.5/16 high, 2/16 deep)
+        const botRailGeomLeft = createCustomBoxGeom(6/16, 2.5/16, 2/16, uvInfo);
+        botRailGeomLeft.translate(3/16, 4/16, 0);
+        leftDoorGroup.add(new THREE.Mesh(botRailGeomLeft, mat));
+
+        // Latch post on inner swinging edge (2/16 wide, 8/16 tall, 2/16 deep)
+        const latchGeomLeft = createCustomBoxGeom(2/16, 8/16, 2/16, uvInfo);
+        latchGeomLeft.translate(5/16, 6.75/16, 0);
+        leftDoorGroup.add(new THREE.Mesh(latchGeomLeft, mat));
+
         gateGroup.add(leftDoorGroup);
 
         // Right swinging door
         const rightDoorGroup = new THREE.Group();
         rightDoorGroup.position.set(6/16, 0, 0); // hinge at right post
-        const leafGeomRight = createCustomBoxGeom(6/16, 8/16, 2/16, uvInfo);
-        leafGeomRight.translate(-3/16, 7/16, 0); // center offset from hinge
-        const rightDoorMesh = new THREE.Mesh(leafGeomRight, mat);
-        rightDoorGroup.add(rightDoorMesh);
+        
+        // Top rail
+        const topRailGeomRight = createCustomBoxGeom(6/16, 2.5/16, 2/16, uvInfo);
+        topRailGeomRight.translate(-3/16, 9.5/16, 0);
+        rightDoorGroup.add(new THREE.Mesh(topRailGeomRight, mat));
+
+        // Bottom rail
+        const botRailGeomRight = createCustomBoxGeom(6/16, 2.5/16, 2/16, uvInfo);
+        botRailGeomRight.translate(-3/16, 4/16, 0);
+        rightDoorGroup.add(new THREE.Mesh(botRailGeomRight, mat));
+
+        // Latch post on inner swinging edge
+        const latchGeomRight = createCustomBoxGeom(2/16, 8/16, 2/16, uvInfo);
+        latchGeomRight.translate(-5/16, 6.75/16, 0);
+        rightDoorGroup.add(new THREE.Mesh(latchGeomRight, mat));
+
         gateGroup.add(rightDoorGroup);
 
         // Orientation: align with connecting fences or walls
@@ -2023,7 +2054,8 @@ class Game {
                 return;
             }
 
-            if (hit.hit && (hit.blockType === window.BLOCKS.OAK_FENCE_GATE || hit.blockType === window.BLOCKS.BIRCH_FENCE_GATE)) {
+            const hitProps = hit.hit ? getBlockProperties(hit.blockType) : null;
+            if (hit.hit && hitProps && hitProps.isFenceGate) {
                 const key = `${hit.blockPos.x},${hit.blockPos.y},${hit.blockPos.z}`;
                 let gate = this.fenceGates.get(key);
                 if (gate) {
@@ -2105,6 +2137,8 @@ class Game {
                         } else {
                             this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.WATER);
                             this.world.setData(placePos.x, placePos.y, placePos.z, 0); // Source block
+                            this.world.queueLiquidUpdate(placePos.x, placePos.y, placePos.z);
+                            this.world.tickFluids();
                         }
                         // Convert back to empty bucket
                         slot.item = { type: 'material', subtype: 'bucket', name: 'Bucket', stackable: true, maxStack: 16, data: {} };

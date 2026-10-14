@@ -556,7 +556,7 @@ export class Chunk {
                 for (let x = 0; x < CHUNK_SIZE; x++) {
                     const blockType = this.getBlock(x, y, z);
                     const props = getBlockProperties(blockType);
-                    if (blockType === BLOCKS.AIR || blockType === BLOCKS.CHEST_BLOCK || blockType === BLOCKS.DUNGEON_DOOR || blockType === BLOCKS.DUNGEON_DOOR_TOP || blockType === BLOCKS.OAK_FENCE_GATE || blockType === BLOCKS.BIRCH_FENCE_GATE || props.isBed || props.isBedHead) continue;
+                    if (blockType === BLOCKS.AIR || blockType === BLOCKS.CHEST_BLOCK || blockType === BLOCKS.DUNGEON_DOOR || blockType === BLOCKS.DUNGEON_DOOR_TOP || props.isFenceGate || props.isBed || props.isBedHead) continue;
 
                     const wx = wxBase + x;
                     const wz = wzBase + z;
@@ -773,7 +773,30 @@ export class Chunk {
                             }
                         } else if (currentProps.isLiquid) {
                             if (sameLiquid) {
-                                shouldRenderFace = false; // Never render any face between blocks of the same liquid!
+                                if (face.dir[1] === 0) {
+                                    // Check if current liquid is taller than neighbor liquid (render step to prevent air gap)
+                                    const nAbove = getBlockOptimized(wx + face.dir[0], y + 1, wz + face.dir[2]);
+                                    let neighborTopY = 1.0;
+                                    if (!getBlockProperties(nAbove).isLiquid) {
+                                        const nData = (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE) ?
+                                            this.data[(y * CHUNK_SIZE * CHUNK_SIZE) + (nz * CHUNK_SIZE) + nx] :
+                                            getDataOptimized(wx + face.dir[0], y, wz + face.dir[2]);
+                                        const isLava = (currentBlockType === BLOCKS.LAVA);
+                                        const maxLevel = isLava ? 3 : 7;
+                                        if (nData === 0) {
+                                            neighborTopY = 0.88;
+                                        } else if (nData === 8) {
+                                            neighborTopY = 1.0;
+                                        } else {
+                                            neighborTopY = 0.18 + (nData / maxLevel) * 0.70;
+                                        }
+                                    }
+                                    if (liquidTopY > neighborTopY + 0.01) {
+                                        shouldRenderFace = true;
+                                        isLiquidStep = true;
+                                        nTop = neighborTopY;
+                                    }
+                                }
                             } else {
                                 // Liquid touching non-same liquid:
                                 // Render face if exposed to AIR or a transparent block or different liquid
@@ -838,7 +861,11 @@ export class Chunk {
                                 let vz = z + v[2];
 
                                 if (currentProps.isLiquid) {
-                                    if (v[1] === 1) vy = y + liquidTopY;
+                                    if (isLiquidStep) {
+                                        vy = (v[1] === 0) ? (y + nTop) : (y + liquidTopY);
+                                    } else {
+                                        if (v[1] === 1) vy = y + liquidTopY;
+                                    }
                                 } else if (currentBlockType === BLOCKS.CACTUS) {
                                     if (v[0] === 0) vx = x + 0.0625;
                                     else if (v[0] === 1) vx = x + 0.9375;
@@ -1509,7 +1536,7 @@ export class World {
             }
 
             // Register fence gate placement/removal
-            const isGate = (b) => b === window.BLOCKS.OAK_FENCE_GATE || b === window.BLOCKS.BIRCH_FENCE_GATE;
+            const isGate = (b) => getBlockProperties(b).isFenceGate;
             if (isGate(oldType) && !isGate(type)) {
                 if (this.onGateRemoved) this.onGateRemoved(wx, wy, wz);
             } else if (!isGate(oldType) && isGate(type)) {
@@ -1536,11 +1563,12 @@ export class World {
             }
             // Trigger neighbor fluid updates
             this.queueLiquidUpdate(wx, wy + 1, wz);
+            this.queueLiquidUpdate(wx, wy - 1, wz);
             this.queueLiquidUpdate(wx, wy, wz + 1);
             this.queueLiquidUpdate(wx, wy, wz - 1);
             this.queueLiquidUpdate(wx + 1, wy, wz);
             this.queueLiquidUpdate(wx - 1, wy, wz);
-            if (type === BLOCKS.WATER || type === BLOCKS.LAVA) this.queueLiquidUpdate(wx, wy, wz);
+            if (type === BLOCKS.WATER || type === BLOCKS.SWAMP_WATER || type === BLOCKS.LAVA) this.queueLiquidUpdate(wx, wy, wz);
             // Check neighbors if block is on border
             if (lx === 0) this._markChunkDirty(cx - 1, cz);
             if (lx === CHUNK_SIZE - 1) this._markChunkDirty(cx + 1, cz);
@@ -1636,10 +1664,9 @@ export class World {
                     this.setBlock(x, y - 1, z, BLOCKS.STONE);
                 }
             } 
-            // 4. Spread sideways if blocked below (solid block)
-            else if (!belowProps.isLiquid) {
-                if (currentLevel > 1) {
-                    const nextLevel = currentLevel - 1;
+            // 4. Spread sideways if blocked below (solid block) or if it's a source block
+            if ((!belowProps.isLiquid || data === 0) && currentLevel > 1) {
+                const nextLevel = currentLevel - 1;
                     const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]];
                     for (const [dx, dz] of sides) {
                         const sideBlock = this.getBlock(x + dx, y, z + dz);
@@ -1751,7 +1778,8 @@ export class World {
             if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated || this.onFurnaceGenerated || this.onGateGenerated) {
                 for (let i = 0; i < chunk.blocks.length; i++) {
                     const blockType = chunk.blocks[i];
-                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.FURNACE || blockType === window.BLOCKS.OAK_FENCE_GATE || blockType === window.BLOCKS.BIRCH_FENCE_GATE) {
+                    const bProps = getBlockProperties(blockType);
+                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.FURNACE || bProps.isFenceGate) {
                         const y = Math.floor(i / (16 * 16));
                         const rem = i % (16 * 16);
                         const z = Math.floor(rem / 16);
@@ -1766,7 +1794,7 @@ export class World {
                             this.onTorchGenerated(wx, y, wz);
                         } else if (blockType === window.BLOCKS.FURNACE && this.onFurnaceGenerated) {
                             this.onFurnaceGenerated(wx, y, wz);
-                        } else if ((blockType === window.BLOCKS.OAK_FENCE_GATE || blockType === window.BLOCKS.BIRCH_FENCE_GATE) && this.onGateGenerated) {
+                        } else if (bProps.isFenceGate && this.onGateGenerated) {
                             this.onGateGenerated(wx, y, wz, blockType);
                         }
                     }
@@ -1872,7 +1900,7 @@ export class World {
 
         if (dt) {
             this.tickTimer += dt;
-            if (this.tickTimer >= 0.5) { // tick every 0.5s for responsive fire and burning
+            if (this.tickTimer >= 0.2) { // tick every 0.2s for snappy fluids and fire
                 this.tickTimer = 0;
                 this.tickFluids();
                 this.tickRandomBlocks();
@@ -2156,97 +2184,98 @@ export class World {
                     for (let z = minZ; z <= maxZ; z++) {
                         const block = this.getBlock(x, y, z);
                         const bProps = getBlockProperties(block);
-                        if (bProps.solid) {
-                            if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) {
-                                continue;
-                            }
-                            if ((block === window.BLOCKS.OAK_FENCE_GATE || block === window.BLOCKS.BIRCH_FENCE_GATE) && this.isGateOpen && this.isGateOpen(x, y, z)) {
-                                continue;
-                            }
-                            if (bProps.isSlab) {
-                                if (py < y + 0.5 && py + entityHeight > y) return true;
-                                continue;
-                            }
-                            if (bProps.isBed || bProps.isBedHead) {
-                                if (py < y + 0.5625 && py + entityHeight > y) return true;
-                                continue;
-                            }
-                            if (bProps.isFence || bProps.isWall || bProps.isFenceGate) {
-                                if (py < y + 1.5 && py + entityHeight > y) return true;
-                                continue;
-                            }
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        };
-
-        // Sneak edge detection
-        if (isSneaking && checkCollision(position.x, position.y - 0.1, position.z)) {
-            if (!checkCollision(targetX, position.y - 0.1, position.z)) {
-                velocity.x = 0;
-                targetX = position.x;
-            }
-            if (!checkCollision(targetX, position.y - 0.1, targetZ)) { // Use targetX because it might have been reset
-                velocity.z = 0;
-                targetZ = position.z;
-            }
-        }
-
-        // Y-axis
-        if (checkCollision(position.x, targetY, position.z)) {
-            velocity.y = 0;
-            if (targetY < position.y) { // Falling down
-                grounded = true;
-                const minX = Math.floor(position.x - hw + 0.01);
-                const maxX = Math.floor(position.x + hw - 0.01);
-                const minZ = Math.floor(position.z - hw + 0.01);
-                const maxZ = Math.floor(position.z + hw - 0.01);
-                const startY = Math.floor(position.y);
-                const endY = Math.floor(targetY);
-                let highestSurfaceY = null;
-                for (let y = startY; y >= endY; y--) {
-                    for (let x = minX; x <= maxX; x++) {
-                        for (let z = minZ; z <= maxZ; z++) {
-                            const block = this.getBlock(x, y, z);
-                            const bProps = getBlockProperties(block);
                             if (bProps.solid) {
-                                if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
-                                if ((block === window.BLOCKS.OAK_FENCE_GATE || block === window.BLOCKS.BIRCH_FENCE_GATE) && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
-                                let surfH = 1.0;
-                                if (bProps.isSlab) surfH = 0.5;
-                                else if (bProps.isBed || bProps.isBedHead) surfH = 0.5625;
-                                else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) surfH = 1.5;
-                                if (highestSurfaceY === null || (y + surfH) > highestSurfaceY) {
-                                    highestSurfaceY = y + surfH;
+                                if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) {
+                                    continue;
                                 }
+                                if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) {
+                                    continue;
+                                }
+                                if (bProps.isSlab) {
+                                    if (py < y + 0.5 && py + entityHeight > y) return true;
+                                    continue;
+                                }
+                                if (bProps.isBed || bProps.isBedHead) {
+                                    if (py < y + 0.5625 && py + entityHeight > y) return true;
+                                    continue;
+                                }
+                                if (bProps.isFence || bProps.isWall || bProps.isFenceGate) {
+                                    if (py < y + 1.5 && py + entityHeight > y) return true;
+                                    continue;
+                                }
+                                return true;
                             }
                         }
                     }
-                    if (highestSurfaceY !== null) break;
                 }
-                targetY = highestSurfaceY !== null ? highestSurfaceY : (Math.floor(position.y) + 1.0);
-            } else { // Jumping up and hitting ceiling
-                const minX = Math.floor(position.x - hw + 0.01);
-                const maxX = Math.floor(position.x + hw - 0.01);
-                const minZ = Math.floor(position.z - hw + 0.01);
-                const maxZ = Math.floor(position.z + hw - 0.01);
-                const startY = Math.floor(position.y + entityHeight);
-                const endY = Math.floor(targetY + entityHeight - 0.01);
-                let lowestCeilingY = null;
-                for (let y = startY; y <= endY; y++) {
-                    for (let x = minX; x <= maxX; x++) {
-                        for (let z = minZ; z <= maxZ; z++) {
-                            const block = this.getBlock(x, y, z);
-                            if (getBlockProperties(block).solid) {
-                                if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
-                                if ((block === window.BLOCKS.OAK_FENCE_GATE || block === window.BLOCKS.BIRCH_FENCE_GATE) && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
-                                if (lowestCeilingY === null || y < lowestCeilingY) {
-                                    lowestCeilingY = y;
+                return false;
+            };
+
+            // Sneak edge detection
+            if (isSneaking && checkCollision(position.x, position.y - 0.1, position.z)) {
+                if (!checkCollision(targetX, position.y - 0.1, position.z)) {
+                    velocity.x = 0;
+                    targetX = position.x;
+                }
+                if (!checkCollision(targetX, position.y - 0.1, targetZ)) { // Use targetX because it might have been reset
+                    velocity.z = 0;
+                    targetZ = position.z;
+                }
+            }
+
+            // Y-axis
+            if (checkCollision(position.x, targetY, position.z)) {
+                velocity.y = 0;
+                if (targetY < position.y) { // Falling down
+                    grounded = true;
+                    const minX = Math.floor(position.x - hw + 0.01);
+                    const maxX = Math.floor(position.x + hw - 0.01);
+                    const minZ = Math.floor(position.z - hw + 0.01);
+                    const maxZ = Math.floor(position.z + hw - 0.01);
+                    const startY = Math.floor(position.y);
+                    const endY = Math.floor(targetY);
+                    let highestSurfaceY = null;
+                    for (let y = startY; y >= endY; y--) {
+                        for (let x = minX; x <= maxX; x++) {
+                            for (let z = minZ; z <= maxZ; z++) {
+                                const block = this.getBlock(x, y, z);
+                                const bProps = getBlockProperties(block);
+                                if (bProps.solid) {
+                                    if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
+                                    if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
+                                    let surfH = 1.0;
+                                    if (bProps.isSlab) surfH = 0.5;
+                                    else if (bProps.isBed || bProps.isBedHead) surfH = 0.5625;
+                                    else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) surfH = 1.5;
+                                    if (highestSurfaceY === null || (y + surfH) > highestSurfaceY) {
+                                        highestSurfaceY = y + surfH;
+                                    }
                                 }
                             }
+                        }
+                        if (highestSurfaceY !== null) break;
+                    }
+                    targetY = highestSurfaceY !== null ? highestSurfaceY : (Math.floor(position.y) + 1.0);
+                } else { // Jumping up and hitting ceiling
+                    const minX = Math.floor(position.x - hw + 0.01);
+                    const maxX = Math.floor(position.x + hw - 0.01);
+                    const minZ = Math.floor(position.z - hw + 0.01);
+                    const maxZ = Math.floor(position.z + hw - 0.01);
+                    const startY = Math.floor(position.y + entityHeight);
+                    const endY = Math.floor(targetY + entityHeight - 0.01);
+                    let lowestCeilingY = null;
+                    for (let y = startY; y <= endY; y++) {
+                        for (let x = minX; x <= maxX; x++) {
+                            for (let z = minZ; z <= maxZ; z++) {
+                                const block = this.getBlock(x, y, z);
+                                const bProps = getBlockProperties(block);
+                                if (bProps.solid) {
+                                    if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
+                                    if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
+                                    if (lowestCeilingY === null || y < lowestCeilingY) {
+                                        lowestCeilingY = y;
+                                    }
+                                }
                         }
                     }
                     if (lowestCeilingY !== null) break;

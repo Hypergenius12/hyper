@@ -2624,6 +2624,14 @@ class UISystem {
             };
             if (isFence(B.PLANKS)) return block(B.OAK_FENCE, 'Oak Fence', 3);
             if (isFence(B.BIRCH_PLANKS)) return block(B.BIRCH_FENCE, 'Birch Fence', 3);
+            if (isFence(B.PINE_PLANKS)) return block(B.SPRUCE_FENCE, 'Spruce Fence', 3);
+            if (isFence(B.PALM_PLANKS)) return block(B.JUNGLE_FENCE, 'Jungle Fence', 3);
+            if (isFence(B.ACACIA_PLANKS)) return block(B.ACACIA_FENCE, 'Acacia Fence', 3);
+            if (isFence(B.DARK_OAK_PLANKS)) return block(B.DARK_OAK_FENCE, 'Dark Oak Fence', 3);
+            if (isFence(B.MANGROVE_PLANKS)) return block(B.MANGROVE_FENCE, 'Mangrove Fence', 3);
+            if (isFence(B.CHERRY_PLANKS)) return block(B.CHERRY_FENCE, 'Cherry Fence', 3);
+            if (isFence(B.CRIMSON_PLANKS)) return block(B.CRIMSON_FENCE, 'Crimson Fence', 3);
+            if (isFence(B.AUTUMN_PLANKS)) return block(B.AUTUMN_FENCE, 'Autumn Fence', 3);
 
             // Fence Gates (Stick + Plank + Stick across 2 rows)
             const isGate = (plankType) => {
@@ -2636,6 +2644,14 @@ class UISystem {
             };
             if (isGate(B.PLANKS)) return block(B.OAK_FENCE_GATE, 'Oak Fence Gate', 1);
             if (isGate(B.BIRCH_PLANKS)) return block(B.BIRCH_FENCE_GATE, 'Birch Fence Gate', 1);
+            if (isGate(B.PINE_PLANKS)) return block(B.SPRUCE_FENCE_GATE, 'Spruce Fence Gate', 1);
+            if (isGate(B.PALM_PLANKS)) return block(B.JUNGLE_FENCE_GATE, 'Jungle Fence Gate', 1);
+            if (isGate(B.ACACIA_PLANKS)) return block(B.ACACIA_FENCE_GATE, 'Acacia Fence Gate', 1);
+            if (isGate(B.DARK_OAK_PLANKS)) return block(B.DARK_OAK_FENCE_GATE, 'Dark Oak Fence Gate', 1);
+            if (isGate(B.MANGROVE_PLANKS)) return block(B.MANGROVE_FENCE_GATE, 'Mangrove Fence Gate', 1);
+            if (isGate(B.CHERRY_PLANKS)) return block(B.CHERRY_FENCE_GATE, 'Cherry Fence Gate', 1);
+            if (isGate(B.CRIMSON_PLANKS)) return block(B.CRIMSON_FENCE_GATE, 'Crimson Fence Gate', 1);
+            if (isGate(B.AUTUMN_PLANKS)) return block(B.AUTUMN_FENCE_GATE, 'Autumn Fence Gate', 1);
 
             // Walls (2 rows of 3)
             const isWallMat = (mat) => {
@@ -2644,7 +2660,12 @@ class UISystem {
                 return false;
             };
             if (isWallMat(B.COBBLESTONE)) return block(B.COBBLESTONE_WALL, 'Cobblestone Wall', 6);
+            if (isWallMat(B.MOSSY_COBBLESTONE)) return block(B.MOSSY_COBBLESTONE_WALL, 'Mossy Cobblestone Wall', 6);
             if (isWallMat(B.STONE_BRICKS)) return block(B.STONE_BRICK_WALL, 'Stone Brick Wall', 6);
+            if (isWallMat(B.STONE)) return block(B.STONE_WALL, 'Stone Wall', 6);
+            if (isWallMat(B.SANDSTONE)) return block(B.SANDSTONE_WALL, 'Sandstone Wall', 6);
+            if (isWallMat(B.BLACKSTONE)) return block(B.BLACKSTONE_WALL, 'Blackstone Wall', 6);
+            if (isWallMat(B.HOLYSTONE)) return block(B.HOLYSTONE_WALL, 'Holystone Wall', 6);
 
             // Stairs
             const isStairMat = (mat) => {
@@ -2825,12 +2846,34 @@ class UISystem {
             // Fences & Gates
             { name: "Oak Fence (3)", desc: "Connecting wooden barrier.", grid: [[_,_,_],[blk(B.PLANKS),mat('stick'),blk(B.PLANKS)],[blk(B.PLANKS),mat('stick'),blk(B.PLANKS)]], out: blk(B.OAK_FENCE), outCount: 3, needs3x3: true },
             { name: "Birch Fence (3)", desc: "Connecting birch barrier.", grid: [[_,_,_],[blk(B.BIRCH_PLANKS),mat('stick'),blk(B.BIRCH_PLANKS)],[blk(B.BIRCH_PLANKS),mat('stick'),blk(B.BIRCH_PLANKS)]], out: blk(B.BIRCH_FENCE), outCount: 3, needs3x3: true },
+            { name: "Spruce Fence (3)", desc: "Connecting spruce barrier.", grid: [[_,_,_],[blk(B.PINE_PLANKS),mat('stick'),blk(B.PINE_PLANKS)],[blk(B.PINE_PLANKS),mat('stick'),blk(B.PINE_PLANKS)]], out: blk(B.SPRUCE_FENCE), outCount: 3, needs3x3: true },
+            { name: "Jungle Fence (3)", desc: "Connecting jungle barrier.", grid: [[_,_,_],[blk(B.PALM_PLANKS),mat('stick'),blk(B.PALM_PLANKS)],[blk(B.PALM_PLANKS),mat('stick'),blk(B.PALM_PLANKS)]], out: blk(B.JUNGLE_FENCE), outCount: 3, needs3x3: true },
+            { name: "Acacia Fence (3)", desc: "Connecting acacia barrier.", grid: [[_,_,_],[blk(B.ACACIA_PLANKS),mat('stick'),blk(B.ACACIA_PLANKS)],[blk(B.ACACIA_PLANKS),mat('stick'),blk(B.ACACIA_PLANKS)]], out: blk(B.ACACIA_FENCE), outCount: 3, needs3x3: true },
+            { name: "Dark Oak Fence (3)", desc: "Connecting dark oak barrier.", grid: [[_,_,_],[blk(B.DARK_OAK_PLANKS),mat('stick'),blk(B.DARK_OAK_PLANKS)],[blk(B.DARK_OAK_PLANKS),mat('stick'),blk(B.DARK_OAK_PLANKS)]], out: blk(B.DARK_OAK_FENCE), outCount: 3, needs3x3: true },
+            { name: "Mangrove Fence (3)", desc: "Connecting mangrove barrier.", grid: [[_,_,_],[blk(B.MANGROVE_PLANKS),mat('stick'),blk(B.MANGROVE_PLANKS)],[blk(B.MANGROVE_PLANKS),mat('stick'),blk(B.MANGROVE_PLANKS)]], out: blk(B.MANGROVE_FENCE), outCount: 3, needs3x3: true },
+            { name: "Cherry Fence (3)", desc: "Connecting cherry barrier.", grid: [[_,_,_],[blk(B.CHERRY_PLANKS),mat('stick'),blk(B.CHERRY_PLANKS)],[blk(B.CHERRY_PLANKS),mat('stick'),blk(B.CHERRY_PLANKS)]], out: blk(B.CHERRY_FENCE), outCount: 3, needs3x3: true },
+            { name: "Crimson Fence (3)", desc: "Connecting crimson barrier.", grid: [[_,_,_],[blk(B.CRIMSON_PLANKS),mat('stick'),blk(B.CRIMSON_PLANKS)],[blk(B.CRIMSON_PLANKS),mat('stick'),blk(B.CRIMSON_PLANKS)]], out: blk(B.CRIMSON_FENCE), outCount: 3, needs3x3: true },
+            { name: "Autumn Fence (3)", desc: "Connecting autumn barrier.", grid: [[_,_,_],[blk(B.AUTUMN_PLANKS),mat('stick'),blk(B.AUTUMN_PLANKS)],[blk(B.AUTUMN_PLANKS),mat('stick'),blk(B.AUTUMN_PLANKS)]], out: blk(B.AUTUMN_FENCE), outCount: 3, needs3x3: true },
+
             { name: "Oak Fence Gate", desc: "Swinging wooden barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.PLANKS),mat('stick')],[mat('stick'),blk(B.PLANKS),mat('stick')]], out: blk(B.OAK_FENCE_GATE), outCount: 1, needs3x3: true },
             { name: "Birch Fence Gate", desc: "Swinging birch barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.BIRCH_PLANKS),mat('stick')],[mat('stick'),blk(B.BIRCH_PLANKS),mat('stick')]], out: blk(B.BIRCH_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Spruce Fence Gate", desc: "Swinging spruce barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.PINE_PLANKS),mat('stick')],[mat('stick'),blk(B.PINE_PLANKS),mat('stick')]], out: blk(B.SPRUCE_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Jungle Fence Gate", desc: "Swinging jungle barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.PALM_PLANKS),mat('stick')],[mat('stick'),blk(B.PALM_PLANKS),mat('stick')]], out: blk(B.JUNGLE_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Acacia Fence Gate", desc: "Swinging acacia barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.ACACIA_PLANKS),mat('stick')],[mat('stick'),blk(B.ACACIA_PLANKS),mat('stick')]], out: blk(B.ACACIA_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Dark Oak Fence Gate", desc: "Swinging dark oak barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.DARK_OAK_PLANKS),mat('stick')],[mat('stick'),blk(B.DARK_OAK_PLANKS),mat('stick')]], out: blk(B.DARK_OAK_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Mangrove Fence Gate", desc: "Swinging mangrove barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.MANGROVE_PLANKS),mat('stick')],[mat('stick'),blk(B.MANGROVE_PLANKS),mat('stick')]], out: blk(B.MANGROVE_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Cherry Fence Gate", desc: "Swinging cherry barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.CHERRY_PLANKS),mat('stick')],[mat('stick'),blk(B.CHERRY_PLANKS),mat('stick')]], out: blk(B.CHERRY_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Crimson Fence Gate", desc: "Swinging crimson barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.CRIMSON_PLANKS),mat('stick')],[mat('stick'),blk(B.CRIMSON_PLANKS),mat('stick')]], out: blk(B.CRIMSON_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Autumn Fence Gate", desc: "Swinging autumn barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.AUTUMN_PLANKS),mat('stick')],[mat('stick'),blk(B.AUTUMN_PLANKS),mat('stick')]], out: blk(B.AUTUMN_FENCE_GATE), outCount: 1, needs3x3: true },
 
             // Walls
             { name: "Cobblestone Wall (6)", desc: "Connecting cobblestone barrier.", grid: [[_,_,_],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)]], out: blk(B.COBBLESTONE_WALL), outCount: 6, needs3x3: true },
+            { name: "Mossy Cobblestone Wall (6)", desc: "Connecting mossy cobblestone barrier.", grid: [[_,_,_],[blk(B.MOSSY_COBBLESTONE),blk(B.MOSSY_COBBLESTONE),blk(B.MOSSY_COBBLESTONE)],[blk(B.MOSSY_COBBLESTONE),blk(B.MOSSY_COBBLESTONE),blk(B.MOSSY_COBBLESTONE)]], out: blk(B.MOSSY_COBBLESTONE_WALL), outCount: 6, needs3x3: true },
             { name: "Stone Brick Wall (6)", desc: "Connecting stone brick barrier.", grid: [[_,_,_],[blk(B.STONE_BRICKS),blk(B.STONE_BRICKS),blk(B.STONE_BRICKS)],[blk(B.STONE_BRICKS),blk(B.STONE_BRICKS),blk(B.STONE_BRICKS)]], out: blk(B.STONE_BRICK_WALL), outCount: 6, needs3x3: true },
+            { name: "Stone Wall (6)", desc: "Connecting stone barrier.", grid: [[_,_,_],[blk(B.STONE),blk(B.STONE),blk(B.STONE)],[blk(B.STONE),blk(B.STONE),blk(B.STONE)]], out: blk(B.STONE_WALL), outCount: 6, needs3x3: true },
+            { name: "Sandstone Wall (6)", desc: "Connecting sandstone barrier.", grid: [[_,_,_],[blk(B.SANDSTONE),blk(B.SANDSTONE),blk(B.SANDSTONE)],[blk(B.SANDSTONE),blk(B.SANDSTONE),blk(B.SANDSTONE)]], out: blk(B.SANDSTONE_WALL), outCount: 6, needs3x3: true },
+            { name: "Blackstone Wall (6)", desc: "Connecting blackstone barrier.", grid: [[_,_,_],[blk(B.BLACKSTONE),blk(B.BLACKSTONE),blk(B.BLACKSTONE)],[blk(B.BLACKSTONE),blk(B.BLACKSTONE),blk(B.BLACKSTONE)]], out: blk(B.BLACKSTONE_WALL), outCount: 6, needs3x3: true },
+            { name: "Holystone Wall (6)", desc: "Connecting holystone barrier.", grid: [[_,_,_],[blk(B.HOLYSTONE),blk(B.HOLYSTONE),blk(B.HOLYSTONE)],[blk(B.HOLYSTONE),blk(B.HOLYSTONE),blk(B.HOLYSTONE)]], out: blk(B.HOLYSTONE_WALL), outCount: 6, needs3x3: true },
 
             { name: "Fletching Table", desc: "Decorative workstation.", grid: [[mat('flint'),mat('flint'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.FLETCHING_TABLE), outCount: 1, needs3x3: true },
             { name: "Smoker", desc: "Rapidly cooks food.", grid: [[_,blk(B.WOOD),_],[blk(B.WOOD),blk(B.FURNACE),blk(B.WOOD)],[_,blk(B.WOOD),_]], out: blk(B.SMOKER), outCount: 1, needs3x3: true },

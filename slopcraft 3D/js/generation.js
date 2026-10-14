@@ -809,7 +809,7 @@ function generateWizardTower(blocks, baseX, baseY, baseZ, rng) {
                         if (y === 0 && x === 0 && z === radius) {
                             type = BLOCKS.DUNGEON_DOOR;
                         } else if (y === 1 && x === 0 && z === radius) {
-                            type = BLOCKS.DUNGEON_DOOR;
+                            type = BLOCKS.DUNGEON_DOOR_TOP;
                         }
                         safeSetBlock(blocks, baseX + x, localY, baseZ + z, type);
                     } else {
