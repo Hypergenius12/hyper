@@ -551,6 +551,10 @@ class Game {
         // Spawn player at safe location
         const spawnPos = findSafeSpawn(this.planetParams);
         this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
+        this.player.fallStartY = spawnPos.y;
+        this.player.fallDistance = 0;
+        this.player.velocity.set(0, 0, 0);
+        this.player.spawnGraceTimer = 5.0;
 
         this.entityManager = new EntityManager(this.engine.scene, this.atlas);
         this.projectileManager = new ProjectileManager(this.engine.scene);
@@ -873,8 +877,8 @@ class Game {
             side: THREE.DoubleSide
         });
         
-        doorGeomBot.translate(0.4375, 0.5, 0); 
-        doorGeomTop.translate(0.4375, 0.5, 0); 
+        doorGeomBot.translate(0.5, 0.5, 0.0625); 
+        doorGeomTop.translate(0.5, 0.5, 0.0625); 
         
         const doorGroup = new THREE.Group();
         const meshBot = new THREE.Mesh(doorGeomBot, mat);
@@ -892,7 +896,7 @@ class Game {
         if (hasWallZ && !hasWallX) {
             baseRot = -Math.PI / 2;
         }
-        doorGroup.position.set(x + 0.0625, y, z + 0.0625);
+        doorGroup.position.set(x, y, z);
         doorGroup.rotation.y = baseRot;
         this.doors.set(key, { mesh: doorGroup, isOpen: false, baseRotationY: baseRot, x, y, z });
         
@@ -1453,8 +1457,8 @@ class Game {
         const eyePos = this.player.getEyePosition();
         
         const invSlot = this.player.inventory.slots[this.player.selectedSlot];
-        const isHoldingBucket = invSlot && invSlot.item && invSlot.item.type === 'material' && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket');
-        const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingBucket);
+        const isHoldingLiquidInteractable = invSlot && invSlot.item && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket' || invSlot.item.subtype === 'oak_boat' || invSlot.item.subtype === 'boat');
+        const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingLiquidInteractable);
         const entityHit = this.entityManager.raycast(eyePos, lookDir, 4); // Melee range
 
         let boatHit = null;
@@ -1840,7 +1844,7 @@ class Game {
             }
 
             // Place Boat
-            if (slot && slot.item.subtype === 'oak_boat' && hit.hit) {
+            if (slot && (slot.item.subtype === 'oak_boat' || slot.item.subtype === 'boat') && hit.hit) {
                 const placePos = new THREE.Vector3(
                     hit.blockPos.x + hit.normal.x + 0.5,
                     hit.blockPos.y + (hit.normal.y > 0 ? 0.05 : hit.normal.y),
@@ -2033,6 +2037,16 @@ class Game {
                     this._addFurnace(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                 }
                 this.ui.toggleFurnace(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, this.furnaces.get(key), () => {
+                    this.input.requestPointerLock();
+                });
+                document.exitPointerLock();
+                this.input.mouse.rightClick = false;
+                return;
+            }
+
+            if (hit.hit && hit.blockType === window.BLOCKS.STONECUTTER) {
+                this.audio.playClick();
+                this.ui.toggleStonecutter(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, () => {
                     this.input.requestPointerLock();
                 });
                 document.exitPointerLock();
@@ -2591,6 +2605,8 @@ class Game {
                 this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
                 this.player.velocity.set(0, 0, 0);
                 this.player.fallDistance = 0;
+                this.player.fallStartY = spawnPos.y;
+                this.player.spawnGraceTimer = 5.0;
                 this.audio.playMC('random/levelup', 0.6);
             }
         }
@@ -3410,8 +3426,8 @@ class Game {
 
                 const eyePos = this.player.getEyePosition();
                 const invSlot = this.player.inventory.slots[this.player.selectedSlot];
-                const isHoldingBucket = invSlot && invSlot.item && invSlot.item.type === 'material' && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket');
-                const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingBucket);
+                const isHoldingLiquidInteractable = invSlot && invSlot.item && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket' || invSlot.item.subtype === 'oak_boat' || invSlot.item.subtype === 'boat');
+                const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingLiquidInteractable);
 
                 const leftLines = [
                     `SlopCraft 3D 1.20.4 (Vanilla / WebGL)`,
@@ -3558,10 +3574,16 @@ class Game {
             if (overrideSpawnPos) {
                 this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
                 this.player.velocity.set(0, -10, 0); // Gentle falling through clouds
+                this.player.fallDistance = 0;
+                this.player.fallStartY = spawnPos.y;
+                this.player.spawnGraceTimer = 5.0;
             } else {
                 // Center player in the block to avoid wall clipping
                 this.player.position.set(spawnPos.x + 0.5, spawnPos.y, spawnPos.z + 0.5);
                 this.player.velocity.set(0, 0, 0);
+                this.player.fallDistance = 0;
+                this.player.fallStartY = spawnPos.y;
+                this.player.spawnGraceTimer = 5.0;
             }
 
             // Immediately preload the 3x3 surrounding chunks synchronously so the world is fully solid & visible when fade lifts

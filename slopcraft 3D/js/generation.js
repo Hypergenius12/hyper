@@ -2706,7 +2706,7 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                 if (!inside) continue;
                 
                 if (isWall) {
-                    if (room.type === 'boss') safeSetBlock(blocks, lx, wy, lz, BLOCKS.PORTAL_FRAME);
+                    if (room.type === 'boss') safeSetBlock(blocks, lx, wy, lz, BLOCKS.POLISHED_BLACKSTONE_BRICKS);
                     else if (room.shape === 'library' && wy >= minY + 1 && wy <= minY + 2) {
                         // Use planks for bookshelves in interior, themed brick for outer walls
                         const isOuterWall = dx >= rw - 0.5 || dz >= rd - 0.5 || wy === minY || wy === maxY;

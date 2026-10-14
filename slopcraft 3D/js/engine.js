@@ -633,13 +633,21 @@ export class Chunk {
                         }
                     }
 
-                    if (props.isSlab || props.isStair || props.isFence || props.isWall) {
+                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME) {
                         const uvTop = atlas.getUV(blockType, 'top');
                         const uvSide = atlas.getUV(blockType, 'side');
                         const uvBottom = atlas.getUV(blockType, 'bottom');
                         const curData = this.data ? this.data[(y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x] : 0;
 
-                        if (props.isSlab) {
+                        if (blockType === BLOCKS.STONECUTTER) {
+                            // 9/16 tall stone base (0.5625)
+                            pushCustomBox(x, y, z, x + 1, y + 9/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
+                            // Centered circular saw blade (metallic)
+                            pushCustomBox(x + 2/16, y + 9/16, z + 7.5/16, x + 14/16, y + 15/16, z + 8.5/16, x, y, z, uvSide, uvSide, uvSide, 0, 1.0);
+                        } else if (blockType === BLOCKS.PORTAL_FRAME) {
+                            // 13/16 tall frame (0.8125)
+                            pushCustomBox(x, y, z, x + 1, y + 13/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
+                        } else if (props.isSlab) {
                             const belowBlock = (y > 0) ? this.getBlock(x, y - 1, z) : getBlockOptimized(wx, y - 1, wz);
                             const cullBottom = getBlockProperties(belowBlock).solid && !getBlockProperties(belowBlock).isSlab;
                             pushCustomBox(x, y, z, x + 1, y + 0.5, z + 1, x, y, z, uvTop, uvSide, uvBottom, cullBottom ? 2 : 0, 1.0);
@@ -723,11 +731,11 @@ export class Chunk {
                             const isLava = (currentBlockType === BLOCKS.LAVA);
                             const maxLevel = isLava ? 3 : 7;
                             if (curData === 0) {
-                                liquidTopY = 0.88; // 14/16 height for liquid source block
+                                liquidTopY = 1.0; // Source block is full height like Minecraft to avoid air gaps
                             } else if (curData === 8) {
                                 liquidTopY = 1.0; // Falling column
                             } else {
-                                liquidTopY = 0.18 + (curData / maxLevel) * 0.70; // Flowing levels (0.28 to 0.88)
+                                liquidTopY = 0.25 + (curData / maxLevel) * 0.70; // Flowing levels
                             }
                         }
                     }
@@ -784,11 +792,11 @@ export class Chunk {
                                         const isLava = (currentBlockType === BLOCKS.LAVA);
                                         const maxLevel = isLava ? 3 : 7;
                                         if (nData === 0) {
-                                            neighborTopY = 0.88;
+                                            neighborTopY = 1.0;
                                         } else if (nData === 8) {
                                             neighborTopY = 1.0;
                                         } else {
-                                            neighborTopY = 0.18 + (nData / maxLevel) * 0.70;
+                                            neighborTopY = 0.25 + (nData / maxLevel) * 0.70;
                                         }
                                     }
                                     if (liquidTopY > neighborTopY + 0.01) {
@@ -1650,8 +1658,16 @@ export class World {
             const bBelow = this.getBlock(x, y - 1, z);
             const belowProps = getBlockProperties(bBelow);
 
+            const isWashablePlant = (b, p) => {
+                if (!p) return false;
+                if (p.isWaterlogged || p.isWaterPlant) return false;
+                if (b >= BLOCKS.TUBE_CORAL && b <= BLOCKS.HORN_CORAL) return false;
+                if (b === BLOCKS.BUBBLE_CORAL || b === BLOCKS.SEAGRASS || b === BLOCKS.KELP || b === BLOCKS.KELP_PLANT || b === BLOCKS.RED_KELP || b === BLOCKS.BROWN_KELP || b === BLOCKS.ALGAE) return false;
+                return (p.isCross || p.isGrass);
+            };
+
             // 2. Flow downwards
-            if (bBelow === BLOCKS.AIR || belowProps.isCross || belowProps.isGrass) {
+            if (bBelow === BLOCKS.AIR || isWashablePlant(bBelow, belowProps)) {
                 this.setBlock(x, y - 1, z, type);
                 this.setData(x, y - 1, z, 8); // 8 indicates falling fluid
                 this.queueLiquidUpdate(x, y - 1, z);
@@ -1672,7 +1688,7 @@ export class World {
                         const sideBlock = this.getBlock(x + dx, y, z + dz);
                         const sideProps = getBlockProperties(sideBlock);
 
-                        if (sideBlock === BLOCKS.AIR || (sideProps.isCross || sideProps.isGrass)) {
+                        if (sideBlock === BLOCKS.AIR || isWashablePlant(sideBlock, sideProps)) {
                             this.setBlock(x + dx, y, z + dz, type);
                             this.setData(x + dx, y, z + dz, nextLevel);
                             this.queueLiquidUpdate(x + dx, y, z + dz);
@@ -2195,8 +2211,12 @@ export class World {
                                     if (py < y + 0.5 && py + entityHeight > y) return true;
                                     continue;
                                 }
-                                if (bProps.isBed || bProps.isBedHead) {
+                                if (bProps.isBed || bProps.isBedHead || bProps.isStonecutter || block === window.BLOCKS.STONECUTTER) {
                                     if (py < y + 0.5625 && py + entityHeight > y) return true;
+                                    continue;
+                                }
+                                if (block === window.BLOCKS.PORTAL_FRAME) {
+                                    if (py < y + 0.8125 && py + entityHeight > y) return true;
                                     continue;
                                 }
                                 if (bProps.isFence || bProps.isWall || bProps.isFenceGate) {
@@ -2245,7 +2265,8 @@ export class World {
                                     if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
                                     let surfH = 1.0;
                                     if (bProps.isSlab) surfH = 0.5;
-                                    else if (bProps.isBed || bProps.isBedHead) surfH = 0.5625;
+                                    else if (bProps.isBed || bProps.isBedHead || bProps.isStonecutter || block === window.BLOCKS.STONECUTTER) surfH = 0.5625;
+                                    else if (block === window.BLOCKS.PORTAL_FRAME) surfH = 0.8125;
                                     else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) surfH = 1.5;
                                     if (highestSurfaceY === null || (y + surfH) > highestSurfaceY) {
                                         highestSurfaceY = y + surfH;

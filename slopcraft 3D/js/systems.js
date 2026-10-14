@@ -524,7 +524,11 @@ class UISystem {
             furnaceFuel: document.getElementById('furnace-fuel'),
             furnaceOutput: document.getElementById('furnace-output'),
             furnaceProgress: document.getElementById('furnace-progress'),
-            furnaceFire: document.getElementById('furnace-fire')
+            furnaceFire: document.getElementById('furnace-fire'),
+            stonecutterPanel: document.getElementById('stonecutter-panel'),
+            stonecutterInput: document.getElementById('stonecutter-input'),
+            stonecutterRecipesContainer: document.getElementById('stonecutter-recipes-container'),
+            stonecutterOutput: document.getElementById('stonecutter-output')
         };
         this.isOpen = false;
         this.chestPos = null;
@@ -533,6 +537,10 @@ class UISystem {
         this.furnacePos = null;
         this.furnaceData = null;
         this.onFurnaceClose = null;
+        this.stonecutterPos = null;
+        this.stonecutterSlot = null;
+        this.stonecutterSelectedRecipe = null;
+        this.onStonecutterClose = null;
         this.atlas = null;
         
         // 9 crafting slots (3x3 grid)
@@ -556,6 +564,7 @@ class UISystem {
         this._initCraftingGrid();
         this._initArmorSlots();
         this._initFurnaceSlots();
+        this._initStonecutterSlots();
 
         const btnRecipeBook = document.getElementById('btn-recipe-book');
         const btnRecipeBookWand = document.getElementById('btn-recipe-book-wand');
@@ -596,6 +605,25 @@ class UISystem {
         }
     }
 
+    closeStonecutter() {
+        if (this.stonecutterPos) {
+            if (this.onStonecutterClose) this.onStonecutterClose();
+            this.stonecutterPos = null;
+            this.onStonecutterClose = null;
+            // Return stonecutter input item to player inventory
+            if (this.stonecutterSlot && this.currentPlayer) {
+                const added = this.currentPlayer.inventory.addItem(this.stonecutterSlot.item, this.stonecutterSlot.count);
+                if (!added && this.currentPlayer.manager) {
+                    this.currentPlayer.manager.spawnItem(this.stonecutterSlot.item, this.stonecutterSlot.count, this.currentPlayer.position);
+                }
+                this.stonecutterSlot = null;
+            }
+            this.stonecutterSelectedRecipe = null;
+            if (this.elements.stonecutterPanel) this.elements.stonecutterPanel.classList.add('hidden');
+            if (this.isOpen && this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.remove('hidden');
+        }
+    }
+
     toggle() {
         this.isOpen = !this.isOpen;
         this.is3x3Crafting = false; // normal inventory gets 2x2
@@ -610,6 +638,7 @@ class UISystem {
             if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.remove('hidden');
             if (this.elements.chestPanel) this.elements.chestPanel.classList.add('hidden');
             if (this.elements.furnacePanel) this.elements.furnacePanel.classList.add('hidden');
+            if (this.elements.stonecutterPanel) this.elements.stonecutterPanel.classList.add('hidden');
             if (this.elements.equipmentCol) this.elements.equipmentCol.style.display = 'flex';
             if (this.elements.playerPreviewBox) this.elements.playerPreviewBox.style.display = 'flex';
         } else {
@@ -637,9 +666,10 @@ class UISystem {
             }
             this._matchRecipe();
             
-            // Safely close chest & furnace
+            // Safely close chest, furnace, stonecutter
             this.closeChest();
             this.closeFurnace();
+            this.closeStonecutter();
         }
     }
 
@@ -653,6 +683,7 @@ class UISystem {
         // Hide other panels if any
         this.closeChest();
         this.closeFurnace();
+        this.closeStonecutter();
         this.elements.wandConfigPanel.classList.add('hidden');
         if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.remove('hidden');
         if (this.elements.equipmentCol) this.elements.equipmentCol.style.display = 'none';
@@ -668,6 +699,7 @@ class UISystem {
         }
 
         this.closeFurnace();
+        this.closeStonecutter();
 
         if (!this.isOpen) {
             this.toggle(); // Open UI
@@ -677,6 +709,7 @@ class UISystem {
         this.chestInventory = inventory;
         this.onChestClose = onClose;
         if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.add('hidden');
+        if (this.elements.stonecutterPanel) this.elements.stonecutterPanel.classList.add('hidden');
         this.elements.chestPanel.classList.remove('hidden');
     }
 
@@ -688,6 +721,7 @@ class UISystem {
         }
 
         this.closeChest();
+        this.closeStonecutter();
 
         if (!this.isOpen) {
             this.toggle();
@@ -697,7 +731,32 @@ class UISystem {
         this.furnaceData = data;
         this.onFurnaceClose = onClose;
         if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.add('hidden');
+        if (this.elements.stonecutterPanel) this.elements.stonecutterPanel.classList.add('hidden');
         this.elements.furnacePanel.classList.remove('hidden');
+    }
+
+    toggleStonecutter(x, y, z, onClose) {
+        if (this.stonecutterPos && this.stonecutterPos.x === x && this.stonecutterPos.y === y && this.stonecutterPos.z === z) {
+            this.closeStonecutter();
+            if (this.isOpen) this.toggle();
+            return;
+        }
+
+        this.closeChest();
+        this.closeFurnace();
+
+        if (!this.isOpen) {
+            this.toggle();
+        }
+
+        this.stonecutterPos = { x, y, z };
+        this.onStonecutterClose = onClose;
+        this.is3x3Crafting = false;
+        if (this.elements.survivalTopPanel) this.elements.survivalTopPanel.classList.add('hidden');
+        if (this.elements.chestPanel) this.elements.chestPanel.classList.add('hidden');
+        if (this.elements.furnacePanel) this.elements.furnacePanel.classList.add('hidden');
+        if (this.elements.stonecutterPanel) this.elements.stonecutterPanel.classList.remove('hidden');
+        this._renderStonecutter();
     }
 
     toggleCreative(atlas) {
@@ -709,6 +768,7 @@ class UISystem {
             if (this.elements.creativeContainer) this.elements.creativeContainer.classList.add('hidden');
             if (this.elements.creativeTrashSlot) this.elements.creativeTrashSlot.classList.add('hidden');
             if (this.elements.geometricUI) this.elements.geometricUI.classList.add('hidden');
+            if (this.elements.stonecutterPanel) this.elements.stonecutterPanel.classList.add('hidden');
             this.elements.tooltip.classList.add('hidden');
             if (this.dragState.isDragging) this.cancelDrag();
             return;
@@ -716,6 +776,7 @@ class UISystem {
         // Close any other open panel first
         this.closeChest();
         this.closeFurnace();
+        this.closeStonecutter();
         this.isCreativeOpen = true;
         this.isOpen = true;
         if (this.elements.geometricUI) this.elements.geometricUI.classList.remove('hidden');
@@ -738,9 +799,16 @@ class UISystem {
 
         // Skip AIR and internal/invisible/removed blocks and multi-part sub-blocks (e.g. TALL_FERN_TOP: 144, KELP_PLANT: 248, BED_HEAD: 294)
         const skip = new Set([0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 144, 194, 248, 294]);
-        const entries = Object.entries(blockDefs)
-            .filter(([name, id]) => !skip.has(id) && typeof id === 'number')
-            .sort((a,b) => a[1] - b[1]);
+        const seenIds = new Set();
+        const entries = [];
+        for (const [name, id] of Object.entries(blockDefs)) {
+            if (skip.has(id) || typeof id !== 'number') continue;
+            if (name === 'PLANKS') continue; // Deduplicate: PLANKS and OAK_PLANKS both represent Oak Planks (ID 8)
+            if (seenIds.has(id)) continue;
+            seenIds.add(id);
+            entries.push([name, id]);
+        }
+        entries.sort((a,b) => a[1] - b[1]);
 
         const getBlockCategory = (id, nameStr) => {
             const naturalIds = new Set([
@@ -1026,7 +1094,9 @@ class UISystem {
             slot.dataset.itemType = itm.type;
             slot.dataset.itemSubtype = itm.subtype;
             slot.dataset.itemName = itm.name;
-            slot.dataset.category = itm.type === 'equipment' ? 'equipment' : 'materials';
+            const isBoat = itm.subtype === 'oak_boat' || itm.subtype === 'boat';
+            slot.dataset.category = isBoat ? 'equipment materials' : (itm.type === 'equipment' ? 'equipment' : 'materials');
+            if (isBoat) slot.dataset.itemKeywords = 'boat boats oak vehicle transportation water raft ship';
 
             const cvs = generateItemTexture(itm.type, itm.subtype, (updatedCvs) => {
                 const existing = slot.querySelector('img');
@@ -1064,18 +1134,19 @@ class UISystem {
             slot.onmousedown = (e) => {
                 if (e.button !== 0) return;
                 e.preventDefault();
+                const isBoat = itm.subtype === 'oak_boat' || itm.subtype === 'boat';
                 const fakeSlot = {
                     item: {
                         type: itm.type,
                         subtype: itm.subtype,
                         name: itm.name,
                         id: `${itm.type}_${itm.subtype}_${Date.now()}`,
-                        stackable: itm.type === 'material' || itm.type === 'food',
-                        maxStack: (itm.type === 'material' || itm.type === 'food') ? 64 : 1,
+                        stackable: !isBoat && (itm.type === 'material' || itm.type === 'food'),
+                        maxStack: isBoat ? 1 : ((itm.type === 'material' || itm.type === 'food') ? 64 : 1),
                         data: itm.type === 'equipment' ? { equipData: getEquipDataForSubtype(itm.subtype) } : {},
                         description: ''
                     },
-                    count: (itm.type === 'material' || itm.type === 'food') ? 64 : 1
+                    count: isBoat ? 1 : ((itm.type === 'material' || itm.type === 'food') ? 64 : 1)
                 };
                 if (e.shiftKey) {
                     if (this.currentPlayer && this.currentPlayer.inventory) {
@@ -1268,11 +1339,24 @@ class UISystem {
         const tab = this.activeCreativeTab || 'all';
         const slots = (this.elements.creativeItemsGrid || document.getElementById('creative-items-grid'))?.querySelectorAll('.creative-item-slot');
         if (!slots) return;
+        const q = query.endsWith('s') ? query.slice(0, -1) : query;
         slots.forEach(slot => {
-            const cat = slot.dataset.category || 'building';
+            const cat = (slot.dataset.category || 'building').toLowerCase();
             const name = (slot.title || slot.dataset.itemName || slot.dataset.blockName || '').toLowerCase();
-            const matchesTab = (tab === 'all') || (cat === tab);
-            const matchesQuery = !query || name.includes(query);
+            const subtype = (slot.dataset.itemSubtype || '').toLowerCase();
+            const keywords = (slot.dataset.itemKeywords || '').toLowerCase();
+            const isBoat = name.includes('boat') || subtype.includes('boat') || keywords.includes('boat');
+            
+            // When user types a search query, search EVERYTHING across all tabs!
+            const matchesTab = (query.length > 0) || (tab === 'all') || cat.includes(tab) || (isBoat && (tab === 'equipment' || tab === 'materials'));
+            
+            const matchesQuery = !query || 
+                name.includes(query) || 
+                subtype.includes(query) || 
+                keywords.includes(query) ||
+                (q.length >= 3 && (name.includes(q) || subtype.includes(q) || keywords.includes(q))) || 
+                (isBoat && (query.includes('boat') || query.includes('ship') || query.includes('raft')));
+            
             slot.style.display = (matchesTab && matchesQuery) ? '' : 'none';
         });
     }
@@ -1566,6 +1650,11 @@ class UISystem {
                     slot = this.furnaceData.output; // Can pick up output
                 }
             }
+        } else if (type === 'stonecutter_output') {
+            this._craftFromStonecutter(e.shiftKey);
+            return;
+        } else if (type === 'stonecutter') {
+            slot = this.stonecutterSlot;
         }
         
         if (slot) {
@@ -1598,12 +1687,17 @@ class UISystem {
                     else if (index === 1) this.furnaceData.fuel = null;
                     else if (index === 2) this.furnaceData.output = null;
                 }
+                else if (type === 'stonecutter') {
+                    this.stonecutterSlot = null;
+                    this._renderStonecutter();
+                }
             }
             
             this._updateInventory();
             this._updateCraftingSlots();
             this._updateArmorSlots();
             this._updateFurnaceSlots();
+            if (this.stonecutterPos) this._renderStonecutter();
             
             if (type === 'wand') {
                 if (window.game && window.game.heldItemMesh) {
@@ -1733,9 +1827,9 @@ class UISystem {
             this.currentPlayer.inventory.armor[srcIndex] = temp;
         }
 
-        const standardTypes = ['inventory', 'crafting', 'chest', 'furnace', 'wand'];
+        const standardTypes = ['inventory', 'crafting', 'chest', 'furnace', 'wand', 'stonecutter'];
         if ((standardTypes.includes(srcType) || srcType === 'creative') && standardTypes.includes(targetType)) {
-            if ((targetType === 'furnace' && targetIndex === 2) || targetType === 'crafting_output') {
+            if ((targetType === 'furnace' && targetIndex === 2) || targetType === 'crafting_output' || targetType === 'stonecutter_output') {
                 // Cannot drop into output slots
                 this.cancelDrag();
                 return;
@@ -1749,6 +1843,7 @@ class UISystem {
                 if (lType === 'inventory') return inv[idx];
                 if (lType === 'crafting') return this.craftingSlots[idx];
                 if (lType === 'chest') return this.chestInventory[idx];
+                if (lType === 'stonecutter') return this.stonecutterSlot;
                 if (lType === 'furnace') {
                     if (!this.furnaceData) return null;
                     return idx === 0 ? this.furnaceData.input : (idx === 1 ? this.furnaceData.fuel : this.furnaceData.output);
@@ -1772,6 +1867,10 @@ class UISystem {
                 if (lType === 'inventory') inv[idx] = val;
                 else if (lType === 'crafting') this.craftingSlots[idx] = val;
                 else if (lType === 'chest') this.chestInventory[idx] = val;
+                else if (lType === 'stonecutter') {
+                    this.stonecutterSlot = val;
+                    this._renderStonecutter();
+                }
                 else if (lType === 'furnace') {
                     if (!this.furnaceData) return;
                     if (idx === 0) this.furnaceData.input = val;
@@ -1863,6 +1962,7 @@ class UISystem {
         this._updateArmorSlots();
         this._updateFurnaceSlots();
         this._updateChestSlots();
+        if (this.stonecutterPos) this._renderStonecutter();
     }
 
     // --- Tooltips ---
@@ -1873,6 +1973,11 @@ class UISystem {
         else if (type === 'crafting') slot = this.craftingSlots[index];
         else if (type === 'crafting_output') slot = this._matchRecipe();
         else if (type === 'armor') slot = this.currentPlayer.inventory.armor[index];
+        else if (type === 'stonecutter') slot = this.stonecutterSlot;
+        else if (type === 'stonecutter_output') {
+            const rec = this.stonecutterSelectedRecipe;
+            if (rec) slot = { item: { type: 'block', subtype: rec.block, name: rec.name }, count: rec.count };
+        }
         else if (type === 'furnace') {
             if (!this.furnaceData) return;
             if (index === 0) slot = this.furnaceData.input;
@@ -2033,6 +2138,179 @@ class UISystem {
             this.elements.furnaceOutput.onmouseenter = (e) => this.onSlotEnter(e, 'furnace', 2);
             this.elements.furnaceOutput.onmouseleave = () => this.onSlotLeave();
         }
+    }
+
+    _initStonecutterSlots() {
+        if (this.elements.stonecutterInput) {
+            this.elements.stonecutterInput.onmousedown = (e) => this.onSlotMouseDown(e, 'stonecutter', 0);
+            this.elements.stonecutterInput.onmouseup = (e) => this.onSlotMouseUp(e, 'stonecutter', 0);
+            this.elements.stonecutterInput.onmouseenter = (e) => this.onSlotEnter(e, 'stonecutter', 0);
+            this.elements.stonecutterInput.onmouseleave = () => this.onSlotLeave();
+        }
+        if (this.elements.stonecutterOutput) {
+            this.elements.stonecutterOutput.onmousedown = (e) => this.onSlotMouseDown(e, 'stonecutter_output', 0);
+            this.elements.stonecutterOutput.onmouseup = (e) => this.onSlotMouseUp(e, 'stonecutter_output', 0);
+            this.elements.stonecutterOutput.onmouseenter = (e) => this.onSlotEnter(e, 'stonecutter_output', 0);
+            this.elements.stonecutterOutput.onmouseleave = () => this.onSlotLeave();
+        }
+    }
+
+    _getStonecutterRecipes(blockId) {
+        const B = (typeof BLOCKS !== 'undefined') ? BLOCKS : window.BLOCKS;
+        if (!B) return [];
+        const table = {
+            [B.STONE]: [
+                { block: B.STONE_SLAB, count: 2, name: 'Stone Slab' },
+                { block: B.STONE_STAIRS, count: 1, name: 'Stone Stairs' },
+                { block: B.STONE_BRICKS, count: 1, name: 'Stone Bricks' },
+                { block: B.STONE_WALL, count: 1, name: 'Stone Wall' },
+                { block: B.STONE_BRICK_WALL, count: 1, name: 'Stone Brick Wall' },
+                { block: B.CHISELED_STONE_BRICKS, count: 1, name: 'Chiseled Stone Bricks' }
+            ],
+            [B.COBBLESTONE]: [
+                { block: B.COBBLESTONE_SLAB, count: 2, name: 'Cobblestone Slab' },
+                { block: B.COBBLESTONE_STAIRS, count: 1, name: 'Cobblestone Stairs' },
+                { block: B.COBBLESTONE_WALL, count: 1, name: 'Cobblestone Wall' }
+            ],
+            [B.STONE_BRICKS]: [
+                { block: B.STONE_BRICK_WALL, count: 1, name: 'Stone Brick Wall' },
+                { block: B.CHISELED_STONE_BRICKS, count: 1, name: 'Chiseled Stone Bricks' },
+                { block: B.STONE_SLAB, count: 2, name: 'Stone Slab' },
+                { block: B.STONE_STAIRS, count: 1, name: 'Stone Stairs' }
+            ],
+            [B.MOSSY_COBBLESTONE]: [
+                { block: B.MOSSY_COBBLESTONE_WALL, count: 1, name: 'Mossy Cobblestone Wall' }
+            ],
+            [B.SANDSTONE]: [
+                { block: B.SANDSTONE_WALL, count: 1, name: 'Sandstone Wall' },
+                { block: B.CHISELED_SANDSTONE, count: 1, name: 'Chiseled Sandstone' }
+            ],
+            [B.BLACKSTONE]: [
+                { block: B.BLACKSTONE_WALL, count: 1, name: 'Blackstone Wall' },
+                { block: B.POLISHED_BLACKSTONE, count: 1, name: 'Polished Blackstone' },
+                { block: B.POLISHED_BLACKSTONE_BRICKS, count: 1, name: 'Polished Blackstone Bricks' },
+                { block: B.CHISELED_POLISHED_BLACKSTONE, count: 1, name: 'Chiseled Polished Blackstone' }
+            ],
+            [B.POLISHED_BLACKSTONE]: [
+                { block: B.POLISHED_BLACKSTONE_BRICKS, count: 1, name: 'Polished Blackstone Bricks' },
+                { block: B.CHISELED_POLISHED_BLACKSTONE, count: 1, name: 'Chiseled Polished Blackstone' },
+                { block: B.BLACKSTONE_WALL, count: 1, name: 'Blackstone Wall' }
+            ],
+            [B.POLISHED_BLACKSTONE_BRICKS]: [
+                { block: B.CHISELED_POLISHED_BLACKSTONE, count: 1, name: 'Chiseled Polished Blackstone' },
+                { block: B.BLACKSTONE_WALL, count: 1, name: 'Blackstone Wall' }
+            ],
+            [B.BRICKS]: [
+                { block: B.BRICK_WALL, count: 1, name: 'Brick Wall' }
+            ],
+            [B.NETHER_BRICKS]: [
+                { block: B.NETHER_BRICK_WALL, count: 1, name: 'Nether Brick Wall' },
+                { block: B.CHISELED_NETHER_BRICKS, count: 1, name: 'Chiseled Nether Bricks' }
+            ],
+            [B.AETHER_HOLYSTONE]: [
+                { block: B.HOLYSTONE_WALL, count: 1, name: 'Holystone Wall' }
+            ]
+        };
+        return table[blockId] || [];
+    }
+
+    _renderStonecutter() {
+        if (!this.elements.stonecutterInput || !this.elements.stonecutterOutput) return;
+        this.renderSlotItem(this.elements.stonecutterInput, this.stonecutterSlot);
+        this._updateStonecutterRecipes();
+        this._updateStonecutterOutput();
+    }
+
+    _updateStonecutterRecipes() {
+        const container = this.elements.stonecutterRecipesContainer;
+        if (!container) return;
+        container.innerHTML = '';
+        if (!this.stonecutterSlot || !this.stonecutterSlot.item || this.stonecutterSlot.item.type !== 'block') {
+            this.stonecutterSelectedRecipe = null;
+            return;
+        }
+
+        const recipes = this._getStonecutterRecipes(this.stonecutterSlot.item.subtype);
+        if (recipes.length === 0) {
+            this.stonecutterSelectedRecipe = null;
+            return;
+        }
+
+        if (!this.stonecutterSelectedRecipe || !recipes.some(r => r.block === this.stonecutterSelectedRecipe.block)) {
+            this.stonecutterSelectedRecipe = recipes[0];
+        }
+
+        for (const rec of recipes) {
+            const btn = document.createElement('div');
+            btn.className = 'inv-slot' + (this.stonecutterSelectedRecipe && this.stonecutterSelectedRecipe.block === rec.block ? ' active' : '');
+            btn.style.width = '36px';
+            btn.style.height = '36px';
+            btn.style.minWidth = '36px';
+            btn.style.minHeight = '36px';
+            btn.style.cursor = 'pointer';
+            btn.title = `${rec.name} (${rec.count})`;
+            if (this.stonecutterSelectedRecipe && this.stonecutterSelectedRecipe.block === rec.block) {
+                btn.style.outline = '2px solid #fff';
+                btn.style.background = 'rgba(255,255,255,0.2)';
+            }
+            this.renderSlotItem(btn, { item: { type: 'block', subtype: rec.block, name: rec.name }, count: rec.count });
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                this.stonecutterSelectedRecipe = rec;
+                this._renderStonecutter();
+            };
+            container.appendChild(btn);
+        }
+    }
+
+    _updateStonecutterOutput() {
+        if (!this.elements.stonecutterOutput) return;
+        if (this.stonecutterSlot && this.stonecutterSlot.count > 0 && this.stonecutterSelectedRecipe) {
+            const rec = this.stonecutterSelectedRecipe;
+            this.renderSlotItem(this.elements.stonecutterOutput, {
+                item: { type: 'block', subtype: rec.block, name: rec.name },
+                count: rec.count
+            });
+        } else {
+            this.renderSlotItem(this.elements.stonecutterOutput, null);
+        }
+    }
+
+    _craftFromStonecutter(shiftClick = false) {
+        if (!this.stonecutterSlot || !this.stonecutterSlot.count || !this.stonecutterSelectedRecipe || !this.currentPlayer) return;
+        const rec = this.stonecutterSelectedRecipe;
+        const inv = this.currentPlayer.inventory;
+        const outItem = { type: 'block', subtype: rec.block, name: rec.name, stackable: true, maxStack: 64, data: {} };
+
+        if (shiftClick) {
+            while (this.stonecutterSlot && this.stonecutterSlot.count > 0) {
+                const added = inv.addItem(outItem, rec.count);
+                if (!added) break;
+                this.stonecutterSlot.count--;
+                if (this.stonecutterSlot.count <= 0) this.stonecutterSlot = null;
+            }
+        } else {
+            if (this.dragState.isDragging) {
+                if (this.dragState.itemData && this.dragState.itemData.item.subtype === rec.block && this.dragState.itemData.count + rec.count <= 64) {
+                    this.dragState.itemData.count += rec.count;
+                    this.stonecutterSlot.count--;
+                    if (this.stonecutterSlot.count <= 0) this.stonecutterSlot = null;
+                }
+            } else {
+                this.dragState.isDragging = true;
+                this.dragState.sourceType = 'stonecutter_output';
+                this.dragState.sourceIndex = -1;
+                this.dragState.itemData = { item: outItem, count: rec.count };
+                this.dragState.offsetX = 0;
+                this.dragState.offsetY = 0;
+                this.elements.dragIcon.classList.remove('hidden');
+                this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData);
+                this.stonecutterSlot.count--;
+                if (this.stonecutterSlot.count <= 0) this.stonecutterSlot = null;
+            }
+        }
+        this._renderStonecutter();
+        this._updateInventory();
     }
 
     _updateChestSlots(forceUpdate = false) {
@@ -2636,6 +2914,7 @@ class UISystem {
             if (isFence(B.MANGROVE_PLANKS)) return block(B.MANGROVE_FENCE, 'Mangrove Fence', 3);
             if (isFence(B.CHERRY_PLANKS)) return block(B.CHERRY_FENCE, 'Cherry Fence', 3);
             if (isFence(B.CRIMSON_PLANKS)) return block(B.CRIMSON_FENCE, 'Crimson Fence', 3);
+            if (isFence(B.WARPED_PLANKS)) return block(B.WARPED_FENCE, 'Warped Fence', 3);
             if (isFence(B.AUTUMN_PLANKS)) return block(B.AUTUMN_FENCE, 'Autumn Fence', 3);
 
             // Fence Gates (Stick + Plank + Stick across 2 rows)
@@ -2656,6 +2935,7 @@ class UISystem {
             if (isGate(B.MANGROVE_PLANKS)) return block(B.MANGROVE_FENCE_GATE, 'Mangrove Fence Gate', 1);
             if (isGate(B.CHERRY_PLANKS)) return block(B.CHERRY_FENCE_GATE, 'Cherry Fence Gate', 1);
             if (isGate(B.CRIMSON_PLANKS)) return block(B.CRIMSON_FENCE_GATE, 'Crimson Fence Gate', 1);
+            if (isGate(B.WARPED_PLANKS)) return block(B.WARPED_FENCE_GATE, 'Warped Fence Gate', 1);
             if (isGate(B.AUTUMN_PLANKS)) return block(B.AUTUMN_FENCE_GATE, 'Autumn Fence Gate', 1);
 
             // Walls (2 rows of 3)
@@ -2671,6 +2951,8 @@ class UISystem {
             if (isWallMat(B.SANDSTONE)) return block(B.SANDSTONE_WALL, 'Sandstone Wall', 6);
             if (isWallMat(B.BLACKSTONE)) return block(B.BLACKSTONE_WALL, 'Blackstone Wall', 6);
             if (isWallMat(B.HOLYSTONE)) return block(B.HOLYSTONE_WALL, 'Holystone Wall', 6);
+            if (isWallMat(B.BRICKS)) return block(B.BRICK_WALL, 'Brick Wall', 6);
+            if (isWallMat(B.NETHER_BRICKS)) return block(B.NETHER_BRICK_WALL, 'Nether Brick Wall', 6);
 
             // Stairs
             const isStairMat = (mat) => {
@@ -2683,9 +2965,11 @@ class UISystem {
             if (isStairMat(B.COBBLESTONE)) return block(B.COBBLESTONE_STAIRS, 'Cobblestone Stairs', 4);
             if (isStairMat(B.STONE)) return block(B.STONE_STAIRS, 'Stone Stairs', 4);
 
-            // Oak Boat (5 planks in U-shape)
-            if (isPlank(s[0]) && !s[1] && isPlank(s[2]) && isPlank(s[3]) && isPlank(s[4]) && isPlank(s[5]) && totalItems === 5) return mat('oak_boat', 'Oak Boat', 1);
-            if (isPlank(s[3]) && !s[4] && isPlank(s[5]) && isPlank(s[6]) && isPlank(s[7]) && isPlank(s[8]) && totalItems === 5) return mat('oak_boat', 'Oak Boat', 1);
+            // Oak Boat (5 planks in U-shape, or 5 planks + wooden shovel in center)
+            const isBoatTop = isPlank(s[0]) && (!s[1] || s[1] === 'shovel_wood') && isPlank(s[2]) && isPlank(s[3]) && isPlank(s[4]) && isPlank(s[5]);
+            const isBoatBottom = isPlank(s[3]) && (!s[4] || s[4] === 'shovel_wood') && isPlank(s[5]) && isPlank(s[6]) && isPlank(s[7]) && isPlank(s[8]);
+            if (isBoatTop && (totalItems === 5 || (totalItems === 6 && s[1] === 'shovel_wood'))) return mat('oak_boat', 'Oak Boat', 1);
+            if (isBoatBottom && (totalItems === 5 || (totalItems === 6 && s[4] === 'shovel_wood'))) return mat('oak_boat', 'Oak Boat', 1);
 
             // Beds (3 matching wool in row, 3 planks directly below)
             const woolBedList = [
@@ -2748,7 +3032,7 @@ class UISystem {
 
         // Structured recipes for visual grid
         const recipes = [
-            { name: "Planks (4)", desc: "Basic building block.", grid: [[_,_,_],[_,blk(B.WOOD),_],[_,_,_]], out: blk(B.PLANKS), outCount: 4, needs3x3: false },
+            { name: "Oak Planks (4)", desc: "Basic building block.", grid: [[_,_,_],[_,blk(B.WOOD),_],[_,_,_]], out: blk(B.PLANKS), outCount: 4, needs3x3: false },
             { name: "Birch Planks (4)", desc: "Light wood building block.", grid: [[_,_,_],[_,blk(B.BIRCH_WOOD),_],[_,_,_]], out: blk(B.BIRCH_PLANKS), outCount: 4, needs3x3: false },
             { name: "Stick (4)", desc: "Used for tools.", grid: [[_,_,_],[_,blk(B.PLANKS),_],[_,blk(B.PLANKS),_]], out: mat('stick'), outCount: 4, needs3x3: false },
             { name: "Crafting Table", desc: "Unlocks 3x3 crafting.", grid: [[_,_,_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.CRAFTING_TABLE), outCount: 1, needs3x3: false },
@@ -2870,6 +3154,8 @@ class UISystem {
             { name: "Cherry Fence Gate", desc: "Swinging cherry barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.CHERRY_PLANKS),mat('stick')],[mat('stick'),blk(B.CHERRY_PLANKS),mat('stick')]], out: blk(B.CHERRY_FENCE_GATE), outCount: 1, needs3x3: true },
             { name: "Crimson Fence Gate", desc: "Swinging crimson barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.CRIMSON_PLANKS),mat('stick')],[mat('stick'),blk(B.CRIMSON_PLANKS),mat('stick')]], out: blk(B.CRIMSON_FENCE_GATE), outCount: 1, needs3x3: true },
             { name: "Autumn Fence Gate", desc: "Swinging autumn barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.AUTUMN_PLANKS),mat('stick')],[mat('stick'),blk(B.AUTUMN_PLANKS),mat('stick')]], out: blk(B.AUTUMN_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Warped Fence (3)", desc: "Connecting warped barrier.", grid: [[_,_,_],[blk(B.WARPED_PLANKS),mat('stick'),blk(B.WARPED_PLANKS)],[blk(B.WARPED_PLANKS),mat('stick'),blk(B.WARPED_PLANKS)]], out: blk(B.WARPED_FENCE), outCount: 3, needs3x3: true },
+            { name: "Warped Fence Gate", desc: "Swinging warped barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.WARPED_PLANKS),mat('stick')],[mat('stick'),blk(B.WARPED_PLANKS),mat('stick')]], out: blk(B.WARPED_FENCE_GATE), outCount: 1, needs3x3: true },
 
             // Walls
             { name: "Cobblestone Wall (6)", desc: "Connecting cobblestone barrier.", grid: [[_,_,_],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)]], out: blk(B.COBBLESTONE_WALL), outCount: 6, needs3x3: true },
@@ -2879,6 +3165,8 @@ class UISystem {
             { name: "Sandstone Wall (6)", desc: "Connecting sandstone barrier.", grid: [[_,_,_],[blk(B.SANDSTONE),blk(B.SANDSTONE),blk(B.SANDSTONE)],[blk(B.SANDSTONE),blk(B.SANDSTONE),blk(B.SANDSTONE)]], out: blk(B.SANDSTONE_WALL), outCount: 6, needs3x3: true },
             { name: "Blackstone Wall (6)", desc: "Connecting blackstone barrier.", grid: [[_,_,_],[blk(B.BLACKSTONE),blk(B.BLACKSTONE),blk(B.BLACKSTONE)],[blk(B.BLACKSTONE),blk(B.BLACKSTONE),blk(B.BLACKSTONE)]], out: blk(B.BLACKSTONE_WALL), outCount: 6, needs3x3: true },
             { name: "Holystone Wall (6)", desc: "Connecting holystone barrier.", grid: [[_,_,_],[blk(B.HOLYSTONE),blk(B.HOLYSTONE),blk(B.HOLYSTONE)],[blk(B.HOLYSTONE),blk(B.HOLYSTONE),blk(B.HOLYSTONE)]], out: blk(B.HOLYSTONE_WALL), outCount: 6, needs3x3: true },
+            { name: "Brick Wall (6)", desc: "Connecting brick barrier.", grid: [[_,_,_],[blk(B.BRICKS),blk(B.BRICKS),blk(B.BRICKS)],[blk(B.BRICKS),blk(B.BRICKS),blk(B.BRICKS)]], out: blk(B.BRICK_WALL), outCount: 6, needs3x3: true },
+            { name: "Nether Brick Wall (6)", desc: "Connecting nether brick barrier.", grid: [[_,_,_],[blk(B.NETHER_BRICKS),blk(B.NETHER_BRICKS),blk(B.NETHER_BRICKS)],[blk(B.NETHER_BRICKS),blk(B.NETHER_BRICKS),blk(B.NETHER_BRICKS)]], out: blk(B.NETHER_BRICK_WALL), outCount: 6, needs3x3: true },
 
             { name: "Fletching Table", desc: "Decorative workstation.", grid: [[mat('flint'),mat('flint'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.FLETCHING_TABLE), outCount: 1, needs3x3: true },
             { name: "Smoker", desc: "Rapidly cooks food.", grid: [[_,blk(B.WOOD),_],[blk(B.WOOD),blk(B.FURNACE),blk(B.WOOD)],[_,blk(B.WOOD),_]], out: blk(B.SMOKER), outCount: 1, needs3x3: true },
@@ -2902,11 +3190,31 @@ class UISystem {
             { name: "Blue Wool", desc: "Dye wool with blue dye.", grid: [[_,_,_],[_,blk(B.WOOL),mat('blue_dye')],[_,_,_]], out: blk(B.BLUE_WOOL), outCount: 1, needs3x3: false }
         ];
 
-        const filteredRecipes = recipes.filter(r => this.is3x3Crafting ? true : !r.needs3x3);
-        let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
-        filteredRecipes.forEach((r, idx) => {
-            html += `<li class="recipe-item" data-idx="${idx}">${r.name}</li>`;
+        const searchInput = document.getElementById('recipe-search');
+        if (searchInput && !searchInput._wired) {
+            searchInput._wired = true;
+            searchInput.oninput = () => this.showRecipeBook();
+        }
+        const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const q = query.endsWith('s') ? query.slice(0, -1) : query;
+
+        const filteredRecipes = recipes.filter(r => {
+            if (!query) return true;
+            const name = r.name.toLowerCase();
+            const desc = (r.desc || '').toLowerCase();
+            const isBoat = name.includes('boat') || desc.includes('boat');
+            return name.includes(query) || (q.length >= 3 && name.includes(q)) || desc.includes(query) || (isBoat && (query.includes('boat') || query.includes('ship') || query.includes('raft')));
         });
+
+        let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+        if (filteredRecipes.length === 0) {
+            html += '<li style="padding: 10px; color: #555; font-size: 11px; text-align: center;">No recipes found</li>';
+        } else {
+            filteredRecipes.forEach((r, idx) => {
+                const tag = r.needs3x3 ? '<span style="font-size:9px; color:#ffdd55; float:right;">3x3</span>' : '<span style="font-size:9px; color:#88ff88; float:right;">2x2</span>';
+                html += `<li class="recipe-item" data-idx="${idx}"><span class="recipe-item-name">${r.name}</span> ${tag}</li>`;
+            });
+        }
         html += '</ul>';
         list.innerHTML = html;
 
@@ -2926,8 +3234,17 @@ class UISystem {
     }
 
     showRecipeDetails(recipe) {
+        if (!recipe) return;
         document.getElementById('recipe-viewer-title').innerText = recipe.name;
-        document.getElementById('recipe-viewer-desc').innerText = recipe.desc;
+        let descHtml = recipe.desc || '';
+        if (recipe.needs3x3 && !this.is3x3Crafting) {
+            descHtml += '<div style="color: #ffaa00; font-size: 10px; font-weight: bold; margin-top: 4px;">★ Requires Crafting Table (3x3 Grid)</div>';
+        } else if (recipe.needs3x3) {
+            descHtml += '<div style="color: #88ff88; font-size: 10px; margin-top: 4px;">Crafted on 3x3 Table</div>';
+        } else {
+            descHtml += '<div style="color: #88ff88; font-size: 10px; margin-top: 4px;">Crafted in 2x2 or 3x3 Grid</div>';
+        }
+        document.getElementById('recipe-viewer-desc').innerHTML = descHtml;
         
         const gridContainer = document.getElementById('recipe-viewer-grid');
         gridContainer.innerHTML = '';

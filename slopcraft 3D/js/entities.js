@@ -131,6 +131,7 @@ export class Player {
         this.isCreative = false;
         this.fallStartY = this.position.y;
         this.fallDistance = 0;
+        this.spawnGraceTimer = 5.0; // 5 seconds of spawn invulnerability & no fall damage
         this.inBoat = null;
         this.spawnPoint = null;
     }
@@ -327,8 +328,15 @@ export class Player {
             }
         }
 
+        // Spawn grace timer: zero out fall distance and provide spawn immunity
+        if (this.spawnGraceTimer > 0) {
+            this.spawnGraceTimer -= dt;
+            this.fallStartY = this.position.y;
+            this.fallDistance = 0;
+        }
+
         // Track falling height
-        if (flying || this.isCreative || inWater || inLava || onLadder) {
+        if (flying || this.isCreative || inWater || inLava || onLadder || this.spawnGraceTimer > 0) {
             this.fallStartY = this.position.y;
             this.fallDistance = 0;
         } else if (!this.grounded) {
@@ -918,7 +926,7 @@ export class Player {
     }
 
     takeDamage(amt) {
-        if (this.isCreative) return false;
+        if (this.isCreative || (this.spawnGraceTimer !== undefined && this.spawnGraceTimer > 0)) return false;
         if (this.health <= 0) return true;
         
         let protection = 0;

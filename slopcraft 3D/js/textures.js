@@ -294,7 +294,15 @@ export const BLOCKS = {
     STONE_WALL: 312,
     SANDSTONE_WALL: 313,
     BLACKSTONE_WALL: 314,
-    HOLYSTONE_WALL: 315
+    HOLYSTONE_WALL: 315,
+
+    // Additional Fences, Gates & Masonry
+    WARPED_FENCE: 316,
+    WARPED_FENCE_GATE: 317,
+    BRICK_WALL: 318,
+    NETHER_BRICK_WALL: 319,
+    POLISHED_BLACKSTONE_BRICKS: 320,
+    CHISELED_POLISHED_BLACKSTONE: 321
 };
 
 // Block properties
@@ -307,6 +315,7 @@ const BLOCK_PROPS = {
     [BLOCKS.CHERRY_FENCE]:          { name: 'Cherry Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.CHERRY_FENCE, flammable: true, isFence: true },
     [BLOCKS.CRIMSON_FENCE]:         { name: 'Crimson Fence',         health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.CRIMSON_FENCE, flammable: true, isFence: true },
     [BLOCKS.AUTUMN_FENCE]:          { name: 'Autumn Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.AUTUMN_FENCE, flammable: true, isFence: true },
+    [BLOCKS.WARPED_FENCE]:          { name: 'Warped Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.WARPED_FENCE, flammable: false, isFence: true },
 
     [BLOCKS.SPRUCE_FENCE_GATE]:     { name: 'Spruce Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.SPRUCE_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
     [BLOCKS.JUNGLE_FENCE_GATE]:     { name: 'Jungle Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.JUNGLE_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
@@ -316,12 +325,17 @@ const BLOCK_PROPS = {
     [BLOCKS.CHERRY_FENCE_GATE]:     { name: 'Cherry Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.CHERRY_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
     [BLOCKS.CRIMSON_FENCE_GATE]:    { name: 'Crimson Fence Gate',    health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.CRIMSON_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
     [BLOCKS.AUTUMN_FENCE_GATE]:     { name: 'Autumn Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.AUTUMN_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+    [BLOCKS.WARPED_FENCE_GATE]:     { name: 'Warped Fence Gate',     health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.WARPED_FENCE_GATE, flammable: false, isFenceGate: true, hasFacing: true },
 
     [BLOCKS.MOSSY_COBBLESTONE_WALL]:{ name: 'Mossy Cobblestone Wall',health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.MOSSY_COBBLESTONE_WALL, isWall: true },
     [BLOCKS.STONE_WALL]:            { name: 'Stone Wall',            health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.STONE_WALL, isWall: true },
     [BLOCKS.SANDSTONE_WALL]:        { name: 'Sandstone Wall',        health: 5, transparent: true, emissive: 0, solid: true, drops: BLOCKS.SANDSTONE_WALL, isWall: true },
     [BLOCKS.BLACKSTONE_WALL]:       { name: 'Blackstone Wall',       health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BLACKSTONE_WALL, isWall: true },
     [BLOCKS.HOLYSTONE_WALL]:        { name: 'Holystone Wall',        health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.HOLYSTONE_WALL, isWall: true },
+    [BLOCKS.BRICK_WALL]:            { name: 'Brick Wall',            health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BRICK_WALL, isWall: true },
+    [BLOCKS.NETHER_BRICK_WALL]:     { name: 'Nether Brick Wall',     health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.NETHER_BRICK_WALL, isWall: true },
+    [BLOCKS.POLISHED_BLACKSTONE_BRICKS]: { name: 'Polished Blackstone Bricks', health: 8, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.CHISELED_POLISHED_BLACKSTONE]: { name: 'Chiseled Polished Blackstone', health: 8, transparent: false, emissive: 0, solid: true, drops: null },
 
     [BLOCKS.RED_WOOL]:              { name: 'Red Wool',              health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.RED_WOOL, flammable: true, isWool: true },
     [BLOCKS.BLUE_WOOL]:             { name: 'Blue Wool',             health: 2, transparent: false, emissive: 0, solid: true, drops: BLOCKS.BLUE_WOOL, flammable: true, isWool: true },
@@ -393,7 +407,7 @@ const BLOCK_PROPS = {
     [BLOCKS.MANGROVE_PLANKS]:       { name: 'Mangrove Planks',       health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.FLETCHING_TABLE]:   { name: 'Fletching Table',   health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.SMOKER]:            { name: 'Smoker',            health: 6, transparent: false, emissive: 0, solid: true, drops: null, hasFacing: true },
-    [BLOCKS.STONECUTTER]:       { name: 'Stonecutter',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
+    [BLOCKS.STONECUTTER]:       { name: 'Stonecutter',       health: 6, transparent: true, emissive: 0, solid: true, drops: null, isStonecutter: true },
     [BLOCKS.EMERALD_BLOCK]:     { name: 'Emerald Block',     health: 8, transparent: false, emissive: 0.1, solid: true, drops: null },
     [BLOCKS.LAPIS_BLOCK]:       { name: 'Lapis Block',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.REDSTONE_BLOCK]:    { name: 'Redstone Block',    health: 6, transparent: false, emissive: 0.6, solid: true, drops: null },
@@ -406,7 +420,7 @@ const BLOCK_PROPS = {
     [BLOCKS.WATER]:         { name: 'Water',          health: 0, transparent: true,  emissive: 0, solid: false, isLiquid: true, drops: null },
     [BLOCKS.WOOD]:          { name: 'Wood',           health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.LEAVES]:        { name: 'Leaves',         health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
-    [BLOCKS.PLANKS]:        { name: 'Planks',         health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.PLANKS]:        { name: 'Oak Planks',     health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.COBBLESTONE]:   { name: 'Cobblestone',    health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.IRON_ORE]:      { name: 'Iron Ore',       health: 8, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.GOLD_ORE]:      { name: 'Gold Ore',       health: 8, transparent: false, emissive: 0, solid: true, drops: null },
@@ -425,7 +439,7 @@ const BLOCK_PROPS = {
     [BLOCKS.SNOW]:          { name: 'Snow',           health: 2, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.ICE]:           { name: 'Ice',            health: 3, transparent: true,  emissive: 0, solid: true, drops: null },
     [BLOCKS.LAVA]:          { name: 'Lava',           health: 0, transparent: false, emissive: 1.0, solid: false, isLiquid: true, drops: null },
-    [BLOCKS.PORTAL_FRAME]:  { name: 'Portal Frame',   health: 20, transparent: false, emissive: 0.4, solid: true, drops: null },
+    [BLOCKS.PORTAL_FRAME]:  { name: 'Portal Frame',   health: 20, transparent: true, emissive: 0.4, solid: true, drops: null },
     [BLOCKS.PORTAL]:        { name: 'Portal',         health: 0, transparent: true,  emissive: 1.0, solid: false, drops: null },
     [BLOCKS.BEDROCK]:       { name: 'Bedrock',        health: Infinity, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.GRAVEL]:        { name: 'Gravel',         health: 3, transparent: false, emissive: 0, solid: true, drops: null },
@@ -744,6 +758,9 @@ function generateBlockTexture(ctx, blockType, face, rng) {
         case BLOCKS.CRIMSON_FENCE:
         case BLOCKS.CRIMSON_FENCE_GATE:
             generateBlockTexture(ctx, BLOCKS.CRIMSON_PLANKS, face, rng); return;
+        case BLOCKS.WARPED_FENCE:
+        case BLOCKS.WARPED_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.WARPED_PLANKS, face, rng); return;
         case BLOCKS.COBBLESTONE_WALL:
             generateBlockTexture(ctx, BLOCKS.COBBLESTONE, face, rng); return;
         case BLOCKS.MOSSY_COBBLESTONE_WALL:
@@ -758,6 +775,13 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             generateBlockTexture(ctx, BLOCKS.BLACKSTONE, face, rng); return;
         case BLOCKS.HOLYSTONE_WALL:
             generateBlockTexture(ctx, BLOCKS.HOLYSTONE, face, rng); return;
+        case BLOCKS.BRICK_WALL:
+            generateBlockTexture(ctx, BLOCKS.BRICKS, face, rng); return;
+        case BLOCKS.NETHER_BRICK_WALL:
+            generateBlockTexture(ctx, BLOCKS.NETHER_BRICKS, face, rng); return;
+        case BLOCKS.POLISHED_BLACKSTONE_BRICKS:
+        case BLOCKS.CHISELED_POLISHED_BLACKSTONE:
+            generateBlockTexture(ctx, BLOCKS.BLACKSTONE, face, rng); return;
         case BLOCKS.RED_BED:
             generateBlockTexture(ctx, BLOCKS.RED_WOOL, face, rng); return;
         case BLOCKS.WHITE_BED:
@@ -3459,7 +3483,13 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.STONE_WALL]: 'stone',
     [BLOCKS.SANDSTONE_WALL]: 'sandstone',
     [BLOCKS.BLACKSTONE_WALL]: 'blackstone',
-    [BLOCKS.HOLYSTONE_WALL]: 'aether://holystone'
+    [BLOCKS.HOLYSTONE_WALL]: 'aether://holystone',
+    [BLOCKS.BRICK_WALL]: 'bricks',
+    [BLOCKS.NETHER_BRICK_WALL]: 'nether_bricks',
+    [BLOCKS.WARPED_FENCE]: 'warped_planks',
+    [BLOCKS.WARPED_FENCE_GATE]: 'warped_planks',
+    [BLOCKS.POLISHED_BLACKSTONE_BRICKS]: 'polished_blackstone_bricks',
+    [BLOCKS.CHISELED_POLISHED_BLACKSTONE]: 'chiseled_polished_blackstone'
 };
 
 let _mcChestPromise = null;
@@ -4212,36 +4242,51 @@ export async function createTextureAtlas(useMinecraft = true) {
             const blanketColor = bedColorsHex[props.bedColor || 'red'] || '#b02e26';
             const s = iconCanvas.width / 16;
             iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
-            // Pillow
+
+            // Bed shadow underneath
+            iconCtx.fillStyle = 'rgba(0,0,0,0.18)';
+            iconCtx.beginPath();
+            iconCtx.ellipse(8 * s, 13 * s, 6.5 * s, 2 * s, 0, 0, Math.PI * 2);
+            iconCtx.fill();
+
+            // 4 Oak legs
+            iconCtx.fillStyle = '#4e342e';
+            iconCtx.fillRect(1.5 * s, 10.5 * s, 1.8 * s, 3.5 * s);
+            iconCtx.fillRect(12.7 * s, 10.5 * s, 1.8 * s, 3.5 * s);
+            iconCtx.fillStyle = '#3e2723';
+            iconCtx.fillRect(3.2 * s, 9.5 * s, 1.5 * s, 2.5 * s);
+            iconCtx.fillRect(11.3 * s, 9.5 * s, 1.5 * s, 2.5 * s);
+
+            // Oak wooden frame
+            iconCtx.fillStyle = '#8d6e63';
+            iconCtx.fillRect(1 * s, 8.5 * s, 14 * s, 2.2 * s);
+            iconCtx.fillStyle = '#5d4037';
+            iconCtx.fillRect(1 * s, 10.2 * s, 14 * s, 0.6 * s);
+
+            // White pillow at head end (left)
             iconCtx.fillStyle = '#ffffff';
-            iconCtx.fillRect(2 * s, 4 * s, 4 * s, 3.5 * s);
-            iconCtx.fillStyle = '#d5d5d5';
-            iconCtx.fillRect(2 * s, 7 * s, 4 * s, 0.8 * s);
-            // Blanket
+            iconCtx.fillRect(1.5 * s, 4.5 * s, 4.5 * s, 3.8 * s);
+            iconCtx.fillStyle = '#e0e0e0';
+            iconCtx.fillRect(1.5 * s, 7.5 * s, 4.5 * s, 0.8 * s);
+            iconCtx.fillStyle = '#b0b0b0';
+            iconCtx.fillRect(1.5 * s, 8.1 * s, 4.5 * s, 0.4 * s);
+
+            // Colored blanket
             iconCtx.fillStyle = blanketColor;
-            iconCtx.fillRect(6 * s, 4 * s, 8 * s, 3.8 * s);
-            // Blanket shadow edge
+            iconCtx.fillRect(5.8 * s, 4.5 * s, 9 * s, 4 * s);
+
+            // Blanket top highlight
+            iconCtx.fillStyle = 'rgba(255,255,255,0.25)';
+            iconCtx.fillRect(5.8 * s, 4.5 * s, 9 * s, 0.8 * s);
+            // Blanket fold shadow
             iconCtx.fillStyle = 'rgba(0,0,0,0.22)';
-            iconCtx.fillRect(2 * s, 7.5 * s, 12 * s, 0.7 * s);
-            // Wooden base
-            iconCtx.fillStyle = '#80552b';
-            iconCtx.fillRect(1.5 * s, 8.2 * s, 13 * s, 1.8 * s);
-            iconCtx.fillStyle = '#553618';
-            iconCtx.fillRect(1.5 * s, 9.5 * s, 13 * s, 0.5 * s);
-            // Legs
-            iconCtx.fillStyle = '#432912';
-            iconCtx.fillRect(2 * s, 10 * s, 1.4 * s, 2.5 * s);
-            iconCtx.fillRect(12.6 * s, 10 * s, 1.4 * s, 2.5 * s);
-            iconCtx.fillStyle = '#2d1b0b';
-            iconCtx.fillRect(3.8 * s, 10 * s, 1.1 * s, 1.5 * s);
-            iconCtx.fillRect(11.1 * s, 10 * s, 1.1 * s, 1.5 * s);
+            iconCtx.fillRect(5.8 * s, 8 * s, 9 * s, 0.8 * s);
             return iconCanvas;
         }
 
         // Generate 3 faces from atlas
         const top = getFaceCanvas('top');
         const side1 = getFaceCanvas('side');
-        // For blocks with a distinct front face (chest, furnace, etc.), show it on the right face of the icon
         const hasFront = uvMap[blockType] && uvMap[blockType]['front'];
         const side2 = getFaceCanvas(hasFront ? 'front' : 'side');
 
@@ -4267,58 +4312,155 @@ export async function createTextureAtlas(useMinecraft = true) {
         const s2sCtx = side2Scaled.getContext('2d'); s2sCtx.imageSmoothingEnabled = false;
         s2sCtx.drawImage(side2, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE * SCALE, TEX_SIZE * SCALE);
 
-        const renderIsoBox = (x0, y0, z0, x1, y1, z1) => {
-            // Top face (at height y1)
-            iconCtx.save();
-            iconCtx.setTransform(1, 0.5, -1, 0.5, 16 * SCALE, (16 - y1) * SCALE);
-            iconCtx.drawImage(topScaled, x0 * SCALE, z0 * SCALE, (x1 - x0) * SCALE, (z1 - z0) * SCALE, x0 * SCALE, z0 * SCALE, (x1 - x0) * SCALE, (z1 - z0) * SCALE);
-            iconCtx.restore();
-
-            // Left face (at z = z1)
-            iconCtx.save();
-            iconCtx.setTransform(1, 0.5, 0, 1, (16 - z1) * SCALE, (16 - y1 + 0.5 * z1) * SCALE);
-            iconCtx.drawImage(side1Scaled, x0 * SCALE, (16 - y1) * SCALE, (x1 - x0) * SCALE, (y1 - y0) * SCALE, x0 * SCALE, 0, (x1 - x0) * SCALE, (y1 - y0) * SCALE);
-            iconCtx.restore();
-
-            // Right face (at x = x1)
-            iconCtx.save();
-            iconCtx.setTransform(1, -0.5, 0, 1, x1 * SCALE, (24 - y1 + 0.5 * x1) * SCALE);
-            iconCtx.drawImage(side2Scaled, (16 - z1) * SCALE, (16 - y1) * SCALE, (z1 - z0) * SCALE, (y1 - y0) * SCALE, (16 - z1) * SCALE, 0, (z1 - z0) * SCALE, (y1 - y0) * SCALE);
-            iconCtx.restore();
-        };
-
         if (props.isFence) {
-            renderIsoBox(6, 0, 2, 10, 16, 6);   // Back post
-            renderIsoBox(7, 4, 2, 9, 7, 14);    // Lower rail
-            renderIsoBox(7, 11, 2, 9, 14, 14);  // Upper rail
-            renderIsoBox(6, 0, 10, 10, 16, 14); // Front post
+            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
+            const s = iconCanvas.width / 16;
+            const drawPlank = (rx, ry, rw, rh) => {
+                iconCtx.drawImage(side1Scaled, rx * s, ry * s, rw * s, rh * s, rx * s, ry * s, rw * s, rh * s);
+                iconCtx.fillStyle = 'rgba(255,255,255,0.25)';
+                iconCtx.fillRect(rx * s, ry * s, rw * s, s);
+                iconCtx.fillStyle = 'rgba(0,0,0,0.35)';
+                iconCtx.fillRect(rx * s, (ry + rh - 1) * s, rw * s, s);
+                iconCtx.fillRect((rx + rw - 1) * s, ry * s, s, rh * s);
+            };
+            // Left post
+            drawPlank(2.5, 1, 3, 14);
+            // Right post
+            drawPlank(10.5, 1, 3, 14);
+            // Upper cross rail
+            drawPlank(0.5, 4, 15, 2.5);
+            // Lower cross rail
+            drawPlank(0.5, 9.5, 15, 2.5);
             return iconCanvas;
         }
 
         if (props.isFenceGate) {
-            renderIsoBox(7, 4, 0, 9, 16, 3);    // Back post
-            renderIsoBox(7, 5, 3, 9, 8, 13);    // Lower rail
-            renderIsoBox(7, 10, 3, 9, 13, 13);  // Upper rail
-            renderIsoBox(6, 5, 7, 10, 14, 9);   // Center latch
-            renderIsoBox(7, 4, 13, 9, 16, 16);  // Front post
+            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
+            const s = iconCanvas.width / 16;
+            const drawPlank = (rx, ry, rw, rh) => {
+                iconCtx.drawImage(side1Scaled, rx * s, ry * s, rw * s, rh * s, rx * s, ry * s, rw * s, rh * s);
+                iconCtx.fillStyle = 'rgba(255,255,255,0.25)';
+                iconCtx.fillRect(rx * s, ry * s, rw * s, s);
+                iconCtx.fillStyle = 'rgba(0,0,0,0.35)';
+                iconCtx.fillRect(rx * s, (ry + rh - 1) * s, rw * s, s);
+                iconCtx.fillRect((rx + rw - 1) * s, ry * s, s, rh * s);
+            };
+            // Outer posts
+            drawPlank(1, 2, 3, 12);
+            drawPlank(12, 2, 3, 12);
+            // Swinging gate rails
+            drawPlank(3.5, 4.5, 9, 2.2);
+            drawPlank(3.5, 9.5, 9, 2.2);
+            // Central vertical latch
+            drawPlank(7, 3.5, 2, 9.2);
             return iconCanvas;
         }
 
         if (props.isWall) {
-            renderIsoBox(5, 0, 0, 11, 13, 4);   // Back shoulder
-            renderIsoBox(4, 0, 4, 12, 16, 12);  // Center post
-            renderIsoBox(5, 0, 12, 11, 13, 16); // Front shoulder
+            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
+            const s = iconCanvas.width / 16;
+            const drawStone = (rx, ry, rw, rh) => {
+                iconCtx.drawImage(side1Scaled, rx * s, ry * s, rw * s, rh * s, rx * s, ry * s, rw * s, rh * s);
+                iconCtx.fillStyle = 'rgba(255,255,255,0.2)';
+                iconCtx.fillRect(rx * s, ry * s, rw * s, s);
+                iconCtx.fillStyle = 'rgba(0,0,0,0.4)';
+                iconCtx.fillRect(rx * s, (ry + rh - 1) * s, rw * s, s);
+                iconCtx.fillRect((rx + rw - 1) * s, ry * s, s, rh * s);
+            };
+            // Side shoulders
+            drawStone(1, 6, 3.5, 9);
+            drawStone(11.5, 6, 3.5, 9);
+            // Central wall post
+            drawStone(4, 2, 8, 13);
+            // Cap
+            drawStone(3, 1.5, 10, 2);
             return iconCanvas;
         }
 
-        if (props.isStair) {
-            renderIsoBox(0, 0, 0, 16, 8, 16);   // Bottom base
-            renderIsoBox(0, 8, 0, 16, 16, 8);   // Upper back step
+        if (blockType === BLOCKS.STONECUTTER) {
+            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
+            const s = iconCanvas.width / 16;
+            // Stone base (9/16 tall)
+            iconCtx.drawImage(side1Scaled, 1 * s, 7 * s, 14 * s, 9 * s, 1 * s, 7 * s, 14 * s, 9 * s);
+            iconCtx.fillStyle = 'rgba(255,255,255,0.2)';
+            iconCtx.fillRect(1 * s, 7 * s, 14 * s, s);
+            iconCtx.fillStyle = 'rgba(0,0,0,0.4)';
+            iconCtx.fillRect(1 * s, 15 * s, 14 * s, s);
+
+            // Saw blade
+            iconCtx.fillStyle = '#dfe4ea';
+            iconCtx.beginPath();
+            iconCtx.arc(8 * s, 7 * s, 5 * s, Math.PI, 0, false);
+            iconCtx.closePath();
+            iconCtx.fill();
+            iconCtx.strokeStyle = '#718093';
+            iconCtx.lineWidth = s * 0.8;
+            iconCtx.stroke();
+            // Center axle
+            iconCtx.fillStyle = '#2f3640';
+            iconCtx.beginPath();
+            iconCtx.arc(8 * s, 7 * s, 1.5 * s, 0, Math.PI * 2);
+            iconCtx.fill();
+            // Blade teeth
+            iconCtx.fillStyle = '#718093';
+            for (let angle = Math.PI; angle <= Math.PI * 2; angle += Math.PI / 6) {
+                const tx = 8 * s + Math.cos(angle) * 4.8 * s;
+                const ty = 7 * s + Math.sin(angle) * 4.8 * s;
+                iconCtx.fillRect(tx - s * 0.5, ty - s * 0.5, s, s);
+            }
+            return iconCanvas;
+        }
+
+        if (blockType === BLOCKS.PORTAL_FRAME) {
+            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
+            const s = iconCanvas.width / 16;
+            // 13/16 height end portal frame
+            iconCtx.drawImage(side1Scaled, 1 * s, 3 * s, 14 * s, 13 * s, 1 * s, 3 * s, 14 * s, 13 * s);
+            iconCtx.fillStyle = 'rgba(255,255,255,0.2)';
+            iconCtx.fillRect(1 * s, 3 * s, 14 * s, s);
+            iconCtx.fillStyle = 'rgba(0,0,0,0.4)';
+            iconCtx.fillRect(1 * s, 15 * s, 14 * s, s);
+            // Eye socket
+            iconCtx.fillStyle = '#0652dd';
+            iconCtx.fillRect(5 * s, 2 * s, 6 * s, 3 * s);
+            iconCtx.fillStyle = '#2ed573';
+            iconCtx.fillRect(6 * s, 2.5 * s, 4 * s, 2 * s);
             return iconCanvas;
         }
 
         if (props.isSlab) {
-            renderIsoBox(0, 0, 0, 16, 8, 16);   // Slab
+            iconCtx.save();
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 8 * SCALE * 0.5);
+            iconCtx.drawImage(topScaled, 0, 0);
+
+            iconCtx.setTransform(1, 0.5, 0, 1, 0, 12 * SCALE);
+            iconCtx.drawImage(side1Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
+
+            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 20 * SCALE);
+            iconCtx.drawImage(side2Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
+            iconCtx.restore();
+            return iconCanvas;
+        }
+
+        if (props.isStair) {
+            iconCtx.save();
+            // Lower slab base
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 8 * SCALE * 0.5);
+            iconCtx.drawImage(topScaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE);
+
+            iconCtx.setTransform(1, 0.5, 0, 1, 0, 12 * SCALE);
+            iconCtx.drawImage(side1Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
+
+            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 20 * SCALE);
+            iconCtx.drawImage(side2Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
+
+            // Upper back step
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 0);
+            iconCtx.drawImage(topScaled, 0, 0, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
+
+            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 16 * SCALE);
+            iconCtx.drawImage(side2Scaled, 0, 0, 8 * SCALE, 8 * SCALE, 8 * SCALE, 0, 8 * SCALE, 8 * SCALE);
+            iconCtx.restore();
             return iconCanvas;
         }
 
@@ -4680,6 +4822,10 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                     savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
                     savedCvs.getContext('2d').drawImage(canvas, 0, 0);
                     _itemCanvasCache.set(itemSubtype, savedCvs);
+                    if (itemSubtype === 'oak_boat' || itemSubtype === 'boat') {
+                        _itemCanvasCache.set('oak_boat', savedCvs);
+                        _itemCanvasCache.set('boat', savedCvs);
+                    }
                     _itemTextureCache.set(itemSubtype, canvas.toDataURL());
                     if (onLoaded) onLoaded(canvas);
                 }
@@ -5026,9 +5172,49 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                "
             ];
             p = palettes['bow'];
+        } else if (itemSubtype === 'oak_boat' || itemSubtype === 'boat') {
+            shape = [
+                "                ",
+                "                ",
+                "  OO        OO  ",
+                "  OSSO    OSSO  ",
+                "  OSSSOOOOCCCO  ",
+                "  OCCSSSSSCCO   ",
+                "  OHCCCCCCCDO   ",
+                "  OHCCCCCCCCDO  ",
+                "  OHCCCCCCCCDO  ",
+                "   OHCCCCCCDDO  ",
+                "   OHCCCCCCDO   ",
+                "    OHCCCCDDO   ",
+                "    ODDDDDDDO   ",
+                "     OOOOOOO    ",
+                "                ",
+                "                "
+            ];
+            p = palettes['wood'] || { c: '#b88648', d: '#8b5a2b', h: '#d4a373' };
         }
     } else if (itemType === 'material') {
-        if (itemSubtype === 'book') {
+        if (itemSubtype === 'oak_boat' || itemSubtype === 'boat') {
+            shape = [
+                "                ",
+                "                ",
+                "  OO        OO  ",
+                "  OSSO    OSSO  ",
+                "  OSSSOOOOCCCO  ",
+                "  OCCSSSSSCCO   ",
+                "  OHCCCCCCCDO   ",
+                "  OHCCCCCCCCDO  ",
+                "  OHCCCCCCCCDO  ",
+                "   OHCCCCCCDDO  ",
+                "   OHCCCCCCDO   ",
+                "    OHCCCCDDO   ",
+                "    ODDDDDDDO   ",
+                "     OOOOOOO    ",
+                "                ",
+                "                "
+            ];
+            p = palettes['wood'] || { c: '#b88648', d: '#8b5a2b', h: '#d4a373' };
+        } else if (itemSubtype === 'book') {
             shape = [
                 "                ",
                 "     OOOOOOO    ",

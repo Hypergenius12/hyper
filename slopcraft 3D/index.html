@@ -246,6 +246,27 @@
                         </div>
                     </div>
 
+                    <!-- 4. Stonecutter Panel -->
+                    <div id="stonecutter-panel" class="container-top-panel hidden">
+                        <div class="mc-container-title" style="text-align: center; width: 100%;">Stonecutter</div>
+                        <div class="stonecutter-body" style="display: flex; align-items: center; justify-content: space-around; width: 100%; padding: 4px 10px;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <span style="font-size: 11px; color: #555; font-family: 'Minecraftia';">Input</span>
+                                <div class="inv-slot" id="stonecutter-input"></div>
+                            </div>
+                            <div style="font-size: 1.4rem; color: #404040; font-family: 'Minecraftia';">➔</div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <span style="font-size: 11px; color: #555; font-family: 'Minecraftia';">Recipes</span>
+                                <div id="stonecutter-recipes-container" style="display: grid; grid-template-columns: repeat(4, 38px); grid-template-rows: repeat(2, 38px); gap: 4px; min-width: 168px; min-height: 82px; max-height: 84px; overflow-y: auto; background: #8b8b8b; padding: 4px; border: 2px inset #373737;"></div>
+                            </div>
+                            <div style="font-size: 1.4rem; color: #404040; font-family: 'Minecraftia';">➔</div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                <span style="font-size: 11px; color: #555; font-family: 'Minecraftia';">Output</span>
+                                <div class="inv-slot crafting-output" id="stonecutter-output"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 5. Dungeon Menu Panel -->
                     <div id="dungeon-menu-panel" class="container-top-panel hidden" style="text-align: center; padding: 10px;">
                         <div class="mc-container-title" style="font-size: 16px;">Dungeon Entrance</div>
@@ -304,6 +325,7 @@
             <button id="btn-close-recipes" class="recipe-close-btn">&times;</button>
         </div>
         <div class="recipe-book-content">
+            <input type="text" id="recipe-search" class="mc-input" placeholder="Search (e.g. boat)..." style="width: 100%; box-sizing: border-box; padding: 4px 6px; font-size: 11px; margin-bottom: 4px; border: 2px solid #373737; background: #222; color: #fff; font-family: 'Minecraftia', monospace;" autocomplete="off" spellcheck="false" />
             <!-- Left Pane: List -->
             <div id="recipe-list">
                 <!-- Filled by JS -->
