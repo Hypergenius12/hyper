@@ -2221,17 +2221,19 @@ class UISystem {
             [B.CRIMSON_STEM]: { block: B.CRIMSON_PLANKS, name: 'Crimson Planks' },
             [B.DARK_OAK_WOOD]: { block: B.DARK_OAK_PLANKS, name: 'Dark Oak Planks' },
             [B.BIRCH_WOOD]: { block: B.BIRCH_PLANKS, name: 'Birch Planks' },
+            [B.MANGROVE_LOG]: { block: B.MANGROVE_PLANKS, name: 'Mangrove Planks' },
             [B.MAGIC_WOOD]: { block: B.MAGIC_PLANKS, name: 'Magic Planks' },
             [B.REDWOOD_LOG]: { block: B.REDWOOD_PLANKS, name: 'Redwood Planks' },
             [B.WARPED_STEM]: { block: B.WARPED_PLANKS, name: 'Warped Planks' },
             [B.GOLDEN_OAK_WOOD]: { block: B.GOLDEN_OAK_PLANKS, name: 'Golden Oak Planks' },
+            [B.ENCHANTED_AETHER_LOG]: { block: B.GOLDEN_OAK_PLANKS, name: 'Golden Oak Planks' },
             [B.AETHER_WOOD]: { block: B.AETHER_PLANKS, name: 'Skyroot Planks' },
         };
         const woodType = s.find(x => x !== null && woodToPlankMap[x]);
         const isPlank = (t) => [
             B.PLANKS, B.ACACIA_PLANKS, B.CHERRY_PLANKS, B.AUTUMN_PLANKS, B.PALM_PLANKS,
-            B.PINE_PLANKS, B.CRIMSON_PLANKS, B.DARK_OAK_PLANKS, B.BIRCH_PLANKS, B.MAGIC_PLANKS,
-            B.REDWOOD_PLANKS, B.WARPED_PLANKS, B.GOLDEN_OAK_PLANKS, B.AETHER_PLANKS
+            B.PINE_PLANKS, B.CRIMSON_PLANKS, B.DARK_OAK_PLANKS, B.BIRCH_PLANKS, B.MANGROVE_PLANKS,
+            B.MAGIC_PLANKS, B.REDWOOD_PLANKS, B.WARPED_PLANKS, B.GOLDEN_OAK_PLANKS, B.AETHER_PLANKS
         ].includes(t);
         const countAnyPlank = s.filter(x => x !== null && isPlank(x)).length;
         const isLog = (t) => t !== null && woodToPlankMap[t] !== undefined;
@@ -2345,7 +2347,7 @@ class UISystem {
         // --- 2x2 and 3x3 shared recipes ---
         if (woodType !== undefined && totalItems === 1) return block(woodToPlankMap[woodType].block, woodToPlankMap[woodType].name, 4);
         if (countAnyPlank === 2 && totalItems === 2) return mat('stick', 'Stick', 4);
-        if (getCount('coal') === 1 && getCount('stick') === 1 && totalItems === 2) return block(B.TORCH, 'Torch', 4);
+        if ((getCount('coal') === 1 || getCount('charcoal') === 1) && getCount('stick') === 1 && totalItems === 2) return block(B.TORCH, 'Torch', 4);
         
         if (getCount('stick') === 1 && getCount('iron_ingot') === 1 && totalItems === 2) return equip('wand_basic', {}, 'Basic Wand', 'Channels raw magic.');
         if (getCount('wand_basic') === 1 && getCount('coal') === 1 && totalItems === 2) return equip('wand_fire', { element: 'FIRE' }, 'Fire Wand', 'Shoots fireballs.');
@@ -2358,6 +2360,12 @@ class UISystem {
         if (getCount('iron_ingot') === 1 && getCount(B.SAND) === 1 && totalItems === 2) return equip('flint_and_steel', { damage: 0 }, 'Flint and Steel', 'Lights fires.');
         if (getCount(B.COBBLESTONE) === 1 && (getCount(B.LEAVES) === 1 || getCount(B.CHERRY_LEAVES) === 1 || getCount(B.AUTUMN_LEAVES) === 1) && totalItems === 2) return block(B.MOSSY_COBBLESTONE, 'Mossy Cobble', 1);
         
+        if (getCount('string') === 4 && totalItems === 4) return block(B.WOOL, 'Wool', 1);
+        if (getCount(B.NETHERRACK) === 4 && totalItems === 4) return block(B.NETHER_BRICKS, 'Nether Bricks', 4);
+        if (getCount(B.MAGMA_STONE) === 4 && totalItems === 4) return block(B.MAGMA, 'Magma Block', 4);
+        if (getCount(B.BASALT) === 4 && totalItems === 4) return block(B.SMOOTH_BASALT, 'Smooth Basalt', 4);
+        if (getCount(B.HOLYSTONE) === 4 && totalItems === 4) return block(B.CARVED_HOLYSTONE, 'Carved Holystone', 4);
+
         if (getCount(B.SUGARCANE) === 1 && totalItems === 1) return mat('sugar', 'Sugar', 1);
         if (getCount(B.SUGARCANE) === 3 && totalItems === 3) return mat('paper', 'Paper', 3);
         if (getCount('paper') === 3 && getCount('leather') === 1 && totalItems === 4) return mat('book', 'Book', 1);
@@ -2374,6 +2382,7 @@ class UISystem {
         if (getCount(B.LAPIS_BLOCK) === 1 && totalItems === 1) return mat('lapis_lazuli', 'Lapis Lazuli', 9);
         if (getCount(B.REDSTONE_BLOCK) === 1 && totalItems === 1) return mat('redstone', 'Redstone Dust', 9);
         if (getCount(B.COAL_BLOCK) === 1 && totalItems === 1) return mat('coal', 'Coal', 9);
+        if (getCount(B.BONE_BLOCK) === 1 && totalItems === 1) return mat('bone_meal', 'Bone Meal', 9);
         if (getCount('netherite_scrap') === 4 && getCount('gold_ingot') === 4 && totalItems === 8) return mat('netherite_ingot', 'Netherite Ingot', 1);
 
         if (getCount('wheat') === 3 && totalItems === 3) return mat('bread', 'Bread', 1);
@@ -2494,6 +2503,7 @@ class UISystem {
             if ((getCount('lapis_lazuli') === 9 || getCount('lapis') === 9) && totalItems === 9) return block(B.LAPIS_BLOCK, 'Lapis Block', 1);
             if (getCount('redstone') === 9 && totalItems === 9) return block(B.REDSTONE_BLOCK, 'Redstone Block', 1);
             if (getCount('coal') === 9 && totalItems === 9) return block(B.COAL_BLOCK, 'Coal Block', 1);
+            if ((getCount('bone_meal') === 9 || getCount('bone') === 9) && totalItems === 9) return block(B.BONE_BLOCK, 'Bone Block', 1);
 
             // Utilities & Weapons
             if (getCount('iron_ingot') === 4 && getCount('redstone') === 1 && totalItems === 5) return mat('compass', 'Compass', 1);
@@ -2610,6 +2620,14 @@ class UISystem {
             { name: "Lapis Lazuli (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.LAPIS_BLOCK),_,_],[_,_,_]], out: mat('lapis_lazuli'), outCount: 9, needs3x3: false },
             { name: "Redstone (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.REDSTONE_BLOCK),_,_],[_,_,_]], out: mat('redstone'), outCount: 9, needs3x3: false },
             { name: "Coal (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.COAL_BLOCK),_,_],[_,_,_]], out: mat('coal'), outCount: 9, needs3x3: false },
+            { name: "Bone Block", desc: "Storage block.", grid: [[mat('bone_meal'),mat('bone_meal'),mat('bone_meal')],[mat('bone_meal'),mat('bone_meal'),mat('bone_meal')],[mat('bone_meal'),mat('bone_meal'),mat('bone_meal')]], out: blk(B.BONE_BLOCK), outCount: 1, needs3x3: true },
+            { name: "Bone Meal (9)", desc: "Revert block.", grid: [[_,_,_],[blk(B.BONE_BLOCK),_,_],[_,_,_]], out: mat('bone_meal'), outCount: 9, needs3x3: false },
+            { name: "Wool", desc: "Spun textile block.", grid: [[_,_,_],[mat('string'),mat('string'),_],[mat('string'),mat('string'),_]], out: blk(B.WOOL), outCount: 1, needs3x3: false },
+            { name: "Nether Bricks (4)", desc: "Durable Nether masonry.", grid: [[_,_,_],[blk(B.NETHERRACK),blk(B.NETHERRACK),_],[blk(B.NETHERRACK),blk(B.NETHERRACK),_]], out: blk(B.NETHER_BRICKS), outCount: 4, needs3x3: false },
+            { name: "Magma Block (4)", desc: "Fiery volcanic block.", grid: [[_,_,_],[blk(B.MAGMA_STONE),blk(B.MAGMA_STONE),_],[blk(B.MAGMA_STONE),blk(B.MAGMA_STONE),_]], out: blk(B.MAGMA), outCount: 4, needs3x3: false },
+            { name: "Smooth Basalt (4)", desc: "Polished basalt masonry.", grid: [[_,_,_],[blk(B.BASALT),blk(B.BASALT),_],[blk(B.BASALT),blk(B.BASALT),_]], out: blk(B.SMOOTH_BASALT), outCount: 4, needs3x3: false },
+            { name: "Mangrove Planks (4)", desc: "Warm reddish planks.", grid: [[_,_,_],[_,blk(B.MANGROVE_LOG),_],[_,_,_]], out: blk(B.MANGROVE_PLANKS), outCount: 4, needs3x3: false },
+            { name: "Dark Oak Planks (4)", desc: "Deep rich planks.", grid: [[_,_,_],[_,blk(B.DARK_OAK_WOOD),_],[_,_,_]], out: blk(B.DARK_OAK_PLANKS), outCount: 4, needs3x3: false },
 
             { name: "Fletching Table", desc: "Decorative workstation.", grid: [[mat('flint'),mat('flint'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.FLETCHING_TABLE), outCount: 1, needs3x3: true },
             { name: "Smoker", desc: "Rapidly cooks food.", grid: [[_,blk(B.WOOD),_],[blk(B.WOOD),blk(B.FURNACE),blk(B.WOOD)],[_,blk(B.WOOD),_]], out: blk(B.SMOKER), outCount: 1, needs3x3: true },
