@@ -15,6 +15,7 @@ export const BLOCKS = {
     WOOD: 6,
     LEAVES: 7,
     PLANKS: 8,
+    OAK_PLANKS: 8,
     COBBLESTONE: 9,
     IRON_ORE: 10,
     GOLD_ORE: 11,
@@ -714,6 +715,82 @@ function addRings(ctx, rng, ringColor, borderColor = 'rgba(60, 45, 25, 0.9)') {
 // Generate texture for a block type
 function generateBlockTexture(ctx, blockType, face, rng) {
     switch (blockType) {
+        case BLOCKS.OAK_FENCE:
+        case BLOCKS.OAK_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.PLANKS, face, rng); return;
+        case BLOCKS.BIRCH_FENCE:
+        case BLOCKS.BIRCH_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.BIRCH_PLANKS, face, rng); return;
+        case BLOCKS.SPRUCE_FENCE:
+        case BLOCKS.SPRUCE_FENCE_GATE:
+        case BLOCKS.AUTUMN_FENCE:
+        case BLOCKS.AUTUMN_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.PINE_PLANKS, face, rng); return;
+        case BLOCKS.JUNGLE_FENCE:
+        case BLOCKS.JUNGLE_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.PALM_PLANKS, face, rng); return;
+        case BLOCKS.ACACIA_FENCE:
+        case BLOCKS.ACACIA_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.ACACIA_PLANKS, face, rng); return;
+        case BLOCKS.DARK_OAK_FENCE:
+        case BLOCKS.DARK_OAK_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.DARK_OAK_PLANKS, face, rng); return;
+        case BLOCKS.MANGROVE_FENCE:
+        case BLOCKS.MANGROVE_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.MANGROVE_PLANKS, face, rng); return;
+        case BLOCKS.CHERRY_FENCE:
+        case BLOCKS.CHERRY_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.CHERRY_PLANKS, face, rng); return;
+        case BLOCKS.CRIMSON_FENCE:
+        case BLOCKS.CRIMSON_FENCE_GATE:
+            generateBlockTexture(ctx, BLOCKS.CRIMSON_PLANKS, face, rng); return;
+        case BLOCKS.COBBLESTONE_WALL:
+            generateBlockTexture(ctx, BLOCKS.COBBLESTONE, face, rng); return;
+        case BLOCKS.MOSSY_COBBLESTONE_WALL:
+            generateBlockTexture(ctx, BLOCKS.MOSSY_COBBLESTONE, face, rng); return;
+        case BLOCKS.STONE_BRICK_WALL:
+            generateBlockTexture(ctx, BLOCKS.STONE_BRICKS, face, rng); return;
+        case BLOCKS.STONE_WALL:
+            generateBlockTexture(ctx, BLOCKS.STONE, face, rng); return;
+        case BLOCKS.SANDSTONE_WALL:
+            generateBlockTexture(ctx, BLOCKS.SANDSTONE, face, rng); return;
+        case BLOCKS.BLACKSTONE_WALL:
+            generateBlockTexture(ctx, BLOCKS.BLACKSTONE, face, rng); return;
+        case BLOCKS.HOLYSTONE_WALL:
+            generateBlockTexture(ctx, BLOCKS.HOLYSTONE, face, rng); return;
+        case BLOCKS.RED_BED:
+            generateBlockTexture(ctx, BLOCKS.RED_WOOL, face, rng); return;
+        case BLOCKS.WHITE_BED:
+        case BLOCKS.BED_HEAD:
+            generateBlockTexture(ctx, BLOCKS.WHITE_WOOL, face, rng); return;
+        case BLOCKS.BLUE_BED:
+            generateBlockTexture(ctx, BLOCKS.BLUE_WOOL, face, rng); return;
+        case BLOCKS.YELLOW_BED:
+            generateBlockTexture(ctx, BLOCKS.YELLOW_WOOL, face, rng); return;
+        case BLOCKS.GREEN_BED:
+            generateBlockTexture(ctx, BLOCKS.GREEN_WOOL, face, rng); return;
+        case BLOCKS.BLACK_BED:
+            generateBlockTexture(ctx, BLOCKS.BLACK_WOOL, face, rng); return;
+        case BLOCKS.PURPLE_BED:
+            generateBlockTexture(ctx, BLOCKS.PURPLE_WOOL, face, rng); return;
+        case BLOCKS.ORANGE_BED:
+            generateBlockTexture(ctx, BLOCKS.ORANGE_WOOL, face, rng); return;
+        case BLOCKS.PINK_BED:
+            generateBlockTexture(ctx, BLOCKS.PINK_WOOL, face, rng); return;
+        case BLOCKS.CYAN_BED:
+            generateBlockTexture(ctx, BLOCKS.CYAN_WOOL, face, rng); return;
+        case BLOCKS.LIME_BED:
+            generateBlockTexture(ctx, BLOCKS.LIME_WOOL, face, rng); return;
+        case BLOCKS.GRAY_BED:
+            generateBlockTexture(ctx, BLOCKS.GRAY_WOOL, face, rng); return;
+        case BLOCKS.LIGHT_BLUE_BED:
+            generateBlockTexture(ctx, BLOCKS.LIGHT_BLUE_WOOL, face, rng); return;
+        case BLOCKS.BROWN_BED:
+            generateBlockTexture(ctx, BLOCKS.BROWN_WOOL, face, rng); return;
+        case BLOCKS.MAGENTA_BED:
+            generateBlockTexture(ctx, BLOCKS.MAGENTA_WOOL, face, rng); return;
+        case BLOCKS.LIGHT_GRAY_BED:
+            generateBlockTexture(ctx, BLOCKS.LIGHT_GRAY_WOOL, face, rng); return;
         case BLOCKS.GRASS:
             if (face === 'top') {
                 fillBase(ctx, 114, 161, 69);
@@ -3212,6 +3289,23 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.BROWN_WOOL]: 'brown_wool',
     [BLOCKS.MAGENTA_WOOL]: 'magenta_wool',
     [BLOCKS.LIGHT_GRAY_WOOL]: 'light_gray_wool',
+    [BLOCKS.RED_BED]: 'red_wool',
+    [BLOCKS.WHITE_BED]: 'white_wool',
+    [BLOCKS.BLUE_BED]: 'blue_wool',
+    [BLOCKS.YELLOW_BED]: 'yellow_wool',
+    [BLOCKS.GREEN_BED]: 'green_wool',
+    [BLOCKS.BLACK_BED]: 'black_wool',
+    [BLOCKS.PURPLE_BED]: 'purple_wool',
+    [BLOCKS.ORANGE_BED]: 'orange_wool',
+    [BLOCKS.PINK_BED]: 'pink_wool',
+    [BLOCKS.CYAN_BED]: 'cyan_wool',
+    [BLOCKS.LIME_BED]: 'lime_wool',
+    [BLOCKS.GRAY_BED]: 'gray_wool',
+    [BLOCKS.LIGHT_BLUE_BED]: 'light_blue_wool',
+    [BLOCKS.BROWN_BED]: 'brown_wool',
+    [BLOCKS.MAGENTA_BED]: 'magenta_wool',
+    [BLOCKS.LIGHT_GRAY_BED]: 'light_gray_wool',
+    [BLOCKS.BED_HEAD]: 'white_wool',
     [BLOCKS.FURNACE]: { top: 'furnace_top', side: 'furnace_side', bottom: 'furnace_top', front: 'furnace_front' },
     [BLOCKS.NETHERRACK]: 'netherrack',
     [BLOCKS.SOUL_SAND]: 'soul_sand',
@@ -4108,7 +4202,7 @@ export async function createTextureAtlas(useMinecraft = true) {
             }
         }
 
-        if (props.isBed) {
+        if (props.isBed || props.isBedHead) {
             const bedColorsHex = {
                 white: '#eaeded', orange: '#f9801d', magenta: '#c74ebd', light_blue: '#3ab3da',
                 yellow: '#fed83d', lime: '#80c71f', pink: '#f38baa', gray: '#474f52',
@@ -5369,6 +5463,50 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                ",
                 "                "
             ];
+        } else if (itemSubtype === 'oak_boat' || itemSubtype === 'boat') {
+            shape = [
+                "                ",
+                "                ",
+                "  OO        OO  ",
+                "  OSSO    OSSO  ",
+                "  OSSSOOOOCCCO  ",
+                "  OCCSSSSSCCO   ",
+                "  OHCCCCCCCDO   ",
+                "  OHCCCCCCCCDO  ",
+                "  OHCCCCCCCCDO  ",
+                "   OHCCCCCCDDO  ",
+                "   OHCCCCCCDO   ",
+                "    OHCCCCDDO   ",
+                "    ODDDDDDDO   ",
+                "     OOOOOOO    ",
+                "                ",
+                "                "
+            ];
+            p = palettes['wood'] || { c: '#b88648', d: '#8b5a2b', h: '#d4a373' };
+        } else if (itemSubtype.endsWith('_dye') || itemSubtype === 'bone_meal') {
+            shape = [
+                "                ",
+                "                ",
+                "      OOOO      ",
+                "     OHHHHDO    ",
+                "    OHHCCCDDO   ",
+                "   OHCCCCCDDDO  ",
+                "   OHCCCCCCDDO  ",
+                "   OHCCCCCCDDO  ",
+                "   OHCCCCCCDDO  ",
+                "   OHCDDDDDDDO  ",
+                "    ODDDDDDDO   ",
+                "     ODDDDDO    ",
+                "      OOOOO     ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            if (itemSubtype === 'red_dye') p = { c: '#b02e26', d: '#891e17', h: '#d84338' };
+            else if (itemSubtype === 'yellow_dye') p = { c: '#fed83d', d: '#d6a815', h: '#ffea73' };
+            else if (itemSubtype === 'blue_dye') p = { c: '#3c44aa', d: '#242a78', h: '#5861d8' };
+            else if (itemSubtype === 'bone_meal' || itemSubtype === 'white_dye') p = { c: '#f9f9f9', d: '#c2c2c2', h: '#ffffff' };
+            else p = { c: '#888888', d: '#555555', h: '#cccccc' };
         }
     } else if (itemType === 'wand') {
         shape = [

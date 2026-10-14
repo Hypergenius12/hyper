@@ -873,8 +873,8 @@ class Game {
             side: THREE.DoubleSide
         });
         
-        doorGeomBot.translate(0.5, 0.5, 0); 
-        doorGeomTop.translate(0.5, 0.5, 0); 
+        doorGeomBot.translate(0.4375, 0.5, 0); 
+        doorGeomTop.translate(0.4375, 0.5, 0); 
         
         const doorGroup = new THREE.Group();
         const meshBot = new THREE.Mesh(doorGeomBot, mat);
@@ -889,14 +889,10 @@ class Game {
         const hasWallZ = (this.world.getBlock(x, y, z - 1) !== window.BLOCKS.AIR || this.world.getBlock(x, y, z + 1) !== window.BLOCKS.AIR);
         
         let baseRot = 0;
-        let posX = x;
-        let posZ = z + 0.0625;
         if (hasWallZ && !hasWallX) {
-            baseRot = Math.PI / 2;
-            posX = x + 0.0625;
-            posZ = z;
+            baseRot = -Math.PI / 2;
         }
-        doorGroup.position.set(posX, y, posZ);
+        doorGroup.position.set(x + 0.0625, y, z + 0.0625);
         doorGroup.rotation.y = baseRot;
         this.doors.set(key, { mesh: doorGroup, isOpen: false, baseRotationY: baseRot, x, y, z });
         
@@ -1036,11 +1032,18 @@ class Game {
         const createCustomBoxGeom = (w, h, d, uvRect) => {
             const geom = new THREE.BoxGeometry(w, h, d).toNonIndexed();
             const uvs = geom.attributes.uv.array;
+            if (!uvRect) uvRect = { u: 0, v: 0, uSize: 1/16, vSize: 1/16 };
+            const faceDims = [
+                [d, h], [d, h], // +X, -X
+                [w, d], [w, d], // +Y, -Y
+                [w, h], [w, h]  // +Z, -Z
+            ];
             for (let f = 0; f < 6; f++) {
+                const [fw, fh] = faceDims[f];
                 for (let v = 0; v < 6; v++) {
                     const idx = (f * 6 + v) * 2;
-                    let baseU = uvs[idx];
-                    let baseV = uvs[idx + 1];
+                    let baseU = uvs[idx] * fw;
+                    let baseV = uvs[idx + 1] * fh;
                     uvs[idx] = uvRect.u + baseU * uvRect.uSize;
                     uvs[idx + 1] = uvRect.v + baseV * uvRect.vSize;
                 }
@@ -1068,7 +1071,7 @@ class Game {
             [window.BLOCKS.PURPLE_BED]: window.BLOCKS.PURPLE_WOOL,
         };
 
-        const uvOak = this.atlas.getUV(window.BLOCKS.OAK_PLANKS, 'side');
+        const uvOak = this.atlas.getUV(window.BLOCKS.OAK_PLANKS || window.BLOCKS.PLANKS || 8, 'side');
         const woolType = BED_TO_WOOL[blockType] || window.BLOCKS.RED_WOOL;
         const uvWool = this.atlas.getUV(woolType, 'side');
         const uvPillow = this.atlas.getUV(window.BLOCKS.WHITE_WOOL, 'side');
@@ -1458,7 +1461,8 @@ class Game {
         if (this.boats && this.boats.size > 0) {
             for (const b of this.boats) {
                 if (b.alive && b !== this.player.inBoat) {
-                    if (b.raycast(eyePos, lookDir, 4.5)) {
+                    const isHit = b.raycast ? b.raycast(eyePos, lookDir, 4.5) : (b.checkRayHit && b.checkRayHit(eyePos, lookDir, 4.5));
+                    if (isHit) {
                         const d = eyePos.distanceTo(b.position);
                         if (!boatHit || d < boatHit.dist) {
                             boatHit = { boat: b, dist: d };
@@ -2046,8 +2050,8 @@ class Game {
                     door.isOpen = !door.isOpen;
                     if (door.isOpen) this.audio.playDoorOpen(hit.blockPos);
                     else this.audio.playDoorClose(hit.blockPos);
-                    const targetRotation = door.isOpen ? Math.PI / 2 : 0;
-                    door.mesh.rotation.y = door.baseRotationY + targetRotation;
+                    const targetRotation = door.isOpen ? (door.baseRotationY === 0 ? -Math.PI / 2 : 0) : door.baseRotationY;
+                    door.mesh.rotation.y = targetRotation;
                 }
                 
                 this.input.mouse.rightClick = false;

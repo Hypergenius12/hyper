@@ -736,8 +736,8 @@ class UISystem {
         const blockDefs = (typeof BLOCKS !== 'undefined' && BLOCKS) ? BLOCKS : (window.BLOCKS_REF || window.BLOCKS);
         if (!blockDefs) return;
 
-        // Skip AIR and internal/invisible/removed blocks and multi-part sub-blocks (e.g. TALL_FERN_TOP: 144, KELP_PLANT: 248)
-        const skip = new Set([0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 144, 194, 248]);
+        // Skip AIR and internal/invisible/removed blocks and multi-part sub-blocks (e.g. TALL_FERN_TOP: 144, KELP_PLANT: 248, BED_HEAD: 294)
+        const skip = new Set([0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 144, 194, 248, 294]);
         const entries = Object.entries(blockDefs)
             .filter(([name, id]) => !skip.has(id) && typeof id === 'number')
             .sort((a,b) => a[1] - b[1]);
@@ -997,6 +997,11 @@ class UISystem {
             { type: 'equipment', subtype: 'bucket',          name: 'Bucket' },
             { type: 'equipment', subtype: 'water_bucket',    name: 'Water Bucket' },
             { type: 'equipment', subtype: 'lava_bucket',     name: 'Lava Bucket' },
+            { type: 'equipment', subtype: 'oak_boat',        name: 'Oak Boat' },
+            { type: 'material',  subtype: 'red_dye',         name: 'Red Dye' },
+            { type: 'material',  subtype: 'yellow_dye',      name: 'Yellow Dye' },
+            { type: 'material',  subtype: 'blue_dye',        name: 'Blue Dye' },
+            { type: 'material',  subtype: 'bone_meal',       name: 'Bone Meal' },
             // Food
             { type: 'food',      subtype: 'raw_beef',        name: 'Raw Beef' },
             { type: 'food',      subtype: 'cooked_beef',     name: 'Steak' },

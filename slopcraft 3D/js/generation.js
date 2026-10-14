@@ -1258,6 +1258,33 @@ export function generateChunkTerrain(cx, cz, params) {
     // ============================================
     // PASS 5: Structures
     // ============================================
+    const isAreaValidForStructure = (centerX, centerZ, baseSurfaceY, radius) => {
+        if (baseSurfaceY <= params.seaLevel + 1) return false;
+        for (let dx = -radius; dx <= radius; dx += 2) {
+            for (let dz = -radius; dz <= radius; dz += 2) {
+                const wx = wxBase + centerX + dx;
+                const wz = wzBase + centerZ + dz;
+                const col = getColumnInfo(wx, wz, params);
+                if (col.surfaceY <= params.seaLevel) return false;
+                if (col.biome === BIOMES.DEEP_OCEAN || col.biome === BIOMES.OCEAN || col.biome === BIOMES.CORAL_REEF || col.biome === BIOMES.FROZEN_OCEAN) return false;
+                if (col.bData && col.bData.lakeSurfaceY && col.surfaceY <= col.bData.lakeSurfaceY) return false;
+
+                const qx = centerX + dx;
+                const qz = centerZ + dz;
+                if (qx >= 0 && qx < CHUNK_SIZE && qz >= 0 && qz < CHUNK_SIZE) {
+                    const topG = getTopGround(qx, qz);
+                    if (topG <= params.seaLevel) return false;
+                    if (Math.abs(topG - baseSurfaceY) > 5) return false; // Steep cliff or hole
+                    for (let sy = Math.max(1, baseSurfaceY - 1); sy <= Math.min(CHUNK_HEIGHT - 2, baseSurfaceY + 4); sy++) {
+                        const b = blocks[(sy * CHUNK_SIZE * CHUNK_SIZE) + (qz * CHUNK_SIZE) + qx];
+                        if (b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER || b === BLOCKS.LAVA) return false;
+                    }
+                }
+            }
+        }
+        return true;
+    };
+
     for (let tx = -3; tx <= CHUNK_SIZE + 2; tx++) {
         for (let tz = -3; tz <= CHUNK_SIZE + 2; tz++) {
             const wx = wxBase + tx;
@@ -1266,19 +1293,29 @@ export function generateChunkTerrain(cx, cz, params) {
             const biome = colInfo.biome;
             let surfaceY = getTopGround(tx, tz);
             if (surfaceY <= 0) surfaceY = colInfo.surfaceY;
-            if (surfaceY >= CHUNK_HEIGHT - 10) continue;
+            if (surfaceY <= params.seaLevel + 1 || surfaceY >= CHUNK_HEIGHT - 10) continue;
+            if (colInfo.bData && colInfo.bData.lakeSurfaceY && surfaceY <= colInfo.bData.lakeSurfaceY) continue;
+            if (biome === BIOMES.DEEP_OCEAN || biome === BIOMES.OCEAN || biome === BIOMES.CORAL_REEF || biome === BIOMES.FROZEN_OCEAN) continue;
 
             const structRng = seededRandom(params.seed + wx * 7777 + wz);
             const r = structRng();
 
             if (r < 0.0000008) {
-                generateWizardTower(blocks, tx, surfaceY + 1, tz, structRng);
+                if (isAreaValidForStructure(tx, tz, surfaceY, 6)) {
+                    generateWizardTower(blocks, tx, surfaceY + 1, tz, structRng);
+                }
             } else if (biome === BIOMES.DESERT && r < 0.0000025) {
-                generateAncientPyramid(blocks, tx, surfaceY, tz, structRng);
+                if (isAreaValidForStructure(tx, tz, surfaceY, 8)) {
+                    generateAncientPyramid(blocks, tx, surfaceY, tz, structRng);
+                }
             } else if (r < 0.000022) {
-                generatePortalStructure(blocks, tx, surfaceY + 1, tz, structRng, 'nether');
+                if (isAreaValidForStructure(tx, tz, surfaceY, 4)) {
+                    generatePortalStructure(blocks, tx, surfaceY + 1, tz, structRng, 'nether');
+                }
             } else if (r < 0.000075) {
-                generateCabin(blocks, tx, surfaceY + 1, tz, structRng);
+                if (isAreaValidForStructure(tx, tz, surfaceY, 4)) {
+                    generateCabin(blocks, tx, surfaceY + 1, tz, structRng);
+                }
             }
         }
     }
@@ -2305,7 +2342,9 @@ function carveGlobalDungeons(blocks, cx, cz, params) {
             let dungeonData = _dungeonCache.get(cacheKey);
             if (dungeonData === undefined) {
                 const startRng = seededRandom(hashSeed(seedStr));
-                if (startRng() < params.dungeonFrequency * 0.012) { // Slightly reduced for less density
+                const dCol = getColumnInfo(sx * CHUNK_SIZE + 8, sz * CHUNK_SIZE + 8, params);
+                const isOcean = dCol.biome === BIOMES.DEEP_OCEAN || dCol.biome === BIOMES.OCEAN || dCol.biome === BIOMES.CORAL_REEF || dCol.biome === BIOMES.FROZEN_OCEAN;
+                if (!isOcean && dCol.surfaceY > params.seaLevel + 3 && startRng() < params.dungeonFrequency * 0.012) { // Slightly reduced for less density
                     const themeIndex = Math.floor(startRng() * DUNGEON_THEMES.length);
                     const theme = DUNGEON_THEMES[themeIndex];
                     const rooms = generateDungeonStructure(startRng, sx * CHUNK_SIZE + 8, 15, sz * CHUNK_SIZE + 8);

@@ -3738,6 +3738,10 @@ export class BoatEntity {
         return false;
     }
 
+    raycast(origin, direction, maxDist = 4.5) {
+        return this.checkRayHit(origin, direction, maxDist);
+    }
+
     takeDamage(amt, particles = null, entityManager = null) {
         this.health -= amt;
         if (this.health <= 0) {
