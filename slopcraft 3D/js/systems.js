@@ -2511,7 +2511,56 @@ class UISystem {
             if (getCount('stick') === 3 && getCount('string') === 3 && totalItems === 6) return equip('bow', { range: 25, damage: 6, passive: 'Ranged Weapon' }, 'Bow', 'Fires arrows at distant foes.');
             if (getCount('gold_ingot') === 8 && getCount('apple') === 1 && totalItems === 9) return { item: { type: 'food', subtype: 'golden_apple', name: 'Golden Apple', stackable: true, maxStack: 64, id: `food_golden_apple_${Date.now()}`, data: { heal: 20 }, description: 'Restores 20 health.' }, count: 1 };
             
-            if (getCount(B.SAND) === 4 && getCount('coal') === 5 && totalItems === 9) return block(B.TNT, 'TNT', 1);
+            // Slabs (3 horizontal items in any row)
+            const isRow = (r, t) => s[r*3] === t && s[r*3+1] === t && s[r*3+2] === t && totalItems === 3;
+            if (isRow(0, B.PLANKS) || isRow(1, B.PLANKS) || isRow(2, B.PLANKS)) return block(B.OAK_SLAB, 'Oak Slab', 6);
+            if (isRow(0, B.BIRCH_PLANKS) || isRow(1, B.BIRCH_PLANKS) || isRow(2, B.BIRCH_PLANKS)) return block(B.BIRCH_SLAB, 'Birch Slab', 6);
+            if (isRow(0, B.COBBLESTONE) || isRow(1, B.COBBLESTONE) || isRow(2, B.COBBLESTONE)) return block(B.COBBLESTONE_SLAB, 'Cobblestone Slab', 6);
+            if (isRow(0, B.STONE) || isRow(1, B.STONE) || isRow(2, B.STONE)) return block(B.STONE_SLAB, 'Stone Slab', 6);
+
+            // Fences (Plank + Stick + Plank across 2 rows)
+            const isFence = (plankType) => {
+                if (s[0] === plankType && s[1] === 'stick' && s[2] === plankType &&
+                    s[3] === plankType && s[4] === 'stick' && s[5] === plankType && !s[6] && !s[7] && !s[8]) return true;
+                if (!s[0] && !s[1] && !s[2] &&
+                    s[3] === plankType && s[4] === 'stick' && s[5] === plankType &&
+                    s[6] === plankType && s[7] === 'stick' && s[8] === plankType) return true;
+                return false;
+            };
+            if (isFence(B.PLANKS)) return block(B.OAK_FENCE, 'Oak Fence', 3);
+            if (isFence(B.BIRCH_PLANKS)) return block(B.BIRCH_FENCE, 'Birch Fence', 3);
+
+            // Fence Gates (Stick + Plank + Stick across 2 rows)
+            const isGate = (plankType) => {
+                if (s[0] === 'stick' && s[1] === plankType && s[2] === 'stick' &&
+                    s[3] === 'stick' && s[4] === plankType && s[5] === 'stick' && !s[6] && !s[7] && !s[8]) return true;
+                if (!s[0] && !s[1] && !s[2] &&
+                    s[3] === 'stick' && s[4] === plankType && s[5] === 'stick' &&
+                    s[6] === 'stick' && s[7] === plankType && s[8] === 'stick') return true;
+                return false;
+            };
+            if (isGate(B.PLANKS)) return block(B.OAK_FENCE_GATE, 'Oak Fence Gate', 1);
+            if (isGate(B.BIRCH_PLANKS)) return block(B.BIRCH_FENCE_GATE, 'Birch Fence Gate', 1);
+
+            // Walls (2 rows of 3)
+            const isWallMat = (mat) => {
+                if (s[0] === mat && s[1] === mat && s[2] === mat && s[3] === mat && s[4] === mat && s[5] === mat && !s[6] && !s[7] && !s[8]) return true;
+                if (!s[0] && !s[1] && !s[2] && s[3] === mat && s[4] === mat && s[5] === mat && s[6] === mat && s[7] === mat && s[8] === mat) return true;
+                return false;
+            };
+            if (isWallMat(B.COBBLESTONE)) return block(B.COBBLESTONE_WALL, 'Cobblestone Wall', 6);
+            if (isWallMat(B.STONE_BRICKS)) return block(B.STONE_BRICK_WALL, 'Stone Brick Wall', 6);
+
+            // Stairs
+            const isStairMat = (mat) => {
+                if (s[0] === mat && !s[1] && !s[2] && s[3] === mat && s[4] === mat && !s[5] && s[6] === mat && s[7] === mat && s[8] === mat) return true;
+                if (!s[0] && !s[1] && s[2] === mat && !s[3] && s[4] === mat && s[5] === mat && s[6] === mat && s[7] === mat && s[8] === mat) return true;
+                return false;
+            };
+            if (isStairMat(B.PLANKS)) return block(B.OAK_STAIRS, 'Oak Stairs', 4);
+            if (isStairMat(B.BIRCH_PLANKS)) return block(B.BIRCH_STAIRS, 'Birch Stairs', 4);
+            if (isStairMat(B.COBBLESTONE)) return block(B.COBBLESTONE_STAIRS, 'Cobblestone Stairs', 4);
+            if (isStairMat(B.STONE)) return block(B.STONE_STAIRS, 'Stone Stairs', 4);
 
             return null;
     }
@@ -2641,9 +2690,11 @@ class UISystem {
             { name: "Stone Stairs (4)", desc: "Ascending smooth stone steps.", grid: [[blk(B.STONE),_,_],[blk(B.STONE),blk(B.STONE),_],[blk(B.STONE),blk(B.STONE),blk(B.STONE)]], out: blk(B.STONE_STAIRS), outCount: 4, needs3x3: true },
             { name: "Birch Stairs (4)", desc: "Ascending birch steps.", grid: [[blk(B.BIRCH_PLANKS),_,_],[blk(B.BIRCH_PLANKS),blk(B.BIRCH_PLANKS),_],[blk(B.BIRCH_PLANKS),blk(B.BIRCH_PLANKS),blk(B.BIRCH_PLANKS)]], out: blk(B.BIRCH_STAIRS), outCount: 4, needs3x3: true },
 
-            // Fences
+            // Fences & Gates
             { name: "Oak Fence (3)", desc: "Connecting wooden barrier.", grid: [[_,_,_],[blk(B.PLANKS),mat('stick'),blk(B.PLANKS)],[blk(B.PLANKS),mat('stick'),blk(B.PLANKS)]], out: blk(B.OAK_FENCE), outCount: 3, needs3x3: true },
             { name: "Birch Fence (3)", desc: "Connecting birch barrier.", grid: [[_,_,_],[blk(B.BIRCH_PLANKS),mat('stick'),blk(B.BIRCH_PLANKS)],[blk(B.BIRCH_PLANKS),mat('stick'),blk(B.BIRCH_PLANKS)]], out: blk(B.BIRCH_FENCE), outCount: 3, needs3x3: true },
+            { name: "Oak Fence Gate", desc: "Swinging wooden barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.PLANKS),mat('stick')],[mat('stick'),blk(B.PLANKS),mat('stick')]], out: blk(B.OAK_FENCE_GATE), outCount: 1, needs3x3: true },
+            { name: "Birch Fence Gate", desc: "Swinging birch barrier gate.", grid: [[_,_,_],[mat('stick'),blk(B.BIRCH_PLANKS),mat('stick')],[mat('stick'),blk(B.BIRCH_PLANKS),mat('stick')]], out: blk(B.BIRCH_FENCE_GATE), outCount: 1, needs3x3: true },
 
             // Walls
             { name: "Cobblestone Wall (6)", desc: "Connecting cobblestone barrier.", grid: [[_,_,_],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)]], out: blk(B.COBBLESTONE_WALL), outCount: 6, needs3x3: true },

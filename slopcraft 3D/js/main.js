@@ -354,10 +354,11 @@ class Game {
         this.world.onFurnaceGenerated = (x, y, z) => this._addFurnace(x, y, z);
         
         this.doors = new Map(); // key -> { mesh, isOpen, baseRotationY }
+        const isDoorBlock = (b) => b === window.BLOCKS.DUNGEON_DOOR || b === window.BLOCKS.DUNGEON_DOOR_TOP;
         this.world.onDoorGenerated = (x, y, z) => this._addDoor(x, y, z);
         this.world.onDoorPlaced = (x, y, z) => {
             // Check if there's already a door here or one below (since it's 2 blocks)
-            if (this.world.getBlock(x, y - 1, z) !== window.BLOCKS.DUNGEON_DOOR) {
+            if (!isDoorBlock(this.world.getBlock(x, y - 1, z))) {
                 this._addDoor(x, y, z);
             }
         };
@@ -369,14 +370,14 @@ class Game {
                 this.engine.scene.remove(this.doors.get(key1).mesh);
                 this.doors.delete(key1);
                 // Also remove the top block if we broke the bottom
-                if (this.world.getBlock(x, y+1, z) === window.BLOCKS.DUNGEON_DOOR) {
+                if (isDoorBlock(this.world.getBlock(x, y+1, z))) {
                     this.world.setBlock(x, y+1, z, window.BLOCKS.AIR);
                 }
             } else if (this.doors.has(key2)) {
                 this.engine.scene.remove(this.doors.get(key2).mesh);
                 this.doors.delete(key2);
                 // Also remove the bottom block if we broke the top
-                if (this.world.getBlock(x, y-1, z) === window.BLOCKS.DUNGEON_DOOR) {
+                if (isDoorBlock(this.world.getBlock(x, y-1, z))) {
                     this.world.setBlock(x, y-1, z, window.BLOCKS.AIR);
                 }
             }
@@ -388,6 +389,22 @@ class Game {
             let d = this.doors.get(key1);
             if (!d) d = this.doors.get(key2);
             return d ? d.isOpen : false;
+        };
+
+        // Fence gates
+        this.fenceGates = new Map(); // key -> { mesh, isOpen, updateVisuals }
+        this.world.onGateGenerated = (x, y, z, bt) => this._addFenceGate(x, y, z, bt);
+        this.world.onGatePlaced = (x, y, z, bt) => this._addFenceGate(x, y, z, bt);
+        this.world.onGateRemoved = (x, y, z) => {
+            const key = `${x},${y},${z}`;
+            if (this.fenceGates.has(key)) {
+                this.engine.scene.remove(this.fenceGates.get(key).mesh);
+                this.fenceGates.delete(key);
+            }
+        };
+        this.world.isGateOpen = (x, y, z) => {
+            const g = this.fenceGates.get(`${x},${y},${z}`);
+            return g ? g.isOpen : false;
         };
 
         this.world.onChestRemoved = (x, y, z) => {
@@ -796,15 +813,13 @@ class Game {
     _addDoor(x, y, z) {
         // Since a door is 2 blocks high, generating a mesh on the top block and bottom block would duplicate it.
         // We only generate the mesh for the bottom block. We assume y is bottom if y-1 is not a door.
-        if (this.world.getBlock(x, y - 1, z) === window.BLOCKS.DUNGEON_DOOR) return;
+        const isDoor = (b) => b === window.BLOCKS.DUNGEON_DOOR || b === window.BLOCKS.DUNGEON_DOOR_TOP;
+        if (isDoor(this.world.getBlock(x, y - 1, z))) return;
 
         const key = `${x},${y},${z}`;
-        if (this.doors.has(key)) {
-            // Update position if needed (shouldn't be needed for static doors)
-            return;
-        }
+        if (this.doors.has(key)) return;
 
-        // Create door geometry (1 block high)
+        // Create door geometry (1 block high per piece)
         const doorGeom = new THREE.BoxGeometry(1, 1, 0.125).toNonIndexed();
         
         // Create materials from texture atlas
@@ -814,25 +829,27 @@ class Game {
         const doorGeomBot = doorGeom.clone();
         const doorGeomTop = doorGeom.clone();
 
-        const uvsBot = doorGeomBot.attributes.uv.array;
-        for (let i = 0; i < 6; i++) {
-            for (let v = 0; v < 6; v++) {
-                const baseU = uvsBot[i * 12 + v * 2];
-                const baseV = uvsBot[i * 12 + v * 2 + 1];
-                uvsBot[i * 12 + v * 2] = uvInfoBot.u + baseU * uvInfoBot.uSize;
-                uvsBot[i * 12 + v * 2 + 1] = uvInfoBot.v + baseV * uvInfoBot.vSize;
+        const mapFaceUVs = (geom, uvInfo) => {
+            const uvs = geom.attributes.uv.array;
+            for (let f = 0; f < 6; f++) {
+                for (let v = 0; v < 6; v++) {
+                    const idx = (f * 6 + v) * 2;
+                    let baseU = uvs[idx];
+                    let baseV = uvs[idx + 1];
+                    if (f === 5) baseU = 1 - baseU; // Un-mirror back face
+                    if (f === 0 || f === 1) {
+                        baseU = (f === 0 ? 0.875 : 0.0) + baseU * 0.125;
+                    } else if (f === 2 || f === 3) {
+                        baseV = (f === 2 ? 0.875 : 0.0) + baseV * 0.125;
+                    }
+                    uvs[idx] = uvInfo.u + baseU * uvInfo.uSize;
+                    uvs[idx + 1] = uvInfo.v + baseV * uvInfo.vSize;
+                }
             }
-        }
-        
-        const uvsTop = doorGeomTop.attributes.uv.array;
-        for (let i = 0; i < 6; i++) {
-            for (let v = 0; v < 6; v++) {
-                const baseU = uvsTop[i * 12 + v * 2];
-                const baseV = uvsTop[i * 12 + v * 2 + 1];
-                uvsTop[i * 12 + v * 2] = uvInfoTop.u + baseU * uvInfoTop.uSize;
-                uvsTop[i * 12 + v * 2 + 1] = uvInfoTop.v + baseV * uvInfoTop.vSize;
-            }
-        }
+            geom.attributes.uv.needsUpdate = true;
+        };
+        mapFaceUVs(doorGeomBot, uvInfoBot);
+        mapFaceUVs(doorGeomTop, uvInfoTop);
         
         const mat = new THREE.MeshLambertMaterial({ 
             map: this.atlas.texture, 
@@ -853,22 +870,108 @@ class Game {
         doorGroup.add(meshTop);
         
         // Determine orientation by checking neighbors
-        const isWallX = this.world.getBlock(x - 1, y, z) !== window.BLOCKS.AIR && this.world.getBlock(x + 1, y, z) !== window.BLOCKS.AIR;
-        const isWallZ = this.world.getBlock(x, y, z - 1) !== window.BLOCKS.AIR && this.world.getBlock(x, y, z + 1) !== window.BLOCKS.AIR;
+        const isWallX = (this.world.getBlock(x - 1, y, z) !== window.BLOCKS.AIR && this.world.getBlock(x + 1, y, z) !== window.BLOCKS.AIR);
+        const isWallZ = (this.world.getBlock(x, y, z - 1) !== window.BLOCKS.AIR && this.world.getBlock(x, y, z + 1) !== window.BLOCKS.AIR);
         
-        if (isWallX) {
-            // Walls on X axis -> Tunnel on Z axis -> Door spans X
-            doorGroup.position.set(x, y, z + 0.5);
-            doorGroup.rotation.y = 0;
-            this.doors.set(key, { mesh: doorGroup, isOpen: false, baseRotationY: 0, x, y, z });
-        } else {
-            // Walls on Z axis -> Tunnel on X axis -> Door spans Z
-            doorGroup.position.set(x + 0.5, y, z);
-            doorGroup.rotation.y = Math.PI / 2;
-            this.doors.set(key, { mesh: doorGroup, isOpen: false, baseRotationY: Math.PI / 2, x, y, z });
+        let baseRot = 0;
+        let posX = x;
+        let posZ = z + 0.5;
+        if (isWallZ && !isWallX) {
+            baseRot = Math.PI / 2;
+            posX = x + 0.5;
+            posZ = z;
         }
+        doorGroup.position.set(posX, y, posZ);
+        doorGroup.rotation.y = baseRot;
+        this.doors.set(key, { mesh: doorGroup, isOpen: false, baseRotationY: baseRot, x, y, z });
         
         this.engine.scene.add(doorGroup);
+    }
+
+    _addFenceGate(x, y, z, blockType = window.BLOCKS.OAK_FENCE_GATE) {
+        const key = `${x},${y},${z}`;
+        if (this.fenceGates.has(key)) return;
+
+        const gateGroup = new THREE.Group();
+        const uvInfo = this.atlas.getUV(blockType, 'side');
+        const mat = new THREE.MeshLambertMaterial({ 
+            map: this.atlas.texture, 
+            transparent: true, 
+            alphaTest: 0.5,
+            side: THREE.DoubleSide
+        });
+
+        const createCustomBoxGeom = (w, h, d, uvRect) => {
+            const geom = new THREE.BoxGeometry(w, h, d).toNonIndexed();
+            const uvs = geom.attributes.uv.array;
+            for (let f = 0; f < 6; f++) {
+                for (let v = 0; v < 6; v++) {
+                    const idx = (f * 6 + v) * 2;
+                    let baseU = uvs[idx];
+                    let baseV = uvs[idx + 1];
+                    uvs[idx] = uvRect.u + baseU * uvRect.uSize;
+                    uvs[idx + 1] = uvRect.v + baseV * uvRect.vSize;
+                }
+            }
+            geom.attributes.uv.needsUpdate = true;
+            return geom;
+        };
+
+        // Fixed outer fence posts (2/16 thick, 12/16 tall)
+        const postGeom = createCustomBoxGeom(2/16, 12/16, 2/16, uvInfo);
+        const leftPost = new THREE.Mesh(postGeom, mat);
+        leftPost.position.set(-7/16, 6/16, 0);
+        gateGroup.add(leftPost);
+
+        const rightPost = new THREE.Mesh(postGeom.clone(), mat);
+        rightPost.position.set(7/16, 6/16, 0);
+        gateGroup.add(rightPost);
+
+        // Left swinging door
+        const leftDoorGroup = new THREE.Group();
+        leftDoorGroup.position.set(-6/16, 0, 0); // hinge at left post
+        const leafGeomLeft = createCustomBoxGeom(6/16, 8/16, 2/16, uvInfo);
+        leafGeomLeft.translate(3/16, 7/16, 0); // center offset from hinge
+        const leftDoorMesh = new THREE.Mesh(leafGeomLeft, mat);
+        leftDoorGroup.add(leftDoorMesh);
+        gateGroup.add(leftDoorGroup);
+
+        // Right swinging door
+        const rightDoorGroup = new THREE.Group();
+        rightDoorGroup.position.set(6/16, 0, 0); // hinge at right post
+        const leafGeomRight = createCustomBoxGeom(6/16, 8/16, 2/16, uvInfo);
+        leafGeomRight.translate(-3/16, 7/16, 0); // center offset from hinge
+        const rightDoorMesh = new THREE.Mesh(leafGeomRight, mat);
+        rightDoorGroup.add(rightDoorMesh);
+        gateGroup.add(rightDoorGroup);
+
+        // Orientation: align with connecting fences or walls
+        const getP = (bx, by, bz) => getBlockProperties(this.world.getBlock(bx, by, bz));
+        const hasFenceX = getP(x - 1, y, z).isFence || getP(x + 1, y, z).isFence || getP(x - 1, y, z).isWall || getP(x + 1, y, z).isWall;
+        const hasFenceZ = getP(x, y, z - 1).isFence || getP(x, y, z + 1).isFence || getP(x, y, z - 1).isWall || getP(x, y, z + 1).isWall;
+
+        let baseRot = 0;
+        if (hasFenceZ && !hasFenceX) {
+            baseRot = Math.PI / 2;
+        }
+
+        gateGroup.position.set(x + 0.5, y, z + 0.5);
+        gateGroup.rotation.y = baseRot;
+
+        const gateData = {
+            mesh: gateGroup,
+            isOpen: false,
+            baseRotationY: baseRot,
+            x, y, z,
+            updateVisuals() {
+                const targetAngle = this.isOpen ? Math.PI / 2 : 0;
+                leftDoorGroup.rotation.y = targetAngle;
+                rightDoorGroup.rotation.y = -targetAngle;
+            }
+        };
+
+        this.fenceGates.set(key, gateData);
+        this.engine.scene.add(gateGroup);
     }
 
     _updateFurnaces(dt) {
@@ -1596,7 +1699,7 @@ class Game {
                 this.input.mouse.rightClick = false;
                 return;
             }
-            if (hit.hit && hit.blockType === window.BLOCKS.DUNGEON_DOOR) {
+            if (hit.hit && (hit.blockType === window.BLOCKS.DUNGEON_DOOR || hit.blockType === window.BLOCKS.DUNGEON_DOOR_TOP)) {
                 const key = `${hit.blockPos.x},${hit.blockPos.y},${hit.blockPos.z}`;
                 const keyLower = `${hit.blockPos.x},${hit.blockPos.y - 1},${hit.blockPos.z}`;
                 
@@ -1611,6 +1714,19 @@ class Game {
                     door.mesh.rotation.y = door.baseRotationY + targetRotation;
                 }
                 
+                this.input.mouse.rightClick = false;
+                return;
+            }
+
+            if (hit.hit && (hit.blockType === window.BLOCKS.OAK_FENCE_GATE || hit.blockType === window.BLOCKS.BIRCH_FENCE_GATE)) {
+                const key = `${hit.blockPos.x},${hit.blockPos.y},${hit.blockPos.z}`;
+                let gate = this.fenceGates.get(key);
+                if (gate) {
+                    gate.isOpen = !gate.isOpen;
+                    if (gate.isOpen) this.audio.playDoorOpen(hit.blockPos);
+                    else this.audio.playDoorClose(hit.blockPos);
+                    gate.updateVisuals();
+                }
                 this.input.mouse.rightClick = false;
                 return;
             }
@@ -1736,6 +1852,7 @@ class Game {
                         this.input.mouse.rightClick = false;
                         return;
                     }
+                }
                 const _pp = this.player.position;
                 const _playerOverlap = (
                     _pp.x - 0.3 < placePos.x + 1 && _pp.x + 0.3 > placePos.x &&
@@ -1753,7 +1870,7 @@ class Game {
                         );
                         if (!_topOverlap && (curBlockTop === BLOCKS.AIR || curBlockTop === BLOCKS.WATER || curBlockTop === BLOCKS.SWAMP_WATER || curBlockTop === BLOCKS.LAVA)) {
                             this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype);
-                            this.world.setBlock(placePos.x, placePos.y + 1, placePos.z, slot.item.subtype);
+                            this.world.setBlock(placePos.x, placePos.y + 1, placePos.z, BLOCKS.DUNGEON_DOOR_TOP);
                             this.audio.playPlace(slot.item.subtype, placePos);
                             slot.count--;
                             if (slot.count <= 0) {

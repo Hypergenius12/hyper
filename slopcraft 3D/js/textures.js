@@ -232,7 +232,9 @@ export const BLOCKS = {
     OAK_FENCE: 257,
     BIRCH_FENCE: 258,
     COBBLESTONE_WALL: 259,
-    STONE_BRICK_WALL: 260
+    STONE_BRICK_WALL: 260,
+    OAK_FENCE_GATE: 261,
+    BIRCH_FENCE_GATE: 262
 };
 
 // Block properties
@@ -249,6 +251,8 @@ const BLOCK_PROPS = {
     [BLOCKS.BIRCH_FENCE]:           { name: 'Birch Fence',           health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BIRCH_FENCE, flammable: true, isFence: true },
     [BLOCKS.COBBLESTONE_WALL]:      { name: 'Cobblestone Wall',      health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.COBBLESTONE_WALL, isWall: true },
     [BLOCKS.STONE_BRICK_WALL]:      { name: 'Stone Brick Wall',      health: 6, transparent: true, emissive: 0, solid: true, drops: BLOCKS.STONE_BRICK_WALL, isWall: true },
+    [BLOCKS.OAK_FENCE_GATE]:        { name: 'Oak Fence Gate',        health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.OAK_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
+    [BLOCKS.BIRCH_FENCE_GATE]:      { name: 'Birch Fence Gate',      health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.BIRCH_FENCE_GATE, flammable: true, isFenceGate: true, hasFacing: true },
     [BLOCKS.BIRCH_WOOD]:              { name: 'Birch Wood',              health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.BIRCH_LEAVES]:            { name: 'Birch Leaves',            health: 1, transparent: true,  emissive: 0, solid: true, drops: null, flammable: true },
     [BLOCKS.BIRCH_PLANKS]:            { name: 'Birch Planks',            health: 4, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
@@ -357,8 +361,8 @@ const BLOCK_PROPS = {
     [BLOCKS.DUNGEON_DESERT_FLOOR]:{name: 'Desert Floor',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DUNGEON_UNDEAD_BRICK]:{name: 'Undead Brick',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DUNGEON_UNDEAD_FLOOR]:{name: 'Undead Floor',health: 12, transparent: false, emissive: 0, solid: true, drops: null },
-    [BLOCKS.DUNGEON_DOOR]:  { name: 'Dungeon Door',   health: 5, transparent: true, emissive: 0, solid: true, drops: BLOCKS.DUNGEON_DOOR },
-    [BLOCKS.DUNGEON_DOOR_TOP]:  { name: 'Dungeon Door Top', health: 5, transparent: true, emissive: 0, solid: true, drops: null },
+    [BLOCKS.DUNGEON_DOOR]:  { name: 'Oak Door',       health: 5, transparent: true, emissive: 0, solid: true, drops: BLOCKS.DUNGEON_DOOR, flammable: true, isDoor: true },
+    [BLOCKS.DUNGEON_DOOR_TOP]:  { name: 'Oak Door Top', health: 5, transparent: true, emissive: 0, solid: true, drops: null, flammable: true, isDoor: true },
     [BLOCKS.BOSS_SPAWNER]:  { name: 'Boss Spawner',   health: Infinity, transparent: true, emissive: 0, solid: false, drops: null },
     [BLOCKS.COAL_ORE]:      { name: 'Coal Ore',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.DIAMOND_ORE]:   { name: 'Diamond Ore',    health: 10, transparent: false, emissive: 0.2, solid: true, drops: null },
@@ -907,35 +911,45 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillStyle = 'rgba(15,15,20,0.6)'; ctx.fillRect(0,0,TEX_SIZE,1); ctx.fillRect(0,8,TEX_SIZE,1); ctx.fillRect(0,0,1,TEX_SIZE); ctx.fillRect(8,0,1,TEX_SIZE);
             break;
         case BLOCKS.DUNGEON_DOOR_TOP:
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(0,0,16,16);
-            ctx.fillStyle = '#111';
-            ctx.fillRect(2,2,4,4);
-            ctx.fillRect(10,2,4,4);
-            ctx.fillRect(2,10,4,4);
-            ctx.fillRect(10,10,4,4);
+            // Authentic Minecraft Oak Door Top: oak frame with 4 window openings and brass latch
+            fillBase(ctx, 184, 138, 72); // Oak planks base
+            addNoise(ctx, rng, 8);
+            ctx.fillStyle = '#6d4822'; // Dark wood border
+            ctx.strokeRect(0.5, 0.5, 15, 15);
+            // 4 transparent / glass window cutouts
+            ctx.fillStyle = '#2b1d0c';
+            ctx.fillRect(2, 2, 5, 5);
+            ctx.fillRect(9, 2, 5, 5);
+            ctx.fillRect(2, 9, 5, 5);
+            ctx.fillRect(9, 9, 5, 5);
+            ctx.clearRect(3, 3, 3, 3);
+            ctx.clearRect(10, 3, 3, 3);
+            ctx.clearRect(3, 10, 3, 3);
+            ctx.clearRect(10, 10, 3, 3);
+            // Brass handle latch bottom-right
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(12, 13, 2, 3);
+            ctx.fillStyle = '#6d4822';
+            ctx.fillRect(13, 14, 1, 1);
             break;
         case BLOCKS.DUNGEON_DOOR:
-            fillBase(ctx, 40, 40, 45); // Dark stone base
+            // Authentic Minecraft Oak Door Bottom: matching oak planks with recessed panels and brass handle
+            fillBase(ctx, 184, 138, 72); // Oak planks base
             addNoise(ctx, rng, 8);
-            
-            // Outer stone border
-            ctx.fillStyle = 'rgba(20, 20, 25, 0.8)';
-            ctx.fillRect(0, 0, TEX_SIZE, 2);
-            ctx.fillRect(0, 0, 2, TEX_SIZE);
-            ctx.fillRect(TEX_SIZE - 2, 0, 2, TEX_SIZE);
-            ctx.fillRect(0, TEX_SIZE - 2, TEX_SIZE, 2);
-            
-            // Glowing magical runes / seal
-            ctx.fillStyle = 'rgba(255, 50, 50, 0.6)';
-            ctx.fillRect(6, 6, 4, 4);
-            ctx.fillStyle = 'rgba(255, 100, 100, 0.8)';
-            ctx.fillRect(7, 7, 2, 2);
-            
-            // Crossbars
-            ctx.fillStyle = 'rgba(15, 15, 20, 0.9)';
-            ctx.fillRect(0, 7, TEX_SIZE, 2);
-            ctx.fillRect(7, 0, 2, TEX_SIZE);
+            ctx.fillStyle = '#6d4822'; // Frame border
+            ctx.strokeRect(0.5, 0.5, 15, 15);
+            // Lower recessed rectangular panels
+            ctx.fillStyle = '#8f6128';
+            ctx.fillRect(2, 3, 5, 10);
+            ctx.fillRect(9, 3, 5, 10);
+            ctx.fillStyle = '#a57738';
+            ctx.fillRect(3, 4, 3, 8);
+            ctx.fillRect(10, 4, 3, 8);
+            // Brass handle latch top-right
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(12, 0, 2, 3);
+            ctx.fillStyle = '#6d4822';
+            ctx.fillRect(13, 1, 1, 1);
             break;
         case BLOCKS.BOSS_SPAWNER:
             ctx.clearRect(0,0,TEX_SIZE,TEX_SIZE); // Invisible
@@ -3158,7 +3172,9 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.OAK_FENCE]: 'oak_planks',
     [BLOCKS.BIRCH_FENCE]: 'birch_planks',
     [BLOCKS.COBBLESTONE_WALL]: 'cobblestone',
-    [BLOCKS.STONE_BRICK_WALL]: 'stone_bricks'
+    [BLOCKS.STONE_BRICK_WALL]: 'stone_bricks',
+    [BLOCKS.OAK_FENCE_GATE]: 'oak_planks',
+    [BLOCKS.BIRCH_FENCE_GATE]: 'birch_planks'
 };
 
 let _mcChestPromise = null;
@@ -3373,6 +3389,8 @@ const LOCAL_ASSET_MAP = {
     "nether_wart_block": "assets/mc/block/nether_wart_block.png",
     "oak_door_bottom": "assets/mc/block/oak_door_bottom.png",
     "oak_door_top": "assets/mc/block/oak_door_top.png",
+    "oak_door": "assets/mc/item/oak_door.png",
+    "iron_door": "assets/mc/item/iron_door.png",
     "oak_leaves": "assets/mc/block/oak_leaves.png",
     "oak_log": "assets/mc/block/oak_log.png",
     "oak_log_top": "assets/mc/block/oak_log_top.png",
@@ -3856,6 +3874,16 @@ export async function createTextureAtlas(useMinecraft = true) {
             return iconCanvas;
         }
 
+        if (props.isDoor) {
+            const doorItem = _itemCanvasCache.get('oak_door') || _itemCanvasCache.get('door');
+            if (doorItem) {
+                const pad = 2 * SCALE;
+                const drawSize = (TEX_SIZE * 2 - 4) * SCALE;
+                iconCtx.drawImage(doorItem, 0, 0, TEX_SIZE, TEX_SIZE, pad, pad, drawSize, drawSize);
+                return iconCanvas;
+            }
+        }
+
         // Generate 3 faces from atlas
         const top = getFaceCanvas('top');
         const side1 = getFaceCanvas('side');
@@ -3984,7 +4012,10 @@ export async function createTextureAtlas(useMinecraft = true) {
 // ----------------------------------------------------
 
 const MC_ITEM_MAP = {
-
+    'door': 'oak_door',
+    'dungeon_door': 'oak_door',
+    'oak_door': 'oak_door',
+    'iron_door': 'iron_door',
     'iron_ingot': 'iron_ingot',
     'gold_ingot': 'gold_ingot',
     'diamond': 'diamond',

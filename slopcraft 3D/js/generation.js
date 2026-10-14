@@ -2323,9 +2323,24 @@ function carveGlobalDungeons(blocks, cx, cz, params) {
             }
             
             if (dungeonData) {
-                // Carve any room that intersects the current chunk (cx, cz)
+                // Carve any room that intersects current chunk in prioritized layers:
+                // 1. Base rooms and halls
                 for (const room of dungeonData) {
-                    carveRoomInChunk(blocks, cx, cz, room);
+                    if (room.type !== 'corridor' && room.type !== 'doorway') {
+                        carveRoomInChunk(blocks, cx, cz, room);
+                    }
+                }
+                // 2. Corridors connecting rooms
+                for (const room of dungeonData) {
+                    if (room.type === 'corridor') {
+                        carveRoomInChunk(blocks, cx, cz, room);
+                    }
+                }
+                // 3. Doorways punching through walls for clear passageways
+                for (const room of dungeonData) {
+                    if (room.type === 'doorway') {
+                        carveRoomInChunk(blocks, cx, cz, room);
+                    }
                 }
             }
 
@@ -2336,8 +2351,8 @@ function carveGlobalDungeons(blocks, cx, cz, params) {
 function generateDungeonStructure(rng, startX, startY, startZ) {
     const rooms = [];
     
-    // Add a huge entrance shaft piercing the surface to make it discoverable
-    rooms.push({ x: startX, y: startY, z: startZ, w: 7, h: 180, d: 7, type: 'entrance', shape: 'square' });
+    // Starting antechamber room
+    rooms.push({ x: startX, y: startY, z: startZ, w: 9, h: 6, d: 9, type: 'start', shape: 'square' });
     
     const GRID_SIZE = 5;
     const CELL_SIZE = 16;
@@ -2386,8 +2401,8 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
         }
     }
     
-    // Extended shape list with new room types
-    const shapes = ['square', 'circle', 'cross', 'L_shaped', 'pillars', 'pit', 'library'];
+    // Extended shape list with room types
+    const shapes = ['square', 'circle', 'cross', 'pillars', 'pit', 'library'];
     
     for (let gx=0; gx<GRID_SIZE; gx++) {
         for (let gz=0; gz<GRID_SIZE; gz++) {
@@ -2400,9 +2415,9 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
             const rx = startX + (gx - 2) * CELL_SIZE;
             const rz = startZ + (gz - 2) * CELL_SIZE;
             
-            const roomW = cell.type === 'boss' ? 15 : 13;
-            const roomH = cell.type === 'boss' ? 8 : 6;
-            const roomD = cell.type === 'boss' ? 15 : 13;
+            const roomW = cell.type === 'boss' ? 15 : 11;
+            const roomH = cell.type === 'boss' ? 8 : 5;
+            const roomD = cell.type === 'boss' ? 15 : 11;
             
             rooms.push({
                 x: rx, y: startY, z: rz,
@@ -2411,44 +2426,50 @@ function generateDungeonStructure(rng, startX, startY, startZ) {
                 shape: cell.shape
             });
             
-            // Build corridors and doorways between connected rooms
+            // Build corridors and doorways placed directly in the walls
             for (const conn of cell.connections) {
                 if (conn.x > gx) { 
                     // Right corridor (along X axis)
-                    const corrX = rx + CELL_SIZE / 2;
-                    const corrZ = rz;
-                    rooms.push({ x: corrX, y: startY, z: corrZ, w: CELL_SIZE - 6, h: 5, d: 5, type: 'corridor', shape: 'square' });
-                    
-                    // Doorway at the LEFT side of corridor (where it meets this room)
-                    rooms.push({ 
-                        x: rx + Math.floor(roomW / 2) + 1, y: startY, z: rz,
-                        w: 1, h: 5, d: 3, type: 'doorway', orient: 'x'
-                    });
-                    // Doorway at the RIGHT side of corridor (where it meets next room)
+                    const wall1X = rx + Math.floor(roomW / 2);
                     const nextRx = startX + (conn.x - 2) * CELL_SIZE;
-                    const nextRoomW = grid[conn.x][conn.z].type === 'boss' ? 15 : 13;
+                    const nextRoomW = grid[conn.x][conn.z].type === 'boss' ? 15 : 11;
+                    const wall2X = nextRx - Math.floor(nextRoomW / 2);
+                    
+                    const corrX = Math.round((wall1X + wall2X) / 2);
+                    const corrW = Math.max(3, (wall2X - wall1X) + 1);
+                    rooms.push({ x: corrX, y: startY, z: rz, w: corrW, h: 5, d: 5, type: 'corridor', shape: 'square' });
+                    
+                    // Doorway embedded right in the wall of room 1
                     rooms.push({ 
-                        x: nextRx - Math.floor(nextRoomW / 2) - 1, y: startY, z: rz,
-                        w: 1, h: 5, d: 3, type: 'doorway', orient: 'x'
+                        x: wall1X, y: startY, z: rz,
+                        w: 3, h: 5, d: 3, type: 'doorway', orient: 'x'
+                    });
+                    // Doorway embedded right in the wall of room 2
+                    rooms.push({ 
+                        x: wall2X, y: startY, z: rz,
+                        w: 3, h: 5, d: 3, type: 'doorway', orient: 'x'
                     });
                 }
                 if (conn.z > gz) { 
                     // Down corridor (along Z axis)
-                    const corrX = rx;
-                    const corrZ = rz + CELL_SIZE / 2;
-                    rooms.push({ x: corrX, y: startY, z: corrZ, w: 5, h: 5, d: CELL_SIZE - 6, type: 'corridor', shape: 'square' });
-                    
-                    // Doorway at TOP of corridor (meets this room)
-                    rooms.push({ 
-                        x: rx, y: startY, z: rz + Math.floor(roomD / 2) + 1,
-                        w: 3, h: 5, d: 1, type: 'doorway', orient: 'z'
-                    });
-                    // Doorway at BOTTOM of corridor (meets next room)
+                    const wall1Z = rz + Math.floor(roomD / 2);
                     const nextRz = startZ + (conn.z - 2) * CELL_SIZE;
-                    const nextRoomD = grid[conn.x][conn.z].type === 'boss' ? 15 : 13;
+                    const nextRoomD = grid[conn.x][conn.z].type === 'boss' ? 15 : 11;
+                    const wall2Z = nextRz - Math.floor(nextRoomD / 2);
+                    
+                    const corrZ = Math.round((wall1Z + wall2Z) / 2);
+                    const corrD = Math.max(3, (wall2Z - wall1Z) + 1);
+                    rooms.push({ x: rx, y: startY, z: corrZ, w: 5, h: 5, d: corrD, type: 'corridor', shape: 'square' });
+                    
+                    // Doorway embedded right in the wall of room 1
                     rooms.push({ 
-                        x: rx, y: startY, z: nextRz - Math.floor(nextRoomD / 2) - 1,
-                        w: 3, h: 5, d: 1, type: 'doorway', orient: 'z'
+                        x: rx, y: startY, z: wall1Z,
+                        w: 3, h: 5, d: 3, type: 'doorway', orient: 'z'
+                    });
+                    // Doorway embedded right in the wall of room 2
+                    rooms.push({ 
+                        x: rx, y: startY, z: wall2Z,
+                        w: 3, h: 5, d: 3, type: 'doorway', orient: 'z'
                     });
                 }
             }
@@ -2486,33 +2507,78 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                 const lx = wx - cMinX;
                 const lz = wz - cMinZ;
                 
-                // Doorway: place a single door column at the exact center, carve the rest
+                // Doorway: embeds a door in the wall between rooms and corridors for actual passageways
                 if (room.type === 'doorway') {
-                    const dx = Math.abs(wx - Math.floor(room.x));
-                    const dz = Math.abs(wz - Math.floor(room.z));
-                    const rw = room.w / 2;
-                    const rd = room.d / 2;
+                    const dwx = Math.floor(room.x);
+                    const dwz = Math.floor(room.z);
+                    const orient = room.orient; // 'x' or 'z'
 
-                    if (dx <= rw && dz <= rd) {
-                        if (dx === 0 && dz === 0) {
-                            // Exact center column: force-place door (overwrite wall blocks)
-                            if (wy === minY) {
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
-                            } else if (wy === minY + 1) {
-                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR, false); // door bottom
-                            } else if (wy === minY + 2) {
-                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR, false); // door top
-                            } else {
-                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR, false); // headroom / wall above
+                    if (orient === 'x') {
+                        // Wall plane is at wx === dwx, passage runs along X
+                        if (wx === dwx) {
+                            if (wz === dwz) {
+                                // Exact door opening through the wall
+                                if (wy === minY) {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
+                                } else if (wy === minY + 1) {
+                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR, false); // Door bottom
+                                } else if (wy === minY + 2) {
+                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR_TOP, false); // Door top
+                                } else {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS, false); // Solid lintel header over door
+                                }
+                            } else if (wz === dwz - 1 || wz === dwz + 1) {
+                                // Solid wall flanking the door
+                                if (wy === minY) {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
+                                } else {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS, false);
+                                }
                             }
-                        } else {
-                            // Sides of the doorway — force-carve air through walls
-                            if (wy === minY) {
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
-                            } else if (wy >= minY + 1 && wy <= minY + 3) {
-                                safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR, false); // open passage
-                            } else if (wy === minY + 4) {
-                                safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.wall : BLOCKS.STONE_BRICKS, false);
+                        } else if (wx === dwx - 1 || wx === dwx + 1) {
+                            // Approach spaces immediately in front of and behind door
+                            if (wz === dwz) {
+                                if (wy === minY) {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
+                                } else if (wy === minY + 1 || wy === minY + 2) {
+                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR, false); // Clear 2-block tall passageway
+                                } else if (wy >= minY + 3) {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS, false); // Ceiling/lintel
+                                }
+                            }
+                        }
+                    } else {
+                        // Wall plane is at wz === dwz, passage runs along Z
+                        if (wz === dwz) {
+                            if (wx === dwx) {
+                                // Exact door opening through the wall
+                                if (wy === minY) {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
+                                } else if (wy === minY + 1) {
+                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR, false); // Door bottom
+                                } else if (wy === minY + 2) {
+                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.DUNGEON_DOOR_TOP, false); // Door top
+                                } else {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS, false); // Solid lintel header over door
+                                }
+                            } else if (wx === dwx - 1 || wx === dwx + 1) {
+                                // Solid wall flanking the door
+                                if (wy === minY) {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
+                                } else {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS, false);
+                                }
+                            }
+                        } else if (wz === dwz - 1 || wz === dwz + 1) {
+                            // Approach spaces immediately in front of and behind door
+                            if (wx === dwx) {
+                                if (wy === minY) {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.floor : BLOCKS.STONE_BRICKS, false);
+                                } else if (wy === minY + 1 || wy === minY + 2) {
+                                    safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR, false); // Clear 2-block tall passageway
+                                } else if (wy >= minY + 3) {
+                                    safeSetBlock(blocks, lx, wy, lz, room.theme ? room.theme.brick : BLOCKS.STONE_BRICKS, false); // Ceiling/lintel
+                                }
                             }
                         }
                     }
@@ -2742,12 +2808,17 @@ export function generateCabin(blocks, x, y, z, rng) {
                 if (isCorner) {
                     safeSetBlock(blocks, px, py, pz, BLOCKS.WOOD); // Corner log pillars
                 } else if (isWall) {
-                    if (py === y) {
+                    if (pz === z - 3 && px === x) {
+                        // Front door doorway: replaces wall blocks for an actual passageway!
+                        if (py === y) {
+                            safeSetBlock(blocks, px, py, pz, BLOCKS.DUNGEON_DOOR); // Bottom door block
+                        } else if (py === y + 1) {
+                            safeSetBlock(blocks, px, py, pz, BLOCKS.DUNGEON_DOOR_TOP); // Top door block
+                        } else {
+                            safeSetBlock(blocks, px, py, pz, BLOCKS.PLANKS); // Solid lintel header over door
+                        }
+                    } else if (py === y) {
                         safeSetBlock(blocks, px, py, pz, BLOCKS.COBBLESTONE); // Stone foundation base
-                    } else if (pz === z - 3 && px === x) {
-                        // Front door
-                        if (py === y + 1) safeSetBlock(blocks, px, py, pz, BLOCKS.DUNGEON_DOOR);
-                        else if (py >= y + 2) safeSetBlock(blocks, px, py, pz, BLOCKS.PLANKS);
                     } else if (py === y + 1 || py === y + 2) {
                         // Glass windows
                         const isWindow = (
@@ -2764,10 +2835,13 @@ export function generateCabin(blocks, x, y, z, rng) {
         }
     }
 
-    // Doorway bottom block
-    safeSetBlock(blocks, x, y, z - 3, BLOCKS.DUNGEON_DOOR);
-    // Doorstep outside
+    // Doorstep outside & clear entryway
     safeSetBlock(blocks, x, y - 1, z - 4, BLOCKS.COBBLESTONE);
+    safeSetBlock(blocks, x, y, z - 4, BLOCKS.AIR);
+    safeSetBlock(blocks, x, y + 1, z - 4, BLOCKS.AIR);
+    safeSetBlock(blocks, x, y, z - 2, BLOCKS.AIR);
+    safeSetBlock(blocks, x, y + 1, z - 2, BLOCKS.AIR);
+
     // Exterior entrance lanterns/torches
     safeSetBlock(blocks, x - 1, y + 2, z - 4, BLOCKS.TORCH);
     safeSetBlock(blocks, x + 1, y + 2, z - 4, BLOCKS.TORCH);

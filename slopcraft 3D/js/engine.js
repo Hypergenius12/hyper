@@ -555,7 +555,7 @@ export class Chunk {
             for (let z = 0; z < CHUNK_SIZE; z++) {
                 for (let x = 0; x < CHUNK_SIZE; x++) {
                     const blockType = this.getBlock(x, y, z);
-                    if (blockType === BLOCKS.AIR || blockType === BLOCKS.CHEST_BLOCK || blockType === BLOCKS.DUNGEON_DOOR) continue;
+                    if (blockType === BLOCKS.AIR || blockType === BLOCKS.CHEST_BLOCK || blockType === BLOCKS.DUNGEON_DOOR || blockType === BLOCKS.DUNGEON_DOOR_TOP || blockType === BLOCKS.OAK_FENCE_GATE || blockType === BLOCKS.BIRCH_FENCE_GATE) continue;
 
                     const wx = wxBase + x;
                     const wz = wzBase + z;
@@ -684,7 +684,7 @@ export class Chunk {
                             // Center post
                             pushCustomBox(x + 6/16, y, z + 6/16, x + 10/16, y + 1.0, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
 
-                            const canConn = (b) => { const p = getBlockProperties(b); return p.solid || p.isFence || p.isWall; };
+                            const canConn = (b) => { const p = getBlockProperties(b); return p.solid || p.isFence || p.isWall || p.isFenceGate; };
                             if (canConn(getBlockOptimized(wx, y, wz - 1))) {
                                 pushCustomBox(x + 7/16, y + 12/16, z, x + 9/16, y + 15/16, z + 6/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
                                 pushCustomBox(x + 7/16, y + 6/16, z, x + 9/16, y + 9/16, z + 6/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
@@ -705,7 +705,7 @@ export class Chunk {
                             // Center post
                             pushCustomBox(x + 4/16, y, z + 4/16, x + 12/16, y + 1.0, z + 12/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
 
-                            const canConn = (b) => { const p = getBlockProperties(b); return p.solid || p.isWall || p.isFence; };
+                            const canConn = (b) => { const p = getBlockProperties(b); return p.solid || p.isWall || p.isFence || p.isFenceGate; };
                             if (canConn(getBlockOptimized(wx, y, wz - 1))) pushCustomBox(x + 5/16, y, z, x + 11/16, y + 14/16, z + 4/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
                             if (canConn(getBlockOptimized(wx, y, wz + 1))) pushCustomBox(x + 5/16, y, z + 12/16, x + 11/16, y + 14/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
                             if (canConn(getBlockOptimized(wx - 1, y, wz))) pushCustomBox(x, y, z + 5/16, x + 4/16, y + 14/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 0.95);
@@ -1501,10 +1501,19 @@ export class World {
             }
 
             // Register door placement/removal
-            if (oldType === window.BLOCKS.DUNGEON_DOOR && type !== window.BLOCKS.DUNGEON_DOOR) {
+            const isDoor = (b) => b === window.BLOCKS.DUNGEON_DOOR || b === window.BLOCKS.DUNGEON_DOOR_TOP;
+            if (isDoor(oldType) && !isDoor(type)) {
                 if (this.onDoorRemoved) this.onDoorRemoved(wx, wy, wz);
-            } else if (oldType !== window.BLOCKS.DUNGEON_DOOR && type === window.BLOCKS.DUNGEON_DOOR) {
+            } else if (!isDoor(oldType) && isDoor(type)) {
                 if (this.onDoorPlaced) this.onDoorPlaced(wx, wy, wz);
+            }
+
+            // Register fence gate placement/removal
+            const isGate = (b) => b === window.BLOCKS.OAK_FENCE_GATE || b === window.BLOCKS.BIRCH_FENCE_GATE;
+            if (isGate(oldType) && !isGate(type)) {
+                if (this.onGateRemoved) this.onGateRemoved(wx, wy, wz);
+            } else if (!isGate(oldType) && isGate(type)) {
+                if (this.onGatePlaced) this.onGatePlaced(wx, wy, wz, type);
             }
 
             if (oldType !== type) {
@@ -1727,11 +1736,11 @@ export class World {
                 }
             }
 
-            // Register chests, doors, torches, and furnaces
-            if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated || this.onFurnaceGenerated) {
+            // Register chests, doors, torches, furnaces, and fence gates
+            if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated || this.onFurnaceGenerated || this.onGateGenerated) {
                 for (let i = 0; i < chunk.blocks.length; i++) {
                     const blockType = chunk.blocks[i];
-                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.FURNACE) {
+                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.FURNACE || blockType === window.BLOCKS.OAK_FENCE_GATE || blockType === window.BLOCKS.BIRCH_FENCE_GATE) {
                         const y = Math.floor(i / (16 * 16));
                         const rem = i % (16 * 16);
                         const z = Math.floor(rem / 16);
@@ -1746,6 +1755,8 @@ export class World {
                             this.onTorchGenerated(wx, y, wz);
                         } else if (blockType === window.BLOCKS.FURNACE && this.onFurnaceGenerated) {
                             this.onFurnaceGenerated(wx, y, wz);
+                        } else if ((blockType === window.BLOCKS.OAK_FENCE_GATE || blockType === window.BLOCKS.BIRCH_FENCE_GATE) && this.onGateGenerated) {
+                            this.onGateGenerated(wx, y, wz, blockType);
                         }
                     }
                 }
@@ -2135,14 +2146,17 @@ export class World {
                         const block = this.getBlock(x, y, z);
                         const bProps = getBlockProperties(block);
                         if (bProps.solid) {
-                            if (block === window.BLOCKS.DUNGEON_DOOR && this.isDoorOpen && this.isDoorOpen(x, y, z)) {
+                            if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) {
+                                continue;
+                            }
+                            if ((block === window.BLOCKS.OAK_FENCE_GATE || block === window.BLOCKS.BIRCH_FENCE_GATE) && this.isGateOpen && this.isGateOpen(x, y, z)) {
                                 continue;
                             }
                             if (bProps.isSlab) {
                                 if (py < y + 0.5 && py + entityHeight > y) return true;
                                 continue;
                             }
-                            if (bProps.isFence || bProps.isWall) {
+                            if (bProps.isFence || bProps.isWall || bProps.isFenceGate) {
                                 if (py < y + 1.5 && py + entityHeight > y) return true;
                                 continue;
                             }
@@ -2184,10 +2198,11 @@ export class World {
                             const block = this.getBlock(x, y, z);
                             const bProps = getBlockProperties(block);
                             if (bProps.solid) {
-                                if (block === window.BLOCKS.DUNGEON_DOOR && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
+                                if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
+                                if ((block === window.BLOCKS.OAK_FENCE_GATE || block === window.BLOCKS.BIRCH_FENCE_GATE) && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
                                 let surfH = 1.0;
                                 if (bProps.isSlab) surfH = 0.5;
-                                else if (bProps.isFence || bProps.isWall) surfH = 1.5;
+                                else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) surfH = 1.5;
                                 if (highestSurfaceY === null || (y + surfH) > highestSurfaceY) {
                                     highestSurfaceY = y + surfH;
                                 }
@@ -2210,7 +2225,8 @@ export class World {
                         for (let z = minZ; z <= maxZ; z++) {
                             const block = this.getBlock(x, y, z);
                             if (getBlockProperties(block).solid) {
-                                if (block === window.BLOCKS.DUNGEON_DOOR && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
+                                if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
+                                if ((block === window.BLOCKS.OAK_FENCE_GATE || block === window.BLOCKS.BIRCH_FENCE_GATE) && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
                                 if (lowestCeilingY === null || y < lowestCeilingY) {
                                     lowestCeilingY = y;
                                 }
