@@ -1,10 +1,10 @@
 // ============================================
 // generation.js — Procedural Generation, Biomes, Dungeons
 // ============================================
-import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=102';
-import { BLOCKS } from './textures.js?v=102';
+import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=103';
+import { BLOCKS } from './textures.js?v=103';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=102';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=103';
 
 // Planet configurations
 export const BIOMES = {
@@ -1706,7 +1706,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 }
             } else if (r < 0.000075) {
                 if (isAreaValidForStructure(tx, tz, surfaceY, 4)) {
-                    generateCabin(blocks, tx, surfaceY + 1, tz, structRng);
+                    generateHouse(blocks, tx, surfaceY + 1, tz, structRng);
                 }
             }
         }
@@ -1719,6 +1719,17 @@ export function generateChunkTerrain(cx, cz, params) {
     for (const shPos of strongholds) {
         if (Math.abs(cx * CHUNK_SIZE + 8 - shPos.x) <= 24 && Math.abs(cz * CHUNK_SIZE + 8 - shPos.z) <= 24) {
             generateStronghold(blocks, cx, cz, shPos, params);
+            break;
+        }
+    }
+
+    // ============================================
+    // PASS 5.6: Rare Surface Villages
+    // ============================================
+    const villages = getVillagePositions(params.seed);
+    for (const vPos of villages) {
+        if (Math.abs(cx * CHUNK_SIZE + 8 - vPos.x) <= 32 && Math.abs(cz * CHUNK_SIZE + 8 - vPos.z) <= 32) {
+            generateVillage(blocks, cx, cz, vPos, params);
             break;
         }
     }
@@ -3432,6 +3443,398 @@ export function generateCabin(blocks, x, y, z, rng) {
     safeSetBlock(blocks, x + 1, y + 2, z + 2, BLOCKS.TORCH);
 }
 
+export function generateBlacksmith(blocks, x, y, z, rng) {
+    // 8x7 Blacksmith shop with forge terrace, 2 furnaces, stonecutter, lava basin, and interior loot room
+    for (let px = x - 4; px <= x + 4; px++) {
+        for (let pz = z - 3; pz <= z + 3; pz++) {
+            for (let dy = 1; dy <= 5; dy++) {
+                const fy = y - dy;
+                if (fy < 1) break;
+                safeSetBlock(blocks, px, fy, pz, BLOCKS.COBBLESTONE);
+            }
+            safeSetBlock(blocks, px, y - 1, pz, BLOCKS.COBBLESTONE);
+        }
+    }
+    // Clear interior/terrace
+    for (let py = y; py <= y + 4; py++) {
+        for (let px = x - 3; px <= x + 3; px++) {
+            for (let pz = z - 2; pz <= z + 2; pz++) {
+                safeSetBlock(blocks, px, py, pz, BLOCKS.AIR);
+            }
+        }
+    }
+    // Walls & pillars
+    for (let py = y; py < y + 3; py++) {
+        // Enclosed back & right room (x to x+3, z-2 to z+2)
+        for (let px = x; px <= x + 3; px++) {
+            for (let pz = z - 2; pz <= z + 2; pz++) {
+                const isWall = (px === x || px === x + 3 || pz === z - 2 || pz === z + 2);
+                const isCorner = (px === x + 3) && (pz === z - 2 || pz === z + 2);
+                if (isCorner) {
+                    safeSetBlock(blocks, px, py, pz, BLOCKS.WOOD);
+                } else if (isWall) {
+                    if (px === x && pz === z && py <= y + 1) {
+                        safeSetBlock(blocks, px, py, pz, (py === y) ? BLOCKS.DUNGEON_DOOR : BLOCKS.DUNGEON_DOOR_TOP);
+                    } else if (pz === z + 2 && px === x + 1 && py === y + 1) {
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.GLASS);
+                    } else {
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.PLANKS);
+                    }
+                }
+            }
+        }
+        // Corner pillars for open forge area (x - 3)
+        safeSetBlock(blocks, x - 3, py, z - 2, BLOCKS.WOOD);
+        safeSetBlock(blocks, x - 3, py, z + 2, BLOCKS.WOOD);
+    }
+    // Roof: flat cobblestone roof with overhang
+    for (let px = x - 4; px <= x + 4; px++) {
+        for (let pz = z - 3; pz <= z + 3; pz++) {
+            safeSetBlock(blocks, px, y + 3, pz, BLOCKS.COBBLESTONE);
+        }
+    }
+    // Forge appliances on terrace (x - 2 to x - 1)
+    safeSetBlock(blocks, x - 2, y, z - 1, BLOCKS.FURNACE);
+    safeSetBlock(blocks, x - 1, y, z - 1, BLOCKS.FURNACE);
+    safeSetBlock(blocks, x - 2, y, z + 1, BLOCKS.STONECUTTER);
+    safeSetBlock(blocks, x - 1, y, z + 1, BLOCKS.COBBLESTONE);
+    // Lava pool
+    safeSetBlock(blocks, x - 1, y - 1, z, BLOCKS.LAVA);
+    safeSetBlock(blocks, x - 2, y, z, BLOCKS.IRON_BLOCK); // anvil stand
+    // Interior room: chest with blacksmith loot
+    safeSetBlock(blocks, x + 2, y, z + 1, BLOCKS.CHEST_BLOCK);
+    safeSetBlock(blocks, x + 2, y, z - 1, BLOCKS.CRAFTING_TABLE);
+    safeSetBlock(blocks, x + 1, y + 2, z, BLOCKS.TORCH);
+    safeSetBlock(blocks, x - 2, y + 2, z, BLOCKS.TORCH);
+}
+
+export function generateLibrary(blocks, x, y, z, rng) {
+    // 7x7 Village Library with bookshelves, desks, and lantern
+    for (let px = x - 3; px <= x + 3; px++) {
+        for (let pz = z - 3; pz <= z + 3; pz++) {
+            for (let dy = 1; dy <= 5; dy++) {
+                const fy = y - dy;
+                if (fy < 1) break;
+                safeSetBlock(blocks, px, fy, pz, BLOCKS.COBBLESTONE);
+            }
+            safeSetBlock(blocks, px, y - 1, pz, BLOCKS.PLANKS);
+        }
+    }
+    for (let py = y; py <= y + 4; py++) {
+        for (let px = x - 2; px <= x + 2; px++) {
+            for (let pz = z - 2; pz <= z + 2; pz++) {
+                safeSetBlock(blocks, px, py, pz, BLOCKS.AIR);
+            }
+        }
+    }
+    for (let py = y; py < y + 4; py++) {
+        for (let px = x - 3; px <= x + 3; px++) {
+            for (let pz = z - 3; pz <= z + 3; pz++) {
+                const isWall = (px === x - 3 || px === x + 3 || pz === z - 3 || pz === z + 3);
+                const isCorner = (px === x - 3 || px === x + 3) && (pz === z - 3 || pz === z + 3);
+                if (isCorner) {
+                    safeSetBlock(blocks, px, py, pz, BLOCKS.WOOD);
+                } else if (isWall) {
+                    if (pz === z - 3 && px === x && py <= y + 1) {
+                        safeSetBlock(blocks, px, py, pz, (py === y) ? BLOCKS.DUNGEON_DOOR : BLOCKS.DUNGEON_DOOR_TOP);
+                    } else if (py === y + 1 && ((px === x - 3 && pz === z) || (px === x + 3 && pz === z) || (pz === z + 3 && px === x))) {
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.GLASS);
+                    } else {
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.STONE_BRICKS);
+                    }
+                }
+            }
+        }
+    }
+    // Roof
+    for (let px = x - 3; px <= x + 3; px++) {
+        for (let pz = z - 3; pz <= z + 3; pz++) {
+            safeSetBlock(blocks, px, y + 4, pz, BLOCKS.PLANKS);
+        }
+    }
+    // Interior Bookshelves along back and sides
+    safeSetBlock(blocks, x - 2, y, z + 2, BLOCKS.BOOKSHELF);
+    safeSetBlock(blocks, x - 1, y, z + 2, BLOCKS.BOOKSHELF);
+    safeSetBlock(blocks, x,     y, z + 2, BLOCKS.BOOKSHELF);
+    safeSetBlock(blocks, x + 1, y, z + 2, BLOCKS.BOOKSHELF);
+    safeSetBlock(blocks, x + 2, y, z + 2, BLOCKS.BOOKSHELF);
+    safeSetBlock(blocks, x - 2, y + 1, z + 2, BLOCKS.BOOKSHELF);
+    safeSetBlock(blocks, x + 2, y + 1, z + 2, BLOCKS.BOOKSHELF);
+    // Reading desk
+    safeSetBlock(blocks, x, y, z, BLOCKS.CRAFTING_TABLE);
+    safeSetBlock(blocks, x, y + 1, z, BLOCKS.LANTERN);
+    safeSetBlock(blocks, x + 1, y, z, BLOCKS.WOOD);
+}
+
+export function generateFarmhouse(blocks, x, y, z, rng) {
+    // Farmhouse with adjacent fenced crop field
+    for (let px = x - 4; px <= x + 4; px++) {
+        for (let pz = z - 3; pz <= z + 3; pz++) {
+            for (let dy = 1; dy <= 5; dy++) {
+                const fy = y - dy;
+                if (fy < 1) break;
+                safeSetBlock(blocks, px, fy, pz, BLOCKS.DIRT);
+            }
+        }
+    }
+    // Farmer's hut (x to x+4)
+    for (let px = x; px <= x + 4; px++) {
+        for (let pz = z - 3; pz <= z + 3; pz++) {
+            safeSetBlock(blocks, px, y - 1, pz, BLOCKS.PLANKS);
+        }
+    }
+    for (let py = y; py <= y + 3; py++) {
+        for (let px = x + 1; px <= x + 3; px++) {
+            for (let pz = z - 2; pz <= z + 2; pz++) {
+                safeSetBlock(blocks, px, py, pz, BLOCKS.AIR);
+            }
+        }
+    }
+    for (let py = y; py < y + 3; py++) {
+        for (let px = x; px <= x + 4; px++) {
+            for (let pz = z - 3; pz <= z + 3; pz++) {
+                const isWall = (px === x || px === x + 4 || pz === z - 3 || pz === z + 3);
+                if (isWall) {
+                    if (pz === z - 3 && px === x + 2 && py <= y + 1) {
+                        safeSetBlock(blocks, px, py, pz, (py === y) ? BLOCKS.DUNGEON_DOOR : BLOCKS.DUNGEON_DOOR_TOP);
+                    } else if (py === y + 1 && (px === x + 4 && pz === z)) {
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.GLASS);
+                    } else {
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.WOOD);
+                    }
+                }
+            }
+        }
+    }
+    // Hut roof
+    for (let px = x - 1; px <= x + 5; px++) {
+        for (let pz = z - 4; pz <= z + 4; pz++) {
+            safeSetBlock(blocks, px, y + 3, pz, BLOCKS.PLANKS);
+        }
+    }
+    safeSetBlock(blocks, x + 3, y, z + 2, BLOCKS.WOOL);
+    safeSetBlock(blocks, x + 1, y, z + 2, BLOCKS.CHEST_BLOCK);
+    safeSetBlock(blocks, x + 2, y + 2, z, BLOCKS.TORCH);
+
+    // Fenced Crop Field (x-4 to x-1)
+    const fenceId = BLOCKS.OAK_FENCE || BLOCKS.WOOD;
+    for (let px = x - 4; px < x; px++) {
+        for (let pz = z - 3; pz <= z + 3; pz++) {
+            const isBorder = (px === x - 4 || pz === z - 3 || pz === z + 3);
+            if (isBorder) {
+                safeSetBlock(blocks, px, y, pz, fenceId);
+            } else {
+                safeSetBlock(blocks, px, y, pz, BLOCKS.AIR);
+                if (pz === z) {
+                    safeSetBlock(blocks, px, y - 1, pz, BLOCKS.WATER);
+                } else {
+                    safeSetBlock(blocks, px, y - 1, pz, BLOCKS.DIRT);
+                    safeSetBlock(blocks, px, y, pz, BLOCKS.WHITE_FLOWER);
+                }
+            }
+        }
+    }
+}
+
+export function generateWatchtower(blocks, x, y, z, rng) {
+    // 5x5 Stone Watchtower
+    for (let px = x - 2; px <= x + 2; px++) {
+        for (let pz = z - 2; pz <= z + 2; pz++) {
+            for (let dy = 1; dy <= 5; dy++) {
+                const fy = y - dy;
+                if (fy < 1) break;
+                safeSetBlock(blocks, px, fy, pz, BLOCKS.COBBLESTONE);
+            }
+            safeSetBlock(blocks, px, y - 1, pz, BLOCKS.COBBLESTONE);
+        }
+    }
+    for (let py = y; py <= y + 7; py++) {
+        for (let px = x - 1; px <= x + 1; px++) {
+            for (let pz = z - 1; pz <= z + 1; pz++) {
+                safeSetBlock(blocks, px, py, pz, BLOCKS.AIR);
+            }
+        }
+    }
+    for (let py = y; py < y + 7; py++) {
+        for (let px = x - 2; px <= x + 2; px++) {
+            for (let pz = z - 2; pz <= z + 2; pz++) {
+                const isWall = (px === x - 2 || px === x + 2 || pz === z - 2 || pz === z + 2);
+                if (isWall) {
+                    if (pz === z - 2 && px === x && py <= y + 1) {
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.AIR);
+                    } else if (py === y + 4 && (px === x || pz === z)) {
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.GLASS);
+                    } else {
+                        safeSetBlock(blocks, px, py, pz, BLOCKS.STONE_BRICKS);
+                    }
+                }
+            }
+        }
+        safeSetBlock(blocks, x, py, z + 1, BLOCKS.LADDER);
+    }
+    for (let px = x - 2; px <= x + 2; px++) {
+        for (let pz = z - 2; pz <= z + 2; pz++) {
+            safeSetBlock(blocks, px, y + 7, pz, BLOCKS.PLANKS);
+            const isCorner = (px === x - 2 || px === x + 2) && (pz === z - 2 || pz === z + 2);
+            if (isCorner) {
+                safeSetBlock(blocks, px, y + 8, pz, BLOCKS.STONE_BRICKS);
+                safeSetBlock(blocks, px, y + 9, pz, BLOCKS.TORCH);
+            }
+        }
+    }
+}
+
+export function generateHouse(blocks, x, y, z, rng) {
+    const r = rng();
+    if (r < 0.25) {
+        generateBlacksmith(blocks, x, y, z, rng);
+    } else if (r < 0.5) {
+        generateLibrary(blocks, x, y, z, rng);
+    } else if (r < 0.75) {
+        generateFarmhouse(blocks, x, y, z, rng);
+    } else {
+        generateCabin(blocks, x, y, z, rng);
+    }
+}
+
+export function getVillagePositions(seed = 12345) {
+    const s = Math.abs(typeof seed === 'string' ? hashSeed(seed) : seed) || 12345;
+    const villages = [];
+    for (let rx = -3; rx <= 3; rx++) {
+        for (let rz = -3; rz <= 3; rz++) {
+            if (rx === 0 && rz === 0) continue;
+            const rRng = seededRandom(s + rx * 73856093 ^ rz * 19349663);
+            if (rRng() < 0.6) {
+                const vx = rx * 550 + Math.floor((rRng() - 0.5) * 300);
+                const vz = rz * 550 + Math.floor((rRng() - 0.5) * 300);
+                villages.push({ x: vx, y: 64, z: vz });
+            }
+        }
+    }
+    return villages;
+}
+
+export function getClosestVillagePosition(px, pz, seed = 12345) {
+    const list = getVillagePositions(seed);
+    if (!list.length) return null;
+    let best = list[0];
+    let bestDist = Infinity;
+    for (const v of list) {
+        const dx = v.x - px;
+        const dz = v.z - pz;
+        const d = dx * dx + dz * dz;
+        if (d < bestDist) {
+            bestDist = d;
+            best = v;
+        }
+    }
+    return best;
+}
+
+if (typeof window !== 'undefined') {
+    window.getVillagePositions = getVillagePositions;
+    window.getClosestVillagePosition = getClosestVillagePosition;
+    window.generateEndChunk = generateEndChunk;
+}
+
+export function generateVillage(blocks, cx, cz, vPos, params) {
+    const wxBase = cx * CHUNK_SIZE;
+    const wzBase = cz * CHUNK_SIZE;
+    const rng = seededRandom(params.seed + vPos.x * 37 + vPos.z * 109);
+
+    const fenceId = BLOCKS.OAK_FENCE || BLOCKS.WOOD;
+    const lanternId = BLOCKS.LANTERN || BLOCKS.TORCH;
+
+    // 1. Village Center Well at (vPos.x, vPos.y, vPos.z)
+    const lxCenter = vPos.x - wxBase;
+    const lzCenter = vPos.z - wzBase;
+
+    for (let dx = -2; dx <= 2; dx++) {
+        for (let dz = -2; dz <= 2; dz++) {
+            const lx = lxCenter + dx;
+            const lz = lzCenter + dz;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                const r2 = dx * dx + dz * dz;
+                for (let dy = 1; dy <= 5; dy++) {
+                    safeSetBlock(blocks, lx, vPos.y - dy, lz, BLOCKS.COBBLESTONE);
+                }
+                if (r2 <= 1) {
+                    safeSetBlock(blocks, lx, vPos.y - 1, lz, BLOCKS.WATER);
+                    safeSetBlock(blocks, lx, vPos.y, lz, BLOCKS.AIR);
+                } else if (r2 <= 4) {
+                    safeSetBlock(blocks, lx, vPos.y - 1, lz, BLOCKS.COBBLESTONE);
+                    safeSetBlock(blocks, lx, vPos.y, lz, BLOCKS.COBBLESTONE);
+                }
+                if (Math.abs(dx) === 1 && Math.abs(dz) === 1) {
+                    for (let py = 1; py <= 3; py++) {
+                        safeSetBlock(blocks, lx, vPos.y + py, lz, fenceId);
+                    }
+                }
+                if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) {
+                    safeSetBlock(blocks, lx, vPos.y + 4, lz, BLOCKS.COBBLESTONE);
+                }
+                if (dx === 0 && dz === 0) {
+                    safeSetBlock(blocks, lx, vPos.y + 3, lz, lanternId);
+                }
+            }
+        }
+    }
+
+    // 2. Gravel pathways radiating 20 blocks in cardinal directions
+    for (let dist = 3; dist <= 20; dist++) {
+        const pathCoords = [
+            { x: vPos.x + dist, z: vPos.z },
+            { x: vPos.x - dist, z: vPos.z },
+            { x: vPos.x, z: vPos.z + dist },
+            { x: vPos.x, z: vPos.z - dist }
+        ];
+        for (const pt of pathCoords) {
+            const lx = pt.x - wxBase;
+            const lz = pt.z - wzBase;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                safeSetBlock(blocks, lx, vPos.y - 1, lz, BLOCKS.GRAVEL);
+                safeSetBlock(blocks, lx, vPos.y, lz, BLOCKS.AIR);
+                safeSetBlock(blocks, lx, vPos.y + 1, lz, BLOCKS.AIR);
+
+                if (dist % 8 === 0) {
+                    safeSetBlock(blocks, lx, vPos.y, lz, fenceId);
+                    safeSetBlock(blocks, lx, vPos.y + 1, lz, fenceId);
+                    safeSetBlock(blocks, lx, vPos.y + 2, lz, lanternId);
+                }
+            }
+        }
+    }
+
+    // 3. Buildings placed in quadrants around village well:
+    // Blacksmith at (+10, +10)
+    const bsX = vPos.x + 10 - wxBase;
+    const bsZ = vPos.z + 10 - wzBase;
+    if (bsX >= -4 && bsX <= CHUNK_SIZE + 4 && bsZ >= -3 && bsZ <= CHUNK_SIZE + 3) {
+        generateBlacksmith(blocks, bsX, vPos.y, bsZ, rng);
+    }
+
+    // Library at (-10, +10)
+    const libX = vPos.x - 10 - wxBase;
+    const libZ = vPos.z + 10 - wzBase;
+    if (libX >= -3 && libX <= CHUNK_SIZE + 3 && libZ >= -3 && libZ <= CHUNK_SIZE + 3) {
+        generateLibrary(blocks, libX, vPos.y, libZ, rng);
+    }
+
+    // Farmhouse at (+10, -10)
+    const farmX = vPos.x + 10 - wxBase;
+    const farmZ = vPos.z - 10 - wzBase;
+    if (farmX >= -4 && farmX <= CHUNK_SIZE + 4 && farmZ >= -3 && farmZ <= CHUNK_SIZE + 3) {
+        generateFarmhouse(blocks, farmX, vPos.y, farmZ, rng);
+    }
+
+    // Peasant Cottage at (-10, -10)
+    const cotX = vPos.x - 10 - wxBase;
+    const cotZ = vPos.z - 10 - wzBase;
+    if (cotX >= -3 && cotX <= CHUNK_SIZE + 3 && cotZ >= -3 && cotZ <= CHUNK_SIZE + 3) {
+        generateCabin(blocks, cotX, vPos.y, cotZ, rng);
+    }
+}
+
 function carveGlobalNetherStructures(blocks, cx, cz, params) {
     const searchRadius = 3;
     for (let sx = cx - searchRadius; sx <= cx + searchRadius; sx++) {
@@ -3908,11 +4311,14 @@ export function generateEndChunk(cx, cz, params) {
     const obsidianId = (window.BLOCKS && window.BLOCKS.OBSIDIAN) ? window.BLOCKS.OBSIDIAN : (BLOCKS.OBSIDIAN || 14);
     const bedrockId = (window.BLOCKS && window.BLOCKS.BEDROCK) ? window.BLOCKS.BEDROCK : (BLOCKS.BEDROCK || 28);
     const torchId = (window.BLOCKS && window.BLOCKS.TORCH) ? window.BLOCKS.TORCH : (BLOCKS.TORCH || 32);
+    const chorusPlantId = (window.BLOCKS && window.BLOCKS.CHORUS_PLANT) ? window.BLOCKS.CHORUS_PLANT : 330;
+    const chorusFlowerId = (window.BLOCKS && window.BLOCKS.CHORUS_FLOWER) ? window.BLOCKS.CHORUS_FLOWER : 331;
+    const endGatewayId = (window.BLOCKS && window.BLOCKS.END_GATEWAY) ? window.BLOCKS.END_GATEWAY : 333;
 
     const wxBase = cx * CHUNK_SIZE;
     const wzBase = cz * CHUNK_SIZE;
 
-    // 1. Central Floating End Stone Island
+    // 1. Central Floating End Stone Island & Outer End Islands (dist >= 360)
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
         for (let lz = 0; lz < CHUNK_SIZE; lz++) {
             const wx = wxBase + lx;
@@ -3929,6 +4335,50 @@ export function generateEndChunk(cx, cz, params) {
                 for (let y = Math.max(1, botY); y <= Math.min(CHUNK_HEIGHT - 2, topY); y++) {
                     const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
                     blocks[idx] = endStoneId;
+                }
+            } else if (dist >= 360) {
+                // Outer End Islands (~400 blocks away from main island)
+                const islandNoise = params.noise2D ? params.noise2D(wx * 0.018, wz * 0.018) : (Math.sin(wx * 0.03) * Math.cos(wz * 0.03));
+                const detailNoise = params.noise2D ? params.noise2D(wx * 0.05, wz * 0.05) * 0.3 : (Math.sin(wx * 0.07) * 0.2);
+                const combined = islandNoise + detailNoise;
+
+                if (combined > 0.05) {
+                    const normH = Math.min(1.0, (combined - 0.05) / 0.5);
+                    const topY = Math.round(60 + combined * 10);
+                    const botY = Math.round(topY - (8 + normH * 16));
+
+                    for (let y = Math.max(1, botY); y <= Math.min(CHUNK_HEIGHT - 2, topY); y++) {
+                        const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                        blocks[idx] = endStoneId;
+                    }
+
+                    // Procedural Chorus Trees on outer islands
+                    const treeRng = seededRandom(params.seed + wx * 1013 + wz * 719);
+                    if (treeRng() < 0.05 && lx >= 2 && lx < CHUNK_SIZE - 2 && lz >= 2 && lz < CHUNK_SIZE - 2 && topY < CHUNK_HEIGHT - 10) {
+                        const trunkH = 3 + Math.floor(treeRng() * 3);
+                        // Vertical stalk
+                        for (let ty = 1; ty <= trunkH; ty++) {
+                            const idx = ((topY + ty) * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                            blocks[idx] = chorusPlantId;
+                        }
+                        // Flower atop trunk
+                        blocks[((topY + trunkH + 1) * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx] = chorusFlowerId;
+
+                        // Branch 1
+                        const b1Dir = treeRng() < 0.5 ? 1 : -1;
+                        const b1X = lx + b1Dir;
+                        const b1Y = topY + trunkH - 1;
+                        blocks[(b1Y * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + b1X] = chorusPlantId;
+                        blocks[((b1Y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + b1X] = chorusPlantId;
+                        blocks[((b1Y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + b1X] = chorusFlowerId;
+
+                        // Branch 2
+                        const b2Dir = treeRng() < 0.5 ? 1 : -1;
+                        const b2Z = lz + b2Dir;
+                        const b2Y = topY + trunkH;
+                        blocks[(b2Y * CHUNK_SIZE * CHUNK_SIZE) + (b2Z * CHUNK_SIZE) + lx] = chorusPlantId;
+                        blocks[((b2Y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (b2Z * CHUNK_SIZE) + lx] = chorusFlowerId;
+                    }
                 }
             }
         }
@@ -4019,6 +4469,32 @@ export function generateEndChunk(cx, cz, params) {
                         const idxAir = (cy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
                         blocks[idxAir] = 0;
                     }
+                }
+            }
+        }
+    }
+
+    // 5. Outer Island Return Gateway at (424, 64, 8) in chunk (26, 0)
+    if (cx === 26 && cz === 0) {
+        const gx = 8;
+        const gz = 8;
+        // End stone platform under return gateway
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dz = -2; dz <= 2; dz++) {
+                const idxFloor = (62 * CHUNK_SIZE * CHUNK_SIZE) + ((gz + dz) * CHUNK_SIZE) + (gx + dx);
+                blocks[idxFloor] = endStoneId;
+            }
+        }
+        // Bedrock frame and gateway
+        blocks[(63 * CHUNK_SIZE * CHUNK_SIZE) + (gz * CHUNK_SIZE) + gx] = bedrockId;
+        blocks[(64 * CHUNK_SIZE * CHUNK_SIZE) + (gz * CHUNK_SIZE) + gx] = endGatewayId;
+        blocks[(65 * CHUNK_SIZE * CHUNK_SIZE) + (gz * CHUNK_SIZE) + gx] = bedrockId;
+        // Clear entry volume around gateway
+        for (let dy = 63; dy <= 66; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dz = -1; dz <= 1; dz++) {
+                    if (dx === 0 && dz === 0) continue;
+                    blocks[(dy * CHUNK_SIZE * CHUNK_SIZE) + ((gz + dz) * CHUNK_SIZE) + (gx + dx)] = 0;
                 }
             }
         }

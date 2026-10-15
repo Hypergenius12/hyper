@@ -2,9 +2,9 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=102';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=102';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=102';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=103';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=103';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=103';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -2368,6 +2368,237 @@ export const MOB_TYPES = {
             }
         }
     },
+    WARDEN: {
+        name: 'Warden', health: 500, damage: 30, speed: 1.4, hostile: true, color: 0x0f2b35,
+        size: 1.6, xpDrop: 50, lootChance: 1.0,
+        buildMesh: () => {
+            const group = new THREE.Group();
+
+            // Broad Sculk Torso / Chest: 18x21x11 -> (1.125, 1.3125, 0.6875), UV: { u: 0, v: 32, w: 18, h: 21, d: 11 }
+            const chestGeo = new THREE.BoxGeometry(1.125, 1.3125, 0.6875);
+            const chestMats = getMobBoxMaterials('WARDEN', { u: 0, v: 32, w: 18, h: 21, d: 11 }, { part: 'body' });
+            const chest = new THREE.Mesh(chestGeo, chestMats);
+            chest.position.set(0, 1.65, 0);
+            chest.name = 'chest';
+            chest.castShadow = true;
+            group.add(chest);
+
+            // Glowing Pulsing Soul Heart in torso
+            const heartGeo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+            const heartMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.85 });
+            const heart = new THREE.Mesh(heartGeo, heartMat);
+            heart.position.set(0, 0, 0.2);
+            heart.name = 'heart';
+            chest.add(heart);
+
+            // Massive Eyeless Head: 16x16x16 -> (1.0, 1.0, 1.0), UV: { u: 0, v: 0, w: 16, h: 16, d: 16 }
+            const headGeo = new THREE.BoxGeometry(1.0, 1.0, 1.0);
+            const headMats = getMobBoxMaterials('WARDEN', { u: 0, v: 0, w: 16, h: 16, d: 16 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 2.7, 0);
+            head.name = 'head';
+            head.castShadow = true;
+
+            // Left Tendril (Sculk antenna that vibrates): 16x16 plane/box -> (0.06, 0.85, 0.85)
+            const tendrilGeo = new THREE.BoxGeometry(0.06, 0.85, 0.85);
+            const ltMats = getMobBoxMaterials('WARDEN', { u: 52, v: 32, w: 16, h: 16, d: 1 }, { part: 'tendril' });
+            const leftTendril = new THREE.Mesh(tendrilGeo, ltMats);
+            leftTendril.position.set(-0.52, 0.35, 0);
+            leftTendril.name = 'leftTendril';
+            head.add(leftTendril);
+
+            // Right Tendril:
+            const rtMats = getMobBoxMaterials('WARDEN', { u: 52, v: 0, w: 16, h: 16, d: 1 }, { part: 'tendril' });
+            const rightTendril = new THREE.Mesh(tendrilGeo, rtMats);
+            rightTendril.position.set(0.52, 0.35, 0);
+            rightTendril.name = 'rightTendril';
+            head.add(rightTendril);
+
+            group.add(head);
+
+            // Massive Heavy Arms: 8x28x8 -> (0.5, 1.75, 0.5)
+            // Left Arm: UV: { u: 44, v: 50, w: 8, h: 28, d: 8 }
+            const armGeo = new THREE.BoxGeometry(0.5, 1.75, 0.5);
+            const laMats = getMobBoxMaterials('WARDEN', { u: 44, v: 50, w: 8, h: 28, d: 8 }, { part: 'arm' });
+            const la = new THREE.Mesh(armGeo, laMats);
+            la.position.set(-0.85, 1.45, 0);
+            la.name = 'leftArm';
+            la.castShadow = true;
+            group.add(la);
+
+            // Right Arm: UV: { u: 36, v: 86, w: 8, h: 28, d: 8 }
+            const raMats = getMobBoxMaterials('WARDEN', { u: 36, v: 86, w: 8, h: 28, d: 8 }, { part: 'arm' });
+            const ra = new THREE.Mesh(armGeo, raMats);
+            ra.position.set(0.85, 1.45, 0);
+            ra.name = 'rightArm';
+            ra.castShadow = true;
+            group.add(ra);
+
+            // Sturdy Legs: 6x13x6 -> (0.375, 0.8125, 0.375)
+            // Left Leg: UV: { u: 76, v: 40, w: 6, h: 13, d: 6 }
+            const legGeo = new THREE.BoxGeometry(0.375, 0.8125, 0.375);
+            const llMats = getMobBoxMaterials('WARDEN', { u: 76, v: 40, w: 6, h: 13, d: 6 }, { part: 'leg' });
+            const ll = new THREE.Mesh(legGeo, llMats);
+            ll.position.set(-0.35, 0.41, 0);
+            ll.name = 'leftLeg';
+            ll.castShadow = true;
+            group.add(ll);
+
+            // Right Leg: UV: { u: 76, v: 76, w: 6, h: 13, d: 6 }
+            const rlMats = getMobBoxMaterials('WARDEN', { u: 76, v: 76, w: 6, h: 13, d: 6 }, { part: 'leg' });
+            const rl = new THREE.Mesh(legGeo, rlMats);
+            rl.position.set(0.35, 0.41, 0);
+            rl.name = 'rightLeg';
+            rl.castShadow = true;
+            group.add(rl);
+
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const chest = mesh.getObjectByName('chest');
+            const heart = mesh.getObjectByName('heart');
+            const lt = mesh.getObjectByName('leftTendril');
+            const rt = mesh.getObjectByName('rightTendril');
+            const la = mesh.getObjectByName('leftArm');
+            const ra = mesh.getObjectByName('rightArm');
+            const ll = mesh.getObjectByName('leftLeg');
+            const rl = mesh.getObjectByName('rightLeg');
+
+            // 1. Tendril wiggles / vibrations
+            if (lt) lt.rotation.z = Math.sin(age * 12) * 0.18 + Math.sin(age * 4.5) * 0.08;
+            if (rt) rt.rotation.z = -Math.sin(age * 12 + 1) * 0.18 - Math.sin(age * 4.5 + 1) * 0.08;
+
+            // 2. Heartbeat pulsing
+            if (heart) {
+                const pulse = Math.pow(Math.max(0, Math.sin(age * 3.5)), 4);
+                heart.scale.setScalar(1.0 + pulse * 0.4);
+                if (heart.material) {
+                    heart.material.opacity = 0.5 + pulse * 0.5;
+                }
+            }
+
+            // 3. Heavy breathing
+            if (chest) {
+                const breath = Math.sin(age * 2.0) * 0.03;
+                chest.scale.set(1.0 + breath, 1.0 + breath * 0.5, 1.0 + breath);
+            }
+
+            // 4. Stride / Arm swing
+            if (isMoving) {
+                const swing = Math.sin(age * 4.0) * 0.45;
+                if (la) la.rotation.x = swing;
+                if (ra) ra.rotation.x = -swing;
+                if (ll) ll.rotation.x = -swing * 0.6;
+                if (rl) rl.rotation.x = swing * 0.6;
+                mesh.position.y += Math.abs(Math.sin(age * 4.0)) * 0.03;
+            } else {
+                if (la) la.rotation.x *= 0.9;
+                if (ra) ra.rotation.x *= 0.9;
+                if (ll) ll.rotation.x *= 0.9;
+                if (rl) rl.rotation.x *= 0.9;
+            }
+        }
+    },
+    VILLAGER: {
+        name: 'Villager', health: 20, damage: 0, speed: 1.0, hostile: false, color: 0xbd8b72,
+        size: 0.8, xpDrop: 2, lootChance: 0.1,
+        buildMesh: () => {
+            const group = new THREE.Group();
+
+            // Head: 8x10x8 -> (0.50, 0.625, 0.50), UV: { u: 0, v: 0, w: 8, h: 10, d: 8 }
+            const headGeo = new THREE.BoxGeometry(0.50, 0.625, 0.50);
+            const headMats = getMobBoxMaterials('VILLAGER', { u: 0, v: 0, w: 8, h: 10, d: 8 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 1.625, 0);
+            head.name = 'head';
+            head.castShadow = true;
+
+            // Long 3D Protruding Nose: 2x4x2 -> (0.125, 0.25, 0.125), UV: { u: 24, v: 0, w: 2, h: 4, d: 2 }
+            const noseGeo = new THREE.BoxGeometry(0.125, 0.25, 0.125);
+            const noseMats = getMobBoxMaterials('VILLAGER', { u: 24, v: 0, w: 2, h: 4, d: 2 }, { part: 'head_front' });
+            const nose = new THREE.Mesh(noseGeo, noseMats);
+            nose.position.set(0, -0.08, 0.3125);
+            nose.castShadow = true;
+            head.add(nose);
+            group.add(head);
+
+            // Robe / Body: 8x12x6 -> (0.50, 0.75, 0.375), UV: { u: 16, v: 20, w: 8, h: 12, d: 6 }
+            const bodyGeo = new THREE.BoxGeometry(0.50, 0.75, 0.375);
+            const bodyMats = getMobBoxMaterials('VILLAGER', { u: 16, v: 20, w: 8, h: 12, d: 6 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 0.9375, 0);
+            body.name = 'body';
+            body.castShadow = true;
+            group.add(body);
+
+            // Crossed Arms in front of chest: 8x8x4 -> (0.50, 0.40, 0.25), UV: { u: 40, v: 38, w: 8, h: 8, d: 4 }
+            const armsGeo = new THREE.BoxGeometry(0.50, 0.40, 0.25);
+            const armsMats = getMobBoxMaterials('VILLAGER', { u: 40, v: 38, w: 8, h: 8, d: 4 }, { part: 'arm' });
+            const arms = new THREE.Mesh(armsGeo, armsMats);
+            arms.position.set(0, 0.98, 0.22);
+            arms.rotation.x = -0.3;
+            arms.name = 'arms';
+            arms.castShadow = true;
+            group.add(arms);
+
+            // Legs under robe: 4x12x4 -> (0.25, 0.65, 0.25)
+            const legGeo = new THREE.BoxGeometry(0.25, 0.65, 0.25);
+            const llMats = getMobBoxMaterials('VILLAGER', { u: 0, v: 22, w: 4, h: 12, d: 4 }, { part: 'leg' });
+            const ll = new THREE.Mesh(legGeo, llMats);
+            ll.position.set(-0.13, 0.325, 0);
+            ll.name = 'leftLeg';
+            ll.castShadow = true;
+            group.add(ll);
+
+            const rlMats = getMobBoxMaterials('VILLAGER', { u: 0, v: 22, w: 4, h: 12, d: 4 }, { part: 'leg' });
+            const rl = new THREE.Mesh(legGeo, rlMats);
+            rl.position.set(0.13, 0.325, 0);
+            rl.name = 'rightLeg';
+            rl.castShadow = true;
+            group.add(rl);
+
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const head = mesh.getObjectByName('head');
+            const ll = mesh.getObjectByName('leftLeg');
+            const rl = mesh.getObjectByName('rightLeg');
+
+            if (head) {
+                head.rotation.y = Math.sin(age * 1.5) * 0.1;
+            }
+
+            if (isMoving) {
+                const swing = Math.sin(age * 4.5) * 0.4;
+                if (ll) ll.rotation.x = swing;
+                if (rl) rl.rotation.x = -swing;
+            } else {
+                if (ll) ll.rotation.x *= 0.85;
+                if (rl) rl.rotation.x *= 0.85;
+            }
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+
+            mob.wanderTimer -= dt;
+            if (mob.wanderTimer <= 0) {
+                if (Math.random() < 0.4) {
+                    mob.wanderTimer = 2 + Math.random() * 3;
+                    const angle = Math.random() * Math.PI * 2;
+                    mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                } else {
+                    mob.wanderTimer = 2 + Math.random() * 4;
+                    mob.wanderDir.set(0, 0, 0);
+                }
+            }
+            mob.velocity.x = mob.wanderDir.x * mob.speed * 0.6;
+            mob.velocity.z = mob.wanderDir.z * mob.speed * 0.6;
+            if (mob.wanderDir.lengthSq() > 0 && mob.mesh) {
+                mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+            }
+        }
+    },
     COD: {
         name: 'Cod', health: 3, damage: 0, speed: 2.2, hostile: false, color: 0xbbbb99,
         size: 0.3, xpDrop: 1, lootChance: 0.1, waterOnly: true,
@@ -4283,6 +4514,7 @@ export class Boss extends Mob {
         this.wantsToPull = false;
         this.wantsToTeleport = false;
         this.wantsToDrain = false;
+        this.wantsSonicBoom = false;
     }
     
     getMesh() {
@@ -4361,11 +4593,11 @@ export class Boss extends Mob {
                         this.wantsToSummon = true; // Mass summon
                     }
                     break;
-                default: // normal
+                default: // normal (WARDEN)
                     if (r < 0.5) {
                         this.velocity.y = 8; this.didSlam = true;
                     } else {
-                        this.wantsToSummon = true;
+                        this.wantsSonicBoom = true;
                     }
                     break;
             }
@@ -4411,7 +4643,7 @@ export class EntityManager {
                             world.setBlock(px+x, py+y, pz+z, BLOCKS.AIR);
                             // Determine boss type based on surrounding blocks (theme)
                             let themeBlock = world.getBlock(px+x, py+y-1, pz+z);
-                            let bossType = 'GOLEM';
+                            let bossType = 'WARDEN';
                             let bossTheme = 'normal';
                             if (themeBlock === BLOCKS.DUNGEON_FIRE_FLOOR || themeBlock === BLOCKS.NETHER_BRICKS) { bossType = 'PIGLIN_BRUISER'; bossTheme = 'fire'; }
                             else if (themeBlock === BLOCKS.DUNGEON_ICE_FLOOR) { bossType = 'SKELETON'; bossTheme = 'ice'; }
@@ -4421,6 +4653,35 @@ export class EntityManager {
                             const boss = new Boss(bossType, new THREE.Vector3(px+x, py+y, pz+z), bossTheme);
                             this.addMob(boss);
                         }
+                    }
+                }
+            }
+        }
+
+        // Village inhabitants spawner (Iron Golem + Villagers)
+        if (!this.spawnedVillages) this.spawnedVillages = new Set();
+        if (currentDimension === 'overworld' && typeof window.getClosestVillagePosition === 'function') {
+            const vSeed = (window.worldGenParams ? window.worldGenParams.seed : 12345);
+            const vPos = window.getClosestVillagePosition(playerPos.x, playerPos.z, vSeed);
+            if (vPos) {
+                const distV = Math.hypot(playerPos.x - vPos.x, playerPos.z - vPos.z);
+                const vKey = `${vPos.x}_${vPos.z}`;
+                if (distV < 56 && !this.spawnedVillages.has(vKey)) {
+                    this.spawnedVillages.add(vKey);
+                    // Spawn Iron Golem protector in village
+                    const golem = new Mob('GOLEM', new THREE.Vector3(vPos.x + 3, vPos.y + 1, vPos.z + 3));
+                    this.addMob(golem);
+                    // Spawn Villagers in village
+                    const vOffsets = [
+                        { dx: -4, dz: 0 },
+                        { dx: 4, dz: 0 },
+                        { dx: 0, dz: -4 },
+                        { dx: 0, dz: 4 },
+                        { dx: 2, dz: -3 }
+                    ];
+                    for (const off of vOffsets) {
+                        const villager = new Mob('VILLAGER', new THREE.Vector3(vPos.x + off.dx, vPos.y + 1, vPos.z + off.dz));
+                        this.addMob(villager);
                     }
                 }
             }
@@ -4623,6 +4884,18 @@ export class EntityManager {
                         if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
                     }
                 }
+                if (mob.wantsSonicBoom) {
+                    mob.wantsSonicBoom = false;
+                    const dir = playerPos.clone().sub(mob.position).normalize();
+                    if (this.shootSonicBoom) {
+                        this.shootSonicBoom(mob.position.clone().add(new THREE.Vector3(0, 1.8, 0)), playerPos);
+                    } else if (player && mob.position.distanceTo(playerPos) < 24) {
+                        player.takeDamage(25);
+                        player.velocity.add(dir.clone().multiplyScalar(14)).add(new THREE.Vector3(0, 6, 0));
+                        const d = document.getElementById('damage-flash');
+                        if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                    }
+                }
             }
             
             if (mob.justDied) {
@@ -4669,6 +4942,9 @@ export class EntityManager {
                 } else if (mob.type === 'PIGLIN_BRUISER') {
                     this.spawnItem(Item.materialItem('nether_scrap', 'Nether Scrap', 'Tough nether metal.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                     if (Math.random() < 0.2) this.spawnItem(Item.materialItem('gold_ingot', 'Gold Ingot', 'Shiny.'), 1, mob.position.clone());
+                } else if (mob.type === 'WARDEN') {
+                    this.spawnItem(Item.materialItem('nether_scrap', 'Sculk Catalyst', 'Deep dark energy.'), 1, mob.position.clone());
+                    this.spawnItem(Item.materialItem('diamond', 'Diamond', 'Precious gem.'), 2 + Math.floor(Math.random() * 3), mob.position.clone());
                 } else if (mob.type === 'GOLEM') {
                     this.spawnItem(Item.materialItem('iron_ingot', 'Iron Ingot', 'Solid iron.'), 3 + Math.floor(Math.random() * 3), mob.position.clone());
                 } else if (mob.type === 'SWET') {

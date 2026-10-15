@@ -2,7 +2,7 @@
 // audio.js — SFX Synthesizer using Web Audio API
 // ============================================
 
-import { BLOCKS, getBlockProperties } from './textures.js?v=102';
+import { BLOCKS, getBlockProperties } from './textures.js?v=103';
 
 export class AudioManager {
     constructor() {
@@ -478,5 +478,54 @@ export class AudioManager {
             if (this.playPortalTravel) this.playPortalTravel(position);
         };
         this.playMC('block/end_portal/endportal', 1.0, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playWardenHeartbeat(position = null) {
+        const doFallback = () => {
+            this.playTone(60, 'sine', 0.25, 0.6, -20, position);
+        };
+        this.playMC('entity/warden/heartbeat', 0.9, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playWardenRoar(position = null) {
+        const doFallback = () => {
+            this.playTone(85, 'sawtooth', 0.8, 0.8, -35, position);
+            this.playNoise(0.6, 0.4, position);
+        };
+        this.playMC('entity/warden/roar', 1.0, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playWardenSonicBoom(position = null) {
+        const doFallback = () => {
+            this.playTone(180, 'sawtooth', 0.6, 0.9, -120, position);
+            this.playTone(45, 'sine', 0.9, 1.0, 0, position);
+            this.playNoise(0.5, 0.6, position);
+        };
+        this.playMC('entity/warden/sonic_boom', 1.0, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playVillager(position = null) {
+        const doFallback = () => {
+            this.playTone(160, 'triangle', 0.35, 0.5, 40, position);
+        };
+        const v = Math.floor(Math.random() * 3) + 1;
+        this.playMC(`entity/villager/idle${v}`, 0.8, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playChorusTeleport(position = null) {
+        const doFallback = () => {
+            this.playTone(320, 'sine', 0.25, 0.5, 200, position);
+            this.playTone(550, 'triangle', 0.2, 0.4, -150, position);
+        };
+        this.playMC('item/chorus_fruit/teleport', 0.85, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playEndGatewayTeleport(position = null) {
+        const doFallback = () => {
+            this.playTone(120, 'sine', 0.8, 0.7, 180, position);
+            this.playTone(60, 'triangle', 1.0, 0.6, 0, position);
+            this.playNoise(0.5, 0.3, position);
+        };
+        this.playMC('block/end_gateway/teleport', 1.0, position).then(s => { if (!s) doFallback(); });
     }
 }

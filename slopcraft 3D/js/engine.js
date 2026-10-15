@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=102';
-import { getBiomeParams } from './generation.js?v=102';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=103';
+import { getBiomeParams } from './generation.js?v=103';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -694,7 +694,7 @@ export class Chunk {
                         }
                     }
 
-                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE || blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.DRAGON_EGG || props.isLantern) {
+                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE || blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.END_GATEWAY || blockType === BLOCKS.CHORUS_PLANT || blockType === BLOCKS.DRAGON_EGG || props.isLantern) {
                         const uvTop = atlas.getUV(blockType, 'top');
                         const uvSide = atlas.getUV(blockType, 'side');
                         const uvBottom = atlas.getUV(blockType, 'bottom');
@@ -741,9 +741,31 @@ export class Chunk {
                                 const uvEye = atlas.getUV(blockType, 'eye');
                                 pushCustomBox(x + 4/16, y + 13/16, z + 4/16, x + 12/16, y + 1.0, z + 12/16, x, y, z, uvEye, uvEye, uvEye, 0, 1.0, false);
                             }
-                        } else if (blockType === BLOCKS.END_PORTAL) {
-                            // Authentic Minecraft horizontal flat void portal pane at y = 12/16 (0.75) with infinite cosmic parallax shader
-                            pushCustomBox(x, y + 11.9/16, z, x + 1, y + 12.1/16, z + 1, x, y, z, uvTop, uvTop, uvTop, 0, 1.0, false, true);
+                        } else if (blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.END_GATEWAY) {
+                            if (blockType === BLOCKS.END_GATEWAY) {
+                                // Full cube void portal block with infinite cosmic parallax shader
+                                pushCustomBox(x, y, z, x + 1, y + 1, z + 1, x, y, z, uvTop, uvTop, uvTop, 0, 1.0, false, true);
+                            } else {
+                                // Authentic Minecraft horizontal flat void portal pane at y = 12/16 (0.75) with infinite cosmic parallax shader
+                                pushCustomBox(x, y + 11.9/16, z, x + 1, y + 12.1/16, z + 1, x, y, z, uvTop, uvTop, uvTop, 0, 1.0, false, true);
+                            }
+                        } else if (blockType === BLOCKS.CHORUS_PLANT) {
+                            // Authentic Minecraft chorus plant stalk (12/16 thick column with side arms towards adjacent chorus blocks)
+                            const canConn = (bx, by, bz) => {
+                                const b = (bx >= 0 && bx < CHUNK_SIZE && bz >= 0 && bz < CHUNK_SIZE && by >= 0 && by < CHUNK_HEIGHT)
+                                    ? this.getBlock(bx, by, bz)
+                                    : getBlockOptimized(wxBase + bx, by, wzBase + bz);
+                                return b === BLOCKS.CHORUS_PLANT || b === BLOCKS.CHORUS_FLOWER || b === BLOCKS.END_STONE;
+                            };
+                            const connW = canConn(x - 1, y, z);
+                            const connE = canConn(x + 1, y, z);
+                            const connN = canConn(x, y, z - 1);
+                            const connS = canConn(x, y, z + 1);
+                            const minX = connW ? x : x + 2/16;
+                            const maxX = connE ? x + 1 : x + 14/16;
+                            const minZ = connN ? z : z + 2/16;
+                            const maxZ = connS ? z + 1 : z + 14/16;
+                            pushCustomBox(minX, y, minZ, maxX, y + 1, maxZ, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false);
                         } else if (blockType === BLOCKS.DRAGON_EGG) {
                             // Authentic Minecraft 8-element dragon egg model from block/dragon_egg.json:
                             pushCustomBox(x + 3/16, y +  0/16, z + 3/16, x + 13/16, y +  1/16, z + 13/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);

@@ -2,7 +2,7 @@
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=102';
+import { seededRandom } from './noise.js?v=103';
 
 // Block type IDs
 export const BLOCKS = {
@@ -316,7 +316,11 @@ export const BLOCKS = {
     END_PORTAL_FRAME_EYE: 326,
     END_PORTAL: 327,
     END_STONE: 328,
-    DRAGON_EGG: 329
+    DRAGON_EGG: 329,
+    CHORUS_PLANT: 330,
+    CHORUS_FLOWER: 331,
+    CHORUS_FLOWER_DEAD: 332,
+    END_GATEWAY: 333
 };
 
 // Block properties
@@ -325,6 +329,10 @@ const BLOCK_PROPS = {
     [BLOCKS.END_PORTAL]:            { name: 'End Portal',            health: 0, transparent: true, emissive: 1.0, solid: false, drops: null, isEndPortal: true },
     [BLOCKS.END_STONE]:             { name: 'End Stone',             health: 15, transparent: false, emissive: 0, solid: true, drops: BLOCKS.END_STONE },
     [BLOCKS.DRAGON_EGG]:            { name: 'Dragon Egg',            health: 15, transparent: true, emissive: 0.4, solid: true, drops: BLOCKS.DRAGON_EGG },
+    [BLOCKS.CHORUS_PLANT]:          { name: 'Chorus Plant',          health: 1, transparent: true, emissive: 0, solid: true, drops: 'chorus_fruit', isChorusPlant: true },
+    [BLOCKS.CHORUS_FLOWER]:         { name: 'Chorus Flower',         health: 1, transparent: true, emissive: 0.25, solid: true, drops: BLOCKS.CHORUS_FLOWER, isChorusFlower: true },
+    [BLOCKS.CHORUS_FLOWER_DEAD]:    { name: 'Dead Chorus Flower',    health: 1, transparent: true, emissive: 0, solid: true, drops: null },
+    [BLOCKS.END_GATEWAY]:           { name: 'End Gateway',           health: -1, transparent: true, emissive: 1.0, solid: false, drops: null, isEndGateway: true },
     [BLOCKS.PACKED_ICE]:            { name: 'Packed Ice',            health: 4, transparent: false, emissive: 0, solid: true, drops: BLOCKS.PACKED_ICE },
     [BLOCKS.BLUE_ICE]:              { name: 'Blue Ice',              health: 5, transparent: false, emissive: 0.05, solid: true, drops: BLOCKS.BLUE_ICE },
     [BLOCKS.LANTERN]:               { name: 'Lantern',               health: 4, transparent: true, emissive: 1.0, solid: false, drops: BLOCKS.LANTERN, isLantern: true, lightLevel: 15 },
@@ -3376,6 +3384,29 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addPixels(ctx, rng, 'rgba(130,45,200,0.8)', 6);
             break;
 
+        case BLOCKS.CHORUS_PLANT:
+            fillBase(ctx, 92, 60, 92);
+            addNoise(ctx, rng, 10);
+            addPixels(ctx, rng, '#4b2f4b', 12);
+            break;
+
+        case BLOCKS.CHORUS_FLOWER:
+            fillBase(ctx, 160, 130, 160);
+            addNoise(ctx, rng, 12);
+            addPixels(ctx, rng, '#e5d1e5', 15);
+            break;
+
+        case BLOCKS.CHORUS_FLOWER_DEAD:
+            fillBase(ctx, 100, 80, 100);
+            addNoise(ctx, rng, 15);
+            break;
+
+        case BLOCKS.END_GATEWAY:
+            fillBase(ctx, 5, 2, 12);
+            addPixels(ctx, rng, 'rgba(180,60,255,0.9)', 12);
+            addPixels(ctx, rng, 'rgba(255,255,255,1.0)', 8);
+            break;
+
         default:
             fillBase(ctx, 255, 0, 255);
             break;
@@ -3692,9 +3723,12 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.WARPED_FENCE]: 'warped_planks',
     [BLOCKS.WARPED_FENCE_GATE]: 'warped_planks',
     [BLOCKS.POLISHED_BLACKSTONE_BRICKS]: 'polished_blackstone_bricks',
-    [BLOCKS.CHISELED_POLISHED_BLACKSTONE]: 'chiseled_polished_blackstone',
     [BLOCKS.LANTERN]: { top: 'lantern', side: 'lantern', bottom: 'lantern' },
-    [BLOCKS.SOUL_LANTERN]: { top: 'soul_lantern', side: 'soul_lantern', bottom: 'soul_lantern' }
+    [BLOCKS.SOUL_LANTERN]: { top: 'soul_lantern', side: 'soul_lantern', bottom: 'soul_lantern' },
+    [BLOCKS.CHORUS_PLANT]: 'chorus_plant',
+    [BLOCKS.CHORUS_FLOWER]: 'chorus_flower',
+    [BLOCKS.CHORUS_FLOWER_DEAD]: 'chorus_flower_dead',
+    [BLOCKS.END_GATEWAY]: 'end_portal'
 };
 
 let _mcChestPromise = null;
@@ -4162,7 +4196,12 @@ const LOCAL_ASSET_MAP = {
     "zombie_spawn_egg": "assets/mc/item/zombie_spawn_egg.png",
     "creeper_spawn_egg": "assets/mc/item/creeper_spawn_egg.png",
     "enderman_spawn_egg": "assets/mc/item/enderman_spawn_egg.png",
-    "pufferfish_spawn_egg": "assets/mc/item/pufferfish_spawn_egg.png"
+    "pufferfish_spawn_egg": "assets/mc/item/pufferfish_spawn_egg.png",
+    "chorus_plant": "assets/mc/block/chorus_plant.png",
+    "chorus_flower": "assets/mc/block/chorus_flower.png",
+    "chorus_flower_dead": "assets/mc/block/chorus_flower_dead.png",
+    "chorus_fruit": "assets/mc/item/chorus_fruit.png",
+    "item/chorus_fruit": "assets/mc/item/chorus_fruit.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -4969,6 +5008,7 @@ const MC_ITEM_MAP = {
     'blaze_rod': 'blaze_rod',
     'blaze_powder': 'blaze_powder',
     'dragon_egg': 'dragon_egg',
+    'chorus_fruit': 'chorus_fruit',
     'helmet_iron': 'iron_helmet',
     'chest_iron': 'iron_chestplate',
     'legs_iron': 'iron_leggings',
@@ -6364,6 +6404,15 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         ctx.fillRect(-1, -5, 2, 10);
         ctx.restore();
         return canvas;
+    } else if (itemSubtype === 'chorus_fruit') {
+        const cx2 = TEX_SIZE / 2, cy2 = TEX_SIZE / 2;
+        ctx.fillStyle = '#8f4f8f';
+        ctx.beginPath(); ctx.arc(cx2, cy2, 5.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#b773b7';
+        ctx.beginPath(); ctx.arc(cx2 - 1, cy2 - 1, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#572b57';
+        ctx.fillRect(cx2 - 1, cy2 - 7, 2, 3);
+        return canvas;
     }
 
     if (shape.length > 0) {
@@ -6464,6 +6513,12 @@ const MC_MOB_SKIN_CONFIG = {
     GOLEM: { path: 'iron_golem/iron_golem.png',
         head_front: [6,10,8,10], head_back: [20,10,8,10], head_top: [6,0,8,6], head_bottom: [14,0,8,6], head_side: [0,10,6,10],
         body: [18,40,18,12], leg: [37,0,6,16], arm: [60,58,8,30] },
+    WARDEN: { path: 'warden/warden.png',
+        head_front: [16,16,16,16], head_back: [48,16,16,16], head_top: [16,0,16,16], head_bottom: [32,0,16,16], head_side: [0,16,16,16],
+        body: [11,43,18,21], leg: [76,40,6,13], arm: [44,50,8,28] },
+    VILLAGER: { path: 'villager/villager.png',
+        head_front: [8,8,8,10], head_back: [24,8,8,10], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,10],
+        body: [16,20,8,18], leg: [0,22,4,12], arm: [44,22,16,8] },
     // --- Other ---
     SPIDER: { path: 'spider/spider.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
@@ -6794,6 +6849,60 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
             rect(0, 14, 16, 2, '#9a9488');
         } else if (part === 'leg') {
             rect(0, 13, 16, 3, '#888278');
+        }
+    }
+
+    // --- WARDEN ---
+    else if (mobType === 'WARDEN') {
+        fill('#0f1e24'); noise(15, 30, 36, 12, 30);
+        if (part === 'head_front') {
+            // Eyeless face with gaping dark mouth and sculk teeth
+            rect(3, 8, 10, 6, '#060d10');
+            rect(4, 9, 8, 2, '#00e1d9');
+            rect(4, 12, 8, 1, '#00e1d9');
+        } else if (part === 'body') {
+            // Dark sculk ribcage with glowing turquoise soul heart
+            rect(2, 3, 12, 2, '#1b3842');
+            rect(2, 6, 12, 2, '#1b3842');
+            rect(2, 9, 12, 2, '#1b3842');
+            rect(6, 5, 4, 4, '#00ffff'); // soul heart
+            dot(7, 6, '#ffffff'); dot(8, 7, '#ffffff');
+        } else if (part === 'tendril') {
+            fill('#003b46');
+            rect(2, 2, 12, 12, '#00e1d9');
+            rect(5, 5, 6, 6, '#00ffff');
+        } else if (part === 'arm') {
+            fill('#0b181c'); noise(11, 24, 28, 10, 20);
+            rect(2, 10, 12, 6, '#004d5a');
+        } else if (part === 'leg') {
+            fill('#0f1e24'); noise(15, 30, 36, 10, 20);
+            rect(0, 12, 16, 4, '#060d10');
+        }
+    }
+
+    // --- VILLAGER ---
+    else if (mobType === 'VILLAGER') {
+        if (part === 'head_front') {
+            fill('#bd8b72'); noise(189, 139, 114, 10, 20);
+            // Thick brown unibrow
+            rect(3, 5, 10, 2, '#4a382c');
+            // Green eyes with white
+            rect(3, 7, 3, 2, '#ffffff'); dot(4, 7, '#1e803c');
+            rect(10, 7, 3, 2, '#ffffff'); dot(11, 7, '#1e803c');
+            // Nose
+            rect(7, 8, 2, 5, '#a67258');
+        } else if (part === 'body') {
+            fill('#7c5335'); noise(124, 83, 53, 12, 25);
+            rect(5, 0, 6, 3, '#bd8b72'); // neck
+            rect(0, 14, 16, 2, '#5a3d27');
+        } else if (part === 'arm') {
+            fill('#7c5335'); noise(124, 83, 53, 10, 20);
+            rect(4, 6, 8, 4, '#a67258'); // crossed hands
+        } else if (part === 'leg') {
+            fill('#422d1d'); noise(66, 45, 29, 8, 15);
+            rect(0, 12, 16, 4, '#24170e');
+        } else {
+            fill('#bd8b72'); noise(189, 139, 114, 10, 20);
         }
     }
 

@@ -2,16 +2,16 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=102';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=102';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=102';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=102';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=102';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=102';
-import { AudioManager } from './audio.js?v=102';
-import { BiomeMap } from './map.js?v=102';
-import { DevMode } from './dev.js?v=102';
-import { ChatSystem } from './chat.js?v=102';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=103';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=103';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=103';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=103';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=103';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=103';
+import { AudioManager } from './audio.js?v=103';
+import { BiomeMap } from './map.js?v=103';
+import { DevMode } from './dev.js?v=103';
+import { ChatSystem } from './chat.js?v=103';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -48,10 +48,12 @@ const FOOD_HEAL_MAP = {
     'sweet_berries': 10,
     'glow_shroom': 10,
     'brown_mushroom': 5,
-    'red_mushroom': 5
+    'red_mushroom': 5,
+    'chorus_fruit': 15
 };
 
 const FOOD_PARTICLE_COLORS = {
+    'chorus_fruit': [0x925f92, 0xc469c4, 0x582658, 0xdda0dd],
     'apple': [0xbf1919, 0xd42929, 0x801010, 0x486414],
     'golden_apple': [0xffd700, 0xffea00, 0xffaa00, 0xffee55],
     'bread': [0xb7803a, 0x8f591f, 0xd8a556, 0x6e3d11],
@@ -2661,6 +2663,46 @@ class Game {
                     this.particles.emit(mouthPos, 'eat', 1, col);
                 }
 
+                // Chorus fruit teleportation
+                if (subtype === 'chorus_fruit') {
+                    const oldPos = this.player.position.clone();
+                    this.particles.emit(oldPos, 'portal', 30, 0xc469c4);
+                    let targetX = oldPos.x, targetY = oldPos.y, targetZ = oldPos.z;
+                    let foundSafe = false;
+                    for (let attempt = 0; attempt < 24; attempt++) {
+                        const rx = Math.floor(oldPos.x + (Math.random() - 0.5) * 16);
+                        const rz = Math.floor(oldPos.z + (Math.random() - 0.5) * 16);
+                        const ryBase = Math.floor(oldPos.y + (Math.random() - 0.5) * 12);
+                        for (let dy = 6; dy >= -6; dy--) {
+                            const cy = ryBase + dy;
+                            const bFloor = this.world.getBlock(rx, cy, rz);
+                            const bFeet = this.world.getBlock(rx, cy + 1, rz);
+                            const bHead = this.world.getBlock(rx, cy + 2, rz);
+                            const pFloor = getBlockProperties(bFloor);
+                            const pFeet = getBlockProperties(bFeet);
+                            const pHead = getBlockProperties(bHead);
+                            if (pFloor.solid && !pFeet.solid && !pHead.solid && bFloor !== BLOCKS.LAVA && bFloor !== BLOCKS.FIRE) {
+                                targetX = rx + 0.5;
+                                targetY = cy + 1.0;
+                                targetZ = rz + 0.5;
+                                foundSafe = true;
+                                break;
+                            }
+                        }
+                        if (foundSafe) break;
+                    }
+                    if (foundSafe) {
+                        this.player.position.set(targetX, targetY, targetZ);
+                        this.player.velocity.set(0, 0, 0);
+                        this.particles.emit(this.player.position, 'portal', 35, 0xc469c4);
+                        if (this.audio && this.audio.playChorusTeleport) {
+                            this.audio.playChorusTeleport(this.player.position);
+                        } else if (this.audio && this.audio.playPop) {
+                            this.audio.playPop(this.player.position);
+                        }
+                    }
+                }
+
                 // Arm swing animation when eating
                 this.isSwinging = true;
                 this.swingProgress = 0;
@@ -2943,6 +2985,29 @@ class Game {
                 this.warpToNewPlanet('end');
             }
             if (this.audio && this.audio.playPortalTravel) this.audio.playPortalTravel();
+        } else if ((pBlock === window.BLOCKS.END_GATEWAY || pBlockBelow === window.BLOCKS.END_GATEWAY) && !this.isWarping) {
+            this.isWarping = true;
+            const pPos = this.player.position;
+            const distToCenter = Math.hypot(pPos.x, pPos.z);
+            this.particles.emit(pPos, 'portal', 40, 0xaa00ff);
+            if (this.audio && this.audio.playEndGatewayTeleport) this.audio.playEndGatewayTeleport();
+            else if (this.audio && this.audio.playPortalTravel) this.audio.playPortalTravel();
+
+            let dest;
+            if (distToCenter < 200) {
+                dest = new THREE.Vector3(424, 66, 8);
+                this.showToast("Warped through End Gateway to Outer Islands!", 3500);
+            } else {
+                dest = new THREE.Vector3(0, 60, 0);
+                this.showToast("Returned through End Gateway to Main Island!", 3500);
+            }
+
+            this.player.position.copy(dest);
+            this.player.velocity.set(0, 0, 0);
+            this.particles.emit(dest, 'portal', 40, 0xaa00ff);
+            setTimeout(() => {
+                this.isWarping = false;
+            }, 1200);
         }
         
         const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'end' ? generateEndChunk : generateChunkTerrain));
@@ -4031,14 +4096,31 @@ class Game {
                     // Dragon Egg atop central pillar
                     this.world.setBlock(0, 59, 0, window.BLOCKS.DRAGON_EGG || 329);
 
-                    // Shower of XP
-                    for (let i = 0; i < 24; i++) {
-                        const xpPos = new THREE.Vector3((Math.random()-0.5)*6, 60, (Math.random()-0.5)*6);
-                        const xpVel = new THREE.Vector3((Math.random()-0.5)*4, 4 + Math.random()*4, (Math.random()-0.5)*4);
-                        this.entityManager.spawnItem(Item.materialItem('emerald', 'Experience Orb', 'Radiant dragon energy.'), 1, xpPos, xpVel);
+                    // Spawn End Gateway portal structure on rim of main island (64, 58, 32)
+                    const gx = 64, gy = 58, gz = 32;
+                    const bedrockId = window.BLOCKS.BEDROCK || 28;
+                    const gatewayId = window.BLOCKS.END_GATEWAY || 333;
+                    for (let dx = -2; dx <= 2; dx++) {
+                        for (let dz = -2; dz <= 2; dz++) {
+                            this.world.setBlock(gx + dx, gy - 2, gz + dz, window.BLOCKS.END_STONE || 328);
+                        }
+                    }
+                    this.world.setBlock(gx, gy - 1, gz, bedrockId);
+                    this.world.setBlock(gx, gy, gz, gatewayId);
+                    this.world.setBlock(gx, gy + 1, gz, bedrockId);
+                    for (let dy = gy - 1; dy <= gy + 2; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            for (let dz = -1; dz <= 1; dz++) {
+                                if (dx === 0 && dz === 0) continue;
+                                this.world.setBlock(gx + dx, dy, gz + dz, 0);
+                            }
+                        }
+                    }
+                    for (let h = 0; h < 40; h++) {
+                        this.particles.emit(new THREE.Vector3(gx + 0.5, gy + 1 + h * 0.5, gz + 0.5), 'portal', 10, 0xaa00ff);
                     }
 
-                    this.showToast("The Ender Dragon has been defeated! The Exit Portal is open!", 5000);
+                    this.showToast("The Ender Dragon has been defeated! The Exit Portal & an End Gateway to Outer Islands are open!", 6000);
                 };
             }
 
