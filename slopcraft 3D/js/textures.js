@@ -4339,6 +4339,8 @@ export async function createTextureAtlas(useMinecraft = true) {
                             }
                         } else if (texName === 'end_portal_frame_side') {
                             ctx.drawImage(img, 0, 3, TEX_SIZE, 13, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                        } else if (img.width !== TEX_SIZE || img.height !== TEX_SIZE) {
+                            ctx.drawImage(img, 0, 0, img.width, img.height, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         } else {
                             ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         }
@@ -4349,7 +4351,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                         }
                         
                         // If animated strip, save it to animatedFrames
-                        if (img.height > TEX_SIZE) {
+                        if (img.width === TEX_SIZE && img.height > TEX_SIZE) {
                             const forceOpaqueFlag = isWater;
                             const frameInfo = animatedFrames.find(f => f.x === entry.col * TEX_SIZE && f.y === entry.row * TEX_SIZE);
                             if (frameInfo) {
@@ -4472,6 +4474,48 @@ export async function createTextureAtlas(useMinecraft = true) {
             const pad = 2 * SCALE;
             const drawSize = (TEX_SIZE * 2 - 4) * SCALE;
             iconCtx.drawImage(tmp, 0, 0, TEX_SIZE, TEX_SIZE, pad, pad, drawSize, drawSize);
+            return iconCanvas;
+        }
+
+        if (blockType === BLOCKS.DRAGON_EGG) {
+            const eggFace = getFaceCanvas('top');
+            const tiers = [
+                [4, 0, 12, 1],
+                [3, 1, 13, 3],
+                [2, 3, 14, 8],
+                [3, 8, 13, 11],
+                [4, 11, 12, 13],
+                [5, 13, 11, 14],
+                [5, 14, 11, 15],
+                [6, 15, 10, 16],
+            ];
+            const s = (TEX_SIZE * 2) * SCALE / 16;
+            
+            // Mask to egg silhouette
+            const maskCanvas = document.createElement('canvas');
+            maskCanvas.width = iconCanvas.width;
+            maskCanvas.height = iconCanvas.height;
+            const mCtx = maskCanvas.getContext('2d');
+            mCtx.imageSmoothingEnabled = false;
+            mCtx.fillStyle = '#000';
+            for (const [x0, y0, x1, y1] of tiers) {
+                const invY0 = 16 - y1;
+                const invY1 = 16 - y0;
+                mCtx.fillRect(x0 * s, invY0 * s, (x1 - x0) * s, (invY1 - invY0) * s);
+            }
+            
+            iconCtx.drawImage(eggFace, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, iconCanvas.width, iconCanvas.height);
+            iconCtx.globalCompositeOperation = 'destination-in';
+            iconCtx.drawImage(maskCanvas, 0, 0);
+            iconCtx.globalCompositeOperation = 'source-over';
+            
+            // Subtle 3D shading
+            iconCtx.fillStyle = 'rgba(0,0,0,0.38)';
+            for (const [x0, y0, x1, y1] of tiers) {
+                const invY0 = 16 - y1;
+                const invY1 = 16 - y0;
+                iconCtx.fillRect((x1 - 2) * s, invY0 * s, 2 * s, (invY1 - invY0) * s);
+            }
             return iconCanvas;
         }
 

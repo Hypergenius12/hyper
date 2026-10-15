@@ -671,7 +671,7 @@ export class Chunk {
                         }
                     }
 
-                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || props.isLantern) {
+                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE || blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.DRAGON_EGG || props.isLantern) {
                         const uvTop = atlas.getUV(blockType, 'top');
                         const uvSide = atlas.getUV(blockType, 'side');
                         const uvBottom = atlas.getUV(blockType, 'bottom');
@@ -710,20 +710,27 @@ export class Chunk {
                             } else {
                                 pushCustomBox(x + 2/16, y + 9/16, z + 7.5/16, x + 14/16, y + 15/16, z + 8.5/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0);
                             }
-                        } else if (blockType === BLOCKS.PORTAL_FRAME) {
-                            // 9/16 tall stone base (0.5625)
-                            pushCustomBox(x, y, z, x + 1, y + 9/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
-                            // Centered circular saw blade (authentic saw texture)
-                            const uvSaw = atlas.getUV(blockType, 'front');
-                            const isXAxis = (curData & 1) === 1;
-                            if (isXAxis) {
-                                pushCustomBox(x + 7.5/16, y + 9/16, z + 2/16, x + 8.5/16, y + 15/16, z + 14/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0);
-                            } else {
-                                pushCustomBox(x + 2/16, y + 9/16, z + 7.5/16, x + 14/16, y + 15/16, z + 8.5/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0);
-                            }
-                        } else if (blockType === BLOCKS.PORTAL_FRAME) {
+                        } else if (blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE) {
                             // 13/16 tall frame (0.8125)
                             pushCustomBox(x, y, z, x + 1, y + 13/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
+                            if (blockType === BLOCKS.END_PORTAL_FRAME_EYE) {
+                                // Eye of Ender set into socket: 6x4x6 in center sitting in the socket from y=13/16 to 17/16
+                                const uvEye = atlas.getUV(blockType, 'top');
+                                pushCustomBox(x + 5/16, y + 13/16, z + 5/16, x + 11/16, y + 17/16, z + 11/16, x, y, z, uvEye, uvEye, uvEye, 0, 1.0, true);
+                            }
+                        } else if (blockType === BLOCKS.END_PORTAL) {
+                            // Authentic Minecraft horizontal flat void portal pane at y = 12/16 (0.75)
+                            pushCustomBox(x, y + 11.9/16, z, x + 1, y + 12.1/16, z + 1, x, y, z, uvTop, uvTop, uvTop, 0, 1.0, true);
+                        } else if (blockType === BLOCKS.DRAGON_EGG) {
+                            // Authentic Minecraft 8-element dragon egg model from block/dragon_egg.json:
+                            pushCustomBox(x + 3/16, y +  0/16, z + 3/16, x + 13/16, y +  1/16, z + 13/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                            pushCustomBox(x + 2/16, y +  1/16, z + 2/16, x + 14/16, y +  3/16, z + 14/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                            pushCustomBox(x + 1/16, y +  3/16, z + 1/16, x + 15/16, y +  8/16, z + 15/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                            pushCustomBox(x + 2/16, y +  8/16, z + 2/16, x + 14/16, y + 11/16, z + 14/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                            pushCustomBox(x + 3/16, y + 11/16, z + 3/16, x + 13/16, y + 13/16, z + 13/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                            pushCustomBox(x + 5/16, y + 13/16, z + 5/16, x + 11/16, y + 14/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                            pushCustomBox(x + 5/16, y + 14/16, z + 5/16, x + 11/16, y + 15/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                            pushCustomBox(x + 6/16, y + 15/16, z + 6/16, x + 10/16, y + 16/16, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
                         } else if (props.isSlab) {
                             const belowBlock = (y > 0) ? this.getBlock(x, y - 1, z) : getBlockOptimized(wx, y - 1, wz);
                             const cullBottom = getBlockProperties(belowBlock).solid && !getBlockProperties(belowBlock).isSlab;
@@ -2334,7 +2341,7 @@ export class World {
                                     if (py < y + 0.5625 && py + entityHeight > y) return true;
                                     continue;
                                 }
-                                if (block === window.BLOCKS.PORTAL_FRAME) {
+                                if (block === window.BLOCKS.PORTAL_FRAME || block === window.BLOCKS.END_PORTAL_FRAME_EYE) {
                                     if (py < y + 0.8125 && py + entityHeight > y) return true;
                                     continue;
                                 }
@@ -2418,7 +2425,7 @@ export class World {
                                         surfH = isHigh ? 1.0 : 0.5;
                                     }
                                     else if (bProps.isBed || bProps.isBedHead || bProps.isStonecutter || block === window.BLOCKS.STONECUTTER) surfH = 0.5625;
-                                    else if (block === window.BLOCKS.PORTAL_FRAME) surfH = 0.8125;
+                                    else if (block === window.BLOCKS.PORTAL_FRAME || block === window.BLOCKS.END_PORTAL_FRAME_EYE) surfH = 0.8125;
                                     else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) surfH = 1.5;
                                     if (highestSurfaceY === null || (y + surfH) > highestSurfaceY) {
                                         highestSurfaceY = y + surfH;

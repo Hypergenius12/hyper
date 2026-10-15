@@ -1713,11 +1713,14 @@ export function generateChunkTerrain(cx, cz, params) {
     }
 
     // ============================================
-    // PASS 5.5: Underground Stronghold
+    // PASS 5.5: Underground Stronghold (Rare)
     // ============================================
-    const shPos = getStrongholdPosition(params.seed);
-    if (Math.abs(cx * CHUNK_SIZE + 8 - shPos.x) <= 24 && Math.abs(cz * CHUNK_SIZE + 8 - shPos.z) <= 24) {
-        generateStronghold(blocks, cx, cz, shPos, params);
+    const strongholds = getStrongholdPositions(params.seed);
+    for (const shPos of strongholds) {
+        if (Math.abs(cx * CHUNK_SIZE + 8 - shPos.x) <= 24 && Math.abs(cz * CHUNK_SIZE + 8 - shPos.z) <= 24) {
+            generateStronghold(blocks, cx, cz, shPos, params);
+            break;
+        }
     }
 
     // ============================================
@@ -3729,13 +3732,39 @@ export function generateHighlandsChunk() {
 // ============================================
 // The Stronghold & The End Dimension Generation
 // ============================================
+export function getStrongholdPositions(seed = 12345) {
+    const s = Math.abs(typeof seed === 'string' ? hashSeed(seed) : seed) || 12345;
+    const rng = seededRandom(s + 888123);
+    const baseAngle = rng() * Math.PI * 2;
+    const strongholds = [];
+    for (let i = 0; i < 3; i++) {
+        const angle = baseAngle + (i * (2 * Math.PI / 3)) + (rng() - 0.5) * 0.3;
+        const dist = 1400 + Math.floor(rng() * 800); // 1,400 to 2,200 blocks away from spawn (really rare!)
+        const x = Math.round(Math.cos(angle) * dist);
+        const z = Math.round(Math.sin(angle) * dist);
+        strongholds.push({ x, y: 22, z });
+    }
+    return strongholds;
+}
+
+export function getClosestStrongholdPosition(px, pz, seed = 12345) {
+    const list = getStrongholdPositions(seed);
+    let best = list[0];
+    let bestDist = Infinity;
+    for (const sh of list) {
+        const dx = sh.x - px;
+        const dz = sh.z - pz;
+        const d = dx * dx + dz * dz;
+        if (d < bestDist) {
+            bestDist = d;
+            best = sh;
+        }
+    }
+    return best;
+}
+
 export function getStrongholdPosition(seed = 12345) {
-    const s = Math.abs(seed) || 12345;
-    const angle = (s % 360) * (Math.PI / 180);
-    const dist = 90 + ((s * 31) % 30);
-    const x = Math.round(Math.cos(angle) * dist);
-    const z = Math.round(Math.sin(angle) * dist);
-    return { x, y: 24, z };
+    return getStrongholdPositions(seed)[0];
 }
 
 function generateStronghold(blocks, cx, cz, sh, params) {

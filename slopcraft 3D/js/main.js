@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=100';
 import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=100';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition } from './generation.js?v=100';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=100';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=100';
 import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=100';
 import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=100';
@@ -2298,7 +2298,10 @@ class Game {
                     }
                     if (this.audio && this.audio.playBow) this.audio.playBow();
                     
-                    const sh = getStrongholdPosition(this.currentSeed);
+                    const sh = getClosestStrongholdPosition(this.player.position.x, this.player.position.z, this.currentSeed);
+                    const dist = Math.round(Math.hypot(sh.x - this.player.position.x, sh.z - this.player.position.z));
+                    this.showToast(`Closest Stronghold located at X: ${sh.x}, Z: ${sh.z} (~${dist} blocks away)`, 4500);
+                    
                     const eyePos = this.player.getEyePosition();
                     const dir = new THREE.Vector3(sh.x - eyePos.x, 0, sh.z - eyePos.z).normalize();
                     dir.y = 0.45;
