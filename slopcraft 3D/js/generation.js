@@ -1,10 +1,10 @@
 // ============================================
 // generation.js — Procedural Generation, Biomes, Dungeons
 // ============================================
-import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=103';
-import { BLOCKS } from './textures.js?v=103';
+import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=104';
+import { BLOCKS } from './textures.js?v=104';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=103';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=104';
 
 // Planet configurations
 export const BIOMES = {
@@ -637,7 +637,7 @@ export function getBiomeParams(wx, wz, params) {
         } else if (temp < 0.26) { // Cold / Cool
             if (weirdness > 0.6 && moist > 0.4) {
                 biome = BIOMES.ICE_SPIKES;
-            } else if (temp < 0.12) {
+            } else if (temp < 0.20) {
                 biome = BIOMES.TUNDRA;
             } else {
                 biome = BIOMES.TAIGA;
@@ -1735,6 +1735,21 @@ export function generateChunkTerrain(cx, cz, params) {
     }
 
     // ============================================
+    // PASS 5.7: Rare Snowy Tundra Igloos
+    // ============================================
+    const igloos = getIglooPositions(params.seed);
+    for (const iPos of igloos) {
+        if (Math.abs(cx * CHUNK_SIZE + 8 - iPos.x) <= 16 && Math.abs(cz * CHUNK_SIZE + 8 - iPos.z) <= 16) {
+            const col = getColumnInfo(iPos.x, iPos.z, params);
+            if (col.biome === BIOMES.TUNDRA || col.biome.name === 'Tundra') {
+                iPos.y = col.surfaceY;
+                generateIglooStructure(blocks, cx, cz, iPos, params);
+                break;
+            }
+        }
+    }
+
+    // ============================================
     // PASS 6: Large Features, Trees & Fallen Logs
     // ============================================
     for (let tx = -3; tx <= CHUNK_SIZE + 2; tx++) {
@@ -1839,6 +1854,23 @@ export function generateChunkTerrain(cx, cz, params) {
                 }
             }
 
+            // Snowy Tundra: Snow-Covered Spruce Trees, Fallen Snow Logs, Ice Boulders & Ice Pools
+            if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
+                if (r < 0.024) {
+                    generateSnowyPineTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    continue;
+                } else if (r < 0.027) {
+                    generateFallenSnowLog(blocks, tx, surfaceY, tz, floraRng);
+                    continue;
+                } else if (r >= 0.045 && r < 0.052) {
+                    generateSnowBoulder(blocks, tx, surfaceY, tz, floraRng);
+                    continue;
+                } else if (r >= 0.052 && r < 0.058) {
+                    generateIcePatch(blocks, tx, surfaceY, tz, floraRng);
+                    continue;
+                }
+            }
+
             // Taiga (Tiaga): Pine Trees, Fallen Pine Logs with mushrooms & Boulders
             if ((biome === BIOMES.TAIGA || biome.name === 'Taiga' || (biome.isTaiga && !biome.isRedwood))) {
                 if (r < 0.028) {
@@ -1883,7 +1915,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 treeProbability = isNearWater ? 0.015 : ((colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.006 : 0.002);
             }
 
-            const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || (biome.isOasis && currentGroundBlock === BLOCKS.SAND);
+            const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || (biome.isOasis && currentGroundBlock === BLOCKS.SAND) || currentGroundBlock === BLOCKS.SNOW;
             if (treeProbability > 0 && r < treeProbability && isSoilForTree) {
                 generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
             } else if (biome.hasDeadTrees && r < 0.005) {
@@ -2069,8 +2101,16 @@ export function generateChunkTerrain(cx, cz, params) {
                         else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                     }
                 } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
-                    // Snowy Tundra: ferns and flora strictly never spawn on snow
-                    continue;
+                    if (fr < 0.12) {
+                        const tundraRoll = floraRng();
+                        if (tundraRoll < 0.40) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.SWEET_BERRY_BUSH, true);
+                        } else if (tundraRoll < 0.70) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
+                        } else {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
+                        }
+                    }
                 } else if (biome === BIOMES.TAIGA || biome.name === 'Taiga' || biome.isTaiga) {
                     if (isSoil && fr < 0.25) {
                         const taigaRoll = floraRng();
@@ -2506,6 +2546,92 @@ function generatePineTree(blocks, x, y, z, rng) {
                     if (radius > 1 || distFromTop % 2 === 0) continue;
                 }
                 safeSetBlock(blocks, x + dx, ly, z + dz, BLOCKS.PINE_LEAVES, true);
+            }
+        }
+    }
+}
+
+function generateSnowyPineTree(blocks, x, y, z, rng) {
+    const height = 9 + Math.floor(rng() * 6);
+    for (let i = 0; i < height; i++) {
+        safeSetBlock(blocks, x, y + i, z, BLOCKS.PINE_WOOD, false, 0);
+    }
+
+    const topY = y + height;
+    safeSetBlock(blocks, x, topY + 1, z, BLOCKS.PINE_LEAVES, true);
+    safeSetBlock(blocks, x, topY + 2, z, BLOCKS.SNOW, true); // Snow dusting on very top leaf
+    safeSetBlock(blocks, x, topY, z, BLOCKS.PINE_LEAVES, true);
+
+    const startLeavesY = y + Math.max(3, Math.floor(height * 0.35));
+    for (let ly = topY; ly >= startLeavesY; ly--) {
+        const distFromTop = topY - ly;
+        let radius = 1;
+        if (distFromTop === 0) {
+            radius = 1;
+        } else if (distFromTop % 2 === 1) {
+            radius = Math.min(3, 1 + Math.floor(distFromTop / 3));
+        } else {
+            radius = Math.max(1, Math.min(2, Math.floor(distFromTop / 4)));
+        }
+
+        for (let dx = -radius; dx <= radius; dx++) {
+            for (let dz = -radius; dz <= radius; dz++) {
+                if (Math.abs(dx) === radius && Math.abs(dz) === radius) {
+                    if (radius > 1 || distFromTop % 2 === 0) continue;
+                }
+                const lx = x + dx;
+                const lz = z + dz;
+                safeSetBlock(blocks, lx, ly, lz, BLOCKS.PINE_LEAVES, true);
+                // Authentic Minecraft snowy spruce: place snow block atop any upward-facing leaf!
+                if (ly + 1 < CHUNK_HEIGHT) {
+                    safeSetBlock(blocks, lx, ly + 1, lz, BLOCKS.SNOW, true);
+                }
+            }
+        }
+    }
+}
+
+function generateFallenSnowLog(blocks, x, y, z, rng) {
+    const len = 3 + Math.floor(rng() * 3);
+    const dirX = rng() < 0.5 ? 1 : 0;
+    const dirZ = dirX === 1 ? 0 : 1;
+    for (let i = 0; i < len; i++) {
+        const lx = x + dirX * i;
+        const lz = z + dirZ * i;
+        safeSetBlock(blocks, lx, y, lz, BLOCKS.PINE_WOOD, false, 0);
+        safeSetBlock(blocks, lx, y + 1, lz, BLOCKS.SNOW, true);
+    }
+}
+
+function generateIcePatch(blocks, x, y, z, rng) {
+    const radius = 3 + Math.floor(rng() * 3);
+    for (let dx = -radius; dx <= radius; dx++) {
+        for (let dz = -radius; dz <= radius; dz++) {
+            const dist = Math.hypot(dx, dz);
+            if (dist > radius) continue;
+            const px = x + dx;
+            const pz = z + dz;
+            let block = BLOCKS.ICE;
+            if (dist < radius * 0.5) {
+                block = rng() < 0.6 ? (BLOCKS.PACKED_ICE || BLOCKS.ICE) : (BLOCKS.BLUE_ICE || BLOCKS.ICE);
+            }
+            safeSetBlock(blocks, px, y, pz, block, false);
+            // Clear snow directly above ice pool surface
+            safeSetBlock(blocks, px, y + 1, pz, BLOCKS.AIR, false);
+        }
+    }
+}
+
+function generateSnowBoulder(blocks, x, y, z, rng) {
+    const radius = 2 + Math.floor(rng() * 2);
+    for (let dx = -radius; dx <= radius; dx++) {
+        for (let dz = -radius; dz <= radius; dz++) {
+            for (let dy = 0; dy <= radius; dy++) {
+                if (dx * dx + dy * dy * 1.4 + dz * dz > radius * radius) continue;
+                const r = rng();
+                const b = r < 0.45 ? BLOCKS.COBBLESTONE : (r < 0.75 ? BLOCKS.STONE : (BLOCKS.PACKED_ICE || BLOCKS.ICE));
+                safeSetBlock(blocks, x + dx, y + dy, z + dz, b, false);
+                safeSetBlock(blocks, x + dx, y + dy + 1, z + dz, BLOCKS.SNOW, true);
             }
         }
     }
@@ -3731,9 +3857,214 @@ export function getClosestVillagePosition(px, pz, seed = 12345) {
     return best;
 }
 
+export function getIglooPositions(seed = 12345) {
+    const s = Math.abs(typeof seed === 'string' ? hashSeed(seed) : seed) || 12345;
+    const igloos = [];
+    for (let rx = -5; rx <= 5; rx++) {
+        for (let rz = -5; rz <= 5; rz++) {
+            const rRng = seededRandom(s + rx * 91827364 ^ rz * 28374619);
+            const ix = rx * 360 + Math.floor((rRng() - 0.5) * 200);
+            const iz = rz * 360 + Math.floor((rRng() - 0.5) * 200);
+            igloos.push({ x: ix, y: 64, z: iz });
+        }
+    }
+    return igloos;
+}
+
+export function getClosestIglooPosition(px, pz, seed = 12345) {
+    const list = getIglooPositions(seed);
+    if (!list.length) return null;
+    let best = list[0];
+    let bestDist = Infinity;
+    for (const v of list) {
+        const dx = v.x - px;
+        const dz = v.z - pz;
+        const d = dx * dx + dz * dz;
+        if (d < bestDist) {
+            bestDist = d;
+            best = v;
+        }
+    }
+    return best;
+}
+
+export function generateIglooStructure(blocks, cx, cz, iPos, params) {
+    const wxBase = cx * CHUNK_SIZE;
+    const wzBase = cz * CHUNK_SIZE;
+    const rng = seededRandom(params.seed + iPos.x * 43 + iPos.z * 151);
+
+    const floorY = iPos.y || 64;
+    const lxCenter = iPos.x - wxBase;
+    const lzCenter = iPos.z - wzBase;
+
+    const hasBasement = rng() < 0.65; // 65% chance of secret basement lab
+
+    // 1. Surface Dome (radius 4 outer, radius 2.8 inner, height 4)
+    for (let dx = -4; dx <= 4; dx++) {
+        for (let dz = -4; dz <= 4; dz++) {
+            const lx = lxCenter + dx;
+            const lz = lzCenter + dz;
+            if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE) continue;
+
+            const r2 = dx * dx + dz * dz;
+            if (r2 > 17) continue;
+
+            // Foundation below floor
+            for (let dy = 1; dy <= 4; dy++) {
+                safeSetBlock(blocks, lx, floorY - dy, lz, BLOCKS.SNOW);
+            }
+
+            // Floor
+            if (r2 <= 10) {
+                const carpetType = (Math.abs(dx + dz) % 2 === 0) ? (BLOCKS.RED_WOOL || BLOCKS.WOOL) : (BLOCKS.WHITE_WOOL || BLOCKS.WOOL);
+                safeSetBlock(blocks, lx, floorY, lz, carpetType);
+            } else {
+                safeSetBlock(blocks, lx, floorY, lz, BLOCKS.SNOW);
+            }
+
+            // Dome walls & ceiling
+            for (let dy = 1; dy <= 4; dy++) {
+                const distSphere = Math.sqrt(dx * dx + (dy * 1.1) * (dy * 1.1) + dz * dz);
+                if (distSphere <= 4.2 && distSphere >= 2.6) {
+                    safeSetBlock(blocks, lx, floorY + dy, lz, BLOCKS.SNOW);
+                } else if (distSphere < 2.6) {
+                    safeSetBlock(blocks, lx, floorY + dy, lz, BLOCKS.AIR);
+                }
+            }
+        }
+    }
+
+    // 2. Entrance Tunnel extending in +Z (from dz = 3 to 5)
+    for (let dz = 3; dz <= 5; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+            const lx = lxCenter + dx;
+            const lz = lzCenter + dz;
+            if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE) continue;
+
+            // Floor
+            safeSetBlock(blocks, lx, floorY, lz, (dx === 0 ? (BLOCKS.RED_WOOL || BLOCKS.WOOL) : BLOCKS.SNOW));
+            // Interior tunnel: 1 block wide, 2 blocks high
+            if (dx === 0) {
+                safeSetBlock(blocks, lx, floorY + 1, lz, BLOCKS.AIR);
+                safeSetBlock(blocks, lx, floorY + 2, lz, BLOCKS.AIR);
+                safeSetBlock(blocks, lx, floorY + 3, lz, BLOCKS.SNOW); // Roof
+            } else {
+                safeSetBlock(blocks, lx, floorY + 1, lz, BLOCKS.SNOW); // Walls
+                safeSetBlock(blocks, lx, floorY + 2, lz, BLOCKS.SNOW);
+                safeSetBlock(blocks, lx, floorY + 3, lz, BLOCKS.SNOW);
+            }
+        }
+    }
+
+    // 3. Ice Window at back (dz = -3, dx = 0)
+    {
+        const lx = lxCenter;
+        const lz = lzCenter - 3;
+        if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+            safeSetBlock(blocks, lx, floorY + 1, lz, BLOCKS.ICE);
+        }
+    }
+
+    // 4. Interior Furniture
+    const furniture = [
+        { dx: -2, dz: 1, y: floorY + 1, b: BLOCKS.BED },
+        { dx: 2, dz: 1, y: floorY + 1, b: BLOCKS.CRAFTING_TABLE },
+        { dx: 2, dz: 0, y: floorY + 1, b: BLOCKS.FURNACE },
+        { dx: 2, dz: -1, y: floorY + 1, b: BLOCKS.CAULDRON },
+        { dx: 0, dz: -2, y: floorY + 2, b: BLOCKS.TORCH }
+    ];
+    for (const f of furniture) {
+        const lx = lxCenter + f.dx;
+        const lz = lzCenter + f.dz;
+        if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+            safeSetBlock(blocks, lx, f.y, lz, f.b);
+        }
+    }
+
+    // 5. Secret Subterranean Basement Lab (if hasBasement)
+    if (hasBasement) {
+        const trapX = lxCenter - 1;
+        const trapZ = lzCenter - 1;
+
+        // Vertical ladder shaft descending 16 blocks
+        for (let depth = 0; depth <= 16; depth++) {
+            const wy = floorY - depth;
+            for (let sx = -1; sx <= 1; sx++) {
+                for (let sz = -1; sz <= 1; sz++) {
+                    const lx = trapX + sx;
+                    const lz = trapZ + sz;
+                    if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE) continue;
+                    if (sx === 0 && sz === 0) {
+                        safeSetBlock(blocks, lx, wy, lz, depth === 0 ? BLOCKS.AIR : BLOCKS.LADDER);
+                    } else {
+                        safeSetBlock(blocks, lx, wy, lz, BLOCKS.STONE_BRICKS);
+                    }
+                }
+            }
+        }
+
+        // Subterranean Lab Room (Floor at baseY = floorY - 20)
+        const baseY = floorY - 20;
+        const labWidth = 3;  // -3 to +3 (7 blocks wide)
+        const labDepth = 2;  // -2 to +2 (5 blocks deep)
+        const labHeight = 4; // 4 blocks tall
+
+        for (let dx = -labWidth; dx <= labWidth; dx++) {
+            for (let dz = -labDepth; dz <= labDepth; dz++) {
+                const lx = trapX + dx;
+                const lz = trapZ + dz;
+                if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE) continue;
+
+                // Floor
+                const isCenterAisle = (dx === 0);
+                safeSetBlock(blocks, lx, baseY, lz, isCenterAisle ? (BLOCKS.RED_WOOL || BLOCKS.WOOL) : BLOCKS.STONE_BRICKS);
+
+                // Ceiling
+                safeSetBlock(blocks, lx, baseY + labHeight + 1, lz, BLOCKS.STONE_BRICKS);
+
+                for (let dy = 1; dy <= labHeight; dy++) {
+                    const isOuterWall = (Math.abs(dx) === labWidth || Math.abs(dz) === labDepth);
+                    if (isOuterWall) {
+                        const wallRoll = rng();
+                        const brick = wallRoll < 0.6 ? BLOCKS.STONE_BRICKS : (wallRoll < 0.85 ? BLOCKS.CRACKED_STONE_BRICK : BLOCKS.MOSSY_STONE_BRICK);
+                        safeSetBlock(blocks, lx, baseY + dy, lz, brick);
+                    } else {
+                        safeSetBlock(blocks, lx, baseY + dy, lz, BLOCKS.AIR);
+                    }
+                }
+
+                // Holding Cell partition walls made of Iron Bars
+                if (Math.abs(dx) === 2 && Math.abs(dz) <= 1) {
+                    for (let dy = 1; dy <= 3; dy++) {
+                        safeSetBlock(blocks, lx, baseY + dy, lz, BLOCKS.IRON_BARS);
+                    }
+                }
+            }
+        }
+
+        // Lab Equipment & Furniture
+        const labProps = [
+            { dx: 0, dz: -1, dy: 1, b: BLOCKS.BREWING_STAND },
+            { dx: 1, dz: -1, dy: 1, b: BLOCKS.CAULDRON },
+            { dx: -1, dz: -1, dy: 1, b: BLOCKS.CHEST_BLOCK },
+            { dx: 0, dz: -1, dy: 3, b: BLOCKS.TORCH },
+            { dx: 0, dz: 1, dy: 3, b: BLOCKS.TORCH }
+        ];
+        for (const lp of labProps) {
+            const lx = trapX + lp.dx;
+            const lz = trapZ + lp.dz;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                safeSetBlock(blocks, lx, baseY + lp.dy, lz, lp.b);
+            }
+        }
+    }
+}
+
 if (typeof window !== 'undefined') {
     window.getVillagePositions = getVillagePositions;
     window.getClosestVillagePosition = getClosestVillagePosition;
+    window.getIglooPositions = getIglooPositions;
+    window.getClosestIglooPosition = getClosestIglooPosition;
     window.generateEndChunk = generateEndChunk;
 }
 

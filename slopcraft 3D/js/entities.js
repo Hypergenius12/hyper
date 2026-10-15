@@ -2,9 +2,9 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=103';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=103';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=103';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=104';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=104';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=104';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -2599,6 +2599,250 @@ export const MOB_TYPES = {
             }
         }
     },
+    POLAR_BEAR: {
+        name: 'Polar Bear', health: 30, damage: 6, speed: 2.2, hostile: false, color: 0xf5f5f0,
+        size: 1.4, xpDrop: 5, lootChance: 0.8,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            // Front Body (Chest): Box(12, 12, 10) -> (0.75, 0.75, 0.625)
+            const frontGeo = new THREE.BoxGeometry(0.75, 0.75, 0.625);
+            const frontMats = getMobBoxMaterials('POLAR_BEAR', { u: 0, v: 19, w: 12, h: 12, l: 10 }, { isBody: true, part: 'body' });
+            const frontBody = new THREE.Mesh(frontGeo, frontMats);
+            frontBody.position.set(0, 0.95, 0.25);
+            frontBody.name = 'frontBody';
+            frontBody.castShadow = true;
+            group.add(frontBody);
+
+            // Rear Body (Hips): Box(14, 14, 11) -> (0.875, 0.875, 0.6875)
+            const rearGeo = new THREE.BoxGeometry(0.875, 0.875, 0.6875);
+            const rearMats = getMobBoxMaterials('POLAR_BEAR', { u: 39, v: 0, w: 14, h: 14, l: 11 }, { isBody: true, part: 'body' });
+            const rearBody = new THREE.Mesh(rearGeo, rearMats);
+            rearBody.position.set(0, 1.0, -0.38);
+            rearBody.name = 'rearBody';
+            rearBody.castShadow = true;
+            group.add(rearBody);
+
+            // Head: Box(7, 7, 9) -> (0.4375, 0.4375, 0.5625)
+            const headGeo = new THREE.BoxGeometry(0.4375, 0.4375, 0.5625);
+            const headMats = getMobBoxMaterials('POLAR_BEAR', { u: 0, v: 0, w: 7, h: 7, d: 9 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 1.10, 0.70);
+            head.name = 'head';
+            head.castShadow = true;
+
+            // Snout: Box(5, 3, 3) -> (0.3125, 0.1875, 0.1875)
+            const snoutGeo = new THREE.BoxGeometry(0.3125, 0.1875, 0.1875);
+            const snoutMats = getMobBoxMaterials('POLAR_BEAR', { u: 0, v: 44, w: 5, h: 3, d: 3 }, { part: 'snout' });
+            const snout = new THREE.Mesh(snoutGeo, snoutMats);
+            snout.position.set(0, -0.09, 0.35);
+            snout.name = 'snout';
+            head.add(snout);
+
+            // Ears: Left & Right Box(2, 2, 1) -> (0.125, 0.125, 0.0625)
+            const earGeo = new THREE.BoxGeometry(0.125, 0.125, 0.0625);
+            const earMats = getMobBoxMaterials('POLAR_BEAR', { u: 26, v: 0, w: 2, h: 2, d: 1 }, { part: 'snout' });
+            const leftEar = new THREE.Mesh(earGeo, earMats);
+            leftEar.position.set(-0.20, 0.20, -0.05);
+            head.add(leftEar);
+            const rightEar = new THREE.Mesh(earGeo, earMats);
+            rightEar.position.set(0.20, 0.20, -0.05);
+            head.add(rightEar);
+
+            group.add(head);
+
+            // 4 Legs: Box(4, 10, 8) -> (0.25, 0.625, 0.5)
+            const legGeo = new THREE.BoxGeometry(0.25, 0.625, 0.5);
+            const legMats = getMobBoxMaterials('POLAR_BEAR', { u: 50, v: 22, w: 4, h: 10, d: 8 }, { part: 'leg' });
+            for (let i = 0; i < 4; i++) {
+                const leg = new THREE.Mesh(legGeo, legMats);
+                const x = (i % 2 === 0 ? -0.32 : 0.32);
+                const z = (i < 2 ? 0.25 : -0.42);
+                leg.position.set(x, 0.3125, z);
+                leg.name = `leg_${i}`;
+                leg.castShadow = true;
+                group.add(leg);
+            }
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving, mob) => {
+            const leg0 = mesh.getObjectByName('leg_0');
+            const leg1 = mesh.getObjectByName('leg_1');
+            const leg2 = mesh.getObjectByName('leg_2');
+            const leg3 = mesh.getObjectByName('leg_3');
+            const head = mesh.getObjectByName('head');
+
+            const isRearing = mob && mob.isRearing;
+            if (isRearing) {
+                // Authentic Minecraft Polar Bear rearing up on hind legs when aggressive!
+                mesh.rotation.x = -Math.PI * 0.35; // tilts upward ~65 degrees
+                if (leg0) leg0.rotation.x = Math.sin(age * 12) * 0.4 - 0.4;
+                if (leg1) leg1.rotation.x = -Math.sin(age * 12) * 0.4 - 0.4;
+                if (leg2) leg2.rotation.x = Math.PI * 0.35;
+                if (leg3) leg3.rotation.x = Math.PI * 0.35;
+                if (head) head.rotation.x = Math.PI * 0.30;
+            } else {
+                mesh.rotation.x = 0;
+                if (isMoving) {
+                    const s = Math.sin(age * 6) * 0.5;
+                    if (leg0) leg0.rotation.x = s;
+                    if (leg1) leg1.rotation.x = -s;
+                    if (leg2) leg2.rotation.x = -s;
+                    if (leg3) leg3.rotation.x = s;
+                } else {
+                    if (leg0) leg0.rotation.x = 0;
+                    if (leg1) leg1.rotation.x = 0;
+                    if (leg2) leg2.rotation.x = 0;
+                    if (leg3) leg3.rotation.x = 0;
+                }
+                if (head) {
+                    head.rotation.x = Math.sin(age * 1.5) * 0.05;
+                    head.rotation.y = Math.sin(age * 0.8) * 0.08;
+                }
+            }
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            const dist = mob.position.distanceTo(playerPos);
+            if (mob.health < mob.maxHealth) {
+                mob.isAggressive = true;
+                mob.hostile = true;
+            }
+
+            if (mob.isAggressive && dist < 16) {
+                mob.isRearing = dist < 5.0;
+                const toPlayer = new THREE.Vector3().subVectors(playerPos, mob.position).setY(0).normalize();
+                mob.velocity.x = toPlayer.x * mob.speed * 1.4;
+                mob.velocity.z = toPlayer.z * mob.speed * 1.4;
+                if (mob.mesh) {
+                    mob.mesh.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
+                }
+                if (!mob.roarTimer) mob.roarTimer = 0;
+                mob.roarTimer -= dt;
+                if (mob.roarTimer <= 0) {
+                    mob.roarTimer = 3.5 + Math.random() * 2;
+                    if (window.game && window.game.audio && window.game.audio.playPolarBearRoar) {
+                        window.game.audio.playPolarBearRoar(mob.position);
+                    }
+                }
+            } else {
+                mob.isRearing = false;
+                if (!mob.wanderTimer) mob.wanderTimer = 0;
+                if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+                mob.wanderTimer -= dt;
+                if (mob.wanderTimer <= 0) {
+                    if (Math.random() < 0.4) {
+                        mob.wanderTimer = 2.5 + Math.random() * 4;
+                        const angle = Math.random() * Math.PI * 2;
+                        mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                    } else {
+                        mob.wanderTimer = 2 + Math.random() * 3;
+                        mob.wanderDir.set(0, 0, 0);
+                    }
+                }
+                mob.velocity.x = mob.wanderDir.x * mob.speed * 0.6;
+                mob.velocity.z = mob.wanderDir.z * mob.speed * 0.6;
+                if (mob.wanderDir.lengthSq() > 0 && mob.mesh) {
+                    mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+                }
+            }
+        }
+    },
+    SNOW_GOLEM: {
+        name: 'Snow Golem', health: 15, damage: 0, speed: 2.0, hostile: false, color: 0xffffff,
+        size: 0.8, xpDrop: 3, lootChance: 0.9,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            // Lower body: Box(12, 12, 12) -> (0.75, 0.75, 0.75)
+            const baseGeo = new THREE.BoxGeometry(0.75, 0.75, 0.75);
+            const baseMats = getMobBoxMaterials('SNOW_GOLEM', { u: 0, v: 36, w: 12, h: 12, d: 12 }, { part: 'leg' });
+            const base = new THREE.Mesh(baseGeo, baseMats);
+            base.position.set(0, 0.375, 0);
+            base.name = 'base';
+            base.castShadow = true;
+            group.add(base);
+
+            // Upper body: Box(8, 8, 8) -> (0.5, 0.5, 0.5)
+            const torsoGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const torsoMats = getMobBoxMaterials('SNOW_GOLEM', { u: 0, v: 16, w: 8, h: 8, d: 8 }, { part: 'body' });
+            const torso = new THREE.Mesh(torsoGeo, torsoMats);
+            torso.position.set(0, 0.875, 0);
+            torso.name = 'torso';
+            torso.castShadow = true;
+            group.add(torso);
+
+            // Head (Carved Pumpkin): Box(8, 8, 8) -> (0.5, 0.5, 0.5)
+            const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const headMats = getMobBoxMaterials('SNOW_GOLEM', { u: 0, v: 0, w: 8, h: 8, d: 8 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 1.375, 0);
+            head.name = 'head';
+            head.castShadow = true;
+            group.add(head);
+
+            // Stick Arms: Box(12, 2, 2) -> (0.6, 0.08, 0.08)
+            const armGeo = new THREE.BoxGeometry(0.6, 0.08, 0.08);
+            const armMats = getMobBoxMaterials('SNOW_GOLEM', { u: 32, v: 0, w: 12, h: 2, d: 2 }, { part: 'arm' });
+            const leftArm = new THREE.Mesh(armGeo, armMats);
+            leftArm.position.set(-0.45, 0.95, 0);
+            leftArm.rotation.z = 0.4;
+            leftArm.name = 'leftArm';
+            group.add(leftArm);
+
+            const rightArm = new THREE.Mesh(armGeo, armMats);
+            rightArm.position.set(0.45, 0.95, 0);
+            rightArm.rotation.z = -0.4;
+            rightArm.name = 'rightArm';
+            group.add(rightArm);
+
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const head = mesh.getObjectByName('head');
+            const leftArm = mesh.getObjectByName('leftArm');
+            const rightArm = mesh.getObjectByName('rightArm');
+            const base = mesh.getObjectByName('base');
+            if (head) {
+                head.rotation.y = Math.sin(age * 2) * 0.15;
+            }
+            if (isMoving) {
+                if (base) base.rotation.y = Math.sin(age * 8) * 0.1;
+                if (leftArm) leftArm.rotation.x = Math.sin(age * 6) * 0.3;
+                if (rightArm) rightArm.rotation.x = -Math.sin(age * 6) * 0.3;
+            }
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            mob.wanderTimer -= dt;
+            if (mob.wanderTimer <= 0) {
+                if (Math.random() < 0.5) {
+                    mob.wanderTimer = 2.0 + Math.random() * 3;
+                    const angle = Math.random() * Math.PI * 2;
+                    mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                } else {
+                    mob.wanderTimer = 1.5 + Math.random() * 2;
+                    mob.wanderDir.set(0, 0, 0);
+                }
+            }
+            mob.velocity.x = mob.wanderDir.x * mob.speed * 0.7;
+            mob.velocity.z = mob.wanderDir.z * mob.speed * 0.7;
+            if (mob.wanderDir.lengthSq() > 0 && mob.mesh) {
+                mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+            }
+
+            // Authentic Snow Golem snow trail: leaves a layer of snow as it walks!
+            if (mob.velocity.lengthSq() > 0.01 && world) {
+                const bx = Math.floor(mob.position.x);
+                const by = Math.floor(mob.position.y);
+                const bz = Math.floor(mob.position.z);
+                const cur = world.getBlock(bx, by, bz);
+                const below = world.getBlock(bx, by - 1, bz);
+                const pBelow = window.getBlockProperties ? window.getBlockProperties(below) : { solid: true };
+                if (cur === (window.BLOCKS.AIR || 0) && pBelow && pBelow.solid && below !== window.BLOCKS.ICE && below !== window.BLOCKS.PACKED_ICE && below !== window.BLOCKS.BLUE_ICE) {
+                    world.setBlock(bx, by, bz, window.BLOCKS.SNOW);
+                }
+            }
+        }
+    },
     COD: {
         name: 'Cod', health: 3, damage: 0, speed: 2.2, hostile: false, color: 0xbbbb99,
         size: 0.3, xpDrop: 1, lootChance: 0.1, waterOnly: true,
@@ -3900,12 +4144,18 @@ function pickRandomMobType(dimension = 'overworld', biome = 'plains', isDay = fa
         const passiveMobs = ['SHEEP', 'COW', 'PIG', 'CHICKEN', 'FROG', 'CAMEL', 'TURTLE'];
         if (biome === 'desert' && Math.random() < 0.6) return 'CAMEL';
         if (biome === 'swamp' && Math.random() < 0.6) return 'FROG';
+        if (biome === 'snow') return Math.random() < 0.55 ? 'POLAR_BEAR' : (Math.random() < 0.5 ? 'SNOW_GOLEM' : 'SHEEP');
         return passiveMobs[Math.floor(Math.random() * passiveMobs.length)];
     }
 
     if (biome === 'desert' && Math.random() < 0.5) return 'CAMEL';
     if (biome === 'swamp' && Math.random() < 0.6) return Math.random() < 0.5 ? 'FROG' : 'SLIME';
-    if (biome === 'snow' && Math.random() < 0.3) return 'SKELETON';
+    if (biome === 'snow') {
+        const coldRoll = Math.random();
+        if (coldRoll < 0.35) return 'POLAR_BEAR';
+        if (coldRoll < 0.55) return 'SNOW_GOLEM';
+        if (coldRoll < 0.80) return 'SKELETON';
+    }
 
     let r = Math.random() * TOTAL_MOB_WEIGHT;
     for (const entry of MOB_SPAWN_WEIGHTS) {
@@ -4687,6 +4937,27 @@ export class EntityManager {
             }
         }
 
+        // Igloo basement inhabitants spawner (Villager + Zombie in holding cells)
+        if (!this.spawnedIgloos) this.spawnedIgloos = new Set();
+        if (currentDimension === 'overworld' && typeof window.getClosestIglooPosition === 'function') {
+            const iSeed = (window.worldGenParams ? window.worldGenParams.seed : 12345);
+            const iPos = window.getClosestIglooPosition(playerPos.x, playerPos.z, iSeed);
+            if (iPos) {
+                const distI = Math.hypot(playerPos.x - iPos.x, playerPos.z - iPos.z);
+                const iKey = `${iPos.x}_${iPos.z}`;
+                if (distI < 24 && playerPos.y < 52 && !this.spawnedIgloos.has(iKey)) {
+                    this.spawnedIgloos.add(iKey);
+                    const trapX = iPos.x - 1;
+                    const trapZ = iPos.z - 1;
+                    const baseY = (iPos.y || 64) - 20;
+                    const villager = new Mob('VILLAGER', new THREE.Vector3(trapX - 2.5, baseY + 1, trapZ));
+                    this.addMob(villager);
+                    const zombie = new Mob('ZOMBIE', new THREE.Vector3(trapX + 2.5, baseY + 1, trapZ));
+                    this.addMob(zombie);
+                }
+            }
+        }
+
         // Mob Spawning with timer
         this.spawnTimer += dt;
         if (this.spawnTimer > 2.0 && this.mobs.length < 20) {
@@ -4909,6 +5180,14 @@ export class EntityManager {
                 } else if (mob.type === 'CHICKEN') {
                     this.spawnItem(Item.foodItem('raw_chicken', 10, 'Raw Chicken', 'Heals a little health.'), 1, mob.position.clone());
                     if (Math.random() < 0.5) this.spawnItem(Item.materialItem('feather', 'Feather', 'Used for crafting.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                } else if (mob.type === 'POLAR_BEAR') {
+                    this.spawnItem(Item.foodItem('raw_fish', 10, 'Raw Cod', 'Heals some health.'), 1 + Math.floor(Math.random() * 3), mob.position.clone());
+                    if (Math.random() < 0.25) this.spawnItem(Item.foodItem('raw_fish', 10, 'Raw Salmon', 'Heals some health.'), 1, mob.position.clone());
+                } else if (mob.type === 'SNOW_GOLEM') {
+                    const snowballItem = new Item('material', 'snowball', {}, 'Snowball');
+                    snowballItem.stackable = true;
+                    snowballItem.maxStack = 16;
+                    this.spawnItem(snowballItem, 2 + Math.floor(Math.random() * 5), mob.position.clone());
                 } else if (['COD', 'SALMON', 'TROPICAL_FISH', 'PUFFERFISH'].includes(mob.type)) {
                     this.spawnItem(Item.foodItem('raw_fish', 10, 'Raw Fish', 'Heals some health.'), 1, mob.position.clone());
                 } else if (mob.type === 'TURTLE') {

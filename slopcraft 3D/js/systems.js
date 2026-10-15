@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js?v=103';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=103';
+import { BLOCKS, generateItemTexture } from './textures.js?v=104';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=104';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -478,6 +478,13 @@ export class ParticleSystem {
                     (Math.random()-0.5)*1.4
                 );
                 maxAge = 0.35 + Math.random() * 0.35;
+            } else if (type === 'snow') {
+                vel = new THREE.Vector3(
+                    (Math.random()-0.5)*1.5,
+                    -(1.8 + Math.random()*1.4), // gentle falling snow
+                    (Math.random()-0.5)*1.5
+                );
+                maxAge = 3.0 + Math.random() * 2.0;
             } else if (type === 'rain') {
                 vel = new THREE.Vector3(
                     (Math.random()-0.5)*0.8,
@@ -522,6 +529,12 @@ export class ParticleSystem {
                 // No gravity, they just drift down
                 this._dummy.rotation.x += dt;
                 this._dummy.rotation.y += dt * 0.5;
+            } else if (p.type === 'snow') {
+                p.vel.x += (Math.random() - 0.5) * dt * 2.0;
+                p.vel.z += (Math.random() - 0.5) * dt * 2.0;
+                p.pos.addScaledVector(p.vel, dt);
+                this._dummy.rotation.x += dt * 1.5;
+                this._dummy.rotation.y += dt * 1.5;
             } else if (p.type === 'eat') {
                 p.pos.addScaledVector(p.vel, dt);
                 p.vel.y -= 7.0 * dt; // gravity
@@ -537,6 +550,8 @@ export class ParticleSystem {
             this._dummy.position.copy(p.pos);
             if (p.type === 'leaf') {
                 this._dummy.scale.set(0.6, 0.1, 0.6);
+            } else if (p.type === 'snow') {
+                this._dummy.scale.set(0.35, 0.35, 0.35);
             } else if (p.type === 'eat') {
                 const s = 0.45 * Math.max(0.15, 1 - (p.age / p.maxAge) * 0.5);
                 this._dummy.scale.set(s, s, s);

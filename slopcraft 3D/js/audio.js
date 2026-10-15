@@ -2,7 +2,7 @@
 // audio.js — SFX Synthesizer using Web Audio API
 // ============================================
 
-import { BLOCKS, getBlockProperties } from './textures.js?v=103';
+import { BLOCKS, getBlockProperties } from './textures.js?v=104';
 
 export class AudioManager {
     constructor() {
@@ -527,5 +527,20 @@ export class AudioManager {
             this.playNoise(0.5, 0.3, position);
         };
         this.playMC('block/end_gateway/teleport', 1.0, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playPolarBearRoar(position = null) {
+        const doFallback = () => {
+            this.playTone(95, 'sawtooth', 0.6, 0.7, -40, position);
+            this.playNoise(0.4, 0.3, position);
+        };
+        this.playMC('entity/polar_bear/warning', 0.9, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playSnowballThrow(position = null) {
+        const doFallback = () => {
+            this.playTone(450, 'sine', 0.08, 0.3, 150, position);
+        };
+        this.playMC('entity/snowball/throw', 0.7, position).then(s => { if (!s) doFallback(); });
     }
 }

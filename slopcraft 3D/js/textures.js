@@ -2,7 +2,7 @@
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=103';
+import { seededRandom } from './noise.js?v=104';
 
 // Block type IDs
 export const BLOCKS = {
@@ -320,7 +320,8 @@ export const BLOCKS = {
     CHORUS_PLANT: 330,
     CHORUS_FLOWER: 331,
     CHORUS_FLOWER_DEAD: 332,
-    END_GATEWAY: 333
+    END_GATEWAY: 333,
+    SWEET_BERRY_BUSH: 334
 };
 
 // Block properties
@@ -333,6 +334,7 @@ const BLOCK_PROPS = {
     [BLOCKS.CHORUS_FLOWER]:         { name: 'Chorus Flower',         health: 1, transparent: true, emissive: 0.25, solid: true, drops: BLOCKS.CHORUS_FLOWER, isChorusFlower: true },
     [BLOCKS.CHORUS_FLOWER_DEAD]:    { name: 'Dead Chorus Flower',    health: 1, transparent: true, emissive: 0, solid: true, drops: null },
     [BLOCKS.END_GATEWAY]:           { name: 'End Gateway',           health: -1, transparent: true, emissive: 1.0, solid: false, drops: null, isEndGateway: true },
+    [BLOCKS.SWEET_BERRY_BUSH]:      { name: 'Sweet Berry Bush',      health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isFlora: true, drops: 'sweet_berries' },
     [BLOCKS.PACKED_ICE]:            { name: 'Packed Ice',            health: 4, transparent: false, emissive: 0, solid: true, drops: BLOCKS.PACKED_ICE },
     [BLOCKS.BLUE_ICE]:              { name: 'Blue Ice',              health: 5, transparent: false, emissive: 0.05, solid: true, drops: BLOCKS.BLUE_ICE },
     [BLOCKS.LANTERN]:               { name: 'Lantern',               health: 4, transparent: true, emissive: 1.0, solid: false, drops: BLOCKS.LANTERN, isLantern: true, lightLevel: 15 },
@@ -1710,6 +1712,31 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillRect(9, 11, 3, 2);
             ctx.fillStyle = '#80df60';
             ctx.fillRect(7, 3, 2, 3);
+            break;
+        case BLOCKS.SWEET_BERRY_BUSH:
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            // Bush foliage
+            ctx.fillStyle = '#2f5926';
+            ctx.fillRect(3, 4, 10, 11);
+            ctx.fillStyle = '#427536';
+            ctx.fillRect(2, 6, 12, 8);
+            ctx.fillRect(4, 3, 8, 2);
+            // Dark stems
+            ctx.fillStyle = '#1c3616';
+            ctx.fillRect(7, 10, 2, 6);
+            ctx.fillRect(5, 7, 1, 3);
+            ctx.fillRect(10, 7, 1, 3);
+            // Sweet red berries
+            ctx.fillStyle = '#b31515';
+            ctx.fillRect(4, 6, 2, 2);
+            ctx.fillRect(10, 7, 2, 2);
+            ctx.fillRect(6, 10, 2, 2);
+            ctx.fillRect(9, 11, 2, 2);
+            ctx.fillStyle = '#ff4d4d'; // highlights on berries
+            ctx.fillRect(4, 6, 1, 1);
+            ctx.fillRect(10, 7, 1, 1);
+            ctx.fillRect(6, 10, 1, 1);
+            ctx.fillRect(9, 11, 1, 1);
             break;
         case BLOCKS.PLANKS:
             drawPlanks(ctx, rng, 160, 130, 75, 'rgba(90, 65, 30, 0.7)', 'rgba(120, 90, 50, 0.5)');
@@ -3728,7 +3755,8 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.CHORUS_PLANT]: 'chorus_plant',
     [BLOCKS.CHORUS_FLOWER]: 'chorus_flower',
     [BLOCKS.CHORUS_FLOWER_DEAD]: 'chorus_flower_dead',
-    [BLOCKS.END_GATEWAY]: 'end_portal'
+    [BLOCKS.END_GATEWAY]: 'end_portal',
+    [BLOCKS.SWEET_BERRY_BUSH]: 'sweet_berry_bush'
 };
 
 let _mcChestPromise = null;
@@ -4201,7 +4229,12 @@ const LOCAL_ASSET_MAP = {
     "chorus_flower": "assets/mc/block/chorus_flower.png",
     "chorus_flower_dead": "assets/mc/block/chorus_flower_dead.png",
     "chorus_fruit": "assets/mc/item/chorus_fruit.png",
-    "item/chorus_fruit": "assets/mc/item/chorus_fruit.png"
+    "item/chorus_fruit": "assets/mc/item/chorus_fruit.png",
+    "sweet_berry_bush": "assets/mc/block/sweet_berry_bush.png",
+    "sweet_berries": "assets/mc/item/sweet_berries.png",
+    "item/sweet_berries": "assets/mc/item/sweet_berries.png",
+    "snowball": "assets/mc/item/snowball.png",
+    "item/snowball": "assets/mc/item/snowball.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -5009,6 +5042,8 @@ const MC_ITEM_MAP = {
     'blaze_powder': 'blaze_powder',
     'dragon_egg': 'dragon_egg',
     'chorus_fruit': 'chorus_fruit',
+    'sweet_berries': 'sweet_berries',
+    'snowball': 'snowball',
     'helmet_iron': 'iron_helmet',
     'chest_iron': 'iron_chestplate',
     'legs_iron': 'iron_leggings',
@@ -6413,6 +6448,28 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         ctx.fillStyle = '#572b57';
         ctx.fillRect(cx2 - 1, cy2 - 7, 2, 3);
         return canvas;
+    } else if (itemSubtype === 'sweet_berries') {
+        // Cluster of small bright red berries with green stem
+        ctx.fillStyle = '#3a7d28';
+        ctx.fillRect(7, 4, 2, 3);
+        ctx.fillStyle = '#bf1818';
+        ctx.fillRect(5, 7, 3, 3);
+        ctx.fillRect(8, 6, 3, 3);
+        ctx.fillRect(7, 9, 3, 3);
+        ctx.fillStyle = '#ff4d4d'; // highlights
+        ctx.fillRect(5, 7, 1, 1);
+        ctx.fillRect(8, 6, 1, 1);
+        ctx.fillRect(7, 9, 1, 1);
+        return canvas;
+    } else if (itemSubtype === 'snowball') {
+        const cx3 = TEX_SIZE / 2, cy3 = TEX_SIZE / 2;
+        ctx.fillStyle = '#dbe5ec';
+        ctx.beginPath(); ctx.arc(cx3, cy3, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(cx3 - 1, cy3 - 1, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#a8bccc';
+        ctx.arc(cx3 + 2, cy3 + 2, 2, 0, Math.PI * 2);
+        return canvas;
     }
 
     if (shape.length > 0) {
@@ -6519,6 +6576,12 @@ const MC_MOB_SKIN_CONFIG = {
     VILLAGER: { path: 'villager/villager.png',
         head_front: [8,8,8,10], head_back: [24,8,8,10], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,10],
         body: [16,20,8,18], leg: [0,22,4,12], arm: [44,22,16,8] },
+    POLAR_BEAR: { path: 'polar_bear/polarbear.png',
+        head_front: [9,9,7,7], head_back: [25,9,7,7], head_top: [9,0,7,9], head_bottom: [16,0,7,9], head_side: [0,9,9,7],
+        body: [10,29,12,10], leg: [50,30,4,10], snout: [3,47,5,3] },
+    SNOW_GOLEM: { path: 'snow_golem/snow_golem.png',
+        head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
+        body: [8,24,8,8], leg: [0,48,12,12], arm: [34,2,12,2] },
     // --- Other ---
     SPIDER: { path: 'spider/spider.png',
         head_front: [8,8,8,8], head_back: [24,8,8,8], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,8],
@@ -7040,6 +7103,47 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
         } else {
             rect(0, 7, 16, 2, 'rgba(0,0,0,0.2)');
             rect(0, 12, 16, 4, 'rgba(255,255,255,0.25)');
+        }
+    }
+
+    // --- POLAR BEAR ---
+    else if (mobType === 'POLAR_BEAR') {
+        fill('#f4f4ee'); noise(244, 244, 238, 8, 30);
+        if (part === 'head_front') {
+            rect(4, 5, 2, 2, '#1a1a1a'); // eyes
+            rect(10, 5, 2, 2, '#1a1a1a');
+            rect(6, 9, 4, 3, '#111111'); // black nose
+            rect(7, 12, 2, 1, '#443333'); // mouth
+        } else if (part === 'snout') {
+            rect(5, 2, 6, 4, '#111111'); // nose tip
+        } else if (part === 'leg') {
+            rect(2, 12, 12, 4, '#dedece'); // paw shading
+            rect(3, 14, 2, 2, '#222222'); // claws
+            rect(7, 14, 2, 2, '#222222');
+            rect(11, 14, 2, 2, '#222222');
+        }
+    }
+    // --- SNOW GOLEM ---
+    else if (mobType === 'SNOW_GOLEM') {
+        if (part === 'head_front' || part === 'head_side' || part === 'head_top') {
+            fill('#d97618'); noise(217, 118, 24, 15, 30); // carved pumpkin
+            if (part === 'head_front') {
+                rect(3, 4, 3, 3, '#151515'); // triangle eyes
+                rect(10, 4, 3, 3, '#151515');
+                rect(7, 7, 2, 2, '#151515'); // nose
+                rect(4, 10, 8, 3, '#151515'); // carved mouth
+                rect(5, 12, 2, 1, '#d97618'); // tooth
+                rect(9, 10, 2, 1, '#d97618');
+            }
+        } else if (part === 'arm') {
+            fill('#54391e'); noise(84, 57, 30, 10, 15); // stick arm
+        } else {
+            fill('#f0f5f9'); noise(240, 245, 249, 10, 25); // snow body
+            if (part === 'body') {
+                rect(7, 5, 2, 2, '#181818'); // coal buttons
+                rect(7, 9, 2, 2, '#181818');
+                rect(7, 13, 2, 2, '#181818');
+            }
         }
     }
 

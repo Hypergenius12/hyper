@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=103';
-import { getBiomeParams } from './generation.js?v=103';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=104';
+import { getBiomeParams } from './generation.js?v=104';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -1627,19 +1627,21 @@ export class World {
         let needsBreak = false;
         const blockBelow = this.getBlock(x, y - 1, z);
         
-        // Plant-like blocks need dirt/grass below (never snow, ice, or stone)
+        // Plant-like blocks need dirt/grass/snow below
         if ([
             window.BLOCKS.TALL_GRASS, window.BLOCKS.FLOWER_RED, window.BLOCKS.FLOWER_YELLOW,
             window.BLOCKS.FERN, window.BLOCKS.TALL_FERN, window.BLOCKS.TALL_FERN_TOP,
             window.BLOCKS.BLUE_FLOWER, window.BLOCKS.WHITE_FLOWER, window.BLOCKS.PURPLE_FLOWER,
-            window.BLOCKS.PINK_PETALS, window.BLOCKS.MUSHROOM_RED, window.BLOCKS.MUSHROOM_BROWN
+            window.BLOCKS.PINK_PETALS, window.BLOCKS.MUSHROOM_RED, window.BLOCKS.MUSHROOM_BROWN,
+            window.BLOCKS.SWEET_BERRY_BUSH
         ].includes(type)) {
             if (type === window.BLOCKS.TALL_FERN_TOP) {
                 if (blockBelow !== window.BLOCKS.TALL_FERN) needsBreak = true;
             } else if (![
                 window.BLOCKS.GRASS, window.BLOCKS.DIRT, window.BLOCKS.MYCELIUM,
                 window.BLOCKS.CRIMSON_NYLIUM, window.BLOCKS.WARPED_NYLIUM, window.BLOCKS.PODZOL,
-                window.BLOCKS.MUD, window.BLOCKS.SWAMP_GRASS, window.BLOCKS.SAVANNA_GRASS
+                window.BLOCKS.MUD, window.BLOCKS.SWAMP_GRASS, window.BLOCKS.SAVANNA_GRASS,
+                window.BLOCKS.SNOW
             ].includes(blockBelow)) {
                 needsBreak = true;
             }

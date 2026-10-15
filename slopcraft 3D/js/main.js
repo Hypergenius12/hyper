@@ -2,16 +2,16 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=103';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=103';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=103';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=103';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=103';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=103';
-import { AudioManager } from './audio.js?v=103';
-import { BiomeMap } from './map.js?v=103';
-import { DevMode } from './dev.js?v=103';
-import { ChatSystem } from './chat.js?v=103';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=104';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=104';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=104';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=104';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=104';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=104';
+import { AudioManager } from './audio.js?v=104';
+import { BiomeMap } from './map.js?v=104';
+import { DevMode } from './dev.js?v=104';
+import { ChatSystem } from './chat.js?v=104';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -54,6 +54,7 @@ const FOOD_HEAL_MAP = {
 
 const FOOD_PARTICLE_COLORS = {
     'chorus_fruit': [0x925f92, 0xc469c4, 0x582658, 0xdda0dd],
+    'sweet_berries': [0xbf1818, 0xdf2929, 0x486414, 0x8a1010],
     'apple': [0xbf1919, 0xd42929, 0x801010, 0x486414],
     'golden_apple': [0xffd700, 0xffea00, 0xffaa00, 0xffee55],
     'bread': [0xb7803a, 0x8f591f, 0xd8a556, 0x6e3d11],
@@ -3032,24 +3033,39 @@ class Game {
 
         this.lighting.update(dt, this.engine.camera.position, isUnderwater, this.currentDimension);
 
-        // Atmospheric Weather Effects (Rain & Thunderstorm)
-        if (this.lighting && (this.lighting.weather === 'rain' || this.lighting.weather === 'thunder') && this.currentDimension === 'overworld') {
-            for (let i = 0; i < 6; i++) {
+        // Atmospheric Weather Effects (Rain & Thunderstorm & Snowfall)
+        if (this.currentDimension === 'overworld') {
+            const rawBiome = (this.world && this.world.getBiomeAt && this.world.getBiomeAt(this.player.position.x, this.player.position.z)?.name) || '';
+            const isCold = (rawBiome === 'Tundra' || rawBiome === 'Ice Spikes' || rawBiome === 'Mountains');
+
+            if (this.lighting && (this.lighting.weather === 'rain' || this.lighting.weather === 'thunder')) {
+                for (let i = 0; i < 6; i++) {
+                    const rx = this.player.position.x + (Math.random() - 0.5) * 26;
+                    const rz = this.player.position.z + (Math.random() - 0.5) * 26;
+                    const ry = this.player.position.y + 7 + Math.random() * 8;
+                    if (isCold) {
+                        this.particles.emit(new THREE.Vector3(rx, ry, rz), 'snow', 1, 0xffffff);
+                    } else {
+                        this.particles.emit(new THREE.Vector3(rx, ry, rz), 'rain', 1, 0x5a9ee6);
+                    }
+                }
+                if (this.lighting.weather === 'thunder' && Math.random() < 0.003) {
+                    // Occasional thunder flash
+                    const prevColor = this.engine.scene.background ? this.engine.scene.background.clone() : new THREE.Color(0x000000);
+                    this.engine.scene.background = new THREE.Color(0xeeeeff);
+                    if (this.lighting.ambientLight) this.lighting.ambientLight.intensity = 2.5;
+                    if (this.audio && this.audio.playExplode) this.audio.playExplode();
+                    setTimeout(() => {
+                        this.engine.scene.background = prevColor;
+                        if (this.lighting.ambientLight) this.lighting.ambientLight.intensity = 0.92;
+                    }, 70);
+                }
+            } else if (isCold && Math.random() < 0.35) {
+                // Ambient gentle snow flurries in Snowy Tundra even in clear weather
                 const rx = this.player.position.x + (Math.random() - 0.5) * 26;
                 const rz = this.player.position.z + (Math.random() - 0.5) * 26;
-                const ry = this.player.position.y + 7 + Math.random() * 8;
-                this.particles.emit(new THREE.Vector3(rx, ry, rz), 'rain', 1, 0x5a9ee6);
-            }
-            if (this.lighting.weather === 'thunder' && Math.random() < 0.003) {
-                // Occasional thunder flash
-                const prevColor = this.engine.scene.background ? this.engine.scene.background.clone() : new THREE.Color(0x000000);
-                this.engine.scene.background = new THREE.Color(0xeeeeff);
-                if (this.lighting.ambientLight) this.lighting.ambientLight.intensity = 2.5;
-                if (this.audio && this.audio.playExplode) this.audio.playExplode();
-                setTimeout(() => {
-                    this.engine.scene.background = prevColor;
-                    if (this.lighting.ambientLight) this.lighting.ambientLight.intensity = 0.92;
-                }, 70);
+                const ry = this.player.position.y + 4 + Math.random() * 7;
+                this.particles.emit(new THREE.Vector3(rx, ry, rz), 'snow', 1, 0xffffff);
             }
         }
 

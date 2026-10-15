@@ -2,9 +2,9 @@
 // chat.js — In-Game Chat & Command System
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockName } from './textures.js?v=103';
-import { BIOMES, getBiomeParams, getClosestStrongholdPosition } from './generation.js?v=103';
-import { Mob, MOB_TYPES, Item } from './entities.js?v=103';
+import { BLOCKS, getBlockName } from './textures.js?v=104';
+import { BIOMES, getBiomeParams, getClosestStrongholdPosition, getClosestIglooPosition } from './generation.js?v=104';
+import { Mob, MOB_TYPES, Item } from './entities.js?v=104';
 
 export class ChatSystem {
     constructor(game) {
@@ -290,7 +290,7 @@ export class ChatSystem {
         } else {
             const cmd = tokens[0].toLowerCase();
             if (cmd === 'find' || cmd === 'locate') {
-                this.autocompleteEl.textContent = 'Usage: /find <stronghold | biome <name> | spawn>';
+                this.autocompleteEl.textContent = 'Usage: /find <stronghold | igloo | biome <name> | spawn>';
                 this.autocompleteEl.classList.remove('hidden');
             } else if (cmd === 'give') {
                 this.autocompleteEl.textContent = 'Usage: /give <item> [count]';
@@ -518,6 +518,18 @@ export class ChatSystem {
                 this.addMessage(`Type '/tp ${sh.x} 25 ${sh.z}' to teleport there directly.`, "#aaaaaa");
             } else {
                 this.addMessage("No stronghold found in this dimension.", "#ff5555");
+            }
+            return;
+        }
+
+        if (target === 'igloo') {
+            const ig = getClosestIglooPosition(p.x, p.z, seed);
+            if (ig) {
+                const dist = Math.round(Math.hypot(ig.x - p.x, ig.z - p.z));
+                this.addMessage(`The nearest Igloo is at [X: ${ig.x}, Y: ${ig.y}, Z: ${ig.z}] (~${dist} blocks away)`, "#55ff55");
+                this.addMessage(`Type '/tp ${ig.x} ${ig.y + 1} ${ig.z}' to teleport there directly.`, "#aaaaaa");
+            } else {
+                this.addMessage("No igloo found nearby.", "#ff5555");
             }
             return;
         }
@@ -1072,8 +1084,8 @@ export class ChatSystem {
             const topic = args[0].toLowerCase();
             const helpMap = {
                 'tp': "/tp <x y z> or /tp <mob_name> — Teleport to coordinates or to a nearby mob",
-                'find': "/find <stronghold | biome <name> | spawn> — Locate structures, biomes, or world spawn",
-                'locate': "/locate <stronghold | biome <name> | spawn> — Locate structures or biomes",
+                'find': "/find <stronghold | igloo | biome <name> | spawn> — Locate structures, biomes, or world spawn",
+                'locate': "/locate <stronghold | igloo | biome <name> | spawn> — Locate structures or biomes",
                 'kill': "/kill [@s | @e | mob_name] — Kill player or mobs",
                 'summon': "/summon <mob_type> [x y z] — Spawn any mob (zombie, creeper, enderman, blaze, ender_dragon, etc.)",
                 'spawn': "/spawn — Teleport to the world spawn location",
