@@ -2,7 +2,7 @@
 // audio.js — SFX Synthesizer using Web Audio API
 // ============================================
 
-import { BLOCKS, getBlockProperties } from './textures.js?v=101';
+import { BLOCKS, getBlockProperties } from './textures.js?v=102';
 
 export class AudioManager {
     constructor() {
@@ -455,5 +455,28 @@ export class AudioManager {
             this.playNoise(0.8, 0.25, position);
         };
         this.playMC('portal/travel', 0.85, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playEyePlace(position = null) {
+        const doFallback = () => {
+            this.playTone(420, 'sine', 0.12, 0.4, 80, position);
+        };
+        const v = Math.floor(Math.random() * 3) + 1;
+        this.playMC(`block/end_portal/eyeplace${v}`, 0.9, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playEnderEyeLaunch(position = null) {
+        const doFallback = () => {
+            this.playTone(340, 'sine', 0.35, 0.4, 260, position);
+        };
+        this.playMC('entity/endereye/endereye_launch1', 0.85, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playEndPortalSpawn(position = null) {
+        const doFallback = () => {
+            if (this.playExplode) this.playExplode();
+            if (this.playPortalTravel) this.playPortalTravel(position);
+        };
+        this.playMC('block/end_portal/endportal', 1.0, position).then(s => { if (!s) doFallback(); });
     }
 }

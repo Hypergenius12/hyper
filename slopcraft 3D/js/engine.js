@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=101';
-import { getBiomeParams } from './generation.js?v=101';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=102';
+import { getBiomeParams } from './generation.js?v=102';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -327,6 +327,7 @@ const _opaqueIndices = new Uint32Array(MAX_INDICES);
 const _crossIndices = new Uint32Array(MAX_INDICES);
 const _glowCrossIndices = new Uint32Array(MAX_INDICES);
 const _waterIndices = new Uint32Array(MAX_INDICES);
+const _endPortalIndices = new Uint32Array(MAX_INDICES);
 const _transparentIndices = new Uint32Array(MAX_INDICES);
 const _glowOpaqueIndices = new Uint32Array(MAX_INDICES);
 const _glowTransparentIndices = new Uint32Array(MAX_INDICES);
@@ -344,6 +345,7 @@ export class Chunk {
         this.data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
         this.mesh = null;
         this.waterMesh = null;
+        this.endPortalMesh = null;
         this.dirty = false;
     }
 
@@ -408,6 +410,7 @@ export class Chunk {
         let crossIndexCount = 0;
         let glowCrossIndexCount = 0;
         let waterIndexCount = 0;
+        let endPortalIndexCount = 0;
         let transparentIndexCount = 0;
         let glowOpaqueIndexCount = 0;
         let glowTransparentIndexCount = 0;
@@ -419,9 +422,16 @@ export class Chunk {
         const wxBase = this.cx * CHUNK_SIZE;
         const wzBase = this.cz * CHUNK_SIZE;
 
-        const pushCustomBox = (minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, uvTop, uvSide, uvBottom, cullMask = 0, aoMult = 1.0, isGlowing = false) => {
+        const pushCustomBox = (minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, uvTop, uvSide, uvBottom, cullMask = 0, aoMult = 1.0, isGlowing = false, isEndPortal = false) => {
             const addBoxQuad = (base) => {
-                if (isGlowing) {
+                if (isEndPortal) {
+                    _endPortalIndices[endPortalIndexCount++] = base;
+                    _endPortalIndices[endPortalIndexCount++] = base + 1;
+                    _endPortalIndices[endPortalIndexCount++] = base + 2;
+                    _endPortalIndices[endPortalIndexCount++] = base;
+                    _endPortalIndices[endPortalIndexCount++] = base + 2;
+                    _endPortalIndices[endPortalIndexCount++] = base + 3;
+                } else if (isGlowing) {
                     _glowTransparentIndices[glowTransparentIndexCount++] = base;
                     _glowTransparentIndices[glowTransparentIndexCount++] = base + 1;
                     _glowTransparentIndices[glowTransparentIndexCount++] = base + 2;
@@ -727,13 +737,13 @@ export class Chunk {
                             // 13/16 tall frame (0.8125)
                             pushCustomBox(x, y, z, x + 1, y + 13/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
                             if (blockType === BLOCKS.END_PORTAL_FRAME_EYE) {
-                                // Eye of Ender set into socket: 6x4x6 in center sitting in the socket from y=13/16 to 17/16
-                                const uvEye = atlas.getUV(blockType, 'top');
-                                pushCustomBox(x + 5/16, y + 13/16, z + 5/16, x + 11/16, y + 17/16, z + 11/16, x, y, z, uvEye, uvEye, uvEye, 0, 1.0, true);
+                                // Authentic Minecraft 8x3x8 eye of ender socket element from block/end_portal_frame_filled.json
+                                const uvEye = atlas.getUV(blockType, 'eye');
+                                pushCustomBox(x + 4/16, y + 13/16, z + 4/16, x + 12/16, y + 1.0, z + 12/16, x, y, z, uvEye, uvEye, uvEye, 0, 1.0, false);
                             }
                         } else if (blockType === BLOCKS.END_PORTAL) {
-                            // Authentic Minecraft horizontal flat void portal pane at y = 12/16 (0.75)
-                            pushCustomBox(x, y + 11.9/16, z, x + 1, y + 12.1/16, z + 1, x, y, z, uvTop, uvTop, uvTop, 0, 1.0, true);
+                            // Authentic Minecraft horizontal flat void portal pane at y = 12/16 (0.75) with infinite cosmic parallax shader
+                            pushCustomBox(x, y + 11.9/16, z, x + 1, y + 12.1/16, z + 1, x, y, z, uvTop, uvTop, uvTop, 0, 1.0, false, true);
                         } else if (blockType === BLOCKS.DRAGON_EGG) {
                             // Authentic Minecraft 8-element dragon egg model from block/dragon_egg.json:
                             pushCustomBox(x + 3/16, y +  0/16, z + 3/16, x + 13/16, y +  1/16, z + 13/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
@@ -1189,6 +1199,39 @@ export class Chunk {
             this.waterMesh = null;
         }
 
+        // Dedicated End Portal mesh with animated cosmic parallax shader
+        if (endPortalIndexCount > 0) {
+            const endPortalGeometry = new THREE.BufferGeometry();
+            endPortalGeometry.setIndex(new THREE.BufferAttribute(_endPortalIndices.slice(0, endPortalIndexCount), 1));
+            endPortalGeometry.setAttribute('position', geometry.attributes.position);
+            endPortalGeometry.setAttribute('normal', geometry.attributes.normal);
+            endPortalGeometry.setAttribute('uv', geometry.attributes.uv);
+            endPortalGeometry.setAttribute('color', geometry.attributes.color);
+            endPortalGeometry.boundingSphere = geometry.boundingSphere;
+            endPortalGeometry.boundingBox = geometry.boundingBox;
+
+            const portalMat = atlas.matEndPortal;
+
+            if (this.endPortalMesh) {
+                this.endPortalMesh.geometry.dispose();
+                this.endPortalMesh.geometry = endPortalGeometry;
+                if (portalMat) this.endPortalMesh.material = portalMat;
+            } else {
+                this.endPortalMesh = new THREE.Mesh(endPortalGeometry, portalMat);
+                this.endPortalMesh.position.set(this.cx * CHUNK_SIZE, 0, this.cz * CHUNK_SIZE);
+                this.endPortalMesh.userData.isChunkMesh = true;
+                this.endPortalMesh.renderOrder = 2;
+            }
+            this.endPortalMesh.visible = true;
+            if (this.mesh && this.mesh.parent && !this.endPortalMesh.parent) {
+                this.mesh.parent.add(this.endPortalMesh);
+            }
+        } else if (this.endPortalMesh) {
+            if (this.endPortalMesh.parent) this.endPortalMesh.parent.remove(this.endPortalMesh);
+            this.endPortalMesh.geometry.dispose();
+            this.endPortalMesh = null;
+        }
+
         this.dirty = false;
         return this.mesh;
     }
@@ -1206,6 +1249,11 @@ export class Chunk {
             if (this.waterMesh.parent) this.waterMesh.parent.remove(this.waterMesh);
             this.waterMesh.geometry.dispose();
             this.waterMesh = null;
+        }
+        if (this.endPortalMesh) {
+            if (this.endPortalMesh.parent) this.endPortalMesh.parent.remove(this.endPortalMesh);
+            this.endPortalMesh.geometry.dispose();
+            this.endPortalMesh = null;
         }
     }
 }
@@ -1366,6 +1414,71 @@ export class World {
         textureAtlas.matWater = matWater;
         this.sharedMaterials = [matOpaque, matCross, matGlowCross, matWater, matTransparent, matGlowOpaque, matGlowTransparent, matSlightGlowOpaque, matSlightGlowTransparent];
 
+        // Authentic Minecraft End Portal cosmic parallax shader
+        const endPortalTex = new THREE.TextureLoader().load('assets/mc/block/end_portal.png');
+        endPortalTex.wrapS = THREE.RepeatWrapping;
+        endPortalTex.wrapT = THREE.RepeatWrapping;
+        endPortalTex.magFilter = THREE.NearestFilter;
+        endPortalTex.minFilter = THREE.NearestFilter;
+
+        const matEndPortal = new THREE.ShaderMaterial({
+            uniforms: {
+                tPortal: { value: endPortalTex },
+                time: { value: 0 },
+                cameraPos: { value: new THREE.Vector3() }
+            },
+            vertexShader: `
+                varying vec3 vWorldPos;
+                void main() {
+                    vec4 wp = modelMatrix * vec4(position, 1.0);
+                    vWorldPos = wp.xyz;
+                    gl_Position = projectionMatrix * viewMatrix * wp;
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D tPortal;
+                uniform float time;
+                uniform vec3 cameraPos;
+                varying vec3 vWorldPos;
+
+                vec2 rot(vec2 p, float a) {
+                    float s = sin(a), c = cos(a);
+                    return vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+                }
+
+                void main() {
+                    vec3 dir = normalize(vWorldPos - cameraPos);
+                    vec2 p = vWorldPos.xz;
+
+                    // Multi-layer infinite cosmic parallax projection
+                    vec2 uv1 = rot(p * 0.14 + dir.xz * 1.8 + vec2(time * 0.02, time * 0.015), 0.5);
+                    vec2 uv2 = rot(p * 0.28 + dir.xz * 3.6 + vec2(-time * 0.025, time * 0.02), -0.8);
+                    vec2 uv3 = rot(p * 0.45 + dir.xz * 5.8 + vec2(time * 0.035, -time * 0.03), 1.3);
+                    vec2 uv4 = rot(p * 0.08 + dir.xz * 0.9 + vec2(-time * 0.01, -time * 0.012), 2.1);
+
+                    vec4 c1 = texture2D(tPortal, uv1);
+                    vec4 c2 = texture2D(tPortal, uv2);
+                    vec4 c3 = texture2D(tPortal, uv3);
+                    vec4 c4 = texture2D(tPortal, uv4);
+
+                    vec3 col = vec3(0.0);
+                    col += c1.rgb * vec3(0.2, 0.35, 0.7);
+                    col += c2.rgb * vec3(0.6, 0.2, 0.8);
+                    col += c3.rgb * vec3(0.2, 0.8, 0.7);
+                    col += c4.rgb * vec3(0.5, 0.4, 0.9);
+                    col *= 2.2;
+
+                    float shimmer = 0.9 + 0.1 * sin(time * 4.0 + p.x * 2.0 + p.y * 2.0);
+                    col *= shimmer;
+
+                    gl_FragColor = vec4(col, 1.0);
+                }
+            `,
+            side: THREE.DoubleSide
+        });
+
+        this.matEndPortal = matEndPortal;
+        textureAtlas.matEndPortal = matEndPortal;
 
         // Chunk queues to avoid stuttering
         this.chunksToGenerate = [];
@@ -1830,6 +1943,15 @@ export class World {
     }
 
     update(playerPos, terrainGenerator, dt) {
+        if (this.matEndPortal) {
+            this.matEndPortal.uniforms.time.value += (dt || 0.016);
+            if (this.camera) {
+                this.matEndPortal.uniforms.cameraPos.value.copy(this.camera.position);
+            } else if (playerPos) {
+                this.matEndPortal.uniforms.cameraPos.value.set(playerPos.x, playerPos.y, playerPos.z);
+            }
+        }
+
         const px = Math.floor(playerPos.x / CHUNK_SIZE);
         const pz = Math.floor(playerPos.z / CHUNK_SIZE);
 
@@ -2007,6 +2129,9 @@ export class World {
                 }
                 if (chunk.waterMesh && !chunk.waterMesh.parent) {
                     this.scene.add(chunk.waterMesh);
+                }
+                if (chunk.endPortalMesh && !chunk.endPortalMesh.parent) {
+                    this.scene.add(chunk.endPortalMesh);
                 }
                 buildsThisFrame++;
             }

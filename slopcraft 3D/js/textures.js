@@ -2,7 +2,7 @@
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=101';
+import { seededRandom } from './noise.js?v=102';
 
 // Block type IDs
 export const BLOCKS = {
@@ -3434,7 +3434,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.BLUE_ICE]: 'blue_ice',
     [BLOCKS.LAVA]: 'lava_flow',
     [BLOCKS.PORTAL_FRAME]: { top: 'end_portal_frame_top', side: 'end_portal_frame_side', bottom: 'end_stone' },
-    [BLOCKS.END_PORTAL_FRAME_EYE]: { top: 'end_portal_frame_eye', side: 'end_portal_frame_side', bottom: 'end_stone' },
+    [BLOCKS.END_PORTAL_FRAME_EYE]: { top: 'end_portal_frame_top', eye: 'end_portal_frame_eye', side: 'end_portal_frame_side', bottom: 'end_stone' },
     [BLOCKS.END_PORTAL]: 'end_portal',
     [BLOCKS.END_STONE]: 'end_stone',
     [BLOCKS.DRAGON_EGG]: 'dragon_egg',
@@ -4432,6 +4432,7 @@ export async function createTextureAtlas(useMinecraft = true) {
         if (face === 'top' || face === 'py') faceKey = 'top';
         else if (face === 'bottom' || face === 'ny') faceKey = 'bottom';
         else if (face === 'front' || face === 'pz') faceKey = 'front';
+        else if (face === 'eye') faceKey = 'eye';
         const entry = map[faceKey] || map.side || map.top;
         
         return {

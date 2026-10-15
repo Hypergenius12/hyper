@@ -2,16 +2,16 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=101';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=101';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=101';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=101';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=101';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=101';
-import { AudioManager } from './audio.js?v=101';
-import { BiomeMap } from './map.js?v=101';
-import { DevMode } from './dev.js?v=101';
-import { ChatSystem } from './chat.js?v=101';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=102';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=102';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=102';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=102';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=102';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=102';
+import { AudioManager } from './audio.js?v=102';
+import { BiomeMap } from './map.js?v=102';
+import { DevMode } from './dev.js?v=102';
+import { ChatSystem } from './chat.js?v=102';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -2277,7 +2277,8 @@ class Game {
                     // Place eye into frame
                     this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, window.BLOCKS.END_PORTAL_FRAME_EYE || 326);
                     this.particles.emit(new THREE.Vector3(hit.blockPos.x + 0.5, hit.blockPos.y + 0.8, hit.blockPos.z + 0.5), 'spell', 15, 0x11ffaa);
-                    if (this.audio && this.audio.playClick) this.audio.playClick();
+                    if (this.audio && this.audio.playEyePlace) this.audio.playEyePlace(hit.blockPos);
+                    else if (this.audio && this.audio.playClick) this.audio.playClick();
                     
                     if (!this.input.creativeMode) {
                         slot.count--;
@@ -2305,7 +2306,8 @@ class Game {
                             this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                         }
                     }
-                    if (this.audio && this.audio.playBow) this.audio.playBow();
+                    if (this.audio && this.audio.playEnderEyeLaunch) this.audio.playEnderEyeLaunch(this.player.position);
+                    else if (this.audio && this.audio.playBow) this.audio.playBow();
                     
                     const sh = getClosestStrongholdPosition(this.player.position.x, this.player.position.z, this.currentSeed);
                     const dist = Math.round(Math.hypot(sh.x - this.player.position.x, sh.z - this.player.position.z));
@@ -4402,8 +4404,11 @@ class Game {
                             this.particles.emit(new THREE.Vector3(px + 0.5, by + 0.5, pz + 0.5), 'spell', 20, 0x050110);
                         }
                     }
-                    if (this.audio && this.audio.playExplode) this.audio.playExplode();
-                    if (this.audio && this.audio.playPortalTravel) this.audio.playPortalTravel();
+                    if (this.audio && this.audio.playEndPortalSpawn) this.audio.playEndPortalSpawn(new THREE.Vector3(cx, by, cz));
+                    else {
+                        if (this.audio && this.audio.playExplode) this.audio.playExplode();
+                        if (this.audio && this.audio.playPortalTravel) this.audio.playPortalTravel();
+                    }
                     this.showToast("The End Portal opens...", 3500);
                     return true;
                 }
@@ -4451,7 +4456,7 @@ class Game {
         if (scr) scr.classList.add('hidden');
         
         if (this.currentDimension === 'end') {
-            this.warpToNewPlanet('overworld');
+            this.warpToNewPlanet('aether');
         }
     }
 

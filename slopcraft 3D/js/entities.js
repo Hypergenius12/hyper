@@ -2,9 +2,9 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=101';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=101';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=101';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=102';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=102';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=102';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -3422,7 +3422,7 @@ export const MOB_TYPES = {
         }
     },
     ENDER_DRAGON: {
-        name: 'Ender Dragon', health: 200, damage: 15, speed: 7.0, hostile: true, flying: true, isBoss: true,
+        name: 'Ender Dragon', health: 2000, damage: 15, speed: 7.0, hostile: true, flying: true, isBoss: true,
         size: 4.5, xpDrop: 150, lootChance: 1.0,
         buildMesh: () => {
             const group = new THREE.Group();

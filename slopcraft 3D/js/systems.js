@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js?v=101';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=101';
+import { BLOCKS, generateItemTexture } from './textures.js?v=102';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=102';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -243,11 +243,11 @@ export class LightingSystem {
             };
         } else if (currentDimension === 'end') {
             state = {
-                amb: new THREE.Color(0x2d1c3a),
-                ambIntensity: 0.8,
-                bg: new THREE.Color(0x0c0414),
-                top: new THREE.Color(0x190828),
-                sun: 0,
+                amb: new THREE.Color(0xd0beea), // Pale lavender cosmic glow
+                ambIntensity: 1.35,             // Beautifully illuminated End islands
+                bg: new THREE.Color(0x150b22),  // Deep void purple
+                top: new THREE.Color(0x321a4f), // Rich dark violet sky
+                sun: 0.35,                      // Soft directional light for block depth
                 moon: 0
             };
         } else {
@@ -281,8 +281,8 @@ export class LightingSystem {
                     this.scene.fog.near = 20;
                     this.scene.fog.far = renderBlocks * 0.85;
                 } else if (currentDimension === 'end') {
-                    this.scene.fog.near = 30;
-                    this.scene.fog.far = renderBlocks * 0.95;
+                    this.scene.fog.near = 50;
+                    this.scene.fog.far = renderBlocks * 1.5;
                 } else {
                     this.scene.fog.near = renderBlocks * 0.65;
                     this.scene.fog.far = renderBlocks * 0.98;
@@ -295,7 +295,7 @@ export class LightingSystem {
                 } else if (currentDimension === 'nether') {
                     this.scene.fog.density = 0.015;
                 } else if (currentDimension === 'end') {
-                    this.scene.fog.density = 0.008;
+                    this.scene.fog.density = 0.0025;
                 } else {
                     this.scene.fog.density = this.scene.fog.baseDensity || 0.003;
                 }
