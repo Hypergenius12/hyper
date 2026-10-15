@@ -2,15 +2,16 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=100';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=100';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=100';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=100';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=100';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=100';
-import { AudioManager } from './audio.js?v=100';
-import { BiomeMap } from './map.js?v=100';
-import { DevMode } from './dev.js?v=100';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=101';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=101';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=101';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=101';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=101';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=101';
+import { AudioManager } from './audio.js?v=101';
+import { BiomeMap } from './map.js?v=101';
+import { DevMode } from './dev.js?v=101';
+import { ChatSystem } from './chat.js?v=101';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -590,6 +591,10 @@ class Game {
         this.devMode = new DevMode(this);
         this.audio = new AudioManager();
         this.audio.camera = this.engine.camera;
+        this.chat = new ChatSystem(this);
+        this.chat.init();
+        window.game = this;
+        window.chatSystem = this.chat;
 
         // Entities
         this.player = new Player();
@@ -805,19 +810,23 @@ class Game {
             const ps = document.getElementById('pause-screen');
             const devModeOpen = this.devMode && this.devMode.isOpen;
             const mapOpen = this.biomeMap && this.biomeMap.isOpen;
-            if (!this.input.isLocked && !this.ui.isOpen && !devModeOpen && !mapOpen && document.getElementById('start-screen').classList.contains('hidden')) {
-                // We lost pointer lock but the inventory/map/dev is not open, show pause
+            const chatOpen = this.chat && this.chat.isOpen;
+            if (!this.input.isLocked && !this.ui.isOpen && !devModeOpen && !mapOpen && !chatOpen && document.getElementById('start-screen').classList.contains('hidden')) {
+                // We lost pointer lock but the inventory/map/dev/chat is not open, show pause
                 if (ps) ps.classList.remove('hidden');
                 this.isPaused = true;
             } else {
                 if (ps) ps.classList.add('hidden');
-                this.isPaused = false;
+                if (this.input.isLocked) {
+                    this.isPaused = false;
+                }
             }
         });
 
         document.addEventListener('pointerlockerror', () => {
             const ps = document.getElementById('pause-screen');
-            if (ps && document.getElementById('start-screen').classList.contains('hidden')) {
+            const chatOpen = this.chat && this.chat.isOpen;
+            if (ps && !chatOpen && document.getElementById('start-screen').classList.contains('hidden')) {
                 ps.classList.remove('hidden');
                 this.isPaused = true;
             }
@@ -2956,6 +2965,27 @@ class Game {
 
         this.lighting.update(dt, this.engine.camera.position, isUnderwater, this.currentDimension);
 
+        // Atmospheric Weather Effects (Rain & Thunderstorm)
+        if (this.lighting && (this.lighting.weather === 'rain' || this.lighting.weather === 'thunder') && this.currentDimension === 'overworld') {
+            for (let i = 0; i < 6; i++) {
+                const rx = this.player.position.x + (Math.random() - 0.5) * 26;
+                const rz = this.player.position.z + (Math.random() - 0.5) * 26;
+                const ry = this.player.position.y + 7 + Math.random() * 8;
+                this.particles.emit(new THREE.Vector3(rx, ry, rz), 'rain', 1, 0x5a9ee6);
+            }
+            if (this.lighting.weather === 'thunder' && Math.random() < 0.003) {
+                // Occasional thunder flash
+                const prevColor = this.engine.scene.background ? this.engine.scene.background.clone() : new THREE.Color(0x000000);
+                this.engine.scene.background = new THREE.Color(0xeeeeff);
+                if (this.lighting.ambientLight) this.lighting.ambientLight.intensity = 2.5;
+                if (this.audio && this.audio.playExplode) this.audio.playExplode();
+                setTimeout(() => {
+                    this.engine.scene.background = prevColor;
+                    if (this.lighting.ambientLight) this.lighting.ambientLight.intensity = 0.92;
+                }, 70);
+            }
+        }
+
         if (this.engine.scene.fog && this.engine.scene.fog.isFogExp2) {
             // Keep track of the original planet fog density for Systems to use
             if (this.engine.scene.fog.baseDensity === undefined) {
@@ -4423,6 +4453,12 @@ class Game {
         if (this.currentDimension === 'end') {
             this.warpToNewPlanet('overworld');
         }
+    }
+
+    loadChunksAroundPlayer() {
+        if (!this.world || !this.player) return;
+        const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'end' ? generateEndChunk : generateChunkTerrain));
+        this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), 0);
     }
 
 }

@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js?v=100';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=100';
+import { BLOCKS, generateItemTexture } from './textures.js?v=101';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=101';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -11,6 +11,7 @@ export class LightingSystem {
         this.world = world;
         this.timeOfDay = 0.3; // start in morning
         this.dayLength = 600; // seconds
+        this.weather = 'clear'; // 'clear' | 'rain' | 'thunder'
 
         this.ambientLight = new THREE.AmbientLight(0xffffff, 0.92);
         this.scene.add(this.ambientLight);
@@ -251,6 +252,12 @@ export class LightingSystem {
             };
         } else {
             state = this._getLightState(this.timeOfDay);
+            if (this.weather === 'rain' || this.weather === 'thunder') {
+                state.ambIntensity *= 0.65;
+                state.sun *= 0.35;
+                state.bg.multiplyScalar(0.7);
+                state.top.multiplyScalar(0.7);
+            }
         }
 
         this.ambientLight.color.copy(state.amb);
@@ -471,6 +478,13 @@ export class ParticleSystem {
                     (Math.random()-0.5)*1.4
                 );
                 maxAge = 0.35 + Math.random() * 0.35;
+            } else if (type === 'rain') {
+                vel = new THREE.Vector3(
+                    (Math.random()-0.5)*0.8,
+                    -(16 + Math.random()*8),
+                    (Math.random()-0.5)*0.8
+                );
+                maxAge = 0.8 + Math.random() * 0.4;
             } else {
                 vel = new THREE.Vector3(
                     (Math.random()-0.5)*5,

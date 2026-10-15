@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=100';
-import { getBiomeParams } from './generation.js?v=100';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=101';
+import { getBiomeParams } from './generation.js?v=101';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -133,6 +133,19 @@ export class InputManager {
                 toast.classList.remove('hidden');
                 clearTimeout(this._toastTimer);
                 this._toastTimer = setTimeout(() => toast.classList.add('hidden'), 2000);
+            }
+        }
+
+        // Chat triggers: 'T' opens chat, '/' opens with command prefix
+        if (this.onChatOpen && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            if (e.code === 'KeyT' || (!e.repeat && (e.key === 't' || e.key === 'T'))) {
+                e.preventDefault();
+                this.onChatOpen('');
+                return;
+            } else if (e.code === 'Slash' || (!e.repeat && e.key === '/')) {
+                e.preventDefault();
+                this.onChatOpen('/');
+                return;
             }
         }
 
