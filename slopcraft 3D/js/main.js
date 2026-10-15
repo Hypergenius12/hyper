@@ -2,12 +2,12 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World } from './engine.js?v=100';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=100';
 import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=100';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, getBiomeParams } from './generation.js?v=100';
-import { Player, EntityManager, Mob, MOB_TYPES, Item, BoatEntity } from './entities.js?v=100';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition } from './generation.js?v=100';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=100';
 import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=100';
-import { ProjectileManager, SpellProjectile, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=100';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=100';
 import { AudioManager } from './audio.js?v=100';
 import { BiomeMap } from './map.js?v=100';
 import { DevMode } from './dev.js?v=100';
@@ -50,8 +50,48 @@ const FOOD_HEAL_MAP = {
     'red_mushroom': 5
 };
 
+const FOOD_PARTICLE_COLORS = {
+    'apple': [0xbf1919, 0xd42929, 0x801010, 0x486414],
+    'golden_apple': [0xffd700, 0xffea00, 0xffaa00, 0xffee55],
+    'bread': [0xb7803a, 0x8f591f, 0xd8a556, 0x6e3d11],
+    'raw_beef': [0x9e2b2b, 0x6e1b1b, 0xba3c3c, 0xc95b5b],
+    'cooked_beef': [0x522718, 0x6e3621, 0x3d1c10, 0x82442b],
+    'raw_porkchop': [0xee8e8e, 0xcc6c6c, 0xf7afaf, 0xd65f5f],
+    'cooked_porkchop': [0xa06745, 0xb87b55, 0x7a4a2e, 0xcf956d],
+    'raw_chicken': [0xdb9688, 0xc77868, 0xebaba0, 0xaf5b4b],
+    'cooked_chicken': [0xb46b33, 0x8a4b1e, 0xcb8146, 0x633110],
+    'raw_mutton': [0x963737, 0x6a2121, 0xb84b4b, 0xcc6868],
+    'cooked_mutton': [0x5a2d1f, 0x411f15, 0x733c2b, 0x33160e],
+    'raw_fish': [0x486b7f, 0x375363, 0x6f91a3, 0x8bb1c5],
+    'cooked_fish': [0xbc9d75, 0x9e7f59, 0xd2b58e, 0x785d3b],
+    'raw_cod': [0x486b7f, 0x375363, 0x6f91a3, 0x8bb1c5],
+    'cooked_cod': [0xbc9d75, 0x9e7f59, 0xd2b58e, 0x785d3b],
+    'raw_salmon': [0xbc4848, 0x993535, 0xd46868, 0x486b7f],
+    'cooked_salmon': [0xa24d35, 0xbf6349, 0x7e3521, 0xd68068],
+    'cookie': [0xc48c46, 0x9b6b2c, 0x432810, 0x2d1b0b],
+    'carrot': [0xe66c12, 0xff8820, 0x388219, 0xc7560a],
+    'golden_carrot': [0xffd700, 0xffa500, 0xffea00, 0x489619],
+    'baked_potato': [0xc99c4c, 0xad7e30, 0xdec078, 0x7f571b],
+    'potato': [0xb89552, 0x9a7738, 0x7e5f29, 0xcca65f],
+    'poisonous_potato': [0x5e8c31, 0x8aa844, 0x9a7738, 0x40611d],
+    'melon_slice': [0xbc2626, 0x931a1a, 0x3a7e28, 0x1d4d12],
+    'sweet_berries': [0xa81c20, 0xd42a30, 0x466620, 0x791216],
+    'glow_shroom': [0x2ad1b0, 0x1a8f77, 0x5fffe0, 0x136353],
+    'brown_mushroom': [0x886246, 0x694830, 0xa57d5c, 0x513521],
+    'red_mushroom': [0xd82020, 0xffffff, 0xa21414, 0xeeeef2],
+    'beetroot': [0x831a29, 0xa22336, 0x530e17, 0x3e7428],
+    'pumpkin_pie': [0xc96924, 0xde873e, 0xb87b40, 0x884310],
+    'honey_bottle': [0xf39c12, 0xe67e22, 0xf1c40f, 0xffeaa7]
+};
+
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
+    if (dimension === 'end') {
+        return { x: 100.5, y: 50.0, z: 0.5 };
+    }
+    if (params && params.isSuperflat && dimension === 'overworld') {
+        return { x: 0.5, y: 5.05, z: 0.5 };
+    }
     const searchRadiusChunks = 10;
     for (let cr = 0; cr <= searchRadiusChunks; cr++) {
         for (let cx = -cr; cx <= cr; cx++) {
@@ -271,7 +311,6 @@ class Game {
         this.primedTNT = [];
         this.thrownPearls = [];
         this.beds = new Map();
-        this.boats = new Set();
         this.isPaused = false;
         
         this._boundLoop = this.loop.bind(this);
@@ -412,19 +451,20 @@ class Game {
         // Bed management
         this.beds = new Map();
         this.world.onBedPlaced = (x, y, z, bt) => {
-            if (!this.beds.has(`${x},${y},${z}`)) {
-                let hx = x, hz = z - 1, dir = 0;
-                if (this.world.getBlock(x, y, z - 1) === window.BLOCKS.BED_HEAD) { hx = x; hz = z - 1; dir = 0; }
-                else if (this.world.getBlock(x + 1, y, z) === window.BLOCKS.BED_HEAD) { hx = x + 1; hz = z; dir = 1; }
-                else if (this.world.getBlock(x, y, z + 1) === window.BLOCKS.BED_HEAD) { hx = x; hz = z + 1; dir = 2; }
-                else if (this.world.getBlock(x - 1, y, z) === window.BLOCKS.BED_HEAD) { hx = x - 1; hz = z; dir = 3; }
+            const props = getBlockProperties(bt);
+            if (!props || !props.isBed || props.isBedHead) return;
+            if (this.beds.has(`${x},${y},${z}`)) return;
+
+            let hx = null, hz = null, dir = 0;
+            if (this.world.getBlock(x, y, z - 1) === window.BLOCKS.BED_HEAD) { hx = x; hz = z - 1; dir = 0; }
+            else if (this.world.getBlock(x + 1, y, z) === window.BLOCKS.BED_HEAD) { hx = x + 1; hz = z; dir = 1; }
+            else if (this.world.getBlock(x, y, z + 1) === window.BLOCKS.BED_HEAD) { hx = x; hz = z + 1; dir = 2; }
+            else if (this.world.getBlock(x - 1, y, z) === window.BLOCKS.BED_HEAD) { hx = x - 1; hz = z; dir = 3; }
+            if (hx !== null && hz !== null) {
                 this._addBed(x, y, z, hx, y, hz, bt, dir);
             }
         };
         this.world.onBedRemoved = (x, y, z) => this._removeBed(x, y, z);
-
-        // Boat management
-        this.boats = new Set();
 
         this.world.onChestRemoved = (x, y, z) => {
             const key = `${x},${y},${z}`;
@@ -543,7 +583,7 @@ class Game {
         window.BLOCKS_REF = BLOCKS;
 
         // Systems
-        this.lighting = new LightingSystem(this.engine.scene);
+        this.lighting = new LightingSystem(this.engine.scene, this.world);
         this.torchSystem = new TorchLightSystem(this.engine.scene);
         this.particles = new ParticleSystem(this.engine.scene);
         this.biomeMap = new BiomeMap(this);
@@ -566,8 +606,59 @@ class Game {
         this.cloudSystem = new CloudSystem(this.engine.scene);
         this.meteorSystem = new MeteorShowerSystem(this.engine.scene, this.particles, this.audio, this.world);
         this.burningBlocks = new Map();
+        this.thrownEnderPearls = [];
+        this.flyingEyesOfEnder = [];
+        this.dragonDefeated = false;
+        this.showingCredits = false;
+
+        this.entityManager.shootMobFireball = (fromPos, targetPos) => {
+            const dir = targetPos.clone().sub(fromPos).normalize();
+            const stats = {
+                speed: 16,
+                damage: 6,
+                lifetime: 5,
+                count: 1,
+                pierce: 0,
+                radius: 1.5,
+                element: 'FIRE'
+            };
+            const proj = new SpellProjectile(fromPos, dir, stats, 0xff6600);
+            proj.isMobProjectile = true;
+            this.projectileManager.add(proj);
+            if (this.audio && this.audio.playCast) this.audio.playCast();
+        };
+
+        this.entityManager.shootDragonFireball = (fromPos, targetPos) => {
+            const dir = targetPos.clone().sub(fromPos).normalize();
+            const stats = {
+                speed: 18,
+                damage: 12,
+                lifetime: 6,
+                count: 1,
+                pierce: 0,
+                radius: 2.5,
+                element: 'VOID'
+            };
+            const proj = new SpellProjectile(fromPos, dir, stats, 0xbf00ff);
+            proj.isMobProjectile = true;
+            this.projectileManager.add(proj);
+            if (this.audio && this.audio.playCast) this.audio.playCast();
+        };
+
+        this.entityManager.createExplosion = (pos, radius = 5) => {
+            this.explode(pos.x, pos.y, pos.z, radius);
+        };
+
+        document.getElementById('btn-skip-credits')?.addEventListener('click', () => {
+            this.closeEndCredits();
+        });
 
         document.addEventListener('keydown', (e) => {
+            if (e.code === 'Escape' && this.showingCredits) {
+                e.preventDefault();
+                this.closeEndCredits();
+                return;
+            }
             if (e.code === 'F2') {
                 e.preventDefault();
                 this.engine.renderer.domElement.toBlob((blob) => {
@@ -581,9 +672,9 @@ class Game {
             }
         });
 
-        // Setup Scene
-        const renderDistBlocks = (this.engine.renderDistance || 8) * 16;
-        this.engine.scene.fog = new THREE.FogExp2(this.planetParams.skyColor || 0x87ceeb, 1.0 / (renderDistBlocks * 0.75));
+        // Setup Scene: Use authentic Minecraft linear fog for smooth distant horizon blending without close-range haze
+        const renderDistBlocks = (this.world?.renderDistance || this.engine.renderDistance || 8) * 16;
+        this.engine.scene.fog = new THREE.Fog(this.planetParams.skyColor || 0x87ceeb, renderDistBlocks * 0.65, renderDistBlocks * 0.98);
 
         // Block outline
         const outlineGeo = new THREE.BoxGeometry(1.02, 1.02, 1.02);
@@ -1202,7 +1293,7 @@ class Game {
     }
 
     interactBed(x, y, z, blockType) {
-        if (this.currentDimension === 'nether' || this.currentDimension === 'aether') {
+        if (this.currentDimension === 'nether' || this.currentDimension === 'aether' || this.currentDimension === 'end') {
             this._removeBed(x, y, z);
             this.world.setBlock(x, y, z, window.BLOCKS.AIR);
             this.explode(x + 0.5, y + 0.5, z + 0.5, 5);
@@ -1251,26 +1342,6 @@ class Game {
         }, 1000);
     }
 
-    mountBoat(boat) {
-        if (this.player.inBoat) return;
-        this.player.inBoat = boat;
-        boat.passenger = this.player;
-        this.showToast("Press Shift to exit boat", 2500);
-        if (this.audio && this.audio.playPop) this.audio.playPop();
-    }
-
-    dismountBoat() {
-        if (!this.player.inBoat) return;
-        const boat = this.player.inBoat;
-        boat.passenger = null;
-        this.player.inBoat = null;
-        const side = new THREE.Vector3(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw)).multiplyScalar(1.2);
-        this.player.position.add(side);
-        this.player.position.y += 0.5;
-        this.player.velocity.set(0, 0, 0);
-        this.player.fallDistance = 0;
-    }
-
     showToast(msg, duration = 2500) {
         const el = document.getElementById('creative-toast');
         if (!el) return;
@@ -1309,6 +1380,9 @@ class Game {
             }
             if (type === 'block' && subtype === window.BLOCKS.COBBLESTONE) {
                 return { type: 'block', subtype: window.BLOCKS.STONE, name: 'Stone', stackable: true, maxStack: 64, id: `block_${window.BLOCKS.STONE}` };
+            }
+            if (type === 'block' && subtype === window.BLOCKS.CACTUS) {
+                return { type: 'material', subtype: 'green_dye', name: 'Green Dye', stackable: true, maxStack: 64, id: 'mat_green_dye' };
             }
             if (type === 'food') {
                 if (subtype === 'raw_beef') return { type: 'food', subtype: 'cooked_beef', name: 'Cooked Beef', stackable: true, maxStack: 64, data: { heal: 30 }, id: `food_cooked_beef` };
@@ -1483,29 +1557,9 @@ class Game {
         const eyePos = this.player.getEyePosition();
         
         const invSlot = this.player.inventory.slots[this.player.selectedSlot];
-        const isHoldingLiquidInteractable = invSlot && invSlot.item && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket' || invSlot.item.subtype === 'oak_boat' || invSlot.item.subtype === 'boat');
+        const isHoldingLiquidInteractable = invSlot && invSlot.item && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket');
         const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingLiquidInteractable);
         const entityHit = this.entityManager.raycast(eyePos, lookDir, 4); // Melee range
-
-        let boatHit = null;
-        if (this.boats && this.boats.size > 0) {
-            for (const b of this.boats) {
-                if (b.alive && b !== this.player.inBoat) {
-                    const isHit = b.raycast ? b.raycast(eyePos, lookDir, 4.5) : (b.checkRayHit && b.checkRayHit(eyePos, lookDir, 4.5));
-                    if (isHit) {
-                        const d = eyePos.distanceTo(b.position);
-                        if (!boatHit || d < boatHit.dist) {
-                            boatHit = { boat: b, dist: d };
-                        }
-                    }
-                }
-            }
-        }
-
-        // Shift to dismount boat
-        if (this.player.inBoat && (this.input.keys['ShiftLeft'] || this.input.keys['ShiftRight'] || this.input.keys['shift'])) {
-            this.dismountBoat();
-        }
 
         // View model bobbing and item display
         const speed = Math.sqrt(this.player.velocity.x ** 2 + this.player.velocity.z ** 2);
@@ -1558,25 +1612,50 @@ class Game {
                     geom.setIndex(indices);
                     geom.computeVertexNormals();
                     this.heldItemMesh = new THREE.Mesh(geom, mat);
+                } else if (blockProps.isBed || blockProps.isBedHead || blockProps.isLantern || blockProps.isFence || blockProps.isFenceGate || blockProps.isWall) {
+                    // Bed/Lantern/Fence/Gate/Wall held in hand: Extruded 2D item sprite like authentic Minecraft
+                    const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype, (c) => {
+                        if (this.heldItemMesh && this.heldItemMesh.userData && this.heldItemMesh.userData.item === slot.item) {
+                            const newExtruded = createExtrudedItemMesh(c, 0.45, 0.035);
+                            newExtruded.position.copy(this.heldItemMesh.position);
+                            newExtruded.rotation.copy(this.heldItemMesh.rotation);
+                            newExtruded.userData.item = slot.item;
+                            this.viewModel.remove(this.heldItemMesh);
+                            if (this.heldItemMesh.geometry) this.heldItemMesh.geometry.dispose();
+                            if (this.heldItemMesh.material) this.heldItemMesh.material.dispose();
+                            this.heldItemMesh = newExtruded;
+                            this.viewModel.add(this.heldItemMesh);
+                        }
+                    });
+                    this.heldItemMesh = createExtrudedItemMesh(iconCanvas, 0.45, 0.035);
+                    this.heldItemMesh.position.set(0.35, -0.32, -0.58);
+                    this.heldItemMesh.rotation.set(-0.2, 0.35, -0.75);
                 } else {
-                    const geom = new THREE.BoxGeometry(0.25, 0.25, 0.25).toNonIndexed();
+                    const isCactus = slot.item.subtype === BLOCKS.CACTUS;
+                    const geom = new THREE.BoxGeometry(isCactus ? 0.21875 : 0.25, 0.25, isCactus ? 0.21875 : 0.25).toNonIndexed();
                     const uvs = geom.attributes.uv.array;
                     const faceNames = ['side', 'side', 'top', 'bottom', 'side', 'side'];
                     for (let i = 0; i < 6; i++) {
                         const uvInfo = this.atlas.getUV(slot.item.subtype, faceNames[i]);
                         for (let v = 0; v < 6; v++) {
-                            const baseU = uvs[i * 12 + v * 2];
-                            const baseV = uvs[i * 12 + v * 2 + 1];
+                            let baseU = uvs[i * 12 + v * 2];
+                            let baseV = uvs[i * 12 + v * 2 + 1];
+                            if (isCactus) {
+                                baseU = 0.0625 + baseU * 0.875;
+                                if (i === 2 || i === 3) baseV = 0.0625 + baseV * 0.875;
+                            }
                             uvs[i * 12 + v * 2] = uvInfo.u + baseU * uvInfo.uSize;
                             uvs[i * 12 + v * 2 + 1] = uvInfo.v + baseV * uvInfo.vSize;
                         }
                     }
                     this.heldItemMesh = new THREE.Mesh(geom, mat);
                 }
-                this.heldItemMesh.position.set(0.4, -0.2, -0.8);
-                if (!blockProps.isCross && slot.item.subtype !== BLOCKS.TORCH) {
-                    this.heldItemMesh.rotation.y = -Math.PI / 4;
-                    this.heldItemMesh.rotation.x = Math.PI / 8;
+                if (!blockProps.isBed && !blockProps.isBedHead && !blockProps.isLantern && !blockProps.isFence && !blockProps.isFenceGate && !blockProps.isWall) {
+                    this.heldItemMesh.position.set(0.4, -0.2, -0.8);
+                    if (!blockProps.isCross && slot.item.subtype !== BLOCKS.TORCH) {
+                        this.heldItemMesh.rotation.y = -Math.PI / 4;
+                        this.heldItemMesh.rotation.x = Math.PI / 8;
+                    }
                 }
 
             } else if (slot.item.type === 'wand') {
@@ -1702,14 +1781,43 @@ class Game {
         // Left click (Attack / Mine / Magic)
         if (this.input.mouse.leftClick) {
 
-            if (slot && slot.item.type === 'wand') {
-                const castInfo = slot.item.data.wand.castCombined(this.player);
+            if (slot && (slot.item.type === 'wand' || slot.item.type === 'spell')) {
+                let castInfo = null;
+                if (slot.item.type === 'wand') {
+                    if (!slot.item.data) slot.item.data = {};
+                    if (!slot.item.data.wand) {
+                        let innate = 'BOLT';
+                        const sub = (slot.item.subtype || '').toLowerCase();
+                        if (sub.includes('fire')) innate = 'BURST';
+                        else if (sub.includes('ice')) innate = 'BOLT';
+                        else if (sub.includes('nature')) innate = 'HEAL';
+                        else if (sub.includes('lightning') || sub.includes('thunder') || sub.includes('master')) innate = 'THUNDER';
+                        else if (sub.includes('void')) innate = 'VOID';
+                        else if (sub.includes('meteor')) innate = 'METEOR';
+                        else if (sub.includes('earth')) innate = 'EARTH';
+                        else if (sub.includes('wind')) innate = 'WIND';
+                        const slots = sub.includes('master') ? 6 : (sub.includes('meteor') ? 5 : 4);
+                        slot.item.data.wand = new Wand(slot.item.name || 'Wand', slots, innate);
+                    }
+                    castInfo = slot.item.data.wand.castCombined(this.player);
+                } else if (slot.item.type === 'spell') {
+                    let spellObj = (slot.item.data && slot.item.data.spell) ? slot.item.data.spell : null;
+                    if (!spellObj) {
+                        const spellKey = (slot.item.subtype || 'BOLT').toUpperCase();
+                        spellObj = new Spell(SPELL_TYPES[spellKey] ? spellKey : 'BOLT');
+                    }
+                    const stats = spellObj.getCalculatedStats();
+                    if (this.player.isCreative || this.player.useMana(stats.manaCost)) {
+                        castInfo = { spell: spellObj, stats: stats };
+                    }
+                }
+
                 if (castInfo) {
                     if (castInfo.stats.element === 'HEAL') {
                         this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.abs(castInfo.stats.damage));
                     }
-                    this.particles.emit(eyePos, 'magic', 10, castInfo.spell.color);
-                    this.audio.playCast();
+                    this.particles.emit(eyePos, 'magic', 12, castInfo.spell.color || 0x88ccff);
+                    if (this.audio && this.audio.playCast) this.audio.playCast();
                     for (let i = 0; i < castInfo.stats.count; i++) {
                         let projDir = lookDir.clone();
                         if (castInfo.stats.count > 1) {
@@ -1719,23 +1827,43 @@ class Game {
                             projDir.normalize();
                         }
                         const proj = new SpellProjectile(eyePos, projDir, castInfo.stats, castInfo.spell.color);
+                        proj.spell = castInfo.spell;
                         this.projectileManager.add(proj);
                     }
                 }
                 this.input.mouse.leftClick = false; // single cast
-            } else if (hit.hit && (hit.blockType === BLOCKS.FIRE || hit.blockType === BLOCKS.SOUL_FIRE)) {
-                // Punching fire extinguishes it instantly like Minecraft
-                this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
-                this.extinguishBurningBlock(hit.blockPos.x, hit.blockPos.y - 1, hit.blockPos.z);
-                if (this.audio && this.audio.playFizz) this.audio.playFizz();
-                this.particles.emit({x: hit.blockPos.x + 0.5, y: hit.blockPos.y + 0.5, z: hit.blockPos.z + 0.5}, 'smoke', 8, 0x888888);
-                this.breakTimer = 0;
-                this.input.mouse.leftClick = false;
-            } else if (boatHit && (!hit.hit || boatHit.dist < hit.distance) && (!entityHit.hit || boatHit.dist < entityHit.distance)) {
-                boatHit.boat.takeDamage(10, this.particles, this.entityManager);
-                if (this.audio) this.audio.playHit();
-                this.input.mouse.leftClick = false;
-                this.breakTimer = 0.4;
+            } else if (hit.hit && (() => {
+                const bx = hit.blockPos.x, by = hit.blockPos.y, bz = hit.blockPos.z;
+                const isF = (b) => b === BLOCKS.FIRE || b === BLOCKS.SOUL_FIRE || (window.BLOCKS && (b === window.BLOCKS.FIRE || b === window.BLOCKS.SOUL_FIRE));
+                let extinguished = false;
+                if (isF(hit.blockType)) {
+                    this.world.setBlock(bx, by, bz, BLOCKS.AIR);
+                    this.extinguishBurningBlock(bx, by, bz);
+                    this.extinguishBurningBlock(bx, by - 1, bz);
+                    extinguished = true;
+                } else if (hit.face && isF(this.world.getBlock(bx + hit.face.x, by + hit.face.y, bz + hit.face.z))) {
+                    this.world.setBlock(bx + hit.face.x, by + hit.face.y, bz + hit.face.z, BLOCKS.AIR);
+                    this.extinguishBurningBlock(bx, by, bz);
+                    extinguished = true;
+                } else if (isF(this.world.getBlock(bx, by + 1, bz))) {
+                    this.world.setBlock(bx, by + 1, bz, BLOCKS.AIR);
+                    this.extinguishBurningBlock(bx, by, bz);
+                    extinguished = true;
+                } else if (this.burningBlocks && this.burningBlocks.has(`${bx},${by},${bz}`)) {
+                    this.extinguishBurningBlock(bx, by, bz);
+                    extinguished = true;
+                }
+                if (extinguished) {
+                    if (this.audio && this.audio.playFizz) this.audio.playFizz();
+                    this.particles.emit({ x: bx + 0.5, y: by + 0.5, z: bz + 0.5 }, 'smoke', 10, 0x888888);
+                    this.breakTimer = 0;
+                    this.miningOverlay.visible = false;
+                    this.input.mouse.leftClick = false;
+                    return true;
+                }
+                return false;
+            })()) {
+                // Handled in condition above
             } else if (entityHit.hit && this.breakTimer === 0) { // Attack entity
                 let damage = 5; // Unarmed base damage
                 let appliedDir = lookDir.clone();
@@ -1810,7 +1938,7 @@ class Game {
                     // The setBlock call will trigger onBlockDestroyed which spawns the item
                     this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, replaceType);
                     
-                    if (blockType === BLOCKS.TORCH || blockType === BLOCKS.GLOWSTONE) this.torchSystem.removeTorch(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    if (blockType === BLOCKS.TORCH || blockType === BLOCKS.GLOWSTONE || blockType === BLOCKS.LANTERN || blockType === BLOCKS.SOUL_LANTERN) this.torchSystem.removeTorch(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                     if (blockType === BLOCKS.TALL_FERN) {
                         if (this.world.getBlock(hit.blockPos.x, hit.blockPos.y + 1, hit.blockPos.z) === BLOCKS.TALL_FERN_TOP) {
                             this.world.setBlock(hit.blockPos.x, hit.blockPos.y + 1, hit.blockPos.z, BLOCKS.AIR);
@@ -1861,43 +1989,6 @@ class Game {
         // Right click actions
         if (this.input.mouse.rightClick) {
             const slot = this.player.inventory.slots[this.player.selectedSlot];
-
-            // Mount Boat
-            if (boatHit && !this.player.inBoat && (!hit.hit || boatHit.dist < hit.distance)) {
-                this.mountBoat(boatHit.boat);
-                this.input.mouse.rightClick = false;
-                return;
-            }
-
-            // Place Boat
-            if (slot && (slot.item.subtype === 'oak_boat' || slot.item.subtype === 'boat') && hit.hit) {
-                const placePos = new THREE.Vector3(
-                    hit.blockPos.x + hit.normal.x + 0.5,
-                    hit.blockPos.y + (hit.normal.y > 0 ? 0.05 : hit.normal.y),
-                    hit.blockPos.z + hit.normal.z + 0.5
-                );
-                const forward = new THREE.Vector3();
-                this.engine.camera.getWorldDirection(forward);
-                const yaw = Math.atan2(-forward.x, -forward.z);
-
-                const boat = new BoatEntity(placePos, yaw, this.engine.scene, this.audio);
-                this.boats.add(boat);
-                if (this.audio && this.audio.playWaterSplash) this.audio.playWaterSplash(placePos);
-                else if (this.audio) this.audio.playClick();
-
-                if (!this.input.creativeMode) {
-                    slot.count--;
-                    if (slot.count <= 0) {
-                        this.player.inventory.slots[this.player.selectedSlot] = null;
-                    }
-                }
-                this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
-                if (this.ui.isOpen) {
-                    this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
-                }
-                this.input.mouse.rightClick = false;
-                return;
-            }
 
             // Ender Pearl throw
             if (slot && slot.item.subtype === 'ender_pearl') {
@@ -2070,15 +2161,6 @@ class Game {
                 return;
             }
 
-            if (hit.hit && hit.blockType === window.BLOCKS.STONECUTTER) {
-                this.audio.playClick();
-                this.ui.toggleStonecutter(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, () => {
-                    this.input.requestPointerLock();
-                });
-                document.exitPointerLock();
-                this.input.mouse.rightClick = false;
-                return;
-            }
             if (hit.hit && (hit.blockType === window.BLOCKS.DUNGEON_DOOR || hit.blockType === window.BLOCKS.DUNGEON_DOOR_TOP)) {
                 const key = `${hit.blockPos.x},${hit.blockPos.y},${hit.blockPos.z}`;
                 const keyLower = `${hit.blockPos.x},${hit.blockPos.y - 1},${hit.blockPos.z}`;
@@ -2140,72 +2222,199 @@ class Game {
                 this.audio.playClick();
                 this.input.mouse.rightClick = false;
                 return;
-            } else if (slot && slot.item.type === 'material' && (slot.item.subtype === 'bucket' || slot.item.subtype === 'water_bucket' || slot.item.subtype === 'lava_bucket') && hit.hit) {
+            }
+            if (slot && slot.item && slot.item.subtype === 'ender_pearl') {
+                this.isSwinging = true;
+                this.swingProgress = 0;
+                if (!this.input.creativeMode) {
+                    slot.count--;
+                    if (slot.count <= 0) {
+                        this.player.inventory.slots[this.player.selectedSlot] = null;
+                    }
+                    this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    if (this.ui.isOpen) {
+                        this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    }
+                }
+                if (this.audio && this.audio.playBow) this.audio.playBow();
+                
+                const eyePos = this.player.getEyePosition();
+                const lookDir = this.player.getLookDirection();
+                const pearlGeo = new THREE.DodecahedronGeometry(0.2);
+                const pearlMat = new THREE.MeshStandardMaterial({
+                    color: 0x18443e,
+                    emissive: 0x09302b,
+                    roughness: 0.3
+                });
+                const pearlMesh = new THREE.Mesh(pearlGeo, pearlMat);
+                pearlMesh.position.copy(eyePos);
+                this.engine.scene.add(pearlMesh);
+                
+                this.thrownEnderPearls.push({
+                    mesh: pearlMesh,
+                    position: eyePos.clone(),
+                    velocity: lookDir.clone().multiplyScalar(24),
+                    life: 0
+                });
+                
+                this.input.mouse.rightClick = false;
+                return;
+            } else if (slot && slot.item && slot.item.subtype === 'eye_of_ender') {
+                this.isSwinging = true;
+                this.swingProgress = 0;
+                
+                const frameId = window.BLOCKS.PORTAL_FRAME || 120;
+                if (hit.hit && hit.blockType === frameId) {
+                    // Place eye into frame
+                    this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, window.BLOCKS.END_PORTAL_FRAME_EYE || 326);
+                    this.particles.emit(new THREE.Vector3(hit.blockPos.x + 0.5, hit.blockPos.y + 0.8, hit.blockPos.z + 0.5), 'spell', 15, 0x11ffaa);
+                    if (this.audio && this.audio.playClick) this.audio.playClick();
+                    
+                    if (!this.input.creativeMode) {
+                        slot.count--;
+                        if (slot.count <= 0) {
+                            this.player.inventory.slots[this.player.selectedSlot] = null;
+                        }
+                        this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        if (this.ui.isOpen) {
+                            this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        }
+                    }
+                    
+                    this.checkAndActivateEndPortal(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    this.input.mouse.rightClick = false;
+                    return;
+                } else {
+                    // Throw Eye of Ender towards Stronghold
+                    if (!this.input.creativeMode) {
+                        slot.count--;
+                        if (slot.count <= 0) {
+                            this.player.inventory.slots[this.player.selectedSlot] = null;
+                        }
+                        this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        if (this.ui.isOpen) {
+                            this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        }
+                    }
+                    if (this.audio && this.audio.playBow) this.audio.playBow();
+                    
+                    const sh = getStrongholdPosition(this.currentSeed);
+                    const eyePos = this.player.getEyePosition();
+                    const dir = new THREE.Vector3(sh.x - eyePos.x, 0, sh.z - eyePos.z).normalize();
+                    dir.y = 0.45;
+                    dir.normalize();
+                    
+                    const eyeGeo = new THREE.SphereGeometry(0.22, 8, 8);
+                    const eyeMat = new THREE.MeshStandardMaterial({
+                        color: 0x1be3b1,
+                        emissive: 0x0a664e,
+                        roughness: 0.2
+                    });
+                    const eyeMesh = new THREE.Mesh(eyeGeo, eyeMat);
+                    eyeMesh.position.copy(eyePos);
+                    this.engine.scene.add(eyeMesh);
+                    
+                    this.flyingEyesOfEnder.push({
+                        mesh: eyeMesh,
+                        position: eyePos.clone(),
+                        velocity: dir.multiplyScalar(14),
+                        life: 0,
+                        maxLife: 3.2
+                    });
+                    
+                    this.input.mouse.rightClick = false;
+                    return;
+                }
+            } else if (slot && slot.item && (slot.item.subtype === 'bucket' || slot.item.subtype === 'water_bucket' || slot.item.subtype === 'lava_bucket') && hit.hit) {
                 // Bucket logic
                 const bucketType = slot.item.subtype;
                 if (bucketType === 'bucket') {
                     // Empty bucket - try to pick up liquid source block
                     const targetBlock = hit.blockType;
-                    if (targetBlock === BLOCKS.WATER || targetBlock === BLOCKS.SWAMP_WATER) {
-                        // Check if it's a source block (data === 0)
+                    if (targetBlock === BLOCKS.WATER || targetBlock === BLOCKS.SWAMP_WATER || targetBlock === BLOCKS.LAVA) {
+                        const isLava = (targetBlock === BLOCKS.LAVA);
                         const data = this.world.getData(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
-                        if (data === 0) {
+                        if (data === 0 || !data) {
                             this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
-                            // Replace bucket with water bucket
-                            slot.item = { type: 'material', subtype: 'water_bucket', name: 'Water Bucket', stackable: false, maxStack: 1, data: {} };
-                            this.audio.playWaterSplash(hit.blockPos);
-                            this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
-                        }
-                    } else if (targetBlock === BLOCKS.LAVA) {
-                        const data = this.world.getData(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
-                        if (data === 0) {
-                            this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, BLOCKS.AIR);
-                            slot.item = { type: 'material', subtype: 'lava_bucket', name: 'Lava Bucket', stackable: false, maxStack: 1, data: {} };
-                            this.audio.playFizz(hit.blockPos);
-                            this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
-                        }
-                    }
-                } else if (bucketType === 'water_bucket') {
-                    // Place water source block
-                    const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
-                    const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
-                    if (curBlock === BLOCKS.AIR || curBlock === BLOCKS.LAVA) {
-                        // Water on lava source = obsidian
-                        if (curBlock === BLOCKS.LAVA) {
-                            const lavaData = this.world.getData(placePos.x, placePos.y, placePos.z);
-                            if (lavaData === 0) {
-                                this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.OBSIDIAN);
-                            } else {
-                                this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.COBBLESTONE);
+                            const newSubtype = isLava ? 'lava_bucket' : 'water_bucket';
+                            const newName = isLava ? 'Lava Bucket' : 'Water Bucket';
+                            const newItem = { type: 'equipment', subtype: newSubtype, name: newName, stackable: false, maxStack: 1, data: {} };
+                            if (!this.input.creativeMode) {
+                                if (slot.count > 1) {
+                                    slot.count--;
+                                    if (!this.player.inventory.addItem(newItem, 1)) {
+                                        this.entityManager.spawnItem(newItem, 1, this.player.getEyePosition());
+                                    }
+                                } else {
+                                    slot.item = newItem;
+                                }
                             }
-                        } else {
-                            this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.WATER);
-                            this.world.setData(placePos.x, placePos.y, placePos.z, 0); // Source block
-                            this.world.queueLiquidUpdate(placePos.x, placePos.y, placePos.z);
-                            this.world.tickFluids();
+                            if (isLava) {
+                                this.audio.playFizz(hit.blockPos);
+                            } else {
+                                this.audio.playWaterSplash(hit.blockPos);
+                            }
+                            this.isSwinging = true;
+                            this.swingProgress = 0;
+                            this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                            if (this.ui.isOpen) {
+                                this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                            }
                         }
-                        // Convert back to empty bucket
-                        slot.item = { type: 'material', subtype: 'bucket', name: 'Bucket', stackable: true, maxStack: 16, data: {} };
-                        this.audio.playWaterSplash(placePos);
-                        this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                     }
-                } else if (bucketType === 'lava_bucket') {
-                    // Place lava source block
-                    const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
+                } else if (bucketType === 'water_bucket' || bucketType === 'lava_bucket') {
+                    const isLava = (bucketType === 'lava_bucket');
+                    const hitProps = getBlockProperties(hit.blockType);
+                    let placePos;
+                    if (!hitProps.solid || hitProps.isCross || hit.blockType === BLOCKS.SNOW) {
+                        placePos = { x: hit.blockPos.x, y: hit.blockPos.y, z: hit.blockPos.z };
+                    } else {
+                        placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
+                    }
                     const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
-                    if (curBlock === BLOCKS.AIR || curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER) {
-                        // Lava on water = stone
-                        if (curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER) {
-                            this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.STONE);
+                    const curProps = getBlockProperties(curBlock);
+                    const isReplaceable = curBlock === BLOCKS.AIR || !curProps.solid || curProps.isCross || curBlock === BLOCKS.SNOW || curProps.isLiquid;
+
+                    if (isReplaceable) {
+                        if (!isLava) {
+                            // Placing water
+                            if (curBlock === BLOCKS.LAVA) {
+                                const lavaData = this.world.getData(placePos.x, placePos.y, placePos.z);
+                                if (lavaData === 0 || !lavaData) {
+                                    this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.OBSIDIAN);
+                                } else {
+                                    this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.COBBLESTONE);
+                                }
+                            } else {
+                                this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.WATER);
+                                this.world.setData(placePos.x, placePos.y, placePos.z, 0); // Source block
+                                this.world.queueLiquidUpdate(placePos.x, placePos.y, placePos.z);
+                                this.world.tickFluids();
+                            }
+                            this.audio.playWaterSplash(placePos);
                         } else {
-                            this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.LAVA);
-                            this.world.setData(placePos.x, placePos.y, placePos.z, 0); // Source block
-                            this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
+                            // Placing lava
+                            if (curBlock === BLOCKS.WATER || curBlock === BLOCKS.SWAMP_WATER) {
+                                this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.STONE);
+                            } else {
+                                this.world.setBlock(placePos.x, placePos.y, placePos.z, BLOCKS.LAVA);
+                                this.world.setData(placePos.x, placePos.y, placePos.z, 0); // Source block
+                                if (this.torchSystem) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
+                                this.world.queueLiquidUpdate(placePos.x, placePos.y, placePos.z);
+                                this.world.tickFluids();
+                            }
+                            this.audio.playFizz(placePos);
                         }
-                        // Convert back to empty bucket
-                        slot.item = { type: 'material', subtype: 'bucket', name: 'Bucket', stackable: true, maxStack: 16, data: {} };
-                        this.audio.playFizz(placePos);
+
+                        if (!this.input.creativeMode) {
+                            slot.item = { type: 'equipment', subtype: 'bucket', name: 'Bucket', stackable: true, maxStack: 16, data: {} };
+                        }
+                        this.isSwinging = true;
+                        this.swingProgress = 0;
                         this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        if (this.ui.isOpen) {
+                            this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        }
                     }
                 }
                 this.input.mouse.rightClick = false;
@@ -2294,9 +2503,9 @@ class Game {
                             return;
                         }
 
+                        this._addBed(placePos.x, placePos.y, placePos.z, headPos.x, headPos.y, headPos.z, slot.item.subtype, dir);
                         this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype, dir);
                         this.world.setBlock(headPos.x, headPos.y, headPos.z, BLOCKS.BED_HEAD, dir);
-                        this._addBed(placePos.x, placePos.y, placePos.z, headPos.x, headPos.y, headPos.z, slot.item.subtype, dir);
                         this.audio.playPlace(BLOCKS.OAK_PLANKS, placePos);
 
                         if (!this.input.creativeMode) {
@@ -2375,7 +2584,7 @@ class Game {
                         }
 
                         this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype, blockData);
-                        if (slot.item.subtype === BLOCKS.TORCH || slot.item.subtype === BLOCKS.GLOWSTONE) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
+                        if (slot.item.subtype === BLOCKS.TORCH || slot.item.subtype === BLOCKS.GLOWSTONE || slot.item.subtype === BLOCKS.LANTERN || slot.item.subtype === BLOCKS.SOUL_LANTERN) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
                         this.audio.playPlace(slot.item.subtype, placePos);
                         if (!this.input.creativeMode) {
                             slot.count--;
@@ -2427,8 +2636,21 @@ class Game {
                     this.player.health = Math.min(this.player.maxHealth + 20, this.player.health + 20);
                 }
                 this.audio.playEat(this.player.position);
-                const mouthPos = new THREE.Vector3(this.player.position.x, this.player.position.y + 1.2, this.player.position.z);
-                this.particles.emit(mouthPos, 'explosion', 12, 0x88cc44);
+                
+                // Emitting food crumbs in front of player's mouth
+                const lookDir = this.player.getLookDirection();
+                const eyePos = this.player.getEyePosition();
+                const mouthPos = eyePos.clone().add(lookDir.clone().multiplyScalar(0.42)).add(new THREE.Vector3(0, -0.18, 0));
+                const colors = FOOD_PARTICLE_COLORS[subtype] || [0xb7803a, 0x8f591f, 0xd8a556];
+                for (let i = 0; i < 16; i++) {
+                    const col = colors[Math.floor(Math.random() * colors.length)];
+                    this.particles.emit(mouthPos, 'eat', 1, col);
+                }
+
+                // Arm swing animation when eating
+                this.isSwinging = true;
+                this.swingProgress = 0;
+
                 if (!this.input.creativeMode) {
                     slot.count--;
                     if (slot.count <= 0) {
@@ -2528,7 +2750,7 @@ class Game {
         if (this.isPaused) {
             this.input.resetMouse();
             // Continue loading chunks while paused
-            const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : generateChunkTerrain);
+            const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'end' ? generateEndChunk : generateChunkTerrain));
             this.world.update(this.player.position, (cx, cz) => {
                 const start = performance.now();
                 const res = chunkGenFn(cx, cz, this.planetParams);
@@ -2693,15 +2915,23 @@ class Game {
         const pby = Math.floor(this.player.position.y);
         const pbz = Math.floor(this.player.position.z);
         const pBlock = this.world.getBlock(pbx, pby, pbz);
-        if (pBlock === BLOCKS.PORTAL && !this.isWarping) {
+        const pBlockBelow = this.world.getBlock(pbx, Math.floor(this.player.position.y - 0.2), pbz);
+        if ((pBlock === BLOCKS.PORTAL || pBlockBelow === BLOCKS.PORTAL) && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'nether' ? 'overworld' : 'nether');
             this.audio.playPortalTravel();
-        } else if (pBlock === window.BLOCKS.AETHER_PORTAL && !this.isWarping) {
+        } else if ((pBlock === window.BLOCKS.AETHER_PORTAL || pBlockBelow === window.BLOCKS.AETHER_PORTAL) && !this.isWarping) {
             this.warpToNewPlanet(this.currentDimension === 'aether' ? 'overworld' : 'aether');
             this.audio.playPortalTravel();
+        } else if ((pBlock === window.BLOCKS.END_PORTAL || pBlockBelow === window.BLOCKS.END_PORTAL) && !this.isWarping) {
+            if (this.currentDimension === 'end') {
+                this.showEndCredits();
+            } else {
+                this.warpToNewPlanet('end');
+            }
+            if (this.audio && this.audio.playPortalTravel) this.audio.playPortalTravel();
         }
         
-        const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : generateChunkTerrain);
+        const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk : (this.currentDimension === 'aether' ? generateAetherChunk : (this.currentDimension === 'end' ? generateEndChunk : generateChunkTerrain));
         this.world.update(this.player.position, (cx, cz) => {
             const start = performance.now();
             const chunkBlocks = chunkGenFn(cx, cz, this.planetParams);
@@ -2723,7 +2953,7 @@ class Game {
 
         this.lighting.update(dt, this.engine.camera.position, isUnderwater, this.currentDimension);
 
-        if (this.engine.scene.fog) {
+        if (this.engine.scene.fog && this.engine.scene.fog.isFogExp2) {
             // Keep track of the original planet fog density for Systems to use
             if (this.engine.scene.fog.baseDensity === undefined) {
                 this.engine.scene.fog.baseDensity = this.engine.scene.fog.density;
@@ -2842,19 +3072,6 @@ class Game {
         this.entityManager.update(dt, this.world, this.player.position, this.player.inventory, this.player, this.lighting.timeOfDay, this.currentDimension);
         if (this.player.health < prevHealth) {
             this.audio.playHurt(this.player.position);
-        }
-
-        // Update boats
-        if (this.boats && this.boats.size > 0) {
-            for (const boat of this.boats) {
-                if (!boat.alive) {
-                    this.boats.delete(boat);
-                    continue;
-                }
-                const isRidden = (this.player.inBoat === boat);
-                const keys = isRidden ? this.input.keys : null;
-                boat.update(dt, this.world, keys, this.particles);
-            }
         }
 
         // Process mob spell casting
@@ -3058,18 +3275,28 @@ class Game {
                 }
             }
 
-            // Check blocks
+            // Check blocks with anti-tunneling continuous collision sub-stepping
             let hitBlock = false;
             if (!hitFound) {
-                const bx = Math.floor(proj.position.x);
-                const by = Math.floor(proj.position.y);
-                const bz = Math.floor(proj.position.z);
-                const blockType = this.world.getBlock(bx, by, bz);
-                if (blockType !== BLOCKS.AIR && blockType !== BLOCKS.WATER && blockType !== BLOCKS.SWAMP_WATER && blockType !== BLOCKS.LAVA) {
-                    const props = getBlockProperties(blockType);
-                    if (props && (props.solid || props.isCross)) {
-                        hitFound = true;
-                        hitBlock = true;
+                const start = proj.previousPosition || proj.position;
+                const end = proj.position;
+                const dist = start.distanceTo(end);
+                const steps = Math.max(1, Math.ceil(dist * 2.5));
+                for (let s = 1; s <= steps; s++) {
+                    const frac = s / steps;
+                    const testX = Math.floor(start.x + (end.x - start.x) * frac);
+                    const testY = Math.floor(start.y + (end.y - start.y) * frac);
+                    const testZ = Math.floor(start.z + (end.z - start.z) * frac);
+                    const blockType = this.world.getBlock(testX, testY, testZ);
+                    if (blockType !== BLOCKS.AIR && blockType !== BLOCKS.WATER && blockType !== BLOCKS.SWAMP_WATER && blockType !== BLOCKS.LAVA) {
+                        const props = getBlockProperties(blockType);
+                        if (props && (props.solid || props.isCross)) {
+                            hitFound = true;
+                            hitBlock = true;
+                            hitPos.set(testX + 0.5, testY + 0.5, testZ + 0.5);
+                            proj.position.set(start.x + (end.x - start.x) * frac, start.y + (end.y - start.y) * frac, start.z + (end.z - start.z) * frac);
+                            break;
+                        }
                     }
                 }
             }
@@ -3274,6 +3501,79 @@ class Game {
             if (Math.random() < 0.1) this.audio.playFizz();
         }
 
+        // Update thrown ender pearls
+        for (let i = this.thrownEnderPearls.length - 1; i >= 0; i--) {
+            const p = this.thrownEnderPearls[i];
+            p.life += dt;
+            p.velocity.y -= 20 * dt; // gravity
+            const nextPos = p.position.clone().addScaledVector(p.velocity, dt);
+            
+            if (Math.random() < 0.7) {
+                this.particles.emit(p.position, 'spell', 1, 0x8a2be2);
+            }
+            
+            const rayDir = nextPos.clone().sub(p.position).normalize();
+            const rayDist = p.position.distanceTo(nextPos);
+            const blockHit = this.world.raycast(p.position, rayDir, rayDist);
+            
+            const hit = blockHit && blockHit.hit;
+            const hitPos = (blockHit && blockHit.hit) ? blockHit.point : nextPos;
+            
+            if (hit || p.life > 6.0) {
+                if (hit) {
+                    const oldPos = this.player.position.clone();
+                    this.particles.emit(oldPos.add(new THREE.Vector3(0, 1, 0)), 'spell', 25, 0x8a2be2);
+                    
+                    this.player.position.set(hitPos.x, hitPos.y + 0.1, hitPos.z);
+                    this.player.velocity.set(0, 0, 0);
+                    this.player.fallDistance = 0;
+                    
+                    this.particles.emit(this.player.position.clone().add(new THREE.Vector3(0, 1, 0)), 'spell', 30, 0x00ffaa);
+                    if (this.audio && this.audio.playHit) this.audio.playHit();
+                    
+                    if (!this.player.isCreative) {
+                        this.player.takeDamage(5); // 5 pearl damage (2.5 hearts)
+                        const d = document.getElementById('damage-flash');
+                        if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                    }
+                }
+                this.engine.scene.remove(p.mesh);
+                p.mesh.geometry.dispose();
+                p.mesh.material.dispose();
+                this.thrownEnderPearls.splice(i, 1);
+            } else {
+                p.position.copy(nextPos);
+                p.mesh.position.copy(nextPos);
+            }
+        }
+
+        // Update flying eyes of ender
+        for (let i = this.flyingEyesOfEnder.length - 1; i >= 0; i--) {
+            const eye = this.flyingEyesOfEnder[i];
+            eye.life += dt;
+            if (eye.life < eye.maxLife * 0.7) {
+                eye.position.addScaledVector(eye.velocity, dt);
+            } else {
+                eye.velocity.multiplyScalar(Math.max(0, 1 - dt * 3));
+                eye.position.addScaledVector(eye.velocity, dt);
+            }
+            eye.mesh.position.copy(eye.position);
+            if (Math.random() < 0.8) {
+                this.particles.emit(eye.position, 'spell', 1, 0x1be3b1);
+            }
+            if (eye.life >= eye.maxLife) {
+                if (Math.random() < 0.8) {
+                    this.entityManager.spawnItem(Item.materialItem('eye_of_ender', 'Eye of Ender', 'Locates strongholds.'), 1, eye.position.clone());
+                } else {
+                    this.particles.emit(eye.position, 'spell', 12, 0x115544);
+                }
+                this.engine.scene.remove(eye.mesh);
+                eye.mesh.geometry.dispose();
+                eye.mesh.material.dispose();
+                this.flyingEyesOfEnder.splice(i, 1);
+            }
+        }
+
         // Update particles
         if (this.particles) this.particles.update(dt);
         
@@ -3357,7 +3657,7 @@ class Game {
                 this.lighting.sunMesh.visible = true;
                 if (this.lighting.moonMesh) this.lighting.moonMesh.visible = true;
             } // Restore sun and moon
-            if (this.engine.scene.fog) {
+            if (this.engine.scene.fog && this.engine.scene.fog.isFogExp2) {
                 this.engine.scene.fog.density = this.engine.scene.fog.baseDensity;
             }
         } else {
@@ -3387,9 +3687,10 @@ class Game {
         let closestDist = Infinity;
         
         for (const mob of this.entityManager.mobs) {
-            if (mob.isBoss && mob.alive) {
+            if (mob.alive && (mob.isBoss || mob.type === 'ENDER_DRAGON' || mob.type === 'CORRUPTED_SENTINEL')) {
                 const dist = mob.position.distanceTo(this.player.position);
-                if (dist < 32 && dist < closestDist) {
+                const maxRange = (mob.type === 'ENDER_DRAGON') ? 500 : 36;
+                if (dist < maxRange && dist < closestDist) {
                     closestDist = dist;
                     activeBoss = mob;
                 }
@@ -3399,9 +3700,16 @@ class Game {
         if (bossUI) {
             if (activeBoss) {
                 bossUI.style.display = 'block';
-                const bossType = activeBoss.typeKey || 'BOSS';
-                if (bossNameUI) bossNameUI.textContent = `${bossType} (${Math.ceil(activeBoss.health)}/${activeBoss.maxHealth})`;
-                if (bossFillUI) bossFillUI.style.width = `${Math.max(0, (activeBoss.health / activeBoss.maxHealth) * 100)}%`;
+                const isDragon = activeBoss.type === 'ENDER_DRAGON';
+                const bossType = isDragon ? 'Ender Dragon' : (activeBoss.name || activeBoss.typeKey || 'Boss');
+                if (bossNameUI) {
+                    bossNameUI.textContent = `${bossType} (${Math.ceil(activeBoss.health)}/${activeBoss.maxHealth})`;
+                    bossNameUI.style.color = isDragon ? '#e066ff' : '#ffaa00';
+                }
+                if (bossFillUI) {
+                    bossFillUI.style.width = `${Math.max(0, (activeBoss.health / activeBoss.maxHealth) * 100)}%`;
+                    bossFillUI.style.background = isDragon ? 'linear-gradient(90deg, #9900cc, #cc33ff)' : 'linear-gradient(90deg, #ff0000, #ff5555)';
+                }
             } else {
                 bossUI.style.display = 'none';
             }
@@ -3452,7 +3760,7 @@ class Game {
 
                 const eyePos = this.player.getEyePosition();
                 const invSlot = this.player.inventory.slots[this.player.selectedSlot];
-                const isHoldingLiquidInteractable = invSlot && invSlot.item && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket' || invSlot.item.subtype === 'oak_boat' || invSlot.item.subtype === 'boat');
+                const isHoldingLiquidInteractable = invSlot && invSlot.item && (invSlot.item.subtype === 'bucket' || invSlot.item.subtype === 'water_bucket' || invSlot.item.subtype === 'lava_bucket');
                 const hit = this.world.raycast(eyePos, lookDir, 8, isHoldingLiquidInteractable);
 
                 const leftLines = [
@@ -3527,6 +3835,7 @@ class Game {
         this.isWarping = true;
 
         const isAether = targetDim === 'aether';
+        const isEnd = targetDim === 'end';
         const isWarpingToDim = targetDim !== 'overworld';
 
         if (isWarpingToDim && !overrideSpawnPos) {
@@ -3540,7 +3849,7 @@ class Game {
         fade.style.position = 'fixed';
         fade.style.top = '0'; fade.style.left = '0';
         fade.style.width = '100%'; fade.style.height = '100%';
-        fade.style.backgroundColor = isWarpingToDim ? (isAether ? 'white' : '#400000') : (overrideSpawnPos ? '#c8e6ff' : 'white');
+        fade.style.backgroundColor = isWarpingToDim ? (isAether ? 'white' : (isEnd ? '#0b0217' : '#400000')) : (overrideSpawnPos ? '#c8e6ff' : 'white');
         fade.style.opacity = '0';
         fade.style.transition = 'opacity 1.5s ease-in-out';
         fade.style.zIndex = '9999';
@@ -3590,11 +3899,11 @@ class Game {
                 this.pendingPortal = null;
             } else if (isWarpingToDim) {
                 spawnPos = findSafeSpawn(this.planetParams, targetDim);
-                this.pendingPortal = { pos: spawnPos, isNether: targetDim === 'nether', isAether: targetDim === 'aether' };
+                this.pendingPortal = (targetDim === 'end') ? null : { pos: spawnPos, isNether: targetDim === 'nether', isAether: targetDim === 'aether' };
             } else {
                 spawnPos = this.overworldReturnPos || findSafeSpawn(this.planetParams, 'overworld');
                 const returnDim = this.lastPortalDim || 'nether';
-                this.pendingPortal = { pos: spawnPos, isNether: returnDim === 'nether', isAether: returnDim === 'aether' };
+                this.pendingPortal = (returnDim === 'end') ? null : { pos: spawnPos, isNether: returnDim === 'nether', isAether: returnDim === 'aether' };
             }
 
             if (overrideSpawnPos) {
@@ -3613,7 +3922,7 @@ class Game {
             }
 
             // Immediately preload the 3x3 surrounding chunks synchronously so the world is fully solid & visible when fade lifts
-            const chunkGenFn = targetDim === 'nether' ? generateNetherChunk : (targetDim === 'aether' ? generateAetherChunk : generateChunkTerrain);
+            const chunkGenFn = targetDim === 'nether' ? generateNetherChunk : (targetDim === 'aether' ? generateAetherChunk : (targetDim === 'end' ? generateEndChunk : generateChunkTerrain));
             this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), 0);
             while (this.world.chunksToGenerate.length > 0) {
                 const chunk = this.world.chunksToGenerate.shift();
@@ -3644,6 +3953,58 @@ class Game {
                         this.world.scene.add(mesh);
                     }
                 }
+            }
+
+            if (targetDim === 'end') {
+                const pillarHeights = [76, 82, 72, 88, 78, 84, 74, 90];
+                for (let i = 0; i < 8; i++) {
+                    const angle = i * Math.PI / 4;
+                    const px = Math.round(Math.cos(angle) * 38);
+                    const pz = Math.round(Math.sin(angle) * 38);
+                    const py = pillarHeights[i] + 1;
+                    const crystal = new Mob('END_CRYSTAL', px + 0.5, py, pz + 0.5);
+                    this.entityManager.addMob(crystal);
+                }
+                
+                // Spawn Ender Dragon if not defeated
+                if (!this.dragonDefeated) {
+                    const dragon = new Mob('ENDER_DRAGON', 0, 72, 0);
+                    this.entityManager.addMob(dragon);
+                }
+
+                this.entityManager.onDragonDefeated = (pos) => {
+                    if (this.dragonDefeated) return;
+                    this.dragonDefeated = true;
+                    
+                    if (this.audio && this.audio.playExplode) this.audio.playExplode();
+                    for (let i = 0; i < 12; i++) {
+                        setTimeout(() => {
+                            const fxPos = pos.clone().add(new THREE.Vector3((Math.random()-0.5)*20, (Math.random()-0.5)*10, (Math.random()-0.5)*20));
+                            this.particles.emit(fxPos, 'explosion', 40, 0xff00ff);
+                            if (this.audio && this.audio.playExplode) this.audio.playExplode();
+                        }, i * 250);
+                    }
+
+                    // Fill 3x3 exit portal at (0, 55, 0)
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dz = -1; dz <= 1; dz++) {
+                            if (dx === 0 && dz === 0) continue; // center pillar
+                            this.world.setBlock(dx, 55, dz, window.BLOCKS.END_PORTAL || 327);
+                        }
+                    }
+
+                    // Dragon Egg atop central pillar
+                    this.world.setBlock(0, 59, 0, window.BLOCKS.DRAGON_EGG || 329);
+
+                    // Shower of XP
+                    for (let i = 0; i < 24; i++) {
+                        const xpPos = new THREE.Vector3((Math.random()-0.5)*6, 60, (Math.random()-0.5)*6);
+                        const xpVel = new THREE.Vector3((Math.random()-0.5)*4, 4 + Math.random()*4, (Math.random()-0.5)*4);
+                        this.entityManager.spawnItem(Item.materialItem('emerald', 'Experience Orb', 'Radiant dragon energy.'), 1, xpPos, xpVel);
+                    }
+
+                    this.showToast("The Ender Dragon has been defeated! The Exit Portal is open!", 5000);
+                };
             }
 
             // Update UI/Env
@@ -3831,6 +4192,10 @@ class Game {
         this.primedTNT.push(primed);
     }
 
+    explode(x, y, z, radius = 4) {
+        this.explodeTNT(x, y, z);
+    }
+
     explodeTNT(x, y, z) {
         const radius = 4; // Expanded destruction radius
         const radiusSq = radius * radius;
@@ -3982,12 +4347,93 @@ class Game {
         }
         return true;
     }
+
+    checkAndActivateEndPortal(bx, by, bz) {
+        const frameEye = window.BLOCKS.END_PORTAL_FRAME_EYE || 326;
+        const portalBlock = window.BLOCKS.END_PORTAL || 327;
+        
+        for (let cx = bx - 2; cx <= bx + 2; cx++) {
+            for (let cz = bz - 2; cz <= bz + 2; cz++) {
+                const frames = [
+                    { x: cx - 1, z: cz - 2 }, { x: cx, z: cz - 2 }, { x: cx + 1, z: cz - 2 },
+                    { x: cx - 1, z: cz + 2 }, { x: cx, z: cz + 2 }, { x: cx + 1, z: cz + 2 },
+                    { x: cx - 2, z: cz - 1 }, { x: cx - 2, z: cz }, { x: cx - 2, z: cz + 1 },
+                    { x: cx + 2, z: cz - 1 }, { x: cx + 2, z: cz }, { x: cx + 2, z: cz + 1 }
+                ];
+                
+                const allEyes = frames.every(f => this.world.getBlock(f.x, by, f.z) === frameEye);
+                if (allEyes) {
+                    for (let px = cx - 1; px <= cx + 1; px++) {
+                        for (let pz = cz - 1; pz <= cz + 1; pz++) {
+                            this.world.setBlock(px, by, pz, portalBlock);
+                            this.particles.emit(new THREE.Vector3(px + 0.5, by + 0.5, pz + 0.5), 'spell', 20, 0x050110);
+                        }
+                    }
+                    if (this.audio && this.audio.playExplode) this.audio.playExplode();
+                    if (this.audio && this.audio.playPortalTravel) this.audio.playPortalTravel();
+                    this.showToast("The End Portal opens...", 3500);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    showEndCredits() {
+        if (this.showingCredits) return;
+        this.showingCredits = true;
+        document.exitPointerLock?.();
+        
+        const scr = document.getElementById('credits-screen');
+        const container = document.getElementById('credits-scroll-container');
+        if (scr && container) {
+            scr.classList.remove('hidden');
+            container.scrollTop = 0;
+            
+            const scrollSpeed = 42; // pixels per second
+            let lastT = performance.now();
+            const doScroll = (now) => {
+                if (!this.showingCredits) return;
+                const dt = (now - lastT) / 1000;
+                lastT = now;
+                container.scrollTop += scrollSpeed * dt;
+                
+                if (container.scrollTop >= container.scrollHeight - container.clientHeight - 10) {
+                    setTimeout(() => this.closeEndCredits(), 4000);
+                    return;
+                }
+                this._creditsScrollAnim = requestAnimationFrame(doScroll);
+            };
+            this._creditsScrollAnim = requestAnimationFrame(doScroll);
+        }
+        if (this.audio && this.audio.playMC) this.audio.playMC('random/levelup', 0.8);
+    }
+
+    closeEndCredits() {
+        if (!this.showingCredits) return;
+        this.showingCredits = false;
+        if (this._creditsScrollAnim) cancelAnimationFrame(this._creditsScrollAnim);
+        
+        const scr = document.getElementById('credits-screen');
+        if (scr) scr.classList.add('hidden');
+        
+        if (this.currentDimension === 'end') {
+            this.warpToNewPlanet('overworld');
+        }
+    }
+
 }
 
 // Start game on load
 const initGame = () => {
     const game = new Game();
     window.game = game;
+
+    // Clean up any custom panorama from localStorage to ensure default menu background
+    try {
+        localStorage.removeItem('slopcraft_custom_panorama');
+    } catch (e) {}
+
     const startBtn = document.getElementById('btn-new-game');
 
     const startBlurToggle = document.getElementById('start-blur-toggle');

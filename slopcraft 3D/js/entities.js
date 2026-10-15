@@ -88,7 +88,7 @@ export class Player {
         this.maxHealth = 100;
         this.mana = 100;
         this.maxMana = 100;
-        this.manaRegenRate = 5;
+        this.manaRegenRate = 15;
 
         this.inventory = new Inventory();
         this.selectedSlot = 0; // Index 0-8 in inventory
@@ -132,7 +132,6 @@ export class Player {
         this.fallStartY = this.position.y;
         this.fallDistance = 0;
         this.spawnGraceTimer = 5.0; // 5 seconds of spawn invulnerability & no fall damage
-        this.inBoat = null;
         this.spawnPoint = null;
     }
 
@@ -148,17 +147,6 @@ export class Player {
         this.rotation.yaw -= mouse.dx * sensitivity;
         this.rotation.pitch -= mouse.dy * sensitivity;
         this.rotation.pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, this.rotation.pitch));
-
-        if (this.inBoat) {
-            // Anchor player position to boat
-            this.position.copy(this.inBoat.position);
-            this.position.y += 0.32;
-            this.velocity.set(0, 0, 0);
-            this.grounded = true;
-            this.fallDistance = 0;
-            this.fallStartY = this.position.y;
-            return;
-        }
 
         // Direction vectors
         const forward = _tempVec1.set(-Math.sin(this.rotation.yaw), 0, -Math.cos(this.rotation.yaw)).normalize();
@@ -287,6 +275,12 @@ export class Player {
             drag = 15; // Higher drag so you stop quickly
         }
 
+        const blockUnderFeet = world ? world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y - 0.2), Math.floor(this.position.z)) : 0;
+        if (blockUnderFeet === BLOCKS.QUICKSOIL || (window.BLOCKS && blockUnderFeet === window.BLOCKS.QUICKSOIL)) {
+            drag = 2.5; // Slippery fast Aether quicksoil
+            speed *= 1.6;
+        }
+
         // X/Z velocity update
         this.velocity.x += moveDir.x * speed * 10 * dt;
         this.velocity.z += moveDir.z * speed * 10 * dt;
@@ -363,8 +357,22 @@ export class Player {
         if (colResult.velocity.y === 0) this.velocity.y = 0;
 
         if (!wasGrounded && this.grounded) {
-            // Player just touched down
-            if (!this.isCreative && !flying && !inWater && !inLava && !onLadder) {
+            // Check block under feet for Aercloud bounce or cushioning
+            const blockUnder = world ? world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y - 0.2), Math.floor(this.position.z)) : 0;
+            const isBlueCloud = (blockUnder === BLOCKS.BLUE_AERCLOUD || (window.BLOCKS && blockUnder === window.BLOCKS.BLUE_AERCLOUD));
+            const isAnyCloud = isBlueCloud || blockUnder === BLOCKS.AETHER_CLOUD || (window.BLOCKS && (blockUnder === window.BLOCKS.GOLDEN_AERCLOUD || blockUnder === window.BLOCKS.AETHER_CLOUD));
+
+            if (isBlueCloud) {
+                this.velocity.y = 18; // Super high cloud bounce!
+                this.grounded = false;
+                this.fallDistance = 0;
+                if (window.game && window.game.particles) window.game.particles.emit(this.position, 'cloud', 15, 0x55aaff);
+            } else if (isAnyCloud) {
+                this.velocity.y = 9; // Gentle cloud bounce
+                this.grounded = false;
+                this.fallDistance = 0;
+                if (window.game && window.game.particles) window.game.particles.emit(this.position, 'cloud', 10, 0xffffff);
+            } else if (!this.isCreative && !flying && !inWater && !inLava && !onLadder) {
                 const dist = this.fallDistance;
                 if (dist > 15) {
                     // Fall damage: only when falling from > 15 blocks. Kill height is 70 blocks.
@@ -944,6 +952,7 @@ export class Player {
     }
 
     useMana(amt) {
+        if (this.isCreative) return true;
         if (this.mana >= amt) {
             this.mana -= amt;
             return true;
@@ -1052,22 +1061,30 @@ export const MOB_TYPES = {
         size: 0.9, xpDrop: 4, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Authentic Minecraft Cow Body: Box (12, 18, 10) in MC coords -> (0.75, 1.125, 0.625) rotated PI/2 around X
-            // Vanilla MC Cow Body UV: { u: 18, v: 4, w: 12, h: 18, d: 10 }
-            const bodyGeo = new THREE.BoxGeometry(0.75, 1.125, 0.625);
-            const bodyMats = getMobBoxMaterials('COW', { u: 18, v: 4, w: 12, h: 18, d: 10 }, { part: 'body' });
+            // Authentic Minecraft Cow Body: Box (12, 10, 18) in MC coords -> (0.75, 0.625, 1.125) unrotated
+            // Vanilla MC Cow Body UV: { u: 18, v: 4, w: 12, h: 10, l: 18 }
+            const bodyGeo = new THREE.BoxGeometry(0.75, 0.625, 1.125);
+            const bodyMats = getMobBoxMaterials('COW', { u: 18, v: 4, w: 12, h: 10, l: 18 }, { isBody: true, part: 'body' });
             const body = new THREE.Mesh(bodyGeo, bodyMats);
-            body.rotation.x = Math.PI / 2;
-            body.position.y = 0.55;
+            body.position.set(0, 1.0625, 0);
             body.castShadow = true;
             group.add(body);
 
-            // Udder: Vanilla MC Udder UV: { u: 52, v: 0, w: 4, h: 6, d: 2 } rotated PI/2 around X
-            const udderGeo = new THREE.BoxGeometry(0.25, 0.375, 0.125);
-            const udderMats = getMobBoxMaterials('COW', { u: 52, v: 0, w: 4, h: 6, d: 2 }, { part: 'snout' });
+            // Udder: Vanilla MC Udder (4x2x6 in world, 4x6x2 rotated 90 deg around X attached to rear belly)
+            const udderGeo = new THREE.BoxGeometry(0.25, 0.125, 0.375);
+            const udderMats = getMobBoxMaterials('COW', { u: 52, v: 0, w: 4, h: 2, d: 6 }, {
+                part: 'snout',
+                faceUVs: {
+                    left: [52, 2, 2, 6],
+                    right: [58, 2, 2, 6],
+                    top: [54, 0, 4, 2],
+                    bottom: [54, 2, 4, 6],
+                    front: [54, 0, 4, 2],
+                    back: [58, 0, 4, 2]
+                }
+            });
             const udder = new THREE.Mesh(udderGeo, udderMats);
-            udder.rotation.x = Math.PI / 2;
-            udder.position.set(0, 0.21, -0.2);
+            udder.position.set(0, 0.70, -0.25);
             udder.castShadow = true;
             group.add(udder);
 
@@ -1075,31 +1092,32 @@ export const MOB_TYPES = {
             const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.375);
             const headMats = getMobBoxMaterials('COW', { u: 0, v: 0, w: 8, h: 8, d: 6 }, { part: 'head_front' });
             const head = new THREE.Mesh(headGeo, headMats);
-            head.position.set(0, 0.8, 0.65);
+            head.position.set(0, 1.20, 0.62);
             head.name = 'head';
             head.castShadow = true;
-            group.add(head);
 
-            // Horns: Vanilla MC Horn UV: { u: 22, v: 0, w: 1, h: 3, d: 1 }
-            const hornGeo = new THREE.BoxGeometry(0.08, 0.18, 0.08);
+            // Horns attached to head: Vanilla MC Horn UV: { u: 22, v: 0, w: 1, h: 3, d: 1 }
+            const hornGeo = new THREE.BoxGeometry(0.0625, 0.1875, 0.0625);
             const hornMats = getMobBoxMaterials('COW', { u: 22, v: 0, w: 1, h: 3, d: 1 }, { part: 'horn' });
             const leftHorn = new THREE.Mesh(hornGeo, hornMats);
-            leftHorn.position.set(-0.25, 1.05, 0.62);
+            leftHorn.position.set(-0.28, 0.26, -0.05);
             leftHorn.rotation.z = 0.15;
-            group.add(leftHorn);
+            head.add(leftHorn);
             const rightHorn = new THREE.Mesh(hornGeo, hornMats);
-            rightHorn.position.set(0.25, 1.05, 0.62);
+            rightHorn.position.set(0.28, 0.26, -0.05);
             rightHorn.rotation.z = -0.15;
-            group.add(rightHorn);
+            head.add(rightHorn);
 
-            // 4 Legs: Vanilla MC Cow Leg UV: { u: 0, v: 16, w: 4, h: 12, d: 4 }
-            const legGeo = new THREE.BoxGeometry(0.22, 0.5, 0.22);
+            group.add(head);
+
+            // 4 Legs: Vanilla MC Cow Leg UV: { u: 0, v: 16, w: 4, h: 12, d: 4 } (height 12 px = 0.75)
+            const legGeo = new THREE.BoxGeometry(0.25, 0.75, 0.25);
             const legMats = getMobBoxMaterials('COW', { u: 0, v: 16, w: 4, h: 12, d: 4 }, { part: 'leg' });
             for(let i = 0; i < 4; i++) {
                 const leg = new THREE.Mesh(legGeo, legMats);
-                const x = (i % 2 === 0 ? -0.26 : 0.26);
+                const x = (i % 2 === 0 ? -0.25 : 0.25);
                 const z = (i < 2 ? 0.38 : -0.38);
-                leg.position.set(x, 0.25, z);
+                leg.position.set(x, 0.375, z);
                 leg.name = `leg_${i}`;
                 leg.castShadow = true;
                 group.add(leg);
@@ -1117,14 +1135,37 @@ export const MOB_TYPES = {
                 if (leg1) leg1.rotation.x = 0;
                 if (leg2) leg2.rotation.x = 0;
                 if (leg3) leg3.rotation.x = 0;
-                if (head) head.rotation.y = Math.sin(age * 1.5) * 0.05;
+                if (head) {
+                    const cycle = (age + 2.5) % 13;
+                    if (cycle > 7 && cycle < 11.5) {
+                        // Grazing / eating grass
+                        const t = Math.min(1, Math.min((cycle - 7) * 2, (11.5 - cycle) * 2));
+                        const chew = Math.sin(age * 12) * 0.05;
+                        head.rotation.x = 0.65 * t + chew;
+                        head.rotation.y = Math.sin(age * 2) * 0.04;
+                        head.rotation.z = Math.sin(age * 10) * 0.04 * t;
+                        head.position.y = 1.20 - 0.28 * t;
+                        head.position.z = 0.62 + 0.12 * t;
+                    } else {
+                        // Normal idle look
+                        head.rotation.x = 0;
+                        head.rotation.y = Math.sin(age * 1.2) * 0.12;
+                        head.rotation.z = 0;
+                        head.position.set(0, 1.20, 0.62);
+                    }
+                }
             } else {
                 const swing = Math.sin(age * 7) * 0.45;
                 if (leg0) leg0.rotation.x = swing;
                 if (leg1) leg1.rotation.x = -swing;
                 if (leg2) leg2.rotation.x = -swing;
                 if (leg3) leg3.rotation.x = swing;
-                if (head) head.rotation.y = 0;
+                if (head) {
+                    head.rotation.x = 0;
+                    head.rotation.y = 0;
+                    head.rotation.z = 0;
+                    head.position.set(0, 1.20, 0.62);
+                }
             }
         },
         updateAI: (mob, dt, world, playerPos) => {
@@ -1159,33 +1200,41 @@ export const MOB_TYPES = {
         size: 0.8, xpDrop: 2, lootChance: 1.0,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Authentic Minecraft Sheep Body (Fleece Wool coat): Box (12, 16, 8) in MC coords -> (0.75, 1.0, 0.5) rotated PI/2 around X
-            // Vanilla MC Sheep Wool body UV: { u: 28, v: 8, w: 12, h: 16, d: 8 }
-            const bodyGeo = new THREE.BoxGeometry(0.75, 1.0, 0.5);
-            const bodyMats = getMobBoxMaterials('SHEEP', { u: 28, v: 8, w: 12, h: 16, d: 8 }, { skinKey: 'sheep/sheep_fur.png', part: 'body' });
+            // Authentic Minecraft Sheep Body (Fleece Wool coat): Box (12, 8, 16) in MC coords -> (0.75, 0.50, 1.0) unrotated
+            // Vanilla MC Sheep Wool body UV: { u: 28, v: 8, w: 8, h: 6, l: 16 }
+            const bodyGeo = new THREE.BoxGeometry(0.75, 0.50, 1.0);
+            const bodyMats = getMobBoxMaterials('SHEEP', { u: 28, v: 8, w: 8, h: 6, l: 16 }, { isBody: true, skinKey: 'sheep/sheep_fur.png', part: 'body' });
             const body = new THREE.Mesh(bodyGeo, bodyMats);
-            body.rotation.x = Math.PI / 2;
-            body.position.y = 0.55;
+            body.position.set(0, 1.0, 0);
             body.castShadow = true;
             group.add(body);
 
             // Head (faces +Z forward): Vanilla MC Sheep Head UV: { u: 0, v: 0, w: 6, h: 6, d: 8 } on sheep.png skin
-            const headGeo = new THREE.BoxGeometry(0.375, 0.375, 0.5);
+            const headGeo = new THREE.BoxGeometry(0.375, 0.375, 0.50);
             const headMats = getMobBoxMaterials('SHEEP', { u: 0, v: 0, w: 6, h: 6, d: 8 }, { skinKey: 'sheep/sheep.png', part: 'head_front' });
             const head = new THREE.Mesh(headGeo, headMats);
-            head.position.set(0, 0.72, 0.6);
+            head.position.set(0, 1.10, 0.58);
             head.name = 'head';
             head.castShadow = true;
+
+            // Head Wool Cap: Vanilla MC Sheep Head Wool UV: { u: 0, v: 0, w: 6, h: 6, d: 6 } on sheep_fur.png
+            const headWoolGeo = new THREE.BoxGeometry(0.40, 0.40, 0.40);
+            const headWoolMats = getMobBoxMaterials('SHEEP', { u: 0, v: 0, w: 6, h: 6, d: 6 }, { isOverlay: true, transparent: true, skinKey: 'sheep/sheep_fur.png', part: 'head_front' });
+            const headWool = new THREE.Mesh(headWoolGeo, headWoolMats);
+            headWool.position.set(0, 0.02, -0.06);
+            headWool.castShadow = false; // Overlay mesh does not cast shadow to prevent black shadow acne on head
+            head.add(headWool); // Child of head!
+
             group.add(head);
 
-            // 4 Legs: Vanilla MC Sheep Leg UV: { u: 0, v: 16, w: 4, h: 12, d: 4 } on sheep.png skin
-            const legGeo = new THREE.BoxGeometry(0.2, 0.45, 0.2);
+            // 4 Legs: Vanilla MC Sheep Leg UV: { u: 0, v: 16, w: 4, h: 12, d: 4 } on sheep.png skin (height 12 px = 0.75)
+            const legGeo = new THREE.BoxGeometry(0.25, 0.75, 0.25);
             const legMats = getMobBoxMaterials('SHEEP', { u: 0, v: 16, w: 4, h: 12, d: 4 }, { skinKey: 'sheep/sheep.png', part: 'leg' });
             for(let i = 0; i < 4; i++) {
                 const leg = new THREE.Mesh(legGeo, legMats);
-                const x = (i % 2 === 0 ? -0.26 : 0.26);
+                const x = (i % 2 === 0 ? -0.22 : 0.22);
                 const z = (i < 2 ? 0.35 : -0.35);
-                leg.position.set(x, 0.225, z);
+                leg.position.set(x, 0.375, z);
                 leg.name = `leg_${i}`;
                 leg.castShadow = true;
                 group.add(leg);
@@ -1197,17 +1246,39 @@ export const MOB_TYPES = {
             const leg1 = mesh.getObjectByName('leg_1');
             const leg2 = mesh.getObjectByName('leg_2');
             const leg3 = mesh.getObjectByName('leg_3');
+            const head = mesh.getObjectByName('head');
             if (!isMoving) {
                 if (leg0) leg0.rotation.x = 0;
                 if (leg1) leg1.rotation.x = 0;
                 if (leg2) leg2.rotation.x = 0;
                 if (leg3) leg3.rotation.x = 0;
+                if (head) {
+                    const cycle = age % 11;
+                    if (cycle > 5.5 && cycle < 9.5) {
+                        // Authentic Minecraft Sheep grass-grazing animation!
+                        const t = Math.min(1, Math.min((cycle - 5.5) * 2, (9.5 - cycle) * 2));
+                        const chew = Math.sin(age * 16) * 0.06;
+                        head.rotation.x = 0.75 * t + chew;
+                        head.rotation.y = Math.sin(age * 3) * 0.04;
+                        head.position.y = 1.10 - 0.35 * t;
+                        head.position.z = 0.58 + 0.15 * t;
+                    } else {
+                        head.rotation.x = 0;
+                        head.rotation.y = Math.sin(age * 1.5) * 0.10;
+                        head.position.set(0, 1.10, 0.58);
+                    }
+                }
             } else {
                 const swing = Math.sin(age * 8) * 0.4;
                 if (leg0) leg0.rotation.x = swing;
                 if (leg1) leg1.rotation.x = -swing;
                 if (leg2) leg2.rotation.x = -swing;
                 if (leg3) leg3.rotation.x = swing;
+                if (head) {
+                    head.rotation.x = 0;
+                    head.rotation.y = 0;
+                    head.position.set(0, 1.10, 0.58);
+                }
             }
         },
         updateAI: (mob, dt, world, playerPos) => {
@@ -1396,13 +1467,12 @@ export const MOB_TYPES = {
         size: 0.7, xpDrop: 3, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Authentic Minecraft Pig Body: Box (10, 16, 8) in MC coords -> (0.625, 1.0, 0.5) rotated PI/2 around X
-            // Vanilla MC Pig Body UV: { u: 28, v: 8, w: 10, h: 16, d: 8 }
-            const bodyGeo = new THREE.BoxGeometry(0.625, 1.0, 0.5);
-            const bodyMats = getMobBoxMaterials('PIG', { u: 28, v: 8, w: 10, h: 16, d: 8 }, { part: 'body' });
+            // Authentic Minecraft Pig Body: Box (10, 8, 16) in MC coords -> (0.625, 0.50, 1.0) unrotated
+            // Vanilla MC Pig Body UV: { u: 28, v: 8, w: 10, h: 8, l: 16 }
+            const bodyGeo = new THREE.BoxGeometry(0.625, 0.50, 1.0);
+            const bodyMats = getMobBoxMaterials('PIG', { u: 28, v: 8, w: 10, h: 8, l: 16 }, { isBody: true, part: 'body' });
             const body = new THREE.Mesh(bodyGeo, bodyMats);
-            body.rotation.x = Math.PI / 2;
-            body.position.y = 0.45;
+            body.position.set(0, 0.625, 0);
             body.castShadow = true;
             group.add(body);
 
@@ -1410,27 +1480,28 @@ export const MOB_TYPES = {
             const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
             const headMats = getMobBoxMaterials('PIG', { u: 0, v: 0, w: 8, h: 8, d: 8 }, { part: 'head_front' });
             const head = new THREE.Mesh(headGeo, headMats);
-            head.position.set(0, 0.55, 0.55);
+            head.position.set(0, 0.70, 0.55);
             head.name = 'head';
             head.castShadow = true;
-            group.add(head);
 
             // 3D Protruding Snout on front of head: Vanilla MC Pig Snout UV: { u: 16, v: 16, w: 4, h: 3, d: 1 }
-            const snoutGeo = new THREE.BoxGeometry(0.25, 0.18, 0.08);
+            const snoutGeo = new THREE.BoxGeometry(0.25, 0.1875, 0.0625);
             const snoutMats = getMobBoxMaterials('PIG', { u: 16, v: 16, w: 4, h: 3, d: 1 }, { part: 'snout' });
             const snout = new THREE.Mesh(snoutGeo, snoutMats);
-            snout.position.set(0, 0.48, 0.81);
+            snout.position.set(0, -0.09, 0.28);
             snout.castShadow = true;
-            group.add(snout);
+            head.add(snout); // Child of head!
 
-            // 4 Legs with trotters: Vanilla MC Pig Leg UV: { u: 0, v: 16, w: 4, h: 6, d: 4 }
-            const legGeo = new THREE.BoxGeometry(0.2, 0.35, 0.2);
+            group.add(head);
+
+            // 4 Legs with trotters: Vanilla MC Pig Leg UV: { u: 0, v: 16, w: 4, h: 6, d: 4 } (height 6 px = 0.375)
+            const legGeo = new THREE.BoxGeometry(0.25, 0.375, 0.25);
             const legMats = getMobBoxMaterials('PIG', { u: 0, v: 16, w: 4, h: 6, d: 4 }, { part: 'leg' });
             for(let i = 0; i < 4; i++) {
                 const leg = new THREE.Mesh(legGeo, legMats);
-                const x = (i % 2 === 0 ? -0.22 : 0.22);
-                const z = (i < 2 ? 0.32 : -0.32);
-                leg.position.set(x, 0.175, z);
+                const x = (i % 2 === 0 ? -0.20 : 0.20);
+                const z = (i < 2 ? 0.30 : -0.30);
+                leg.position.set(x, 0.1875, z);
                 leg.name = `leg_${i}`;
                 leg.castShadow = true;
                 group.add(leg);
@@ -1442,17 +1513,39 @@ export const MOB_TYPES = {
             const leg1 = mesh.getObjectByName('leg_1');
             const leg2 = mesh.getObjectByName('leg_2');
             const leg3 = mesh.getObjectByName('leg_3');
+            const head = mesh.getObjectByName('head');
             if (!isMoving) {
                 if (leg0) leg0.rotation.x = 0;
                 if (leg1) leg1.rotation.x = 0;
                 if (leg2) leg2.rotation.x = 0;
                 if (leg3) leg3.rotation.x = 0;
+                if (head) {
+                    const cycle = (age + 4.2) % 10;
+                    if (cycle > 5 && cycle < 8.5) {
+                        // Sniffing and rooting in ground
+                        const t = Math.min(1, Math.min((cycle - 5) * 2, (8.5 - cycle) * 2));
+                        const sniff = Math.sin(age * 22) * 0.05;
+                        head.rotation.x = 0.45 * t + sniff;
+                        head.rotation.y = Math.sin(age * 14) * 0.06 * t;
+                        head.position.y = 0.70 - 0.18 * t;
+                        head.position.z = 0.55 + 0.08 * t;
+                    } else {
+                        head.rotation.x = 0;
+                        head.rotation.y = Math.sin(age * 1.2) * 0.10;
+                        head.position.set(0, 0.70, 0.55);
+                    }
+                }
             } else {
                 const swing = Math.sin(age * 8) * 0.4;
                 if (leg0) leg0.rotation.x = swing;
                 if (leg1) leg1.rotation.x = -swing;
                 if (leg2) leg2.rotation.x = -swing;
                 if (leg3) leg3.rotation.x = swing;
+                if (head) {
+                    head.rotation.x = 0;
+                    head.rotation.y = 0;
+                    head.position.set(0, 0.70, 0.55);
+                }
             }
         },
         updateAI: (mob, dt, world, playerPos) => {
@@ -1487,44 +1580,132 @@ export const MOB_TYPES = {
         size: 0.9, xpDrop: 15, lootChance: 0.6,
         buildMesh: () => {
             const group = new THREE.Group();
-            const body = createBodyPart(new THREE.BoxGeometry(0.5, 0.6, 0.3), 'PIGLIN_BRUISER', 0, 0, 'body'); // Dark armor
-            body.position.y = 0.7;
+
+            // Authentic Minecraft Java Piglin Brute UV layout on piglin_brute.png (64x64)
+            // Body (Torso): 8x12x4 -> (0.50, 0.75, 0.25), UV: { u: 16, v: 16, w: 8, h: 12, d: 4 }
+            const bodyGeo = new THREE.BoxGeometry(0.50, 0.75, 0.25);
+            const bodyMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 16, v: 16, w: 8, h: 12, d: 4 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 1.125, 0);
+            body.name = 'body';
+            body.castShadow = true;
             group.add(body);
-            const head = createMobHead(new THREE.BoxGeometry(0.45, 0.45, 0.45), 'PIGLIN_BRUISER');
-            head.position.set(0, 1.25, 0.05);
+
+            // Head: 10x8x8 -> (0.625, 0.50, 0.50), UV: { u: 0, v: 0, w: 10, h: 8, d: 8 }
+            const headGeo = new THREE.BoxGeometry(0.625, 0.50, 0.50);
+            const headMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 0, v: 0, w: 10, h: 8, d: 8 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 1.75, 0);
+            head.name = 'head';
+            head.castShadow = true;
+
+            // Snout: 4x4x1 -> (0.25, 0.25, 0.0625), UV: { u: 31, v: 1, w: 4, h: 4, d: 1 }
+            const snoutGeo = new THREE.BoxGeometry(0.25, 0.25, 0.0625);
+            const snoutMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 31, v: 1, w: 4, h: 4, d: 1 }, { part: 'snout' });
+            const snout = new THREE.Mesh(snoutGeo, snoutMats);
+            snout.position.set(0, -0.10, 0.28125);
+            snout.castShadow = true;
+            head.add(snout);
+
+            // Tusks on snout sides: 1x2x1 -> (0.0625, 0.125, 0.0625)
+            // Left tusk: { u: 2, v: 4, w: 1, h: 2, d: 1 }
+            const tuskGeo = new THREE.BoxGeometry(0.0625, 0.125, 0.0625);
+            const leftTuskMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 2, v: 4, w: 1, h: 2, d: 1 }, { part: 'snout' });
+            const leftTusk = new THREE.Mesh(tuskGeo, leftTuskMats);
+            leftTusk.position.set(-0.15625, -0.14, 0.26);
+            leftTusk.castShadow = true;
+            head.add(leftTusk);
+
+            // Right tusk: { u: 2, v: 0, w: 1, h: 2, d: 1 }
+            const rightTuskMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 2, v: 0, w: 1, h: 2, d: 1 }, { part: 'snout' });
+            const rightTusk = new THREE.Mesh(tuskGeo, rightTuskMats);
+            rightTusk.position.set(0.15625, -0.14, 0.26);
+            rightTusk.castShadow = true;
+            head.add(rightTusk);
+
+            // Floppy Ears: 1x5x4 -> (0.0625, 0.3125, 0.25)
+            // Left ear: { u: 51, v: 6, w: 1, h: 5, d: 4 }, angled outwards
+            const earGeo = new THREE.BoxGeometry(0.0625, 0.3125, 0.25);
+            const leftEarMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 51, v: 6, w: 1, h: 5, d: 4 }, { part: 'head_side' });
+            const leftEar = new THREE.Mesh(earGeo, leftEarMats);
+            leftEar.position.set(-0.34, 0.05, -0.05);
+            leftEar.rotation.z = 0.52; // Angled outward
+            leftEar.name = 'leftEar';
+            leftEar.castShadow = true;
+            head.add(leftEar);
+
+            // Right ear: { u: 39, v: 6, w: 1, h: 5, d: 4 }, angled outwards
+            const rightEarMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 39, v: 6, w: 1, h: 5, d: 4 }, { part: 'head_side' });
+            const rightEar = new THREE.Mesh(earGeo, rightEarMats);
+            rightEar.position.set(0.34, 0.05, -0.05);
+            rightEar.rotation.z = -0.52; // Angled outward
+            rightEar.name = 'rightEar';
+            rightEar.castShadow = true;
+            head.add(rightEar);
+
             group.add(head);
-            // Snout
-            const snout = createBodyPart(new THREE.BoxGeometry(0.2, 0.15, 0.1), 'PIGLIN_BRUISER', 0, 0, 'snout');
-            snout.position.set(0, 1.15, 0.3);
-            group.add(snout);
-            const armGeo = new THREE.BoxGeometry(0.15, 0.5, 0.15);
-            const lArm = createBodyPart(armGeo, 'PIGLIN_BRUISER', 0, 0, 'arm');
-            lArm.position.set(-0.35, 0.7, 0);
+
+            // Arms: 4x12x4 -> (0.25, 0.75, 0.25)
+            // Left Arm: UV: { u: 32, v: 48, w: 4, h: 12, d: 4 }
+            const armGeo = new THREE.BoxGeometry(0.25, 0.75, 0.25);
+            const lArmMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 32, v: 48, w: 4, h: 12, d: 4 }, { part: 'arm' });
+            const lArm = new THREE.Mesh(armGeo, lArmMats);
+            lArm.position.set(-0.375, 1.125, 0);
+            lArm.name = 'leftArm';
+            lArm.castShadow = true;
             group.add(lArm);
-            const rArm = createBodyPart(armGeo, 'PIGLIN_BRUISER', 0, 0, 'arm');
-            rArm.position.set(0.35, 0.7, 0);
+
+            // Right Arm: UV: { u: 40, v: 16, w: 4, h: 12, d: 4 }
+            const rArmMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 40, v: 16, w: 4, h: 12, d: 4 }, { part: 'arm' });
+            const rArm = new THREE.Mesh(armGeo, rArmMats);
+            rArm.position.set(0.375, 1.125, 0);
+            rArm.name = 'rightArm';
+            rArm.castShadow = true;
             group.add(rArm);
-            const legGeo = new THREE.BoxGeometry(0.15, 0.45, 0.15);
-            const lLeg = createBodyPart(legGeo, 'PIGLIN_BRUISER', 0, 0, 'leg');
-            lLeg.position.set(-0.15, 0.22, 0);
+
+            // Legs: 4x12x4 -> (0.25, 0.75, 0.25)
+            // Left Leg: UV: { u: 16, v: 48, w: 4, h: 12, d: 4 }
+            const legGeo = new THREE.BoxGeometry(0.25, 0.75, 0.25);
+            const lLegMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 16, v: 48, w: 4, h: 12, d: 4 }, { part: 'leg' });
+            const lLeg = new THREE.Mesh(legGeo, lLegMats);
+            lLeg.position.set(-0.125, 0.375, 0);
+            lLeg.name = 'leftLeg';
+            lLeg.castShadow = true;
             group.add(lLeg);
-            const rLeg = createBodyPart(legGeo, 'PIGLIN_BRUISER', 0, 0, 'leg');
-            rLeg.position.set(0.15, 0.22, 0);
+
+            // Right Leg: UV: { u: 0, v: 16, w: 4, h: 12, d: 4 }
+            const rLegMats = getMobBoxMaterials('PIGLIN_BRUISER', { u: 0, v: 16, w: 4, h: 12, d: 4 }, { part: 'leg' });
+            const rLeg = new THREE.Mesh(legGeo, rLegMats);
+            rLeg.position.set(0.125, 0.375, 0);
+            rLeg.name = 'rightLeg';
+            rLeg.castShadow = true;
             group.add(rLeg);
+
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
+            const lArm = mesh.getObjectByName('leftArm');
+            const rArm = mesh.getObjectByName('rightArm');
+            const lLeg = mesh.getObjectByName('leftLeg');
+            const rLeg = mesh.getObjectByName('rightLeg');
+            const lEar = mesh.getObjectByName('leftEar');
+            const rEar = mesh.getObjectByName('rightEar');
+
             if (!isMoving) {
-                mesh.children[3].rotation.x = 0;
-                mesh.children[4].rotation.x = 0;
-                mesh.children[5].rotation.x = 0;
-                mesh.children[6].rotation.x = 0;
+                if (lArm) lArm.rotation.x = 0;
+                if (rArm) rArm.rotation.x = 0;
+                if (lLeg) lLeg.rotation.x = 0;
+                if (rLeg) rLeg.rotation.x = 0;
+                if (lEar) lEar.rotation.z = 0.52 + Math.sin(age * 2) * 0.05;
+                if (rEar) rEar.rotation.z = -0.52 - Math.sin(age * 2) * 0.05;
             } else {
-                const swing = Math.sin(age * 10) * 0.5;
-                mesh.children[3].rotation.x = swing;
-                mesh.children[4].rotation.x = -swing;
-                mesh.children[5].rotation.x = -swing;
-                mesh.children[6].rotation.x = swing;
+                const swing = Math.sin(age * 8) * 0.5;
+                if (lArm) lArm.rotation.x = swing;
+                if (rArm) rArm.rotation.x = -swing;
+                if (lLeg) lLeg.rotation.x = -swing;
+                if (rLeg) rLeg.rotation.x = swing;
+                if (lEar) lEar.rotation.z = 0.52 + Math.sin(age * 12) * 0.12;
+                if (rEar) rEar.rotation.z = -0.52 - Math.sin(age * 12) * 0.12;
             }
         }
     },
@@ -1533,40 +1714,50 @@ export const MOB_TYPES = {
         size: 0.85, xpDrop: 5, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Torso
-            const bodyGeo = new THREE.BoxGeometry(0.45, 0.65, 0.25);
-            const body = createBodyPart(bodyGeo, 'CREEPER', 0, 0, 'body');
-            body.position.y = 0.68;
+            // Torso: 8x12x4 -> (0.50, 0.75, 0.25), UV: { u: 16, v: 16, w: 8, h: 12, d: 4 }
+            const bodyGeo = new THREE.BoxGeometry(0.50, 0.75, 0.25);
+            const bodyMats = getMobBoxMaterials('CREEPER', { u: 16, v: 16, w: 8, h: 12, d: 4 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 0.75, 0);
             body.name = 'body';
+            body.castShadow = true;
             group.add(body);
 
-            // Head (faces +Z forward with authentic Creeper face)
-            const headGeo = new THREE.BoxGeometry(0.45, 0.45, 0.45);
-            const head = createMobHead(headGeo, 'CREEPER');
-            head.position.set(0, 1.2, 0);
+            // Head: 8x8x8 -> (0.50, 0.50, 0.50), UV: { u: 0, v: 0, w: 8, h: 8, d: 8 }
+            const headGeo = new THREE.BoxGeometry(0.50, 0.50, 0.50);
+            const headMats = getMobBoxMaterials('CREEPER', { u: 0, v: 0, w: 8, h: 8, d: 8 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 1.375, 0);
             head.name = 'head';
+            head.castShadow = true;
             group.add(head);
 
-            // 4 short stubby legs
-            const legGeo = new THREE.BoxGeometry(0.18, 0.35, 0.18);
-            const legFL = createBodyPart(legGeo, 'CREEPER', 0, 0, 'leg');
-            legFL.position.set(-0.13, 0.175, 0.13);
+            // 4 short stubby textured feet: 4x6x4 -> (0.25, 0.375, 0.25), UV: { u: 0, v: 16, w: 4, h: 6, d: 4 }
+            const legGeo = new THREE.BoxGeometry(0.25, 0.375, 0.25);
+            const legMats = getMobBoxMaterials('CREEPER', { u: 0, v: 16, w: 4, h: 6, d: 4 }, { part: 'leg' });
+
+            const legFL = new THREE.Mesh(legGeo, legMats);
+            legFL.position.set(-0.13, 0.1875, 0.13);
             legFL.name = 'leg_fl';
+            legFL.castShadow = true;
             group.add(legFL);
 
-            const legFR = createBodyPart(legGeo, 'CREEPER', 0, 0, 'leg');
-            legFR.position.set(0.13, 0.175, 0.13);
+            const legFR = new THREE.Mesh(legGeo, legMats);
+            legFR.position.set(0.13, 0.1875, 0.13);
             legFR.name = 'leg_fr';
+            legFR.castShadow = true;
             group.add(legFR);
 
-            const legBL = createBodyPart(legGeo, 'CREEPER', 0, 0, 'leg');
-            legBL.position.set(-0.13, 0.175, -0.13);
+            const legBL = new THREE.Mesh(legGeo, legMats);
+            legBL.position.set(-0.13, 0.1875, -0.13);
             legBL.name = 'leg_bl';
+            legBL.castShadow = true;
             group.add(legBL);
 
-            const legBR = createBodyPart(legGeo, 'CREEPER', 0, 0, 'leg');
-            legBR.position.set(0.13, 0.175, -0.13);
+            const legBR = new THREE.Mesh(legGeo, legMats);
+            legBR.position.set(0.13, 0.1875, -0.13);
             legBR.name = 'leg_br';
+            legBR.castShadow = true;
             group.add(legBR);
 
             return group;
@@ -1968,44 +2159,65 @@ export const MOB_TYPES = {
         size: 0.4, xpDrop: 4, lootChance: 0.2, flying: true,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body (small oval)
-            const body = createBodyPart(new THREE.SphereGeometry(0.12, 8, 6), 'BAT');
-            body.scale.set(1, 0.8, 1.2);
-            body.position.y = 0.2;
+            // Body: Box (3, 5, 2) in MC coords -> (0.1875, 0.3125, 0.125)
+            // Vanilla MC Bat Body UV: { u: 0, v: 0, w: 3, h: 5, d: 2 }
+            const bodyGeo = new THREE.BoxGeometry(0.1875, 0.3125, 0.125);
+            const bodyMats = getMobBoxMaterials('BAT', { u: 0, v: 0, w: 3, h: 5, d: 2 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 0.35, 0);
+            body.castShadow = true;
+            body.name = 'body';
             group.add(body);
-            // Head
-            const head = createBodyPart(new THREE.SphereGeometry(0.08, 6, 6), 'BAT');
-            head.position.set(0, 0.3, 0.1);
+
+            // Head: Box (4, 3, 2) in MC coords -> (0.25, 0.1875, 0.125)
+            // Vanilla MC Bat Head UV: { u: 0, v: 7, w: 4, h: 3, d: 2 }
+            const headGeo = new THREE.BoxGeometry(0.25, 0.1875, 0.125);
+            const headMats = getMobBoxMaterials('BAT', { u: 0, v: 7, w: 4, h: 3, d: 2 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 0.55, 0.02);
+            head.name = 'head';
+            head.castShadow = true;
+
+            // Ears attached to head: Right Ear UV: { u: 1, v: 15, w: 3, h: 5, d: 1 }, Left Ear UV: { u: 8, v: 15, w: 3, h: 5, d: 1 }
+            const earGeo = new THREE.BoxGeometry(0.15, 0.22, 0.02);
+            const rEarMats = getMobBoxMaterials('BAT', { u: 1, v: 15, w: 3, h: 5, d: 1 }, { part: 'body' });
+            const rightEar = new THREE.Mesh(earGeo, rEarMats);
+            rightEar.position.set(-0.12, 0.16, 0);
+            head.add(rightEar);
+            const lEarMats = getMobBoxMaterials('BAT', { u: 8, v: 15, w: 3, h: 5, d: 1 }, { part: 'body' });
+            const leftEar = new THREE.Mesh(earGeo, lEarMats);
+            leftEar.position.set(0.12, 0.16, 0);
+            head.add(leftEar);
+
             group.add(head);
-            // Eyes (tiny red)
-            const eyeGeo = new THREE.SphereGeometry(0.025, 4, 4);
-            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-            const le = new THREE.Mesh(eyeGeo, eyeMat);
-            le.position.set(-0.04, 0.32, 0.17);
-            group.add(le);
-            const re = new THREE.Mesh(eyeGeo, eyeMat);
-            re.position.set(0.04, 0.32, 0.17);
-            group.add(re);
-            // Wings (flat boxes)
-            const wingGeo = new THREE.BoxGeometry(0.35, 0.01, 0.2);
-            const wingMat = getMobMaterial('BAT');
-            const lw = new THREE.Mesh(wingGeo, wingMat);
-            lw.position.set(-0.22, 0.22, 0);
-            lw.name = 'leftWing';
-            group.add(lw);
-            const rw = new THREE.Mesh(wingGeo, wingMat);
-            rw.position.set(0.22, 0.22, 0);
-            rw.name = 'rightWing';
-            group.add(rw);
-            // Ears
-            const earGeo = new THREE.ConeGeometry(0.03, 0.08, 3);
-            const earMat = getMobMaterial('BAT');
-            const lear = new THREE.Mesh(earGeo, earMat);
-            lear.position.set(-0.04, 0.4, 0.08);
-            group.add(lear);
-            const rear = new THREE.Mesh(earGeo, earMat);
-            rear.position.set(0.04, 0.4, 0.08);
-            group.add(rear);
+
+            // Left Wing with shoulder hinge
+            const lWingGeo = new THREE.BoxGeometry(0.40, 0.40, 0.02);
+            lWingGeo.translate(0.20, 0, 0);
+            const lWingMats = getMobBoxMaterials('BAT', { u: 12, v: 7, w: 8, h: 8, d: 1 }, { part: 'wing' });
+            const leftWing = new THREE.Mesh(lWingGeo, lWingMats);
+            leftWing.position.set(0.09, 0.42, 0);
+            leftWing.name = 'leftWing';
+            leftWing.castShadow = true;
+            group.add(leftWing);
+
+            // Right Wing with shoulder hinge
+            const rWingGeo = new THREE.BoxGeometry(0.40, 0.40, 0.02);
+            rWingGeo.translate(-0.20, 0, 0);
+            const rWingMats = getMobBoxMaterials('BAT', { u: 12, v: 0, w: 8, h: 8, d: 1 }, { part: 'wing' });
+            const rightWing = new THREE.Mesh(rWingGeo, rWingMats);
+            rightWing.position.set(-0.09, 0.42, 0);
+            rightWing.name = 'rightWing';
+            rightWing.castShadow = true;
+            group.add(rightWing);
+
+            // Feet UV: { u: 16, v: 16, w: 3, h: 2, d: 1 }
+            const feetGeo = new THREE.BoxGeometry(0.1875, 0.125, 0.02);
+            const feetMats = getMobBoxMaterials('BAT', { u: 16, v: 16, w: 3, h: 2, d: 1 }, { part: 'body' });
+            const feet = new THREE.Mesh(feetGeo, feetMats);
+            feet.position.set(0, 0.15, 0);
+            group.add(feet);
+
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
@@ -2025,54 +2237,77 @@ export const MOB_TYPES = {
         size: 1.4, xpDrop: 25, lootChance: 0.7,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Broad upper chest
-            const chestGeo = new THREE.BoxGeometry(0.9, 0.7, 0.5);
-            const chest = createBodyPart(chestGeo, 'GOLEM', 0, 0, 'body');
-            chest.position.y = 1.05;
+
+            // Broad upper chest: 18x12x11 -> (1.125, 0.75, 0.6875), UV: { u: 0, v: 40, w: 18, h: 12, d: 11 }
+            const chestGeo = new THREE.BoxGeometry(1.125, 0.75, 0.6875);
+            const chestMats = getMobBoxMaterials('GOLEM', { u: 0, v: 40, w: 18, h: 12, d: 11 }, { part: 'body' });
+            const chest = new THREE.Mesh(chestGeo, chestMats);
+            chest.position.set(0, 1.6875, 0);
+            chest.name = 'chest';
+            chest.castShadow = true;
             group.add(chest);
 
-            // Narrow lower torso
-            const lowerGeo = new THREE.BoxGeometry(0.6, 0.35, 0.4);
-            const lower = createBodyPart(lowerGeo, 'GOLEM', 0, 0, 'body');
-            lower.position.y = 0.55;
+            // Narrow lower torso / waist: 9x5x6 -> (0.5625, 0.3125, 0.375), UV: { u: 0, v: 70, w: 9, h: 5, d: 6 }
+            const lowerGeo = new THREE.BoxGeometry(0.5625, 0.3125, 0.375);
+            const lowerMats = getMobBoxMaterials('GOLEM', { u: 0, v: 70, w: 9, h: 5, d: 6 }, { part: 'body' });
+            const lower = new THREE.Mesh(lowerGeo, lowerMats);
+            lower.position.set(0, 1.15625, 0);
+            lower.name = 'lower';
+            lower.castShadow = true;
             group.add(lower);
 
-            // Head (authentic Minecraft proportions)
-            const headGeo = new THREE.BoxGeometry(0.4, 0.5, 0.4);
-            const head = createMobHead(headGeo, 'GOLEM');
-            head.position.set(0, 1.62, 0.05);
+            // Head: 8x10x8 -> (0.50, 0.625, 0.50), UV: { u: 0, v: 0, w: 8, h: 10, d: 8 }
+            const headGeo = new THREE.BoxGeometry(0.50, 0.625, 0.50);
+            const headMats = getMobBoxMaterials('GOLEM', { u: 0, v: 0, w: 8, h: 10, d: 8 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 2.375, 0.05);
             head.name = 'head';
+            head.castShadow = true;
+
+            // Protruding 3D Nose: 2x4x2 -> (0.125, 0.25, 0.125), UV: { u: 24, v: 0, w: 2, h: 4, d: 2 }
+            const noseGeo = new THREE.BoxGeometry(0.125, 0.25, 0.125);
+            const noseMats = getMobBoxMaterials('GOLEM', { u: 24, v: 0, w: 2, h: 4, d: 2 }, { part: 'head_front' });
+            const nose = new THREE.Mesh(noseGeo, noseMats);
+            nose.position.set(0, -0.08, 0.3125);
+            nose.castShadow = true;
+            head.add(nose);
+
             group.add(head);
 
-            // Protruding 3D Nose
-            const noseGeo = new THREE.BoxGeometry(0.1, 0.22, 0.12);
-            const noseMat = getMobMaterial('GOLEM', 'head_front');
-            const nose = new THREE.Mesh(noseGeo, noseMat);
-            nose.position.set(0, 1.52, 0.28);
-            group.add(nose);
-
-            // Massive swinging arms
-            const armGeo = new THREE.BoxGeometry(0.25, 1.05, 0.25);
-            const la = createBodyPart(armGeo, 'GOLEM', 0, 0, 'arm');
-            la.position.set(-0.6, 0.85, 0);
+            // Massive swinging arms: 4x30x6 -> (0.25, 1.875, 0.375)
+            // Left Arm: UV: { u: 60, v: 58, w: 4, h: 30, d: 6 }
+            const armGeo = new THREE.BoxGeometry(0.25, 1.875, 0.375);
+            const laMats = getMobBoxMaterials('GOLEM', { u: 60, v: 58, w: 4, h: 30, d: 6 }, { part: 'arm' });
+            const la = new THREE.Mesh(armGeo, laMats);
+            la.position.set(-0.6875, 1.45, 0);
             la.name = 'leftArm';
+            la.castShadow = true;
             group.add(la);
 
-            const ra = createBodyPart(armGeo, 'GOLEM', 0, 0, 'arm');
-            ra.position.set(0.6, 0.85, 0);
+            // Right Arm: UV: { u: 60, v: 21, w: 4, h: 30, d: 6 }
+            const raMats = getMobBoxMaterials('GOLEM', { u: 60, v: 21, w: 4, h: 30, d: 6 }, { part: 'arm' });
+            const ra = new THREE.Mesh(armGeo, raMats);
+            ra.position.set(0.6875, 1.45, 0);
             ra.name = 'rightArm';
+            ra.castShadow = true;
             group.add(ra);
 
-            // Heavy legs
-            const legGeo = new THREE.BoxGeometry(0.28, 0.65, 0.28);
-            const ll = createBodyPart(legGeo, 'GOLEM', 0, 0, 'leg');
-            ll.position.set(-0.22, 0.32, 0);
+            // Heavy legs: 6x16x5 -> (0.375, 1.0, 0.3125)
+            // Left Leg: UV: { u: 60, v: 0, w: 6, h: 16, d: 5 }
+            const legGeo = new THREE.BoxGeometry(0.375, 1.0, 0.3125);
+            const llMats = getMobBoxMaterials('GOLEM', { u: 60, v: 0, w: 6, h: 16, d: 5 }, { part: 'leg' });
+            const ll = new THREE.Mesh(legGeo, llMats);
+            ll.position.set(-0.25, 0.50, 0);
             ll.name = 'leftLeg';
+            ll.castShadow = true;
             group.add(ll);
 
-            const rl = createBodyPart(legGeo, 'GOLEM', 0, 0, 'leg');
-            rl.position.set(0.22, 0.32, 0);
+            // Right Leg: UV: { u: 37, v: 0, w: 6, h: 16, d: 5 }
+            const rlMats = getMobBoxMaterials('GOLEM', { u: 37, v: 0, w: 6, h: 16, d: 5 }, { part: 'leg' });
+            const rl = new THREE.Mesh(legGeo, rlMats);
+            rl.position.set(0.25, 0.50, 0);
             rl.name = 'rightLeg';
+            rl.castShadow = true;
             group.add(rl);
 
             return group;
@@ -2138,15 +2373,55 @@ export const MOB_TYPES = {
         size: 0.3, xpDrop: 1, lootChance: 0.1, waterOnly: true,
         buildMesh: () => {
             const group = new THREE.Group();
-            const mat = getMobMaterial('COD');
-            const bodyGeo = new THREE.BoxGeometry(0.15, 0.3, 0.6);
-            const body = new THREE.Mesh(bodyGeo, mat);
-            body.position.y = 0.15; group.add(body);
-            const tailGeo = new THREE.BoxGeometry(0.02, 0.12, 0.12);
-            const tail = createBodyPart(tailGeo, 'COD'); tail.position.set(0, 0.15, -0.3); tail.name = 'tail'; group.add(tail);
-            const finGeo = new THREE.BoxGeometry(0.08, 0.02, 0.06);
-            const lf = createBodyPart(finGeo, 'COD'); lf.position.set(-0.08, 0.1, 0); lf.rotation.z = -0.3; lf.name = 'leftFin'; group.add(lf);
-            const rf = createBodyPart(finGeo, 'COD'); rf.position.set(0.08, 0.1, 0); rf.rotation.z = 0.3; rf.name = 'rightFin'; group.add(rf);
+            // Body: Box (2, 4, 7) in MC coords -> (0.125, 0.25, 0.4375)
+            // Vanilla MC Cod Body UV: { u: 0, v: 0, w: 2, h: 4, d: 7 }
+            const bodyGeo = new THREE.BoxGeometry(0.125, 0.25, 0.4375);
+            const bodyMats = getMobBoxMaterials('COD', { u: 0, v: 0, w: 2, h: 4, d: 7 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 0.2, 0);
+            body.castShadow = true;
+            group.add(body);
+
+            // Head: Box (2, 4, 3) in MC coords -> (0.125, 0.25, 0.1875)
+            // Vanilla MC Cod Head UV: { u: 11, v: 0, w: 2, h: 4, d: 3 }
+            const headGeo = new THREE.BoxGeometry(0.125, 0.25, 0.1875);
+            const headMats = getMobBoxMaterials('COD', { u: 11, v: 0, w: 2, h: 4, d: 3 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 0.2, 0.31);
+            head.castShadow = true;
+            group.add(head);
+
+            // Nose: Box (2, 3, 1) in MC coords -> (0.125, 0.1875, 0.0625)
+            // Vanilla MC Cod Nose UV: { u: 0, v: 0, w: 2, h: 3, d: 1 }
+            const noseGeo = new THREE.BoxGeometry(0.125, 0.1875, 0.0625);
+            const noseMats = getMobBoxMaterials('COD', { u: 0, v: 0, w: 2, h: 3, d: 1 }, { part: 'head_front' });
+            const nose = new THREE.Mesh(noseGeo, noseMats);
+            nose.position.set(0, 0.17, 0.43);
+            group.add(nose);
+
+            // Tail fin: Box (0.02, 4, 4) in MC coords -> (0.02, 0.25, 0.25)
+            // Vanilla MC Cod Tail Fin UV: { u: 22, v: 3, w: 1, h: 4, d: 4 }
+            const tailGeo = new THREE.BoxGeometry(0.02, 0.25, 0.25);
+            const tailMats = getMobBoxMaterials('COD', { u: 22, v: 3, w: 1, h: 4, d: 4 }, { part: 'body' });
+            const tail = new THREE.Mesh(tailGeo, tailMats);
+            tail.position.set(0, 0.2, -0.34);
+            tail.name = 'tail';
+            group.add(tail);
+
+            // Left & Right pectoral fins
+            const finGeo = new THREE.BoxGeometry(0.12, 0.02, 0.12);
+            const finMats = getMobBoxMaterials('COD', { u: 22, v: 1, w: 2, h: 1, d: 2 }, { part: 'body' });
+            const lf = new THREE.Mesh(finGeo, finMats);
+            lf.position.set(0.1, 0.14, 0.12);
+            lf.rotation.z = Math.PI / 4;
+            lf.name = 'leftFin';
+            group.add(lf);
+            const rf = new THREE.Mesh(finGeo, finMats);
+            rf.position.set(-0.1, 0.14, 0.12);
+            rf.rotation.z = -Math.PI / 4;
+            rf.name = 'rightFin';
+            group.add(rf);
+
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
@@ -2164,32 +2439,40 @@ export const MOB_TYPES = {
         size: 0.25, xpDrop: 1, lootChance: 0.1, waterOnly: true,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body (Orange and White)
-            const body = createBodyPart(new THREE.BoxGeometry(0.08, 0.15, 0.25), 'TROPICAL_FISH');
-            body.position.y = 0.15;
+            // Body: Box (2, 3, 6) in MC coords -> (0.125, 0.1875, 0.375)
+            // Vanilla MC Tropical Fish Small Body UV: { u: 0, v: 0, w: 2, h: 3, d: 6 }
+            const bodyGeo = new THREE.BoxGeometry(0.125, 0.1875, 0.375);
+            const bodyMats = getMobBoxMaterials('TROPICAL_FISH', { u: 0, v: 0, w: 2, h: 3, d: 6 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 0.15, 0);
+            body.castShadow = true;
             group.add(body);
-            // White stripe
-            const stripe = createBodyPart(new THREE.BoxGeometry(0.085, 0.16, 0.05), 0xffffff);
-            stripe.position.set(0, 0.15, 0);
-            group.add(stripe);
-            // Tail
-            const tailGeo = new THREE.BoxGeometry(0.02, 0.1, 0.1);
-            const tail = createBodyPart(tailGeo, 0xffffff);
-            tail.position.set(0, 0.15, -0.15);
+
+            // Tail: Box (0.02, 3, 6) in MC coords -> (0.02, 0.1875, 0.375)
+            // Vanilla MC Tropical Fish Small Tail UV: { u: 22, v: 0, w: 1, h: 3, d: 6 }
+            const tailGeo = new THREE.BoxGeometry(0.02, 0.1875, 0.3);
+            const tailMats = getMobBoxMaterials('TROPICAL_FISH', { u: 22, v: 0, w: 1, h: 3, d: 6 }, { part: 'body' });
+            const tail = new THREE.Mesh(tailGeo, tailMats);
+            tail.position.set(0, 0.15, -0.32);
             tail.name = 'tail';
             group.add(tail);
-            // Fins
-            const finGeo = new THREE.BoxGeometry(0.1, 0.02, 0.08);
-            const lf = createBodyPart(finGeo, 0xffaa00);
-            lf.position.set(-0.06, 0.1, 0);
-            lf.rotation.z = -0.3;
+
+            // Left & Right fins
+            const finGeo = new THREE.BoxGeometry(0.12, 0.12, 0.02);
+            const lFinMats = getMobBoxMaterials('TROPICAL_FISH', { u: 2, v: 12, w: 2, h: 2, d: 1 }, { part: 'body' });
+            const lf = new THREE.Mesh(finGeo, lFinMats);
+            lf.position.set(0.08, 0.12, 0.05);
+            lf.rotation.y = -Math.PI / 4;
             lf.name = 'leftFin';
             group.add(lf);
-            const rf = createBodyPart(finGeo, 0xffaa00);
-            rf.position.set(0.06, 0.1, 0);
-            rf.rotation.z = 0.3;
+
+            const rFinMats = getMobBoxMaterials('TROPICAL_FISH', { u: 2, v: 16, w: 2, h: 2, d: 1 }, { part: 'body' });
+            const rf = new THREE.Mesh(finGeo, rFinMats);
+            rf.position.set(-0.08, 0.12, 0.05);
+            rf.rotation.y = Math.PI / 4;
             rf.name = 'rightFin';
             group.add(rf);
+
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
@@ -2208,32 +2491,57 @@ export const MOB_TYPES = {
         size: 0.4, xpDrop: 3, lootChance: 0.15, waterOnly: true,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body
-            const body = createBodyPart(new THREE.BoxGeometry(0.12, 0.25, 0.45), 'SALMON');
-            body.position.y = 0.2;
-            group.add(body);
-            // Greenish back
-            const back = createBodyPart(new THREE.BoxGeometry(0.125, 0.1, 0.45), 0x335533);
-            back.position.set(0, 0.28, 0);
-            group.add(back);
-            // Tail
-            const tailGeo = new THREE.BoxGeometry(0.02, 0.2, 0.15);
-            const tail = createBodyPart(tailGeo, 0x335533);
-            tail.position.set(0, 0.2, -0.28);
-            tail.name = 'tail';
-            group.add(tail);
-            // Fins
-            const finGeo = new THREE.BoxGeometry(0.15, 0.02, 0.15);
-            const lf = createBodyPart(finGeo, 0xcc3333);
-            lf.position.set(-0.08, 0.1, 0);
-            lf.rotation.z = -0.2;
+            // Body Front: Box (3, 5, 8) in MC coords -> (0.1875, 0.3125, 0.50)
+            // Vanilla MC Salmon Body Front UV: { u: 0, v: 0, w: 3, h: 5, d: 8 }
+            const frontGeo = new THREE.BoxGeometry(0.1875, 0.3125, 0.50);
+            const frontMats = getMobBoxMaterials('SALMON', { u: 0, v: 0, w: 3, h: 5, d: 8 }, { part: 'body' });
+            const bodyFront = new THREE.Mesh(frontGeo, frontMats);
+            bodyFront.position.set(0, 0.25, 0.1);
+            bodyFront.castShadow = true;
+            group.add(bodyFront);
+
+            // Head: Box (2, 4, 3) in MC coords -> (0.125, 0.25, 0.1875)
+            // Vanilla MC Salmon Head UV: { u: 22, v: 0, w: 2, h: 4, d: 3 }
+            const headGeo = new THREE.BoxGeometry(0.125, 0.25, 0.1875);
+            const headMats = getMobBoxMaterials('SALMON', { u: 22, v: 0, w: 2, h: 4, d: 3 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 0.25, 0.44);
+            head.castShadow = true;
+            group.add(head);
+
+            // Body Back (articulated for swimming): Box (3, 5, 8) in MC coords -> (0.1875, 0.3125, 0.50)
+            // Vanilla MC Salmon Body Back UV: { u: 0, v: 13, w: 3, h: 5, d: 8 }
+            const backGeo = new THREE.BoxGeometry(0.1875, 0.3125, 0.50);
+            const backMats = getMobBoxMaterials('SALMON', { u: 0, v: 13, w: 3, h: 5, d: 8 }, { part: 'body' });
+            const bodyBack = new THREE.Mesh(backGeo, backMats);
+            bodyBack.position.set(0, 0.25, -0.4);
+            bodyBack.name = 'tail';
+            bodyBack.castShadow = true;
+
+            // Back fin on Body Back: Box (0.02, 5, 6) in MC coords -> (0.02, 0.3125, 0.375)
+            // Vanilla MC Salmon Back Fin UV: { u: 20, v: 10, w: 1, h: 5, d: 6 }
+            const finGeo = new THREE.BoxGeometry(0.02, 0.3125, 0.375);
+            const finMats = getMobBoxMaterials('SALMON', { u: 20, v: 10, w: 1, h: 5, d: 6 }, { part: 'body' });
+            const fin = new THREE.Mesh(finGeo, finMats);
+            fin.position.set(0, 0, -0.4);
+            bodyBack.add(fin);
+
+            group.add(bodyBack);
+
+            // Pectoral fins
+            const pFinGeo = new THREE.BoxGeometry(0.12, 0.02, 0.12);
+            const pFinMats = getMobBoxMaterials('SALMON', { u: 0, v: 0, w: 2, h: 1, d: 2 }, { part: 'body' });
+            const lf = new THREE.Mesh(pFinGeo, pFinMats);
+            lf.position.set(0.12, 0.18, 0.2);
+            lf.rotation.z = Math.PI / 4;
             lf.name = 'leftFin';
             group.add(lf);
-            const rf = createBodyPart(finGeo, 0xcc3333);
-            rf.position.set(0.08, 0.1, 0);
-            rf.rotation.z = 0.2;
+            const rf = new THREE.Mesh(pFinGeo, pFinMats);
+            rf.position.set(-0.12, 0.18, 0.2);
+            rf.rotation.z = -Math.PI / 4;
             rf.name = 'rightFin';
             group.add(rf);
+
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
@@ -2252,36 +2560,43 @@ export const MOB_TYPES = {
         size: 0.35, xpDrop: 4, lootChance: 0.2, waterOnly: true,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Boxy Body
-            const body = createBodyPart(new THREE.BoxGeometry(0.3, 0.3, 0.3), 'PUFFERFISH');
-            body.position.y = 0.2;
+            // Authentic Minecraft Big Pufferfish Body: Box (8, 8, 8) in MC coords -> (0.50, 0.50, 0.50)
+            // Vanilla MC Pufferfish Body UV: { u: 0, v: 0, w: 8, h: 8, d: 8 }
+            const bodyGeo = new THREE.BoxGeometry(0.50, 0.50, 0.50);
+            const bodyMats = getMobBoxMaterials('PUFFERFISH', { u: 0, v: 0, w: 8, h: 8, d: 8 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 0.35, 0);
             body.name = 'body';
+            body.castShadow = true;
             group.add(body);
-            // Eyes
-            const eyeGeo = new THREE.BoxGeometry(0.05, 0.05, 0.05);
-            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-            const le = new THREE.Mesh(eyeGeo, eyeMat);
-            le.position.set(-0.16, 0.25, 0.1);
-            group.add(le);
-            const re = new THREE.Mesh(eyeGeo, eyeMat);
-            re.position.set(0.16, 0.25, 0.1);
-            group.add(re);
-            // Tail
-            const tailGeo = new THREE.BoxGeometry(0.05, 0.1, 0.1);
-            const tail = createBodyPart(tailGeo, 'PUFFERFISH');
-            tail.position.set(0, 0.2, -0.2);
-            tail.name = 'tail';
-            group.add(tail);
+
+            // Left & Right blue fins: Box (2, 1, 2) in MC coords -> (0.125, 0.0625, 0.125)
+            // Left fin UV: { u: 24, v: 3, w: 2, h: 1, d: 2 }, Right fin UV: { u: 24, v: 0, w: 2, h: 1, d: 2 }
+            const finGeo = new THREE.BoxGeometry(0.125, 0.0625, 0.125);
+            const lFinMats = getMobBoxMaterials('PUFFERFISH', { u: 24, v: 3, w: 2, h: 1, d: 2 }, { part: 'body' });
+            const leftFin = new THREE.Mesh(finGeo, lFinMats);
+            leftFin.position.set(0.31, 0.38, 0.12);
+            leftFin.name = 'leftFin';
+            group.add(leftFin);
+
+            const rFinMats = getMobBoxMaterials('PUFFERFISH', { u: 24, v: 0, w: 2, h: 1, d: 2 }, { part: 'body' });
+            const rightFin = new THREE.Mesh(finGeo, rFinMats);
+            rightFin.position.set(-0.31, 0.38, 0.12);
+            rightFin.name = 'rightFin';
+            group.add(rightFin);
+
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
             const speed = isMoving ? 15 : 4;
-            const tail = mesh.getObjectByName('tail');
-            if (tail) tail.rotation.y = Math.sin(age * speed) * 0.4;
+            const leftFin = mesh.getObjectByName('leftFin');
+            const rightFin = mesh.getObjectByName('rightFin');
+            if (leftFin) leftFin.rotation.z = Math.sin(age * speed) * 0.3;
+            if (rightFin) rightFin.rotation.z = -Math.sin(age * speed) * 0.3;
             // Puffs up rhythmically when moving
             const body = mesh.getObjectByName('body');
             if (body) {
-                const puff = isMoving ? 1.0 + Math.abs(Math.sin(age * 5)) * 0.4 : 1.0;
+                const puff = isMoving ? 1.0 + Math.abs(Math.sin(age * 5)) * 0.25 : 1.0;
                 body.scale.set(puff, puff, puff);
             }
         }
@@ -2291,37 +2606,70 @@ export const MOB_TYPES = {
         size: 0.6, xpDrop: 5, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Shell
-            const shell = createBodyPart(new THREE.BoxGeometry(0.6, 0.25, 0.7), 'TURTLE', 0, 0, 'shell');
-            shell.position.y = 0.3;
+            // Authentic Minecraft Adult Turtle Shell: Box (19, 6, 20) in MC coords -> (1.1875, 0.375, 1.25) unrotated
+            // Vanilla MC Turtle Shell UV: { u: 7, v: 37, w: 19, h: 6, l: 20 }
+            const shellGeo = new THREE.BoxGeometry(1.1875, 0.375, 1.25);
+            const shellMats = getMobBoxMaterials('TURTLE', { u: 7, v: 37, w: 19, h: 6, l: 20 }, { isBody: true, part: 'body' });
+            const shell = new THREE.Mesh(shellGeo, shellMats);
+            shell.position.set(0, 0.35, 0);
+            shell.castShadow = true;
             group.add(shell);
-            // Body (under shell)
-            const body = createBodyPart(new THREE.BoxGeometry(0.5, 0.15, 0.6), 'TURTLE', 0, 0, 'body');
-            body.position.y = 0.2;
-            group.add(body);
-            // Head with front-facing eyes and pale jaw
-            const head = createMobHead(new THREE.BoxGeometry(0.2, 0.15, 0.2), 'TURTLE');
-            head.position.set(0, 0.25, 0.4);
+
+            // Belly under shell: Box (11, 3, 18) in MC coords -> (0.6875, 0.1875, 1.125)
+            // Vanilla MC Turtle Belly UV: { u: 31, v: 1, w: 11, h: 3, l: 18 }
+            const bellyGeo = new THREE.BoxGeometry(0.6875, 0.1875, 1.125);
+            const bellyMats = getMobBoxMaterials('TURTLE', { u: 31, v: 1, w: 11, h: 3, l: 18 }, { isBody: true, part: 'body' });
+            const belly = new THREE.Mesh(bellyGeo, bellyMats);
+            belly.position.set(0, 0.15, 0);
+            belly.castShadow = true;
+            group.add(belly);
+
+            // Head (faces +Z): Box (6, 5, 6) in MC coords -> (0.375, 0.3125, 0.375)
+            // Vanilla MC Turtle Head UV: { u: 3, v: 0, w: 6, h: 5, d: 6 }
+            const headGeo = new THREE.BoxGeometry(0.375, 0.3125, 0.375);
+            const headMats = getMobBoxMaterials('TURTLE', { u: 3, v: 0, w: 6, h: 5, d: 6 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 0.28, 0.75);
             head.name = 'head';
+            head.castShadow = true;
             group.add(head);
-            // Flippers
-            const flipperGeo = new THREE.BoxGeometry(0.3, 0.05, 0.2);
-            const fl1 = createBodyPart(flipperGeo, 'TURTLE', 0, 0, 'flipper');
-            fl1.position.set(-0.35, 0.15, 0.2);
-            fl1.name = 'fl1';
-            group.add(fl1);
-            const fl2 = createBodyPart(flipperGeo, 'TURTLE', 0, 0, 'flipper');
-            fl2.position.set(0.35, 0.15, 0.2);
+
+            // Flippers / Legs:
+            // Left Front Leg: Box (13, 1, 5) -> (0.8125, 0.0625, 0.3125), UV: { u: 27, v: 24, w: 13, h: 1, d: 5 }
+            const flGeo = new THREE.BoxGeometry(0.8125, 0.0625, 0.3125);
+            const lFrontMats = getMobBoxMaterials('TURTLE', { u: 27, v: 24, w: 13, h: 1, d: 5 }, { part: 'leg' });
+            const fl2 = new THREE.Mesh(flGeo, lFrontMats);
+            fl2.position.set(0.72, 0.16, 0.35);
             fl2.name = 'fl2';
+            fl2.castShadow = true;
             group.add(fl2);
-            const fl3 = createBodyPart(flipperGeo, 'TURTLE', 0, 0, 'flipper');
-            fl3.position.set(-0.3, 0.15, -0.2);
-            fl3.name = 'fl3';
-            group.add(fl3);
-            const fl4 = createBodyPart(flipperGeo, 'TURTLE', 0, 0, 'flipper');
-            fl4.position.set(0.3, 0.15, -0.2);
+
+            // Right Front Leg: Box (13, 1, 5) -> (0.8125, 0.0625, 0.3125), UV: { u: 27, v: 30, w: 13, h: 1, d: 5 }
+            const rFrontMats = getMobBoxMaterials('TURTLE', { u: 27, v: 30, w: 13, h: 1, d: 5 }, { part: 'leg' });
+            const fl1 = new THREE.Mesh(flGeo, rFrontMats);
+            fl1.position.set(-0.72, 0.16, 0.35);
+            fl1.name = 'fl1';
+            fl1.castShadow = true;
+            group.add(fl1);
+
+            // Hind Legs: Box (4, 1, 10) -> (0.25, 0.0625, 0.625)
+            // Left Hind Leg UV: { u: 1, v: 12, w: 4, h: 1, d: 10 }
+            const hindGeo = new THREE.BoxGeometry(0.25, 0.0625, 0.625);
+            const lHindMats = getMobBoxMaterials('TURTLE', { u: 1, v: 12, w: 4, h: 1, d: 10 }, { part: 'leg' });
+            const fl4 = new THREE.Mesh(hindGeo, lHindMats);
+            fl4.position.set(0.35, 0.16, -0.72);
             fl4.name = 'fl4';
+            fl4.castShadow = true;
             group.add(fl4);
+
+            // Right Hind Leg UV: { u: 1, v: 23, w: 4, h: 1, d: 10 }
+            const rHindMats = getMobBoxMaterials('TURTLE', { u: 1, v: 23, w: 4, h: 1, d: 10 }, { part: 'leg' });
+            const fl3 = new THREE.Mesh(hindGeo, rHindMats);
+            fl3.position.set(-0.35, 0.16, -0.72);
+            fl3.name = 'fl3';
+            fl3.castShadow = true;
+            group.add(fl3);
+
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
@@ -2346,68 +2694,80 @@ export const MOB_TYPES = {
         size: 0.3, xpDrop: 1, lootChance: 0.1,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Authentic Minecraft Chicken Body: Box (6, 8, 6) in MC coords -> (0.375, 0.5, 0.375) rotated PI/2 around X
-            // Vanilla MC Chicken Body UV: { u: 0, v: 9, w: 6, h: 8, d: 6 }
-            const bodyGeo = new THREE.BoxGeometry(0.375, 0.5, 0.375);
-            const bodyMats = getMobBoxMaterials('CHICKEN', { u: 0, v: 9, w: 6, h: 8, d: 6 }, { part: 'body' });
+            // Authentic Minecraft Chicken Body: Box (6, 6, 8) in MC coords -> (0.375, 0.375, 0.50) unrotated
+            // Vanilla MC Chicken Body UV: { u: 0, v: 9, w: 6, h: 6, l: 8 }
+            const bodyGeo = new THREE.BoxGeometry(0.375, 0.375, 0.50);
+            const bodyMats = getMobBoxMaterials('CHICKEN', { u: 0, v: 9, w: 6, h: 6, l: 8 }, { isBody: true, part: 'body' });
             const body = new THREE.Mesh(bodyGeo, bodyMats);
-            body.rotation.x = Math.PI / 2;
-            body.position.y = 0.32;
+            body.position.set(0, 0.50, 0);
             body.castShadow = true;
             group.add(body);
 
             // Head (faces +Z forward): Vanilla MC Chicken Head UV: { u: 0, v: 0, w: 4, h: 6, d: 3 }
-            const headGeo = new THREE.BoxGeometry(0.22, 0.28, 0.22);
+            const headGeo = new THREE.BoxGeometry(0.25, 0.375, 0.1875);
             const headMats = getMobBoxMaterials('CHICKEN', { u: 0, v: 0, w: 4, h: 6, d: 3 }, { part: 'head_front' });
             const head = new THREE.Mesh(headGeo, headMats);
-            head.position.set(0, 0.55, 0.22);
+            head.position.set(0, 0.72, 0.22);
             head.name = 'head';
             head.castShadow = true;
+
+            // 3D Beak: Vanilla MC Chicken Beak UV: { u: 14, v: 0, w: 4, h: 2, d: 2 } attached to head!
+            const beakGeo = new THREE.BoxGeometry(0.25, 0.125, 0.125);
+            const beakMats = getMobBoxMaterials('CHICKEN', { u: 14, v: 0, w: 4, h: 2, d: 2 }, { part: 'beak' });
+            const beak = new THREE.Mesh(beakGeo, beakMats);
+            beak.position.set(0, -0.04, 0.15);
+            beak.castShadow = true;
+            head.add(beak);
+
+            // 3D Red Wattle: Vanilla MC Chicken Wattle UV: { u: 14, v: 4, w: 2, h: 2, d: 2 } attached to head!
+            const wattleGeo = new THREE.BoxGeometry(0.125, 0.125, 0.125);
+            const wattleMats = getMobBoxMaterials('CHICKEN', { u: 14, v: 4, w: 2, h: 2, d: 2 }, { part: 'wattle' });
+            const wattle = new THREE.Mesh(wattleGeo, wattleMats);
+            wattle.position.set(0, -0.15, 0.08);
+            wattle.castShadow = true;
+            head.add(wattle);
+
             group.add(head);
 
-            // 3D Beak: Vanilla MC Chicken Beak UV: { u: 14, v: 0, w: 4, h: 2, d: 2 }
-            const beakGeo = new THREE.BoxGeometry(0.14, 0.08, 0.1);
-            const beakMats = getMobBoxMaterials('CHICKEN', { u: 14, v: 0, w: 4, h: 2, d: 2 }, { part: 'snout' });
-            const beak = new THREE.Mesh(beakGeo, beakMats);
-            beak.position.set(0, 0.51, 0.35);
-            beak.castShadow = true;
-            group.add(beak);
-
-            // 3D Red Wattle: Vanilla MC Chicken Wattle UV: { u: 14, v: 4, w: 2, h: 2, d: 2 }
-            const wattleGeo = new THREE.BoxGeometry(0.08, 0.1, 0.08);
-            const wattleMats = getMobBoxMaterials('CHICKEN', { u: 14, v: 4, w: 2, h: 2, d: 2 }, { part: 'snout' });
-            const wattle = new THREE.Mesh(wattleGeo, wattleMats);
-            wattle.position.set(0, 0.43, 0.31);
-            wattle.castShadow = true;
-            group.add(wattle);
-
             // Wings: Vanilla MC Chicken Wing UV: { u: 24, v: 13, w: 1, h: 4, d: 6 }
-            const wingGeo = new THREE.BoxGeometry(0.05, 0.22, 0.32);
+            const wingGeo = new THREE.BoxGeometry(0.0625, 0.25, 0.375);
             const wingMats = getMobBoxMaterials('CHICKEN', { u: 24, v: 13, w: 1, h: 4, d: 6 }, { part: 'wing' });
             const leftWing = new THREE.Mesh(wingGeo, wingMats);
-            leftWing.position.set(-0.2, 0.34, 0);
+            leftWing.position.set(0.22, 0.52, 0);
             leftWing.name = 'leftWing';
             leftWing.castShadow = true;
             group.add(leftWing);
             const rightWing = new THREE.Mesh(wingGeo, wingMats);
-            rightWing.position.set(0.2, 0.34, 0);
+            rightWing.position.set(-0.22, 0.52, 0);
             rightWing.name = 'rightWing';
             rightWing.castShadow = true;
             group.add(rightWing);
 
-            // 2 Legs with yellow feet: Vanilla MC Chicken Leg UV: { u: 26, v: 0, w: 3, h: 5, d: 3 }
-            const legGeo = new THREE.BoxGeometry(0.08, 0.24, 0.12);
-            const legMats = getMobBoxMaterials('CHICKEN', { u: 26, v: 0, w: 3, h: 5, d: 3 }, { part: 'leg' });
-            const leftLeg = new THREE.Mesh(legGeo, legMats);
-            leftLeg.position.set(-0.09, 0.12, 0);
-            leftLeg.name = 'leftLeg';
-            leftLeg.castShadow = true;
-            group.add(leftLeg);
-            const rightLeg = new THREE.Mesh(legGeo, legMats);
-            rightLeg.position.set(0.09, 0.12, 0);
-            rightLeg.name = 'rightLeg';
-            rightLeg.castShadow = true;
-            group.add(rightLeg);
+            // 2 Legs with yellow feet & 3-toed paws:
+            // Vanilla MC Chicken Leg UV: shaft at { u: 36, v: 3, w: 1, h: 5, d: 1 }, foot at { u: 32, v: 0, w: 3, h: 1, d: 3 }
+            const makeChickenLeg = (isLeft) => {
+                const legGroup = new THREE.Group();
+                const shaftGeo = new THREE.BoxGeometry(0.0625, 0.3125, 0.0625);
+                const shaftMats = getMobBoxMaterials('CHICKEN', { u: 36, v: 3, w: 1, h: 5, d: 1 }, { part: 'leg' });
+                const shaft = new THREE.Mesh(shaftGeo, shaftMats);
+                shaft.position.set(0, 0.15625, 0);
+                shaft.castShadow = true;
+                legGroup.add(shaft);
+
+                const footGeo = new THREE.BoxGeometry(0.1875, 0.03, 0.1875);
+                const footMats = getMobBoxMaterials('CHICKEN', { u: 32, v: 0, w: 3, h: 1, d: 3 }, { part: 'leg' });
+                const foot = new THREE.Mesh(footGeo, footMats);
+                foot.position.set(0, 0.015, 0.0625); // Extend toes forward
+                foot.castShadow = true;
+                legGroup.add(foot);
+
+                legGroup.position.set(isLeft ? 0.09 : -0.09, 0, 0.03);
+                legGroup.name = isLeft ? 'leftLeg' : 'rightLeg';
+                return legGroup;
+            };
+
+            group.add(makeChickenLeg(true));
+            group.add(makeChickenLeg(false));
 
             return group;
         },
@@ -2416,11 +2776,26 @@ export const MOB_TYPES = {
             const rightLeg = mesh.getObjectByName('rightLeg');
             const leftWing = mesh.getObjectByName('leftWing');
             const rightWing = mesh.getObjectByName('rightWing');
+            const head = mesh.getObjectByName('head');
             if (!isMoving) {
                 if (leftLeg) leftLeg.rotation.x = 0;
                 if (rightLeg) rightLeg.rotation.x = 0;
                 if (leftWing) leftWing.rotation.z = 0;
                 if (rightWing) rightWing.rotation.z = 0;
+                if (head) {
+                    const cycle = (age + 1.2) % 8.5;
+                    if (cycle > 4.5 && cycle < 7.5) {
+                        // Pecking ground for seeds!
+                        const peck = Math.max(0, Math.sin(age * 18));
+                        head.rotation.x = peck * 0.65;
+                        head.position.y = 0.72 - peck * 0.15;
+                        head.position.z = 0.22 + peck * 0.08;
+                    } else {
+                        head.rotation.x = 0;
+                        head.rotation.y = Math.sin(age * 2) * 0.12;
+                        head.position.set(0, 0.72, 0.22);
+                    }
+                }
             } else {
                 const swing = Math.sin(age * 12) * 0.55;
                 if (leftLeg) leftLeg.rotation.x = swing;
@@ -2428,6 +2803,13 @@ export const MOB_TYPES = {
                 const flap = Math.sin(age * 16) * 0.3;
                 if (leftWing) leftWing.rotation.z = flap;
                 if (rightWing) rightWing.rotation.z = -flap;
+                if (head) {
+                    // Authentic chicken head-bob while walking
+                    head.rotation.x = 0;
+                    head.rotation.y = 0;
+                    head.position.y = 0.72;
+                    head.position.z = 0.22 + Math.sin(age * 12) * 0.05;
+                }
             }
         },
         updateAI: (mob, dt, world, playerPos) => {
@@ -2458,28 +2840,100 @@ export const MOB_TYPES = {
         size: 1.0, xpDrop: 3, lootChance: 0.5,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body
-            const body = createBodyPart(new THREE.BoxGeometry(1.0, 0.8, 1.5), 'CAMEL', 0, 0, 'body');
-            body.position.y = 1.2; body.name = 'body'; group.add(body);
-            // Hump
-            const hump = createBodyPart(new THREE.BoxGeometry(0.65, 0.5, 0.65), 'CAMEL', 0, 0, 'hump');
-            hump.position.set(0, 1.7, -0.1); group.add(hump);
-            // Neck
-            const neck = createBodyPart(new THREE.BoxGeometry(0.35, 0.7, 0.4), 'CAMEL', 0, 0, 'body');
-            neck.position.set(0, 1.55, 0.75); neck.name = 'neck'; group.add(neck);
-            // Head (facing +Z)
-            const head = createMobHead(new THREE.BoxGeometry(0.42, 0.45, 0.55), 'CAMEL');
-            head.position.set(0, 1.95, 0.95); head.name = 'head'; group.add(head);
-            // 4 Legs: fl, fr, bl, br
-            const legGeo = new THREE.BoxGeometry(0.24, 0.85, 0.24);
-            const legFL = createBodyPart(legGeo, 'CAMEL', 0, 0, 'leg');
-            legFL.position.set(-0.38, 0.42, 0.55); legFL.name = 'leg_fl'; group.add(legFL);
-            const legFR = createBodyPart(legGeo, 'CAMEL', 0, 0, 'leg');
-            legFR.position.set(0.38, 0.42, 0.55); legFR.name = 'leg_fr'; group.add(legFR);
-            const legBL = createBodyPart(legGeo, 'CAMEL', 0, 0, 'leg');
-            legBL.position.set(-0.38, 0.42, -0.55); legBL.name = 'leg_bl'; group.add(legBL);
-            const legBR = createBodyPart(legGeo, 'CAMEL', 0, 0, 'leg');
-            legBR.position.set(0.38, 0.42, -0.55); legBR.name = 'leg_br'; group.add(legBR);
+            // Authentic Minecraft Camel Body: Box (15, 12, 27) in MC coords -> (0.9375, 0.75, 1.6875)
+            // Vanilla MC Camel Body UV: { u: 0, v: 25, w: 15, h: 12, d: 27 }
+            const bodyGeo = new THREE.BoxGeometry(0.9375, 0.75, 1.6875);
+            const bodyMats = getMobBoxMaterials('CAMEL', { u: 0, v: 25, w: 15, h: 12, d: 27 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 1.55, 0);
+            body.castShadow = true;
+            body.name = 'body';
+            group.add(body);
+
+            // Hump: Box (9, 5, 11) in MC coords -> (0.5625, 0.3125, 0.6875)
+            // Vanilla MC Camel Hump UV: { u: 74, v: 0, w: 9, h: 5, d: 11 }
+            const humpGeo = new THREE.BoxGeometry(0.5625, 0.3125, 0.6875);
+            const humpMats = getMobBoxMaterials('CAMEL', { u: 74, v: 0, w: 9, h: 5, d: 11 }, { part: 'body' });
+            const hump = new THREE.Mesh(humpGeo, humpMats);
+            hump.position.set(0, 2.05, -0.15);
+            hump.castShadow = true;
+            group.add(hump);
+
+            // Neck & Head (faces +Z):
+            // Neck: Box (7, 14, 7) in MC coords -> (0.4375, 0.875, 0.4375)
+            // Vanilla MC Camel Neck UV: { u: 21, v: 0, w: 7, h: 14, d: 7 }
+            const neckGeo = new THREE.BoxGeometry(0.4375, 0.875, 0.4375);
+            const neckMats = getMobBoxMaterials('CAMEL', { u: 21, v: 0, w: 7, h: 14, d: 7 }, { part: 'body' });
+            const neck = new THREE.Mesh(neckGeo, neckMats);
+            neck.position.set(0, 2.0, 0.85);
+            neck.name = 'neck';
+            neck.castShadow = true;
+            group.add(neck);
+
+            // Head: Box (7, 8, 19) in MC coords -> (0.4375, 0.5, 0.65)
+            // Vanilla MC Camel Head UV: { u: 60, v: 24, w: 7, h: 8, d: 19 }
+            const headGeo = new THREE.BoxGeometry(0.4375, 0.5, 0.65);
+            const headMats = getMobBoxMaterials('CAMEL', { u: 60, v: 24, w: 7, h: 8, d: 19 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 2.5, 1.05);
+            head.name = 'head';
+            head.castShadow = true;
+
+            // Snout attached to head: Box (5, 5, 6) in MC coords -> (0.3125, 0.3125, 0.375)
+            // Vanilla MC Camel Snout UV: { u: 50, v: 0, w: 5, h: 5, d: 6 }
+            const snoutGeo = new THREE.BoxGeometry(0.3125, 0.3125, 0.375);
+            const snoutMats = getMobBoxMaterials('CAMEL', { u: 50, v: 0, w: 5, h: 5, d: 6 }, { part: 'head_front' });
+            const snout = new THREE.Mesh(snoutGeo, snoutMats);
+            snout.position.set(0, -0.05, 0.45);
+            head.add(snout);
+
+            // Left & Right ears attached to head:
+            const earGeo = new THREE.BoxGeometry(0.1875, 0.0625, 0.125);
+            const lEarMats = getMobBoxMaterials('CAMEL', { u: 45, v: 0, w: 3, h: 1, d: 2 }, { part: 'head_front' });
+            const leftEar = new THREE.Mesh(earGeo, lEarMats);
+            leftEar.position.set(0.25, 0.18, -0.15);
+            head.add(leftEar);
+            const rEarMats = getMobBoxMaterials('CAMEL', { u: 67, v: 0, w: 3, h: 1, d: 2 }, { part: 'head_front' });
+            const rightEar = new THREE.Mesh(earGeo, rEarMats);
+            rightEar.position.set(-0.25, 0.18, -0.15);
+            head.add(rightEar);
+
+            group.add(head);
+
+            // 4 Legs: Box (5, 21, 5) in MC coords -> (0.3125, 1.3125, 0.3125)
+            const legGeo = new THREE.BoxGeometry(0.3125, 1.3125, 0.3125);
+            // Left Front Leg UV: { u: 0, v: 0, w: 5, h: 21, d: 5 }
+            const lfMats = getMobBoxMaterials('CAMEL', { u: 0, v: 0, w: 5, h: 21, d: 5 }, { part: 'leg' });
+            const legFL = new THREE.Mesh(legGeo, lfMats);
+            legFL.position.set(0.35, 0.65625, 0.65);
+            legFL.name = 'leg_fl';
+            legFL.castShadow = true;
+            group.add(legFL);
+
+            // Right Front Leg UV: { u: 0, v: 26, w: 5, h: 21, d: 5 }
+            const rfMats = getMobBoxMaterials('CAMEL', { u: 0, v: 26, w: 5, h: 21, d: 5 }, { part: 'leg' });
+            const legFR = new THREE.Mesh(legGeo, rfMats);
+            legFR.position.set(-0.35, 0.65625, 0.65);
+            legFR.name = 'leg_fr';
+            legFR.castShadow = true;
+            group.add(legFR);
+
+            // Left Hind Leg UV: { u: 58, v: 16, w: 5, h: 21, d: 5 }
+            const blMats = getMobBoxMaterials('CAMEL', { u: 58, v: 16, w: 5, h: 21, d: 5 }, { part: 'leg' });
+            const legBL = new THREE.Mesh(legGeo, blMats);
+            legBL.position.set(0.35, 0.65625, -0.65);
+            legBL.name = 'leg_bl';
+            legBL.castShadow = true;
+            group.add(legBL);
+
+            // Right Hind Leg UV: { u: 94, v: 16, w: 5, h: 21, d: 5 }
+            const brMats = getMobBoxMaterials('CAMEL', { u: 94, v: 16, w: 5, h: 21, d: 5 }, { part: 'leg' });
+            const legBR = new THREE.Mesh(legGeo, brMats);
+            legBR.position.set(-0.35, 0.65625, -0.65);
+            legBR.name = 'leg_br';
+            legBR.castShadow = true;
+            group.add(legBR);
+
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
@@ -2528,30 +2982,76 @@ export const MOB_TYPES = {
         size: 0.4, xpDrop: 1, lootChance: 0.2,
         buildMesh: () => {
             const group = new THREE.Group();
-            // Body
-            const body = createBodyPart(new THREE.BoxGeometry(0.42, 0.22, 0.42), 'FROG', 0, 0, 'body');
-            body.position.y = 0.15; group.add(body);
-            // Head with wide mouth & eyes
-            const head = createMobHead(new THREE.BoxGeometry(0.4, 0.18, 0.3), 'FROG');
-            head.position.set(0, 0.22, 0.22); group.add(head);
-            // Eye bumps on top
-            const eyeGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-            const le = createBodyPart(eyeGeo, 'FROG', 0, 0, 'head_top');
-            le.position.set(-0.12, 0.34, 0.26); group.add(le);
-            const re = createBodyPart(eyeGeo, 'FROG', 0, 0, 'head_top');
-            re.position.set(0.12, 0.34, 0.26); group.add(re);
-            // Front legs
-            const fLegGeo = new THREE.BoxGeometry(0.08, 0.14, 0.08);
-            const fl = createBodyPart(fLegGeo, 'FROG', 0, 0, 'leg');
-            fl.position.set(-0.18, 0.07, 0.15); fl.name = 'fl'; group.add(fl);
-            const fr = createBodyPart(fLegGeo, 'FROG', 0, 0, 'leg');
-            fr.position.set(0.18, 0.07, 0.15); fr.name = 'fr'; group.add(fr);
-            // Hind legs (folded)
-            const hLegGeo = new THREE.BoxGeometry(0.12, 0.18, 0.22);
-            const hl = createBodyPart(hLegGeo, 'FROG', 0, 0, 'leg');
-            hl.position.set(-0.2, 0.1, -0.12); hl.name = 'hl'; group.add(hl);
-            const hr = createBodyPart(hLegGeo, 'FROG', 0, 0, 'leg');
-            hr.position.set(0.2, 0.1, -0.12); hr.name = 'hr'; group.add(hr);
+            // Authentic Minecraft Frog Body: Box (7, 3, 9) in MC coords -> (0.4375, 0.1875, 0.5625)
+            // Vanilla MC Frog Body UV: { u: 3, v: 1, w: 7, h: 3, d: 9 }
+            const bodyGeo = new THREE.BoxGeometry(0.4375, 0.1875, 0.5625);
+            const bodyMats = getMobBoxMaterials('FROG', { u: 3, v: 1, w: 7, h: 3, d: 9 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 0.22, 0);
+            body.castShadow = true;
+            group.add(body);
+
+            // Head (faces +Z): Box (7, 3, 9) in MC coords -> (0.4375, 0.1875, 0.45)
+            // Vanilla MC Frog Head UV: { u: 0, v: 13, w: 7, h: 3, d: 9 }
+            const headGeo = new THREE.BoxGeometry(0.4375, 0.1875, 0.45);
+            const headMats = getMobBoxMaterials('FROG', { u: 0, v: 13, w: 7, h: 3, d: 9 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 0.22, 0.25);
+            head.name = 'head';
+            head.castShadow = true;
+
+            // Eyes attached to head: Box (3, 2, 3) in MC coords -> (0.1875, 0.125, 0.1875)
+            const eyeGeo = new THREE.BoxGeometry(0.1875, 0.125, 0.1875);
+            // Right Eye UV: { u: 0, v: 0, w: 3, h: 2, d: 3 }
+            const rEyeMats = getMobBoxMaterials('FROG', { u: 0, v: 0, w: 3, h: 2, d: 3 }, { part: 'head_top' });
+            const re = new THREE.Mesh(eyeGeo, rEyeMats);
+            re.position.set(-0.16, 0.14, 0.1);
+            head.add(re);
+
+            // Left Eye UV: { u: 0, v: 5, w: 3, h: 2, d: 3 }
+            const lEyeMats = getMobBoxMaterials('FROG', { u: 0, v: 5, w: 3, h: 2, d: 3 }, { part: 'head_top' });
+            const le = new THREE.Mesh(eyeGeo, lEyeMats);
+            le.position.set(0.16, 0.14, 0.1);
+            head.add(le);
+
+            group.add(head);
+
+            // Front arms: Box (2, 3, 3) in MC coords -> (0.125, 0.1875, 0.1875)
+            const fArmGeo = new THREE.BoxGeometry(0.125, 0.1875, 0.1875);
+            // Left Arm UV: { u: 0, v: 32, w: 2, h: 3, d: 3 }
+            const lArmMats = getMobBoxMaterials('FROG', { u: 0, v: 32, w: 2, h: 3, d: 3 }, { part: 'leg' });
+            const fl = new THREE.Mesh(fArmGeo, lArmMats);
+            fl.position.set(0.24, 0.10, 0.2);
+            fl.name = 'fl';
+            fl.castShadow = true;
+            group.add(fl);
+
+            // Right Arm UV: { u: 0, v: 38, w: 2, h: 3, d: 3 }
+            const rArmMats = getMobBoxMaterials('FROG', { u: 0, v: 38, w: 2, h: 3, d: 3 }, { part: 'leg' });
+            const fr = new THREE.Mesh(fArmGeo, rArmMats);
+            fr.position.set(-0.24, 0.10, 0.2);
+            fr.name = 'fr';
+            fr.castShadow = true;
+            group.add(fr);
+
+            // Hind legs: Box (3, 3, 4) in MC coords -> (0.1875, 0.1875, 0.25)
+            const hLegGeo = new THREE.BoxGeometry(0.1875, 0.1875, 0.25);
+            // Left Hind Leg UV: { u: 14, v: 25, w: 3, h: 3, d: 4 }
+            const lLegMats = getMobBoxMaterials('FROG', { u: 14, v: 25, w: 3, h: 3, d: 4 }, { part: 'leg' });
+            const hl = new THREE.Mesh(hLegGeo, lLegMats);
+            hl.position.set(0.25, 0.10, -0.2);
+            hl.name = 'hl';
+            hl.castShadow = true;
+            group.add(hl);
+
+            // Right Hind Leg UV: { u: 0, v: 25, w: 3, h: 3, d: 4 }
+            const rLegMats = getMobBoxMaterials('FROG', { u: 0, v: 25, w: 3, h: 3, d: 4 }, { part: 'leg' });
+            const hr = new THREE.Mesh(hLegGeo, rLegMats);
+            hr.position.set(-0.25, 0.10, -0.2);
+            hr.name = 'hr';
+            hr.castShadow = true;
+            group.add(hr);
+
             return group;
         },
         animate: (mesh, dt, age, isMoving) => {
@@ -2594,6 +3094,530 @@ export const MOB_TYPES = {
             }
             if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
         }
+    },
+    SWET: {
+        name: 'Swet', health: 16, damage: 4, speed: 3.5, hostile: false, color: 0x38bdf8,
+        size: 0.8, xpDrop: 3, lootChance: 0.5,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            // Outer translucent gelatinous slime cube
+            const outerGeo = new THREE.BoxGeometry(0.75, 0.75, 0.75);
+            const outer = createBodyPart(outerGeo, 0x38bdf8);
+            outer.position.y = 0.375;
+            outer.material.transparent = true;
+            outer.material.opacity = 0.65;
+            outer.name = 'outer';
+            group.add(outer);
+
+            // Inner vibrant blue core
+            const coreGeo = new THREE.BoxGeometry(0.42, 0.42, 0.42);
+            const core = createBodyPart(coreGeo, 0x0284c7);
+            core.position.y = 0.35;
+            core.name = 'core';
+            group.add(core);
+
+            // Cute Swet eyes
+            const eyeGeo = new THREE.BoxGeometry(0.09, 0.09, 0.02);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(0.18, 0.42, 0.38);
+            group.add(eyeL);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeR.position.set(-0.18, 0.42, 0.38);
+            group.add(eyeR);
+
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const outer = mesh.getObjectByName('outer');
+            const core = mesh.getObjectByName('core');
+            const bounce = Math.sin(age * 8);
+            const squash = 1.0 + bounce * 0.18;
+            if (outer) {
+                outer.scale.set(1.0 / Math.sqrt(squash), squash, 1.0 / Math.sqrt(squash));
+            }
+            if (core) {
+                core.scale.set(1.0 / Math.sqrt(squash), squash, 1.0 / Math.sqrt(squash));
+            }
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            mob.wanderTimer -= dt;
+            if (mob.wanderTimer <= 0) {
+                mob.wanderTimer = 1.0 + Math.random() * 2.0;
+                const angle = Math.random() * Math.PI * 2;
+                mob.wanderDir.set(Math.cos(angle), 0, Math.sin(angle));
+                if (mob.grounded) {
+                    mob.velocity.y = 6.2; // Aether bouncy hop
+                    mob.grounded = false;
+                }
+            }
+            if (!mob.grounded) {
+                mob.velocity.x = mob.wanderDir.x * mob.speed;
+                mob.velocity.z = mob.wanderDir.z * mob.speed;
+            } else {
+                mob.velocity.x *= 0.5;
+                mob.velocity.z *= 0.5;
+            }
+            if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+        }
+    },
+    AERWHALE: {
+        name: 'Aerwhale', health: 40, damage: 0, speed: 1.8, hostile: false, flying: true, color: 0x93c5fd,
+        size: 2.2, xpDrop: 5, lootChance: 0.8,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            // Main body (elongated streamlined whale shape)
+            const bodyGeo = new THREE.BoxGeometry(1.6, 1.1, 3.0);
+            const body = createBodyPart(bodyGeo, 0xdbeafe);
+            body.position.set(0, 0, 0);
+            body.name = 'body';
+            group.add(body);
+
+            // Head snout (front +Z)
+            const headGeo = new THREE.BoxGeometry(1.3, 0.9, 1.1);
+            const head = createBodyPart(headGeo, 0xbfdbfe);
+            head.position.set(0, -0.05, 1.8);
+            head.name = 'head';
+            group.add(head);
+
+            // Left Flipper / Wing
+            const finGeo = new THREE.BoxGeometry(1.2, 0.1, 0.6);
+            const finL = createBodyPart(finGeo, 0x93c5fd);
+            finL.position.set(1.2, -0.2, 0.3);
+            finL.name = 'finL';
+            group.add(finL);
+
+            // Right Flipper / Wing
+            const finR = createBodyPart(finGeo, 0x93c5fd);
+            finR.position.set(-1.2, -0.2, 0.3);
+            finR.name = 'finR';
+            group.add(finR);
+
+            // Dorsal Fin
+            const dorsalGeo = new THREE.BoxGeometry(0.12, 0.6, 0.7);
+            const dorsal = createBodyPart(dorsalGeo, 0x60a5fa);
+            dorsal.position.set(0, 0.8, -0.3);
+            group.add(dorsal);
+
+            // Tail stalk and fluke (-Z)
+            const tailGeo = new THREE.BoxGeometry(0.6, 0.5, 1.2);
+            const tail = createBodyPart(tailGeo, 0xbfdbfe);
+            tail.position.set(0, 0, -2.0);
+            tail.name = 'tail';
+            
+            const flukeGeo = new THREE.BoxGeometry(1.8, 0.08, 0.8);
+            const fluke = createBodyPart(flukeGeo, 0x60a5fa);
+            fluke.position.set(0, 0, -0.6);
+            tail.add(fluke);
+            group.add(tail);
+
+            return group;
+        },
+        animate: (mesh, dt, age) => {
+            const finL = mesh.getObjectByName('finL');
+            const finR = mesh.getObjectByName('finR');
+            const tail = mesh.getObjectByName('tail');
+            const sway = Math.sin(age * 2.2);
+            if (finL) finL.rotation.z = sway * 0.25;
+            if (finR) finR.rotation.z = -sway * 0.25;
+            if (tail) tail.rotation.x = Math.sin(age * 2.2 - 0.5) * 0.18;
+            mesh.position.y += Math.sin(age * 1.5) * 0.004;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.wanderTimer) mob.wanderTimer = 0;
+            if (!mob.wanderDir) mob.wanderDir = new THREE.Vector3();
+            mob.wanderTimer -= dt;
+            if (mob.wanderTimer <= 0) {
+                mob.wanderTimer = 4.0 + Math.random() * 6.0;
+                const angle = Math.random() * Math.PI * 2;
+                const targetY = 75 + Math.random() * 35;
+                const dy = (targetY - mob.position.y) * 0.1;
+                mob.wanderDir.set(Math.cos(angle), Math.max(-0.3, Math.min(0.3, dy)), Math.sin(angle)).normalize();
+            }
+            mob.velocity.x = mob.wanderDir.x * mob.speed;
+            mob.velocity.y = mob.wanderDir.y * mob.speed * 0.5;
+            mob.velocity.z = mob.wanderDir.z * mob.speed;
+            if (mob.wanderDir.lengthSq() > 0 && mob.mesh) {
+                mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
+            }
+        }
+    },
+    BLAZE: {
+        name: 'Blaze', health: 20, damage: 5, speed: 2.5, hostile: true, flying: true, color: 0xffaa00,
+        size: 1.4, xpDrop: 10, lootChance: 1.0,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const headMat = new THREE.MeshStandardMaterial({
+                color: 0xffaa00,
+                emissive: 0xff5500,
+                emissiveIntensity: 0.6,
+                roughness: 0.4
+            });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.2;
+            head.name = 'head';
+            group.add(head);
+
+            const eyeGeo = new THREE.BoxGeometry(0.12, 0.08, 0.02);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffff88 });
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+            leftEye.position.set(-0.13, 1.22, 0.26);
+            group.add(leftEye);
+            const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+            rightEye.position.set(0.13, 1.22, 0.26);
+            group.add(rightEye);
+
+            const rodGeo = new THREE.BoxGeometry(0.1, 0.45, 0.1);
+            const rodMat = new THREE.MeshStandardMaterial({
+                color: 0xff9900,
+                emissive: 0xff4400,
+                emissiveIntensity: 0.8
+            });
+
+            const tier1 = new THREE.Group();
+            tier1.name = 'tier1';
+            for (let i = 0; i < 4; i++) {
+                const a = i * (Math.PI / 2);
+                const r = new THREE.Mesh(rodGeo, rodMat);
+                r.position.set(Math.cos(a) * 0.45, 0, Math.sin(a) * 0.45);
+                tier1.add(r);
+            }
+            tier1.position.y = 1.3;
+            group.add(tier1);
+
+            const tier2 = new THREE.Group();
+            tier2.name = 'tier2';
+            for (let i = 0; i < 4; i++) {
+                const a = i * (Math.PI / 2) + Math.PI / 4;
+                const r = new THREE.Mesh(rodGeo, rodMat);
+                r.position.set(Math.cos(a) * 0.6, 0, Math.sin(a) * 0.6);
+                tier2.add(r);
+            }
+            tier2.position.y = 0.9;
+            group.add(tier2);
+
+            const tier3 = new THREE.Group();
+            tier3.name = 'tier3';
+            for (let i = 0; i < 4; i++) {
+                const a = i * (Math.PI / 2);
+                const r = new THREE.Mesh(rodGeo, rodMat);
+                r.position.set(Math.cos(a) * 0.4, 0, Math.sin(a) * 0.4);
+                tier3.add(r);
+            }
+            tier3.position.y = 0.5;
+            group.add(tier3);
+
+            return group;
+        },
+        animate: (mesh, dt, age) => {
+            const t1 = mesh.getObjectByName('tier1');
+            const t2 = mesh.getObjectByName('tier2');
+            const t3 = mesh.getObjectByName('tier3');
+            if (t1) {
+                t1.rotation.y = age * 3.0;
+                t1.position.y = 1.3 + Math.sin(age * 4) * 0.08;
+            }
+            if (t2) {
+                t2.rotation.y = -age * 2.2;
+                t2.position.y = 0.9 + Math.cos(age * 3.5) * 0.08;
+            }
+            if (t3) {
+                t3.rotation.y = age * 2.8;
+                t3.position.y = 0.5 + Math.sin(age * 5) * 0.08;
+            }
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.shootCooldown) mob.shootCooldown = 1.0;
+            mob.shootCooldown -= dt;
+
+            const dist = mob.position.distanceTo(playerPos);
+            const targetY = playerPos.y + 2.5;
+            mob.velocity.y += (targetY - mob.position.y) * 2.0 * dt;
+            mob.velocity.y = Math.max(-4, Math.min(4, mob.velocity.y));
+
+            if (dist > 5 && dist < 25) {
+                const dir = playerPos.clone().sub(mob.position).normalize();
+                mob.velocity.x += dir.x * 3.0 * dt;
+                mob.velocity.z += dir.z * 3.0 * dt;
+
+                if (mob.shootCooldown <= 0) {
+                    mob.shootCooldown = 2.5 + Math.random() * 1.5;
+                    if (mob.manager && mob.manager.shootMobFireball) {
+                        mob.manager.shootMobFireball(mob.position.clone().add(new THREE.Vector3(0, 1.2, 0)), playerPos);
+                    }
+                }
+            } else {
+                mob.velocity.x *= 0.9;
+                mob.velocity.z *= 0.9;
+            }
+        }
+    },
+    END_CRYSTAL: {
+        name: 'End Crystal', health: 1, damage: 0, speed: 0, hostile: false, isStationary: true, isCrystal: true,
+        size: 1.5, xpDrop: 0, lootChance: 0,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const baseGeo = new THREE.BoxGeometry(1.2, 0.3, 1.2);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.15;
+            group.add(base);
+
+            const outerGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+            const outerMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.55,
+                roughness: 0.1
+            });
+            const outerCube = new THREE.Mesh(outerGeo, outerMat);
+            outerCube.position.y = 1.0;
+            outerCube.name = 'outerCube';
+            group.add(outerCube);
+
+            const innerGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+            const innerMat = new THREE.MeshStandardMaterial({
+                color: 0xd946ef,
+                transparent: true,
+                opacity: 0.7,
+                roughness: 0.1
+            });
+            const innerCube = new THREE.Mesh(innerGeo, innerMat);
+            innerCube.position.y = 1.0;
+            innerCube.name = 'innerCube';
+            group.add(innerCube);
+
+            const coreGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+            const coreMat = new THREE.MeshBasicMaterial({ color: 0xff55ff });
+            const core = new THREE.Mesh(coreGeo, coreMat);
+            core.position.y = 1.0;
+            core.name = 'core';
+            group.add(core);
+
+            return group;
+        },
+        animate: (mesh, dt, age) => {
+            const outer = mesh.getObjectByName('outerCube');
+            const inner = mesh.getObjectByName('innerCube');
+            const core = mesh.getObjectByName('core');
+            if (outer) {
+                outer.rotation.y = age * 1.5;
+                outer.rotation.x = Math.sin(age * 1.2) * 0.4;
+            }
+            if (inner) {
+                inner.rotation.y = -age * 2.0;
+                inner.rotation.z = Math.cos(age * 1.5) * 0.4;
+            }
+            if (core) {
+                core.rotation.y = age * 3.0;
+                const s = 1.0 + Math.sin(age * 8) * 0.15;
+                core.scale.set(s, s, s);
+            }
+        },
+        updateAI: (mob) => {
+            mob.velocity.set(0, 0, 0);
+        }
+    },
+    ENDER_DRAGON: {
+        name: 'Ender Dragon', health: 200, damage: 15, speed: 7.0, hostile: true, flying: true, isBoss: true,
+        size: 4.5, xpDrop: 150, lootChance: 1.0,
+        buildMesh: () => {
+            const group = new THREE.Group();
+            const darkMat = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.7 });
+            const greyMat = new THREE.MeshStandardMaterial({ color: 0x333338, roughness: 0.5 });
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xd946ef });
+            const wingMat = new THREE.MeshStandardMaterial({ color: 0x221128, side: THREE.DoubleSide, roughness: 0.6 });
+
+            const bodyGeo = new THREE.BoxGeometry(1.6, 1.4, 3.4);
+            const body = new THREE.Mesh(bodyGeo, darkMat);
+            body.position.set(0, 1.2, 0);
+            body.name = 'body';
+            group.add(body);
+
+            const neckGroup = new THREE.Group();
+            neckGroup.name = 'neckGroup';
+            neckGroup.position.set(0, 1.4, 1.7);
+            for (let i = 0; i < 3; i++) {
+                const nGeo = new THREE.BoxGeometry(0.7 - i*0.05, 0.7 - i*0.05, 0.8);
+                const nMesh = new THREE.Mesh(nGeo, darkMat);
+                nMesh.position.set(0, (i + 1) * 0.4, (i + 1) * 0.7);
+                neckGroup.add(nMesh);
+            }
+
+            const headGeo = new THREE.BoxGeometry(0.9, 0.8, 1.2);
+            const head = new THREE.Mesh(headGeo, darkMat);
+            head.position.set(0, 1.7, 2.8);
+            head.name = 'head';
+
+            const hornGeo = new THREE.BoxGeometry(0.12, 0.4, 0.12);
+            const hornL = new THREE.Mesh(hornGeo, greyMat);
+            hornL.position.set(-0.3, 0.45, -0.2);
+            hornL.rotation.x = -0.4;
+            head.add(hornL);
+            const hornR = new THREE.Mesh(hornGeo, greyMat);
+            hornR.position.set(0.3, 0.45, -0.2);
+            hornR.rotation.x = -0.4;
+            head.add(hornR);
+
+            const eyeGeo = new THREE.BoxGeometry(0.2, 0.1, 0.05);
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(-0.35, 0.15, 0.61);
+            head.add(eyeL);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeR.position.set(0.35, 0.15, 0.61);
+            head.add(eyeR);
+
+            neckGroup.add(head);
+            group.add(neckGroup);
+
+            const leftWing = new THREE.Group();
+            leftWing.name = 'leftWing';
+            leftWing.position.set(-0.8, 1.6, 0.2);
+            const boneL = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.2, 0.3), greyMat);
+            boneL.position.set(-1.4, 0, 0);
+            leftWing.add(boneL);
+            const memGeoL = new THREE.PlaneGeometry(2.8, 2.4);
+            const memL = new THREE.Mesh(memGeoL, wingMat);
+            memL.rotation.x = Math.PI / 2;
+            memL.position.set(-1.4, 0, -0.8);
+            leftWing.add(memL);
+            group.add(leftWing);
+
+            const rightWing = new THREE.Group();
+            rightWing.name = 'rightWing';
+            rightWing.position.set(0.8, 1.6, 0.2);
+            const boneR = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.2, 0.3), greyMat);
+            boneR.position.set(1.4, 0, 0);
+            rightWing.add(boneR);
+            const memGeoR = new THREE.PlaneGeometry(2.8, 2.4);
+            const memR = new THREE.Mesh(memGeoR, wingMat);
+            memR.rotation.x = Math.PI / 2;
+            memR.position.set(1.4, 0, -0.8);
+            rightWing.add(memR);
+            group.add(rightWing);
+
+            const tailGroup = new THREE.Group();
+            tailGroup.name = 'tailGroup';
+            tailGroup.position.set(0, 1.2, -1.7);
+            for (let i = 0; i < 4; i++) {
+                const tGeo = new THREE.BoxGeometry(0.7 - i*0.12, 0.6 - i*0.1, 0.9);
+                const tMesh = new THREE.Mesh(tGeo, darkMat);
+                tMesh.position.set(0, -i*0.2, -(i+1)*0.8);
+                tailGroup.add(tMesh);
+            }
+            group.add(tailGroup);
+
+            return group;
+        },
+        animate: (mesh, dt, age) => {
+            const lw = mesh.getObjectByName('leftWing');
+            const rw = mesh.getObjectByName('rightWing');
+            const neck = mesh.getObjectByName('neckGroup');
+            const tail = mesh.getObjectByName('tailGroup');
+
+            const flap = Math.sin(age * 5.0) * 0.45;
+            if (lw) lw.rotation.z = -flap;
+            if (rw) rw.rotation.z = flap;
+
+            if (tail) tail.rotation.y = Math.sin(age * 3.0) * 0.25;
+            if (neck) neck.rotation.y = Math.sin(age * 2.0) * 0.15;
+        },
+        updateAI: (mob, dt, world, playerPos) => {
+            if (!mob.dragonState) mob.dragonState = 'CIRCLING';
+            if (!mob.stateTimer) mob.stateTimer = 0;
+            if (!mob.circleAngle) mob.circleAngle = 0;
+            mob.stateTimer += dt;
+
+            if (mob.healingFromCrystal) {
+                mob.health = Math.min(mob.maxHealth, mob.health + dt * 8);
+            }
+
+            if (mob.dragonState === 'CIRCLING') {
+                mob.circleAngle += dt * 0.4;
+                const radius = 38;
+                const targetX = Math.cos(mob.circleAngle) * radius;
+                const targetZ = Math.sin(mob.circleAngle) * radius;
+                const targetY = 70 + Math.sin(mob.circleAngle * 2) * 5;
+
+                const dx = targetX - mob.position.x;
+                const dy = targetY - mob.position.y;
+                const dz = targetZ - mob.position.z;
+
+                mob.velocity.x += dx * 2.5 * dt;
+                mob.velocity.y += dy * 2.5 * dt;
+                mob.velocity.z += dz * 2.5 * dt;
+
+                const spd = Math.hypot(mob.velocity.x, mob.velocity.z);
+                if (spd > 12) {
+                    mob.velocity.x = (mob.velocity.x / spd) * 12;
+                    mob.velocity.z = (mob.velocity.z / spd) * 12;
+                }
+
+                if (spd > 0.5) {
+                    mob.rotationY = Math.atan2(mob.velocity.x, mob.velocity.z);
+                }
+
+                if (mob.stateTimer > 15) {
+                    mob.stateTimer = 0;
+                    mob.dragonState = Math.random() < 0.6 ? 'SWOOPING' : 'PERCHING';
+                }
+            } else if (mob.dragonState === 'SWOOPING') {
+                const dir = playerPos.clone().sub(mob.position);
+                const dist = dir.length();
+                dir.normalize();
+
+                mob.velocity.x += dir.x * 12 * dt;
+                mob.velocity.y += dir.y * 12 * dt;
+                mob.velocity.z += dir.z * 12 * dt;
+
+                const vLen = mob.velocity.length();
+                if (vLen > 18) mob.velocity.multiplyScalar(18 / vLen);
+
+                mob.rotationY = Math.atan2(mob.velocity.x, mob.velocity.z);
+
+                if (dist < 4.0) {
+                    if (world && world.damagePlayer) world.damagePlayer(15);
+                    mob.velocity.y = 12;
+                    mob.dragonState = 'CIRCLING';
+                    mob.stateTimer = 0;
+                } else if (mob.stateTimer > 6 || mob.position.y < 54) {
+                    mob.velocity.y = 10;
+                    mob.dragonState = 'CIRCLING';
+                    mob.stateTimer = 0;
+                }
+            } else if (mob.dragonState === 'PERCHING') {
+                const targetY = 58;
+                const dx = 0 - mob.position.x;
+                const dy = targetY - mob.position.y;
+                const dz = 0 - mob.position.z;
+
+                mob.velocity.x += dx * 3 * dt;
+                mob.velocity.y += dy * 3 * dt;
+                mob.velocity.z += dz * 3 * dt;
+                mob.velocity.multiplyScalar(0.92);
+
+                const toPlayer = playerPos.clone().sub(mob.position);
+                mob.rotationY = Math.atan2(toPlayer.x, toPlayer.z);
+
+                if (!mob.perchShootTimer) mob.perchShootTimer = 0;
+                mob.perchShootTimer += dt;
+                if (mob.perchShootTimer > 3.0) {
+                    mob.perchShootTimer = 0;
+                    if (mob.manager && mob.manager.shootDragonFireball) {
+                        mob.manager.shootDragonFireball(mob.position.clone().add(new THREE.Vector3(0, 1.5, 0)), playerPos);
+                    }
+                }
+
+                if (mob.stateTimer > 9) {
+                    mob.stateTimer = 0;
+                    mob.velocity.y = 14;
+                    mob.dragonState = 'CIRCLING';
+                }
+            }
+        }
     }
 };
 
@@ -2618,19 +3642,34 @@ const MOB_SPAWN_WEIGHTS = [
     { type: 'FROG', weight: 10 },
     { type: 'CAMEL', weight: 6 },
     { type: 'GOLEM', weight: 2 },
+    { type: 'SWET', weight: 6 },
+    { type: 'AERWHALE', weight: 4 },
 ];
 const TOTAL_MOB_WEIGHT = MOB_SPAWN_WEIGHTS.reduce((s, e) => s + e.weight, 0);
 
-function pickRandomMobType(dimension = 'overworld', biome = 'plains') {
+function pickRandomMobType(dimension = 'overworld', biome = 'plains', isDay = false) {
     if (dimension === 'nether') {
-        return Math.random() < 0.5 ? 'LAVASLIME' : 'PIGLIN_BRUISER';
+        const netherMobs = ['BLAZE', 'BLAZE', 'ENDERMAN', 'LAVASLIME', 'PIGLIN_BRUISER'];
+        return netherMobs[Math.floor(Math.random() * netherMobs.length)];
+    }
+    if (dimension === 'end') {
+        return 'ENDERMAN';
     }
     if (dimension === 'aether') {
-        return Math.random() < 0.5 ? 'SHEEP' : 'CHICKEN';
+        const aetherMobs = ['SWET', 'SWET', 'AERWHALE', 'SHEEP', 'CHICKEN'];
+        return aetherMobs[Math.floor(Math.random() * aetherMobs.length)];
     }
     if (dimension === 'caverns') {
         const cavMobs = ['BAT', 'SKELETON', 'ZOMBIE', 'SPIDER', 'CREEPER', 'ENDERMAN'];
         return cavMobs[Math.floor(Math.random() * cavMobs.length)];
+    }
+
+    if (dimension === 'overworld' && isDay) {
+        // STRICTLY no hostile mobs on surface during daytime!
+        const passiveMobs = ['SHEEP', 'COW', 'PIG', 'CHICKEN', 'FROG', 'CAMEL', 'TURTLE'];
+        if (biome === 'desert' && Math.random() < 0.6) return 'CAMEL';
+        if (biome === 'swamp' && Math.random() < 0.6) return 'FROG';
+        return passiveMobs[Math.floor(Math.random() * passiveMobs.length)];
     }
 
     if (biome === 'desert' && Math.random() < 0.5) return 'CAMEL';
@@ -2755,11 +3794,19 @@ export class ItemEntity {
 }
 
 export class Mob {
-    constructor(typeKey, position) {
+    constructor(typeKey, position, posY, posZ) {
         this.type = typeKey;
         const config = MOB_TYPES[typeKey] || MOB_TYPES.SLIME;
         this.config = config;
-        this.position = position.clone();
+        if (position && typeof position.clone === 'function') {
+            this.position = position.clone();
+        } else if (typeof position === 'number') {
+            this.position = new THREE.Vector3(position, posY || 0, posZ || 0);
+        } else if (position && typeof position.x === 'number') {
+            this.position = new THREE.Vector3(position.x, position.y || 0, position.z || 0);
+        } else {
+            this.position = new THREE.Vector3(0, 0, 0);
+        }
         this.velocity = new THREE.Vector3(0,0,0);
         this.health = config.health;
         this.maxHealth = config.health;
@@ -2838,26 +3885,48 @@ export class Mob {
         return this.mesh;
     }
 
-    update(dt, world, playerPos) {
+    update(dt, world, playerPos, isDay = false, currentDimension = 'overworld') {
         if (!this.alive) return;
         this.age += dt;
         
-        let inWater = false;
-        const currentBlock = world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y), Math.floor(this.position.z));
-        
-        if (this.config.waterOnly) {
-            const props = getBlockProperties(currentBlock);
-            inWater = props && (props.isLiquid || props.isWaterlogged);
+        const feetBlock = world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y), Math.floor(this.position.z));
+        const midBlock = world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y + this.size * 0.5), Math.floor(this.position.z));
+        const propsFeet = getBlockProperties(feetBlock);
+        const propsMid = getBlockProperties(midBlock);
+        const inWater = (propsFeet && (propsFeet.isLiquid || propsFeet.isWaterlogged)) || (propsMid && (propsMid.isLiquid || propsMid.isWaterlogged));
+
+        if (feetBlock === BLOCKS.FIRE || feetBlock === BLOCKS.LAVA || midBlock === BLOCKS.LAVA) {
+            this.burnTimer = 2.0;
         }
 
-        if (currentBlock === BLOCKS.FIRE || currentBlock === BLOCKS.LAVA) {
-            this.burnTimer = 2.0;
+        // Hostile undead mobs burn in direct sunlight during daytime in Overworld
+        if (isDay && currentDimension === 'overworld' && (this.type === 'ZOMBIE' || this.type === 'SKELETON') && !inWater) {
+            const mx = Math.floor(this.position.x);
+            const my = Math.floor(this.position.y + this.size);
+            const mz = Math.floor(this.position.z);
+            let hasRoof = false;
+            for (let y = my + 1; y < Math.min(127, my + 16); y++) {
+                const b = world.getBlock(mx, y, mz);
+                if (b !== BLOCKS.AIR && b !== BLOCKS.GLASS) {
+                    hasRoof = true;
+                    break;
+                }
+            }
+            if (!hasRoof) {
+                this.burnTimer = 3.0;
+            }
         }
 
         if (!this.flying) {
             if (this.config.waterOnly && inWater) {
-                // Buoyancy/swimming
+                // Buoyancy/swimming for aquatic mobs
                 this.velocity.y += (Math.sin(this.age * 3) * 2.0 - this.velocity.y) * dt * 2;
+            } else if (inWater) {
+                // Buoyancy / swimming for land animals (Minecraft style: float on water, gentle bobbing)
+                const targetVy = 2.2;
+                this.velocity.y += (targetVy - this.velocity.y) * dt * 6.0;
+                this.velocity.x *= Math.pow(0.85, dt * 20);
+                this.velocity.z *= Math.pow(0.85, dt * 20);
             } else {
                 this.velocity.y -= 25 * dt; // gravity
             }
@@ -3041,12 +4110,44 @@ export class Mob {
 
         if (this.attackCooldown > 0) this.attackCooldown -= dt;
 
+        if (inWater) {
+            this.isMoving = true; // Paddle and swim in water
+        }
+
+        // Obstacle auto-jump for walking mobs (Minecraft step-up jump over 1-block steps)
+        if (!this.flying && !this.config.waterOnly && this.grounded && this.isMoving) {
+            const speedSq = this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z;
+            if (speedSq > 0.01) {
+                const moveSpeed = Math.sqrt(speedSq);
+                const dirX = this.velocity.x / moveSpeed;
+                const dirZ = this.velocity.z / moveSpeed;
+                const aheadX = Math.floor(this.position.x + dirX * 0.6);
+                const aheadY = Math.floor(this.position.y + 0.1);
+                const aheadZ = Math.floor(this.position.z + dirZ * 0.6);
+                const blockAhead = world.getBlock(aheadX, aheadY, aheadZ);
+                const blockAbove = world.getBlock(aheadX, aheadY + 1, aheadZ);
+                const pAhead = getBlockProperties(blockAhead);
+                const pAbove = getBlockProperties(blockAbove);
+
+                if (pAhead && pAhead.solid && (!pAbove || !pAbove.solid)) {
+                    this.velocity.y = 6.2;
+                    this.grounded = false;
+                }
+            }
+        }
+
         const velStep = this.velocity.clone().multiplyScalar(dt);
         const col = world.collide(this.position, velStep, this.size * 0.8, this.size);
         this.position.copy(col.position);
         
-        if (col.velocity.x === 0) this.velocity.x = 0;
-        if (col.velocity.z === 0) this.velocity.z = 0;
+        if (col.velocity.x === 0) {
+            this.velocity.x = 0;
+            if (this.wanderDir && Math.abs(this.wanderDir.x) > 0.1) this.wanderDir.x *= -0.8;
+        }
+        if (col.velocity.z === 0) {
+            this.velocity.z = 0;
+            if (this.wanderDir && Math.abs(this.wanderDir.z) > 0.1) this.wanderDir.z *= -0.8;
+        }
         if (col.velocity.y === 0) this.velocity.y = 0;
 
         if (!this.flying && !this.config.waterOnly) {
@@ -3080,6 +4181,14 @@ export class Mob {
     }
 
     takeDamage(amt, dir) {
+        if (this.type === 'END_CRYSTAL') {
+            this.health = 0;
+            this.alive = false;
+            if (this.manager && this.manager.createExplosion) {
+                this.manager.createExplosion(this.position.clone(), 6, 35);
+            }
+            return;
+        }
         this.health -= amt;
         
         // Damage tint — color all child meshes red
@@ -3185,8 +4294,8 @@ export class Boss extends Mob {
         return this.mesh;
     }
 
-    update(dt, world, playerPos) {
-        super.update(dt, world, playerPos);
+    update(dt, world, playerPos, isDay = false, currentDimension = 'overworld') {
+        super.update(dt, world, playerPos, isDay, currentDimension);
         if (!this.alive) return;
 
         const dist = this.position.distanceTo(playerPos);
@@ -3360,15 +4469,15 @@ export class EntityManager {
                             else if (biomeBlock === BLOCKS.SWAMP_GRASS) biome = 'swamp';
                             else if (biomeBlock === BLOCKS.ALIEN_GRASS) biome = 'alien';
 
-                            type = pickRandomMobType(currentDimension, biome);
+                            type = pickRandomMobType(currentDimension, biome, isDay);
                             while(MOB_TYPES[type].waterOnly) {
-                                type = pickRandomMobType(currentDimension, biome);
+                                type = pickRandomMobType(currentDimension, biome, isDay);
                             }
                         }
-                // Only allow hostile surface spawns at night (except in Nether)
+                        // Strictly no hostile surface spawns at daytime in Overworld
                         const config = MOB_TYPES[type];
-                        const isHostile = (config.damage || 0) > 0;
-                        if (isHostile && isDay && !config.flying && !config.waterOnly && currentDimension !== 'nether') break; // Skip surface hostiles during day
+                        const isHostile = (config.damage || 0) > 0 || config.hostile === true;
+                        if (isHostile && isDay && currentDimension === 'overworld') break;
 
                         let spawnY = y + 2;
                         if (config.flying) spawnY = y + 5 + Math.random() * 10;
@@ -3399,9 +4508,46 @@ export class EntityManager {
             }
         }
 
+        // Check End Crystal healing link to Ender Dragon
+        const dragonMob = this.mobs.find(m => m.type === 'ENDER_DRAGON' && m.alive);
+        if (dragonMob) {
+            let closestCrystal = null;
+            let closestDist = 70;
+            for (const m of this.mobs) {
+                if (m.type === 'END_CRYSTAL' && m.alive) {
+                    const d = m.position.distanceTo(dragonMob.position);
+                    if (d < closestDist) {
+                        closestDist = d;
+                        closestCrystal = m;
+                    }
+                }
+            }
+            dragonMob.healingFromCrystal = !!closestCrystal;
+            if (closestCrystal && this.scene) {
+                if (!this.crystalBeamMesh) {
+                    const bGeo = new THREE.CylinderGeometry(0.12, 0.12, 1, 8);
+                    const bMat = new THREE.MeshBasicMaterial({ color: 0xd946ef, transparent: true, opacity: 0.85 });
+                    this.crystalBeamMesh = new THREE.Mesh(bGeo, bMat);
+                    this.scene.add(this.crystalBeamMesh);
+                }
+                const start = closestCrystal.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+                const end = dragonMob.position.clone().add(new THREE.Vector3(0, 1.5, 0));
+                const mid = start.clone().lerp(end, 0.5);
+                const dist = start.distanceTo(end);
+                this.crystalBeamMesh.position.copy(mid);
+                this.crystalBeamMesh.scale.set(1, dist, 1);
+                this.crystalBeamMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), end.clone().sub(start).normalize());
+                this.crystalBeamMesh.visible = true;
+            } else if (this.crystalBeamMesh) {
+                this.crystalBeamMesh.visible = false;
+            }
+        } else if (this.crystalBeamMesh) {
+            this.crystalBeamMesh.visible = false;
+        }
+
         for (let i = this.mobs.length - 1; i >= 0; i--) {
             const mob = this.mobs[i];
-            mob.update(dt, world, playerPos);
+            mob.update(dt, world, playerPos, isDay, currentDimension);
             
             // Mob deals damage to player
             if (player && mob.alive && mob.didAttack && mob.position.distanceTo(playerPos) < 2.0) {
@@ -3497,11 +4643,18 @@ export class EntityManager {
                 } else if (mob.type === 'CREEPER') {
                     this.spawnItem(Item.materialItem('gunpowder', 'Gunpowder', 'Explosive powder.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 } else if (mob.type === 'ENDERMAN') {
-                    if (Math.random() < 0.6) {
-                        const pearl = new Item('material', 'ender_pearl', {}, 'Ender Pearl');
-                        pearl.stackable = true;
-                        pearl.maxStack = 16;
-                        this.spawnItem(pearl, 1, mob.position.clone());
+                    const pearl = new Item('material', 'ender_pearl', {}, 'Ender Pearl');
+                    pearl.stackable = true;
+                    pearl.maxStack = 16;
+                    this.spawnItem(pearl, 1 + (Math.random() < 0.5 ? 1 : 0), mob.position.clone());
+                } else if (mob.type === 'BLAZE') {
+                    const rod = new Item('material', 'blaze_rod', {}, 'Blaze Rod');
+                    rod.stackable = true;
+                    rod.maxStack = 64;
+                    this.spawnItem(rod, 1 + (Math.random() < 0.5 ? 1 : 0), mob.position.clone());
+                } else if (mob.type === 'ENDER_DRAGON') {
+                    if (this.onDragonDefeated) {
+                        this.onDragonDefeated(mob.position.clone());
                     }
                 } else if (mob.type === 'ZOMBIE') {
                     this.spawnItem(Item.materialItem('rotten_flesh', 'Rotten Flesh', 'Gross.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
@@ -3518,6 +4671,17 @@ export class EntityManager {
                     if (Math.random() < 0.2) this.spawnItem(Item.materialItem('gold_ingot', 'Gold Ingot', 'Shiny.'), 1, mob.position.clone());
                 } else if (mob.type === 'GOLEM') {
                     this.spawnItem(Item.materialItem('iron_ingot', 'Iron Ingot', 'Solid iron.'), 3 + Math.floor(Math.random() * 3), mob.position.clone());
+                } else if (mob.type === 'SWET') {
+                    const cloudId = (window.BLOCKS && window.BLOCKS.BLUE_AERCLOUD) ? window.BLOCKS.BLUE_AERCLOUD : 135;
+                    if (Math.random() < 0.6) {
+                        this.spawnItem(Item.blockItem(cloudId, 'Blue Aercloud'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                    } else {
+                        this.spawnItem(Item.materialItem('ambrosium_shard', 'Ambrosium Shard', 'Healing Aether shard.'), 1, mob.position.clone());
+                    }
+                } else if (mob.type === 'AERWHALE') {
+                    const whiteCloudId = (window.BLOCKS && window.BLOCKS.AETHER_CLOUD) ? window.BLOCKS.AETHER_CLOUD : 134;
+                    this.spawnItem(Item.blockItem(whiteCloudId, 'Cold Aercloud'), 2 + Math.floor(Math.random() * 3), mob.position.clone());
+                    if (Math.random() < 0.5) this.spawnItem(Item.materialItem('feather', 'Feather'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 }
                 
                 // Generic drop logic (Spells/Modifiers)
@@ -3551,8 +4715,9 @@ export class EntityManager {
                 mob.justDied = false;
             }
 
-            // Despawn far mobs
-            if (!mob.alive || mob.position.distanceTo(playerPos) > 60) {
+            // Despawn far mobs (never despawn bosses or End Crystals)
+            const isPersistent = mob.isBoss || mob.type === 'ENDER_DRAGON' || mob.type === 'END_CRYSTAL';
+            if (!mob.alive || (!isPersistent && mob.position.distanceTo(playerPos) > 60)) {
                 mob.dispose();
                 this.mobs.splice(i, 1);
             }
@@ -3600,299 +4765,3 @@ export class EntityManager {
         return this.raycast(origin, direction, maxDist);
     }
 }
-
-// ============================================
-// Boat Entity
-// ============================================
-
-export class BoatEntity {
-    constructor(position, yaw = 0, scene = null, audio = null) {
-        this.position = position.clone();
-        this.velocity = new THREE.Vector3(0, 0, 0);
-        this.yaw = yaw;
-        this.angularVelocity = 0;
-        this.health = 4;
-        this.maxHealth = 4;
-        this.alive = true;
-        this.isBoat = true;
-        this.passenger = null;
-        this.scene = scene;
-        this.audio = audio;
-        this.splashTimer = 0;
-
-        this.leftOarTime = 0;
-        this.rightOarTime = 0;
-        this.rowingLeft = false;
-        this.rowingRight = false;
-
-        this.width = 1.4;
-        this.length = 1.4;
-        this.height = 0.6;
-
-        this.mesh = this.buildMesh();
-        if (this.scene) this.scene.add(this.mesh);
-    }
-
-    buildMesh() {
-        const group = new THREE.Group();
-        
-        // Load official Minecraft boat texture with fallback
-        const texLoader = new THREE.TextureLoader();
-        const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide });
-        texLoader.load(
-            'assets/mc/entity/boat_oak.png',
-            (tex) => {
-                tex.magFilter = THREE.NearestFilter;
-                tex.minFilter = THREE.NearestFilter;
-                mat.map = tex;
-                mat.needsUpdate = true;
-            },
-            undefined,
-            () => {
-                texLoader.load('https://assets.mcasset.cloud/1.21.4/assets/minecraft/textures/entity/boat/oak.png', (cdnTex) => {
-                    cdnTex.magFilter = THREE.NearestFilter;
-                    cdnTex.minFilter = THREE.NearestFilter;
-                    mat.map = cdnTex;
-                    mat.needsUpdate = true;
-                });
-            }
-        );
-
-        // 1. Boat Bottom Hull (Flat plank floor)
-        const bottomGeo = new THREE.BoxGeometry(0.88, 0.0625, 1.35);
-        const bottomMesh = new THREE.Mesh(bottomGeo, mat);
-        bottomMesh.position.set(0, 0.03125, 0);
-        bottomMesh.castShadow = true;
-        group.add(bottomMesh);
-
-        // 2. Left Wall (Port side)
-        const leftWallGeo = new THREE.BoxGeometry(0.125, 0.38, 1.35);
-        const leftWallMesh = new THREE.Mesh(leftWallGeo, mat);
-        leftWallMesh.position.set(-0.44, 0.22, 0);
-        leftWallMesh.castShadow = true;
-        group.add(leftWallMesh);
-
-        // 3. Right Wall (Starboard side)
-        const rightWallGeo = new THREE.BoxGeometry(0.125, 0.38, 1.35);
-        const rightWallMesh = new THREE.Mesh(rightWallGeo, mat);
-        rightWallMesh.position.set(0.44, 0.22, 0);
-        rightWallMesh.castShadow = true;
-        group.add(rightWallMesh);
-
-        // 4. Back Wall (Stern)
-        const backWallGeo = new THREE.BoxGeometry(0.76, 0.38, 0.125);
-        const backWallMesh = new THREE.Mesh(backWallGeo, mat);
-        backWallMesh.position.set(0, 0.22, 0.61);
-        backWallMesh.castShadow = true;
-        group.add(backWallMesh);
-
-        // 5. Front Wall (Bow)
-        const frontWallGeo = new THREE.BoxGeometry(0.76, 0.38, 0.125);
-        const frontWallMesh = new THREE.Mesh(frontWallGeo, mat);
-        frontWallMesh.position.set(0, 0.22, -0.61);
-        frontWallMesh.castShadow = true;
-        group.add(frontWallMesh);
-
-        // 6. Left Oar
-        this.leftOarPivot = new THREE.Group();
-        this.leftOarPivot.position.set(-0.48, 0.36, -0.05);
-        
-        const shaftGeo = new THREE.BoxGeometry(0.06, 0.06, 0.95);
-        const lShaft = new THREE.Mesh(shaftGeo, mat);
-        lShaft.position.set(-0.42, 0, 0.08);
-        lShaft.rotation.y = -0.3;
-        this.leftOarPivot.add(lShaft);
-
-        const bladeGeo = new THREE.BoxGeometry(0.18, 0.03, 0.38);
-        const lBlade = new THREE.Mesh(bladeGeo, mat);
-        lBlade.position.set(-0.82, 0, 0.22);
-        lBlade.rotation.y = -0.3;
-        this.leftOarPivot.add(lBlade);
-
-        this.leftOarPivot.rotation.set(0.1, 0.35, -0.15);
-        group.add(this.leftOarPivot);
-
-        // 7. Right Oar
-        this.rightOarPivot = new THREE.Group();
-        this.rightOarPivot.position.set(0.48, 0.36, -0.05);
-
-        const rShaft = new THREE.Mesh(shaftGeo, mat);
-        rShaft.position.set(0.42, 0, 0.08);
-        rShaft.rotation.y = 0.3;
-        this.rightOarPivot.add(rShaft);
-
-        const rBlade = new THREE.Mesh(bladeGeo, mat);
-        rBlade.position.set(0.82, 0, 0.22);
-        rBlade.rotation.y = 0.3;
-        this.rightOarPivot.add(rBlade);
-
-        this.rightOarPivot.rotation.set(0.1, -0.35, 0.15);
-        group.add(this.rightOarPivot);
-
-        group.position.copy(this.position);
-        group.rotation.y = this.yaw;
-        return group;
-    }
-
-    checkRayHit(origin, direction, maxDist = 4.5) {
-        const min = new THREE.Vector3(this.position.x - 0.7, this.position.y - 0.1, this.position.z - 0.7);
-        const max = new THREE.Vector3(this.position.x + 0.7, this.position.y + 0.6, this.position.z + 0.7);
-        const box = new THREE.Box3(min, max);
-        const ray = new THREE.Ray(origin, direction);
-        const hit = new THREE.Vector3();
-        if (ray.intersectBox(box, hit)) {
-            return origin.distanceTo(hit) <= maxDist;
-        }
-        return false;
-    }
-
-    raycast(origin, direction, maxDist = 4.5) {
-        return this.checkRayHit(origin, direction, maxDist);
-    }
-
-    takeDamage(amt, particles = null, entityManager = null) {
-        this.health -= amt;
-        if (this.health <= 0) {
-            this.destroy(particles, entityManager);
-        } else {
-            if (this.mesh) {
-                this.mesh.rotation.z = 0.15;
-                setTimeout(() => { if (this.mesh) this.mesh.rotation.z = 0; }, 120);
-            }
-            if (this.audio) this.audio.playHit();
-        }
-    }
-
-    destroy(particles = null, entityManager = null) {
-        this.alive = false;
-        if (this.mesh && this.scene) {
-            this.scene.remove(this.mesh);
-            this.mesh.traverse(child => {
-                if (child.geometry) child.geometry.dispose();
-                if (child.material) {
-                    if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
-                    else child.material.dispose();
-                }
-            });
-        }
-        if (particles) {
-            particles.emit(this.position.clone().add(new THREE.Vector3(0, 0.3, 0)), 'block_break', 12, 0x8b5a2b);
-        }
-        if (this.audio) this.audio.playHit();
-        if (entityManager) {
-            entityManager.spawnItem(
-                { type: 'material', subtype: 'oak_boat', name: 'Oak Boat', stackable: true, maxStack: 1, data: {} },
-                1,
-                this.position.clone().add(new THREE.Vector3(0, 0.3, 0))
-            );
-        }
-    }
-
-    update(dt, world, keys = null, particles = null) {
-        if (!this.alive) return;
-
-        const bx = Math.floor(this.position.x);
-        const by = Math.floor(this.position.y);
-        const bz = Math.floor(this.position.z);
-        const blockCur = world ? world.getBlock(bx, by, bz) : 0;
-        const blockBelow = world ? world.getBlock(bx, by - 1, bz) : 0;
-        const isWater = (b) => b === window.BLOCKS.WATER || b === window.BLOCKS.SWAMP_WATER;
-        const inWater = isWater(blockCur) || isWater(blockBelow);
-
-        this.rowingLeft = false;
-        this.rowingRight = false;
-
-        const forwardAccel = inWater ? 20.0 * dt : 5.5 * dt;
-        const turnSpeed = inWater ? 2.5 * dt : 1.3 * dt;
-        const drag = inWater ? Math.pow(0.965, dt * 60) : Math.pow(0.72, dt * 60);
-
-        if (inWater) {
-            const waterSurfaceY = isWater(blockCur) ? by + 0.85 : (by - 1) + 0.85;
-            const diffY = waterSurfaceY - this.position.y;
-            this.velocity.y += diffY * 18 * dt;
-            this.velocity.y *= Math.pow(0.5, dt * 10);
-        } else {
-            this.velocity.y -= 26 * dt;
-        }
-
-        if (keys) {
-            if (keys.forward) {
-                this.rowingLeft = true;
-                this.rowingRight = true;
-                this.velocity.x -= Math.sin(this.yaw) * forwardAccel;
-                this.velocity.z -= Math.cos(this.yaw) * forwardAccel;
-            }
-            if (keys.backward) {
-                this.rowingLeft = true;
-                this.rowingRight = true;
-                this.velocity.x += Math.sin(this.yaw) * (forwardAccel * 0.4);
-                this.velocity.z += Math.cos(this.yaw) * (forwardAccel * 0.4);
-            }
-            if (keys.left) {
-                this.rowingRight = true;
-                this.yaw += turnSpeed;
-            }
-            if (keys.right) {
-                this.rowingLeft = true;
-                this.yaw -= turnSpeed;
-            }
-        }
-
-        this.velocity.x *= drag;
-        this.velocity.z *= drag;
-
-        const rowSpeed = 10.0;
-        if (this.rowingLeft) {
-            this.leftOarTime += dt * rowSpeed;
-            const swing = Math.sin(this.leftOarTime);
-            const dip = Math.cos(this.leftOarTime);
-            this.leftOarPivot.rotation.y = 0.35 + swing * 0.45;
-            this.leftOarPivot.rotation.z = -0.15 + dip * 0.22;
-        } else {
-            this.leftOarPivot.rotation.y += (0.35 - this.leftOarPivot.rotation.y) * dt * 5;
-            this.leftOarPivot.rotation.z += (-0.15 - this.leftOarPivot.rotation.z) * dt * 5;
-        }
-
-        if (this.rowingRight) {
-            this.rightOarTime += dt * rowSpeed;
-            const swing = Math.sin(this.rightOarTime);
-            const dip = Math.cos(this.rightOarTime);
-            this.rightOarPivot.rotation.y = -0.35 - swing * 0.45;
-            this.rightOarPivot.rotation.z = 0.15 - dip * 0.22;
-        } else {
-            this.rightOarPivot.rotation.y += (-0.35 - this.rightOarPivot.rotation.y) * dt * 5;
-            this.rightOarPivot.rotation.z += (0.15 - this.rightOarPivot.rotation.z) * dt * 5;
-        }
-
-        const step = this.velocity.clone().multiplyScalar(dt);
-        if (world && world.collide) {
-            const col = world.collide(this.position, step, 1.1, 0.5);
-            this.position.copy(col.position);
-            if (col.velocity.x === 0) this.velocity.x = 0;
-            if (col.velocity.z === 0) this.velocity.z = 0;
-            if (col.velocity.y === 0) this.velocity.y = 0;
-        } else {
-            this.position.add(step);
-        }
-
-        if (this.mesh) {
-            this.mesh.position.copy(this.position);
-            this.mesh.rotation.y = this.yaw;
-        }
-
-        const speed = Math.hypot(this.velocity.x, this.velocity.z);
-        if (inWater && speed > 1.8) {
-            this.splashTimer += dt;
-            if (this.splashTimer > 0.4) {
-                this.splashTimer = 0;
-                if (this.audio && this.audio.playWaterSplash) {
-                    this.audio.playWaterSplash(this.position);
-                }
-                if (particles) {
-                    particles.emit(this.position.clone().add(new THREE.Vector3(0, 0.1, 0)), 'splash', 4, 0xffffff);
-                }
-            }
-        }
-    }
-}
-

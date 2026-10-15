@@ -3,18 +3,19 @@
 // ============================================
 import * as THREE from 'three';
 import { BLOCKS, generateItemTexture } from './textures.js?v=100';
-import { Spell, SPELL_TYPES } from './magic.js?v=100';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=100';
 
 export class LightingSystem {
-    constructor(scene) {
+    constructor(scene, world = null) {
         this.scene = scene;
+        this.world = world;
         this.timeOfDay = 0.3; // start in morning
         this.dayLength = 600; // seconds
 
-        this.hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x444455, 0.8);
-        this.scene.add(this.hemiLight);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.92);
+        this.scene.add(this.ambientLight);
 
-        this.sunLight = new THREE.DirectionalLight(0xffffdd, 1.2);
+        this.sunLight = new THREE.DirectionalLight(0xffffff, 0.12);
         this.sunLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.sunLight);
 
@@ -41,6 +42,7 @@ export class LightingSystem {
         const sunMat = new THREE.MeshBasicMaterial({
             map: sunTexture,
             transparent: true,
+            alphaTest: 0.05,
             depthWrite: false,
             fog: false,
             side: THREE.DoubleSide
@@ -85,6 +87,7 @@ export class LightingSystem {
         const moonMat = new THREE.MeshBasicMaterial({
             map: moonTexture,
             transparent: true,
+            alphaTest: 0.05,
             depthWrite: false,
             fog: false,
             side: THREE.DoubleSide
@@ -134,31 +137,31 @@ export class LightingSystem {
     _getLightState(time) {
         // 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 1.0 = midnight
         const states = [
-            // Midnight - slightly brighter so you can see without torches
-            { t: 0.0, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 },
-            { t: 0.2, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 },
-            // Sunrise - pink/orange horizon, light blue top
-            { t: 0.25, amb: new THREE.Color(0x8a6b52), bg: new THREE.Color(0xffa65a), top: new THREE.Color(0x82a6ff), sun: 0.8, moon: 0.2, hemi: 0.8 },
-            // Day - bright Minecraft blue, high ambient light for soft shadows
-            { t: 0.3, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 1.5, moon: 0.0, hemi: 1.2 },
-            { t: 0.7, amb: new THREE.Color(0xdddddd), bg: new THREE.Color(0xcceeff), top: new THREE.Color(0x88ccff), sun: 1.5, moon: 0.0, hemi: 1.2 },
+            // Midnight - authentic Minecraft night (light level 4)
+            { t: 0.0, amb: new THREE.Color(0x283248), ambIntensity: 0.22, bg: new THREE.Color(0x0c0f18), top: new THREE.Color(0x141a2c), sun: 0.0, moon: 0.12 },
+            { t: 0.2, amb: new THREE.Color(0x283248), ambIntensity: 0.22, bg: new THREE.Color(0x0c0f18), top: new THREE.Color(0x141a2c), sun: 0.0, moon: 0.12 },
+            // Sunrise - warm horizon, Minecraft blue top
+            { t: 0.25, amb: new THREE.Color(0xffd8b0), ambIntensity: 0.65, bg: new THREE.Color(0xffa050), top: new THREE.Color(0x78a7ff), sun: 0.15, moon: 0.02 },
+            // Day - authentic Minecraft sky blue (#78a7ff), crisp directional contrast and ambient fill
+            { t: 0.3, amb: new THREE.Color(0xffffff), ambIntensity: 0.90, bg: new THREE.Color(0x78a7ff), top: new THREE.Color(0xdcebff), sun: 0.12, moon: 0.0 },
+            { t: 0.7, amb: new THREE.Color(0xffffff), ambIntensity: 0.90, bg: new THREE.Color(0x78a7ff), top: new THREE.Color(0xdcebff), sun: 0.12, moon: 0.0 },
             // Sunset - orange/red horizon
-            { t: 0.75, amb: new THREE.Color(0x8a5050), bg: new THREE.Color(0xff5a5a), top: new THREE.Color(0x5a82f2), sun: 0.8, moon: 0.2, hemi: 0.8 },
+            { t: 0.75, amb: new THREE.Color(0xffa880), ambIntensity: 0.60, bg: new THREE.Color(0xff6644), top: new THREE.Color(0x5878d0), sun: 0.12, moon: 0.02 },
             // Night
-            { t: 0.8, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 },
-            { t: 1.0, amb: new THREE.Color(0x666677), bg: new THREE.Color(0x181822), top: new THREE.Color(0x11111c), sun: 0.0, moon: 0.6, hemi: 0.7 }
+            { t: 0.8, amb: new THREE.Color(0x283248), ambIntensity: 0.22, bg: new THREE.Color(0x0c0f18), top: new THREE.Color(0x141a2c), sun: 0.0, moon: 0.12 },
+            { t: 1.0, amb: new THREE.Color(0x283248), ambIntensity: 0.22, bg: new THREE.Color(0x0c0f18), top: new THREE.Color(0x141a2c), sun: 0.0, moon: 0.12 }
         ];
 
         for (let i = 0; i < states.length - 1; i++) {
             if (time >= states[i].t && time <= states[i+1].t) {
                 const fraction = (time - states[i].t) / (states[i+1].t - states[i].t);
                 const amb = states[i].amb.clone().lerp(states[i+1].amb, fraction);
+                const ambIntensity = states[i].ambIntensity + (states[i+1].ambIntensity - states[i].ambIntensity) * fraction;
                 const bg = states[i].bg.clone().lerp(states[i+1].bg, fraction);
                 const top = states[i].top.clone().lerp(states[i+1].top, fraction);
                 const sun = states[i].sun + (states[i+1].sun - states[i].sun) * fraction;
                 const moon = (states[i].moon !== undefined) ? states[i].moon + (states[i+1].moon - states[i].moon) * fraction : 0.0;
-                const hemi = states[i].hemi + (states[i+1].hemi - states[i].hemi) * fraction;
-                return { amb, bg, top, sun, moon, hemi };
+                return { amb, ambIntensity, bg, top, sun, moon };
             }
         }
         return states[0]; // fallback
@@ -171,12 +174,12 @@ export class LightingSystem {
         const angle = (this.timeOfDay - 0.5) * Math.PI * 2;
         const moonAngle = angle + Math.PI;
         
-        // In Minecraft, the celestial axis rotates east-to-west across the sky dome
+        // In Minecraft, the celestial axis rotates across the sky with a slight diagonal tilt to cast dynamic shadows
         const celestialDist = 280; // Distance towards sky dome for authentic scale
         this.sunLight.position.set(
             cameraPos.x + Math.sin(angle) * 80,
             cameraPos.y + Math.cos(angle) * 80,
-            cameraPos.z
+            cameraPos.z + 32
         );
         this.sunLight.target.position.copy(cameraPos);
         this.sunLight.target.updateMatrixWorld();
@@ -192,7 +195,7 @@ export class LightingSystem {
         this.moonLight.position.set(
             cameraPos.x + Math.sin(moonAngle) * 80,
             cameraPos.y + Math.cos(moonAngle) * 80,
-            cameraPos.z
+            cameraPos.z - 32
         );
         this.moonLight.target.position.copy(cameraPos);
         this.moonLight.target.updateMatrixWorld();
@@ -215,47 +218,80 @@ export class LightingSystem {
 
         this.skyDome.position.copy(cameraPos);
 
+        this.sunMesh.visible = (currentDimension === 'overworld');
+        this.moonMesh.visible = (currentDimension === 'overworld');
+
         let state;
         if (currentDimension === 'nether') {
             state = {
-                amb: new THREE.Color(0x772222),
-                bg: new THREE.Color(0x330000),
-                top: new THREE.Color(0x993333),
+                amb: new THREE.Color(0x551a1a),
+                ambIntensity: 0.6,
+                bg: new THREE.Color(0x220000),
+                top: new THREE.Color(0x662222),
                 sun: 0,
-                moon: 0,
-                hemi: 1.0
+                moon: 0
             };
         } else if (currentDimension === 'aether') {
             state = {
-                amb: new THREE.Color(0xaaffff),
+                amb: new THREE.Color(0xeef6ff),
+                ambIntensity: 0.95,
                 bg: new THREE.Color(0xddeeff),
                 top: new THREE.Color(0xffffff),
-                sun: 1.5,
-                moon: 0,
-                hemi: 1.0
+                sun: 0.15,
+                moon: 0
+            };
+        } else if (currentDimension === 'end') {
+            state = {
+                amb: new THREE.Color(0x2d1c3a),
+                ambIntensity: 0.8,
+                bg: new THREE.Color(0x0c0414),
+                top: new THREE.Color(0x190828),
+                sun: 0,
+                moon: 0
             };
         } else {
             state = this._getLightState(this.timeOfDay);
         }
 
+        this.ambientLight.color.copy(state.amb);
+        this.ambientLight.intensity = state.ambIntensity;
+
         this.sunLight.intensity = state.sun;
         this.moonLight.intensity = state.moon;
-
-        this.hemiLight.color.copy(state.top);
-        this.hemiLight.groundColor.copy(state.amb);
-        this.hemiLight.intensity = state.hemi;
         
         this.scene.background = isUnderwater ? new THREE.Color(0x3377aa) : state.bg;
         if (this.scene.fog) {
             this.scene.fog.color.copy(this.scene.background);
-            if (isUnderwater) {
-                this.scene.fog.density = 0.05;
-            } else if (currentDimension === 'aether') {
-                this.scene.fog.density = 0.02; // Thicker fog in Aether to feel like clouds
-            } else if (currentDimension === 'nether') {
-                this.scene.fog.density = 0.015;
+            const renderBlocks = (this.world?.renderDistance || 8) * 16;
+            if (this.scene.fog.isFog) {
+                if (isUnderwater) {
+                    this.scene.fog.near = 1;
+                    this.scene.fog.far = 18;
+                } else if (currentDimension === 'aether') {
+                    this.scene.fog.near = 16;
+                    this.scene.fog.far = renderBlocks * 0.75;
+                } else if (currentDimension === 'nether') {
+                    this.scene.fog.near = 20;
+                    this.scene.fog.far = renderBlocks * 0.85;
+                } else if (currentDimension === 'end') {
+                    this.scene.fog.near = 30;
+                    this.scene.fog.far = renderBlocks * 0.95;
+                } else {
+                    this.scene.fog.near = renderBlocks * 0.65;
+                    this.scene.fog.far = renderBlocks * 0.98;
+                }
             } else {
-                this.scene.fog.density = this.scene.fog.baseDensity || 0.003;
+                if (isUnderwater) {
+                    this.scene.fog.density = 0.05;
+                } else if (currentDimension === 'aether') {
+                    this.scene.fog.density = 0.02;
+                } else if (currentDimension === 'nether') {
+                    this.scene.fog.density = 0.015;
+                } else if (currentDimension === 'end') {
+                    this.scene.fog.density = 0.008;
+                } else {
+                    this.scene.fog.density = this.scene.fog.baseDensity || 0.003;
+                }
             }
         }
         
@@ -410,6 +446,11 @@ export class ParticleSystem {
     }
 
     emit(pos, type, count = 10, color = 0xffffff) {
+        if (!pos) return;
+        const basePos = (pos instanceof THREE.Vector3 || (typeof pos.clone === 'function'))
+            ? pos.clone()
+            : new THREE.Vector3(pos.x || 0, pos.y || 0, pos.z || 0);
+
         for(let i=0; i<count; i++) {
             if (this.particles.length >= this.maxParticles) {
                 // Drop oldest if we reach limit
@@ -423,6 +464,13 @@ export class ParticleSystem {
                     (Math.random()-0.5)*1.5
                 );
                 maxAge = 3 + Math.random() * 2;
+            } else if (type === 'eat') {
+                vel = new THREE.Vector3(
+                    (Math.random()-0.5)*1.4,
+                    Math.random()*1.2 + 0.4,
+                    (Math.random()-0.5)*1.4
+                );
+                maxAge = 0.35 + Math.random() * 0.35;
             } else {
                 vel = new THREE.Vector3(
                     (Math.random()-0.5)*5,
@@ -432,7 +480,7 @@ export class ParticleSystem {
                 maxAge = 0.5 + Math.random();
             }
             this.particles.push({
-                pos: pos.clone(),
+                pos: basePos.clone(),
                 vel: vel,
                 age: 0,
                 maxAge: maxAge,
@@ -460,6 +508,13 @@ export class ParticleSystem {
                 // No gravity, they just drift down
                 this._dummy.rotation.x += dt;
                 this._dummy.rotation.y += dt * 0.5;
+            } else if (p.type === 'eat') {
+                p.pos.addScaledVector(p.vel, dt);
+                p.vel.y -= 7.0 * dt; // gravity
+                p.vel.x *= Math.max(0, 1 - dt * 2.5); // horizontal drag
+                p.vel.z *= Math.max(0, 1 - dt * 2.5);
+                this._dummy.rotation.x += dt * 6;
+                this._dummy.rotation.y += dt * 6;
             } else {
                 p.pos.addScaledVector(p.vel, dt);
                 p.vel.y -= 9.8 * dt; // gravity
@@ -468,6 +523,9 @@ export class ParticleSystem {
             this._dummy.position.copy(p.pos);
             if (p.type === 'leaf') {
                 this._dummy.scale.set(0.6, 0.1, 0.6);
+            } else if (p.type === 'eat') {
+                const s = 0.45 * Math.max(0.15, 1 - (p.age / p.maxAge) * 0.5);
+                this._dummy.scale.set(s, s, s);
             } else {
                 this._dummy.scale.set(1, 1, 1);
                 this._dummy.rotation.set(0, 0, 0);
@@ -1061,15 +1119,24 @@ class UISystem {
             { type: 'material',  subtype: 'compass',         name: 'Compass' },
             { type: 'material',  subtype: 'clock',           name: 'Clock' },
             { type: 'material',  subtype: 'ender_pearl',     name: 'Ender Pearl' },
+            { type: 'material',  subtype: 'eye_of_ender',    name: 'Eye of Ender' },
+            { type: 'material',  subtype: 'blaze_rod',       name: 'Blaze Rod' },
+            { type: 'material',  subtype: 'blaze_powder',    name: 'Blaze Powder' },
             { type: 'equipment', subtype: 'bow',             name: 'Bow' },
             { type: 'equipment', subtype: 'bucket',          name: 'Bucket' },
             { type: 'equipment', subtype: 'water_bucket',    name: 'Water Bucket' },
             { type: 'equipment', subtype: 'lava_bucket',     name: 'Lava Bucket' },
-            { type: 'equipment', subtype: 'oak_boat',        name: 'Oak Boat' },
             { type: 'material',  subtype: 'red_dye',         name: 'Red Dye' },
             { type: 'material',  subtype: 'yellow_dye',      name: 'Yellow Dye' },
             { type: 'material',  subtype: 'blue_dye',        name: 'Blue Dye' },
+            { type: 'material',  subtype: 'green_dye',       name: 'Green Dye' },
+            { type: 'material',  subtype: 'white_dye',       name: 'White Dye' },
+            { type: 'material',  subtype: 'black_dye',       name: 'Black Dye' },
+            { type: 'material',  subtype: 'iron_nugget',     name: 'Iron Nugget' },
+            { type: 'material',  subtype: 'gold_nugget',     name: 'Gold Nugget' },
+            { type: 'material',  subtype: 'bone',            name: 'Bone' },
             { type: 'material',  subtype: 'bone_meal',       name: 'Bone Meal' },
+            { type: 'material',  subtype: 'gunpowder',       name: 'Gunpowder' },
             // Food
             { type: 'food',      subtype: 'raw_beef',        name: 'Raw Beef' },
             { type: 'food',      subtype: 'cooked_beef',     name: 'Steak' },
@@ -1094,9 +1161,7 @@ class UISystem {
             slot.dataset.itemType = itm.type;
             slot.dataset.itemSubtype = itm.subtype;
             slot.dataset.itemName = itm.name;
-            const isBoat = itm.subtype === 'oak_boat' || itm.subtype === 'boat';
-            slot.dataset.category = isBoat ? 'equipment materials' : (itm.type === 'equipment' ? 'equipment' : 'materials');
-            if (isBoat) slot.dataset.itemKeywords = 'boat boats oak vehicle transportation water raft ship';
+            slot.dataset.category = itm.type === 'equipment' ? 'equipment' : 'materials';
 
             const cvs = generateItemTexture(itm.type, itm.subtype, (updatedCvs) => {
                 const existing = slot.querySelector('img');
@@ -1134,19 +1199,18 @@ class UISystem {
             slot.onmousedown = (e) => {
                 if (e.button !== 0) return;
                 e.preventDefault();
-                const isBoat = itm.subtype === 'oak_boat' || itm.subtype === 'boat';
                 const fakeSlot = {
                     item: {
                         type: itm.type,
                         subtype: itm.subtype,
                         name: itm.name,
                         id: `${itm.type}_${itm.subtype}_${Date.now()}`,
-                        stackable: !isBoat && (itm.type === 'material' || itm.type === 'food'),
-                        maxStack: isBoat ? 1 : ((itm.type === 'material' || itm.type === 'food') ? 64 : 1),
+                        stackable: itm.type === 'material' || itm.type === 'food',
+                        maxStack: (itm.type === 'material' || itm.type === 'food') ? 64 : 1,
                         data: itm.type === 'equipment' ? { equipData: getEquipDataForSubtype(itm.subtype) } : {},
                         description: ''
                     },
-                    count: isBoat ? 1 : ((itm.type === 'material' || itm.type === 'food') ? 64 : 1)
+                    count: (itm.type === 'material' || itm.type === 'food') ? 64 : 1
                 };
                 if (e.shiftKey) {
                     if (this.currentPlayer && this.currentPlayer.inventory) {
@@ -1195,6 +1259,8 @@ class UISystem {
             { subtype: 'salmon',          name: 'Spawn Salmon',          mob: 'SALMON' },
             { subtype: 'tropical_fish',   name: 'Spawn Tropical Fish',   mob: 'TROPICAL_FISH' },
             { subtype: 'pufferfish',      name: 'Spawn Pufferfish',      mob: 'PUFFERFISH' },
+            { subtype: 'swet',            name: 'Spawn Swet',            mob: 'SWET' },
+            { subtype: 'aerwhale',        name: 'Spawn Aerwhale',        mob: 'AERWHALE' },
         ];
 
         for (const egg of spawnEggs) {
@@ -1249,6 +1315,248 @@ class UISystem {
                 if (e.shiftKey) {
                     if (this.currentPlayer && this.currentPlayer.inventory) {
                         this.currentPlayer.inventory.addItem(fakeSlot.item, fakeSlot.count);
+                        this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                        this.renderGrid(this.elements.mainHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                    }
+                    return;
+                }
+                this.dragState.isDragging = true;
+                this.dragState.sourceType = 'creative';
+                this.dragState.sourceIndex = -1;
+                this.dragState.itemData = fakeSlot;
+                this.dragState.isSplit = false;
+                this.dragState.offsetX = 0;
+                this.dragState.offsetY = 0;
+                this.elements.dragIcon.classList.remove('hidden');
+                this.renderSlotItem(this.elements.dragIcon, fakeSlot);
+                this.updateDragIconPos(e.clientX, e.clientY);
+                this.elements.tooltip.classList.add('hidden');
+            };
+
+            panel.appendChild(slot);
+        }
+
+        // --- Magic Section (Wands, Spells, Modifiers) ---
+        const wandTemplates = [
+            { subtype: 'wand_basic', name: 'Basic Wand', slots: 4, innate: 'BOLT', desc: 'Channels arcane energy.' },
+            { subtype: 'wand_fire', name: 'Fire Wand', slots: 4, innate: 'BURST', desc: 'Shoots burning projectiles.' },
+            { subtype: 'wand_ice', name: 'Ice Wand', slots: 4, innate: 'BOLT', desc: 'Shoots fast freezing bolts.' },
+            { subtype: 'wand_nature', name: 'Nature Wand', slots: 4, innate: 'HEAL', desc: 'Heals the wielder.' },
+            { subtype: 'wand_lightning', name: 'Lightning Wand', slots: 4, innate: 'THUNDER', desc: 'Strikes targets with instant lightning.' },
+            { subtype: 'wand_earth', name: 'Earth Wand', slots: 4, innate: 'EARTH', desc: 'Hurls crushing boulders.' },
+            { subtype: 'wand_wind', name: 'Wind Wand', slots: 4, innate: 'WIND', desc: 'Fires cutting wind blades with high knockback.' },
+            { subtype: 'wand_void', name: 'Void Wand', slots: 4, innate: 'VOID', desc: 'Fires destructive void orbs.' },
+            { subtype: 'wand_meteor', name: 'Meteor Wand', slots: 5, innate: 'METEOR', desc: 'Calls down devastating meteors.' },
+            { subtype: 'wand_master', name: 'Master Wand', slots: 6, innate: 'THUNDER', desc: 'Ultimate magical staff with 6 spell slots.' },
+        ];
+
+        for (const wt of wandTemplates) {
+            const slot = document.createElement('div');
+            slot.className = 'inv-slot creative-item-slot';
+            slot.title = wt.name;
+            slot.dataset.itemType = 'wand';
+            slot.dataset.itemSubtype = wt.subtype;
+            slot.dataset.itemName = wt.name;
+            slot.dataset.category = 'magic';
+
+            const cvs = generateItemTexture('wand', wt.subtype, (updatedCvs) => {
+                const existing = slot.querySelector('img');
+                if (existing) existing.src = updatedCvs.toDataURL();
+            });
+            const img = document.createElement('img');
+            img.src = cvs.toDataURL();
+            img.className = 'item-icon';
+            img.style.imageRendering = 'pixelated';
+            img.style.width = '76%';
+            img.style.height = '76%';
+            img.style.objectFit = 'contain';
+            img.draggable = false;
+            slot.appendChild(img);
+
+            slot.onmouseenter = (e) => {
+                if (this.dragState.isDragging || !this.isOpen) return;
+                const html = `<strong style="color:#c084fc; font-size:16px;">${wt.name}</strong><br/><span style="color:#aaa;">Wand (${wt.slots} Slots)</span><br/><span style="color:#67e8f9;">Innate: ${wt.innate}</span><br/><span style="color:#e2e8f0;">${wt.desc}</span>`;
+                this.elements.tooltip.innerHTML = html;
+                this.elements.tooltip.classList.remove('hidden');
+                this.elements.tooltip.style.left = (e.clientX + 15) + 'px';
+                this.elements.tooltip.style.top = (e.clientY + 15) + 'px';
+            };
+            slot.onmouseleave = () => this.elements.tooltip.classList.add('hidden');
+
+            slot.onmousedown = (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                const wandObj = new Wand(wt.name, wt.slots, wt.innate);
+                const fakeSlot = {
+                    item: {
+                        type: 'wand',
+                        subtype: wt.subtype,
+                        name: wt.name,
+                        id: `wand_${wt.subtype}_${Date.now()}`,
+                        stackable: false,
+                        maxStack: 1,
+                        data: { wand: wandObj },
+                        description: wt.desc
+                    },
+                    count: 1
+                };
+                if (e.shiftKey) {
+                    if (this.currentPlayer && this.currentPlayer.inventory) {
+                        this.currentPlayer.inventory.addItem(fakeSlot.item, 1);
+                        this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                        this.renderGrid(this.elements.mainHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                    }
+                    return;
+                }
+                this.dragState.isDragging = true;
+                this.dragState.sourceType = 'creative';
+                this.dragState.sourceIndex = -1;
+                this.dragState.itemData = fakeSlot;
+                this.dragState.isSplit = false;
+                this.dragState.offsetX = 0;
+                this.dragState.offsetY = 0;
+                this.elements.dragIcon.classList.remove('hidden');
+                this.renderSlotItem(this.elements.dragIcon, fakeSlot);
+                this.updateDragIconPos(e.clientX, e.clientY);
+                this.elements.tooltip.classList.add('hidden');
+            };
+
+            panel.appendChild(slot);
+        }
+
+        // Spells
+        for (const [spellKey, spellCfg] of Object.entries(SPELL_TYPES)) {
+            const slot = document.createElement('div');
+            slot.className = 'inv-slot creative-item-slot';
+            slot.title = spellCfg.name;
+            slot.dataset.itemType = 'spell';
+            slot.dataset.itemSubtype = spellKey;
+            slot.dataset.itemName = spellCfg.name;
+            slot.dataset.category = 'magic';
+
+            const cvs = generateItemTexture('spell', spellKey, (updatedCvs) => {
+                const existing = slot.querySelector('img');
+                if (existing) existing.src = updatedCvs.toDataURL();
+            });
+            const img = document.createElement('img');
+            img.src = cvs.toDataURL();
+            img.className = 'item-icon';
+            img.style.imageRendering = 'pixelated';
+            img.style.width = '76%';
+            img.style.height = '76%';
+            img.style.objectFit = 'contain';
+            img.draggable = false;
+            slot.appendChild(img);
+
+            slot.onmouseenter = (e) => {
+                if (this.dragState.isDragging || !this.isOpen) return;
+                let html = `<strong style="color:#60a5fa; font-size:16px;">${spellCfg.name}</strong><br/><span style="color:#aaa;">Spell [${spellCfg.element}]</span><br/>`;
+                if (spellCfg.baseDamage) html += `<span style="color:#f87171;">Damage: ${spellCfg.baseDamage}</span><br/>`;
+                if (spellCfg.baseManaCost) html += `<span style="color:#38bdf8;">Mana: ${spellCfg.baseManaCost}</span><br/>`;
+                if (spellCfg.projectileSpeed) html += `<span style="color:#4ade80;">Speed: ${spellCfg.projectileSpeed}</span><br/>`;
+                html += `<span style="color:#cbd5e1;">${spellCfg.description || ''}</span>`;
+                this.elements.tooltip.innerHTML = html;
+                this.elements.tooltip.classList.remove('hidden');
+                this.elements.tooltip.style.left = (e.clientX + 15) + 'px';
+                this.elements.tooltip.style.top = (e.clientY + 15) + 'px';
+            };
+            slot.onmouseleave = () => this.elements.tooltip.classList.add('hidden');
+
+            slot.onmousedown = (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                const spellObj = new Spell(spellKey);
+                const fakeSlot = {
+                    item: {
+                        type: 'spell',
+                        subtype: spellKey,
+                        name: spellCfg.name,
+                        id: `spell_${spellKey}_${Date.now()}`,
+                        stackable: true,
+                        maxStack: 16,
+                        data: { spell: spellObj },
+                        description: spellCfg.description || ''
+                    },
+                    count: 1
+                };
+                if (e.shiftKey) {
+                    if (this.currentPlayer && this.currentPlayer.inventory) {
+                        this.currentPlayer.inventory.addItem(fakeSlot.item, 1);
+                        this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                        this.renderGrid(this.elements.mainHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
+                    }
+                    return;
+                }
+                this.dragState.isDragging = true;
+                this.dragState.sourceType = 'creative';
+                this.dragState.sourceIndex = -1;
+                this.dragState.itemData = fakeSlot;
+                this.dragState.isSplit = false;
+                this.dragState.offsetX = 0;
+                this.dragState.offsetY = 0;
+                this.elements.dragIcon.classList.remove('hidden');
+                this.renderSlotItem(this.elements.dragIcon, fakeSlot);
+                this.updateDragIconPos(e.clientX, e.clientY);
+                this.elements.tooltip.classList.add('hidden');
+            };
+
+            panel.appendChild(slot);
+        }
+
+        // Modifiers
+        for (const [modKey, modCfg] of Object.entries(MODIFIER_TYPES)) {
+            const slot = document.createElement('div');
+            slot.className = 'inv-slot creative-item-slot';
+            slot.title = modCfg.name;
+            slot.dataset.itemType = 'modifier';
+            slot.dataset.itemSubtype = modKey;
+            slot.dataset.itemName = modCfg.name;
+            slot.dataset.category = 'magic';
+
+            const cvs = generateItemTexture('modifier', modKey, (updatedCvs) => {
+                const existing = slot.querySelector('img');
+                if (existing) existing.src = updatedCvs.toDataURL();
+            });
+            const img = document.createElement('img');
+            img.src = cvs.toDataURL();
+            img.className = 'item-icon';
+            img.style.imageRendering = 'pixelated';
+            img.style.width = '76%';
+            img.style.height = '76%';
+            img.style.objectFit = 'contain';
+            img.draggable = false;
+            slot.appendChild(img);
+
+            slot.onmouseenter = (e) => {
+                if (this.dragState.isDragging || !this.isOpen) return;
+                const html = `<strong style="color:#f472b6; font-size:16px;">${modCfg.name}</strong><br/><span style="color:#aaa;">Modifier (${modCfg.rarity})</span><br/><span style="color:#cbd5e1;">${modCfg.description || ''}</span>`;
+                this.elements.tooltip.innerHTML = html;
+                this.elements.tooltip.classList.remove('hidden');
+                this.elements.tooltip.style.left = (e.clientX + 15) + 'px';
+                this.elements.tooltip.style.top = (e.clientY + 15) + 'px';
+            };
+            slot.onmouseleave = () => this.elements.tooltip.classList.add('hidden');
+
+            slot.onmousedown = (e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                const modObj = new Modifier(modKey);
+                const fakeSlot = {
+                    item: {
+                        type: 'modifier',
+                        subtype: modKey,
+                        name: modCfg.name,
+                        id: `mod_${modKey}_${Date.now()}`,
+                        stackable: true,
+                        maxStack: 16,
+                        data: { mod: modObj },
+                        description: modCfg.description || ''
+                    },
+                    count: 1
+                };
+                if (e.shiftKey) {
+                    if (this.currentPlayer && this.currentPlayer.inventory) {
+                        this.currentPlayer.inventory.addItem(fakeSlot.item, 1);
                         this.renderGrid(this.elements.invHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
                         this.renderGrid(this.elements.mainHotbar, this.currentPlayer.inventory.slots.slice(0, 9), 0, this.currentPlayer, 'inventory');
                     }
@@ -1345,17 +1653,14 @@ class UISystem {
             const name = (slot.title || slot.dataset.itemName || slot.dataset.blockName || '').toLowerCase();
             const subtype = (slot.dataset.itemSubtype || '').toLowerCase();
             const keywords = (slot.dataset.itemKeywords || '').toLowerCase();
-            const isBoat = name.includes('boat') || subtype.includes('boat') || keywords.includes('boat');
-            
             // When user types a search query, search EVERYTHING across all tabs!
-            const matchesTab = (query.length > 0) || (tab === 'all') || cat.includes(tab) || (isBoat && (tab === 'equipment' || tab === 'materials'));
+            const matchesTab = (query.length > 0) || (tab === 'all') || cat.includes(tab);
             
             const matchesQuery = !query || 
                 name.includes(query) || 
                 subtype.includes(query) || 
                 keywords.includes(query) ||
-                (q.length >= 3 && (name.includes(q) || subtype.includes(q) || keywords.includes(q))) || 
-                (isBoat && (query.includes('boat') || query.includes('ship') || query.includes('raft')));
+                (q.length >= 3 && (name.includes(q) || subtype.includes(q) || keywords.includes(q)));
             
             slot.style.display = (matchesTab && matchesQuery) ? '' : 'none';
         });
@@ -2627,15 +2932,25 @@ class UISystem {
             return null;
         };
 
+        const wndRecipe = (sub, name, desc, innate, slots = 4) => ({
+            item: {
+                type: 'wand', subtype: sub, name: name,
+                stackable: false, maxStack: 1, id: `wand_${sub}_${Date.now()}`,
+                data: { wand: new Wand(name, slots, innate) },
+                description: desc
+            },
+            count: 1
+        });
+
         // --- 2x2 and 3x3 shared recipes ---
         if (woodType !== undefined && totalItems === 1) return block(woodToPlankMap[woodType].block, woodToPlankMap[woodType].name, 4);
         if (countAnyPlank === 2 && totalItems === 2) return mat('stick', 'Stick', 4);
         if ((getCount('coal') === 1 || getCount('charcoal') === 1) && getCount('stick') === 1 && totalItems === 2) return block(B.TORCH, 'Torch', 4);
         
-        if (getCount('stick') === 1 && getCount('iron_ingot') === 1 && totalItems === 2) return equip('wand_basic', {}, 'Basic Wand', 'Channels raw magic.');
-        if (getCount('wand_basic') === 1 && getCount('coal') === 1 && totalItems === 2) return equip('wand_fire', { element: 'FIRE' }, 'Fire Wand', 'Shoots fireballs.');
-        if (getCount('wand_basic') === 1 && getCount(B.SNOW) === 1 && totalItems === 2) return equip('wand_ice', { element: 'ICE' }, 'Ice Wand', 'Shoots ice blasts.');
-        if (getCount('wand_basic') === 1 && (getCount(B.LEAVES) === 1 || getCount(B.CHERRY_LEAVES) === 1 || getCount(B.AUTUMN_LEAVES) === 1) && totalItems === 2) return equip('wand_nature', { element: 'HEAL' }, 'Nature Wand', 'Heals the wielder.');
+        if (getCount('stick') === 1 && getCount('iron_ingot') === 1 && totalItems === 2) return wndRecipe('wand_basic', 'Basic Wand', 'Channels raw magic.', 'BOLT', 4);
+        if (getCount('wand_basic') === 1 && getCount('coal') === 1 && totalItems === 2) return wndRecipe('wand_fire', 'Fire Wand', 'Shoots fireballs.', 'BURST', 4);
+        if (getCount('wand_basic') === 1 && getCount(B.SNOW) === 1 && totalItems === 2) return wndRecipe('wand_ice', 'Ice Wand', 'Shoots ice blasts.', 'BOLT', 4);
+        if (getCount('wand_basic') === 1 && (getCount(B.LEAVES) === 1 || getCount(B.CHERRY_LEAVES) === 1 || getCount(B.AUTUMN_LEAVES) === 1) && totalItems === 2) return wndRecipe('wand_nature', 'Nature Wand', 'Heals the wielder.', 'HEAL', 4);
 
         if (getCount(B.STONE) === 4 && totalItems === 4) return block(B.STONE_BRICKS, 'Stone Bricks', 4);
         if (getCount(B.CLAY) === 4 && totalItems === 4) return block(B.BRICKS, 'Bricks', 4);
@@ -2659,13 +2974,17 @@ class UISystem {
 
         // Reverse Storage is 1 item -> 9 items.
         if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
+        if (getCount('iron_ingot') === 1 && totalItems === 1) return mat('iron_nugget', 'Iron Nugget', 9);
         if (getCount(B.GOLD_BLOCK) === 1 && totalItems === 1) return mat('gold_ingot', 'Gold Ingot', 9);
+        if (getCount('gold_ingot') === 1 && totalItems === 1) return mat('gold_nugget', 'Gold Nugget', 9);
         if (getCount(B.DIAMOND_BLOCK) === 1 && totalItems === 1) return mat('diamond', 'Diamond', 9);
         if (getCount(B.EMERALD_BLOCK) === 1 && totalItems === 1) return mat('emerald', 'Emerald', 9);
         if (getCount(B.LAPIS_BLOCK) === 1 && totalItems === 1) return mat('lapis_lazuli', 'Lapis Lazuli', 9);
         if (getCount(B.REDSTONE_BLOCK) === 1 && totalItems === 1) return mat('redstone', 'Redstone Dust', 9);
         if (getCount(B.COAL_BLOCK) === 1 && totalItems === 1) return mat('coal', 'Coal', 9);
         if (getCount(B.BONE_BLOCK) === 1 && totalItems === 1) return mat('bone_meal', 'Bone Meal', 9);
+        if (getCount('bone') === 1 && totalItems === 1) return mat('bone_meal', 'Bone Meal', 3);
+        if (getCount('bone_meal') === 1 && totalItems === 1) return mat('white_dye', 'White Dye', 1);
         if (getCount('netherite_scrap') === 4 && getCount('gold_ingot') === 4 && totalItems === 8) return mat('netherite_ingot', 'Netherite Ingot', 1);
 
         if (getCount('wheat') === 3 && totalItems === 3) return mat('bread', 'Bread', 1);
@@ -2680,6 +2999,10 @@ class UISystem {
         if (getCount(B.ORANGE_FLOWER) === 1 && totalItems === 1) return mat('orange_dye', 'Orange Dye', 1);
         if (getCount(B.AETHER_FLOWER) === 1 && totalItems === 1) return mat('cyan_dye', 'Cyan Dye', 1);
         if (getCount(B.CACTUS) === 1 && totalItems === 1) return mat('green_dye', 'Green Dye', 1);
+
+        // Blaze Powder & Eye of Ender
+        if (getCount('blaze_rod') === 1 && totalItems === 1) return mat('blaze_powder', 'Blaze Powder', 2);
+        if (getCount('ender_pearl') === 1 && getCount('blaze_powder') === 1 && totalItems === 2) return mat('eye_of_ender', 'Eye of Ender', 1);
 
         // Dye Mixing (2 dyes -> 2 mixed dyes)
         if (getCount('red_dye') === 1 && getCount('yellow_dye') === 1 && totalItems === 2) return mat('orange_dye', 'Orange Dye', 2);
@@ -2865,7 +3188,6 @@ class UISystem {
             if (!s[0] && isPlank(s[1]) && isPlank(s[2]) && !s[3] && isPlank(s[4]) && isPlank(s[5]) && !s[6] && isPlank(s[7]) && isPlank(s[8])) return block(B.DUNGEON_DOOR, 'Door', 3);
 
             // Workstations & Furniture
-            if (getCount('iron_ingot') === 1 && getCount(B.STONE) === 3 && totalItems === 4) return block(B.STONECUTTER, 'Stonecutter', 1);
             if (getCount(B.FURNACE) === 1 && countAnyLog === 4 && totalItems === 5) return block(B.SMOKER, 'Smoker', 1);
 
             if (countAnyPlank === 8 && totalItems === 8) return block(B.CHEST_BLOCK, 'Chest', 1);
@@ -2874,6 +3196,8 @@ class UISystem {
             if (getCount('stick') === 7 && totalItems === 7) return block(B.LADDER, 'Ladder', 3);
 
             // Storage Blocks (9 items -> 1 block)
+            if (getCount('iron_nugget') === 9 && totalItems === 9) return mat('iron_ingot', 'Iron Ingot', 1);
+            if (getCount('gold_nugget') === 9 && totalItems === 9) return mat('gold_ingot', 'Gold Ingot', 1);
             if (getCount('iron_ingot') === 9 && totalItems === 9) return block(B.IRON_BLOCK, 'Iron Block', 1);
             if (getCount('gold_ingot') === 9 && totalItems === 9) return block(B.GOLD_BLOCK, 'Gold Block', 1);
             if (getCount('diamond') === 9 && totalItems === 9) return block(B.DIAMOND_BLOCK, 'Diamond Block', 1);
@@ -2882,6 +3206,10 @@ class UISystem {
             if (getCount('redstone') === 9 && totalItems === 9) return block(B.REDSTONE_BLOCK, 'Redstone Block', 1);
             if (getCount('coal') === 9 && totalItems === 9) return block(B.COAL_BLOCK, 'Coal Block', 1);
             if ((getCount('bone_meal') === 9 || getCount('bone') === 9) && totalItems === 9) return block(B.BONE_BLOCK, 'Bone Block', 1);
+
+            // Lanterns (8 Iron Nuggets surrounding 1 Torch or Soul Torch)
+            if (getCount('iron_nugget') === 8 && (getCount(B.TORCH) === 1 || getCount('torch') === 1) && totalItems === 9) return block(B.LANTERN, 'Lantern', 1);
+            if (getCount('iron_nugget') === 8 && (getCount(B.SOUL_TORCH) === 1 || getCount('soul_torch') === 1) && totalItems === 9) return block(B.SOUL_LANTERN, 'Soul Lantern', 1);
 
             // Utilities & Weapons
             if (getCount('iron_ingot') === 4 && getCount('redstone') === 1 && totalItems === 5) return mat('compass', 'Compass', 1);
@@ -2965,11 +3293,7 @@ class UISystem {
             if (isStairMat(B.COBBLESTONE)) return block(B.COBBLESTONE_STAIRS, 'Cobblestone Stairs', 4);
             if (isStairMat(B.STONE)) return block(B.STONE_STAIRS, 'Stone Stairs', 4);
 
-            // Oak Boat (5 planks in U-shape, or 5 planks + wooden shovel in center)
-            const isBoatTop = isPlank(s[0]) && (!s[1] || s[1] === 'shovel_wood') && isPlank(s[2]) && isPlank(s[3]) && isPlank(s[4]) && isPlank(s[5]);
-            const isBoatBottom = isPlank(s[3]) && (!s[4] || s[4] === 'shovel_wood') && isPlank(s[5]) && isPlank(s[6]) && isPlank(s[7]) && isPlank(s[8]);
-            if (isBoatTop && (totalItems === 5 || (totalItems === 6 && s[1] === 'shovel_wood'))) return mat('oak_boat', 'Oak Boat', 1);
-            if (isBoatBottom && (totalItems === 5 || (totalItems === 6 && s[4] === 'shovel_wood'))) return mat('oak_boat', 'Oak Boat', 1);
+
 
             // Beds (3 matching wool in row, 3 planks directly below)
             const woolBedList = [
@@ -3034,9 +3358,14 @@ class UISystem {
         const recipes = [
             { name: "Oak Planks (4)", desc: "Basic building block.", grid: [[_,_,_],[_,blk(B.WOOD),_],[_,_,_]], out: blk(B.PLANKS), outCount: 4, needs3x3: false },
             { name: "Birch Planks (4)", desc: "Light wood building block.", grid: [[_,_,_],[_,blk(B.BIRCH_WOOD),_],[_,_,_]], out: blk(B.BIRCH_PLANKS), outCount: 4, needs3x3: false },
+            { name: "Blaze Powder (2)", desc: "Crafted from a Blaze Rod.", grid: [[_,_,_],[_,mat('blaze_rod'),_],[_,_,_]], out: mat('blaze_powder'), outCount: 2, needs3x3: false },
+            { name: "Eye of Ender", desc: "Locates Strongholds and activates End Portals.", grid: [[_,_,_],[mat('ender_pearl'),mat('blaze_powder'),_],[_,_,_]], out: mat('eye_of_ender'), outCount: 1, needs3x3: false },
             { name: "Stick (4)", desc: "Used for tools.", grid: [[_,_,_],[_,blk(B.PLANKS),_],[_,blk(B.PLANKS),_]], out: mat('stick'), outCount: 4, needs3x3: false },
             { name: "Crafting Table", desc: "Unlocks 3x3 crafting.", grid: [[_,_,_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.CRAFTING_TABLE), outCount: 1, needs3x3: false },
             { name: "Torch (4)", desc: "Lights up the dark.", grid: [[_,_,_],[_,mat('coal'),_],[_,mat('stick'),_]], out: blk(B.TORCH), outCount: 4, needs3x3: false },
+            { name: "Iron Nugget (9)", desc: "Crafted from 1 iron ingot.", grid: [[_,_,_],[_,mat('iron_ingot'),_],[_,_,_]], out: mat('iron_nugget'), outCount: 9, needs3x3: false },
+            { name: "Lantern", desc: "Authentic Minecraft lantern.", grid: [[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')],[mat('iron_nugget'),blk(B.TORCH),mat('iron_nugget')],[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')]], out: blk(B.LANTERN), outCount: 1, needs3x3: true },
+            { name: "Soul Lantern", desc: "Soul fire lantern.", grid: [[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')],[mat('iron_nugget'),blk(B.SOUL_TORCH),mat('iron_nugget')],[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')]], out: blk(B.SOUL_LANTERN), outCount: 1, needs3x3: true },
             { name: "Iron Sword", desc: "Deals moderate damage.", grid: [[_,mat('iron_ingot'),_],[_,mat('iron_ingot'),_],[_,mat('stick'),_]], out: eqp('sword_iron'), outCount: 1, needs3x3: true },
             { name: "Shark Sword", desc: "High damage weapon.", grid: [[_,mat('shark_tooth'),_],[_,mat('shark_tooth'),_],[_,mat('stick'),_]], out: eqp('sword_shark'), outCount: 1, needs3x3: true },
             { name: "Iron Pickaxe", desc: "Mines ores.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('pickaxe_iron'), outCount: 1, needs3x3: true },
@@ -3170,7 +3499,6 @@ class UISystem {
 
             { name: "Fletching Table", desc: "Decorative workstation.", grid: [[mat('flint'),mat('flint'),_],[blk(B.PLANKS),blk(B.PLANKS),_],[blk(B.PLANKS),blk(B.PLANKS),_]], out: blk(B.FLETCHING_TABLE), outCount: 1, needs3x3: true },
             { name: "Smoker", desc: "Rapidly cooks food.", grid: [[_,blk(B.WOOD),_],[blk(B.WOOD),blk(B.FURNACE),blk(B.WOOD)],[_,blk(B.WOOD),_]], out: blk(B.SMOKER), outCount: 1, needs3x3: true },
-            { name: "Stonecutter", desc: "Precision masonry tool.", grid: [[_,mat('iron_ingot'),_],[blk(B.STONE),blk(B.STONE),blk(B.STONE)],[_,_,_]], out: blk(B.STONECUTTER), outCount: 1, needs3x3: true },
             { name: "Bookshelf", desc: "Storage for literature.", grid: [[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[mat('book'),mat('book'),mat('book')],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.BOOKSHELF), outCount: 1, needs3x3: true },
 
             { name: "Bow", desc: "Ranged weapon.", grid: [[_,mat('stick'),mat('string')],[mat('stick'),_,mat('string')],[_,mat('stick'),mat('string')]], out: eqp('bow'), outCount: 1, needs3x3: true },
@@ -3179,7 +3507,6 @@ class UISystem {
             { name: "Golden Apple", desc: "Powerful restorative food.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('apple'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: mat('golden_apple'), outCount: 1, needs3x3: true },
             { name: "Compass", desc: "Navigation instrument.", grid: [[_,mat('iron_ingot'),_],[mat('iron_ingot'),mat('redstone'),mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('compass'), outCount: 1, needs3x3: true },
             { name: "Clock", desc: "Tracks day and night cycle.", grid: [[_,mat('gold_ingot'),_],[mat('gold_ingot'),mat('redstone'),mat('gold_ingot')],[_,mat('gold_ingot'),_]], out: mat('clock'), outCount: 1, needs3x3: true },
-            { name: "Oak Boat", desc: "Fast water transportation.", grid: [[_,_,_],[blk(B.PLANKS),_,blk(B.PLANKS)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: mat('oak_boat'), outCount: 1, needs3x3: true },
             { name: "Red Bed", desc: "Sleep at night and set your spawn point.", grid: [[_,_,_],[blk(B.RED_WOOL),blk(B.RED_WOOL),blk(B.RED_WOOL)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.RED_BED), outCount: 1, needs3x3: true },
             { name: "White Bed", desc: "Sleep at night and set your spawn point.", grid: [[_,_,_],[blk(B.WOOL),blk(B.WOOL),blk(B.WOOL)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.WHITE_BED), outCount: 1, needs3x3: true },
             { name: "Blue Bed", desc: "Sleep at night and set your spawn point.", grid: [[_,_,_],[blk(B.BLUE_WOOL),blk(B.BLUE_WOOL),blk(B.BLUE_WOOL)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.BLUE_BED), outCount: 1, needs3x3: true },
@@ -3202,8 +3529,7 @@ class UISystem {
             if (!query) return true;
             const name = r.name.toLowerCase();
             const desc = (r.desc || '').toLowerCase();
-            const isBoat = name.includes('boat') || desc.includes('boat');
-            return name.includes(query) || (q.length >= 3 && name.includes(q)) || desc.includes(query) || (isBoat && (query.includes('boat') || query.includes('ship') || query.includes('raft')));
+            return name.includes(query) || (q.length >= 3 && name.includes(q)) || desc.includes(query);
         });
 
         let html = '<ul style="list-style: none; padding: 0; margin: 0;">';

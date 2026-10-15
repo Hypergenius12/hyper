@@ -238,7 +238,7 @@ export function generateAetherChunk(cx, cz, params) {
     }
 
     // Floating Temple Ruins / Bronze Dungeon (rare floating sanctuary)
-    if (rng() < 0.03) {
+    if (rng() < 0.06) {
         const tx = Math.floor(CHUNK_SIZE / 2);
         const tz = Math.floor(CHUNK_SIZE / 2);
         let groundY = -1;
@@ -254,15 +254,43 @@ export function generateAetherChunk(cx, cz, params) {
         }
     }
 
+    // Floating Crystal Shrines / Ambrosium Geodes
+    if (rng() < 0.08) {
+        const sx = Math.floor(rng() * (CHUNK_SIZE - 6)) + 3;
+        const sz = Math.floor(rng() * (CHUNK_SIZE - 6)) + 3;
+        const sy = 60 + Math.floor(rng() * 30);
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dy = -2; dy <= 2; dy++) {
+                for (let dz = -2; dz <= 2; dz++) {
+                    const dsq = dx * dx + dy * dy + dz * dz;
+                    if (dsq <= 4) {
+                        const mat = (dx === 0 && dy === 0 && dz === 0) 
+                            ? (rng() < 0.5 ? BLOCKS.GRAVITITE_ORE : BLOCKS.ZANITE_ORE)
+                            : (dsq <= 2 ? BLOCKS.AMBROSIUM_ORE : BLOCKS.CARVED_HOLYSTONE);
+                        safeSetBlock(blocks, sx + dx, sy + dy, sz + dz, mat, true);
+                    } else if (dsq <= 6 && rng() < 0.35) {
+                        safeSetBlock(blocks, sx + dx, sy + dy, sz + dz, BLOCKS.BLUE_AERCLOUD, true);
+                    }
+                }
+            }
+        }
+    }
+
     return blocks;
 }
 
 function generateAetherTemple(blocks, startX, startY, startZ, rng) {
-    const r = 3;
+    const r = 4;
+    // Temple foundation and floor
     for (let dx = -r; dx <= r; dx++) {
         for (let dz = -r; dz <= r; dz++) {
             safeSetBlock(blocks, startX + dx, startY, startZ + dz, BLOCKS.CARVED_HOLYSTONE);
-            if (Math.abs(dx) === r && Math.abs(dz) === r) {
+            safeSetBlock(blocks, startX + dx, startY - 1, startZ + dz, BLOCKS.HOLYSTONE);
+            
+            // Outer decorative pillars on corners and wall midpoints
+            const isCorner = Math.abs(dx) === r && Math.abs(dz) === r;
+            const isMid = (Math.abs(dx) === r && dz === 0) || (Math.abs(dz) === r && dx === 0);
+            if (isCorner || isMid) {
                 for (let py = 1; py <= 4; py++) {
                     safeSetBlock(blocks, startX + dx, startY + py, startZ + dz, BLOCKS.SENTRY_STONE);
                 }
@@ -270,9 +298,15 @@ function generateAetherTemple(blocks, startX, startY, startZ, rng) {
             }
         }
     }
-    safeSetBlock(blocks, startX, startY + 1, startZ, BLOCKS.HOLYSTONE);
+    // Temple altar with Aether loot
+    safeSetBlock(blocks, startX, startY + 1, startZ, BLOCKS.CARVED_HOLYSTONE);
     safeSetBlock(blocks, startX, startY + 2, startZ, BLOCKS.CHEST_BLOCK);
-    safeSetBlock(blocks, startX, startY + 3, startZ, BLOCKS.TORCH);
+    safeSetBlock(blocks, startX, startY + 3, startZ, BLOCKS.GOLDEN_AERCLOUD);
+    // Surrounding candelabra torches
+    safeSetBlock(blocks, startX - 2, startY + 1, startZ - 2, BLOCKS.TORCH);
+    safeSetBlock(blocks, startX + 2, startY + 1, startZ - 2, BLOCKS.TORCH);
+    safeSetBlock(blocks, startX - 2, startY + 1, startZ + 2, BLOCKS.TORCH);
+    safeSetBlock(blocks, startX + 2, startY + 1, startZ + 2, BLOCKS.TORCH);
 }
 
 function generateGoldenOakTree(blocks, x, y, z, rng) {
@@ -321,8 +355,102 @@ function generateAetherTree(blocks, x, y, z, rng) {
     }
 }
 
+export function isSuperflatSeed(seed) {
+    if (typeof seed !== 'string') return false;
+    const clean = seed.trim().toLowerCase().replace(/[\s_\-]+/g, '');
+    return clean === 'superflat' || clean === 'flat' || clean.startsWith('superflat') || clean.startsWith('flat');
+}
+
+export function matchBiomeSeed(seed) {
+    if (typeof seed !== 'string') return null;
+    let s = seed.trim().toLowerCase();
+    // Strip leading "superflat" or "flat" so e.g. "superflat desert" identifies desert as well
+    s = s.replace(/^(superflat|flat)[\s_\-]*/, '');
+    const clean = s.replace(/[\s_\-]+/g, '');
+    if (!clean) return null;
+
+    const mapping = {
+        'plains': BIOMES.PLAINS,
+        'plain': BIOMES.PLAINS,
+        'forest': BIOMES.FOREST,
+        'oak': BIOMES.FOREST,
+        'oakforest': BIOMES.FOREST,
+        'birch': BIOMES.BIRCH_FOREST,
+        'birchforest': BIOMES.BIRCH_FOREST,
+        'desert': BIOMES.DESERT,
+        'beach': BIOMES.BEACH,
+        'sandybeach': BIOMES.BEACH,
+        'badlands': BIOMES.BADLANDS,
+        'mesa': BIOMES.BADLANDS,
+        'terracotta': BIOMES.BADLANDS,
+        'tundra': BIOMES.TUNDRA,
+        'snow': BIOMES.TUNDRA,
+        'snowy': BIOMES.TUNDRA,
+        'snowytundra': BIOMES.TUNDRA,
+        'snowyplains': BIOMES.TUNDRA,
+        'icespikes': BIOMES.ICE_SPIKES,
+        'icespike': BIOMES.ICE_SPIKES,
+        'ice': BIOMES.ICE_SPIKES,
+        'mushroom': BIOMES.MUSHROOM,
+        'mushroomisland': BIOMES.MUSHROOM,
+        'mushroomfields': BIOMES.MUSHROOM,
+        'mushroomfield': BIOMES.MUSHROOM,
+        'mycelium': BIOMES.MUSHROOM,
+        'volcanic': BIOMES.VOLCANIC,
+        'volcano': BIOMES.VOLCANIC,
+        'basalt': BIOMES.VOLCANIC,
+        'swamp': BIOMES.SWAMP,
+        'swampland': BIOMES.SWAMP,
+        'mangrove': BIOMES.SWAMP,
+        'jungle': BIOMES.JUNGLE,
+        'rainforest': BIOMES.JUNGLE,
+        'savanna': BIOMES.SAVANNA,
+        'savannah': BIOMES.SAVANNA,
+        'mountains': BIOMES.MOUNTAINS,
+        'mountain': BIOMES.MOUNTAINS,
+        'peaks': BIOMES.MOUNTAINS,
+        'extremehills': BIOMES.MOUNTAINS,
+        'ocean': BIOMES.DEEP_OCEAN,
+        'deepocean': BIOMES.DEEP_OCEAN,
+        'sea': BIOMES.DEEP_OCEAN,
+        'cherry': BIOMES.CHERRY_GROVE,
+        'cherrygrove': BIOMES.CHERRY_GROVE,
+        'cherryblossom': BIOMES.CHERRY_GROVE,
+        'oasis': BIOMES.OASIS,
+        'coral': BIOMES.CORAL_REEF,
+        'coralreef': BIOMES.CORAL_REEF,
+        'darkforest': BIOMES.DARK_FOREST,
+        'darkoak': BIOMES.DARK_FOREST,
+        'roofedforest': BIOMES.DARK_FOREST,
+        'mystic': BIOMES.MYSTIC_GROVE,
+        'mysticgrove': BIOMES.MYSTIC_GROVE,
+        'taiga': BIOMES.TAIGA,
+        'spruce': BIOMES.TAIGA,
+        'pine': BIOMES.TAIGA,
+        'redwood': BIOMES.REDWOOD_FOREST,
+        'redwoodforest': BIOMES.REDWOOD_FOREST,
+        'megataiga': BIOMES.REDWOOD_FOREST,
+        'oldgrowthtaiga': BIOMES.REDWOOD_FOREST
+    };
+
+    if (mapping[clean]) return mapping[clean];
+
+    for (const [key, b] of Object.entries(BIOMES)) {
+        const kClean = key.toLowerCase().replace(/[\s_\-]+/g, '');
+        const nClean = b.name.toLowerCase().replace(/[\s_\-]+/g, '');
+        if (clean === kClean || clean === nClean) {
+            return b;
+        }
+    }
+
+    return null;
+}
+
 export class PlanetParams {
     constructor(seed) {
+        this.rawSeed = seed;
+        this.isSuperflat = isSuperflatSeed(seed);
+        this.forcedBiome = matchBiomeSeed(seed);
         this.seed = typeof seed === 'string' ? hashSeed(seed) : seed;
         const rng = seededRandom(this.seed);
         
@@ -356,6 +484,21 @@ export class PlanetParams {
         this.caveNoise = createNoise3D(this.seed + 123);
         this.tempNoise = createNoise2D(this.seed + 456);
         this.moistNoise = createNoise2D(this.seed + 789);
+
+        if (this.isSuperflat) {
+            this.terrainHeight = 0;
+            this.baseHeight = 4;
+            this.seaLevel = -1;
+            this.skyColor = '#78A7FF';
+        } else if (this.forcedBiome) {
+            if (this.forcedBiome === BIOMES.DEEP_OCEAN || this.forcedBiome === BIOMES.CORAL_REEF) {
+                this.baseHeight = 35;
+                this.seaLevel = 62;
+            } else if (this.forcedBiome === BIOMES.BEACH) {
+                this.baseHeight = 62;
+                this.seaLevel = 62;
+            }
+        }
     }
 }
 
@@ -364,6 +507,70 @@ export function generatePlanetParams(seed) {
 }
 
 export function getBiomeParams(wx, wz, params) {
+    if (params && params.isSuperflat) {
+        return {
+            biome: params.forcedBiome || BIOMES.PLAINS,
+            terraceWeight: 0,
+            contNoise: 0.8,
+            erosionNoise: 1.0,
+            weirdness: 0,
+            temp: 0.5,
+            moist: 0.5
+        };
+    }
+
+    if (params && params.forcedBiome) {
+        const forced = params.forcedBiome;
+        let forcedContNoise = 0.6; // Inland dry land by default (no unwanted ocean cuts)
+        if (forced === BIOMES.DEEP_OCEAN || forced === BIOMES.CORAL_REEF) {
+            forcedContNoise = 0.15; // Deep ocean
+        } else if (forced === BIOMES.BEACH) {
+            forcedContNoise = 0.32; // Coastal beach
+        } else if (forced === BIOMES.SWAMP) {
+            forcedContNoise = 0.45; // Inland wetland
+        }
+        
+        let forcedTemp = 0.5;
+        let forcedMoist = 0.5;
+        
+        if (forced === BIOMES.DESERT || forced === BIOMES.BADLANDS || forced === BIOMES.OASIS) {
+            forcedTemp = 0.9;
+            forcedMoist = 0.1;
+        } else if (forced === BIOMES.TUNDRA || forced === BIOMES.ICE_SPIKES) {
+            forcedTemp = 0.1;
+            forcedMoist = 0.2;
+        } else if (forced === BIOMES.JUNGLE) {
+            forcedTemp = 0.85;
+            forcedMoist = 0.85;
+        } else if (forced === BIOMES.SWAMP) {
+            forcedTemp = 0.6;
+            forcedMoist = 0.85;
+        } else if (forced === BIOMES.SAVANNA) {
+            forcedTemp = 0.85;
+            forcedMoist = 0.3;
+        } else if (forced === BIOMES.TAIGA || forced === BIOMES.REDWOOD_FOREST) {
+            forcedTemp = 0.22;
+            forcedMoist = 0.5;
+        }
+
+        const noise2D = params.noise2D;
+        let erosionNoise = (noise2D(wx * 0.0004 + 1000, wz * 0.0004 + 1000) + 1) / 2;
+        if (forced === BIOMES.MOUNTAINS) {
+            erosionNoise = Math.min(0.22, erosionNoise * 0.4); // Force extreme jagged mountain erosion
+        }
+        const weirdness = (noise2D(wx * 0.0006 + 15000, wz * 0.0006 + 15000) + 1) / 2;
+
+        return {
+            biome: forced,
+            terraceWeight: (forced === BIOMES.BADLANDS || forced === BIOMES.VOLCANIC) ? 0.6 : 0,
+            contNoise: forcedContNoise,
+            erosionNoise: erosionNoise,
+            weirdness: weirdness,
+            temp: forcedTemp,
+            moist: forcedMoist
+        };
+    }
+
     const noise2D = params.noise2D;
     const tempNoise = params.tempNoise;
     const moistNoise = params.moistNoise;
@@ -385,29 +592,31 @@ export function getBiomeParams(wx, wz, params) {
     const weirdness = (noise2D((wx + warpX) * 0.0006 + 15000, (wz + warpZ) * 0.0006 + 15000) + 1) / 2;
 
     const isOcean = contNoise < 0.3;
-    const isCoast = contNoise >= 0.3 && contNoise < 0.35;
     const isMountain = erosionNoise < 0.35 && contNoise >= 0.38;
     const isFlat = erosionNoise > 0.65;
+    // Authentic Minecraft Beach Biome: coastal boundary ribbon along oceans
+    const isCoast = contNoise >= 0.285 && contNoise < 0.35 && !isMountain;
 
     let biome = BIOMES.PLAINS;
     let terraceWeight = 0;
 
     if (isOcean) {
-        if (temp > 0.75 && moist > 0.5) biome = BIOMES.CORAL_REEF;
-        else if (temp < 0.25) biome = BIOMES.TUNDRA; // Frozen ocean equivalent
+        if (contNoise < 0.15 && weirdness > 0.82) biome = BIOMES.MUSHROOM; // Rare isolated Minecraft Mushroom Island in deep ocean
+        else if (temp > 0.75 && moist > 0.5) biome = BIOMES.CORAL_REEF;
+        else if (temp < 0.25) biome = weirdness > 0.42 ? BIOMES.ICE_SPIKES : BIOMES.TUNDRA; // Authentic Frozen Ocean with Ice Spikes!
         else biome = BIOMES.DEEP_OCEAN; // Default ocean
     } else if (isCoast) {
-        if (temp < 0.12) biome = BIOMES.TUNDRA;
+        if (temp < 0.15) biome = weirdness > 0.45 ? BIOMES.ICE_SPIKES : BIOMES.TUNDRA;
         else if (temp < 0.26) biome = BIOMES.TAIGA;
-        else if (temp > 0.4) biome = BIOMES.BEACH; // Sandy beach
-        else biome = BIOMES.PLAINS; // Grassy/stony shore
+        else if (temp > 0.55 && moist > 0.65) biome = BIOMES.SWAMP;
+        else biome = BIOMES.BEACH; // Authentic Sandy beach for coastal shores
     } else if (isMountain) {
         let tw = Math.max(0, Math.min(1, (temp - 0.6) / 0.1));
         let mw = Math.max(0, Math.min(1, (0.5 - moist) / 0.1));
         terraceWeight = Math.max(terraceWeight, tw * mw);
         
         if (temp > 0.75 && moist < 0.4) biome = BIOMES.BADLANDS;
-        else if (temp < 0.25) biome = BIOMES.ICE_SPIKES;
+        else if (temp < 0.25) biome = BIOMES.MOUNTAINS; // Snowy Peaks
         else if (temp > 0.72 && moist < 0.5) biome = BIOMES.VOLCANIC;
         else biome = BIOMES.MOUNTAINS;
     } else {
@@ -421,7 +630,7 @@ export function getBiomeParams(wx, wz, params) {
             } else if (moist < 0.45) {
                 biome = weirdness > 0.6 ? BIOMES.SAVANNA : BIOMES.DESERT;
             } else if (moist > 0.6) {
-                biome = weirdness > 0.6 ? BIOMES.JUNGLE : BIOMES.SWAMP;
+                biome = weirdness > 0.3 ? BIOMES.JUNGLE : BIOMES.SWAMP;
             } else {
                 biome = BIOMES.SAVANNA;
             }
@@ -435,7 +644,7 @@ export function getBiomeParams(wx, wz, params) {
             }
         } else { // Temperate (0.26 to 0.75)
             if (moist < 0.35) {
-                biome = weirdness > 0.7 ? BIOMES.MUSHROOM : BIOMES.PLAINS;
+                biome = BIOMES.PLAINS;
             } else if (moist > 0.65) {
                 if (weirdness > 0.75) biome = BIOMES.MYSTIC_GROVE;
                 else if (weirdness > 0.45) biome = BIOMES.DARK_FOREST;
@@ -454,6 +663,22 @@ export function getBiomeParams(wx, wz, params) {
 }
 
 export function getColumnInfo(wx, wz, params) {
+    if (params && params.isSuperflat) {
+        return {
+            biome: params.forcedBiome || BIOMES.PLAINS,
+            surfaceY: 4,
+            targetHeight: 4,
+            erosionNoise: 1.0,
+            contNoise: 0.8,
+            weirdness: 0,
+            temp: 0.5,
+            moist: 0.5,
+            factor: 0,
+            colRng: seededRandom(params.seed + wx * 3141 + wz),
+            bData: { isTerraced: false, lakeSurfaceY: 0 }
+        };
+    }
+
     const colRng = seededRandom(params.seed + wx * 3141 + wz);
     
     let { biome, terraceWeight, contNoise, erosionNoise, weirdness, temp, moist } = getBiomeParams(wx, wz, params);
@@ -468,15 +693,15 @@ export function getColumnInfo(wx, wz, params) {
     if (contNoise < 0.3) {
         // Ocean (deep to shallow)
         const t = smoothstep(0, 0.3, contNoise);
-        baseElevation = (params.seaLevel - 25) + t * 23; // e.g. -25 to -2 below sea level
-    } else if (contNoise < 0.4) {
+        baseElevation = (params.seaLevel - 25) + t * 23; // -25 to -2 below sea level
+    } else if (contNoise < 0.35) {
         // Coastline/Beach
-        const t = smoothstep(0.3, 0.4, contNoise);
-        baseElevation = (params.seaLevel - 2) + t * 6; // e.g. -2 to +4 relative to sea level
+        const t = smoothstep(0.3, 0.35, contNoise);
+        baseElevation = (params.seaLevel - 2) + t * 5; // -2 to +3 relative to sea level
     } else {
-        // Inland
-        const t = smoothstep(0.4, 1.0, contNoise);
-        baseElevation = (params.seaLevel + 4) + t * 30; // e.g. +4 to +34 relative to sea level
+        // Inland (safely elevated above sea level so plains/forest don't create accidental ocean dips)
+        const t = smoothstep(0.35, 1.0, contNoise);
+        baseElevation = (params.seaLevel + 3) + t * 32; // +3 to +35 relative to sea level
     }
 
     // 2. Erosion Factor
@@ -494,9 +719,10 @@ export function getColumnInfo(wx, wz, params) {
     const plainsInfluence = smoothstep(0.55, 0.75, erosionNoise) * (1.0 - smoothstep(0.45, 0.65, weirdness));
 
     // In Minecraft, swamps are sea-level wetlands:
-    // When swampInfluence > 0 and contNoise >= 0.35, smoothly pull inland baseElevation down to sea level
+    // Centered around sea level (+0.6) with natural relief (factor 0.32)
+    // allowing gentle channels (y=60-61) and lush grassy islands/banks (y=63-65)
     if (swampInfluence > 0 && contNoise >= 0.35) {
-        const targetSwampElev = params.seaLevel - 1.2;
+        const targetSwampElev = params.seaLevel + 0.6;
         baseElevation = baseElevation * (1.0 - swampInfluence) + targetSwampElev * swampInfluence;
     }
 
@@ -504,17 +730,17 @@ export function getColumnInfo(wx, wz, params) {
     climateMultiplier = climateMultiplier * (1.0 - desertInfluence) + 0.35 * desertInfluence;
     climateMultiplier = climateMultiplier * (1.0 - plainsInfluence * 0.45) + 0.30 * (plainsInfluence * 0.45);
     factor *= climateMultiplier;
-    // For swamps, guarantee gentle rolling wetland relief (channels dipping 1-2 blocks below seaLevel, banks 1-2 blocks above)
+    // For swamps, guarantee gentle rolling wetland relief (channels dipping 1-2 blocks below seaLevel, banks 1-3 blocks above)
     if (swampInfluence > 0) {
-        factor = factor * (1.0 - swampInfluence) + 0.18 * swampInfluence;
+        factor = factor * (1.0 - swampInfluence) + 0.32 * swampInfluence;
     }
 
-    // Reduce roughness in oceans and coastlines
-    if (contNoise < 0.3) {
-        factor *= 0.1;
-    } else if (contNoise < 0.4) {
-        let t = (contNoise - 0.3) / 0.1;
-        factor *= (0.1 + t * 0.9);
+    // Smooth roughness in deep oceans while preserving natural gentle coastal slopes
+    if (contNoise < 0.22) {
+        factor *= 0.25;
+    } else if (contNoise < 0.35) {
+        let t = (contNoise - 0.22) / 0.13;
+        factor *= (0.25 + t * 0.75);
     }
 
     // 3. Peaks and Valleys (Weirdness)
@@ -553,6 +779,30 @@ export function getColumnInfo(wx, wz, params) {
         const targetTerraced = elevation * 0.2 + terracedElevation * 0.8;
         elevation = elevation * (1.0 - terraceWeight) + targetTerraced * terraceWeight;
     }
+
+    // Guarantee strict Minecraft terrain boundaries:
+    // 1. Inland dry biomes (contNoise >= 0.35 and not swamp/water) MUST NEVER dip below seaLevel + 1.2 (surfaceY >= 63).
+    //    This creates a solid natural dam/bank holding back any adjacent ocean or swamp water, completely eliminating
+    //    floating walls of water and sub-sea-level dry grass basins.
+    // 2. Swamps are shallow wetlands: channels dip 1-2 blocks below seaLevel (y=60-61) for shallow water; banks rise 1-3 blocks above (y=63-65).
+    // 3. Coastal transitions ramp smoothly up to inland elevation.
+    const isWaterBiome = (biome === BIOMES.DEEP_OCEAN || biome === BIOMES.OCEAN || biome === BIOMES.CORAL_REEF || biome === BIOMES.FROZEN_OCEAN || biome.isOcean || biome.isBeach || biome === BIOMES.BEACH);
+    const isSwamp = (biome === BIOMES.SWAMP || biome.name === 'Swamp');
+
+    if (!isWaterBiome) {
+        if (isSwamp) {
+            // Swamp wetland: channels dip 1-2 blocks below seaLevel for shallow water; banks rise 1-3 blocks above
+            elevation = Math.max(params.seaLevel - 2.0, Math.min(params.seaLevel + 3.0, elevation));
+        } else if (contNoise >= 0.35) {
+            // Inland dry land: guaranteed to be at least seaLevel + 1.2 (surfaceY >= 63)
+            elevation = Math.max(params.seaLevel + 1.2, elevation);
+        } else {
+            // Coastal transition: smoothly ramp between coast and inland
+            const coastT = smoothstep(0.30, 0.35, contNoise);
+            const minCoastElev = (params.seaLevel - 1.5) + coastT * 2.7;
+            elevation = Math.max(minCoastElev, elevation);
+        }
+    }
     let surfaceY = Math.floor(elevation);
     if (surfaceY < 1) surfaceY = 1;
     if (surfaceY >= CHUNK_HEIGHT - 1) surfaceY = CHUNK_HEIGHT - 2;
@@ -582,6 +832,34 @@ function safeSetBlock(blocks, x, y, z, type, onlyAir = false, dataVal = 0) {
             }
         }
     }
+}
+
+function hasDirectAdjacentWater(blocks, tx, groundY, tz, wx, wz, params) {
+    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    for (const [dx, dz] of dirs) {
+        const nx = tx + dx;
+        const nz = tz + dz;
+        const nwx = wx + dx;
+        const nwz = wz + dz;
+        // In Minecraft Java, sugarcane strictly requires a water block directly horizontally adjacent
+        // to the supporting soil block (at groundY or groundY - 1)
+        for (const testY of [groundY, groundY - 1]) {
+            if (testY < 1 || testY >= CHUNK_HEIGHT) continue;
+            if (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE) {
+                const b = blocks[(testY * CHUNK_SIZE * CHUNK_SIZE) + (nz * CHUNK_SIZE) + nx];
+                if (b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER) return true;
+            } else {
+                const nCol = getColumnInfo(nwx, nwz, params);
+                if (nCol.bData && nCol.bData.lakeSurfaceY > 0) {
+                    if (testY > nCol.surfaceY && testY <= nCol.bData.lakeSurfaceY && nCol.biome !== BIOMES.VOLCANIC) return true;
+                }
+                if (testY <= params.seaLevel && testY > nCol.surfaceY) {
+                    if (nCol.biome !== BIOMES.VOLCANIC) return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 function generateSugarcane(blocks, x, y, z, rng) {
@@ -644,20 +922,14 @@ function generateFallenLog(blocks, startX, startY, startZ, woodType, rng) {
         placedLogBlocks.push({ lx, logY, lz });
     }
 
-    // Place red or brown mushrooms on top of the fallen log (guarantee at least one)
-    if (placedLogBlocks.length > 0) {
-        let shroomCount = 0;
+    // Place red or brown mushrooms on top of the fallen log only in dark or shaded forests (Dark Oak / Pine)
+    const canHaveLogMushrooms = (woodType === BLOCKS.DARK_OAK_WOOD || woodType === BLOCKS.PINE_WOOD);
+    if (canHaveLogMushrooms && placedLogBlocks.length > 0) {
         for (const pos of placedLogBlocks) {
-            if (rng() < 0.45) {
+            if (rng() < 0.18) {
                 const shroomType = rng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
                 safeSetBlock(blocks, pos.lx, pos.logY + 1, pos.lz, shroomType, false);
-                shroomCount++;
             }
-        }
-        if (shroomCount === 0 && placedLogBlocks.length > 0) {
-            const pick = placedLogBlocks[Math.floor(rng() * placedLogBlocks.length)];
-            const shroomType = rng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
-            safeSetBlock(blocks, pick.lx, pick.logY + 1, pick.lz, shroomType, false);
         }
     }
 }
@@ -889,9 +1161,25 @@ export function generateChunkTerrain(cx, cz, params) {
     const data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
     blocks.data = data;
 
+    const blockIndex = (x, y, z) => (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
+
+    if (params && params.isSuperflat) {
+        const surfaceBlock = (params.forcedBiome && params.forcedBiome.surface) ? params.forcedBiome.surface : BLOCKS.GRASS;
+        const subBlock = (params.forcedBiome && params.forcedBiome.dirt) ? params.forcedBiome.dirt : BLOCKS.DIRT;
+        for (let x = 0; x < CHUNK_SIZE; x++) {
+            for (let z = 0; z < CHUNK_SIZE; z++) {
+                blocks[blockIndex(x, 0, z)] = BLOCKS.BEDROCK;
+                blocks[blockIndex(x, 1, z)] = subBlock;
+                blocks[blockIndex(x, 2, z)] = subBlock;
+                blocks[blockIndex(x, 3, z)] = subBlock;
+                blocks[blockIndex(x, 4, z)] = surfaceBlock;
+            }
+        }
+        return blocks;
+    }
+
     const wxBase = cx * CHUNK_SIZE;
     const wzBase = cz * CHUNK_SIZE;
-    const blockIndex = (x, y, z) => (y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
 
     // Cache column infos for the 16x16 chunk
     const columns = [];
@@ -907,7 +1195,7 @@ export function generateChunkTerrain(cx, cz, params) {
         if (tx < 0 || tx >= CHUNK_SIZE || tz < 0 || tz >= CHUNK_SIZE) return -1;
         for (let y = CHUNK_HEIGHT - 3; y >= 1; y--) {
             const b = blocks[(y * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx];
-            if (b !== BLOCKS.AIR && b !== BLOCKS.WATER && b !== BLOCKS.SWAMP_WATER && b !== BLOCKS.LAVA && b !== BLOCKS.ICE) {
+            if (b !== BLOCKS.AIR && b !== BLOCKS.WATER && b !== BLOCKS.SWAMP_WATER && b !== BLOCKS.LAVA) {
                 return y;
             }
         }
@@ -963,6 +1251,13 @@ export function generateChunkTerrain(cx, cz, params) {
                 // Ceiling taper to keep mountains inside the chunk height limit
                 if (wy > CHUNK_HEIGHT - 12) {
                     grad -= (wy - (CHUNK_HEIGHT - 12)) * 2.2;
+                }
+
+                // Guarantee solid ground below sea level for inland dry terrain:
+                // Prevents accidental subterranean dips or air pockets below seaLevel in inland dry biomes
+                const isWaterBiome = (biome.isOcean || biome.isBeach || biome === BIOMES.SWAMP || col.contNoise < 0.33);
+                if (!isWaterBiome && wy <= params.seaLevel) {
+                    grad = Math.max(grad, 0.45);
                 }
 
                 // 2. 3D Noise (Minecraft 3D Perlin shape + detail)
@@ -1027,7 +1322,20 @@ export function generateChunkTerrain(cx, cz, params) {
                                 blocks[idx] = (blockY === bData.lakeSurfaceY && (biome === BIOMES.TUNDRA || biome === BIOMES.ICE_SPIKES || biome === BIOMES.MOUNTAINS)) ? BLOCKS.ICE : waterType;
                             } else if (blockY <= params.seaLevel) {
                                 const waterType = biome === BIOMES.VOLCANIC ? BLOCKS.LAVA : (biome === BIOMES.SWAMP ? BLOCKS.SWAMP_WATER : BLOCKS.WATER);
-                                blocks[idx] = (blockY === params.seaLevel && (biome === BIOMES.TUNDRA || biome === BIOMES.ICE_SPIKES || biome === BIOMES.MOUNTAINS)) ? BLOCKS.ICE : waterType;
+                                if (biome === BIOMES.ICE_SPIKES) {
+                                    // Frozen Ocean under Ice Spikes: authentic ice surface sheet of packed ice & blue ice
+                                    if (blockY === params.seaLevel) {
+                                        const rIce = (params.noise2D((wxBase + blockX) * 0.15, (wzBase + blockZ) * 0.15) + 1) / 2;
+                                        blocks[idx] = rIce < 0.55 ? BLOCKS.PACKED_ICE : (rIce < 0.85 ? BLOCKS.BLUE_ICE : BLOCKS.ICE);
+                                    } else if (blockY >= params.seaLevel - 2) {
+                                        const rSub = (params.noise2D((wxBase + blockX) * 0.15 + 50, (wzBase + blockZ) * 0.15 + 50) + 1) / 2;
+                                        blocks[idx] = rSub < 0.65 ? BLOCKS.PACKED_ICE : BLOCKS.BLUE_ICE;
+                                    } else {
+                                        blocks[idx] = BLOCKS.WATER;
+                                    }
+                                } else {
+                                    blocks[idx] = (blockY === params.seaLevel && (biome === BIOMES.TUNDRA || biome === BIOMES.MOUNTAINS)) ? BLOCKS.ICE : waterType;
+                                }
                             } else {
                                 blocks[idx] = BLOCKS.AIR;
                             }
@@ -1068,14 +1376,14 @@ export function generateChunkTerrain(cx, cz, params) {
     carveGlobalDungeons(blocks, cx, cz, params);
 
     // ============================================
-    // PASS 2B: Rare Underground Dripstone Clumps
+    // PASS 2B: Very Rare Deep Underground Dripstone Clumps
     // ============================================
     const dripRng = seededRandom(params.seed + cx * 7919 + cz * 31337);
-    if (dripRng() < 0.22) { // Rare chance per chunk (~22%)
-        for (let attempt = 0; attempt < 3; attempt++) {
+    if (dripRng() < 0.05) { // Very rare chance per chunk (~5%) strictly deep underground
+        for (let attempt = 0; attempt < 2; attempt++) {
             const rx = 3 + Math.floor(dripRng() * (CHUNK_SIZE - 6));
             const rz = 3 + Math.floor(dripRng() * (CHUNK_SIZE - 6));
-            const ry = 14 + Math.floor(dripRng() * 32);
+            const ry = 10 + Math.floor(dripRng() * 16); // Deep subterranean: y 10 to 26
             const idx = blockIndex(rx, ry, rz);
             if (blocks[idx] === BLOCKS.AIR) {
                 let hasStoneNearby = false;
@@ -1089,7 +1397,7 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 }
                 if (hasStoneNearby) {
-                    generateDripstoneClump(blocks, rx, ry, rz, dripRng);
+                    generateDripstoneClump(blocks, rx, ry, rz, dripRng, columns, params);
                     break;
                 }
             }
@@ -1106,11 +1414,11 @@ export function generateChunkTerrain(cx, cz, params) {
             const { biome, colRng, bData, temp, moist, contNoise, erosionNoise, weirdness } = columns[x][z];
             const isSwamp = (biome === BIOMES.SWAMP || biome.name === 'Swamp' || biome.swampFlora);
 
-            // Check if swamp has mud patches here
+            // Check if swamp has natural mud bogs here
             let isSwampMud = false;
             if (isSwamp) {
-                const mNoise = (params.noise2D(wx * 0.12 + 888, wz * 0.12 + 888) + 1) / 2;
-                if (mNoise > 0.45) {
+                const bogNoise = (params.noise2D(wx * 0.035 + 888, wz * 0.035 + 888) + 1) / 2;
+                if (bogNoise > 0.68) {
                     isSwampMud = true;
                 }
             }
@@ -1127,12 +1435,15 @@ export function generateChunkTerrain(cx, cz, params) {
             const soilLimit = 2 + Math.floor((params.noise2D(wx * 0.08 + 111, wz * 0.08 + 111) + 1.0) * 1.1);
 
             let depth = -1;
+            let hitTrueSurface = false;
             for (let y = CHUNK_HEIGHT - 2; y >= 1; y--) {
                 const idx = blockIndex(x, y, z);
                 const b = blocks[idx];
 
                 if (b === BLOCKS.AIR || b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER || b === BLOCKS.LAVA || b === BLOCKS.ICE) {
-                    depth = -1; // Reset surface depth when open air or water is encountered
+                    if (!hitTrueSurface) {
+                        depth = -1; // Reset surface depth only before hitting the true sky surface
+                    }
                     continue;
                 }
 
@@ -1140,34 +1451,36 @@ export function generateChunkTerrain(cx, cz, params) {
                     continue; // Skip blocks already altered
                 }
 
-                if (depth === -1) {
+                if (depth === -1 && !hitTrueSurface) {
                     // Top exposed surface!
+                    hitTrueSurface = true;
                     depth = 0;
                     const aboveIdx = blockIndex(x, y + 1, z);
                     const aboveBlock = blocks[aboveIdx];
                     const isUnderwater = aboveBlock === BLOCKS.WATER || aboveBlock === BLOCKS.SWAMP_WATER || aboveBlock === BLOCKS.ICE;
-                    const isNearSeaShore = (y <= params.seaLevel + 1 && y >= params.seaLevel - 2);
+                    const isNearSeaShore = (y <= params.seaLevel + 3 && y >= params.seaLevel - 4);
+                    const isActualCoastalBeach = hasSandyBeach || (contNoise < 0.35 && !isColdBiome && !isSwamp && biome.name !== 'Mountains');
 
                     let type;
                     if (isUnderwater) {
                         const waterDepth = Math.max(0, params.seaLevel - y);
                         if (isColdBiome) {
                             type = BLOCKS.GRAVEL;
-                        } else if (hasSandyBeach) {
-                            // Shallow water shelf is mostly sand; deeper transitions to gravel like Minecraft
-                            type = (waterDepth <= 2 || surfaceNoise > -0.3) ? BLOCKS.SAND : BLOCKS.GRAVEL;
                         } else if (isSwamp) {
-                            type = isSwampMud ? BLOCKS.MUD : (surfaceNoise > 0 ? BLOCKS.MUD : BLOCKS.DIRT);
+                            type = BLOCKS.MUD; // Underwater beds in swamps are always rich mud
+                        } else if (isActualCoastalBeach) {
+                            // Shallow water shelf is authentic Minecraft sand with gravel transitions on coastal shores
+                            type = (waterDepth <= 3 || surfaceNoise > -0.25) ? BLOCKS.SAND : BLOCKS.GRAVEL;
                         } else {
-                            type = (waterDepth > 3 && surfaceNoise < 0) ? BLOCKS.GRAVEL : BLOCKS.DIRT;
+                            // Inland waterbeds in Plains / Forest / etc: dirt, gravel (like Minecraft, NO sand!)
+                            type = (surfaceNoise < -0.3) ? BLOCKS.GRAVEL : BLOCKS.DIRT;
                         }
-                    } else if (isNearSeaShore) {
-                        if (isColdBiome) {
-                            type = (surfaceNoise > 0.2) ? BLOCKS.GRAVEL : BLOCKS.STONE;
-                        } else if (hasSandyBeach) {
-                            type = (surfaceNoise < -0.7) ? BLOCKS.GRAVEL : BLOCKS.SAND;
-                        } else if (isSwamp) {
-                            type = isSwampMud ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
+                    } else if (isNearSeaShore && isActualCoastalBeach) {
+                        // Authentic Minecraft Shoreline: Sandy beach only on actual coastal beaches / beach biomes
+                        if (hasSandyBeach) {
+                            type = BLOCKS.SAND;
+                        } else if (y <= params.seaLevel + 1) {
+                            type = (surfaceNoise < -0.5) ? BLOCKS.GRAVEL : BLOCKS.SAND;
                         } else {
                             type = biome.surface;
                         }
@@ -1179,63 +1492,29 @@ export function generateChunkTerrain(cx, cz, params) {
                         else if (vRoll < 0.40) type = BLOCKS.OBSIDIAN;
                         else type = BLOCKS.BASALT;
                     } else if (isSwamp) {
-                        // Swamp border dither: swamp grass & mud naturally buffer into regular grass/dirt
-                        if (moist < 0.63 && surfaceNoise < -0.3) {
-                            type = BLOCKS.GRASS;
-                        } else {
-                            type = (isSwampMud || surfaceNoise < -0.3) ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
-                        }
+                        const isWaterEdge = (y <= params.seaLevel + 1);
+                        type = (isSwampMud || (isWaterEdge && surfaceNoise > 0.15)) ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
                     } else if (biome === BIOMES.BADLANDS || biome.name === 'Badlands') {
-                        // Badlands border dither: blend red sand / terracotta into sand, savanna grass, and dirt
-                        if (weirdness < 0.44 && surfaceNoise < -0.2) {
-                            type = (temp > 0.74) ? BLOCKS.SAND : BLOCKS.SAVANNA_GRASS;
-                        } else {
-                            type = (surfaceNoise > 0.25) ? BLOCKS.RED_SAND : BLOCKS.TERRACOTTA;
-                        }
+                        type = (weirdness < 0.44 && temp > 0.74) ? BLOCKS.RED_SAND : BLOCKS.TERRACOTTA;
+                    } else if (biome === BIOMES.ICE_SPIKES || biome.name === 'Ice Spikes') {
+                        // Authentic Ice Spikes: packed ice and blue ice floor (no snow on bottom)
+                        const iceRoll = colRng();
+                        if (iceRoll < 0.60) type = BLOCKS.PACKED_ICE;
+                        else if (iceRoll < 0.88) type = BLOCKS.BLUE_ICE;
+                        else type = BLOCKS.ICE;
                     } else if (biome.isRedwood) {
-                        // Redwood border dither: podzol buffers into dirt and grass
-                        type = (surfaceNoise < -0.55) ? BLOCKS.DIRT : (surfaceNoise < -0.3 ? BLOCKS.GRASS : BLOCKS.PODZOL);
-                    } else {
-                        // Natural Biome Transition Zones (Dithering & Organic Blending)
-                        // 1. Hot / Desert transition (temp ~0.70 to 0.77, low moisture)
-                        const isDesertMargin = (temp >= 0.69 && temp <= 0.78 && moist < 0.48);
-                        // 2. Cold / Snow transition (temp ~0.18 to 0.28)
-                        const isSnowMargin = (temp >= 0.18 && temp <= 0.28);
-
-                        if (isDesertMargin) {
-                            const dFactor = (temp - 0.69) / (0.78 - 0.69); // 0 at edge, 1 in desert
-                            const dScore = dFactor + surfaceNoise * 0.35;
-                            if (dScore > 0.60) {
-                                type = BLOCKS.SAND;
-                            } else if (dScore > 0.35) {
-                                type = BLOCKS.DIRT;
-                            } else if (dScore > 0.15) {
-                                type = BLOCKS.SAVANNA_GRASS;
-                            } else {
-                                type = biome.surface;
-                            }
-                        } else if (isSnowMargin) {
-                            const sFactor = (0.28 - temp) / (0.28 - 0.18); // 0 at edge, 1 in snow core
-                            const sScore = sFactor + surfaceNoise * 0.35;
-                            if (sScore > 0.55) {
-                                type = BLOCKS.SNOW;
-                            } else if (sScore > 0.28) {
-                                type = BLOCKS.DIRT;
-                            } else {
-                                type = BLOCKS.GRASS;
-                            }
-                        } else if (biome.name === 'Mountains') {
-                            // High altitude exposed rock and alpine grass blending
-                            if (surfaceNoise > 0.4 || y > CHUNK_HEIGHT - 35) {
-                                type = (surfaceNoise > 0.68) ? BLOCKS.STONE : BLOCKS.SNOW;
-                            } else if (surfaceNoise < -0.4) {
-                                type = BLOCKS.GRASS;
-                            } else {
-                                type = BLOCKS.SNOW;
-                            }
+                        type = BLOCKS.PODZOL;
+                    } else if (biome.name === 'Mountains' || biome === BIOMES.MOUNTAINS) {
+                        // Authentic Minecraft Mountains: lush grass on lower slopes, rock and snow at high altitudes
+                        if (y >= 95) {
+                            type = (surfaceNoise > 0.2) ? BLOCKS.STONE : BLOCKS.SNOW;
+                        } else if (y >= 80) {
+                            type = (surfaceNoise > 0.1) ? BLOCKS.STONE : BLOCKS.GRASS;
                         } else {
-                            type = biome.surface;
+                            type = BLOCKS.GRASS;
                         }
+                    } else {
+                        type = biome.surface;
                     }
                     blocks[idx] = type;
                 } else if (depth < soilLimit) {
@@ -1245,8 +1524,10 @@ export function generateChunkTerrain(cx, cz, params) {
                     let type;
                     if (biome.isVolcanic) {
                         type = colRng() < 0.5 ? BLOCKS.BLACKSTONE : BLOCKS.SMOOTH_BASALT;
+                    } else if (biome === BIOMES.ICE_SPIKES || biome.name === 'Ice Spikes') {
+                        type = (colRng() < 0.65) ? BLOCKS.PACKED_ICE : BLOCKS.BLUE_ICE;
                     } else if (surfaceBlock === BLOCKS.SAND) {
-                        type = (depth >= 3 && temp > 0.75) ? BLOCKS.SANDSTONE : ((colRng() < 0.35) ? BLOCKS.DIRT : BLOCKS.SAND);
+                        type = (depth >= 3 && (temp > 0.75 || hasSandyBeach)) ? BLOCKS.SANDSTONE : BLOCKS.SAND;
                     } else if (surfaceBlock === BLOCKS.RED_SAND || surfaceBlock === BLOCKS.TERRACOTTA) {
                         type = BLOCKS.TERRACOTTA;
                     } else if (surfaceBlock === BLOCKS.MUD) {
@@ -1278,6 +1559,63 @@ export function generateChunkTerrain(cx, cz, params) {
                         break; // Only the top water layer freezes!
                     } else if (b !== BLOCKS.AIR) {
                         break;
+                    }
+                }
+            }
+        }
+    }
+
+    // ============================================
+    // PASS 3B: Shoreline & Beach Lone Water Cleanup
+    // Eliminates isolated 1x1/pothole water blocks along beaches and shorelines
+    // ============================================
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+        for (let z = 0; z < CHUNK_SIZE; z++) {
+            const col = columns[x][z];
+            if (col.biome === BIOMES.SWAMP || col.biome.name === 'Swamp') continue; // Preserve authentic wetland water channels!
+            for (let y = params.seaLevel; y >= params.seaLevel - 1; y--) {
+                const idx = blockIndex(x, y, z);
+                const b = blocks[idx];
+                if (b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER) {
+                    let solidNeighbors = 0;
+                    let sandNeighbors = 0;
+                    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+                    for (const [dx, dz] of dirs) {
+                        const nx = x + dx;
+                        const nz = z + dz;
+                        let isSolid = false;
+                        if (nx >= 0 && nx < CHUNK_SIZE && nz >= 0 && nz < CHUNK_SIZE) {
+                            const nb = blocks[blockIndex(nx, y, nz)];
+                            if (nb !== BLOCKS.AIR && nb !== BLOCKS.WATER && nb !== BLOCKS.SWAMP_WATER && nb !== BLOCKS.LAVA && nb !== BLOCKS.ICE) {
+                                isSolid = true;
+                                if (nb === BLOCKS.SAND || nb === BLOCKS.SANDSTONE) sandNeighbors++;
+                            }
+                        } else {
+                            const nCol = getColumnInfo(wxBase + nx, wzBase + nz, params);
+                            if (nCol.surfaceY >= y) {
+                                isSolid = true;
+                                if (nCol.biome === BIOMES.BEACH || nCol.biome === BIOMES.DESERT || nCol.biome === BIOMES.OASIS) sandNeighbors++;
+                            }
+                        }
+                        if (isSolid) solidNeighbors++;
+                    }
+
+                    const isBeachCol = col.biome === BIOMES.BEACH || col.biome === BIOMES.DESERT || col.biome === BIOMES.OASIS || col.biome.name === 'Beach' || col.biome.name === 'Desert';
+                    const isIsolatedPothole = solidNeighbors >= 3;
+
+                    if (isIsolatedPothole) {
+                        const fillBlock = isBeachCol ? BLOCKS.SAND : col.biome.surface;
+                        const fillSub = isBeachCol ? BLOCKS.SAND : col.biome.dirt;
+                        blocks[idx] = fillBlock;
+                        for (let dy = y - 1; dy >= Math.max(1, y - 4); dy--) {
+                            const underIdx = blockIndex(x, dy, z);
+                            const ub = blocks[underIdx];
+                            if (ub === BLOCKS.WATER || ub === BLOCKS.SWAMP_WATER || ub === BLOCKS.AIR) {
+                                blocks[underIdx] = fillSub;
+                            } else {
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -1375,6 +1713,14 @@ export function generateChunkTerrain(cx, cz, params) {
     }
 
     // ============================================
+    // PASS 5.5: Underground Stronghold
+    // ============================================
+    const shPos = getStrongholdPosition(params.seed);
+    if (Math.abs(cx * CHUNK_SIZE + 8 - shPos.x) <= 24 && Math.abs(cz * CHUNK_SIZE + 8 - shPos.z) <= 24) {
+        generateStronghold(blocks, cx, cz, shPos, params);
+    }
+
+    // ============================================
     // PASS 6: Large Features, Trees & Fallen Logs
     // ============================================
     for (let tx = -3; tx <= CHUNK_SIZE + 2; tx++) {
@@ -1391,12 +1737,19 @@ export function generateChunkTerrain(cx, cz, params) {
             const floraRng = seededRandom(params.seed + wx * 7777 + wz);
             const r = floraRng();
             const isUnderwater = surfaceY < params.seaLevel || (bData && bData.lakeSurfaceY && surfaceY < bData.lakeSurfaceY);
-            if (isUnderwater) continue;
+            if (isUnderwater) {
+                // In swamps, Mangrove Trees can grow directly out of shallow wetland water (1-2 blocks deep)
+                const isSwamp = (biome.swampFlora || biome === BIOMES.SWAMP || biome.name === 'Swamp');
+                if (isSwamp && surfaceY >= params.seaLevel - 2 && r < 0.035) {
+                    generateMangroveTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                }
+                continue;
+            }
 
             // Ground validity check
             const currentGroundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
             const currentGroundBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[currentGroundIdx] : BLOCKS.AIR;
-            const isValidGround = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.SAND || currentGroundBlock === BLOCKS.SNOW || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.ALIEN_GRASS || currentGroundBlock === BLOCKS.ALIEN_STONE || currentGroundBlock === BLOCKS.RED_SAND || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.BASALT || currentGroundBlock === BLOCKS.SMOOTH_BASALT || currentGroundBlock === BLOCKS.BLACKSTONE || currentGroundBlock === BLOCKS.MUD || currentGroundBlock === BLOCKS.SWAMP_WATER;
+            const isValidGround = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.SAND || currentGroundBlock === BLOCKS.SNOW || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.ALIEN_GRASS || currentGroundBlock === BLOCKS.ALIEN_STONE || currentGroundBlock === BLOCKS.RED_SAND || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.BASALT || currentGroundBlock === BLOCKS.SMOOTH_BASALT || currentGroundBlock === BLOCKS.BLACKSTONE || currentGroundBlock === BLOCKS.MUD || currentGroundBlock === BLOCKS.SWAMP_WATER || currentGroundBlock === BLOCKS.PACKED_ICE || currentGroundBlock === BLOCKS.BLUE_ICE || currentGroundBlock === BLOCKS.ICE;
             if (!isValidGround) continue;
 
             // Border tree density feathering (prevents abrupt walls of trees hitting desert borders)
@@ -1415,10 +1768,14 @@ export function generateChunkTerrain(cx, cz, params) {
                 continue;
             }
 
-            // Swamp Biome: Mangrove Trees (No fallen logs)
+            // Swamp Biome: Swamp Oaks with hanging vines & Mangrove Trees
             if (biome.swampFlora || biome === BIOMES.SWAMP || biome.name === 'Swamp') {
-                if (r < 0.038) {
-                    generateMangroveTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                if (r < 0.048) {
+                    if (floraRng() < 0.65) {
+                        generateSwampOakTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    } else {
+                        generateMangroveTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    }
                     continue;
                 }
             }
@@ -1448,10 +1805,10 @@ export function generateChunkTerrain(cx, cz, params) {
                 } else if (r < 0.056) {
                     generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
                     continue;
-                } else if (r < 0.063) {
+                } else if (r < 0.0575) {
                     generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.DARK_OAK_WOOD, floraRng);
                     continue;
-                } else if (r < 0.075) {
+                } else if (r < 0.070) {
                     generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
                     continue;
                 }
@@ -1462,7 +1819,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 if (r < 0.028) {
                     generateBirchTree(blocks, tx, surfaceY + 1, tz, floraRng);
                     continue;
-                } else if (r < 0.034) {
+                } else if (r < 0.0295) {
                     generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.BIRCH_WOOD, floraRng);
                     continue;
                 }
@@ -1473,7 +1830,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 if (r < 0.028) {
                     generatePineTree(blocks, tx, surfaceY + 1, tz, floraRng);
                     continue;
-                } else if (r < 0.034) {
+                } else if (r < 0.0295) {
                     generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.PINE_WOOD, floraRng);
                     continue;
                 } else if (r >= 0.08 && r < 0.086) {
@@ -1492,7 +1849,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 if (r < 0.028) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                     continue;
-                } else if (r < 0.034) {
+                } else if (r < 0.0295) {
                     generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.WOOD, floraRng);
                     continue;
                 }
@@ -1507,11 +1864,13 @@ export function generateChunkTerrain(cx, cz, params) {
                     treeProbability *= Math.max(0.35, 1.0 - (colInfo.erosionNoise - 0.60) / 0.15 * 0.65);
                 }
             } else if (biome === BIOMES.PLAINS || biome.name === 'Plains') {
-                // Rare solitary oak trees in plains, slightly more common near forest borders (like vanilla Minecraft)
-                treeProbability = (colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.005 : 0.002;
+                // Solitary oak trees in plains, more common near water edges (riparian willow/oak) and forest borders
+                const isNearWater = surfaceY <= params.seaLevel + 4;
+                treeProbability = isNearWater ? 0.015 : ((colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.006 : 0.002);
             }
 
-            if (treeProbability > 0 && r < treeProbability) {
+            const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || (biome.isOasis && currentGroundBlock === BLOCKS.SAND);
+            if (treeProbability > 0 && r < treeProbability && isSoilForTree) {
                 generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
             } else if (biome.hasDeadTrees && r < 0.005) {
                 generateDeadTree(blocks, tx, surfaceY + 1, tz, floraRng);
@@ -1519,7 +1878,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if (biome.hasCrystals && r < 0.03) {
                 generateCrystal(blocks, tx, surfaceY + 1, tz, floraRng);
-            } else if (biome.hasIceSpikes && r < 0.02) {
+            } else if (biome.hasIceSpikes && r < 0.025) {
                 generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if (biome.hasCactus && r < 0.01 && currentGroundBlock === BLOCKS.SAND) {
                 generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
@@ -1547,6 +1906,21 @@ export function generateChunkTerrain(cx, cz, params) {
 
             // Aquatic vegetation
             if (isUnderwater) {
+                const isOcean = biome.isOcean || biome.isCoralReef || biome === BIOMES.CORAL_REEF || biome === BIOMES.OCEAN || biome === BIOMES.DEEP_OCEAN || biome === BIOMES.FROZEN_OCEAN;
+                if (isOcean && r < 0.04 && surfaceY < params.seaLevel - 1) {
+                    const floorIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                    const floorBlock = blocks[floorIdx];
+                    if (floorBlock === BLOCKS.SAND || floorBlock === BLOCKS.GRAVEL) {
+                        const aboveIdx = ((surfaceY + 1) * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                        const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[aboveIdx] : BLOCKS.WATER;
+                        if (aboveBlock === BLOCKS.WATER) {
+                            const shellRng = floraRng();
+                            const shell = shellRng < 0.33 ? BLOCKS.SEASHELL_1 : (shellRng < 0.66 ? BLOCKS.SEASHELL_2 : BLOCKS.SEASHELL_3);
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, shell, false);
+                            continue;
+                        }
+                    }
+                }
                 if (biome.isCoralReef && r < 0.3 && surfaceY < params.seaLevel - 1) {
                     const cRng = floraRng();
                     let coralType;
@@ -1618,29 +1992,15 @@ export function generateChunkTerrain(cx, cz, params) {
                 continue;
             }
 
-            // Sugarcane logic along warm biomes
-            const isWarmBiome = (biome === BIOMES.DESERT || biome === BIOMES.SAVANNA || biome === BIOMES.JUNGLE || 
-                biome === BIOMES.SWAMP || biome === BIOMES.BADLANDS || biome === BIOMES.BEACH || 
-                biome === BIOMES.OASIS || biome.isBeach || biome.isOasis || biome.jungleFlora || 
-                biome.savannaFlora || biome.swampFlora || biome.name === 'Desert' || biome.name === 'Savanna' || 
-                biome.name === 'Jungle' || biome.name === 'Swamp' || biome.name === 'Badlands' || 
-                biome.name === 'Beach' || biome.name === 'Oasis');
+            // Sugarcane logic: generates along water shores in all non-frozen biomes (authentic Minecraft behavior)
+            const canHaveSugarcane = biome !== BIOMES.TUNDRA && biome !== BIOMES.ICE_SPIKES && !biome.isVolcanic && colInfo.temp >= 0.20;
             
             const groundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
             const groundBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[groundIdx] : BLOCKS.AIR;
             const isSugarcaneSoil = groundBlock === BLOCKS.SAND || groundBlock === BLOCKS.RED_SAND || groundBlock === BLOCKS.DIRT || groundBlock === BLOCKS.GRASS || groundBlock === BLOCKS.SWAMP_GRASS || groundBlock === BLOCKS.SAVANNA_GRASS || groundBlock === BLOCKS.MUD;
 
-            if (isWarmBiome && isSugarcaneSoil && surfaceY >= params.seaLevel && surfaceY <= params.seaLevel + 3 && r < 0.12) {
-                const n1 = getColumnInfo(wx - 1, wz, params);
-                const n2 = getColumnInfo(wx + 1, wz, params);
-                const n3 = getColumnInfo(wx, wz - 1, params);
-                const n4 = getColumnInfo(wx, wz + 1, params);
-                const nearWater = [n1, n2, n3, n4].some(n => 
-                    n.surfaceY < params.seaLevel || 
-                    (n.bData && n.bData.lakeSurfaceY > 0 && n.surfaceY <= n.bData.lakeSurfaceY) ||
-                    n.surfaceY < surfaceY
-                );
-                if (nearWater) {
+            if (canHaveSugarcane && isSugarcaneSoil && surfaceY >= params.seaLevel && surfaceY <= params.seaLevel + 3 && r < 0.14) {
+                if (hasDirectAdjacentWater(blocks, tx, surfaceY, tz, wx, wz, params)) {
                     generateSugarcane(blocks, tx, surfaceY + 1, tz, floraRng);
                     continue;
                 }
@@ -1649,16 +2009,28 @@ export function generateChunkTerrain(cx, cz, params) {
             // Only place ground flora on solid non-air ground
             const curGroundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
             const curGround = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[curGroundIdx] : BLOCKS.AIR;
-            const canSupportFlora = curGround === BLOCKS.GRASS || curGround === BLOCKS.DIRT || curGround === BLOCKS.SAND || curGround === BLOCKS.SNOW || curGround === BLOCKS.MYCELIUM || curGround === BLOCKS.SWAMP_GRASS || curGround === BLOCKS.SAVANNA_GRASS || curGround === BLOCKS.PODZOL || curGround === BLOCKS.MUD;
+            const isSoil = curGround === BLOCKS.GRASS || curGround === BLOCKS.DIRT || curGround === BLOCKS.PODZOL || curGround === BLOCKS.MYCELIUM || curGround === BLOCKS.SWAMP_GRASS || curGround === BLOCKS.SAVANNA_GRASS || curGround === BLOCKS.MUD;
+            const isSandSoil = curGround === BLOCKS.SAND || curGround === BLOCKS.RED_SAND;
+            const canSupportFlora = isSoil || isSandSoil;
             if (!canSupportFlora) continue;
+
+            // Sand blocks on land: only place dead bushes in desert/badlands (never seashells on land!)
+            if (isSandSoil) {
+                if (biome.hasDeadBush && r < 0.04) {
+                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
+                }
+                continue;
+            }
+
+            // Vegetation strictly requires soil (grass/dirt/podzol) - never grows on snow or ice!
+            if (!isSoil) continue;
 
             // Ground cover vegetation
             if (biome.hasDeadBush && r < 0.04) {
                 safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
-            } else if (biome.isBeach && r < 0.08) {
-                const shellRng = floraRng();
-                const shell = shellRng < 0.33 ? BLOCKS.SEASHELL_1 : (shellRng < 0.66 ? BLOCKS.SEASHELL_2 : BLOCKS.SEASHELL_3);
-                safeSetBlock(blocks, tx, surfaceY + 1, tz, shell, true);
+            } else if (biome.isBeach) {
+                // Beaches on land are clean sandy shores (seashells are strictly underwater)
+                continue;
             } else if (biome.jungleFlora && r < 0.08) {
                 if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                 else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true);
@@ -1682,8 +2054,11 @@ export function generateChunkTerrain(cx, cz, params) {
                         else if (fernRoll < 0.8) generateTallFern(blocks, tx, surfaceY + 1, tz);
                         else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                     }
-                } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra' || biome === BIOMES.TAIGA || biome.name === 'Taiga' || biome.isTaiga) {
-                    if (fr < 0.25) {
+                } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
+                    // Snowy Tundra: ferns and flora strictly never spawn on snow
+                    continue;
+                } else if (biome === BIOMES.TAIGA || biome.name === 'Taiga' || biome.isTaiga) {
+                    if (isSoil && fr < 0.25) {
                         const taigaRoll = floraRng();
                         if (taigaRoll < 0.35) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
                         else if (taigaRoll < 0.6) generateTallFern(blocks, tx, surfaceY + 1, tz);
@@ -1699,11 +2074,13 @@ export function generateChunkTerrain(cx, cz, params) {
                         }
                     }
                 } else if (biome.swampFlora || biome === BIOMES.SWAMP || biome.name === 'Swamp') {
-                    if (fr < 0.25) {
+                    if (fr < 0.12) {
                         const swRoll = floraRng();
-                        if (swRoll < 0.7) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                        else if (swRoll < 0.85) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.BLUE_FLOWER, true);
-                        else {
+                        if (swRoll < 0.82) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                        } else if (swRoll < 0.92) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.BLUE_FLOWER, true);
+                        } else {
                             const swShroom = floraRng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
                             safeSetBlock(blocks, tx, surfaceY + 1, tz, swShroom, true);
                         }
@@ -1725,6 +2102,14 @@ export function generateChunkTerrain(cx, cz, params) {
                     if (fr < 0.15) {
                         if (floraRng() < 0.8) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                         else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
+                    }
+                } else if (biome === BIOMES.PLAINS || biome.name === 'Plains') {
+                    // Authentic Minecraft Plains: tall grass with scattered dandelions and poppies (strictly NO mushrooms!)
+                    if (fr < 0.22) {
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                    } else if (fr < 0.26) {
+                        const fl = floraRng() < 0.55 ? BLOCKS.YELLOW_FLOWER : BLOCKS.RED_FLOWER;
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, fl, true);
                     }
                 } else {
                     if (fr < 0.22) {
@@ -1810,8 +2195,8 @@ function generateRockPatch(blocks, cx, cy, cz, rng) {
     }
 }
 
-function generateDripstoneClump(blocks, cx, cy, cz, rng) {
-    const radius = 2 + Math.floor(rng() * 2); // 2 to 3 radius clump
+function generateDripstoneClump(blocks, cx, cy, cz, rng, columns, params) {
+    const radius = 1 + Math.floor(rng() * 2); // Tight 1 to 2 radius clump
     for (let dx = -radius; dx <= radius; dx++) {
         for (let dz = -radius; dz <= radius; dz++) {
             const px = cx + dx;
@@ -1820,8 +2205,11 @@ function generateDripstoneClump(blocks, cx, cy, cz, rng) {
             const distSq = dx * dx + dz * dz;
             if (distSq > radius * radius + (rng() * 0.7)) continue;
 
-            // Search column around cy for subterranean cave ceiling and cave floor
-            for (let y = Math.max(8, cy - 7); y <= Math.min(50, cy + 7); y++) {
+            const maxAllowedY = columns ? Math.min(30, columns[px][pz].bData.surfaceY - 12) : 30;
+            if (maxAllowedY <= 10) continue;
+
+            // Search column around cy for subterranean cave ceiling and cave floor (strictly subterranean)
+            for (let y = Math.max(8, cy - 5); y <= Math.min(maxAllowedY, cy + 5); y++) {
                 const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
                 if (blocks[idx] !== BLOCKS.AIR) continue;
 
@@ -1829,11 +2217,11 @@ function generateDripstoneClump(blocks, cx, cy, cz, rng) {
                 const aboveIdx = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
 
                 // Floor stalagmite (pointing UP)
-                if (blocks[belowIdx] === BLOCKS.STONE && rng() < 0.65) {
+                if (blocks[belowIdx] === BLOCKS.STONE && rng() < 0.5) {
                     blocks[belowIdx] = BLOCKS.DRIPSTONE_BLOCK;
-                    if (rng() < 0.5) {
-                        const spikeH = 1 + (rng() < 0.35 ? 1 : 0);
-                        for (let s = 0; s < spikeH && y + s <= 50; s++) {
+                    if (rng() < 0.4) {
+                        const spikeH = 1 + (rng() < 0.25 ? 1 : 0);
+                        for (let s = 0; s < spikeH && y + s <= maxAllowedY; s++) {
                             const sIdx = ((y + s) * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
                             if (blocks[sIdx] === BLOCKS.AIR) {
                                 blocks[sIdx] = (s === spikeH - 1) ? BLOCKS.POINTED_DRIPSTONE_UP : BLOCKS.DRIPSTONE_BLOCK;
@@ -1843,10 +2231,10 @@ function generateDripstoneClump(blocks, cx, cy, cz, rng) {
                 }
 
                 // Ceiling stalactite (pointing DOWN)
-                if (blocks[aboveIdx] === BLOCKS.STONE && rng() < 0.65) {
+                if (blocks[aboveIdx] === BLOCKS.STONE && rng() < 0.5) {
                     blocks[aboveIdx] = BLOCKS.DRIPSTONE_BLOCK;
-                    if (rng() < 0.6) {
-                        const spikeH = 1 + (rng() < 0.4 ? (rng() < 0.5 ? 2 : 1) : 0);
+                    if (rng() < 0.4) {
+                        const spikeH = 1 + (rng() < 0.25 ? 1 : 0);
                         for (let s = 0; s < spikeH && y - s >= 8; s++) {
                             const sIdx = ((y - s) * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
                             if (blocks[sIdx] === BLOCKS.AIR) {
@@ -2321,15 +2709,51 @@ function generateCrystal(blocks, x, y, z, rng) {
 }
 
 function generateIceSpike(blocks, x, y, z, rng) {
-    const height = 5 + Math.floor((rng ? rng() : Math.random()) * 8);
-    for (let i = 0; i < height; i++) {
-        safeSetBlock(blocks, x, y + i, z, BLOCKS.ICE);
-        if (i < height - 2) {
-            safeSetBlock(blocks, x+1, y + i, z, BLOCKS.ICE);
-            safeSetBlock(blocks, x-1, y + i, z, BLOCKS.ICE);
-            safeSetBlock(blocks, x, y + i, z+1, BLOCKS.ICE);
-            safeSetBlock(blocks, x, y + i, z-1, BLOCKS.ICE);
+    const random = rng || Math.random;
+    // Minecraft ice spikes: 75% standard spikes (height 12-22), 25% giant spikes (height 28-42)
+    const isGiant = random() < 0.25;
+    const height = isGiant ? (26 + Math.floor(random() * 16)) : (10 + Math.floor(random() * 12));
+    const baseRadius = isGiant ? 3 : (random() < 0.45 ? 2 : 1);
+
+    // Anchor base into ground/ice sheet (down to 2 blocks below surface)
+    for (let dy = -2; dy <= 0; dy++) {
+        for (let dx = -baseRadius; dx <= baseRadius; dx++) {
+            for (let dz = -baseRadius; dz <= baseRadius; dz++) {
+                if (dx * dx + dz * dz <= baseRadius * baseRadius) {
+                    const block = random() < 0.65 ? BLOCKS.PACKED_ICE : BLOCKS.BLUE_ICE;
+                    safeSetBlock(blocks, x + dx, y + dy, z + dz, block);
+                }
+            }
         }
+    }
+
+    // Build tapered ice spire
+    for (let dy = 0; dy < height; dy++) {
+        const progress = dy / height; // 0 to 1
+        let radius = Math.round(baseRadius * (1 - progress));
+        if (progress > 0.85) radius = 0; // tapered tip
+
+        for (let dx = -radius; dx <= radius; dx++) {
+            for (let dz = -radius; dz <= radius; dz++) {
+                const distSq = dx * dx + dz * dz;
+                if (distSq <= radius * radius + 0.35) {
+                    const isCore = (distSq <= Math.max(0, radius - 1) * Math.max(0, radius - 1));
+                    let iceType;
+                    if (isCore) {
+                        iceType = random() < 0.7 ? BLOCKS.BLUE_ICE : BLOCKS.PACKED_ICE;
+                    } else {
+                        iceType = random() < 0.75 ? BLOCKS.PACKED_ICE : (random() < 0.5 ? BLOCKS.BLUE_ICE : BLOCKS.ICE);
+                    }
+                    safeSetBlock(blocks, x + dx, y + dy, z + dz, iceType);
+                }
+            }
+        }
+    }
+
+    // Sharp spire needle at top
+    safeSetBlock(blocks, x, y + height, z, BLOCKS.PACKED_ICE);
+    if (isGiant) {
+        safeSetBlock(blocks, x, y + height + 1, z, BLOCKS.BLUE_ICE);
     }
 }
 
@@ -3301,3 +3725,276 @@ export function generateCavernsChunk() {
 export function generateHighlandsChunk() {
     return new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
 }
+
+// ============================================
+// The Stronghold & The End Dimension Generation
+// ============================================
+export function getStrongholdPosition(seed = 12345) {
+    const s = Math.abs(seed) || 12345;
+    const angle = (s % 360) * (Math.PI / 180);
+    const dist = 90 + ((s * 31) % 30);
+    const x = Math.round(Math.cos(angle) * dist);
+    const z = Math.round(Math.sin(angle) * dist);
+    return { x, y: 24, z };
+}
+
+function generateStronghold(blocks, cx, cz, sh, params) {
+    const wxBase = cx * CHUNK_SIZE;
+    const wzBase = cz * CHUNK_SIZE;
+
+    const stoneBricks = (window.BLOCKS && window.BLOCKS.STONE_BRICKS) ? window.BLOCKS.STONE_BRICKS : (BLOCKS.STONE_BRICKS || 16);
+    const crackedBricks = (window.BLOCKS && window.BLOCKS.CRACKED_STONE_BRICKS) ? window.BLOCKS.CRACKED_STONE_BRICKS : stoneBricks;
+    const frameId = (window.BLOCKS && window.BLOCKS.PORTAL_FRAME) ? window.BLOCKS.PORTAL_FRAME : (BLOCKS.PORTAL_FRAME || 26);
+    const frameEyeId = (window.BLOCKS && window.BLOCKS.END_PORTAL_FRAME_EYE) ? window.BLOCKS.END_PORTAL_FRAME_EYE : 326;
+    const lavaId = (window.BLOCKS && window.BLOCKS.LAVA) ? window.BLOCKS.LAVA : (BLOCKS.LAVA || 25);
+    const torchId = (window.BLOCKS && window.BLOCKS.TORCH) ? window.BLOCKS.TORCH : (BLOCKS.TORCH || 32);
+    const ironBarsId = (window.BLOCKS && window.BLOCKS.IRON_BARS) ? window.BLOCKS.IRON_BARS : stoneBricks;
+    const bookshelfId = (window.BLOCKS && window.BLOCKS.BOOKSHELF) ? window.BLOCKS.BOOKSHELF : stoneBricks;
+    const chestId = (window.BLOCKS && window.BLOCKS.CHEST_BLOCK) ? window.BLOCKS.CHEST_BLOCK : stoneBricks;
+    const spawnerId = (window.BLOCKS && window.BLOCKS.BOSS_SPAWNER) ? window.BLOCKS.BOSS_SPAWNER : stoneBricks;
+
+    const rng = seededRandom(params.seed + cx * 1013 + cz);
+
+    const setW = (wx, wy, wz, blockType, onlyAir = false) => {
+        const lx = wx - wxBase;
+        const lz = wz - wzBase;
+        safeSetBlock(blocks, lx, wy, lz, blockType, onlyAir);
+    };
+
+    // 1. Portal Room: 11x11 hollow chamber centered at (sh.x, sh.y, sh.z)
+    const px = sh.x, py = sh.y, pz = sh.z;
+    for (let dx = -5; dx <= 5; dx++) {
+        for (let dz = -5; dz <= 5; dz++) {
+            const isWall = Math.abs(dx) === 5 || Math.abs(dz) === 5;
+            for (let dy = -1; dy <= 5; dy++) {
+                const isFloor = dy === -1;
+                const isCeiling = dy === 5;
+                const wx = px + dx;
+                const wy = py + dy;
+                const wz = pz + dz;
+
+                if (isWall || isFloor || isCeiling) {
+                    const brick = (rng() < 0.25) ? crackedBricks : stoneBricks;
+                    setW(wx, wy, wz, brick);
+                } else {
+                    setW(wx, wy, wz, BLOCKS.AIR);
+                }
+            }
+        }
+    }
+
+    // Portal platform in center (5x5 at py, with 3x3 lava pit)
+    for (let dx = -2; dx <= 2; dx++) {
+        for (let dz = -2; dz <= 2; dz++) {
+            const wx = px + dx;
+            const wz = pz + dz;
+            setW(wx, py - 1, wz, stoneBricks);
+
+            if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1) {
+                setW(wx, py, wz, lavaId);
+                setW(wx, py + 1, wz, BLOCKS.AIR);
+            } else {
+                setW(wx, py, wz, stoneBricks);
+            }
+        }
+    }
+
+    // Portal Frame Ring at py + 1: 12 frames forming a 5x5 ring (corners empty)
+    const frameCoords = [
+        // North
+        { dx: -1, dz: -2 }, { dx: 0, dz: -2 }, { dx: 1, dz: -2 },
+        // South
+        { dx: -1, dz: 2 }, { dx: 0, dz: 2 }, { dx: 1, dz: 2 },
+        // West
+        { dx: -2, dz: -1 }, { dx: -2, dz: 0 }, { dx: -2, dz: 1 },
+        // East
+        { dx: 2, dz: -1 }, { dx: 2, dz: 0 }, { dx: 2, dz: 1 }
+    ];
+
+    for (const fc of frameCoords) {
+        const wx = px + fc.dx;
+        const wy = py + 1;
+        const wz = pz + fc.dz;
+        const frameRng = seededRandom(params.seed + wx * 19 + wz * 37)();
+        // 15% chance to have eye pre-inserted, matching vanilla Minecraft
+        const isEye = frameRng < 0.15;
+        setW(wx, wy, wz, isEye ? frameEyeId : frameId);
+    }
+
+    // Stairs leading to platform from dz = 3
+    setW(px, py, pz + 3, stoneBricks);
+    setW(px - 1, py, pz + 3, stoneBricks);
+    setW(px + 1, py, pz + 3, stoneBricks);
+
+    // Silverfish Spawner under/in front of the stairs
+    setW(px, py + 1, pz + 4, spawnerId);
+
+    // Corner decorative iron bars and torches
+    setW(px - 4, py + 2, pz - 4, ironBarsId);
+    setW(px + 4, py + 2, pz - 4, ironBarsId);
+    setW(px - 4, py + 2, pz + 4, ironBarsId);
+    setW(px + 4, py + 2, pz + 4, ironBarsId);
+
+    setW(px - 4, py + 3, pz, torchId);
+    setW(px + 4, py + 3, pz, torchId);
+    setW(px, py + 3, pz - 4, torchId);
+
+    // 2. Stronghold Corridor & Library extending South from dz = 5 to 14
+    for (let dz = 6; dz <= 14; dz++) {
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dy = -1; dy <= 4; dy++) {
+                const isWall = Math.abs(dx) === 2;
+                const isFloor = dy === -1;
+                const isCeiling = dy === 4;
+                const wx = px + dx;
+                const wy = py + dy;
+                const wz = pz + dz;
+                if (isWall || isFloor || isCeiling) {
+                    setW(wx, wy, wz, stoneBricks);
+                } else {
+                    setW(wx, wy, wz, BLOCKS.AIR);
+                }
+            }
+        }
+    }
+
+    // Doorway opening between portal room and corridor
+    setW(px, py, pz + 5, BLOCKS.AIR);
+    setW(px, py + 1, pz + 5, BLOCKS.AIR);
+    setW(px, py + 2, pz + 5, BLOCKS.AIR);
+
+    // Corridor Torches, Chest, and Bookshelves
+    setW(px - 1, py + 2, pz + 9, torchId);
+    setW(px + 1, py + 2, pz + 9, torchId);
+    setW(px - 1, py, pz + 12, chestId);
+    setW(px + 1, py, pz + 12, bookshelfId);
+    setW(px + 1, py + 1, pz + 12, bookshelfId);
+}
+
+export function generateEndChunk(cx, cz, params) {
+    const blocks = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
+    const rng = seededRandom(params.seed + cx * 65537 + cz);
+
+    const endStoneId = (window.BLOCKS && window.BLOCKS.END_STONE) ? window.BLOCKS.END_STONE : ((typeof BLOCKS !== 'undefined' && BLOCKS.END_STONE) ? BLOCKS.END_STONE : 328);
+    const obsidianId = (window.BLOCKS && window.BLOCKS.OBSIDIAN) ? window.BLOCKS.OBSIDIAN : (BLOCKS.OBSIDIAN || 14);
+    const bedrockId = (window.BLOCKS && window.BLOCKS.BEDROCK) ? window.BLOCKS.BEDROCK : (BLOCKS.BEDROCK || 28);
+    const torchId = (window.BLOCKS && window.BLOCKS.TORCH) ? window.BLOCKS.TORCH : (BLOCKS.TORCH || 32);
+
+    const wxBase = cx * CHUNK_SIZE;
+    const wzBase = cz * CHUNK_SIZE;
+
+    // 1. Central Floating End Stone Island
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+        for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+            const wx = wxBase + lx;
+            const wz = wzBase + lz;
+            const dist = Math.hypot(wx, wz);
+
+            if (dist < 60) {
+                const normDist = dist / 60;
+                const surfaceNoise = Math.sin(wx * 0.15) * Math.cos(wz * 0.15) * 2;
+                const bottomNoise = Math.cos(wx * 0.1) * Math.sin(wz * 0.1) * 3;
+                const topY = Math.round(55 + surfaceNoise - Math.pow(normDist, 2.2) * 14);
+                const botY = Math.round(38 + bottomNoise - (1 - Math.pow(normDist, 2)) * 16);
+
+                for (let y = Math.max(1, botY); y <= Math.min(CHUNK_HEIGHT - 2, topY); y++) {
+                    const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                    blocks[idx] = endStoneId;
+                }
+            }
+        }
+    }
+
+    // 2. Obsidian Pillars (8 pillars arranged in circle at radius 38 blocks)
+    const pillarCount = 8;
+    const pillarRadius = 38;
+    for (let p = 0; p < pillarCount; p++) {
+        const pAngle = p * (Math.PI * 2 / pillarCount);
+        const px = Math.round(Math.cos(pAngle) * pillarRadius);
+        const pz = Math.round(Math.sin(pAngle) * pillarRadius);
+        const pHeight = 18 + (p % 4) * 6; // pillar heights: 18, 24, 30, 36 above island
+        const pTopY = 55 + pHeight;
+
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dz = -2; dz <= 2; dz++) {
+                if (dx * dx + dz * dz > 5) continue; // rounded pillar
+                const wx = px + dx;
+                const wz = pz + dz;
+                const lx = wx - wxBase;
+                const lz = wz - wzBase;
+                if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                    for (let y = 42; y <= pTopY; y++) {
+                        const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                        blocks[idx] = obsidianId;
+                    }
+                    if (dx === 0 && dz === 0) {
+                        const idx = (pTopY * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                        blocks[idx] = bedrockId;
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Bedrock Exit Portal structure at center (0, y, 0)
+    if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) {
+        for (let dx = -3; dx <= 3; dx++) {
+            for (let dz = -3; dz <= 3; dz++) {
+                const wx = dx;
+                const wz = dz;
+                const lx = wx - wxBase;
+                const lz = wz - wzBase;
+                if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                    const r2 = dx * dx + dz * dz;
+                    if (r2 <= 10) {
+                        const idxFloor = (54 * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                        blocks[idxFloor] = bedrockId;
+
+                        if (r2 >= 7) {
+                            const idxRim = (55 * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                            blocks[idxRim] = bedrockId;
+                        }
+                    }
+                    // Center pillar
+                    if (dx === 0 && dz === 0) {
+                        for (let y = 55; y <= 58; y++) {
+                            const idx = (y * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                            blocks[idx] = bedrockId;
+                        }
+                    }
+                    // 4 torch pillars around fountain
+                    const isTorchPillar = (Math.abs(dx) === 2 && dz === 0) || (Math.abs(dz) === 2 && dx === 0);
+                    if (isTorchPillar) {
+                        const idxPillar = (55 * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                        blocks[idxPillar] = bedrockId;
+                        const idxTorch = (56 * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                        blocks[idxTorch] = torchId;
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Obsidian Spawn Platform at (100, 48, 0)
+    if (Math.abs(cx * CHUNK_SIZE + 8 - 100) <= 16 && Math.abs(cz * CHUNK_SIZE + 8) <= 16) {
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dz = -2; dz <= 2; dz++) {
+                const wx = 100 + dx;
+                const wz = dz;
+                const lx = wx - wxBase;
+                const lz = wz - wzBase;
+                if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                    const idx = (48 * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                    blocks[idx] = obsidianId;
+                    for (let cy = 49; cy <= 52; cy++) {
+                        const idxAir = (cy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                        blocks[idxAir] = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    return blocks;
+}
+

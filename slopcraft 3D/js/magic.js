@@ -103,9 +103,10 @@ export class Spell {
 }
 
 export class Wand {
-    constructor(name, maxSlots) {
+    constructor(name, maxSlots, innateSpell = null) {
         this.name = name;
         this.maxSlots = maxSlots;
+        this.innateSpell = innateSpell;
         this.spellSlots = new Array(maxSlots).fill(null);
         this.cooldowns = new Array(maxSlots).fill(0);
         this.id = getUniqueId();
@@ -134,7 +135,7 @@ export class Wand {
         if (typeof spell.getCalculatedStats !== 'function') return null;
 
         const stats = spell.getCalculatedStats();
-        if (!player.useMana(stats.manaCost)) return null;
+        if (!player.isCreative && !player.useMana(stats.manaCost)) return null;
 
         return { spell, stats };
     }
@@ -159,7 +160,20 @@ export class Wand {
             else if (obj && obj.config && typeof obj.config.effect === 'function') wandModifiers.push(obj);
         }
         
-        if (spells.length === 0) return null;
+        // If no custom spells are loaded, fall back to innate wand spell so wands ALWAYS fire!
+        if (spells.length === 0) {
+            let fallbackKey = 'BOLT';
+            const wName = (this.name || '').toLowerCase();
+            const wSub = (this.subtype || '').toLowerCase();
+            if (this.innateSpell && SPELL_TYPES[this.innateSpell]) fallbackKey = this.innateSpell;
+            else if (wName.includes('fire') || wSub.includes('fire')) fallbackKey = 'BURST';
+            else if (wName.includes('ice') || wSub.includes('ice')) fallbackKey = 'BOLT';
+            else if (wName.includes('nature') || wSub.includes('nature')) fallbackKey = 'HEAL';
+            else if (wName.includes('master') || wSub.includes('master')) fallbackKey = 'THUNDER';
+            else if (wName.includes('void') || wSub.includes('void')) fallbackKey = 'VOID';
+            else if (wName.includes('meteor') || wSub.includes('meteor')) fallbackKey = 'METEOR';
+            spells.push(new Spell(fallbackKey));
+        }
 
         // Combine stats: sum damage, sum mana cost, average speed, sum projectile count, merge effects
         let totalDamage = 0, totalMana = 0, totalSpeed = 0, totalCount = 0;
@@ -356,6 +370,15 @@ export class SpellProjectile {
                 this.mesh.rotation.x += dt * 3;
                 this.mesh.rotation.y += dt * 3;
             }
+        }
+
+        // Emit vibrant trail particles
+        if (window.game && window.game.particles && Math.random() < 0.65) {
+            let pType = 'magic';
+            if (this.element === 'FIRE' || this.element === 'LAVA' || this.element === 'MAGMA') pType = 'fire';
+            else if (this.element === 'WATER') pType = 'portal';
+            else if (this.element === 'EARTH' || this.element === 'BUILDER') pType = 'block_break';
+            window.game.particles.emit(this.position, pType, 2, this.color);
         }
     }
 

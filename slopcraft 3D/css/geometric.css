@@ -435,8 +435,9 @@
 
 .creative-tabs-bar {
     display: flex;
-    gap: 3px;
-    width: 392px;
+    gap: 2px;
+    width: 100%;
+    max-width: 392px;
     margin-bottom: 6px;
     overflow-x: auto;
     scrollbar-width: none;
@@ -452,13 +453,15 @@
     border: 2px solid #373737;
     border-top-color: #888888;
     border-left-color: #888888;
-    padding: 3px 7px;
+    padding: 3px 4px;
     font-family: 'Minecraftia', monospace, sans-serif;
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
     user-select: none;
     transition: background 0.1s, color 0.1s;
     white-space: nowrap;
+    flex: 1 1 auto;
+    text-align: center;
 }
 
 .creative-tab:hover {

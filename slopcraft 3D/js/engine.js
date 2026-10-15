@@ -258,7 +258,7 @@ export class GameEngine {
     get renderer() { return this._renderer; }
 
     init(canvas) {
-        this._renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: false });
+        this._renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
         this._renderer.setSize(window.innerWidth, window.innerHeight);
         this._renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -406,7 +406,25 @@ export class Chunk {
         const wxBase = this.cx * CHUNK_SIZE;
         const wzBase = this.cz * CHUNK_SIZE;
 
-        const pushCustomBox = (minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, uvTop, uvSide, uvBottom, cullMask = 0, aoMult = 1.0) => {
+        const pushCustomBox = (minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, uvTop, uvSide, uvBottom, cullMask = 0, aoMult = 1.0, isGlowing = false) => {
+            const addBoxQuad = (base) => {
+                if (isGlowing) {
+                    _glowTransparentIndices[glowTransparentIndexCount++] = base;
+                    _glowTransparentIndices[glowTransparentIndexCount++] = base + 1;
+                    _glowTransparentIndices[glowTransparentIndexCount++] = base + 2;
+                    _glowTransparentIndices[glowTransparentIndexCount++] = base;
+                    _glowTransparentIndices[glowTransparentIndexCount++] = base + 2;
+                    _glowTransparentIndices[glowTransparentIndexCount++] = base + 3;
+                } else {
+                    _opaqueIndices[opaqueIndexCount++] = base;
+                    _opaqueIndices[opaqueIndexCount++] = base + 1;
+                    _opaqueIndices[opaqueIndexCount++] = base + 2;
+                    _opaqueIndices[opaqueIndexCount++] = base;
+                    _opaqueIndices[opaqueIndexCount++] = base + 2;
+                    _opaqueIndices[opaqueIndexCount++] = base + 3;
+                }
+            };
+
             // Top (+Y)
             if (!(cullMask & 1)) {
                 _positions[posCount++] = minX; _positions[posCount++] = maxY; _positions[posCount++] = maxZ;
@@ -425,8 +443,7 @@ export class Chunk {
                 _uvs[uvCount++] = uvTop.u + (minX - bx) * uvTop.uSize; _uvs[uvCount++] = uvTop.v + (maxZ - bz) * uvTop.vSize;
 
                 const base = vertexCount;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                addBoxQuad(base);
                 vertexCount += 4;
             }
 
@@ -439,7 +456,7 @@ export class Chunk {
 
                 for (let k = 0; k < 4; k++) {
                     _normals[posCount - 12 + k * 3] = 0; _normals[posCount - 11 + k * 3] = -1; _normals[posCount - 10 + k * 3] = 0;
-                    const c = aoMult * 0.6;
+                    const c = aoMult * 0.5;
                     _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
                 }
 
@@ -449,8 +466,7 @@ export class Chunk {
                 _uvs[uvCount++] = uvBottom.u + (minX - bx) * uvBottom.uSize; _uvs[uvCount++] = uvBottom.v + (maxZ - bz) * uvBottom.vSize;
 
                 const base = vertexCount;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                addBoxQuad(base);
                 vertexCount += 4;
             }
 
@@ -463,7 +479,7 @@ export class Chunk {
 
                 for (let k = 0; k < 4; k++) {
                     _normals[posCount - 12 + k * 3] = 1; _normals[posCount - 11 + k * 3] = 0; _normals[posCount - 10 + k * 3] = 0;
-                    const c = aoMult * 0.8;
+                    const c = aoMult * 0.6;
                     _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
                 }
 
@@ -473,8 +489,7 @@ export class Chunk {
                 _uvs[uvCount++] = uvSide.u + (minZ - bz) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
 
                 const base = vertexCount;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                addBoxQuad(base);
                 vertexCount += 4;
             }
 
@@ -487,7 +502,7 @@ export class Chunk {
 
                 for (let k = 0; k < 4; k++) {
                     _normals[posCount - 12 + k * 3] = -1; _normals[posCount - 11 + k * 3] = 0; _normals[posCount - 10 + k * 3] = 0;
-                    const c = aoMult * 0.8;
+                    const c = aoMult * 0.6;
                     _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
                 }
 
@@ -497,8 +512,7 @@ export class Chunk {
                 _uvs[uvCount++] = uvSide.u + (1 - (maxZ - bz)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
 
                 const base = vertexCount;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                addBoxQuad(base);
                 vertexCount += 4;
             }
 
@@ -511,7 +525,7 @@ export class Chunk {
 
                 for (let k = 0; k < 4; k++) {
                     _normals[posCount - 12 + k * 3] = 0; _normals[posCount - 11 + k * 3] = 0; _normals[posCount - 10 + k * 3] = 1;
-                    const c = aoMult * 0.7;
+                    const c = aoMult * 0.8;
                     _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
                 }
 
@@ -521,8 +535,7 @@ export class Chunk {
                 _uvs[uvCount++] = uvSide.u + (minX - bx) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
 
                 const base = vertexCount;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                addBoxQuad(base);
                 vertexCount += 4;
             }
 
@@ -535,7 +548,7 @@ export class Chunk {
 
                 for (let k = 0; k < 4; k++) {
                     _normals[posCount - 12 + k * 3] = 0; _normals[posCount - 11 + k * 3] = 0; _normals[posCount - 10 + k * 3] = -1;
-                    const c = aoMult * 0.7;
+                    const c = aoMult * 0.8;
                     _colors[colorCount++] = c; _colors[colorCount++] = c; _colors[colorCount++] = c;
                 }
 
@@ -545,8 +558,7 @@ export class Chunk {
                 _uvs[uvCount++] = uvSide.u + (1 - (maxX - bx)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
 
                 const base = vertexCount;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 1; _opaqueIndices[opaqueIndexCount++] = base + 2;
-                _opaqueIndices[opaqueIndexCount++] = base; _opaqueIndices[opaqueIndexCount++] = base + 2; _opaqueIndices[opaqueIndexCount++] = base + 3;
+                addBoxQuad(base);
                 vertexCount += 4;
             }
         };
@@ -563,7 +575,25 @@ export class Chunk {
 
                     if (props.isCross) {
                         const uvInfo = atlas.getUV(blockType, 'side');
-                        const cR = 1, cG = 1, cB = 1;
+                        
+                        let topAO = 1.0;
+                        let bottomAO = 1.0;
+                        if (blockType !== BLOCKS.TORCH) {
+                            const belowBlock = (y > 0) ? this.getBlock(x, y - 1, z) : getBlockOptimized(wx, y - 1, wz);
+                            const hasGround = getBlockProperties(belowBlock).solid;
+                            bottomAO = hasGround ? 0.72 : 0.90;
+
+                            let occludeCount = 0;
+                            if (getBlockProperties(getBlockOptimized(wx + 1, y, wz)).solid) occludeCount++;
+                            if (getBlockProperties(getBlockOptimized(wx - 1, y, wz)).solid) occludeCount++;
+                            if (getBlockProperties(getBlockOptimized(wx, y, wz + 1)).solid) occludeCount++;
+                            if (getBlockProperties(getBlockOptimized(wx, y, wz - 1)).solid) occludeCount++;
+                            if (occludeCount > 0) {
+                                const occFactor = Math.max(0.65, 1.0 - occludeCount * 0.08);
+                                topAO *= occFactor;
+                                bottomAO *= occFactor;
+                            }
+                        }
 
                         // Diagonal 1
                         _positions[posCount++] = x; _positions[posCount++] = y; _positions[posCount++] = z;
@@ -581,10 +611,10 @@ export class Chunk {
                         _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
                         _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
 
-                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
-                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
-                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
-                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
+                        _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO;
+                        _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO;
+                        _colors[colorCount++] = topAO; _colors[colorCount++] = topAO; _colors[colorCount++] = topAO;
+                        _colors[colorCount++] = topAO; _colors[colorCount++] = topAO; _colors[colorCount++] = topAO;
 
                         // Diagonal 2
                         _positions[posCount++] = x; _positions[posCount++] = y; _positions[posCount++] = z + 1;
@@ -602,10 +632,10 @@ export class Chunk {
                         _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
                         _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
 
-                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
-                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
-                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
-                        _colors[colorCount++] = cR; _colors[colorCount++] = cG; _colors[colorCount++] = cB;
+                        _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO;
+                        _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO;
+                        _colors[colorCount++] = topAO; _colors[colorCount++] = topAO; _colors[colorCount++] = topAO;
+                        _colors[colorCount++] = topAO; _colors[colorCount++] = topAO; _colors[colorCount++] = topAO;
 
                         if (blockType === BLOCKS.TORCH) {
                             _glowCrossIndices[glowCrossIndexCount++] = vertexCount; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 1; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 2;
@@ -619,31 +649,78 @@ export class Chunk {
                             _crossIndices[crossIndexCount++] = vertexCount + 4; _crossIndices[crossIndexCount++] = vertexCount + 6; _crossIndices[crossIndexCount++] = vertexCount + 7;
                         }
                         vertexCount += 8;
-                    } // Missing brace added here
+                    }
 
                     let currentBlockType = blockType;
                     let currentProps = props;
 
                     if (props.isCross) {
                         if (props.isWaterlogged) {
-                            currentBlockType = window.BLOCKS.WATER;
-                            currentProps = getBlockProperties(window.BLOCKS.WATER);
+                            const seaLvl = (window.worldGenParams && window.worldGenParams.seaLevel !== undefined) ? window.worldGenParams.seaLevel : 62;
+                            const aboveType = (y < CHUNK_HEIGHT - 1) ? this.getBlock(x, y + 1, z) : getBlockOptimized(wx, y + 1, wz);
+                            const pAbove = getBlockProperties(aboveType);
+                            const isSubmerged = (y <= seaLvl) || (pAbove && (pAbove.isLiquid || pAbove.isWaterlogged));
+                            if (isSubmerged) {
+                                currentBlockType = window.BLOCKS.WATER;
+                                currentProps = getBlockProperties(window.BLOCKS.WATER);
+                            } else {
+                                continue;
+                            }
                         } else {
                             continue;
                         }
                     }
 
-                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME) {
+                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || props.isLantern) {
                         const uvTop = atlas.getUV(blockType, 'top');
                         const uvSide = atlas.getUV(blockType, 'side');
                         const uvBottom = atlas.getUV(blockType, 'bottom');
                         const curData = this.data ? this.data[(y * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x] : 0;
 
-                        if (blockType === BLOCKS.STONECUTTER) {
+                        if (props.isLantern) {
+                            const aboveBlock = (y < CHUNK_HEIGHT - 1) ? this.getBlock(x, y + 1, z) : getBlockOptimized(wx, y + 1, wz);
+                            const pAbove = getBlockProperties(aboveBlock);
+                            const isHanging = pAbove.solid || pAbove.isFence || pAbove.isWall;
+
+                            if (isHanging) {
+                                // Hanging lantern: shifts down slightly with a top connecting chain loop
+                                // Body: 6x7x6 (pixels: 5 to 11 in X/Z, 1 to 8 in Y)
+                                pushCustomBox(x + 5/16, y + 1/16, z + 5/16, x + 11/16, y + 8/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                                // Cap: 4x2x4 (pixels: 6 to 10 in X/Z, 8 to 10 in Y)
+                                pushCustomBox(x + 6/16, y + 8/16, z + 6/16, x + 10/16, y + 10/16, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                                // Chain hanger up to ceiling: 2x6x2 (pixels: 7 to 9 in X/Z, 10 to 16 in Y)
+                                pushCustomBox(x + 7/16, y + 10/16, z + 7/16, x + 9/16, y + 1.0, z + 9/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                            } else {
+                                // Standing lantern on ground:
+                                // Body: 6x7x6 (pixels: 5 to 11 in X/Z, 0 to 7 in Y)
+                                pushCustomBox(x + 5/16, y, z + 5/16, x + 11/16, y + 7/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                                // Cap: 4x2x4 (pixels: 6 to 10 in X/Z, 7 to 9 in Y)
+                                pushCustomBox(x + 6/16, y + 7/16, z + 6/16, x + 10/16, y + 9/16, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                                // Ring handle: 2x2x2 (pixels: 7 to 9 in X/Z, 9 to 11 in Y)
+                                pushCustomBox(x + 7/16, y + 9/16, z + 7/16, x + 9/16, y + 11/16, z + 9/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                            }
+                        } else if (blockType === BLOCKS.STONECUTTER) {
                             // 9/16 tall stone base (0.5625)
                             pushCustomBox(x, y, z, x + 1, y + 9/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
-                            // Centered circular saw blade (metallic)
-                            pushCustomBox(x + 2/16, y + 9/16, z + 7.5/16, x + 14/16, y + 15/16, z + 8.5/16, x, y, z, uvSide, uvSide, uvSide, 0, 1.0);
+                            // Centered circular saw blade (authentic saw texture)
+                            const uvSaw = atlas.getUV(blockType, 'front');
+                            const isXAxis = (curData & 1) === 1;
+                            if (isXAxis) {
+                                pushCustomBox(x + 7.5/16, y + 9/16, z + 2/16, x + 8.5/16, y + 15/16, z + 14/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0);
+                            } else {
+                                pushCustomBox(x + 2/16, y + 9/16, z + 7.5/16, x + 14/16, y + 15/16, z + 8.5/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0);
+                            }
+                        } else if (blockType === BLOCKS.PORTAL_FRAME) {
+                            // 9/16 tall stone base (0.5625)
+                            pushCustomBox(x, y, z, x + 1, y + 9/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
+                            // Centered circular saw blade (authentic saw texture)
+                            const uvSaw = atlas.getUV(blockType, 'front');
+                            const isXAxis = (curData & 1) === 1;
+                            if (isXAxis) {
+                                pushCustomBox(x + 7.5/16, y + 9/16, z + 2/16, x + 8.5/16, y + 15/16, z + 14/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0);
+                            } else {
+                                pushCustomBox(x + 2/16, y + 9/16, z + 7.5/16, x + 14/16, y + 15/16, z + 8.5/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0);
+                            }
                         } else if (blockType === BLOCKS.PORTAL_FRAME) {
                             // 13/16 tall frame (0.8125)
                             pushCustomBox(x, y, z, x + 1, y + 13/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
@@ -665,28 +742,30 @@ export class Chunk {
                             else sx1 = x + 0.5;
                             pushCustomBox(sx0, y + 0.5, sz0, sx1, y + 1.0, sz1, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
 
-                            // Connecting stairs wrap logic
-                            const nN = getBlockOptimized(wx, y, wz - 1);
-                            const nS = getBlockOptimized(wx, y, wz + 1);
-                            const nW = getBlockOptimized(wx - 1, y, wz);
-                            const nE = getBlockOptimized(wx + 1, y, wz);
-                            const pN = getBlockProperties(nN);
-                            const pS = getBlockProperties(nS);
-                            const pW = getBlockProperties(nW);
-                            const pE = getBlockProperties(nE);
+                            // Connecting stairs wrap logic (only for perpendicular stairs forming an authentic L-corner)
+                            const getStairFacing = (bx, by, bz) => {
+                                const b = getBlockOptimized(bx, by, bz);
+                                if (!getBlockProperties(b).isStair) return -1;
+                                return getDataOptimized(bx, by, bz) & 3;
+                            };
 
-                            if (facing === 0) {
-                                if (pE.isStair) pushCustomBox(x + 0.5, y + 0.5, z + 0.5, x + 1.0, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
-                                if (pW.isStair) pushCustomBox(x, y + 0.5, z + 0.5, x + 0.5, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
-                            } else if (facing === 2) {
-                                if (pE.isStair) pushCustomBox(x + 0.5, y + 0.5, z, x + 1.0, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
-                                if (pW.isStair) pushCustomBox(x, y + 0.5, z, x + 0.5, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
-                            } else if (facing === 1) {
-                                if (pN.isStair) pushCustomBox(x, y + 0.5, z, x + 0.5, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
-                                if (pS.isStair) pushCustomBox(x, y + 0.5, z + 0.5, x + 0.5, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
-                            } else {
-                                if (pN.isStair) pushCustomBox(x + 0.5, y + 0.5, z, x + 1.0, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
-                                if (pS.isStair) pushCustomBox(x + 0.5, y + 0.5, z + 0.5, x + 1.0, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                            const fN = getStairFacing(wx, y, wz - 1);
+                            const fS = getStairFacing(wx, y, wz + 1);
+                            const fW = getStairFacing(wx - 1, y, wz);
+                            const fE = getStairFacing(wx + 1, y, wz);
+
+                            if (facing === 0) { // High at North (-Z), Low at South (+Z)
+                                if (fS === 1 && fW !== 0) pushCustomBox(x + 0.5, y + 0.5, z + 0.5, x + 1.0, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                                if (fS === 3 && fE !== 0) pushCustomBox(x, y + 0.5, z + 0.5, x + 0.5, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                            } else if (facing === 2) { // High at South (+Z), Low at North (-Z)
+                                if (fN === 1 && fW !== 2) pushCustomBox(x + 0.5, y + 0.5, z, x + 1.0, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                                if (fN === 3 && fE !== 2) pushCustomBox(x, y + 0.5, z, x + 0.5, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                            } else if (facing === 1) { // High at East (+X), Low at West (-X)
+                                if (fW === 0 && fS !== 1) pushCustomBox(x, y + 0.5, z, x + 0.5, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                                if (fW === 2 && fN !== 1) pushCustomBox(x, y + 0.5, z + 0.5, x + 0.5, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                            } else if (facing === 3) { // High at West (-X), Low at East (+X)
+                                if (fE === 0 && fS !== 3) pushCustomBox(x + 0.5, y + 0.5, z, x + 1.0, y + 1.0, z + 0.5, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
+                                if (fE === 2 && fN !== 3) pushCustomBox(x + 0.5, y + 0.5, z + 0.5, x + 1.0, y + 1.0, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 2, 1.0);
                             }
                         } else if (props.isFence) {
                             // Center post
@@ -774,7 +853,7 @@ export class Chunk {
                         let shouldRenderFace = false;
                         if (currentBlockType === BLOCKS.CACTUS) {
                             if (face.name === 'top' || face.name === 'bottom') {
-                                shouldRenderFace = (effectiveNeighborType === BLOCKS.AIR || effectiveNeighborProps.transparent);
+                                shouldRenderFace = (effectiveNeighborType !== BLOCKS.CACTUS && (effectiveNeighborType === BLOCKS.AIR || effectiveNeighborProps.transparent));
                             } else {
                                 // Cactus sides are inset 1/16th, visible unless touching another cactus
                                 shouldRenderFace = (effectiveNeighborType !== BLOCKS.CACTUS);
@@ -903,6 +982,16 @@ export class Chunk {
                                 _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = v1;
                                 _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = v0;
                                 _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = v0;
+                            } else if (currentBlockType === BLOCKS.CACTUS) {
+                                const isTopBot = (face.name === 'top' || face.name === 'bottom');
+                                const u0 = uvInfo.u + uvInfo.uSize * 0.0625;
+                                const u1 = uvInfo.u + uvInfo.uSize * 0.9375;
+                                const v0 = isTopBot ? (uvInfo.v + uvInfo.vSize * 0.0625) : uvInfo.v;
+                                const v1 = isTopBot ? (uvInfo.v + uvInfo.vSize * 0.9375) : (uvInfo.v + uvInfo.vSize);
+                                _uvs[uvCount++] = u0; _uvs[uvCount++] = v0;
+                                _uvs[uvCount++] = u1; _uvs[uvCount++] = v0;
+                                _uvs[uvCount++] = u1; _uvs[uvCount++] = v1;
+                                _uvs[uvCount++] = u0; _uvs[uvCount++] = v1;
                             } else {
                                 _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v; // bottom left
                                 _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v; // bottom right
@@ -912,6 +1001,14 @@ export class Chunk {
 
                             // Calculate ambient occlusion
                             const aoColor = calculateVertexAO(wx, y, wz, face, getBlockOptimized, currentBlockType);
+
+                            // Authentic Minecraft directional face shading multipliers:
+                            // Top (+Y): 1.0, Bottom (-Y): 0.5, Z-sides (South/North): 0.8, X-sides (East/West): 0.6
+                            let faceShade = 1.0;
+                            if (face.dir[1] > 0) faceShade = 1.0;
+                            else if (face.dir[1] < 0) faceShade = 0.5;
+                            else if (face.dir[2] !== 0) faceShade = 0.8;
+                            else if (face.dir[0] !== 0) faceShade = 0.6;
                             
                             let waterFade = 0;
                             if (effectiveNeighborType === BLOCKS.WATER || effectiveNeighborType === BLOCKS.SWAMP_WATER || neighborType === BLOCKS.WATER || neighborType === BLOCKS.SWAMP_WATER) {
@@ -920,7 +1017,7 @@ export class Chunk {
                             }
 
                             for (let i = 0; i < 4; i++) {
-                                let c = aoColor[i];
+                                let c = (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) ? 1.0 : (aoColor[i] * faceShade);
                                 // Water: pure white vertex color — biome tint applied via matWater.color so MC texture shows
                                 if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) {
                                     _colors[colorCount++] = 1.0;
@@ -1122,8 +1219,10 @@ function _vertexAO(wx, wy, wz, vx, vy, vz, face, getNeighborBlock) {
     const side2 = _isSolid(wx, wy, wz, face.dir[0] + dx2, face.dir[1] + dy2, face.dir[2] + dz2, getNeighborBlock);
     const corner = _isSolid(wx, wy, wz, face.dir[0] + dx1 + dx2, face.dir[1] + dy1 + dy2, face.dir[2] + dz1 + dz2, getNeighborBlock);
 
-    if (side1 && side2) return 0.2;
-    return 1.0 - (side1 + side2 + corner) * 0.25;
+    if (side1 && side2) return 0.45;
+    const count = (side1 ? 1 : 0) + (side2 ? 1 : 0) + (corner ? 1 : 0);
+    const aoValues = [1.0, 0.80, 0.62, 0.45];
+    return aoValues[count];
 }
 
 function calculateVertexAO(wx, wy, wz, face, getNeighborBlock, blockType) {
@@ -1175,94 +1274,73 @@ export class World {
         this.projScreenMatrix = new THREE.Matrix4();
         
         // Initialize shared materials to drastically reduce GC and WebGL overhead
-        // MeshPhongMaterial gives per-pixel shading + specular highlights vs flat Lambert
-        const matOpaque = new THREE.MeshPhongMaterial({
+        // MeshLambertMaterial gives classic Minecraft Gouraud diffuse shading and torch lighting
+        const matOpaque = new THREE.MeshLambertMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
-            side: THREE.FrontSide, // Massive performance gain for opaque blocks
-            shininess: 0,
-            specular: new THREE.Color(0x000000)
+            side: THREE.FrontSide // Massive performance gain for opaque blocks
         });
-        const matCross = new THREE.MeshPhongMaterial({
+        const matCross = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
-            transparent: false,
+            transparent: true,
             alphaTest: 0.5,
-            side: THREE.DoubleSide,
-            shininess: 0
+            side: THREE.DoubleSide
         });
-        const matGlowCross = new THREE.MeshPhongMaterial({
+        const matGlowCross = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
-            transparent: false,
+            transparent: true,
             alphaTest: 0.5,
-            side: THREE.DoubleSide,
-            emissive: new THREE.Color(0xffffff),
-            emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 1.5,
-            shininess: 0
+            side: THREE.DoubleSide
         });
-        const matWater = new THREE.MeshPhongMaterial({
+        const matWater = new THREE.MeshLambertMaterial({
             map: textureAtlas.texture,
             color: new THREE.Color(0xffffff), // Authentic MC water texture colors (already colored blue in texture)
             vertexColors: true,
             transparent: true,
             opacity: 0.65, // Authentic translucent water
             depthWrite: false, // Prevents z-sorting fighting and clipping underwater terrain
-            side: THREE.DoubleSide,
-            shininess: 0, // Eliminate harsh blocky quad specular glare grid
-            specular: new THREE.Color(0x000000)
+            side: THREE.DoubleSide
         });
-        const matTransparent = new THREE.MeshPhongMaterial({
+        const matTransparent = new THREE.MeshLambertMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
-            alphaTest: 0.5,
-            side: THREE.DoubleSide,
-            shininess: 0
+            alphaTest: 0.25,
+            side: THREE.DoubleSide
         });
-        const matGlowOpaque = new THREE.MeshPhongMaterial({
+        const matGlowOpaque = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
-            transparent: false,
-            side: THREE.FrontSide, // Massive performance gain for opaque blocks
-            emissive: new THREE.Color(0xffffff),
-            emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 2.0,
-            shininess: 0, specular: new THREE.Color(0x000000)
+            side: THREE.FrontSide // Massive performance gain for opaque blocks
         });
-        const matGlowTransparent = new THREE.MeshPhongMaterial({
+        const matGlowTransparent = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
             alphaTest: 0.1,
-            side: THREE.DoubleSide,
-            emissive: new THREE.Color(0xffffff),
-            emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 0.8,
-            shininess: 0
+            side: THREE.DoubleSide
         });
-        const matSlightGlowOpaque = new THREE.MeshPhongMaterial({
+        const matSlightGlowOpaque = new THREE.MeshLambertMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: false,
             side: THREE.FrontSide,
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 0.2,
-            shininess: 0, specular: new THREE.Color(0x000000)
+            emissiveIntensity: 0.2
         });
-        const matSlightGlowTransparent = new THREE.MeshPhongMaterial({
+        const matSlightGlowTransparent = new THREE.MeshLambertMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,
-            alphaTest: 0.5,
+            alphaTest: 0.25,
             side: THREE.DoubleSide,
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 0.2,
-            shininess: 0, specular: new THREE.Color(0x000000)
+            emissiveIntensity: 0.2
         });
         this.matWater = matWater;
         textureAtlas.matWater = matWater;
@@ -1282,8 +1360,13 @@ export class World {
         this.renderDistance = d;
         if (this.scene.fog) {
             const blocks = d * 16;
-            this.scene.fog.density = 1.0 / (blocks * 0.75);
-            this.scene.fog.baseDensity = this.scene.fog.density;
+            if (this.scene.fog.isFog) {
+                this.scene.fog.near = blocks * 0.65;
+                this.scene.fog.far = blocks * 0.98;
+            } else {
+                this.scene.fog.density = 1.0 / (blocks * 0.75);
+                this.scene.fog.baseDensity = this.scene.fog.density;
+            }
         }
     }
 
@@ -1389,9 +1472,20 @@ export class World {
         let needsBreak = false;
         const blockBelow = this.getBlock(x, y - 1, z);
         
-        // Plant-like blocks need dirt/grass below
-        if ([window.BLOCKS.TALL_GRASS, window.BLOCKS.FLOWER_RED, window.BLOCKS.FLOWER_YELLOW, window.BLOCKS.FERN, window.BLOCKS.MUSHROOM_RED, window.BLOCKS.MUSHROOM_BROWN].includes(type)) {
-            if (![window.BLOCKS.GRASS, window.BLOCKS.DIRT, window.BLOCKS.MYCELIUM, window.BLOCKS.CRIMSON_NYLIUM, window.BLOCKS.PODZOL].includes(blockBelow)) {
+        // Plant-like blocks need dirt/grass below (never snow, ice, or stone)
+        if ([
+            window.BLOCKS.TALL_GRASS, window.BLOCKS.FLOWER_RED, window.BLOCKS.FLOWER_YELLOW,
+            window.BLOCKS.FERN, window.BLOCKS.TALL_FERN, window.BLOCKS.TALL_FERN_TOP,
+            window.BLOCKS.BLUE_FLOWER, window.BLOCKS.WHITE_FLOWER, window.BLOCKS.PURPLE_FLOWER,
+            window.BLOCKS.PINK_PETALS, window.BLOCKS.MUSHROOM_RED, window.BLOCKS.MUSHROOM_BROWN
+        ].includes(type)) {
+            if (type === window.BLOCKS.TALL_FERN_TOP) {
+                if (blockBelow !== window.BLOCKS.TALL_FERN) needsBreak = true;
+            } else if (![
+                window.BLOCKS.GRASS, window.BLOCKS.DIRT, window.BLOCKS.MYCELIUM,
+                window.BLOCKS.CRIMSON_NYLIUM, window.BLOCKS.WARPED_NYLIUM, window.BLOCKS.PODZOL,
+                window.BLOCKS.MUD, window.BLOCKS.SWAMP_GRASS, window.BLOCKS.SAVANNA_GRASS
+            ].includes(blockBelow)) {
                 needsBreak = true;
             }
         }
@@ -1552,13 +1646,17 @@ export class World {
             }
 
             // Register bed placement/removal
+            const isBedFoot = (b) => {
+                const p = getBlockProperties(b);
+                return p.isBed && !p.isBedHead;
+            };
             const isBedBlock = (b) => {
                 const p = getBlockProperties(b);
                 return p.isBed || p.isBedHead;
             };
             if (isBedBlock(oldType) && !isBedBlock(type)) {
                 if (this.onBedRemoved) this.onBedRemoved(wx, wy, wz);
-            } else if (!isBedBlock(oldType) && isBedBlock(type)) {
+            } else if (!isBedFoot(oldType) && isBedFoot(type)) {
                 if (this.onBedPlaced) this.onBedPlaced(wx, wy, wz, type);
             }
 
@@ -2131,7 +2229,7 @@ export class World {
             const props = getBlockProperties(blockType);
 
             const isLiquidHit = hitLiquids && props.isLiquid;
-            const isSolidOrInteractable = props.solid || props.isCross || blockType === BLOCKS.PORTAL || blockType === BLOCKS.BOSS_SPAWNER || (window.BLOCKS && (blockType === window.BLOCKS.AETHER_PORTAL || blockType === window.BLOCKS.CAVERN_PORTAL || blockType === window.BLOCKS.HIGHLANDS_PORTAL));
+            const isSolidOrInteractable = props.solid || props.isCross || blockType === BLOCKS.FIRE || (window.BLOCKS && (blockType === window.BLOCKS.FIRE || blockType === window.BLOCKS.SOUL_FIRE)) || blockType === BLOCKS.PORTAL || blockType === BLOCKS.BOSS_SPAWNER || (window.BLOCKS && (blockType === window.BLOCKS.AETHER_PORTAL || blockType === window.BLOCKS.CAVERN_PORTAL || blockType === window.BLOCKS.HIGHLANDS_PORTAL));
             if (blockType !== BLOCKS.AIR && (isLiquidHit || (!props.isLiquid && isSolidOrInteractable))) {
                 const hitNormal = new THREE.Vector3(0, 0, 0);
                 if (steppedIndex === 0) hitNormal.x = -stepX;
@@ -2142,6 +2240,7 @@ export class World {
                     hit: true,
                     position: origin.clone().add(direction.clone().multiplyScalar(t)),
                     normal: hitNormal,
+                    face: hitNormal,
                     blockPos: { x: ix, y: iy, z: iz },
                     blockType: blockType
                 };
@@ -2211,6 +2310,26 @@ export class World {
                                     if (py < y + 0.5 && py + entityHeight > y) return true;
                                     continue;
                                 }
+                                if (bProps.isStair) {
+                                    // Lower step (0 to 0.5) is across full block
+                                    if (py < y + 0.5 && py + entityHeight > y) return true;
+                                    // Upper step (0.5 to 1.0) is only on the high half
+                                    if (py < y + 1.0 && py + entityHeight > y + 0.5) {
+                                        const sFacing = (this.getData ? this.getData(x, y, z) : 0) & 3;
+                                        // 0: North (-Z), 1: East (+X), 2: South (+Z), 3: West (-X)
+                                        let sMinX = x, sMaxX = x + 1, sMinZ = z, sMaxZ = z + 1;
+                                        if (sFacing === 0) sMaxZ = z + 0.5;
+                                        else if (sFacing === 1) sMinX = x + 0.5;
+                                        else if (sFacing === 2) sMinZ = z + 0.5;
+                                        else sMaxX = x + 0.5;
+
+                                        // Player AABB is [px - hw, px + hw] x [pz - hw, pz + hw]
+                                        if (px + hw > sMinX && px - hw < sMaxX && pz + hw > sMinZ && pz - hw < sMaxZ) {
+                                            return true;
+                                        }
+                                    }
+                                    continue;
+                                }
                                 if (bProps.isBed || bProps.isBedHead || bProps.isStonecutter || block === window.BLOCKS.STONECUTTER) {
                                     if (py < y + 0.5625 && py + entityHeight > y) return true;
                                     continue;
@@ -2219,7 +2338,31 @@ export class World {
                                     if (py < y + 0.8125 && py + entityHeight > y) return true;
                                     continue;
                                 }
-                                if (bProps.isFence || bProps.isWall || bProps.isFenceGate) {
+                                if (bProps.isFence || bProps.isWall) {
+                                    if (py < y + 1.5 && py + entityHeight > y) {
+                                        // Authentic Minecraft fence collision: central post [x+0.375, x+0.625] x [z+0.375, z+0.625] plus connected arms
+                                        const pL = px - hw, pR = px + hw, pN = pz - hw, pF = pz + hw;
+                                        if (pR > x + 0.375 && pL < x + 0.625 && pF > z + 0.375 && pN < z + 0.625) return true;
+
+                                        const canConn = (bx, bz) => {
+                                            const p = getBlockProperties(this.getBlock(bx, y, bz));
+                                            return p.solid || p.isFence || p.isWall;
+                                        };
+                                        // -X arm
+                                        if (canConn(x - 1, z) && pR > x && pL < x + 0.375 && pF > z + 0.375 && pN < z + 0.625) return true;
+                                        // +X arm
+                                        if (canConn(x + 1, z) && pR > x + 0.625 && pL < x + 1.0 && pF > z + 0.375 && pN < z + 0.625) return true;
+                                        // -Z arm
+                                        if (canConn(x, z - 1) && pR > x + 0.375 && pL < x + 0.625 && pF > z && pN < z + 0.375) return true;
+                                        // +Z arm
+                                        if (canConn(x, z + 1) && pR > x + 0.375 && pL < x + 0.625 && pF > z + 0.625 && pN < z + 1.0) return true;
+                                    }
+                                    continue;
+                                }
+                                if (bProps.isFenceGate) {
+                                    if (this.isGateOpen && this.isGateOpen(x, y, z)) {
+                                        continue; // Open fence gate: no collision, walk freely through
+                                    }
                                     if (py < y + 1.5 && py + entityHeight > y) return true;
                                     continue;
                                 }
@@ -2265,6 +2408,15 @@ export class World {
                                     if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
                                     let surfH = 1.0;
                                     if (bProps.isSlab) surfH = 0.5;
+                                    else if (bProps.isStair) {
+                                        const sFacing = (this.getData ? this.getData(x, y, z) : 0) & 3;
+                                        let isHigh = false;
+                                        if (sFacing === 0 && (position.z - Math.floor(position.z)) < 0.5) isHigh = true;
+                                        else if (sFacing === 1 && (position.x - Math.floor(position.x)) >= 0.5) isHigh = true;
+                                        else if (sFacing === 2 && (position.z - Math.floor(position.z)) >= 0.5) isHigh = true;
+                                        else if (sFacing === 3 && (position.x - Math.floor(position.x)) < 0.5) isHigh = true;
+                                        surfH = isHigh ? 1.0 : 0.5;
+                                    }
                                     else if (bProps.isBed || bProps.isBedHead || bProps.isStonecutter || block === window.BLOCKS.STONECUTTER) surfH = 0.5625;
                                     else if (block === window.BLOCKS.PORTAL_FRAME) surfH = 0.8125;
                                     else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) surfH = 1.5;
@@ -2308,8 +2460,8 @@ export class World {
 
         // X-axis
         if (checkCollision(targetX, targetY, position.z)) {
-            // Auto step-up for slabs and stairs (0.5 blocks)
-            if (grounded && !checkCollision(targetX, targetY + 0.51, position.z)) {
+            // Auto step-up for slabs and stairs (0.6 blocks like Minecraft)
+            if (grounded && !checkCollision(targetX, targetY + 0.6, position.z)) {
                 targetY += 0.5;
             } else {
                 velocity.x = 0;
@@ -2319,8 +2471,8 @@ export class World {
 
         // Z-axis
         if (checkCollision(targetX, targetY, targetZ)) {
-            // Auto step-up for slabs and stairs (0.5 blocks)
-            if (grounded && !checkCollision(targetX, targetY + 0.51, targetZ)) {
+            // Auto step-up for slabs and stairs (0.6 blocks like Minecraft)
+            if (grounded && !checkCollision(targetX, targetY + 0.6, targetZ)) {
                 targetY += 0.5;
             } else {
                 velocity.z = 0;

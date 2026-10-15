@@ -302,11 +302,33 @@ export const BLOCKS = {
     BRICK_WALL: 318,
     NETHER_BRICK_WALL: 319,
     POLISHED_BLACKSTONE_BRICKS: 320,
-    CHISELED_POLISHED_BLACKSTONE: 321
+    CHISELED_POLISHED_BLACKSTONE: 321,
+
+    // Lanterns
+    LANTERN: 322,
+    SOUL_LANTERN: 323,
+
+    // Packed & Blue Ice
+    PACKED_ICE: 324,
+    BLUE_ICE: 325,
+
+    // The End Dimension Blocks
+    END_PORTAL_FRAME_EYE: 326,
+    END_PORTAL: 327,
+    END_STONE: 328,
+    DRAGON_EGG: 329
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.END_PORTAL_FRAME_EYE]:  { name: 'End Portal Frame',      health: 20, transparent: true, emissive: 0.6, solid: true, drops: null },
+    [BLOCKS.END_PORTAL]:            { name: 'End Portal',            health: 0, transparent: true, emissive: 1.0, solid: false, drops: null, isEndPortal: true },
+    [BLOCKS.END_STONE]:             { name: 'End Stone',             health: 15, transparent: false, emissive: 0, solid: true, drops: BLOCKS.END_STONE },
+    [BLOCKS.DRAGON_EGG]:            { name: 'Dragon Egg',            health: 15, transparent: true, emissive: 0.4, solid: true, drops: BLOCKS.DRAGON_EGG },
+    [BLOCKS.PACKED_ICE]:            { name: 'Packed Ice',            health: 4, transparent: false, emissive: 0, solid: true, drops: BLOCKS.PACKED_ICE },
+    [BLOCKS.BLUE_ICE]:              { name: 'Blue Ice',              health: 5, transparent: false, emissive: 0.05, solid: true, drops: BLOCKS.BLUE_ICE },
+    [BLOCKS.LANTERN]:               { name: 'Lantern',               health: 4, transparent: true, emissive: 1.0, solid: false, drops: BLOCKS.LANTERN, isLantern: true, lightLevel: 15 },
+    [BLOCKS.SOUL_LANTERN]:          { name: 'Soul Lantern',          health: 4, transparent: true, emissive: 0.8, solid: false, drops: BLOCKS.SOUL_LANTERN, isLantern: true, isSoulLantern: true, lightLevel: 10 },
     [BLOCKS.SPRUCE_FENCE]:          { name: 'Spruce Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.SPRUCE_FENCE, flammable: true, isFence: true },
     [BLOCKS.JUNGLE_FENCE]:          { name: 'Jungle Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.JUNGLE_FENCE, flammable: true, isFence: true },
     [BLOCKS.ACACIA_FENCE]:          { name: 'Acacia Fence',          health: 4, transparent: true, emissive: 0, solid: true, drops: BLOCKS.ACACIA_FENCE, flammable: true, isFence: true },
@@ -526,9 +548,9 @@ const BLOCK_PROPS = {
     [BLOCKS.BUBBLE_CORAL]:  { name: 'Bubble Coral',   health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.FIRE_CORAL]:    { name: 'Fire Coral',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.HORN_CORAL]:    { name: 'Horn Coral',     health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
-    [BLOCKS.SEASHELL_1]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
-    [BLOCKS.SEASHELL_2]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
-    [BLOCKS.SEASHELL_3]:    { name: 'Seashell',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
+    [BLOCKS.SEASHELL_1]:    { name: 'Scallop Shell',  health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: false, drops: BLOCKS.SEASHELL_1 },
+    [BLOCKS.SEASHELL_2]:    { name: 'Nautilus Shell', health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: false, drops: BLOCKS.SEASHELL_2 },
+    [BLOCKS.SEASHELL_3]:    { name: 'Conch Shell',    health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: false, drops: BLOCKS.SEASHELL_3 },
     [BLOCKS.LILY_PAD]:      { name: 'Lily Pad',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
     [BLOCKS.ALGAE]:         { name: 'Algae',          health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.PINE_WOOD]:     { name: 'Pine Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
@@ -1232,6 +1254,27 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillStyle = 'rgba(200,230,255,0.3)';
             ctx.fillRect((rng() * 12) | 0, 0, 2, TEX_SIZE);
             ctx.fillRect(0, (rng() * 12) | 0, TEX_SIZE, 2);
+            break;
+        case BLOCKS.PACKED_ICE:
+            fillBase(ctx, 145, 195, 235);
+            addNoise(ctx, rng, 8);
+            ctx.fillStyle = 'rgba(120,175,220,0.6)';
+            for (let i = 0; i < 4; i++) {
+                ctx.fillRect((rng() * 13) | 0, (rng() * 13) | 0, 3, 2);
+            }
+            ctx.fillStyle = 'rgba(180,225,255,0.5)';
+            ctx.fillRect((rng() * 14) | 0, (rng() * 14) | 0, 2, 2);
+            break;
+        case BLOCKS.BLUE_ICE:
+            fillBase(ctx, 95, 155, 245);
+            addNoise(ctx, rng, 10);
+            ctx.fillStyle = 'rgba(140,200,255,0.6)';
+            for (let i = 0; i < 5; i++) {
+                ctx.fillRect((rng() * 13) | 0, (rng() * 13) | 0, 3, 2);
+            }
+            ctx.fillStyle = 'rgba(60,115,210,0.7)';
+            ctx.fillRect(2, 4, 12, 1);
+            ctx.fillRect(3, 10, 10, 1);
             break;
         case BLOCKS.LAVA:
             fillBase(ctx, 200, 60, 10);
@@ -2100,27 +2143,112 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
         case BLOCKS.SEASHELL_1:
-        case BLOCKS.SEASHELL_2:
-        case BLOCKS.SEASHELL_3:
+            // Authentic Minecraft-style Pearlescent Scallop / Clam Shell (resting on ground, y: 10 to 15)
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            let shColor = blockType === BLOCKS.SEASHELL_1 ? 'rgb(255, 230, 200)' : (blockType === BLOCKS.SEASHELL_2 ? 'rgb(255, 180, 180)' : 'rgb(200, 220, 255)');
-            ctx.fillStyle = shColor;
-            
-            // Draw a small shell shape at the bottom
-            if (blockType === BLOCKS.SEASHELL_1) {
-                // Spiral shell
-                ctx.fillRect(6, 12, 4, 4);
-                ctx.fillRect(7, 10, 2, 2);
-            } else if (blockType === BLOCKS.SEASHELL_2) {
-                // Clam shell
-                ctx.fillRect(5, 13, 6, 3);
-                ctx.fillRect(6, 11, 4, 2);
-            } else {
-                // Starfish / weird shell
-                ctx.fillRect(6, 12, 4, 4);
-                ctx.fillRect(4, 13, 2, 2);
-                ctx.fillRect(10, 13, 2, 2);
-            }
+            // Outer shadow / outline base
+            ctx.fillStyle = '#7a5d3f';
+            ctx.fillRect(5, 15, 6, 1);
+            ctx.fillRect(4, 14, 8, 1);
+            ctx.fillRect(3, 13, 10, 1);
+            ctx.fillRect(3, 12, 10, 1);
+            ctx.fillRect(4, 11, 8, 1);
+            // Pearlescent cream shell body
+            ctx.fillStyle = '#f5ecd7';
+            ctx.fillRect(5, 14, 6, 1);
+            ctx.fillRect(4, 13, 8, 1);
+            ctx.fillRect(4, 12, 8, 1);
+            ctx.fillRect(5, 11, 6, 1);
+            // Fluted vertical ribs & highlights
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(5, 12, 1, 2);
+            ctx.fillRect(7, 11, 1, 3);
+            ctx.fillRect(8, 11, 1, 3);
+            ctx.fillRect(10, 12, 1, 2);
+            // Subtle amber hinge at bottom center
+            ctx.fillStyle = '#c49a6c';
+            ctx.fillRect(7, 14, 2, 1);
+            // Warm peach / shadow between ribs
+            ctx.fillStyle = '#d9b991';
+            ctx.fillRect(6, 12, 1, 3);
+            ctx.fillRect(9, 12, 1, 3);
+            ctx.fillRect(4, 13, 1, 1);
+            ctx.fillRect(11, 13, 1, 1);
+            break;
+
+        case BLOCKS.SEASHELL_2:
+            // Authentic Minecraft-style Coiled Nautilus Shell (resting on ground, y: 9 to 15)
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            // Dark base curve & silhouette
+            ctx.fillStyle = '#4a2f18';
+            ctx.fillRect(5, 15, 6, 1);
+            ctx.fillRect(4, 14, 8, 1);
+            ctx.fillRect(3, 13, 9, 1);
+            ctx.fillRect(3, 12, 9, 1);
+            ctx.fillRect(4, 11, 8, 1);
+            ctx.fillRect(5, 10, 6, 1);
+            // Porcelain ivory shell body
+            ctx.fillStyle = '#faf6ee';
+            ctx.fillRect(5, 14, 6, 1);
+            ctx.fillRect(4, 13, 7, 1);
+            ctx.fillRect(4, 12, 7, 1);
+            ctx.fillRect(5, 11, 6, 1);
+            ctx.fillRect(6, 10, 4, 1);
+            // Warm terracotta / coral chevron tiger-stripes
+            ctx.fillStyle = '#c85a32';
+            ctx.fillRect(6, 14, 1, 1);
+            ctx.fillRect(8, 14, 1, 1);
+            ctx.fillRect(5, 13, 1, 1);
+            ctx.fillRect(7, 13, 1, 1);
+            ctx.fillRect(9, 13, 1, 1);
+            ctx.fillRect(6, 12, 1, 1);
+            ctx.fillRect(8, 12, 1, 1);
+            ctx.fillRect(7, 11, 1, 1);
+            ctx.fillRect(9, 11, 1, 1);
+            // Inner spiral whorl shadow
+            ctx.fillStyle = '#3a2010';
+            ctx.fillRect(4, 12, 1, 2);
+            ctx.fillRect(5, 12, 1, 1);
+            // Top glistening pearl highlight
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(6, 10, 2, 1);
+            ctx.fillRect(5, 11, 1, 1);
+            break;
+
+        case BLOCKS.SEASHELL_3:
+            // Authentic Minecraft-style Sunset Conch Shell (resting on ground, y: 9 to 15)
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            // Silhouette & shadow
+            ctx.fillStyle = '#5c3a21';
+            ctx.fillRect(4, 15, 8, 1);
+            ctx.fillRect(3, 14, 10, 1);
+            ctx.fillRect(4, 13, 9, 1);
+            ctx.fillRect(5, 12, 7, 1);
+            ctx.fillRect(6, 11, 5, 1);
+            ctx.fillRect(7, 10, 3, 1);
+            // Sandy tan spiral shell exterior
+            ctx.fillStyle = '#e8cca0';
+            ctx.fillRect(4, 14, 8, 1);
+            ctx.fillRect(4, 13, 8, 1);
+            ctx.fillRect(5, 12, 6, 1);
+            ctx.fillRect(6, 11, 4, 1);
+            ctx.fillRect(7, 10, 2, 1);
+            // Sunset rosy pink aperture opening on right side
+            ctx.fillStyle = '#f87171';
+            ctx.fillRect(10, 14, 2, 1);
+            ctx.fillRect(10, 13, 2, 1);
+            ctx.fillStyle = '#fda4af';
+            ctx.fillRect(11, 13, 1, 1);
+            ctx.fillRect(10, 12, 1, 1);
+            // Deep burgundy aperture shadow
+            ctx.fillStyle = '#7f1d1d';
+            ctx.fillRect(9, 13, 1, 2);
+            // Golden spire highlights & whorl ridges
+            ctx.fillStyle = '#fffbeb';
+            ctx.fillRect(5, 14, 1, 1);
+            ctx.fillRect(5, 13, 1, 1);
+            ctx.fillRect(6, 12, 1, 1);
+            ctx.fillRect(7, 11, 1, 1);
+            ctx.fillRect(7, 10, 1, 1);
             break;
         case BLOCKS.LILY_PAD:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
@@ -2675,29 +2803,37 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
 
         case BLOCKS.RUBY_ORE: {
-            fillBase(ctx, 110, 110, 110);
-            addNoise(ctx, rng, 20);
-            const clusters = [[3, 3], [10, 2], [5, 9], [11, 10]];
-            for (const [cx, cy] of clusters) {
-                ctx.fillStyle = '#4a0014'; ctx.fillRect(cx - 1, cy - 1, 4, 4);
-                ctx.fillStyle = '#9b0032'; ctx.fillRect(cx, cy, 3, 3);
-                ctx.fillStyle = '#e0115f'; ctx.fillRect(cx, cy, 2, 2);
-                ctx.fillStyle = '#ff6088'; ctx.fillRect(cx, cy, 1, 1);
-                ctx.fillStyle = '#ffffff'; ctx.fillRect(cx + 1, cy, 1, 1);
+            fillBase(ctx, 127, 127, 127);
+            addNoise(ctx, rng, 18);
+            const flecks = [
+                [4, 2], [5, 2], [11, 2], [12, 2], [4, 3], [7, 3], [8, 3], [9, 3], [12, 3], [8, 4],
+                [5, 5], [6, 5], [10, 5], [11, 5], [3, 6], [4, 6], [5, 6], [6, 6], [7, 6], [8, 6], [10, 6], [11, 6],
+                [4, 7], [6, 7], [7, 7], [11, 7], [1, 8], [2, 8], [3, 8], [8, 8], [9, 8], [1, 9], [2, 9], [7, 9], [8, 9], [9, 9], [10, 9], [11, 9],
+                [4, 10], [8, 10], [9, 10], [11, 11], [12, 11], [8, 12], [9, 12], [10, 12], [11, 12], [12, 12], [13, 12],
+                [2, 13], [3, 13], [4, 13], [9, 13], [10, 13], [11, 13], [12, 13], [3, 14], [10, 14]
+            ];
+            for (const [fx, fy] of flecks) {
+                const r = rng();
+                ctx.fillStyle = (r < 0.25) ? '#730c1e' : (r < 0.65 ? '#da1e3c' : (r < 0.88 ? '#ff5f7d' : '#ffd0dc'));
+                ctx.fillRect(fx, fy, 1, 1);
             }
             break;
         }
 
         case BLOCKS.SAPPHIRE_ORE: {
-            fillBase(ctx, 110, 110, 110);
-            addNoise(ctx, rng, 20);
-            const clusters = [[2, 4], [9, 3], [4, 10], [11, 9]];
-            for (const [cx, cy] of clusters) {
-                ctx.fillStyle = '#081c52'; ctx.fillRect(cx - 1, cy - 1, 4, 4);
-                ctx.fillStyle = '#0e3a96'; ctx.fillRect(cx, cy, 3, 3);
-                ctx.fillStyle = '#2f80ed'; ctx.fillRect(cx, cy, 2, 2);
-                ctx.fillStyle = '#56ccf2'; ctx.fillRect(cx, cy, 1, 1);
-                ctx.fillStyle = '#ffffff'; ctx.fillRect(cx + 1, cy, 1, 1);
+            fillBase(ctx, 127, 127, 127);
+            addNoise(ctx, rng, 18);
+            const flecks = [
+                [4, 2], [5, 2], [11, 2], [12, 2], [4, 3], [7, 3], [8, 3], [9, 3], [12, 3], [8, 4],
+                [5, 5], [6, 5], [10, 5], [11, 5], [3, 6], [4, 6], [5, 6], [6, 6], [7, 6], [8, 6], [10, 6], [11, 6],
+                [4, 7], [6, 7], [7, 7], [11, 7], [1, 8], [2, 8], [3, 8], [8, 8], [9, 8], [1, 9], [2, 9], [7, 9], [8, 9], [9, 9], [10, 9], [11, 9],
+                [4, 10], [8, 10], [9, 10], [11, 11], [12, 11], [8, 12], [9, 12], [10, 12], [11, 12], [12, 12], [13, 12],
+                [2, 13], [3, 13], [4, 13], [9, 13], [10, 13], [11, 13], [12, 13], [3, 14], [10, 14]
+            ];
+            for (const [fx, fy] of flecks) {
+                const r = rng();
+                ctx.fillStyle = (r < 0.25) ? '#0c235f' : (r < 0.65 ? '#2370e8' : (r < 0.88 ? '#5ab4f8' : '#d0ecff'));
+                ctx.fillRect(fx, fy, 1, 1);
             }
             break;
         }
@@ -2739,13 +2875,49 @@ function generateBlockTexture(ctx, blockType, face, rng) {
         }
 
         case BLOCKS.STONECUTTER: {
-            fillBase(ctx, 120, 120, 125);
-            addNoise(ctx, rng, 15);
-            ctx.fillStyle = '#9095a0';
-            ctx.fillRect(0, 10, 16, 6);
-            ctx.fillStyle = '#dcdfe5';
-            ctx.fillRect(6, 2, 4, 8);
-            ctx.fillRect(4, 4, 8, 4);
+            if (face === 'front') {
+                ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                ctx.fillStyle = '#dfe4ea';
+                ctx.beginPath();
+                ctx.arc(8, 8, 6.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#718093';
+                ctx.beginPath();
+                ctx.arc(8, 8, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#2f3640';
+                ctx.lineWidth = 1;
+                for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+                    ctx.beginPath();
+                    ctx.moveTo(8 + Math.cos(a) * 4, 8 + Math.sin(a) * 4);
+                    ctx.lineTo(8 + Math.cos(a) * 7, 8 + Math.sin(a) * 7);
+                    ctx.stroke();
+                }
+            } else {
+                fillBase(ctx, 120, 120, 125);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#9095a0';
+                ctx.fillRect(0, 10, 16, 6);
+                ctx.fillStyle = '#dcdfe5';
+                ctx.fillRect(6, 2, 4, 8);
+                ctx.fillRect(4, 4, 8, 4);
+            }
+            break;
+        }
+
+        case BLOCKS.LANTERN:
+        case BLOCKS.SOUL_LANTERN: {
+            const isSoul = blockType === BLOCKS.SOUL_LANTERN;
+            ctx.fillStyle = '#222326';
+            ctx.fillRect(0, 0, 16, 16);
+            ctx.fillStyle = '#3a3b40';
+            ctx.fillRect(1, 1, 14, 14);
+            ctx.fillStyle = isSoul ? '#00c3ff' : '#ff9900';
+            ctx.fillRect(4, 4, 8, 8);
+            ctx.fillStyle = isSoul ? '#b0f5ff' : '#fff3a8';
+            ctx.fillRect(5, 5, 6, 6);
+            ctx.fillStyle = '#1c1d20';
+            ctx.fillRect(7, 0, 2, 3);
             break;
         }
 
@@ -3176,6 +3348,34 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addPixels(ctx, rng, 'rgba(255, 200, 80, 0.6)', 40);
             break;
 
+        case BLOCKS.END_PORTAL_FRAME_EYE:
+            fillBase(ctx, 45, 75, 65);
+            addNoise(ctx, rng, 10);
+            ctx.fillStyle = '#22aa77';
+            ctx.fillRect(4, 4, 8, 8);
+            ctx.fillStyle = '#0a0d0b';
+            ctx.fillRect(7, 4, 2, 8);
+            break;
+
+        case BLOCKS.END_PORTAL:
+            fillBase(ctx, 5, 2, 12);
+            addPixels(ctx, rng, 'rgba(180,60,255,0.9)', 8);
+            addPixels(ctx, rng, 'rgba(50,220,255,0.9)', 8);
+            addPixels(ctx, rng, 'rgba(255,255,255,1.0)', 6);
+            break;
+
+        case BLOCKS.END_STONE:
+            fillBase(ctx, 220, 220, 160);
+            addNoise(ctx, rng, 20);
+            addPixels(ctx, rng, 'rgba(180,180,120,0.5)', 15);
+            break;
+
+        case BLOCKS.DRAGON_EGG:
+            fillBase(ctx, 15, 8, 24);
+            addNoise(ctx, rng, 10);
+            addPixels(ctx, rng, 'rgba(130,45,200,0.8)', 6);
+            break;
+
         default:
             fillBase(ctx, 255, 0, 255);
             break;
@@ -3183,7 +3383,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
 }
 function hasFaceVariants(blockType) {
     return [
-        BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD, BLOCKS.DARK_OAK_WOOD,
+        BLOCKS.GRASS, BLOCKS.WOOD, BLOCKS.MUSHROOM_STEM, BLOCKS.SAVANNA_GRASS, BLOCKS.ACACIA_WOOD, BLOCKS.SWAMP_GRASS, BLOCKS.ALIEN_GRASS, BLOCKS.PORTAL_FRAME, BLOCKS.END_PORTAL_FRAME_EYE, BLOCKS.CHERRY_LOG, BLOCKS.AUTUMN_WOOD, BLOCKS.PALM_WOOD, BLOCKS.PINE_WOOD, BLOCKS.DARK_OAK_WOOD,
         BLOCKS.CHEST_BLOCK, BLOCKS.FURNACE, BLOCKS.CRIMSON_NYLIUM, BLOCKS.CRIMSON_STEM, BLOCKS.TNT, BLOCKS.CRAFTING_TABLE, BLOCKS.AETHER_GRASS, BLOCKS.AETHER_WOOD, BLOCKS.HIGHLANDS_GRASS,
         BLOCKS.CACTUS, BLOCKS.SANDSTONE, BLOCKS.BOOKSHELF, BLOCKS.MYCELIUM,
         BLOCKS.WARPED_NYLIUM, BLOCKS.WARPED_STEM, BLOCKS.BONE_BLOCK, BLOCKS.BASALT, BLOCKS.BLACKSTONE, BLOCKS.PODZOL, BLOCKS.GOLDEN_OAK_WOOD, BLOCKS.MAGIC_WOOD, BLOCKS.REDWOOD_LOG,
@@ -3230,8 +3430,14 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.ALIEN_CRYSTAL]: 'purpur_block',
     [BLOCKS.SNOW]: 'snow',
     [BLOCKS.ICE]: 'ice',
+    [BLOCKS.PACKED_ICE]: 'packed_ice',
+    [BLOCKS.BLUE_ICE]: 'blue_ice',
     [BLOCKS.LAVA]: 'lava_flow',
     [BLOCKS.PORTAL_FRAME]: { top: 'end_portal_frame_top', side: 'end_portal_frame_side', bottom: 'end_stone' },
+    [BLOCKS.END_PORTAL_FRAME_EYE]: { top: 'end_portal_frame_eye', side: 'end_portal_frame_side', bottom: 'end_stone' },
+    [BLOCKS.END_PORTAL]: 'end_portal',
+    [BLOCKS.END_STONE]: 'end_stone',
+    [BLOCKS.DRAGON_EGG]: 'dragon_egg',
     [BLOCKS.PORTAL]: 'nether_portal',
     [BLOCKS.BEDROCK]: 'bedrock',
     [BLOCKS.GRAVEL]: 'gravel',
@@ -3296,7 +3502,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.COAL_BLOCK]: 'coal_block',
     [BLOCKS.FLETCHING_TABLE]: { top: 'fletching_table_top', side: 'fletching_table_side', bottom: 'birch_planks', front: 'fletching_table_front' },
     [BLOCKS.SMOKER]: { top: 'smoker_top', side: 'smoker_side', bottom: 'smoker_bottom', front: 'smoker_front' },
-    [BLOCKS.STONECUTTER]: { top: 'stonecutter_top', side: 'stonecutter_side', bottom: 'stonecutter_bottom', front: 'stonecutter_side' },
+    [BLOCKS.STONECUTTER]: { top: 'stonecutter_top', side: 'stonecutter_side', bottom: 'stonecutter_bottom', front: 'stonecutter_saw' },
     [BLOCKS.WOOL]: 'white_wool',
     [BLOCKS.RED_WOOL]: 'red_wool',
     [BLOCKS.BLUE_WOOL]: 'blue_wool',
@@ -3376,9 +3582,6 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.KELP]: 'kelp',
     [BLOCKS.KELP_PLANT]: 'kelp_plant',
     [BLOCKS.BUBBLE_CORAL]: 'bubble_coral',
-    [BLOCKS.SEASHELL_1]: 'bone_block_top',
-    [BLOCKS.SEASHELL_2]: 'item/nautilus_shell',
-    [BLOCKS.SEASHELL_3]: 'item/turtle_scute',
     [BLOCKS.LILY_PAD]: 'lily_pad',
     [BLOCKS.ALGAE]: 'seagrass',
     [BLOCKS.RED_KELP]: 'kelp',
@@ -3489,7 +3692,9 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.WARPED_FENCE]: 'warped_planks',
     [BLOCKS.WARPED_FENCE_GATE]: 'warped_planks',
     [BLOCKS.POLISHED_BLACKSTONE_BRICKS]: 'polished_blackstone_bricks',
-    [BLOCKS.CHISELED_POLISHED_BLACKSTONE]: 'chiseled_polished_blackstone'
+    [BLOCKS.CHISELED_POLISHED_BLACKSTONE]: 'chiseled_polished_blackstone',
+    [BLOCKS.LANTERN]: { top: 'lantern', side: 'lantern', bottom: 'lantern' },
+    [BLOCKS.SOUL_LANTERN]: { top: 'soul_lantern', side: 'soul_lantern', bottom: 'soul_lantern' }
 };
 
 let _mcChestPromise = null;
@@ -3540,6 +3745,14 @@ function loadMinecraftChestTexture(face) {
 }
 
 const LOCAL_ASSET_MAP = {
+    "lantern": "assets/mc/block/lantern.png",
+    "soul_lantern": "assets/mc/block/soul_lantern.png",
+    "item/lantern": "assets/mc/item/lantern.png",
+    "item/soul_lantern": "assets/mc/item/soul_lantern.png",
+    "iron_nugget": "assets/mc/item/iron_nugget.png",
+    "item/iron_nugget": "assets/mc/item/iron_nugget.png",
+    "gold_nugget": "assets/mc/item/gold_nugget.png",
+    "item/gold_nugget": "assets/mc/item/gold_nugget.png",
     "aether_dirt": "assets/aether/block/aether_dirt.png",
     "aether_grass_side": "assets/aether/block/aether_grass_side.png",
     "aether_grass_top": "assets/aether/block/aether_grass_top.png",
@@ -3628,6 +3841,7 @@ const LOCAL_ASSET_MAP = {
     "stonecutter_top": "assets/mc/block/stonecutter_top.png",
     "stonecutter_side": "assets/mc/block/stonecutter_side.png",
     "stonecutter_bottom": "assets/mc/block/stonecutter_bottom.png",
+    "stonecutter_saw": "assets/mc/block/stonecutter_saw.png",
     "emerald": "assets/mc/item/emerald.png",
     "redstone": "assets/mc/item/redstone.png",
     "bow": "assets/mc/item/bow.png",
@@ -3656,6 +3870,9 @@ const LOCAL_ASSET_MAP = {
     "end_gateway_beam": "assets/mc/block/end_gateway_beam.png",
     "end_portal_frame_side": "assets/mc/block/end_portal_frame_side.png",
     "end_portal_frame_top": "assets/mc/block/end_portal_frame_top.png",
+    "end_portal_frame_eye": "assets/mc/block/end_portal_frame_eye.png",
+    "end_portal": "assets/mc/block/end_portal.png",
+    "dragon_egg": "assets/mc/block/dragon_egg.png",
     "end_stone": "assets/mc/block/end_stone.png",
     "fern": "assets/mc/block/fern.png",
     "fire_0": "assets/mc/block/fire_0.png",
@@ -3672,6 +3889,8 @@ const LOCAL_ASSET_MAP = {
     "gravel": "assets/mc/block/gravel.png",
     "horn_coral": "assets/mc/block/horn_coral.png",
     "ice": "assets/mc/block/ice.png",
+    "packed_ice": "assets/mc/block/packed_ice.png",
+    "blue_ice": "assets/mc/block/blue_ice.png",
     "iron_block": "assets/mc/block/iron_block.png",
     "iron_ore": "assets/mc/block/iron_ore.png",
     "jungle_planks": "assets/mc/block/jungle_planks.png",
@@ -3790,8 +4009,6 @@ const LOCAL_ASSET_MAP = {
     "brown_wool": "assets/mc/block/brown_wool.png",
     "magenta_wool": "assets/mc/block/magenta_wool.png",
     "light_gray_wool": "assets/mc/block/light_gray_wool.png",
-    "oak_boat": "assets/mc/item/oak_boat.png",
-    "boat": "assets/mc/item/oak_boat.png",
     "red_dye": "assets/mc/item/red_dye.png",
     "yellow_dye": "assets/mc/item/yellow_dye.png",
     "blue_dye": "assets/mc/item/blue_dye.png",
@@ -3808,9 +4025,29 @@ const LOCAL_ASSET_MAP = {
     "gray_dye": "assets/mc/item/gray_dye.png",
     "light_blue_dye": "assets/mc/item/light_blue_dye.png",
     "light_gray_dye": "assets/mc/item/light_gray_dye.png",
+    "bone_meal": "assets/mc/item/bone_meal.png",
+    "bone": "assets/mc/item/bone.png",
+    "white_bed": "assets/mc/item/white_bed.png",
+    "orange_bed": "assets/mc/item/orange_bed.png",
+    "magenta_bed": "assets/mc/item/magenta_bed.png",
+    "light_blue_bed": "assets/mc/item/light_blue_bed.png",
+    "yellow_bed": "assets/mc/item/yellow_bed.png",
+    "lime_bed": "assets/mc/item/lime_bed.png",
+    "pink_bed": "assets/mc/item/pink_bed.png",
+    "gray_bed": "assets/mc/item/gray_bed.png",
+    "light_gray_bed": "assets/mc/item/light_gray_bed.png",
+    "cyan_bed": "assets/mc/item/cyan_bed.png",
+    "purple_bed": "assets/mc/item/purple_bed.png",
+    "blue_bed": "assets/mc/item/blue_bed.png",
+    "brown_bed": "assets/mc/item/brown_bed.png",
+    "green_bed": "assets/mc/item/green_bed.png",
+    "red_bed": "assets/mc/item/red_bed.png",
+    "black_bed": "assets/mc/item/black_bed.png",
+    "gunpowder": "assets/mc/item/gunpowder.png",
     "apple": "assets/mc/item/apple.png",
     "beef": "assets/mc/item/beef.png",
     "blaze_rod": "assets/mc/item/blaze_rod.png",
+    "blaze_powder": "assets/mc/item/blaze_powder.png",
     "bread": "assets/mc/item/bread.png",
     "bucket": "assets/mc/item/bucket.png",
     "chicken": "assets/mc/item/chicken.png",
@@ -3831,6 +4068,7 @@ const LOCAL_ASSET_MAP = {
     "diamond_shovel": "assets/mc/item/diamond_shovel.png",
     "diamond_sword": "assets/mc/item/diamond_sword.png",
     "ender_pearl": "assets/mc/item/ender_pearl.png",
+    "eye_of_ender": "assets/mc/item/eye_of_ender.png",
     "flint_and_steel": "assets/mc/item/flint_and_steel.png",
     "golden_axe": "assets/mc/item/golden_axe.png",
     "golden_boots": "assets/mc/item/golden_boots.png",
@@ -3997,7 +4235,8 @@ export async function createTextureAtlas(useMinecraft = true) {
 
     const totalRows = row + (col > 0 ? 1 : 0);
     const atlasW = ATLAS_COLS * TEX_SIZE;
-    const atlasH = totalRows * TEX_SIZE;
+    const nextPOT = (n) => Math.pow(2, Math.ceil(Math.log2(Math.max(16, n))));
+    const atlasH = nextPOT(totalRows * TEX_SIZE);
 
     const canvas = document.createElement('canvas');
     canvas.width = atlasW;
@@ -4140,7 +4379,10 @@ export async function createTextureAtlas(useMinecraft = true) {
         // Preload all Minecraft item textures so slots never glitch or pop
         const itemPromises = [];
         for (const [subtype, mcName] of Object.entries(MC_ITEM_MAP)) {
-            if (!_itemCanvasCache.has(subtype)) {
+            const isEgg = subtype.includes('spawn_egg');
+            const cleanSub = subtype.replace(/^spawn_egg_/, '').replace(/_spawn_egg$/, '');
+            const cacheKey = isEgg ? `spawn_egg_${cleanSub}` : subtype;
+            if (!_itemCanvasCache.has(cacheKey)) {
                 itemPromises.push(loadMinecraftTexture(mcName).then(img => {
                     if (img) {
                         const itemCvs = document.createElement('canvas');
@@ -4148,8 +4390,14 @@ export async function createTextureAtlas(useMinecraft = true) {
                         const ictx = itemCvs.getContext('2d');
                         ictx.imageSmoothingEnabled = false;
                         ictx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
-                        _itemCanvasCache.set(subtype, itemCvs);
-                        _itemTextureCache.set(subtype, itemCvs.toDataURL());
+                        _itemCanvasCache.set(cacheKey, itemCvs);
+                        _itemTextureCache.set(cacheKey, itemCvs.toDataURL());
+                        if (isEgg) {
+                            _itemCanvasCache.set(`${cleanSub}_spawn_egg`, itemCvs);
+                            _itemTextureCache.set(`${cleanSub}_spawn_egg`, itemCvs.toDataURL());
+                            _itemCanvasCache.set(subtype, itemCvs);
+                            _itemTextureCache.set(subtype, itemCvs.toDataURL());
+                        }
                     }
                 }));
             }
@@ -4161,14 +4409,19 @@ export async function createTextureAtlas(useMinecraft = true) {
     await initSteveSkin();
 
     const texture = new THREE.CanvasTexture(canvas);
+    texture.generateMipmaps = true;
     texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestMipmapLinearFilter;
+    texture.anisotropy = 4;
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.needsUpdate = true;
 
     // UV helper: returns u,v coordinates (0-1) and size for a face
-    const uUnit = 1 / ATLAS_COLS;
-    const vUnit = 1 / totalRows;
+    const uUnit = TEX_SIZE / atlasW;
+    const vUnit = TEX_SIZE / atlasH;
+    // Tiny half-texel border inset guarantees no cross-tile texture atlas bleeding during mipmapping
+    const epsU = 0.05 / atlasW;
+    const epsV = 0.05 / atlasH;
 
     function getUV(blockType, face) {
         const map = uvMap[blockType];
@@ -4180,10 +4433,10 @@ export async function createTextureAtlas(useMinecraft = true) {
         const entry = map[faceKey] || map.side || map.top;
         
         return {
-            u: entry.col * uUnit,
-            v: 1 - (entry.row + 1) * vUnit, // flip Y for Three.js
-            uSize: uUnit,
-            vSize: vUnit
+            u: entry.col * uUnit + epsU,
+            v: 1 - (entry.row + 1) * vUnit + epsV, // flip Y for Three.js
+            uSize: uUnit - 2 * epsU,
+            vSize: vUnit - 2 * epsV
         };
     }
 
@@ -4232,7 +4485,44 @@ export async function createTextureAtlas(useMinecraft = true) {
             }
         }
 
+        if (props.isLantern) {
+            const key = props.isSoulLantern ? 'soul_lantern' : 'lantern';
+            const lanternItem = _itemCanvasCache.get(key) || _itemCanvasCache.get(`item/${key}`);
+            if (lanternItem) {
+                const pad = 2 * SCALE;
+                const drawSize = (TEX_SIZE * 2 - 4) * SCALE;
+                iconCtx.drawImage(lanternItem, 0, 0, TEX_SIZE, TEX_SIZE, pad, pad, drawSize, drawSize);
+                return iconCanvas;
+            }
+        }
+
         if (props.isBed || props.isBedHead) {
+            const bedColor = props.bedColor || 'red';
+            const itemKey = `${bedColor}_bed`;
+            const bedCached = _itemCanvasCache.get(itemKey);
+            if (bedCached) {
+                iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
+                const pad = 2 * SCALE;
+                const drawSize = (TEX_SIZE * 2 - 4) * SCALE;
+                iconCtx.drawImage(bedCached, 0, 0, TEX_SIZE, TEX_SIZE, pad, pad, drawSize, drawSize);
+                return iconCanvas;
+            }
+            // Asynchronously preload if not yet in cache
+            if (typeof loadMinecraftTexture === 'function') {
+                loadMinecraftTexture(itemKey).then(img => {
+                    if (img) {
+                        const itemCvs = document.createElement('canvas');
+                        itemCvs.width = TEX_SIZE; itemCvs.height = TEX_SIZE;
+                        const ictx = itemCvs.getContext('2d');
+                        ictx.imageSmoothingEnabled = false;
+                        ictx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                        _itemCanvasCache.set(itemKey, itemCvs);
+                        _itemTextureCache.set(itemKey, itemCvs.toDataURL());
+                        if (onLoaded) onLoaded(generateItemTexture(blockType, onLoaded));
+                    }
+                });
+            }
+
             const bedColorsHex = {
                 white: '#eaeded', orange: '#f9801d', magenta: '#c74ebd', light_blue: '#3ab3da',
                 yellow: '#fed83d', lime: '#80c71f', pink: '#f38baa', gray: '#474f52',
@@ -4316,21 +4606,25 @@ export async function createTextureAtlas(useMinecraft = true) {
             iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
             const s = iconCanvas.width / 16;
             const drawPlank = (rx, ry, rw, rh) => {
-                iconCtx.drawImage(side1Scaled, rx * s, ry * s, rw * s, rh * s, rx * s, ry * s, rw * s, rh * s);
-                iconCtx.fillStyle = 'rgba(255,255,255,0.25)';
+                const sx = Math.max(0, Math.min(15, Math.floor(rx) % 16));
+                const sy = Math.max(0, Math.min(15, Math.floor(ry) % 16));
+                const sw = Math.min(rw, 16 - sx);
+                const sh = Math.min(rh, 16 - sy);
+                iconCtx.drawImage(side1, sx, sy, sw, sh, rx * s, ry * s, rw * s, rh * s);
+                iconCtx.fillStyle = 'rgba(255,255,255,0.22)';
                 iconCtx.fillRect(rx * s, ry * s, rw * s, s);
                 iconCtx.fillStyle = 'rgba(0,0,0,0.35)';
                 iconCtx.fillRect(rx * s, (ry + rh - 1) * s, rw * s, s);
                 iconCtx.fillRect((rx + rw - 1) * s, ry * s, s, rh * s);
             };
             // Left post
-            drawPlank(2.5, 1, 3, 14);
+            drawPlank(2, 1, 3, 14);
             // Right post
-            drawPlank(10.5, 1, 3, 14);
+            drawPlank(11, 1, 3, 14);
             // Upper cross rail
-            drawPlank(0.5, 4, 15, 2.5);
+            drawPlank(0, 4, 16, 2.5);
             // Lower cross rail
-            drawPlank(0.5, 9.5, 15, 2.5);
+            drawPlank(0, 9.5, 16, 2.5);
             return iconCanvas;
         }
 
@@ -4338,8 +4632,12 @@ export async function createTextureAtlas(useMinecraft = true) {
             iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
             const s = iconCanvas.width / 16;
             const drawPlank = (rx, ry, rw, rh) => {
-                iconCtx.drawImage(side1Scaled, rx * s, ry * s, rw * s, rh * s, rx * s, ry * s, rw * s, rh * s);
-                iconCtx.fillStyle = 'rgba(255,255,255,0.25)';
+                const sx = Math.max(0, Math.min(15, Math.floor(rx) % 16));
+                const sy = Math.max(0, Math.min(15, Math.floor(ry) % 16));
+                const sw = Math.min(rw, 16 - sx);
+                const sh = Math.min(rh, 16 - sy);
+                iconCtx.drawImage(side1, sx, sy, sw, sh, rx * s, ry * s, rw * s, rh * s);
+                iconCtx.fillStyle = 'rgba(255,255,255,0.22)';
                 iconCtx.fillRect(rx * s, ry * s, rw * s, s);
                 iconCtx.fillStyle = 'rgba(0,0,0,0.35)';
                 iconCtx.fillRect(rx * s, (ry + rh - 1) * s, rw * s, s);
@@ -4349,8 +4647,8 @@ export async function createTextureAtlas(useMinecraft = true) {
             drawPlank(1, 2, 3, 12);
             drawPlank(12, 2, 3, 12);
             // Swinging gate rails
-            drawPlank(3.5, 4.5, 9, 2.2);
-            drawPlank(3.5, 9.5, 9, 2.2);
+            drawPlank(4, 4.5, 8, 2.2);
+            drawPlank(4, 9.5, 8, 2.2);
             // Central vertical latch
             drawPlank(7, 3.5, 2, 9.2);
             return iconCanvas;
@@ -4360,7 +4658,11 @@ export async function createTextureAtlas(useMinecraft = true) {
             iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
             const s = iconCanvas.width / 16;
             const drawStone = (rx, ry, rw, rh) => {
-                iconCtx.drawImage(side1Scaled, rx * s, ry * s, rw * s, rh * s, rx * s, ry * s, rw * s, rh * s);
+                const sx = Math.max(0, Math.min(15, Math.floor(rx) % 16));
+                const sy = Math.max(0, Math.min(15, Math.floor(ry) % 16));
+                const sw = Math.min(rw, 16 - sx);
+                const sh = Math.min(rh, 16 - sy);
+                iconCtx.drawImage(side1, sx, sy, sw, sh, rx * s, ry * s, rw * s, rh * s);
                 iconCtx.fillStyle = 'rgba(255,255,255,0.2)';
                 iconCtx.fillRect(rx * s, ry * s, rw * s, s);
                 iconCtx.fillStyle = 'rgba(0,0,0,0.4)';
@@ -4368,46 +4670,12 @@ export async function createTextureAtlas(useMinecraft = true) {
                 iconCtx.fillRect((rx + rw - 1) * s, ry * s, s, rh * s);
             };
             // Side shoulders
-            drawStone(1, 6, 3.5, 9);
-            drawStone(11.5, 6, 3.5, 9);
+            drawStone(1, 5, 3.5, 10);
+            drawStone(11.5, 5, 3.5, 10);
             // Central wall post
             drawStone(4, 2, 8, 13);
             // Cap
             drawStone(3, 1.5, 10, 2);
-            return iconCanvas;
-        }
-
-        if (blockType === BLOCKS.STONECUTTER) {
-            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
-            const s = iconCanvas.width / 16;
-            // Stone base (9/16 tall)
-            iconCtx.drawImage(side1Scaled, 1 * s, 7 * s, 14 * s, 9 * s, 1 * s, 7 * s, 14 * s, 9 * s);
-            iconCtx.fillStyle = 'rgba(255,255,255,0.2)';
-            iconCtx.fillRect(1 * s, 7 * s, 14 * s, s);
-            iconCtx.fillStyle = 'rgba(0,0,0,0.4)';
-            iconCtx.fillRect(1 * s, 15 * s, 14 * s, s);
-
-            // Saw blade
-            iconCtx.fillStyle = '#dfe4ea';
-            iconCtx.beginPath();
-            iconCtx.arc(8 * s, 7 * s, 5 * s, Math.PI, 0, false);
-            iconCtx.closePath();
-            iconCtx.fill();
-            iconCtx.strokeStyle = '#718093';
-            iconCtx.lineWidth = s * 0.8;
-            iconCtx.stroke();
-            // Center axle
-            iconCtx.fillStyle = '#2f3640';
-            iconCtx.beginPath();
-            iconCtx.arc(8 * s, 7 * s, 1.5 * s, 0, Math.PI * 2);
-            iconCtx.fill();
-            // Blade teeth
-            iconCtx.fillStyle = '#718093';
-            for (let angle = Math.PI; angle <= Math.PI * 2; angle += Math.PI / 6) {
-                const tx = 8 * s + Math.cos(angle) * 4.8 * s;
-                const ty = 7 * s + Math.sin(angle) * 4.8 * s;
-                iconCtx.fillRect(tx - s * 0.5, ty - s * 0.5, s, s);
-            }
             return iconCanvas;
         }
 
@@ -4552,8 +4820,6 @@ const MC_ITEM_MAP = {
     'dungeon_door': 'oak_door',
     'oak_door': 'oak_door',
     'iron_door': 'iron_door',
-    'oak_boat': 'oak_boat',
-    'boat': 'oak_boat',
     'red_dye': 'red_dye',
     'yellow_dye': 'yellow_dye',
     'blue_dye': 'blue_dye',
@@ -4570,12 +4836,34 @@ const MC_ITEM_MAP = {
     'gray_dye': 'gray_dye',
     'light_blue_dye': 'light_blue_dye',
     'light_gray_dye': 'light_gray_dye',
+    'bone_meal': 'bone_meal',
+    'bone': 'bone',
+    'white_bed': 'white_bed',
+    'orange_bed': 'orange_bed',
+    'magenta_bed': 'magenta_bed',
+    'light_blue_bed': 'light_blue_bed',
+    'yellow_bed': 'yellow_bed',
+    'lime_bed': 'lime_bed',
+    'pink_bed': 'pink_bed',
+    'gray_bed': 'gray_bed',
+    'light_gray_bed': 'light_gray_bed',
+    'cyan_bed': 'cyan_bed',
+    'purple_bed': 'purple_bed',
+    'blue_bed': 'blue_bed',
+    'brown_bed': 'brown_bed',
+    'green_bed': 'green_bed',
+    'red_bed': 'red_bed',
+    'black_bed': 'black_bed',
     'iron_ingot': 'iron_ingot',
     'gold_ingot': 'gold_ingot',
+    'iron_nugget': 'iron_nugget',
+    'gold_nugget': 'gold_nugget',
+    'netherite_scrap': 'netherite_scrap',
     'diamond': 'diamond',
     'coal': 'coal',
     'mana_crystal': 'lapis_lazuli',
     'boss': 'nether_star',
+    'gunpowder': 'gunpowder',
     'stick': 'stick',
     'wand_basic': 'stick',
     'wand_fire': 'blaze_rod',
@@ -4632,6 +4920,10 @@ const MC_ITEM_MAP = {
     'raw_gold': 'raw_gold',
     'raw_copper': 'raw_copper',
     'ender_pearl': 'ender_pearl',
+    'eye_of_ender': 'eye_of_ender',
+    'blaze_rod': 'blaze_rod',
+    'blaze_powder': 'blaze_powder',
+    'dragon_egg': 'dragon_egg',
     'helmet_iron': 'iron_helmet',
     'chest_iron': 'iron_chestplate',
     'legs_iron': 'iron_leggings',
@@ -4709,6 +5001,10 @@ const MC_ITEM_MAP = {
     'fletching_table': 'fletching_table_front',
     'smoker': 'smoker_front',
     'stonecutter': 'stonecutter_side',
+    'lantern': 'item/lantern',
+    'soul_lantern': 'item/soul_lantern',
+    'iron_nugget': 'iron_nugget',
+    'gold_nugget': 'gold_nugget',
     'bat_spawn_egg': 'bat_spawn_egg',
     'camel_spawn_egg': 'camel_spawn_egg',
     'chicken_spawn_egg': 'chicken_spawn_egg',
@@ -4777,7 +5073,9 @@ const SPAWN_EGG_COLORS = {
     'cod':             { c: '#c1a176', d: '#876e4c', h: '#dec39e', e: '#e5cbb0' },
     'salmon':          { c: '#8f2525', d: '#5e1717', h: '#b83b3b', e: '#0e4435' },
     'tropical_fish':   { c: '#ef6915', d: '#ab4609', h: '#ff8a42', e: '#ffffff' },
-    'pufferfish':      { c: '#e8a93a', d: '#a87720', h: '#ffc766', e: '#337ab7' }
+    'pufferfish':      { c: '#e8a93a', d: '#a87720', h: '#ffc766', e: '#337ab7' },
+    'swet':            { c: '#0284c7', d: '#0369a1', h: '#38bdf8', e: '#bae6fd' },
+    'aerwhale':        { c: '#93c5fd', d: '#60a5fa', h: '#dbeafe', e: '#ffffff' }
 };
 
 // Global cache: subtype -> canvas / data URL
@@ -4796,14 +5094,23 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
-    if (itemType === 'block') {
-        return canvas;
-    }
+    const isSpawnEgg = itemType === 'spawn_egg' || itemSubtype.includes('spawn_egg');
+    const cleanEgg = itemSubtype.replace(/^spawn_egg_/, '').replace(/_spawn_egg$/, '');
+    const cacheKey = isSpawnEgg ? `spawn_egg_${cleanEgg}` : (itemType ? `${itemType}_${itemSubtype}` : itemSubtype);
 
     // If already cached in memory, draw immediately and return synchronously
-    if (_itemCanvasCache.has(itemSubtype)) {
-        ctx.drawImage(_itemCanvasCache.get(itemSubtype), 0, 0);
-        return canvas;
+    if (isSpawnEgg) {
+        const cachedEgg = _itemCanvasCache.get(cacheKey) || _itemCanvasCache.get(`${cleanEgg}_spawn_egg`);
+        if (cachedEgg) {
+            ctx.drawImage(cachedEgg, 0, 0);
+            return canvas;
+        }
+    } else {
+        const cached = _itemCanvasCache.get(cacheKey) || _itemCanvasCache.get(itemSubtype);
+        if (cached) {
+            ctx.drawImage(cached, 0, 0);
+            return canvas;
+        }
     }
 
     // Clear transparent
@@ -4811,9 +5118,12 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
 
     const useMC = true;
     if (useMC) {
-        const mcKey = (itemType === 'spawn_egg') 
-            ? (MC_ITEM_MAP['spawn_egg_' + itemSubtype] || MC_ITEM_MAP[itemSubtype + '_spawn_egg'] || MC_ITEM_MAP[itemSubtype])
-            : MC_ITEM_MAP[itemSubtype];
+        let mcKey = null;
+        if (isSpawnEgg) {
+            mcKey = MC_ITEM_MAP[`spawn_egg_${cleanEgg}`] || MC_ITEM_MAP[`${cleanEgg}_spawn_egg`] || `${cleanEgg}_spawn_egg`;
+        } else {
+            mcKey = MC_ITEM_MAP[itemSubtype] || MC_ITEM_MAP[cacheKey];
+        }
         const mcName = mcKey;
         if (mcName) {
             loadMinecraftTexture(mcName).then(img => {
@@ -4823,12 +5133,17 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                     const savedCvs = document.createElement('canvas');
                     savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
                     savedCvs.getContext('2d').drawImage(canvas, 0, 0);
-                    _itemCanvasCache.set(itemSubtype, savedCvs);
-                    if (itemSubtype === 'oak_boat' || itemSubtype === 'boat') {
-                        _itemCanvasCache.set('oak_boat', savedCvs);
-                        _itemCanvasCache.set('boat', savedCvs);
+                    _itemCanvasCache.set(cacheKey, savedCvs);
+                    _itemTextureCache.set(cacheKey, canvas.toDataURL());
+                    if (isSpawnEgg) {
+                        _itemCanvasCache.set(`${cleanEgg}_spawn_egg`, savedCvs);
+                        _itemTextureCache.set(`${cleanEgg}_spawn_egg`, canvas.toDataURL());
+                        _itemCanvasCache.set(`spawn_egg_${cleanEgg}`, savedCvs);
+                        _itemTextureCache.set(`spawn_egg_${cleanEgg}`, canvas.toDataURL());
+                    } else {
+                        _itemCanvasCache.set(itemSubtype, savedCvs);
+                        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
                     }
-                    _itemTextureCache.set(itemSubtype, canvas.toDataURL());
                     if (onLoaded) onLoaded(canvas);
                 }
             });
@@ -4857,6 +5172,10 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         'wand_fire': { c: '#795548', d: '#4e342e', g: '#ff3d00' },
         'wand_ice': { c: '#795548', d: '#4e342e', g: '#00b0ff' },
         'wand_nature': { c: '#795548', d: '#4e342e', g: '#00e676' },
+        'wand_master': { c: '#311b92', d: '#1a0c4e', g: '#ffd700' },
+        'wand_void': { c: '#212121', d: '#000000', g: '#aa00ff' },
+        'wand_meteor': { c: '#bf360c', d: '#5d1000', g: '#ffab00' },
+        'gunpowder': { c: '#555555', d: '#333333', h: '#777777' },
         'spell_fire': { c: '#ff3d00', d: '#dd2c00', h: '#ff9e80' },
         'spell_ice': { c: '#00b0ff', d: '#0091ea', h: '#80d8ff' },
         'spell_nature': { c: '#00e676', d: '#00c853', h: '#b9f6ca' },
@@ -5174,49 +5493,9 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                "
             ];
             p = palettes['bow'];
-        } else if (itemSubtype === 'oak_boat' || itemSubtype === 'boat') {
-            shape = [
-                "                ",
-                "                ",
-                "  OO        OO  ",
-                "  OSSO    OSSO  ",
-                "  OSSSOOOOCCCO  ",
-                "  OCCSSSSSCCO   ",
-                "  OHCCCCCCCDO   ",
-                "  OHCCCCCCCCDO  ",
-                "  OHCCCCCCCCDO  ",
-                "   OHCCCCCCDDO  ",
-                "   OHCCCCCCDO   ",
-                "    OHCCCCDDO   ",
-                "    ODDDDDDDO   ",
-                "     OOOOOOO    ",
-                "                ",
-                "                "
-            ];
-            p = palettes['wood'] || { c: '#b88648', d: '#8b5a2b', h: '#d4a373' };
         }
     } else if (itemType === 'material') {
-        if (itemSubtype === 'oak_boat' || itemSubtype === 'boat') {
-            shape = [
-                "                ",
-                "                ",
-                "  OO        OO  ",
-                "  OSSO    OSSO  ",
-                "  OSSSOOOOCCCO  ",
-                "  OCCSSSSSCCO   ",
-                "  OHCCCCCCCDO   ",
-                "  OHCCCCCCCCDO  ",
-                "  OHCCCCCCCCDO  ",
-                "   OHCCCCCCDDO  ",
-                "   OHCCCCCCDO   ",
-                "    OHCCCCDDO   ",
-                "    ODDDDDDDO   ",
-                "     OOOOOOO    ",
-                "                ",
-                "                "
-            ];
-            p = palettes['wood'] || { c: '#b88648', d: '#8b5a2b', h: '#d4a373' };
-        } else if (itemSubtype === 'book') {
+        if (itemSubtype === 'book') {
             shape = [
                 "                ",
                 "     OOOOOOO    ",
@@ -5276,7 +5555,7 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                "
             ];
             p = { c: '#ffffff', d: '#e0e0e0', h: '#ffffff' };
-        } else if (itemSubtype === 'coal' || itemSubtype === 'diamond' || itemSubtype === 'mana_crystal' || itemSubtype === 'ruby' || itemSubtype === 'sapphire' || itemSubtype === 'zanite_gem' || itemSubtype === 'zanite_gemstone' || itemSubtype === 'ambrosium_shard' || itemSubtype === 'quartz' || itemSubtype === 'netherite_scrap' || itemSubtype === 'emerald' || itemSubtype === 'lapis_lazuli' || itemSubtype === 'lapis') {
+        } else if (itemSubtype === 'coal' || itemSubtype === 'diamond' || itemSubtype === 'mana_crystal' || itemSubtype === 'ruby' || itemSubtype === 'sapphire' || itemSubtype === 'zanite_gem' || itemSubtype === 'zanite_gemstone' || itemSubtype === 'ambrosium_shard' || itemSubtype === 'quartz' || itemSubtype === 'emerald' || itemSubtype === 'lapis_lazuli' || itemSubtype === 'lapis') {
             shape = [
                 "                ",
                 "      OOOO      ",
@@ -5295,6 +5574,48 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                ",
                 "                "
             ];
+        } else if (itemSubtype === 'gold_nugget' || itemSubtype === 'iron_nugget') {
+            shape = [
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "      OOOO      ",
+                "     OHHHHDO    ",
+                "    OHHCCCDDO   ",
+                "   OHHCCCCCDDO  ",
+                "   OHCCCCCCDDO  ",
+                "    OHCCCCDDO   ",
+                "     ODDDDDO    ",
+                "      OOOO      ",
+                "                ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            p = (itemSubtype === 'gold_nugget') 
+                ? { c: '#ebba2f', d: '#725014', h: '#fff8af' }
+                : { c: '#c8d6e5', d: '#585f68', h: '#ffffff' };
+        } else if (itemSubtype === 'netherite_scrap') {
+            shape = [
+                "                ",
+                "                ",
+                "      OOOO      ",
+                "     OHHHDO     ",
+                "    OHCCCDDO    ",
+                "   OHCCCCCDDO   ",
+                "   OHCDDCCCDDO  ",
+                "  OHCDDCCCCDDO  ",
+                "  OHCCCCDDCDDO  ",
+                "   ODDDCCCCDDO  ",
+                "    ODDDCCDDO   ",
+                "     ODDDDDO    ",
+                "      OOOO      ",
+                "                ",
+                "                ",
+                "                "
+            ];
+            p = { c: '#493e3b', d: '#2b2321', h: '#786862' };
         } else if (itemSubtype === 'arrow') {
             shape = [
                 "             OO ",
@@ -5651,27 +5972,47 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 "                ",
                 "                "
             ];
-        } else if (itemSubtype === 'oak_boat' || itemSubtype === 'boat') {
+        } else if (itemSubtype === 'bone_meal') {
             shape = [
                 "                ",
-                "                ",
-                "  OO        OO  ",
-                "  OSSO    OSSO  ",
-                "  OSSSOOOOCCCO  ",
-                "  OCCSSSSSCCO   ",
-                "  OHCCCCCCCDO   ",
+                "     OOOO       ",
+                "    OHHHHDO     ",
+                "   OHHCCCCDO    ",
+                "  OHHCCCCCCDO   ",
+                "  OHCCCCCCCCO   ",
                 "  OHCCCCCCCCDO  ",
                 "  OHCCCCCCCCDO  ",
                 "   OHCCCCCCDDO  ",
-                "   OHCCCCCCDO   ",
-                "    OHCCCCDDO   ",
-                "    ODDDDDDDO   ",
-                "     OOOOOOO    ",
-                "                ",
+                "    ODDDDDDDDO  ",
+                "     OOOOOOOO   ",
+                "      O C  O    ",
+                "     O C C  O   ",
+                "      O C  O    ",
+                "       OOOO     ",
                 "                "
             ];
-            p = palettes['wood'] || { c: '#b88648', d: '#8b5a2b', h: '#d4a373' };
-        } else if (itemSubtype.endsWith('_dye') || itemSubtype === 'bone_meal') {
+            p = { c: '#f4f5f0', d: '#c5c7be', h: '#ffffff', o: '#3a3c36' };
+        } else if (itemSubtype === 'bone') {
+            shape = [
+                "             OO ",
+                "            OHHO",
+                "           OHHDO",
+                "          OHDDO ",
+                "         OHDDO  ",
+                "        OHDDO   ",
+                "       OHDDO    ",
+                "      OHDDO     ",
+                "     OHDDO      ",
+                "    OHDDO       ",
+                "   OHDDO        ",
+                "  OHDDO         ",
+                " OHDDO          ",
+                "OHHDO           ",
+                "OHHO            ",
+                " OO             "
+            ];
+            p = { c: '#e8e8dc', d: '#b8b8a8', h: '#ffffff', o: '#3e3e36' };
+        } else if (itemSubtype.endsWith('_dye')) {
             shape = [
                 "                ",
                 "                ",
@@ -5693,8 +6034,28 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
             if (itemSubtype === 'red_dye') p = { c: '#b02e26', d: '#891e17', h: '#d84338' };
             else if (itemSubtype === 'yellow_dye') p = { c: '#fed83d', d: '#d6a815', h: '#ffea73' };
             else if (itemSubtype === 'blue_dye') p = { c: '#3c44aa', d: '#242a78', h: '#5861d8' };
-            else if (itemSubtype === 'bone_meal' || itemSubtype === 'white_dye') p = { c: '#f9f9f9', d: '#c2c2c2', h: '#ffffff' };
+            else if (itemSubtype === 'white_dye') p = { c: '#f9f9f9', d: '#c2c2c2', h: '#ffffff' };
             else p = { c: '#888888', d: '#555555', h: '#cccccc' };
+        } else if (itemSubtype === 'gunpowder') {
+            shape = [
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "                ",
+                "       OO       ",
+                "      OHHDO     ",
+                "     OHCCCDO    ",
+                "   OOHCCCCCCDO  ",
+                "  OHCCCCDCCCCDO ",
+                "  OHCCDDDDDCCDO ",
+                "  OHDDDDDDDDCDO ",
+                "   ODDDDDDDDDO  ",
+                "    OOOOOOOOO   ",
+                "                ",
+                "                "
+            ];
+            p = palettes['gunpowder'] || { c: '#555555', d: '#333333', h: '#777777' };
         }
     } else if (itemType === 'wand') {
         shape = [
@@ -5816,20 +6177,22 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
             }
         } else if (itemType === 'spell') {
         let sc = 'spell_basic';
-        if (itemSubtype === 'FIRE') sc = 'spell_fire';
-        if (itemSubtype === 'ICE') sc = 'spell_ice';
-        if (itemSubtype === 'HEAL') sc = 'spell_nature';
-        if (itemSubtype === 'EARTH') sc = 'spell_earth';
-        if (itemSubtype === 'THUNDER') sc = 'spell_thunder';
-        if (itemSubtype === 'DARK') sc = 'spell_dark';
-        if (itemSubtype === 'WIND') sc = 'spell_wind';
-        if (itemSubtype === 'POISON') sc = 'spell_poison';
-        if (itemSubtype === 'FROST') sc = 'spell_frost';
-        if (itemSubtype === 'LIGHT') sc = 'spell_light';
-        if (itemSubtype === 'VOID') sc = 'spell_void';
-        if (itemSubtype === 'LAVA') sc = 'spell_lava';
-        if (itemSubtype === 'BUILDER') sc = 'spell_builder';
-        p = palettes[sc];
+        const subUpper = (itemSubtype || '').toUpperCase();
+        if (subUpper === 'FIRE' || subUpper === 'BURST' || subUpper === 'METEOR') sc = 'spell_fire';
+        else if (subUpper === 'ICE' || subUpper === 'BOLT' || subUpper === 'MISSILE') sc = 'spell_ice';
+        else if (subUpper === 'HEAL' || subUpper === 'NATURE') sc = 'spell_nature';
+        else if (subUpper === 'EARTH') sc = 'spell_earth';
+        else if (subUpper === 'THUNDER' || subUpper === 'CHAIN') sc = 'spell_thunder';
+        else if (subUpper === 'DARK') sc = 'spell_dark';
+        else if (subUpper === 'WIND') sc = 'spell_wind';
+        else if (subUpper === 'POISON') sc = 'spell_poison';
+        else if (subUpper === 'FROST') sc = 'spell_frost';
+        else if (subUpper === 'LIGHT') sc = 'spell_light';
+        else if (subUpper === 'VOID') sc = 'spell_void';
+        else if (subUpper === 'LAVA') sc = 'spell_lava';
+        else if (subUpper === 'WATER') sc = 'spell_ice';
+        else if (subUpper === 'BUILDER') sc = 'spell_builder';
+        p = palettes[sc] || palettes['spell_basic'];
         shape = [
             "                ",
             "      OOOO      ",
@@ -5916,6 +6279,45 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         // Outline
         ctx.beginPath(); ctx.arc(cx2, cy2, r2, 0, Math.PI * 2);
         ctx.strokeStyle = '#003322'; ctx.lineWidth = 1; ctx.stroke();
+        return canvas;
+    } else if (itemSubtype === 'eye_of_ender') {
+        const cx2 = TEX_SIZE / 2, cy2 = TEX_SIZE / 2, r2 = TEX_SIZE / 2 - 1;
+        const grad = ctx.createRadialGradient(cx2 - 1, cy2 - 1, 1, cx2, cy2, r2);
+        grad.addColorStop(0, '#55ffbb');
+        grad.addColorStop(0.3, '#22aa77');
+        grad.addColorStop(0.7, '#115533');
+        grad.addColorStop(1, '#001a10');
+        ctx.beginPath();
+        ctx.arc(cx2, cy2, r2, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        // Slit pupil
+        ctx.fillStyle = '#0a0d0b';
+        ctx.beginPath();
+        ctx.ellipse(cx2, cy2, 1.2, 4.0, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#aaffee';
+        ctx.fillRect(cx2 - 1, cy2 - 2, 1, 1);
+        ctx.beginPath(); ctx.arc(cx2, cy2, r2, 0, Math.PI * 2);
+        ctx.strokeStyle = '#002211'; ctx.lineWidth = 1; ctx.stroke();
+        return canvas;
+    } else if (itemSubtype === 'blaze_powder') {
+        ctx.fillStyle = '#ff3300';
+        ctx.beginPath(); ctx.arc(TEX_SIZE/2, TEX_SIZE/2 + 2, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffaa00';
+        ctx.beginPath(); ctx.arc(TEX_SIZE/2, TEX_SIZE/2, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffff66';
+        ctx.beginPath(); ctx.arc(TEX_SIZE/2 - 1, TEX_SIZE/2 - 1, 1.8, 0, Math.PI * 2); ctx.fill();
+        return canvas;
+    } else if (itemSubtype === 'blaze_rod') {
+        ctx.save();
+        ctx.translate(TEX_SIZE/2, TEX_SIZE/2);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = '#ff7700';
+        ctx.fillRect(-2, -6, 4, 12);
+        ctx.fillStyle = '#ffdd33';
+        ctx.fillRect(-1, -5, 2, 10);
+        ctx.restore();
         return canvas;
     }
 
@@ -6195,6 +6597,10 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
         } else if (part === 'leg') {
             fill('#e89010'); noise(232, 144, 16, 10, 20);
             rect(0, 12, 16, 4, '#b26b00');
+        } else if (part === 'beak' || part === 'snout') {
+            fill('#e89010'); noise(232, 144, 16, 8, 15);
+        } else if (part === 'wattle') {
+            fill('#cc1824'); noise(204, 24, 36, 8, 15);
         } else { // body
             fill('#f6f6f6'); noise(246, 246, 246, 10, 30);
             rect(2, 4, 12, 2, '#e8e8e8'); rect(3, 8, 10, 2, '#dedede');
@@ -6801,8 +7207,9 @@ export function createSteveBodyMaterials(partName) {
     if (!parts) return null;
     const makeTex = (canvas) => {
         const t = new THREE.CanvasTexture(canvas);
+        t.generateMipmaps = true;
         t.magFilter = THREE.NearestFilter;
-        t.minFilter = THREE.NearestFilter;
+        t.minFilter = THREE.NearestMipmapLinearFilter;
         t.colorSpace = THREE.SRGBColorSpace;
         t.needsUpdate = true;
         _activeSteveTextures.add(t);
@@ -6916,14 +7323,18 @@ const _mobBoxMaterialCache = {};
 
 export function getMobBoxMaterials(mobType, uvs, options = {}) {
     // mobType: e.g. 'COW', 'PIG', 'SHEEP', 'CHICKEN'
-    // uvs: { u, v, w, h, d } standard MC box UV definition
-    // options: { skinKey, emissive, emissiveIntensity, part, faceUVs }
-    const key = `${mobType}_${uvs.u}_${uvs.v}_${uvs.w}_${uvs.h}_${uvs.d}_${options.skinKey || ''}_${options.part || ''}`;
+    // uvs: { u, v, w, h, d, l } standard MC box UV definition
+    // options: { skinKey, emissive, emissiveIntensity, part, faceUVs, isBody }
+    const isBody = !!options.isBody;
+    const isOverlay = !!options.isOverlay;
+    const key = `${mobType}_${uvs.u}_${uvs.v}_${uvs.w}_${uvs.h}_${uvs.d || uvs.l || ''}_${options.skinKey || ''}_${options.part || ''}_${isBody ? 'body' : ''}_${isOverlay ? 'ovl' : ''}`;
     if (_mobBoxMaterialCache[key]) {
         return _mobBoxMaterialCache[key];
     }
 
-    const { u, v, w, h, d } = uvs;
+    const { u, v, w, h } = uvs;
+    const d = uvs.d || uvs.l || 0;
+    const l = uvs.l || uvs.d || d;
     const skinPath = options.skinKey || (MC_MOB_SKIN_CONFIG[mobType] ? MC_MOB_SKIN_CONFIG[mobType].path : null);
 
     const makeFaceCanvas = (fw, fh) => {
@@ -6934,37 +7345,63 @@ export function getMobBoxMaterials(mobType, uvs, options = {}) {
         return { c, ctx: cctx };
     };
 
+    let lw, lh, rw, rh, tw, th, bw, bh, fw, fh, kw, kh;
     const custom = options.faceUVs;
-    const rw = custom ? custom.right[2]  : d;
-    const rh = custom ? custom.right[3]  : h;
-    const lw = custom ? custom.left[2]   : d;
-    const lh = custom ? custom.left[3]   : h;
-    const tw = custom ? custom.top[2]    : w;
-    const th = custom ? custom.top[3]    : d;
-    const bw = custom ? custom.bottom[2] : w;
-    const bh = custom ? custom.bottom[3] : d;
-    const fw = custom ? custom.front[2]  : w;
-    const fh = custom ? custom.front[3]  : h;
-    const kw = custom ? custom.back[2]   : w;
-    const kh = custom ? custom.back[3]   : h;
 
-    const right  = makeFaceCanvas(rw, rh);
-    const left   = makeFaceCanvas(lw, lh);
-    const top    = makeFaceCanvas(tw, th);
-    const bottom = makeFaceCanvas(bw, bh);
-    const front  = makeFaceCanvas(fw, fh);
-    const back   = makeFaceCanvas(kw, kh);
+    if (custom) {
+        rw = custom.right[2];  rh = custom.right[3];
+        lw = custom.left[2];   lh = custom.left[3];
+        tw = custom.top[2];    th = custom.top[3];
+        bw = custom.bottom[2]; bh = custom.bottom[3];
+        fw = custom.front[2];  fh = custom.front[3];
+        kw = custom.back[2];   kh = custom.back[3];
+    } else if (isBody) {
+        // Quadruped body in world space: BoxGeometry(w, h, l)
+        // Face 0 (+X): Left flank (length l x height h)
+        // Face 1 (-X): Right flank (length l x height h)
+        // Face 2 (+Y): Spine/Top (width w x length l)
+        // Face 3 (-Y): Belly/Bottom (width w x length l)
+        // Face 4 (+Z): Chest/Front (width w x height h)
+        // Face 5 (-Z): Butt/Rear (width w x height h)
+        lw = l; lh = h;
+        rw = l; rh = h;
+        tw = w; th = l;
+        bw = w; bh = l;
+        fw = w; fh = h;
+        kw = w; kh = h;
+    } else {
+        // Standard upright cuboid: BoxGeometry(w, h, d)
+        // Face 0 (+X): Left side (depth d x height h)
+        // Face 1 (-X): Right side (depth d x height h)
+        // Face 2 (+Y): Top (width w x depth d)
+        // Face 3 (-Y): Bottom (width w x depth d)
+        // Face 4 (+Z): Front (width w x height h)
+        // Face 5 (-Z): Back (width w x height h)
+        lw = d; lh = h;
+        rw = d; rh = h;
+        tw = w; th = d;
+        bw = w; bh = d;
+        fw = w; fh = h;
+        kw = w; kh = h;
+    }
+
+    const left   = makeFaceCanvas(lw, lh); // Face 0 (+X in Three.js)
+    const right  = makeFaceCanvas(rw, rh); // Face 1 (-X in Three.js)
+    const top    = makeFaceCanvas(tw, th); // Face 2 (+Y in Three.js)
+    const bottom = makeFaceCanvas(bw, bh); // Face 3 (-Y in Three.js)
+    const front  = makeFaceCanvas(fw, fh); // Face 4 (+Z in Three.js)
+    const back   = makeFaceCanvas(kw, kh); // Face 5 (-Z in Three.js)
 
     const faces = [
-        { name: 'right',  canvas: right.c,  ctx: right.ctx,  sx: custom ? custom.right[0]  : u,             sy: custom ? custom.right[1]  : v + d, sw: rw, sh: rh },
-        { name: 'left',   canvas: left.c,   ctx: left.ctx,   sx: custom ? custom.left[0]   : u + d + w,     sy: custom ? custom.left[1]   : v + d, sw: lw, sh: lh },
-        { name: 'top',    canvas: top.c,    ctx: top.ctx,    sx: custom ? custom.top[0]    : u + d,         sy: custom ? custom.top[1]    : v,     sw: tw, sh: th },
-        { name: 'bottom', canvas: bottom.c, ctx: bottom.ctx, sx: custom ? custom.bottom[0] : u + d + w,     sy: custom ? custom.bottom[1] : v,     sw: bw, sh: bh },
-        { name: 'front',  canvas: front.c,  ctx: front.ctx,  sx: custom ? custom.front[0]  : u + d,         sy: custom ? custom.front[1]  : v + d, sw: fw, sh: fh },
-        { name: 'back',   canvas: back.c,   ctx: back.ctx,   sx: custom ? custom.back[0]   : u + d + w + d, sy: custom ? custom.back[1]  : v + d, sw: kw, sh: kh }
+        { name: 'left',   canvas: left.c,   ctx: left.ctx },
+        { name: 'right',  canvas: right.c,  ctx: right.ctx },
+        { name: 'top',    canvas: top.c,    ctx: top.ctx },
+        { name: 'bottom', canvas: bottom.c, ctx: bottom.ctx },
+        { name: 'front',  canvas: front.c,  ctx: front.ctx },
+        { name: 'back',   canvas: back.c,   ctx: back.ctx }
     ];
 
-    // Initialize faces with procedural fallback using appropriate part (not head_front for everything)
+    // Initialize faces with procedural fallback using appropriate part
     const partToUse = options.part || 'body';
     const procFallback = generateMobTexture(mobType, partToUse);
     for (const f of faces) {
@@ -6973,17 +7410,314 @@ export function getMobBoxMaterials(mobType, uvs, options = {}) {
 
     const textures = faces.map(f => {
         const tex = new THREE.CanvasTexture(f.canvas);
+        tex.generateMipmaps = true;
         tex.magFilter = THREE.NearestFilter;
-        tex.minFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestMipmapLinearFilter;
         tex.colorSpace = THREE.SRGBColorSpace;
         return tex;
     });
 
     const applySkinImage = (img) => {
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+        if (!iw || !ih) return;
+
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = iw; offCanvas.height = ih;
+        const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
+        offCtx.drawImage(img, 0, 0);
+        const imgData = offCtx.getImageData(0, 0, iw, ih);
+        const sdata = imgData.data;
+
+        const getPixel = (px, py) => {
+            if (px < 0 || px >= iw || py < 0 || py >= ih) return [0, 0, 0, 0];
+            const i = (py * iw + px) * 4;
+            return [sdata[i], sdata[i + 1], sdata[i + 2], sdata[i + 3]];
+        };
+
+        if (custom) {
+            const faceList = [
+                { f: faces[0], r: custom.left },
+                { f: faces[1], r: custom.right },
+                { f: faces[2], r: custom.top },
+                { f: faces[3], r: custom.bottom },
+                { f: faces[4], r: custom.front },
+                { f: faces[5], r: custom.back }
+            ];
+            for (const { f, r } of faceList) {
+                const fbData = f.ctx.getImageData(0, 0, f.canvas.width, f.canvas.height);
+                const outData = f.ctx.createImageData(f.canvas.width, f.canvas.height);
+                for (let cy = 0; cy < f.canvas.height; cy++) {
+                    for (let cx = 0; cx < f.canvas.width; cx++) {
+                        const tx = r[0] + cx;
+                        const ty = r[1] + cy;
+                        const p = getPixel(tx, ty);
+                        const di = (cy * f.canvas.width + cx) * 4;
+                        if (p[3] > 10) {
+                            outData.data[di] = p[0];
+                            outData.data[di+1] = p[1];
+                            outData.data[di+2] = p[2];
+                            outData.data[di+3] = 255;
+                        } else if (isOverlay) {
+                            outData.data[di] = 0;
+                            outData.data[di+1] = 0;
+                            outData.data[di+2] = 0;
+                            outData.data[di+3] = 0;
+                        } else {
+                            outData.data[di] = fbData.data[di];
+                            outData.data[di+1] = fbData.data[di+1];
+                            outData.data[di+2] = fbData.data[di+2];
+                            outData.data[di+3] = 255;
+                        }
+                    }
+                }
+                f.ctx.putImageData(outData, 0, 0);
+            }
+        } else if (isBody) {
+            // Authentic Minecraft Quadruped Body UV unrolling (Pig, Cow, Sheep, Chicken)
+            // Face 0: +X (Left flank, length l x height h)
+            const fb0 = faces[0].ctx.getImageData(0, 0, l, h);
+            const leftData = faces[0].ctx.createImageData(l, h);
+            for (let cy = 0; cy < h; cy++) {
+                for (let cx = 0; cx < l; cx++) {
+                    const tx = (u + h + w + h - 1) - cy;
+                    const ty = (v + h) + cx;
+                    const p = getPixel(tx, ty);
+                    const di = (cy * l + cx) * 4;
+                    if (p[3] > 10) {
+                        leftData.data[di] = p[0]; leftData.data[di+1] = p[1]; leftData.data[di+2] = p[2]; leftData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        leftData.data[di] = 0; leftData.data[di+1] = 0; leftData.data[di+2] = 0; leftData.data[di+3] = 0;
+                    } else {
+                        leftData.data[di] = fb0.data[di]; leftData.data[di+1] = fb0.data[di+1]; leftData.data[di+2] = fb0.data[di+2]; leftData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[0].ctx.putImageData(leftData, 0, 0);
+
+            // Face 1: -X (Right flank, length l x height h)
+            const fb1 = faces[1].ctx.getImageData(0, 0, l, h);
+            const rightData = faces[1].ctx.createImageData(l, h);
+            for (let cy = 0; cy < h; cy++) {
+                for (let cx = 0; cx < l; cx++) {
+                    const tx = (u + h - 1) - cy;
+                    const ty = (v + h) + (l - 1 - cx);
+                    const p = getPixel(tx, ty);
+                    const di = (cy * l + cx) * 4;
+                    if (p[3] > 10) {
+                        rightData.data[di] = p[0]; rightData.data[di+1] = p[1]; rightData.data[di+2] = p[2]; rightData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        rightData.data[di] = 0; rightData.data[di+1] = 0; rightData.data[di+2] = 0; rightData.data[di+3] = 0;
+                    } else {
+                        rightData.data[di] = fb1.data[di]; rightData.data[di+1] = fb1.data[di+1]; rightData.data[di+2] = fb1.data[di+2]; rightData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[1].ctx.putImageData(rightData, 0, 0);
+
+            // Face 2: +Y (Spine / Top of back, width w x length l)
+            const fb2 = faces[2].ctx.getImageData(0, 0, w, l);
+            const topData = faces[2].ctx.createImageData(w, l);
+            for (let cy = 0; cy < l; cy++) {
+                for (let cx = 0; cx < w; cx++) {
+                    const tx = (u + h + w + h) + cx;
+                    const ty = (v + h) + cy;
+                    const p = getPixel(tx, ty);
+                    const di = (cy * w + cx) * 4;
+                    if (p[3] > 10) {
+                        topData.data[di] = p[0]; topData.data[di+1] = p[1]; topData.data[di+2] = p[2]; topData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        topData.data[di] = 0; topData.data[di+1] = 0; topData.data[di+2] = 0; topData.data[di+3] = 0;
+                    } else {
+                        topData.data[di] = fb2.data[di]; topData.data[di+1] = fb2.data[di+1]; topData.data[di+2] = fb2.data[di+2]; topData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[2].ctx.putImageData(topData, 0, 0);
+
+            // Face 3: -Y (Belly / Bottom, width w x length l)
+            const fb3 = faces[3].ctx.getImageData(0, 0, w, l);
+            const botData = faces[3].ctx.createImageData(w, l);
+            for (let cy = 0; cy < l; cy++) {
+                for (let cx = 0; cx < w; cx++) {
+                    const tx = (u + h) + cx;
+                    const ty = (v + h) + (l - 1 - cy);
+                    const p = getPixel(tx, ty);
+                    const di = (cy * w + cx) * 4;
+                    if (p[3] > 10) {
+                        botData.data[di] = p[0]; botData.data[di+1] = p[1]; botData.data[di+2] = p[2]; botData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        botData.data[di] = 0; botData.data[di+1] = 0; botData.data[di+2] = 0; botData.data[di+3] = 0;
+                    } else {
+                        botData.data[di] = fb3.data[di]; botData.data[di+1] = fb3.data[di+1]; botData.data[di+2] = fb3.data[di+2]; botData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[3].ctx.putImageData(botData, 0, 0);
+
+            // Face 4: +Z (Chest / Front, width w x height h)
+            const fb4 = faces[4].ctx.getImageData(0, 0, w, h);
+            const frontData = faces[4].ctx.createImageData(w, h);
+            for (let cy = 0; cy < h; cy++) {
+                for (let cx = 0; cx < w; cx++) {
+                    const tx = (u + h) + cx;
+                    const ty = v + cy;
+                    const p = getPixel(tx, ty);
+                    const di = (cy * w + cx) * 4;
+                    if (p[3] > 10) {
+                        frontData.data[di] = p[0]; frontData.data[di+1] = p[1]; frontData.data[di+2] = p[2]; frontData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        frontData.data[di] = 0; frontData.data[di+1] = 0; frontData.data[di+2] = 0; frontData.data[di+3] = 0;
+                    } else {
+                        frontData.data[di] = fb4.data[di]; frontData.data[di+1] = fb4.data[di+1]; frontData.data[di+2] = fb4.data[di+2]; frontData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[4].ctx.putImageData(frontData, 0, 0);
+
+            // Face 5: -Z (Butt / Rear with tail, width w x height h)
+            const fb5 = faces[5].ctx.getImageData(0, 0, w, h);
+            const backData = faces[5].ctx.createImageData(w, h);
+            for (let cy = 0; cy < h; cy++) {
+                for (let cx = 0; cx < w; cx++) {
+                    const tx = (u + h + w) + cx;
+                    const ty = v + cy;
+                    const p = getPixel(tx, ty);
+                    const di = (cy * w + cx) * 4;
+                    if (p[3] > 10) {
+                        backData.data[di] = p[0]; backData.data[di+1] = p[1]; backData.data[di+2] = p[2]; backData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        backData.data[di] = 0; backData.data[di+1] = 0; backData.data[di+2] = 0; backData.data[di+3] = 0;
+                    } else {
+                        backData.data[di] = fb5.data[di]; backData.data[di+1] = fb5.data[di+1]; backData.data[di+2] = fb5.data[di+2]; backData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[5].ctx.putImageData(backData, 0, 0);
+        } else {
+            // Authentic Minecraft Standard Box UV unrolling (Head, Legs, Snout, Wings, Udder)
+            // Face 0: +X (Mob's Left side: depth d x height h)
+            const fb0 = faces[0].ctx.getImageData(0, 0, d, h);
+            const leftData = faces[0].ctx.createImageData(d, h);
+            for (let cy = 0; cy < h; cy++) {
+                for (let cx = 0; cx < d; cx++) {
+                    const tx = (u + d + w) + cx;
+                    const ty = (v + d) + cy;
+                    const p = getPixel(tx, ty);
+                    const di = (cy * d + cx) * 4;
+                    if (p[3] > 10) {
+                        leftData.data[di] = p[0]; leftData.data[di+1] = p[1]; leftData.data[di+2] = p[2]; leftData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        leftData.data[di] = 0; leftData.data[di+1] = 0; leftData.data[di+2] = 0; leftData.data[di+3] = 0;
+                    } else {
+                        leftData.data[di] = fb0.data[di]; leftData.data[di+1] = fb0.data[di+1]; leftData.data[di+2] = fb0.data[di+2]; leftData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[0].ctx.putImageData(leftData, 0, 0);
+
+            // Face 1: -X (Mob's Right side: depth d x height h)
+            const fb1 = faces[1].ctx.getImageData(0, 0, d, h);
+            const rightData = faces[1].ctx.createImageData(d, h);
+            for (let cy = 0; cy < h; cy++) {
+                for (let cx = 0; cx < d; cx++) {
+                    const tx = u + cx;
+                    const ty = (v + d) + cy;
+                    const p = getPixel(tx, ty);
+                    const di = (cy * d + cx) * 4;
+                    if (p[3] > 10) {
+                        rightData.data[di] = p[0]; rightData.data[di+1] = p[1]; rightData.data[di+2] = p[2]; rightData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        rightData.data[di] = 0; rightData.data[di+1] = 0; rightData.data[di+2] = 0; rightData.data[di+3] = 0;
+                    } else {
+                        rightData.data[di] = fb1.data[di]; rightData.data[di+1] = fb1.data[di+1]; rightData.data[di+2] = fb1.data[di+2]; rightData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[1].ctx.putImageData(rightData, 0, 0);
+
+            // Face 2: +Y (Top of part: width w x depth d)
+            const fb2 = faces[2].ctx.getImageData(0, 0, w, d);
+            const topData = faces[2].ctx.createImageData(w, d);
+            for (let cy = 0; cy < d; cy++) {
+                for (let cx = 0; cx < w; cx++) {
+                    const tx = (u + d) + cx;
+                    const ty = v + (d - 1 - cy);
+                    const p = getPixel(tx, ty);
+                    const di = (cy * w + cx) * 4;
+                    if (p[3] > 10) {
+                        topData.data[di] = p[0]; topData.data[di+1] = p[1]; topData.data[di+2] = p[2]; topData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        topData.data[di] = 0; topData.data[di+1] = 0; topData.data[di+2] = 0; topData.data[di+3] = 0;
+                    } else {
+                        topData.data[di] = fb2.data[di]; topData.data[di+1] = fb2.data[di+1]; topData.data[di+2] = fb2.data[di+2]; topData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[2].ctx.putImageData(topData, 0, 0);
+
+            // Face 3: -Y (Bottom of part: width w x depth d)
+            const fb3 = faces[3].ctx.getImageData(0, 0, w, d);
+            const botData = faces[3].ctx.createImageData(w, d);
+            for (let cy = 0; cy < d; cy++) {
+                for (let cx = 0; cx < w; cx++) {
+                    const tx = (u + d + w) + cx;
+                    const ty = v + (d - 1 - cy);
+                    const p = getPixel(tx, ty);
+                    const di = (cy * w + cx) * 4;
+                    if (p[3] > 10) {
+                        botData.data[di] = p[0]; botData.data[di+1] = p[1]; botData.data[di+2] = p[2]; botData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        botData.data[di] = 0; botData.data[di+1] = 0; botData.data[di+2] = 0; botData.data[di+3] = 0;
+                    } else {
+                        botData.data[di] = fb3.data[di]; botData.data[di+1] = fb3.data[di+1]; botData.data[di+2] = fb3.data[di+2]; botData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[3].ctx.putImageData(botData, 0, 0);
+
+            // Face 4: +Z (Front face / Face: width w x height h)
+            const fb4 = faces[4].ctx.getImageData(0, 0, w, h);
+            const frontData = faces[4].ctx.createImageData(w, h);
+            for (let cy = 0; cy < h; cy++) {
+                for (let cx = 0; cx < w; cx++) {
+                    const tx = (u + d) + cx;
+                    const ty = (v + d) + cy;
+                    const p = getPixel(tx, ty);
+                    const di = (cy * w + cx) * 4;
+                    if (p[3] > 10) {
+                        frontData.data[di] = p[0]; frontData.data[di+1] = p[1]; frontData.data[di+2] = p[2]; frontData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        frontData.data[di] = 0; frontData.data[di+1] = 0; frontData.data[di+2] = 0; frontData.data[di+3] = 0;
+                    } else {
+                        frontData.data[di] = fb4.data[di]; frontData.data[di+1] = fb4.data[di+1]; frontData.data[di+2] = fb4.data[di+2]; frontData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[4].ctx.putImageData(frontData, 0, 0);
+
+            // Face 5: -Z (Back of part: width w x height h)
+            const fb5 = faces[5].ctx.getImageData(0, 0, w, h);
+            const backData = faces[5].ctx.createImageData(w, h);
+            for (let cy = 0; cy < h; cy++) {
+                for (let cx = 0; cx < w; cx++) {
+                    const tx = (u + d + w + d) + cx;
+                    const ty = (v + d) + cy;
+                    const p = getPixel(tx, ty);
+                    const di = (cy * w + cx) * 4;
+                    if (p[3] > 10) {
+                        backData.data[di] = p[0]; backData.data[di+1] = p[1]; backData.data[di+2] = p[2]; backData.data[di+3] = 255;
+                    } else if (isOverlay) {
+                        backData.data[di] = 0; backData.data[di+1] = 0; backData.data[di+2] = 0; backData.data[di+3] = 0;
+                    } else {
+                        backData.data[di] = fb5.data[di]; backData.data[di+1] = fb5.data[di+1]; backData.data[di+2] = fb5.data[di+2]; backData.data[di+3] = 255;
+                    }
+                }
+            }
+            faces[5].ctx.putImageData(backData, 0, 0);
+        }
+
         for (let i = 0; i < faces.length; i++) {
-            const f = faces[i];
-            f.ctx.clearRect(0, 0, f.canvas.width, f.canvas.height);
-            f.ctx.drawImage(img, f.sx, f.sy, f.sw, f.sh, 0, 0, f.canvas.width, f.canvas.height);
             textures[i].needsUpdate = true;
         }
     };
@@ -7022,10 +7756,14 @@ export function getMobBoxMaterials(mobType, uvs, options = {}) {
     const emissive = options.emissive ? new THREE.Color(options.emissive) : new THREE.Color(0x000000);
     const emissiveIntensity = options.emissiveIntensity || 0;
 
+    const isTransparent = options.transparent !== undefined ? options.transparent : isOverlay;
     const materials = textures.map(tex => new THREE.MeshLambertMaterial({
         map: tex,
         emissive,
-        emissiveIntensity
+        emissiveIntensity,
+        transparent: isTransparent,
+        alphaTest: isTransparent ? (options.alphaTest !== undefined ? options.alphaTest : 0.5) : 0,
+        side: THREE.FrontSide
     }));
 
     _mobBoxMaterialCache[key] = materials;
