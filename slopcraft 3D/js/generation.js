@@ -1,10 +1,10 @@
-// ============================================
+﻿// ============================================
 // generation.js — Procedural Generation, Biomes, Dungeons
 // ============================================
-import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=109';
-import { BLOCKS } from './textures.js?v=109';
+import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=110';
+import { BLOCKS } from './textures.js?v=110';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=109';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=110';
 
 // Planet configurations
 export const BIOMES = {
@@ -1752,7 +1752,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 if (isAreaValidForStructure(tx, tz, surfaceY, 4)) {
                     generatePortalStructure(blocks, tx, surfaceY + 1, tz, structRng, 'nether');
                 }
-            } else if (r < 0.000075) {
+            } else if (r < 0.000004 && (biome === BIOMES.DARK_FOREST || biome === BIOMES.TAIGA || biome === BIOMES.REDWOOD_FOREST)) {
                 if (isAreaValidForStructure(tx, tz, surfaceY, 4)) {
                     generateHouse(blocks, tx, surfaceY + 1, tz, structRng);
                 }
@@ -1776,7 +1776,7 @@ export function generateChunkTerrain(cx, cz, params) {
     // ============================================
     const villages = getVillagePositions(params.seed);
     for (const vPos of villages) {
-        if (Math.abs(cx * CHUNK_SIZE + 8 - vPos.x) <= 32 && Math.abs(cz * CHUNK_SIZE + 8 - vPos.z) <= 32) {
+        if (Math.abs(cx * CHUNK_SIZE + 8 - vPos.x) <= 40 && Math.abs(cz * CHUNK_SIZE + 8 - vPos.z) <= 40) {
             generateVillage(blocks, cx, cz, vPos, params);
             break;
         }
@@ -3907,6 +3907,10 @@ export function getClosestVillagePosition(px, pz, seed = 12345) {
             best = v;
         }
     }
+    if (window.worldGenParams) {
+        const col = getColumnInfo(best.x, best.z, window.worldGenParams);
+        if (col && col.surfaceY > 0) best.y = col.surfaceY;
+    }
     return best;
 }
 
@@ -4329,7 +4333,18 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
     const fenceId = BLOCKS.OAK_FENCE || BLOCKS.WOOD;
     const lanternId = BLOCKS.LANTERN || BLOCKS.TORCH;
 
-    // 1. Village Center Well at (vPos.x, vPos.y, vPos.z)
+    // Determine actual surface height at village center
+    const centerCol = getColumnInfo(vPos.x, vPos.z, params);
+    if (!centerCol) return;
+    const centerBiome = centerCol.biome;
+    if (centerBiome === BIOMES.DEEP_OCEAN || centerBiome === BIOMES.OCEAN || centerBiome === BIOMES.CORAL_REEF || centerBiome === BIOMES.FROZEN_OCEAN) {
+        return; // No ocean villages
+    }
+    const villageY = centerCol.surfaceY;
+    if (villageY <= params.seaLevel) return;
+    vPos.y = villageY;
+
+    // 1. Village Center Well at (vPos.x, villageY, vPos.z)
     const lxCenter = vPos.x - wxBase;
     const lzCenter = vPos.z - wzBase;
 
@@ -4339,83 +4354,173 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
             const lz = lzCenter + dz;
             if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
                 const r2 = dx * dx + dz * dz;
-                for (let dy = 1; dy <= 5; dy++) {
-                    safeSetBlock(blocks, lx, vPos.y - dy, lz, BLOCKS.COBBLESTONE);
+                for (let dy = 1; dy <= 8; dy++) {
+                    const fy = villageY - dy;
+                    if (fy < 1) break;
+                    safeSetBlock(blocks, lx, fy, lz, BLOCKS.COBBLESTONE);
                 }
                 if (r2 <= 1) {
-                    safeSetBlock(blocks, lx, vPos.y - 1, lz, BLOCKS.WATER);
-                    safeSetBlock(blocks, lx, vPos.y, lz, BLOCKS.AIR);
+                    safeSetBlock(blocks, lx, villageY - 1, lz, BLOCKS.WATER);
+                    safeSetBlock(blocks, lx, villageY, lz, BLOCKS.AIR);
                 } else if (r2 <= 4) {
-                    safeSetBlock(blocks, lx, vPos.y - 1, lz, BLOCKS.COBBLESTONE);
-                    safeSetBlock(blocks, lx, vPos.y, lz, BLOCKS.COBBLESTONE);
+                    safeSetBlock(blocks, lx, villageY - 1, lz, BLOCKS.COBBLESTONE);
+                    safeSetBlock(blocks, lx, villageY, lz, BLOCKS.COBBLESTONE);
                 }
                 if (Math.abs(dx) === 1 && Math.abs(dz) === 1) {
                     for (let py = 1; py <= 3; py++) {
-                        safeSetBlock(blocks, lx, vPos.y + py, lz, fenceId);
+                        safeSetBlock(blocks, lx, villageY + py, lz, fenceId);
                     }
                 }
                 if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) {
-                    safeSetBlock(blocks, lx, vPos.y + 4, lz, BLOCKS.COBBLESTONE);
+                    safeSetBlock(blocks, lx, villageY + 4, lz, BLOCKS.COBBLESTONE);
                 }
                 if (dx === 0 && dz === 0) {
-                    safeSetBlock(blocks, lx, vPos.y + 3, lz, lanternId);
+                    safeSetBlock(blocks, lx, villageY + 3, lz, lanternId);
                 }
             }
         }
     }
 
-    // 2. Gravel pathways radiating 20 blocks in cardinal directions
-    for (let dist = 3; dist <= 20; dist++) {
-        const pathCoords = [
-            { x: vPos.x + dist, z: vPos.z },
-            { x: vPos.x - dist, z: vPos.z },
-            { x: vPos.x, z: vPos.z + dist },
-            { x: vPos.x, z: vPos.z - dist }
-        ];
-        for (const pt of pathCoords) {
-            const lx = pt.x - wxBase;
-            const lz = pt.z - wzBase;
+    // 2. Comprehensive Connected Pathway Network
+    // Connects central well plaza directly to every building entrance & surrounds the village
+    const pathPoints = new Map();
+    const addPath = (wx, wz, isLamp = false) => {
+        const key = `${wx},${wz}`;
+        if (!pathPoints.has(key)) pathPoints.set(key, { wx, wz, isLamp });
+        else if (isLamp) pathPoints.get(key).isLamp = true;
+    };
+
+    // (A) Well plaza perimeter loop (3x3 ring around well)
+    for (let dx = -4; dx <= 4; dx++) {
+        for (let dz = -4; dz <= 4; dz++) {
+            if (Math.abs(dx) >= 3 || Math.abs(dz) >= 3) {
+                const isCorner = Math.abs(dx) === 4 && Math.abs(dz) === 4;
+                addPath(vPos.x + dx, vPos.z + dz, isCorner);
+            }
+        }
+    }
+
+    // (B) 4 Main Cardinal Avenues (radiating 26 blocks, 2 blocks wide)
+    for (let dist = 4; dist <= 26; dist++) {
+        for (let w = -1; w <= 0; w++) {
+            addPath(vPos.x + dist, vPos.z + w, dist % 8 === 0 && w === 0);
+            addPath(vPos.x - dist, vPos.z + w, dist % 8 === 0 && w === 0);
+            addPath(vPos.x + w, vPos.z + dist, dist % 8 === 0 && w === 0);
+            addPath(vPos.x + w, vPos.z - dist, dist % 8 === 0 && w === 0);
+        }
+    }
+
+    // (C) Direct connecting paths to building doorways
+    // Blacksmith (+14, +14)
+    for (let d = 4; d <= 14; d++) {
+        addPath(vPos.x + d, vPos.z + 4);
+        addPath(vPos.x + 14, vPos.z + d, d === 12);
+    }
+    // Library (-14, +14)
+    for (let d = 4; d <= 14; d++) {
+        addPath(vPos.x - d, vPos.z + 4);
+        addPath(vPos.x - 14, vPos.z + d, d === 12);
+    }
+    // Farmhouse (+14, -14)
+    for (let d = 4; d <= 14; d++) {
+        addPath(vPos.x + d, vPos.z - 4);
+        addPath(vPos.x + 14, vPos.z - d, d === 12);
+    }
+    // Peasant Cabin (-14, -14)
+    for (let d = 4; d <= 14; d++) {
+        addPath(vPos.x - d, vPos.z - 4);
+        addPath(vPos.x - 14, vPos.z - d, d === 12);
+    }
+
+    // (D) Cross-village perimeter connecting avenue
+    for (let d = -14; d <= 14; d++) {
+        if (Math.abs(d) > 3) {
+            addPath(vPos.x + d, vPos.z + 14);
+            addPath(vPos.x + d, vPos.z - 14);
+            addPath(vPos.x + 14, vPos.z + d);
+            addPath(vPos.x - 14, vPos.z + d);
+        }
+    }
+
+    // Carve & surface the path points that fall within this chunk
+    for (const pt of pathPoints.values()) {
+        const lx = pt.wx - wxBase;
+        const lz = pt.wz - wzBase;
+        if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+            const pCol = getColumnInfo(pt.wx, pt.wz, params);
+            let py = pCol ? pCol.surfaceY : villageY;
+            if (py <= 0) py = villageY;
+
+            safeSetBlock(blocks, lx, py - 1, lz, BLOCKS.GRAVEL);
+            safeSetBlock(blocks, lx, py, lz, BLOCKS.AIR);
+            safeSetBlock(blocks, lx, py + 1, lz, BLOCKS.AIR);
+
+            if (pt.isLamp) {
+                safeSetBlock(blocks, lx, py, lz, fenceId);
+                safeSetBlock(blocks, lx, py + 1, lz, fenceId);
+                safeSetBlock(blocks, lx, py + 2, lz, lanternId);
+            }
+        }
+    }
+
+    // 3. Village Crop Farm Field at (-5 to +5, -6 to -10)
+    for (let fx = -4; fx <= 4; fx++) {
+        for (let fz = -10; fz <= -6; fz++) {
+            const lx = vPos.x + fx - wxBase;
+            const lz = vPos.z + fz - wzBase;
             if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
-                safeSetBlock(blocks, lx, vPos.y - 1, lz, BLOCKS.GRAVEL);
-                safeSetBlock(blocks, lx, vPos.y, lz, BLOCKS.AIR);
-                safeSetBlock(blocks, lx, vPos.y + 1, lz, BLOCKS.AIR);
-
-                if (dist % 8 === 0) {
-                    safeSetBlock(blocks, lx, vPos.y, lz, fenceId);
-                    safeSetBlock(blocks, lx, vPos.y + 1, lz, fenceId);
-                    safeSetBlock(blocks, lx, vPos.y + 2, lz, lanternId);
+                const fCol = getColumnInfo(vPos.x + fx, vPos.z + fz, params);
+                const fy = fCol ? fCol.surfaceY : villageY;
+                const isBorder = (fx === -4 || fx === 4 || fz === -10 || fz === -6);
+                if (isBorder) {
+                    safeSetBlock(blocks, lx, fy - 1, lz, BLOCKS.WOOD);
+                    safeSetBlock(blocks, lx, fy, lz, fenceId);
+                } else if (fx === 0) {
+                    safeSetBlock(blocks, lx, fy - 1, lz, BLOCKS.WATER);
+                    safeSetBlock(blocks, lx, fy, lz, BLOCKS.AIR);
+                } else {
+                    safeSetBlock(blocks, lx, fy - 1, lz, BLOCKS.DIRT);
+                    safeSetBlock(blocks, lx, fy, lz, (Math.abs(fx) % 2 === 0) ? BLOCKS.YELLOW_FLOWER : BLOCKS.WHITE_FLOWER);
                 }
             }
         }
     }
 
-    // 3. Buildings placed in quadrants around village well:
-    // Blacksmith at (+10, +10)
-    const bsX = vPos.x + 10 - wxBase;
-    const bsZ = vPos.z + 10 - wzBase;
-    if (bsX >= -4 && bsX <= CHUNK_SIZE + 4 && bsZ >= -3 && bsZ <= CHUNK_SIZE + 3) {
-        generateBlacksmith(blocks, bsX, vPos.y, bsZ, rng);
+    // 4. Village Buildings at local terrain surface heights:
+    // (A) Blacksmith at (+14, +14)
+    const bsCol = getColumnInfo(vPos.x + 14, vPos.z + 14, params);
+    const bsY = bsCol ? bsCol.surfaceY : villageY;
+    const bsX = vPos.x + 14 - wxBase;
+    const bsZ = vPos.z + 14 - wzBase;
+    if (bsX >= -5 && bsX <= CHUNK_SIZE + 5 && bsZ >= -5 && bsZ <= CHUNK_SIZE + 5) {
+        generateBlacksmith(blocks, bsX, bsY, bsZ, rng);
     }
 
-    // Library at (-10, +10)
-    const libX = vPos.x - 10 - wxBase;
-    const libZ = vPos.z + 10 - wzBase;
-    if (libX >= -3 && libX <= CHUNK_SIZE + 3 && libZ >= -3 && libZ <= CHUNK_SIZE + 3) {
-        generateLibrary(blocks, libX, vPos.y, libZ, rng);
+    // (B) Library at (-14, +14)
+    const libCol = getColumnInfo(vPos.x - 14, vPos.z + 14, params);
+    const libY = libCol ? libCol.surfaceY : villageY;
+    const libX = vPos.x - 14 - wxBase;
+    const libZ = vPos.z + 14 - wzBase;
+    if (libX >= -5 && libX <= CHUNK_SIZE + 5 && libZ >= -5 && libZ <= CHUNK_SIZE + 5) {
+        generateLibrary(blocks, libX, libY, libZ, rng);
     }
 
-    // Farmhouse at (+10, -10)
-    const farmX = vPos.x + 10 - wxBase;
-    const farmZ = vPos.z - 10 - wzBase;
-    if (farmX >= -4 && farmX <= CHUNK_SIZE + 4 && farmZ >= -3 && farmZ <= CHUNK_SIZE + 3) {
-        generateFarmhouse(blocks, farmX, vPos.y, farmZ, rng);
+    // (C) Farmhouse at (+14, -14)
+    const farmCol = getColumnInfo(vPos.x + 14, vPos.z - 14, params);
+    const farmY = farmCol ? farmCol.surfaceY : villageY;
+    const farmX = vPos.x + 14 - wxBase;
+    const farmZ = vPos.z - 14 - wzBase;
+    if (farmX >= -5 && farmX <= CHUNK_SIZE + 5 && farmZ >= -5 && farmZ <= CHUNK_SIZE + 5) {
+        generateFarmhouse(blocks, farmX, farmY, farmZ, rng);
     }
 
-    // Peasant Cottage at (-10, -10)
-    const cotX = vPos.x - 10 - wxBase;
-    const cotZ = vPos.z - 10 - wzBase;
-    if (cotX >= -3 && cotX <= CHUNK_SIZE + 3 && cotZ >= -3 && cotZ <= CHUNK_SIZE + 3) {
-        generateCabin(blocks, cotX, vPos.y, cotZ, rng);
+    // (D) Peasant Cottage at (-14, -14)
+    const cotCol = getColumnInfo(vPos.x - 14, vPos.z - 14, params);
+    const cotY = cotCol ? cotCol.surfaceY : villageY;
+    const cotX = vPos.x - 14 - wxBase;
+    const cotZ = vPos.z - 14 - wzBase;
+    if (cotX >= -5 && cotX <= CHUNK_SIZE + 5 && cotZ >= -5 && cotZ <= CHUNK_SIZE + 5) {
+        generateCabin(blocks, cotX, cotY, cotZ, rng);
     }
 }
 

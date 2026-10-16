@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=109';
-import { getBiomeParams } from './generation.js?v=109';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=110';
+import { getBiomeParams } from './generation.js?v=110';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -14,7 +14,7 @@ export const CHUNK_HEIGHT = 128;
 export class InputManager {
     constructor() {
         this.keys = { forward: false, backward: false, left: false, right: false, jump: false, sprint: false, crouch: false };
-        this.mouse = { dx: 0, dy: 0, leftClick: false, rightClick: false, scrollDelta: 0 };
+        this.mouse = { dx: 0, dy: 0, leftClick: false, rightClick: false, middleClick: false, scrollDelta: 0 };
         this.menuKeys = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false, togglePerspective: false };
         this._menuKeysDown = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false, togglePerspective: false };
         this.hotbarIndex = -1;
@@ -43,12 +43,18 @@ export class InputManager {
         document.addEventListener('mousedown', (e) => {
             if (!this.isLocked) return;
             if (e.button === 0) this.mouse.leftClick = true;
+            if (e.button === 1) { this.mouse.middleClick = true; e.preventDefault(); }
             if (e.button === 2) this.mouse.rightClick = true;
         }, false);
 
         document.addEventListener('mouseup', (e) => {
             if (e.button === 0) this.mouse.leftClick = false;
+            if (e.button === 1) this.mouse.middleClick = false;
             if (e.button === 2) this.mouse.rightClick = false;
+        }, false);
+
+        document.addEventListener('auxclick', (e) => {
+            if (e.button === 1) e.preventDefault();
         }, false);
 
         document.addEventListener('wheel', (e) => {
@@ -1583,7 +1589,15 @@ export class World {
         const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
         const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
 
-        const chunk = this.chunks.get(this.getChunkKey(cx, cz));
+        const chunkKey = this.getChunkKey(cx, cz);
+        const mods = this.modifications ? this.modifications.get(chunkKey) : null;
+        if (mods) {
+            const idx = (wy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+            const mod = mods.get(idx);
+            if (mod !== undefined) return mod.block;
+        }
+
+        const chunk = this.chunks.get(chunkKey);
         if (chunk) return chunk.getBlock(lx, wy, lz);
         return BLOCKS.AIR;
     }
@@ -1597,8 +1611,29 @@ export class World {
         const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
         const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
 
-        const chunk = this.chunks.get(this.getChunkKey(cx, cz));
+        const chunkKey = this.getChunkKey(cx, cz);
+        const mods = this.modifications ? this.modifications.get(chunkKey) : null;
+        if (mods) {
+            const idx = (wy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+            const mod = mods.get(idx);
+            if (mod !== undefined) return mod.data;
+        }
+
+        const chunk = this.chunks.get(chunkKey);
         if (chunk) return chunk.getData(lx, wy, lz);
+        return 0;
+    }
+
+    getHighestBlock(x, z) {
+        x = Math.floor(x);
+        z = Math.floor(z);
+        for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) {
+            const b = this.getBlock(x, y, z);
+            if (b !== BLOCKS.AIR) {
+                const props = getBlockProperties(b);
+                if (props && props.solid) return y;
+            }
+        }
         return 0;
     }
 

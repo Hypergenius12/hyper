@@ -2,9 +2,9 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=109';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=109';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=109';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=110';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=110';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=110';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -4199,23 +4199,13 @@ const MOB_SPAWN_WEIGHTS = [
     { type: 'SKELETON', weight: 15 },
     { type: 'SPIDER', weight: 12 },
     { type: 'CREEPER', weight: 12 },
-    { type: 'SLIME', weight: 12 },
-    { type: 'ENDERMAN', weight: 6 },
-    { type: 'BAT', weight: 8 },
-    { type: 'TROPICAL_FISH', weight: 15 },
-    { type: 'COD', weight: 15 },
-    { type: 'SALMON', weight: 15 },
-    { type: 'PUFFERFISH', weight: 6 },
-    { type: 'TURTLE', weight: 8 },
-    { type: 'FROG', weight: 10 },
-    { type: 'CAMEL', weight: 6 },
-    { type: 'GOLEM', weight: 2 },
-    { type: 'SWET', weight: 6 },
-    { type: 'AERWHALE', weight: 4 },
+    { type: 'SLIME', weight: 8 },
+    { type: 'ENDERMAN', weight: 5 },
+    { type: 'BAT', weight: 6 }
 ];
 const TOTAL_MOB_WEIGHT = MOB_SPAWN_WEIGHTS.reduce((s, e) => s + e.weight, 0);
 
-function pickRandomMobType(dimension = 'overworld', biome = 'plains', isDay = false) {
+function pickRandomMobType(dimension = 'overworld', biomeName = 'plains', isDay = false, surfaceBlock = null) {
     if (dimension === 'nether') {
         const netherMobs = ['BLAZE', 'BLAZE', 'ENDERMAN', 'LAVASLIME', 'PIGLIN_BRUISER'];
         return netherMobs[Math.floor(Math.random() * netherMobs.length)];
@@ -4232,35 +4222,86 @@ function pickRandomMobType(dimension = 'overworld', biome = 'plains', isDay = fa
         return cavMobs[Math.floor(Math.random() * cavMobs.length)];
     }
 
-    if (dimension === 'overworld' && isDay) {
-        // STRICTLY no hostile mobs on surface during daytime!
-        const passiveMobs = ['SHEEP', 'COW', 'PIG', 'CHICKEN', 'FROG', 'CAMEL', 'TURTLE'];
-        if (biome === 'desert' && Math.random() < 0.6) return 'CAMEL';
-        if (biome === 'swamp' && Math.random() < 0.6) return 'FROG';
-        if (biome === 'snow') return Math.random() < 0.65 ? 'POLAR_BEAR' : 'SHEEP';
-        return passiveMobs[Math.floor(Math.random() * passiveMobs.length)];
+    const b = (biomeName || '').toLowerCase();
+    const isCold = b.includes('snow') || b.includes('tundra') || b.includes('ice') || b.includes('mountain') || 
+                   surfaceBlock === BLOCKS.SNOW || surfaceBlock === BLOCKS.ICE || surfaceBlock === BLOCKS.PACKED_ICE || surfaceBlock === BLOCKS.BLUE_ICE;
+    const isDesert = b.includes('desert') || b.includes('badlands') || b.includes('oasis') || 
+                     surfaceBlock === BLOCKS.SAND || surfaceBlock === BLOCKS.RED_SAND || surfaceBlock === BLOCKS.TERRACOTTA;
+    const isSwamp = b.includes('swamp') || surfaceBlock === BLOCKS.SWAMP_GRASS || surfaceBlock === BLOCKS.MUD;
+    const isJungle = b.includes('jungle');
+    const isBeach = b.includes('beach');
+    const isMushroom = b.includes('mushroom') || surfaceBlock === BLOCKS.MYCELIUM;
+
+    // Day Spawning (strictly passive mobs matching their authentic biome)
+    if (isDay) {
+        if (isCold) {
+            // Strictly snowy mobs: Polar Bears and Snow Golems (and rare white sheep) - NEVER camels!
+            const coldRoll = Math.random();
+            if (coldRoll < 0.60) return 'POLAR_BEAR';
+            if (coldRoll < 0.85) return 'SNOW_GOLEM';
+            return 'SHEEP';
+        }
+        if (isDesert) {
+            // Desert mobs: Camels (and rare sheep)
+            return Math.random() < 0.80 ? 'CAMEL' : 'SHEEP';
+        }
+        if (isSwamp) {
+            // Swamp mobs: Frogs and slimes
+            return Math.random() < 0.70 ? 'FROG' : 'SLIME';
+        }
+        if (isBeach) {
+            return Math.random() < 0.80 ? 'TURTLE' : 'CHICKEN';
+        }
+        if (isJungle) {
+            const jPassives = ['CHICKEN', 'PIG', 'FROG', 'SHEEP'];
+            return jPassives[Math.floor(Math.random() * jPassives.length)];
+        }
+        if (isMushroom) {
+            return 'COW';
+        }
+        // General temperate plains / forest / taiga / savanna:
+        // STRICTLY: Cow, Sheep, Pig, Chicken - NO Camels, NO Polar Bears!
+        const temperatePassives = ['SHEEP', 'COW', 'PIG', 'CHICKEN'];
+        return temperatePassives[Math.floor(Math.random() * temperatePassives.length)];
     }
 
-    if (biome === 'desert' && Math.random() < 0.5) return 'CAMEL';
-    if (biome === 'swamp') {
-        const swRoll = Math.random();
-        if (swRoll < 0.35) return 'WITCH';
-        if (swRoll < 0.70) return 'SLIME';
+    // Night Spawning
+    if (isCold) {
+        // Cold nights: Strays (Skeleton), Zombies, Polar Bears, Snow Golems - NO camels!
+        const cNightRoll = Math.random();
+        if (cNightRoll < 0.35) return 'POLAR_BEAR';
+        if (cNightRoll < 0.65) return 'SKELETON';
+        if (cNightRoll < 0.85) return 'ZOMBIE';
+        return 'SPIDER';
+    }
+    if (isDesert) {
+        // Desert nights: Camels, Husks (Zombies), Skeletons, Spiders - NO winter mobs!
+        const dNightRoll = Math.random();
+        if (dNightRoll < 0.25) return 'CAMEL';
+        if (dNightRoll < 0.55) return 'ZOMBIE';
+        if (dNightRoll < 0.80) return 'SKELETON';
+        return 'SPIDER';
+    }
+    if (isSwamp) {
+        const sNightRoll = Math.random();
+        if (sNightRoll < 0.35) return 'WITCH';
+        if (sNightRoll < 0.70) return 'SLIME';
         return 'FROG';
     }
-    if (biome === 'snow') {
-        const coldRoll = Math.random();
-        if (coldRoll < 0.35) return 'POLAR_BEAR';
-        if (coldRoll < 0.70) return 'SKELETON';
-        return 'ZOMBIE';
+    if (isMushroom) {
+        return 'COW';
     }
 
-    let r = Math.random() * TOTAL_MOB_WEIGHT;
-    for (const entry of MOB_SPAWN_WEIGHTS) {
-        r -= entry.weight;
-        if (r <= 0) return entry.type;
+    // General Overworld Night Hostiles
+    const nightHostiles = ['ZOMBIE', 'SKELETON', 'SPIDER', 'CREEPER', 'ENDERMAN', 'BAT'];
+    const weights = [30, 25, 20, 15, 6, 4];
+    let totalW = 100;
+    let r = Math.random() * totalW;
+    for (let i = 0; i < nightHostiles.length; i++) {
+        r -= weights[i];
+        if (r <= 0) return nightHostiles[i];
     }
-    return 'SHEEP';
+    return 'ZOMBIE';
 }
 
 // ============================================
@@ -5009,26 +5050,45 @@ export class EntityManager {
         // Village inhabitants spawner (Iron Golem + Villagers)
         if (!this.spawnedVillages) this.spawnedVillages = new Set();
         if (currentDimension === 'overworld' && typeof window.getClosestVillagePosition === 'function') {
-            const vSeed = (window.worldGenParams ? window.worldGenParams.seed : 12345);
+            const vSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
             const vPos = window.getClosestVillagePosition(playerPos.x, playerPos.z, vSeed);
             if (vPos) {
                 const distV = Math.hypot(playerPos.x - vPos.x, playerPos.z - vPos.z);
                 const vKey = `${vPos.x}_${vPos.z}`;
-                if (distV < 56 && !this.spawnedVillages.has(vKey)) {
+                if (distV < 80 && !this.spawnedVillages.has(vKey)) {
                     this.spawnedVillages.add(vKey);
+                    
+                    const getGround = (x, z) => {
+                        if (world && typeof world.getHighestBlock === 'function') {
+                            const h = world.getHighestBlock(Math.floor(x), Math.floor(z));
+                            if (h > 0) return h;
+                        }
+                        if (this.game && this.game.world && typeof this.game.world.getHighestBlock === 'function') {
+                            const h = this.game.world.getHighestBlock(Math.floor(x), Math.floor(z));
+                            if (h > 0) return h;
+                        }
+                        return vPos.y || 64;
+                    };
+
                     // Spawn Iron Golem protector in village
-                    const golem = new Mob('GOLEM', new THREE.Vector3(vPos.x + 3, vPos.y + 1, vPos.z + 3));
+                    const gy = getGround(vPos.x + 3, vPos.z + 3);
+                    const golem = new Mob('GOLEM', new THREE.Vector3(vPos.x + 3, gy + 1, vPos.z + 3));
                     this.addMob(golem);
-                    // Spawn Villagers in village
+
+                    // Spawn Villagers in various spots across the village: well, blacksmith, library, farm, cabin
                     const vOffsets = [
-                        { dx: -4, dz: 0 },
-                        { dx: 4, dz: 0 },
-                        { dx: 0, dz: -4 },
-                        { dx: 0, dz: 4 },
-                        { dx: 2, dz: -3 }
+                        { dx: 2, dz: 0 },
+                        { dx: -2, dz: 2 },
+                        { dx: 12, dz: 12 },
+                        { dx: -12, dz: 12 },
+                        { dx: 12, dz: -12 },
+                        { dx: -12, dz: -12 }
                     ];
                     for (const off of vOffsets) {
-                        const villager = new Mob('VILLAGER', new THREE.Vector3(vPos.x + off.dx, vPos.y + 1, vPos.z + off.dz));
+                        const vx = vPos.x + off.dx;
+                        const vz = vPos.z + off.dz;
+                        const vy = getGround(vx, vz);
+                        const villager = new Mob('VILLAGER', new THREE.Vector3(vx, vy + 1, vz));
                         this.addMob(villager);
                     }
                 }
@@ -5038,7 +5098,7 @@ export class EntityManager {
         // Igloo basement inhabitants spawner (Villager + Zombie in holding cells)
         if (!this.spawnedIgloos) this.spawnedIgloos = new Set();
         if (currentDimension === 'overworld' && typeof window.getClosestIglooPosition === 'function') {
-            const iSeed = (window.worldGenParams ? window.worldGenParams.seed : 12345);
+            const iSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
             const iPos = window.getClosestIglooPosition(playerPos.x, playerPos.z, iSeed);
             if (iPos) {
                 const distI = Math.hypot(playerPos.x - iPos.x, playerPos.z - iPos.z);
@@ -5059,7 +5119,7 @@ export class EntityManager {
         // Witch Hut inhabitant spawner (Witch inside swamp hut)
         if (!this.spawnedWitchHuts) this.spawnedWitchHuts = new Set();
         if (currentDimension === 'overworld' && typeof window.getClosestWitchHutPosition === 'function') {
-            const wSeed = (window.worldGenParams ? window.worldGenParams.seed : 12345);
+            const wSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
             const wPos = window.getClosestWitchHutPosition(playerPos.x, playerPos.z, wSeed);
             if (wPos) {
                 const distW = Math.hypot(playerPos.x - wPos.x, playerPos.z - wPos.z);
@@ -5111,14 +5171,19 @@ export class EntityManager {
                         } else {
                             const biomeBlock = b;
                             let biome = 'plains';
-                            if (biomeBlock === BLOCKS.SAND || biomeBlock === BLOCKS.RED_SAND) biome = 'desert';
-                            else if (biomeBlock === BLOCKS.SNOW) biome = 'snow';
-                            else if (biomeBlock === BLOCKS.SWAMP_GRASS) biome = 'swamp';
-                            else if (biomeBlock === BLOCKS.ALIEN_GRASS) biome = 'alien';
+                            if (world && typeof world.getBiomeAt === 'function') {
+                                const bObj = world.getBiomeAt(sx, sz);
+                                if (bObj && bObj.name) biome = bObj.name;
+                            } else {
+                                if (biomeBlock === BLOCKS.SAND || biomeBlock === BLOCKS.RED_SAND) biome = 'desert';
+                                else if (biomeBlock === BLOCKS.SNOW || biomeBlock === BLOCKS.ICE || biomeBlock === BLOCKS.PACKED_ICE || biomeBlock === BLOCKS.BLUE_ICE) biome = 'snow';
+                                else if (biomeBlock === BLOCKS.SWAMP_GRASS || biomeBlock === BLOCKS.MUD) biome = 'swamp';
+                                else if (biomeBlock === BLOCKS.ALIEN_GRASS) biome = 'alien';
+                            }
 
-                            type = pickRandomMobType(currentDimension, biome, isDay);
-                            while(MOB_TYPES[type].waterOnly) {
-                                type = pickRandomMobType(currentDimension, biome, isDay);
+                            type = pickRandomMobType(currentDimension, biome, isDay, biomeBlock);
+                            while (MOB_TYPES[type].waterOnly) {
+                                type = pickRandomMobType(currentDimension, biome, isDay, biomeBlock);
                             }
                         }
                         // Strictly no hostile surface spawns at daytime in Overworld

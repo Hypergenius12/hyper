@@ -1,5 +1,5 @@
-import { getBiomeParams, getColumnInfo } from './generation.js?v=109';
-import { createNoise2D, seededRandom } from './noise.js?v=109';
+﻿import { getBiomeParams, getColumnInfo } from './generation.js?v=110';
+import { createNoise2D, seededRandom } from './noise.js?v=110';
 
 export class BiomeMap {
     constructor(game) {

@@ -1,10 +1,10 @@
-// ============================================
+﻿// ============================================
 // chat.js — In-Game Chat & Command System
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockName } from './textures.js?v=109';
-import { BIOMES, getBiomeParams, getClosestStrongholdPosition, getClosestIglooPosition, getClosestWitchHutPosition } from './generation.js?v=109';
-import { Mob, MOB_TYPES, Item } from './entities.js?v=109';
+import { BLOCKS, getBlockName } from './textures.js?v=110';
+import { BIOMES, getBiomeParams, getClosestStrongholdPosition, getClosestIglooPosition, getClosestWitchHutPosition, getClosestVillagePosition } from './generation.js?v=110';
+import { Mob, MOB_TYPES, Item } from './entities.js?v=110';
 
 export class ChatSystem {
     constructor(game) {
@@ -290,7 +290,7 @@ export class ChatSystem {
         } else {
             const cmd = tokens[0].toLowerCase();
             if (cmd === 'find' || cmd === 'locate') {
-                this.autocompleteEl.textContent = 'Usage: /find <stronghold | igloo | witch_hut | biome <name> | spawn>';
+                this.autocompleteEl.textContent = 'Usage: /find <stronghold | village | igloo | witch_hut | biome <name> | spawn>';
                 this.autocompleteEl.classList.remove('hidden');
             } else if (cmd === 'give') {
                 this.autocompleteEl.textContent = 'Usage: /give <item> [count]';
@@ -524,6 +524,19 @@ export class ChatSystem {
                 this.addMessage(`Type '/tp ${sh.x} 25 ${sh.z}' to teleport there directly.`, "#aaaaaa");
             } else {
                 this.addMessage("No stronghold found in this dimension.", "#ff5555");
+            }
+            return;
+        }
+
+        if (target === 'village' || target === 'villages') {
+            const v = getClosestVillagePosition(p.x, p.z, seed);
+            if (v) {
+                const dist = Math.round(Math.hypot(v.x - p.x, v.z - p.z));
+                const vy = v.y || 64;
+                this.addMessage(`The nearest Village is at [X: ${v.x}, Y: ${vy}, Z: ${v.z}] (~${dist} blocks away)`, "#55ff55");
+                this.addMessage(`Type '/tp ${v.x} ${vy + 2} ${v.z}' to teleport there directly.`, "#aaaaaa");
+            } else {
+                this.addMessage("No village found in this dimension.", "#ff5555");
             }
             return;
         }

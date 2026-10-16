@@ -1,8 +1,8 @@
-// ============================================
+﻿// ============================================
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=109';
+import { seededRandom } from './noise.js?v=110';
 
 // Block type IDs
 export const BLOCKS = {
@@ -3487,12 +3487,24 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
 
         case BLOCKS.END_PORTAL_FRAME_EYE:
-            fillBase(ctx, 45, 75, 65);
-            addNoise(ctx, rng, 10);
-            ctx.fillStyle = '#22aa77';
-            ctx.fillRect(4, 4, 8, 8);
-            ctx.fillStyle = '#0a0d0b';
-            ctx.fillRect(7, 4, 2, 8);
+            if (face === 'eye') {
+                fillBase(ctx, 16, 48, 44);
+                addNoise(ctx, rng, 8);
+                ctx.fillStyle = '#0f2f27';
+                ctx.fillRect(2, 2, 12, 12);
+                ctx.fillStyle = '#2bb384';
+                ctx.fillRect(3, 3, 10, 10);
+                ctx.fillStyle = '#4ae2a8';
+                ctx.fillRect(4, 4, 8, 8);
+                ctx.fillStyle = '#0b1612';
+                ctx.fillRect(7, 4, 2, 8);
+                ctx.fillRect(6, 6, 4, 4);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(5, 5, 2, 2);
+            } else {
+                fillBase(ctx, 45, 75, 65);
+                addNoise(ctx, rng, 10);
+            }
             break;
 
         case BLOCKS.END_PORTAL:
@@ -4424,9 +4436,11 @@ export async function createTextureAtlas(useMinecraft = true) {
         if (bt === BLOCKS.AIR) continue;
 
         if (hasFaceVariants(bt)) {
-            // Top
             uvMap[bt] = {};
-            for (const face of ['top', 'side', 'bottom', 'front']) {
+            const faces = (bt === BLOCKS.END_PORTAL_FRAME_EYE)
+                ? ['top', 'side', 'bottom', 'front', 'eye']
+                : ['top', 'side', 'bottom', 'front'];
+            for (const face of faces) {
                 entries.push({ blockType: bt, face, col, row });
                 uvMap[bt][face] = { col, row };
                 col++;

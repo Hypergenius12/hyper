@@ -2,16 +2,16 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=109';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=109';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=109';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=109';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=109';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=109';
-import { AudioManager } from './audio.js?v=109';
-import { BiomeMap } from './map.js?v=109';
-import { DevMode } from './dev.js?v=109';
-import { ChatSystem } from './chat.js?v=109';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=110';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=110';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=110';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=110';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=110';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=110';
+import { AudioManager } from './audio.js?v=110';
+import { BiomeMap } from './map.js?v=110';
+import { DevMode } from './dev.js?v=110';
+import { ChatSystem } from './chat.js?v=110';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -380,6 +380,7 @@ class Game {
         this.currentSeed = rawSeed;
         this.currentDimension = 'overworld'; // 'overworld' or 'nether'
         this.planetParams = generatePlanetParams(rawSeed);
+        window.worldGenParams = this.planetParams;
         this.world = new World(this.engine.scene, this.atlas);
         this.world.dimension = 'overworld';
         this.world.planetParams = this.planetParams;
@@ -851,6 +852,7 @@ class Game {
                 // Randomly generate loot
                 const rng = () => Math.random();
                 let lootTable = [];
+                const guaranteedItems = [];
                 
                 // Check for portal markers underneath the chest
                 let portalType = null;
@@ -858,6 +860,35 @@ class Game {
                     const below = this.world.getBlock(x, y - 1, z);
                     if (below === window.BLOCKS.PORTAL) { portalType = 'nether'; this.world.setBlock(x, y - 1, z, window.BLOCKS.NETHERRACK); }
                     else if (below === window.BLOCKS.AETHER_PORTAL) { portalType = 'aether'; this.world.setBlock(x, y - 1, z, window.BLOCKS.AETHER_DIRT); }
+                }
+
+                // Check environment context (Igloo, Blacksmith, Library, House)
+                let isIgloo = false;
+                let isBlacksmith = false;
+                let isLibrary = false;
+                let isHouse = false;
+
+                if (this.world) {
+                    for (let dx = -3; dx <= 3; dx++) {
+                        for (let dy = -2; dy <= 2; dy++) {
+                            for (let dz = -3; dz <= 3; dz++) {
+                                const b = this.world.getBlock(x + dx, y + dy, z + dz);
+                                if (b === window.BLOCKS.BREWING_STAND || b === window.BLOCKS.CAULDRON) isIgloo = true;
+                                if (b === window.BLOCKS.LAVA || b === window.BLOCKS.STONECUTTER) isBlacksmith = true;
+                                if (b === window.BLOCKS.BOOKSHELF) isLibrary = true;
+                            }
+                        }
+                    }
+                }
+
+                if (!isIgloo && y < 52 && typeof window.getClosestIglooPosition === 'function') {
+                    const seed = (window.worldGenParams ? window.worldGenParams.seed : 12345);
+                    const ig = window.getClosestIglooPosition(x, z, seed);
+                    if (ig && Math.hypot(x - ig.x, z - ig.z) < 22) isIgloo = true;
+                }
+
+                if (y >= 40 && !isIgloo && !portalType) {
+                    isHouse = true;
                 }
 
                 if (portalType === 'nether') {
@@ -873,6 +904,68 @@ class Game {
                         { item: new Item('material', 'diamond', {}, 'Diamond'), maxCount: 3, chance: 0.5 },
                         { item: Item.equipmentItem('sword_diamond', { damage: 10 }, 'Diamond Sword'), maxCount: 1, chance: 0.3 },
                         { item: Item.equipmentItem('pickaxe_diamond', { mineSpeed: 3, damage: 5 }, 'Diamond Pickaxe'), maxCount: 1, chance: 0.3 }
+                    ];
+                } else if (isIgloo) {
+                    // Authentic Minecraft Igloo Basement Chest: Guaranteed Golden Apple, Emeralds, and Bread!
+                    guaranteedItems.push({ item: new Item('food', 'golden_apple', { heal: 40 }, 'Golden Apple', 'Powerful restorative food.'), count: 1 });
+                    guaranteedItems.push({ item: new Item('material', 'emerald', {}, 'Emerald'), count: 1 + Math.floor(rng() * 3) });
+                    guaranteedItems.push({ item: new Item('food', 'bread', { heal: 20 }, 'Bread'), count: 2 + Math.floor(rng() * 5) });
+
+                    lootTable = [
+                        { item: new Item('material', 'gold_ingot', {}, 'Gold Ingot'), maxCount: 4, chance: 0.8 },
+                        { item: new Item('material', 'iron_ingot', {}, 'Iron Ingot'), maxCount: 5, chance: 0.8 },
+                        { item: new Item('material', 'coal', {}, 'Coal'), maxCount: 6, chance: 0.7 },
+                        { item: new Item('food', 'apple', { heal: 15 }, 'Apple'), maxCount: 4, chance: 0.6 },
+                        { item: new Item('material', 'wheat', {}, 'Wheat'), maxCount: 6, chance: 0.7 },
+                        { item: Item.equipmentItem('axe_iron', { chopSpeed: 2.5, damage: 5 }, 'Iron Axe'), maxCount: 1, chance: 0.35 }
+                    ];
+                } else if (isBlacksmith) {
+                    // Authentic Minecraft Blacksmith Chest: Iron ingots, bread, diamonds, obsidian, armor/weapons
+                    guaranteedItems.push({ item: new Item('material', 'iron_ingot', {}, 'Iron Ingot'), count: 3 + Math.floor(rng() * 5) });
+                    guaranteedItems.push({ item: new Item('food', 'bread', { heal: 20 }, 'Bread'), count: 3 + Math.floor(rng() * 4) });
+                    if (rng() < 0.7) {
+                        guaranteedItems.push({ item: new Item('material', 'diamond', {}, 'Diamond'), count: 1 + Math.floor(rng() * 3) });
+                    }
+
+                    lootTable = [
+                        { item: Item.blockItem(window.BLOCKS.OBSIDIAN, 'Obsidian'), maxCount: 6, chance: 0.75 },
+                        { item: new Item('material', 'gold_ingot', {}, 'Gold Ingot'), maxCount: 4, chance: 0.6 },
+                        { item: Item.equipmentItem('sword_iron', { damage: 8 }, 'Iron Sword'), maxCount: 1, chance: 0.4 },
+                        { item: Item.equipmentItem('pickaxe_iron', { mineSpeed: 3.0, damage: 4 }, 'Iron Pickaxe'), maxCount: 1, chance: 0.4 },
+                        { item: Item.equipmentItem('helmet_iron', { protection: 2 }, 'Iron Helmet'), maxCount: 1, chance: 0.35 },
+                        { item: Item.equipmentItem('chestplate_iron', { protection: 5 }, 'Iron Chestplate'), maxCount: 1, chance: 0.3 },
+                        { item: Item.equipmentItem('boots_iron', { protection: 2 }, 'Iron Boots'), maxCount: 1, chance: 0.35 },
+                        { item: new Item('food', 'apple', { heal: 15 }, 'Apple'), maxCount: 5, chance: 0.7 }
+                    ];
+                } else if (isLibrary) {
+                    // Village Library Chest: Books, emeralds, spells, bread
+                    guaranteedItems.push({ item: new Item('material', 'emerald', {}, 'Emerald'), count: 2 + Math.floor(rng() * 3) });
+                    guaranteedItems.push({ item: new Item('food', 'bread', { heal: 20 }, 'Bread'), count: 3 + Math.floor(rng() * 4) });
+
+                    lootTable = [
+                        { factory: () => Item.spellItem(generateRandomSpell()), maxCount: 1, chance: 0.5 },
+                        { factory: () => Item.modifierItem(generateRandomModifier()), maxCount: 1, chance: 0.4 },
+                        { item: Item.blockItem(window.BLOCKS.BOOKSHELF, 'Bookshelf'), maxCount: 3, chance: 0.6 },
+                        { item: new Item('material', 'emerald', {}, 'Emerald'), maxCount: 4, chance: 0.8 },
+                        { item: new Item('food', 'apple', { heal: 15 }, 'Apple'), maxCount: 4, chance: 0.6 }
+                    ];
+                } else if (isHouse) {
+                    // Village House / Farmhouse / Cabin Chest: Bread, apples, emeralds, wheat, torches, tools
+                    guaranteedItems.push({ item: new Item('food', 'bread', { heal: 20 }, 'Bread'), count: 2 + Math.floor(rng() * 6) });
+                    guaranteedItems.push({ item: new Item('food', 'apple', { heal: 15 }, 'Apple'), count: 1 + Math.floor(rng() * 4) });
+                    if (rng() < 0.75) {
+                        guaranteedItems.push({ item: new Item('material', 'emerald', {}, 'Emerald'), count: 1 + Math.floor(rng() * 3) });
+                    }
+
+                    lootTable = [
+                        { item: Item.blockItem(window.BLOCKS.TORCH, 'Torch'), maxCount: 8, chance: 0.8 },
+                        { item: new Item('material', 'wheat', {}, 'Wheat'), maxCount: 8, chance: 0.8 },
+                        { item: new Item('material', 'iron_ingot', {}, 'Iron Ingot'), maxCount: 3, chance: 0.6 },
+                        { item: new Item('material', 'coal', {}, 'Coal'), maxCount: 8, chance: 0.7 },
+                        { item: Item.blockItem(window.BLOCKS.PLANKS, 'Oak Planks'), maxCount: 16, chance: 0.7 },
+                        { item: Item.equipmentItem('sword_stone', { damage: 5 }, 'Stone Sword'), maxCount: 1, chance: 0.35 },
+                        { item: Item.equipmentItem('pickaxe_stone', { mineSpeed: 2.0, damage: 3 }, 'Stone Pickaxe'), maxCount: 1, chance: 0.35 },
+                        { factory: () => Item.spellItem(generateRandomSpell()), maxCount: 1, chance: 0.25 }
                     ];
                 } else if (y < 40) {
                     // Dungeon loot - spells, modifiers, and rare gear
@@ -898,11 +991,21 @@ class Game {
                     ];
                 }
 
-                // Populate 3-8 slots randomly
-                const numSlots = 3 + Math.floor(rng() * 6);
+                // Place guaranteed items first in distinct slots
+                for (let g = 0; g < guaranteedItems.length; g++) {
+                    const gEntry = guaranteedItems[g];
+                    const gSlot = g < 27 ? g * 2 + Math.floor(rng() * 2) : Math.floor(rng() * 27);
+                    const slotIdx = Math.min(26, Math.max(0, gSlot));
+                    const clone = Object.assign(Object.create(Object.getPrototypeOf(gEntry.item)), gEntry.item);
+                    clone.stackable = gEntry.item.stackable || gEntry.count > 1;
+                    inv[slotIdx] = { item: clone, count: gEntry.count };
+                }
+
+                // Populate additional slots from loot table
+                const numSlots = 3 + Math.floor(rng() * 5);
                 for (let i = 0; i < numSlots; i++) {
                     const slotIdx = Math.floor(rng() * 27);
-                    if (!inv[slotIdx]) {
+                    if (!inv[slotIdx] && lootTable.length > 0) {
                         const entry = lootTable[Math.floor(rng() * lootTable.length)];
                         if (rng() < entry.chance) {
                             const count = 1 + Math.floor(rng() * entry.maxCount);
@@ -2146,6 +2249,43 @@ class Game {
             this.blockOutline.visible = false;
         }
 
+        // Middle click (Pick-block in Creative: gives 64 of targeted block)
+        if (this.input.mouse.middleClick) {
+            this.input.mouse.middleClick = false;
+            if (this.player.isCreative && hit && hit.hit && hit.blockType) {
+                let targetType = hit.blockType;
+                if (targetType === BLOCKS.BED_HEAD) targetType = BLOCKS.BED;
+                else if (targetType === BLOCKS.TALL_FERN_TOP) targetType = BLOCKS.TALL_FERN;
+                else if (targetType === BLOCKS.DUNGEON_DOOR_TOP) targetType = BLOCKS.DUNGEON_DOOR;
+                else if (targetType === BLOCKS.KELP_PLANT) targetType = BLOCKS.KELP;
+
+                const blockName = getBlockName(targetType) || 'Block';
+
+                // Check if already in hotbar (slots 0..8)
+                let existingSlot = -1;
+                for (let i = 0; i < 9; i++) {
+                    const s = this.player.inventory.slots[i];
+                    if (s && s.item && s.item.type === 'block' && s.item.subtype === targetType) {
+                        existingSlot = i;
+                        break;
+                    }
+                }
+
+                if (existingSlot !== -1) {
+                    this.player.selectedSlot = existingSlot;
+                    this.player.inventory.slots[existingSlot].count = 64;
+                } else {
+                    const activeSlot = this.player.selectedSlot;
+                    this.player.inventory.slots[activeSlot] = {
+                        item: Item.blockItem(targetType, blockName),
+                        count: 64
+                    };
+                }
+                if (this.audio && this.audio.playClick) this.audio.playClick();
+                if (this.ui && this.ui.updateHotbar) this.ui.updateHotbar(this.player);
+            }
+        }
+
         // Right click actions
         if (this.input.mouse.rightClick) {
             const slot = this.player.inventory.slots[this.player.selectedSlot];
@@ -2284,6 +2424,9 @@ class Game {
                 // Open Chest
                 this.audio.playChestOpen();
                 const key = `${hit.blockPos.x},${hit.blockPos.y},${hit.blockPos.z}`;
+                if (!this.chestInventories.has(key)) {
+                    this._addChest(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, true);
+                }
                 const visual = this.chestVisuals.get(key);
                 if (visual) visual.isOpen = true;
                 
@@ -4096,6 +4239,7 @@ class Game {
         setTimeout(() => {
             // Keep the same seed to preserve world generation
             this.planetParams = generatePlanetParams(this.currentSeed);
+            window.worldGenParams = this.planetParams;
             this.world.planetParams = this.planetParams;
             this.currentDimension = targetDim;
             this.world.dimension = targetDim;
