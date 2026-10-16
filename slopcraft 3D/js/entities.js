@@ -2,9 +2,9 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=115';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=115';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=115';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=116';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=116';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=116';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -28,10 +28,15 @@ export const FOOD_DATA = {
     'cooked_mutton':    { hunger: 6, saturation: 9.6, heal: 0 },
     'cooked_chicken':   { hunger: 6, saturation: 7.2, heal: 0 },
     'cooked_fish':      { hunger: 5, saturation: 6.0, heal: 0 },
+    'cooked_salmon':    { hunger: 6, saturation: 9.6, heal: 0 },
     'baked_potato':     { hunger: 5, saturation: 6.0, heal: 0 },
     'apple':            { hunger: 4, saturation: 2.4, heal: 0 },
     'golden_apple':     { hunger: 4, saturation: 9.6, heal: 10, absorption: true },
+    'golden_carrot':    { hunger: 6, saturation: 14.4, heal: 0 },
     'carrot':           { hunger: 3, saturation: 3.6, heal: 0 },
+    'cookie':           { hunger: 2, saturation: 0.4, heal: 0 },
+    'pumpkin_pie':      { hunger: 8, saturation: 4.8, heal: 0 },
+    'mushroom_stew':    { hunger: 6, saturation: 7.2, heal: 0 },
     'raw_beef':         { hunger: 3, saturation: 1.8, heal: 0 },
     'raw_porkchop':     { hunger: 3, saturation: 1.8, heal: 0 },
     'raw_mutton':       { hunger: 2, saturation: 1.2, heal: 0 },
@@ -41,6 +46,9 @@ export const FOOD_DATA = {
     'sweet_berries':    { hunger: 2, saturation: 1.2, heal: 0 },
     'potato':           { hunger: 1, saturation: 0.6, heal: 0 },
     'beetroot':         { hunger: 1, saturation: 1.2, heal: 0 },
+    'rotten_flesh':     { hunger: 4, saturation: 0.8, hungerEffect: true },
+    'spider_eye':       { hunger: 2, saturation: 3.2, poison: true },
+    'honey_bottle':     { hunger: 6, saturation: 1.2, curePoison: true },
     'poisonous_potato': { hunger: 2, saturation: 1.2, poison: true },
     'chorus_fruit':     { hunger: 4, saturation: 2.4, teleport: true }
 };
@@ -179,8 +187,17 @@ export class Player {
         } else if (fData.heal) {
             this.health = Math.min(this.maxHealth, this.health + fData.heal);
         }
+        if (fData.hungerEffect && Math.random() < 0.8) {
+            this.hungerEffectTimer = 30.0;
+        }
+        if (fData.curePoison) {
+            this.poisonTimer = 0;
+        }
+        if (fData.hungerPoison && Math.random() < fData.hungerPoison) {
+            this.hungerEffectTimer = 30.0;
+        }
         if (fData.poison && Math.random() < 0.6) {
-            this.takeDamage(10);
+            this.poisonTimer = 4.0;
         }
         return true;
     }
@@ -565,6 +582,25 @@ export class Player {
 
         // Hunger, exhaustion, natural health regeneration and starvation
         if (!this.isCreative) {
+            // Hunger effect debuff (from rotten flesh / raw chicken)
+            if (this.hungerEffectTimer > 0) {
+                this.hungerEffectTimer = Math.max(0, this.hungerEffectTimer - dt);
+                this.exhaustion += 0.03 * dt;
+            }
+            // Poison effect (stops at 1 heart, 10 HP)
+            if (this.poisonTimer > 0) {
+                this.poisonTimer = Math.max(0, this.poisonTimer - dt);
+                this.poisonTickTimer = (this.poisonTickTimer || 0) + dt;
+                if (this.poisonTickTimer >= 1.25) {
+                    this.poisonTickTimer = 0;
+                    if (this.health > 10) {
+                        this.takeDamage(10);
+                        const d = document.getElementById('damage-flash');
+                        if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                    }
+                }
+            }
+
             // Drain exhaustion into saturation / hunger
             while (this.exhaustion >= 4.0) {
                 this.exhaustion -= 4.0;

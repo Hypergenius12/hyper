@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=115';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=115';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=115';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=115';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=115';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=115';
-import { AudioManager } from './audio.js?v=115';
-import { BiomeMap } from './map.js?v=115';
-import { DevMode } from './dev.js?v=115';
-import { ChatSystem } from './chat.js?v=115';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=116';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=116';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=116';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=116';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=116';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=116';
+import { AudioManager } from './audio.js?v=116';
+import { BiomeMap } from './map.js?v=116';
+import { DevMode } from './dev.js?v=116';
+import { ChatSystem } from './chat.js?v=116';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -2280,7 +2280,7 @@ class Game {
                         this.player.health = Math.min(this.player.maxHealth, this.player.health + Math.abs(castInfo.stats.damage));
                     }
                     this.particles.emit(eyePos, 'magic', 12, castInfo.spell.color || 0x88ccff);
-                    if (this.audio && this.audio.playCast) this.audio.playCast();
+                    if (this.audio && this.audio.playCast) this.audio.playCast(castInfo.stats.element, eyePos);
                     for (let i = 0; i < castInfo.stats.count; i++) {
                         let projDir = lookDir.clone();
                         if (castInfo.stats.count > 1) {
@@ -4178,41 +4178,103 @@ class Game {
                 const by = Math.floor(hitPos.y);
                 const bz = Math.floor(hitPos.z);
                 
-                if (proj.stats.element === 'WATER') {
+                const hasEl = (el) => (proj.hasElement ? proj.hasElement(el) : ((proj.stats && proj.stats.elements && proj.stats.elements.includes(el)) || (proj.stats && proj.stats.element === el)));
+
+                // 1. Stone Wall Construction (BUILDER) - builds an authentic 3x3 stone wall perpendicular to flight
+                if (hasEl('BUILDER') || (proj.spell && proj.spell.type === 'BUILDER')) {
+                    const hitX = Math.floor(proj.previousPosition.x);
+                    const hitY = Math.floor(proj.previousPosition.y);
+                    const hitZ = Math.floor(proj.previousPosition.z);
+
+                    const velX = Math.abs(proj.velocity.x);
+                    const velZ = Math.abs(proj.velocity.z);
+                    const faceZ = velZ >= velX; // If moving mainly along Z, wall spans horizontally along X
+
+                    // Wall material reflects combined elements!
+                    let wallBlock = BLOCKS.STONE_BRICKS;
+                    if (hasEl('FIRE') || hasEl('LAVA') || hasEl('MAGMA')) {
+                        wallBlock = (window.BLOCKS && window.BLOCKS.MAGMA_BLOCK) ? window.BLOCKS.MAGMA_BLOCK : ((window.BLOCKS && window.BLOCKS.NETHER_BRICKS) ? window.BLOCKS.NETHER_BRICKS : BLOCKS.STONE_BRICKS);
+                    } else if (hasEl('ICE') || hasEl('FROST')) {
+                        wallBlock = (window.BLOCKS && window.BLOCKS.PACKED_ICE) ? window.BLOCKS.PACKED_ICE : ((window.BLOCKS && window.BLOCKS.ICE) ? window.BLOCKS.ICE : BLOCKS.STONE_BRICKS);
+                    } else if (hasEl('VOID') || hasEl('DARK')) {
+                        wallBlock = (window.BLOCKS && window.BLOCKS.CRYING_OBSIDIAN) ? window.BLOCKS.CRYING_OBSIDIAN : (BLOCKS.OBSIDIAN || BLOCKS.STONE_BRICKS);
+                    } else if (hasEl('EARTH')) {
+                        wallBlock = (window.BLOCKS && window.BLOCKS.MOSSY_STONE_BRICKS) ? window.BLOCKS.MOSSY_STONE_BRICKS : (BLOCKS.COBBLESTONE || BLOCKS.STONE_BRICKS);
+                    }
+
+                    const wallRadius = (proj.stats.count > 1 || proj.stats.castTwo) ? 2 : 1;
+                    const wallHeight = 3;
+                    let placedCount = 0;
+
+                    for (let d = -wallRadius; d <= wallRadius; d++) {
+                        for (let dy = 0; dy < wallHeight; dy++) {
+                            const wx = faceZ ? (hitX + d) : hitX;
+                            const wy = hitY + dy;
+                            const wz = faceZ ? hitZ : (hitZ + d);
+                            const curB = this.world.getBlock(wx, wy, wz);
+                            const curProps = getBlockProperties(curB);
+                            if (curB === BLOCKS.AIR || curProps.isLiquid || curProps.isCross || curB === BLOCKS.SNOW || !curProps.solid) {
+                                this.world.setBlock(wx, wy, wz, wallBlock);
+                                placedCount++;
+                                this.particles.emit({ x: wx + 0.5, y: wy + 0.5, z: wz + 0.5 }, 'smoke', 2, 0x888888);
+                            }
+                        }
+                    }
+                    if (placedCount > 0 && this.audio) {
+                        if (this.audio.playBlockPlace) this.audio.playBlockPlace(wallBlock, hitPos);
+                        else if (this.audio.playPop) this.audio.playPop(hitPos);
+                    }
+                    this.particles.emit(hitPos, 'explosion', 16, 0x55ffff);
+                }
+
+                // 2. Water / Steam Effect
+                if (hasEl('WATER') || hasEl('STEAM')) {
                     this.particles.emit(hitPos, 'explosion', 20, 0x3399FF);
                     for(let x = bx - 1; x <= bx + 1; x++) {
                         for(let y = by - 1; y <= by + 1; y++) {
                             for(let z = bz - 1; z <= bz + 1; z++) {
                                 const b = this.world.getBlock(x,y,z);
-                                if (b === BLOCKS.FIRE) this.world.setBlock(x,y,z, BLOCKS.AIR);
+                                if (b === BLOCKS.FIRE || (window.BLOCKS && (b === window.BLOCKS.FIRE || b === window.BLOCKS.SOUL_FIRE))) this.world.setBlock(x,y,z, BLOCKS.AIR);
                                 else if (b === BLOCKS.LAVA) this.world.setBlock(x,y,z, BLOCKS.OBSIDIAN);
                             }
                         }
                     }
-                } else if (proj.stats.element === 'LAVA') {
+                }
+
+                // 3. Lava Effect
+                if (hasEl('LAVA')) {
                     this.particles.emit(hitPos, 'explosion', 20, 0xFF6600);
                     if (!eHit.hit) {
                         const tgtY = this.world.getBlock(bx, by, bz) === BLOCKS.AIR ? by : by + 1;
                         if (this.world.getBlock(bx, tgtY, bz) === BLOCKS.AIR) this.world.setBlock(bx, tgtY, bz, BLOCKS.LAVA);
                     }
-                } else if (proj.stats.element === 'BUILDER') {
-                    this.particles.emit(hitPos, 'explosion', 10, 0xAAAAAA);
-                    if (!eHit.hit) {
-                        const px = Math.floor(proj.previousPosition.x);
-                        const py = Math.floor(proj.previousPosition.y);
-                        const pz = Math.floor(proj.previousPosition.z);
-                        if (this.world.getBlock(px, py, pz) === BLOCKS.AIR || this.world.getBlock(px, py, pz) === BLOCKS.WATER) {
-                            this.world.setBlock(px, py, pz, BLOCKS.STONE_BRICKS);
-                        }
-                    }
-                } else if (proj.stats.element === 'FROST') {
-                    this.particles.emit(hitPos, 'explosion', 40, 0xBBFFFF);
+                }
+
+                // 4. Frost / Ice Freezing Effect
+                if (hasEl('FROST') || hasEl('ICE')) {
+                    this.particles.emit(hitPos, 'explosion', 35, 0xBBFFFF);
                     for (const mob of this.entityManager.mobs) {
                         if (mob.position.distanceTo(hitPos) < 5.0) {
                             mob.freeze(5.0);
                         }
                     }
-                } else if (proj.stats.element === 'VOID') {
+                    for(let x = bx - 1; x <= bx + 1; x++) {
+                        for(let y = by - 1; y <= by + 1; y++) {
+                            for(let z = bz - 1; z <= bz + 1; z++) {
+                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 2.0) {
+                                    const b = this.world.getBlock(x, y, z);
+                                    if (b === BLOCKS.WATER || (window.BLOCKS && b === window.BLOCKS.SWAMP_WATER)) this.world.setBlock(x, y, z, BLOCKS.ICE);
+                                    else if (b === BLOCKS.GRASS) this.world.setBlock(x, y, z, BLOCKS.SNOW);
+                                    else if (b === BLOCKS.FIRE) this.world.setBlock(x, y, z, BLOCKS.AIR);
+                                    else if (b === BLOCKS.LAVA) this.world.setBlock(x, y, z, BLOCKS.OBSIDIAN);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 5. Void Destruction Effect
+                if (hasEl('VOID')) {
                     this.particles.emit(hitPos, 'explosion', 40, 0x220033);
                     for(let x = bx - 2; x <= bx + 2; x++) {
                         for(let y = by - 2; y <= by + 2; y++) {
@@ -4226,35 +4288,50 @@ class Game {
                             }
                         }
                     }
-                } else if (proj.stats.element === 'STEAM') {
-                    this.particles.emit(hitPos, 'explosion', 40, 0xDDDDDD);
+                }
+
+                // 6. Steam / Storm Shockwave
+                if (hasEl('STEAM')) {
+                    this.particles.emit(hitPos, 'explosion', 30, 0xDDDDDD);
                     for (const mob of this.entityManager.mobs) {
                         if (mob.position.distanceTo(hitPos) < 4.0) {
                             const knockbackDir = mob.position.clone().sub(hitPos).normalize();
                             mob.takeDamage(proj.stats.damage, knockbackDir.multiplyScalar(2));
-                            mob.burnTimer = 0; // Steam extinguishes
+                            mob.burnTimer = 0;
                         }
                     }
-                } else if (proj.stats.element === 'STORM') {
+                }
+                if (hasEl('STORM') || hasEl('THUNDER')) {
                     this.particles.emit(hitPos, 'explosion', 30, 0x44DDFF);
                     for (const mob of this.entityManager.mobs) {
                         if (mob.position.distanceTo(hitPos) < 6.0) {
                             const knockbackDir = mob.position.clone().sub(hitPos).normalize();
                             mob.takeDamage(proj.stats.damage, knockbackDir);
-                            this.particles.emit(mob.position, 'explosion', 10, 0xFFFF00); // Zap
+                            this.particles.emit(mob.position, 'explosion', 10, 0xFFFF00);
                         }
                     }
-                } else if (proj.stats.element === 'FIRE' || proj.stats.element === 'MAGMA') {
-                    // Explode! AOE damage
+                    for(let x = bx - 1; x <= bx + 1; x++) {
+                        for(let y = by - 1; y <= by + 1; y++) {
+                            for(let z = bz - 1; z <= bz + 1; z++) {
+                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 1.5) {
+                                    const b = this.world.getBlock(x, y, z);
+                                    if (b === BLOCKS.SAND) this.world.setBlock(x, y, z, BLOCKS.GLASS);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 7. Fire / Magma Effect
+                if (hasEl('FIRE') || hasEl('MAGMA')) {
                     for (const mob of this.entityManager.mobs) {
                         if (mob.position.distanceTo(hitPos) < 4.0) {
                             const knockbackDir = mob.position.clone().sub(hitPos).normalize();
                             mob.takeDamage(proj.stats.damage, knockbackDir);
-                            mob.burnTimer = 5.0; // Ignite AOE
+                            mob.burnTimer = 5.0;
                         }
                     }
                     this.particles.emit(hitPos, 'explosion', 30, 0xffaa00);
-                    // Ignite blocks
                     if (!eHit.hit || !eHit.mob) {
                         const bx = Math.floor(hitPos.x);
                         const by = Math.floor(hitPos.y);
@@ -4262,10 +4339,13 @@ class Game {
                         if (this.world.getBlock(bx, by + 1, bz) === BLOCKS.AIR) {
                             this.world.setBlock(bx, by + 1, bz, BLOCKS.FIRE);
                         } else if (this.world.getBlock(bx, by, bz) === BLOCKS.AIR) {
-                            this.world.setBlock(bx, by, bz, proj.stats.element === 'MAGMA' ? BLOCKS.LAVA : BLOCKS.FIRE);
+                            this.world.setBlock(bx, by, bz, hasEl('MAGMA') ? BLOCKS.LAVA : BLOCKS.FIRE);
                         }
                     }
-                } else if (proj.stats.element === 'EARTH') {
+                }
+
+                // 8. Earth Boulder Effect
+                if (hasEl('EARTH')) {
                     for (const mob of this.entityManager.mobs) {
                         if (mob.position.distanceTo(hitPos) < 3.0) {
                             const knockbackDir = mob.position.clone().sub(hitPos).normalize();
@@ -4273,8 +4353,6 @@ class Game {
                         }
                     }
                     this.particles.emit(hitPos, 'explosion', 20, 0x8B4513);
-                    // Destroy weak blocks
-                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
                     const weakBlocks = [BLOCKS.DIRT, BLOCKS.GRASS, BLOCKS.SAND, BLOCKS.RED_SAND, BLOCKS.LEAVES, BLOCKS.ACACIA_LEAVES, BLOCKS.WOOD, BLOCKS.PLANKS, BLOCKS.ACACIA_WOOD, BLOCKS.GLASS, BLOCKS.TALL_GRASS, BLOCKS.ALIEN_TALL_GRASS, BLOCKS.RED_FLOWER, BLOCKS.BLUE_FLOWER, BLOCKS.YELLOW_FLOWER, BLOCKS.DEAD_BUSH, BLOCKS.VINES];
                     for(let x = bx - 1; x <= bx + 1; x++) {
                         for(let y = by - 1; y <= by + 1; y++) {
@@ -4289,25 +4367,11 @@ class Game {
                             }
                         }
                     }
-                } else if (proj.stats.element === 'ICE') {
+                }
+
+                // 9. Dark / Void Vegetation Wither
+                if (hasEl('DARK')) {
                     this.particles.emit(hitPos, 'magic', 15, proj.color);
-                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
-                    for(let x = bx - 1; x <= bx + 1; x++) {
-                        for(let y = by - 1; y <= by + 1; y++) {
-                            for(let z = bz - 1; z <= bz + 1; z++) {
-                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 2.0) {
-                                    const b = this.world.getBlock(x, y, z);
-                                    if (b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER) this.world.setBlock(x, y, z, BLOCKS.ICE);
-                                    else if (b === BLOCKS.GRASS) this.world.setBlock(x, y, z, BLOCKS.SNOW);
-                                    else if (b === BLOCKS.FIRE) this.world.setBlock(x, y, z, BLOCKS.AIR);
-                                    else if (b === BLOCKS.LAVA) this.world.setBlock(x, y, z, BLOCKS.STONE);
-                                }
-                            }
-                        }
-                    }
-                } else if (proj.stats.element === 'DARK') {
-                    this.particles.emit(hitPos, 'magic', 15, proj.color);
-                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
                     for(let x = bx - 1; x <= bx + 1; x++) {
                         for(let y = by - 1; y <= by + 1; y++) {
                             for(let z = bz - 1; z <= bz + 1; z++) {
@@ -4320,25 +4384,11 @@ class Game {
                             }
                         }
                     }
-                } else if (proj.stats.element === 'THUNDER') {
+                }
+
+                // 10. Wind / Air Vegetation Blowaway
+                if (hasEl('WIND') || hasEl('AIR')) {
                     this.particles.emit(hitPos, 'magic', 15, proj.color);
-                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
-                    for(let x = bx - 1; x <= bx + 1; x++) {
-                        for(let y = by - 1; y <= by + 1; y++) {
-                            for(let z = bz - 1; z <= bz + 1; z++) {
-                                if (hitPos.distanceTo(new THREE.Vector3(x+0.5, y+0.5, z+0.5)) <= 1.5) {
-                                    const b = this.world.getBlock(x, y, z);
-                                    if (b === BLOCKS.SAND || b === BLOCKS.RED_SAND) this.world.setBlock(x, y, z, BLOCKS.GLASS);
-                                    else if (b === BLOCKS.AIR && this.world.getBlock(x, y - 1, z) !== BLOCKS.AIR) {
-                                        if (Math.random() < 0.3) this.world.setBlock(x, y, z, BLOCKS.FIRE);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else if (proj.stats.element === 'WIND') {
-                    this.particles.emit(hitPos, 'magic', 15, proj.color);
-                    const bx = Math.floor(hitPos.x), by = Math.floor(hitPos.y), bz = Math.floor(hitPos.z);
                     const vegetation = [BLOCKS.TALL_GRASS, BLOCKS.ALIEN_TALL_GRASS, BLOCKS.RED_FLOWER, BLOCKS.BLUE_FLOWER, BLOCKS.YELLOW_FLOWER, BLOCKS.DEAD_BUSH, BLOCKS.VINES];
                     for(let x = bx - 1; x <= bx + 1; x++) {
                         for(let y = by - 1; y <= by + 1; y++) {
@@ -4352,9 +4402,8 @@ class Game {
                             }
                         }
                     }
-                } else {
-                    this.particles.emit(hitPos, 'magic', 15, proj.color);
                 }
+                this.particles.emit(hitPos, 'magic', 10, proj.color);
                 this.audio.playHit();
                 return { hit: true, hitType: hitBlock ? 'block' : 'entity' };
             }

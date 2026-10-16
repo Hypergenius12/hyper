@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js?v=115';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=115';
+import { BLOCKS, generateItemTexture } from './textures.js?v=116';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=116';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -1961,6 +1961,7 @@ class UISystem {
                 }
                 const maxFoodIcons = 10;
                 let foodHtml = '';
+                const hasHungerEffect = player && player.hungerEffectTimer > 0;
                 for (let i = 0; i < maxFoodIcons; i++) {
                     const iconVal = (i + 1) * 2;
                     let foodImg = 'food_empty.png';
@@ -1970,7 +1971,8 @@ class UISystem {
                         foodImg = 'food_half.png';
                     }
                     const lowHungerShake = (pHunger <= 6 && Math.random() > 0.6) ? 'transform: translateY(-2px);' : '';
-                    foodHtml += `<img src="assets/mc/hud/${foodImg}" class="mc-food" style="${lowHungerShake}" />`;
+                    const effectFilter = hasHungerEffect ? 'filter: hue-rotate(65deg) saturate(1.4);' : '';
+                    foodHtml += `<img src="assets/mc/hud/${foodImg}" class="mc-food" style="${lowHungerShake} ${effectFilter}" />`;
                 }
                 hungerBar.innerHTML = foodHtml;
             }

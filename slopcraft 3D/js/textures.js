@@ -2,7 +2,7 @@
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=115';
+import { seededRandom } from './noise.js?v=116';
 
 // Block type IDs
 export const BLOCKS = {

@@ -2,7 +2,7 @@
 // audio.js - SFX Synthesizer using Web Audio API
 // ============================================
 
-import { BLOCKS, getBlockProperties } from './textures.js?v=115';
+import { BLOCKS, getBlockProperties } from './textures.js?v=116';
 
 export class AudioManager {
     constructor() {
@@ -455,8 +455,40 @@ export class AudioManager {
         this.playMC('random/pop', 0.7, position).then(s => { if(!s) doFallback(); });
     }
 
-    playCast(position = null) {
-        this.playMC('random/bow', 0.8, position).then(s => { if(!s) this.playTone(600, 'sine', 0.3, 0.3, 400, position); });
+    playCast(element = null, position = null) {
+        if (typeof element === 'object' && element !== null && (element.x !== undefined || element.y !== undefined)) {
+            position = element;
+            element = null;
+        }
+        if (element === 'FIRE' || element === 'LAVA' || element === 'MAGMA') {
+            this.playMC('item/firecharge/use', 0.85, position).then(s => {
+                if (!s) {
+                    this.playTone(220, 'sawtooth', 0.22, 0.4, 380, position);
+                    this.playNoise(0.2, 0.25, position);
+                }
+            });
+        } else if (element === 'ICE' || element === 'FROST') {
+            this.playTone(850, 'sine', 0.25, 0.35, 450, position);
+            setTimeout(() => this.playTone(1200, 'triangle', 0.2, 0.3, -200, position), 60);
+        } else if (element === 'BUILDER') {
+            this.playTone(320, 'triangle', 0.3, 0.45, 120, position);
+            setTimeout(() => this.playTone(480, 'sine', 0.25, 0.35, -80, position), 70);
+            this.playMC('block/stone/place', 0.7, position);
+        } else if (element === 'THUNDER' || element === 'STORM') {
+            this.playTone(140, 'sawtooth', 0.18, 0.5, 300, position);
+            this.playNoise(0.25, 0.35, position);
+        } else if (element === 'VOID' || element === 'DARK') {
+            this.playTone(110, 'sine', 0.4, 0.6, -40, position);
+            this.playTone(190, 'triangle', 0.3, 0.4, 60, position);
+        } else if (element === 'HEAL') {
+            this.playTone(523.25, 'sine', 0.18, 0.3, 0, position);
+            setTimeout(() => this.playTone(659.25, 'sine', 0.18, 0.3, 0, position), 70);
+            setTimeout(() => this.playTone(783.99, 'sine', 0.25, 0.3, 0, position), 140);
+        } else {
+            this.playMC('random/bow', 0.8, position).then(s => {
+                if (!s) this.playTone(600, 'sine', 0.3, 0.3, 400, position);
+            });
+        }
     }
 
     playBow(position = null) {

@@ -299,7 +299,7 @@
     top: -16px;
     left: 0;
     font-family: 'Minecraftia', monospace, sans-serif;
-    font-size: 14px;
+    font-size: 13px;
     color: #55ffff;
     text-shadow:
         1px 1px 0 #000,
@@ -309,6 +309,7 @@
         0 2px 0 #000;
     letter-spacing: 1px;
     user-select: none;
+    z-index: 2;
 }
 
 /* Status Row (Health/Armor on left, Hunger on right) */
@@ -318,6 +319,7 @@
     justify-content: space-between;
     align-items: flex-end;
     width: 455px;
+    margin-bottom: 5px; /* Ample space above mana text */
 }
 
 #mc-health-armor-col {
@@ -332,28 +334,32 @@
     align-items: flex-end;
 }
 
-/* Health Hearts Row */
+/* Health Hearts Row - 0.9x size */
 #mc-health-bar {
     display: flex;
     flex-direction: row;
     gap: 1px;
-    height: 22px;
+    height: 20px;
+    transform: scale(0.9);
+    transform-origin: bottom left;
 }
 
 .mc-heart {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     background-size: 100% 100%;
     background-repeat: no-repeat;
     image-rendering: pixelated;
 }
 
-/* Hunger Drumsticks Row */
+/* Hunger Drumsticks Row - 0.9x size */
 #mc-hunger-bar {
     display: flex;
     flex-direction: row-reverse;
     gap: 1px;
-    height: 22px;
+    height: 20px;
+    transform: scale(0.9);
+    transform-origin: bottom right;
 }
 
 #mc-hunger-bar.hidden {
@@ -373,19 +379,21 @@
 }
 
 .mc-food {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     background-size: 100% 100%;
     background-repeat: no-repeat;
     image-rendering: pixelated;
 }
 
-/* Armor Bar Row */
+/* Armor Bar Row - 0.9x size */
 #mc-armor-bar {
     display: flex;
     flex-direction: row;
     gap: 1px;
-    height: 22px;
+    height: 20px;
+    transform: scale(0.9);
+    transform-origin: bottom left;
 }
 
 #mc-armor-bar.hidden {
@@ -393,8 +401,8 @@
 }
 
 .mc-armor {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     background-size: 100% 100%;
     background-repeat: no-repeat;
     image-rendering: pixelated;
