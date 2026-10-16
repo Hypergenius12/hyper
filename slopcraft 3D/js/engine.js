@@ -1916,6 +1916,14 @@ export class World {
                 if (this.onChestPlaced) this.onChestPlaced(wx, wy, wz);
             }
 
+            // Register boss spawner placement/removal
+            if (oldType === window.BLOCKS.BOSS_SPAWNER && type !== window.BLOCKS.BOSS_SPAWNER) {
+                if (this.spawners) this.spawners.delete(`${wx},${wy},${wz}`);
+            } else if (oldType !== window.BLOCKS.BOSS_SPAWNER && type === window.BLOCKS.BOSS_SPAWNER) {
+                if (!this.spawners) this.spawners = new Set();
+                this.spawners.add(`${wx},${wy},${wz}`);
+            }
+
             // Register furnace placement/removal
             if (oldType === window.BLOCKS.FURNACE && type !== window.BLOCKS.FURNACE) {
                 if (this.onFurnaceRemoved) this.onFurnaceRemoved(wx, wy, wz);
@@ -2137,9 +2145,11 @@ export class World {
         }
 
         // Process a few chunks per frame for generating blocks
+        // Process chunks with a time budget to maintain solid 60 FPS
         let gensThisFrame = 0;
+        const genStart = performance.now();
         
-        while (this.chunksToGenerate.length > 0 && gensThisFrame < 4) {
+        while (this.chunksToGenerate.length > 0 && gensThisFrame < 3 && (performance.now() - genStart < 8)) {
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToGenerate.length; i++) {
@@ -2179,24 +2189,16 @@ export class World {
             }
 
             chunk.dirty = true;
-            this.chunksToBuild.push(chunk);
-
-            // Re-mesh existing neighbor chunks to eliminate boundary seams / water walls
-            for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                const nKey = this.getChunkKey(chunk.cx + dx, chunk.cz + dz);
-                const nChunk = this.chunks.get(nKey);
-                if (nChunk && nChunk.mesh && !nChunk.dirty) {
-                    nChunk.dirty = true;
-                    this.chunksToBuild.push(nChunk);
-                }
+            if (!this.chunksToBuild.includes(chunk)) {
+                this.chunksToBuild.push(chunk);
             }
 
-            // Register chests, doors, torches, furnaces, and fence gates
-            if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated || this.onFurnaceGenerated || this.onGateGenerated) {
+            // Register chests, doors, torches, furnaces, fence gates, and boss spawners
+            if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated || this.onFurnaceGenerated || this.onGateGenerated || true) {
                 for (let i = 0; i < chunk.blocks.length; i++) {
                     const blockType = chunk.blocks[i];
                     const bProps = getBlockProperties(blockType);
-                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.FURNACE || bProps.isFenceGate) {
+                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.FURNACE || blockType === window.BLOCKS.BOSS_SPAWNER || bProps.isFenceGate) {
                         const y = Math.floor(i / (16 * 16));
                         const rem = i % (16 * 16);
                         const z = Math.floor(rem / 16);
@@ -2211,6 +2213,9 @@ export class World {
                             this.onTorchGenerated(wx, y, wz);
                         } else if (blockType === window.BLOCKS.FURNACE && this.onFurnaceGenerated) {
                             this.onFurnaceGenerated(wx, y, wz);
+                        } else if (blockType === window.BLOCKS.BOSS_SPAWNER) {
+                            if (!this.spawners) this.spawners = new Set();
+                            this.spawners.add(`${wx},${y},${wz}`);
                         } else if (bProps.isFenceGate && this.onGateGenerated) {
                             this.onGateGenerated(wx, y, wz, blockType);
                         }
@@ -2218,12 +2223,12 @@ export class World {
                 }
             }
 
-            // Mark neighbors dirty
+            // Re-mesh existing neighbor chunks to eliminate boundary seams / water walls (deduplicated)
             const neighbors = [[-1, 0], [1, 0], [0, -1], [0, 1]];
             for (const [dx, dz] of neighbors) {
                 const nKey = this.getChunkKey(chunk.cx + dx, chunk.cz + dz);
                 const nChunk = this.chunks.get(nKey);
-                if (nChunk && nChunk.blocks[0] !== undefined) { // Check if neighbor is generated
+                if (nChunk && nChunk.blocks && nChunk.blocks[0] !== undefined) {
                     nChunk.dirty = true;
                     if (!this.chunksToBuild.includes(nChunk)) {
                         this.chunksToBuild.push(nChunk);
@@ -2247,10 +2252,10 @@ export class World {
             }
         }
 
-        // Process a few chunks per frame
+        // Process a few chunks per frame with frame-time budgeting (max 8ms to prevent dropped frames)
         let buildsThisFrame = 0;
-        // Limit to 4 builds per frame for responsive, seamless chunk rendering
-        while (this.chunksToBuild.length > 0 && buildsThisFrame < 4) {
+        const buildStart = performance.now();
+        while (this.chunksToBuild.length > 0 && buildsThisFrame < 3 && (performance.now() - buildStart < 8)) {
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToBuild.length; i++) {
@@ -2304,7 +2309,7 @@ export class World {
         if (this.camera) {
             this.projScreenMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
             this.frustum.setFromProjectionMatrix(this.projScreenMatrix);
-            const _box = new THREE.Box3();
+            const _box = this._cullingBox || (this._cullingBox = new THREE.Box3());
             for (const chunk of this.chunks.values()) {
                 if (chunk.mesh) {
                     const cx = chunk.cx * 16;
@@ -2335,11 +2340,19 @@ export class World {
     }
 
     tickRandomBlocks() {
-        // Pick random blocks per active chunk (increased to 220 to speed up hydration and crop growth by 1/3rd)
+        let px = 0, pz = 0, hasCam = false;
+        if (this.camera) {
+            px = Math.floor(this.camera.position.x / 16);
+            pz = Math.floor(this.camera.position.z / 16);
+            hasCam = true;
+        }
+
+        // Pick random blocks per active chunk within simulation distance (~64 blocks around player)
         for (const chunk of this.chunks.values()) {
             if (!chunk.blocks || chunk.blocks[0] === undefined) continue;
+            if (hasCam && (Math.abs(chunk.cx - px) > 4 || Math.abs(chunk.cz - pz) > 4)) continue;
             
-            for (let i = 0; i < 220; i++) {
+            for (let i = 0; i < 80; i++) {
                 const rx = Math.floor(Math.random() * 16);
                 const ry = Math.floor(Math.random() * CHUNK_HEIGHT);
                 const rz = Math.floor(Math.random() * 16);
@@ -2501,21 +2514,6 @@ export class World {
                             }
                             if (canCatch) {
                                 this.setBlock(nx, ny, nz, window.BLOCKS.FIRE);
-                            }
-                        }
-                    }
-                } else if (block === window.BLOCKS.WATER || block === window.BLOCKS.SWAMP_WATER) {
-                    const wx = chunk.cx * 16 + rx;
-                    const wy = ry;
-                    const wz = chunk.cz * 16 + rz;
-                    // Water actively wets dry farmland in a 9x9 area (dx: -4..4, dz: -4..4, dy: -1..1) 1/3rd faster
-                    for (let dx = -4; dx <= 4; dx++) {
-                        for (let dz = -4; dz <= 4; dz++) {
-                            for (let dy = -1; dy <= 1; dy++) {
-                                const targetBlock = this.getBlock(wx + dx, wy + dy, wz + dz);
-                                if (targetBlock === window.BLOCKS.FARMLAND) {
-                                    this.setBlock(wx + dx, wy + dy, wz + dz, window.BLOCKS.FARMLAND_MOIST);
-                                }
                             }
                         }
                     }

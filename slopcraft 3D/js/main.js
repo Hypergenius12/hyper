@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=116';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=116';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=116';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=116';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=116';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=116';
-import { AudioManager } from './audio.js?v=116';
-import { BiomeMap } from './map.js?v=116';
-import { DevMode } from './dev.js?v=116';
-import { ChatSystem } from './chat.js?v=116';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=117';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=117';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=117';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=117';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=117';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=117';
+import { AudioManager } from './audio.js?v=117';
+import { BiomeMap } from './map.js?v=117';
+import { DevMode } from './dev.js?v=117';
+import { ChatSystem } from './chat.js?v=117';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -3817,7 +3817,6 @@ class Game {
                 this.engine.scene.fog.baseDensity = this.engine.scene.fog.density;
             }
         }
-        this.particles.update(dt);
 
         // Update Primed TNT entities
         if (this.primedTNT && this.primedTNT.length > 0) {
@@ -4579,7 +4578,7 @@ class Game {
         this.engine.renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
         this.engine.renderer.setScissorTest(false);
         this.engine.renderer.clear();
-        if (this.composer) {
+        if (this.composer && this.bokehPass && this.bokehPass.enabled) {
             this.composer.render(dt);
         } else {
             this.engine.renderer.render(this.engine.scene, this.engine.camera);
@@ -4621,12 +4620,30 @@ class Game {
             
             // Disable minimap rendering in underground dimensions to avoid massive lag from drawing millions of ceiling faces
             if (!isUnderground) {
+                const pChunkX = Math.floor(this.player.position.x / 16);
+                const pChunkZ = Math.floor(this.player.position.z / 16);
+                const prevVisibility = [];
+
+                // Only render chunks within the minimap viewport (~80 blocks radius)
                 for (const chunk of this.world.chunks.values()) {
-                    if (chunk.mesh) chunk.mesh.visible = true;
-                    if (chunk.waterMesh) chunk.waterMesh.visible = true;
+                    const isNear = Math.abs(chunk.cx - pChunkX) <= 2 && Math.abs(chunk.cz - pChunkZ) <= 2;
+                    if (chunk.mesh) {
+                        prevVisibility.push({ chunk, vis: chunk.mesh.visible, waterVis: chunk.waterMesh ? chunk.waterMesh.visible : false });
+                        chunk.mesh.visible = isNear;
+                    }
+                    if (chunk.waterMesh) chunk.waterMesh.visible = isNear;
                 }
                 
+                if (this.particles && this.particles.mesh) this.particles.mesh.visible = false;
                 this.engine.renderer.render(this.engine.scene, this.minimapCamera);
+                if (this.particles && this.particles.mesh) this.particles.mesh.visible = true;
+
+                // Restore previous frustum culling visibility for main scene
+                for (let i = 0; i < prevVisibility.length; i++) {
+                    const pv = prevVisibility[i];
+                    if (pv.chunk.mesh) pv.chunk.mesh.visible = pv.vis;
+                    if (pv.chunk.waterMesh) pv.chunk.waterMesh.visible = pv.waterVis;
+                }
             }
             
             // Update player indicator rotation
@@ -4795,9 +4812,21 @@ class Game {
         if (!this.waypointMeshes) this.waypointMeshes = [];
         const waypoints = this.waypoints || [];
         
-        // Remove old meshes
+        // Only rebuild waypoint meshes if waypoints or dimension changed
+        const currentCount = waypoints.length;
+        if (!this._waypointsDirty && this._lastWaypointCount === currentCount && this._lastWaypointDim === this.currentDimension) {
+            return;
+        }
+        this._waypointsDirty = false;
+        this._lastWaypointCount = currentCount;
+        this._lastWaypointDim = this.currentDimension;
+
+        // Cleanly dispose and remove old meshes
         for (let i = 0; i < this.waypointMeshes.length; i++) {
-            this.engine.scene.remove(this.waypointMeshes[i]);
+            const m = this.waypointMeshes[i];
+            this.engine.scene.remove(m);
+            if (m.geometry) m.geometry.dispose();
+            if (m.material) m.material.dispose();
         }
         this.waypointMeshes = [];
 

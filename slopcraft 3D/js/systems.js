@@ -153,13 +153,21 @@ export class LightingSystem {
             { t: 1.0, amb: new THREE.Color(0x7588a8), ambIntensity: 0.58, bg: new THREE.Color(0x0e1322), top: new THREE.Color(0x182238), sun: 0.0, moon: 0.25 }
         ];
 
+        if (!this._cachedColors) {
+            this._cachedColors = {
+                amb: new THREE.Color(),
+                bg: new THREE.Color(),
+                top: new THREE.Color()
+            };
+        }
+
         for (let i = 0; i < states.length - 1; i++) {
             if (time >= states[i].t && time <= states[i+1].t) {
                 const fraction = (time - states[i].t) / (states[i+1].t - states[i].t);
-                const amb = states[i].amb.clone().lerp(states[i+1].amb, fraction);
+                const amb = this._cachedColors.amb.copy(states[i].amb).lerp(states[i+1].amb, fraction);
                 const ambIntensity = states[i].ambIntensity + (states[i+1].ambIntensity - states[i].ambIntensity) * fraction;
-                const bg = states[i].bg.clone().lerp(states[i+1].bg, fraction);
-                const top = states[i].top.clone().lerp(states[i+1].top, fraction);
+                const bg = this._cachedColors.bg.copy(states[i].bg).lerp(states[i+1].bg, fraction);
+                const top = this._cachedColors.top.copy(states[i].top).lerp(states[i+1].top, fraction);
                 const sun = states[i].sun + (states[i+1].sun - states[i].sun) * fraction;
                 const moon = (states[i].moon !== undefined) ? states[i].moon + (states[i+1].moon - states[i].moon) * fraction : 0.0;
                 return { amb, ambIntensity, bg, top, sun, moon };
@@ -3884,28 +3892,55 @@ export class CloudSystem {
         const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
         
         this.clusters = [];
+        let totalBlocks = 0;
         for(let i=0; i<30; i++) {
-            const cluster = new THREE.Group();
-            cluster.position.set((Math.random()-0.5)*400, 100 + Math.random()*20, (Math.random()-0.5)*400);
+            const clusterPos = new THREE.Vector3((Math.random()-0.5)*400, 100 + Math.random()*20, (Math.random()-0.5)*400);
             const numBlocks = 5 + Math.floor(Math.random()*15);
+            const blocks = [];
             for(let j=0; j<numBlocks; j++) {
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(Math.floor((Math.random()-0.5)*4)*8, Math.floor((Math.random()-0.5)*2)*4, Math.floor((Math.random()-0.5)*4)*8);
-                cluster.add(mesh);
+                const offset = new THREE.Vector3(
+                    Math.floor((Math.random()-0.5)*4)*8,
+                    Math.floor((Math.random()-0.5)*2)*4,
+                    Math.floor((Math.random()-0.5)*4)*8
+                );
+                blocks.push(offset);
+                totalBlocks++;
             }
-            this.clouds.add(cluster);
-            this.clusters.push(cluster);
+            this.clusters.push({ pos: clusterPos, blocks });
         }
+
+        // Single InstancedMesh replaces 360 separate transparent draw calls with exactly 1 draw call
+        this.instancedMesh = new THREE.InstancedMesh(geo, mat, totalBlocks);
+        this.instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        this.clouds.add(this.instancedMesh);
+        this._dummy = new THREE.Object3D();
+        this._updateInstances();
+    }
+
+    _updateInstances() {
+        let idx = 0;
+        for (let i = 0; i < this.clusters.length; i++) {
+            const c = this.clusters[i];
+            for (let j = 0; j < c.blocks.length; j++) {
+                const b = c.blocks[j];
+                this._dummy.position.set(c.pos.x + b.x, c.pos.y + b.y, c.pos.z + b.z);
+                this._dummy.updateMatrix();
+                this.instancedMesh.setMatrixAt(idx++, this._dummy.matrix);
+            }
+        }
+        this.instancedMesh.instanceMatrix.needsUpdate = true;
     }
 
     update(dt, cameraPos) {
-        for(let c of this.clusters) {
-            c.position.x += dt * 2;
-            if (c.position.x - cameraPos.x > 200) c.position.x -= 400;
-            if (c.position.x - cameraPos.x < -200) c.position.x += 400;
-            if (c.position.z - cameraPos.z > 200) c.position.z -= 400;
-            if (c.position.z - cameraPos.z < -200) c.position.z += 400;
+        for(let i = 0; i < this.clusters.length; i++) {
+            const c = this.clusters[i];
+            c.pos.x += dt * 2;
+            if (c.pos.x - cameraPos.x > 200) c.pos.x -= 400;
+            if (c.pos.x - cameraPos.x < -200) c.pos.x += 400;
+            if (c.pos.z - cameraPos.z > 200) c.pos.z -= 400;
+            if (c.pos.z - cameraPos.z < -200) c.pos.z += 400;
         }
+        this._updateInstances();
     }
 }
 

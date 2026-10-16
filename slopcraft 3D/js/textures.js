@@ -5327,32 +5327,33 @@ export async function createTextureAtlas(useMinecraft = true) {
                 if (frame.lastFrame === currentFrame) continue;
                 frame.lastFrame = currentFrame;
                 
+                if (!frame.preProcessedCanvas) {
+                    const pc = document.createElement('canvas');
+                    pc.width = TEX_SIZE;
+                    pc.height = totalFrames * TEX_SIZE;
+                    const pCtx = pc.getContext('2d', { willReadFrequently: true });
+                    pCtx.imageSmoothingEnabled = false;
+                    for (let f = 0; f < totalFrames; f++) {
+                        pCtx.drawImage(frame.img, 0, f * frameSize, frameSize, frameSize, 0, f * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                        if (frame.tint) {
+                            pCtx.globalCompositeOperation = 'multiply';
+                            pCtx.fillStyle = frame.tint;
+                            pCtx.fillRect(0, f * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                            pCtx.globalCompositeOperation = 'destination-in';
+                            pCtx.drawImage(frame.img, 0, f * frameSize, frameSize, frameSize, 0, f * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                            pCtx.globalCompositeOperation = 'source-over';
+                        }
+                        if (frame.forceOpaque) {
+                            const pd = pCtx.getImageData(0, f * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                            for (let pi = 3; pi < pd.data.length; pi += 4) pd.data[pi] = 255;
+                            pCtx.putImageData(pd, 0, f * TEX_SIZE);
+                        }
+                    }
+                    frame.preProcessedCanvas = pc;
+                }
+
                 ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
-                ctx.drawImage(frame.img, 0, currentFrame * frameSize, frameSize, frameSize, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
-                
-                // If it requires tint, multiply tint color over it
-                if (frame.tint) {
-                    tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-                    tmpCtx.drawImage(frame.img, 0, currentFrame * frameSize, frameSize, frameSize, 0, 0, TEX_SIZE, TEX_SIZE);
-                    tmpCtx.globalCompositeOperation = 'multiply';
-                    tmpCtx.fillStyle = frame.tint;
-                    tmpCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-                    // Restore alpha
-                    tmpCtx.globalCompositeOperation = 'destination-in';
-                    tmpCtx.drawImage(frame.img, 0, currentFrame * frameSize, frameSize, frameSize, 0, 0, TEX_SIZE, TEX_SIZE);
-                    tmpCtx.globalCompositeOperation = 'source-over';
-                    
-                    ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
-                    ctx.drawImage(tmp, 0, 0, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
-                }
-                
-                // Force water pixels opaque so material opacity controls transparency
-                if (frame.forceOpaque) {
-                    const pd = ctx.getImageData(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
-                    for (let pi = 3; pi < pd.data.length; pi += 4) pd.data[pi] = 255;
-                    ctx.putImageData(pd, frame.x, frame.y);
-                }
-                
+                ctx.drawImage(frame.preProcessedCanvas, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
                 didUpdate = true;
             } else {
                 if (useMinecraft) continue;

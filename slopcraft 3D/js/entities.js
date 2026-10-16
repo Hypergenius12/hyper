@@ -4752,19 +4752,23 @@ export class Mob {
 
         // Hostile undead mobs burn in direct sunlight during daytime in Overworld
         if (isDay && currentDimension === 'overworld' && (this.type === 'ZOMBIE' || this.type === 'SKELETON') && !inWater) {
-            const mx = Math.floor(this.position.x);
-            const my = Math.floor(this.position.y + this.size);
-            const mz = Math.floor(this.position.z);
-            let hasRoof = false;
-            for (let y = my + 1; y < Math.min(127, my + 16); y++) {
-                const b = world.getBlock(mx, y, mz);
-                if (b !== BLOCKS.AIR && b !== BLOCKS.GLASS) {
-                    hasRoof = true;
-                    break;
+            this.sunCheckTimer = (this.sunCheckTimer || 0) + dt;
+            if (this.sunCheckTimer >= 0.5) {
+                this.sunCheckTimer = 0;
+                const mx = Math.floor(this.position.x);
+                const my = Math.floor(this.position.y + this.size);
+                const mz = Math.floor(this.position.z);
+                let hasRoof = false;
+                for (let y = my + 1; y < Math.min(127, my + 16); y++) {
+                    const b = world.getBlock(mx, y, mz);
+                    if (b !== BLOCKS.AIR && b !== BLOCKS.GLASS) {
+                        hasRoof = true;
+                        break;
+                    }
                 }
-            }
-            if (!hasRoof) {
-                this.burnTimer = 3.0;
+                if (!hasRoof) {
+                    this.burnTimer = 3.0;
+                }
             }
         }
 
@@ -5249,130 +5253,154 @@ export class EntityManager {
     update(dt, world, playerPos, playerInventory, player, timeOfDay = 0.5, currentDimension = 'overworld') {
         // Day: 0.25 to 0.75. Night: 0.75-1.0 and 0.0-0.25
         const isDay = timeOfDay >= 0.25 && timeOfDay <= 0.75;
-        // Boss spawner detection
+        // Boss spawner detection (uses tracked world.spawners set for O(1) checks instead of 36,000 getBlock calls)
         this.bossScanTimer = (this.bossScanTimer || 0) + dt;
         if (this.bossScanTimer > 2.0) {
             this.bossScanTimer = 0;
             const px = Math.floor(playerPos.x);
             const py = Math.floor(playerPos.y);
             const pz = Math.floor(playerPos.z);
-            for (let x = -16; x <= 16; x++) {
-                for (let y = -16; y <= 16; y++) {
-                    for (let z = -16; z <= 16; z++) {
-                        if (world.getBlock(px+x, py+y, pz+z) === BLOCKS.BOSS_SPAWNER) {
-                            world.setBlock(px+x, py+y, pz+z, BLOCKS.AIR);
-                            // Determine boss type based on surrounding blocks (theme)
-                            let themeBlock = world.getBlock(px+x, py+y-1, pz+z);
-                            let bossType = 'WARDEN';
-                            let bossTheme = 'normal';
-                            if (themeBlock === BLOCKS.DUNGEON_FIRE_FLOOR || themeBlock === BLOCKS.NETHER_BRICKS) { bossType = 'PIGLIN_BRUISER'; bossTheme = 'fire'; }
-                            else if (themeBlock === BLOCKS.DUNGEON_ICE_FLOOR) { bossType = 'SKELETON'; bossTheme = 'ice'; }
-                            else if (themeBlock === BLOCKS.DUNGEON_JUNGLE_FLOOR) { bossType = 'SPIDER'; bossTheme = 'jungle'; }
-                            else if (themeBlock === BLOCKS.DUNGEON_DESERT_FLOOR) { bossType = 'ZOMBIE'; bossTheme = 'desert'; }
-                            else if (themeBlock === BLOCKS.DUNGEON_UNDEAD_FLOOR) { bossType = 'SKELETON'; bossTheme = 'undead'; }
-                            const boss = new Boss(bossType, new THREE.Vector3(px+x, py+y, pz+z), bossTheme);
-                            this.addMob(boss);
+            let foundX = null, foundY = null, foundZ = null;
+
+            if (world && world.spawners && world.spawners.size > 0) {
+                for (const key of world.spawners) {
+                    const [sx, sy, sz] = key.split(',').map(Number);
+                    if (Math.abs(sx - px) <= 16 && Math.abs(sy - py) <= 16 && Math.abs(sz - pz) <= 16) {
+                        foundX = sx; foundY = sy; foundZ = sz;
+                        break;
+                    }
+                }
+            } else {
+                // Fast local check within 6 blocks
+                for (let x = -6; x <= 6 && foundX === null; x++) {
+                    for (let y = -6; y <= 6 && foundX === null; y++) {
+                        for (let z = -6; z <= 6 && foundX === null; z++) {
+                            if (world.getBlock(px+x, py+y, pz+z) === BLOCKS.BOSS_SPAWNER) {
+                                foundX = px + x; foundY = py + y; foundZ = pz + z;
+                            }
                         }
                     }
                 }
             }
+
+            if (foundX !== null) {
+                world.setBlock(foundX, foundY, foundZ, BLOCKS.AIR);
+                if (world.spawners) world.spawners.delete(`${foundX},${foundY},${foundZ}`);
+                // Determine boss type based on surrounding blocks (theme)
+                let themeBlock = world.getBlock(foundX, foundY - 1, foundZ);
+                let bossType = 'WARDEN';
+                let bossTheme = 'normal';
+                if (themeBlock === BLOCKS.DUNGEON_FIRE_FLOOR || themeBlock === BLOCKS.NETHER_BRICKS) { bossType = 'PIGLIN_BRUISER'; bossTheme = 'fire'; }
+                else if (themeBlock === BLOCKS.DUNGEON_ICE_FLOOR) { bossType = 'SKELETON'; bossTheme = 'ice'; }
+                else if (themeBlock === BLOCKS.DUNGEON_JUNGLE_FLOOR) { bossType = 'SPIDER'; bossTheme = 'jungle'; }
+                else if (themeBlock === BLOCKS.DUNGEON_DESERT_FLOOR) { bossType = 'ZOMBIE'; bossTheme = 'desert'; }
+                else if (themeBlock === BLOCKS.DUNGEON_UNDEAD_FLOOR) { bossType = 'SKELETON'; bossTheme = 'undead'; }
+                const boss = new Boss(bossType, new THREE.Vector3(foundX, foundY, foundZ), bossTheme);
+                this.addMob(boss);
+            }
         }
 
-        // Village inhabitants spawner (Iron Golem + Villagers)
-        if (!this.spawnedVillages) this.spawnedVillages = new Set();
-        if (currentDimension === 'overworld' && typeof window.getClosestVillagePosition === 'function') {
-            const vSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
-            const vPos = window.getClosestVillagePosition(playerPos.x, playerPos.z, vSeed);
-            if (vPos) {
-                const distV = Math.hypot(playerPos.x - vPos.x, playerPos.z - vPos.z);
-                const vKey = `${vPos.x}_${vPos.z}`;
-                if (distV < 80 && !this.spawnedVillages.has(vKey)) {
-                    this.spawnedVillages.add(vKey);
-                    
-                    const getGround = (x, z) => {
-                        if (world && typeof world.getHighestBlock === 'function') {
-                            const h = world.getHighestBlock(Math.floor(x), Math.floor(z));
-                            if (h > 0) return h;
-                        }
-                        if (this.game && this.game.world && typeof this.game.world.getHighestBlock === 'function') {
-                            const h = this.game.world.getHighestBlock(Math.floor(x), Math.floor(z));
-                            if (h > 0) return h;
-                        }
-                        return vPos.y || 64;
-                    };
+        // Structure inhabitant spawners (Village, Igloo, Witch Hut) throttled to 1.0s interval
+        this.structureCheckTimer = (this.structureCheckTimer || 0) + dt;
+        if (this.structureCheckTimer >= 1.0) {
+            this.structureCheckTimer = 0;
 
-                    // Spawn Iron Golem protector in village
-                    const gy = getGround(vPos.x + 3, vPos.z + 3);
-                    const golem = new Mob('GOLEM', new THREE.Vector3(vPos.x + 3, gy + 1, vPos.z + 3));
-                    this.addMob(golem);
+            // Village inhabitants spawner (Iron Golem + Villagers)
+            if (!this.spawnedVillages) this.spawnedVillages = new Set();
+            if (currentDimension === 'overworld' && typeof window.getClosestVillagePosition === 'function') {
+                const vSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
+                const vPos = window.getClosestVillagePosition(playerPos.x, playerPos.z, vSeed);
+                if (vPos) {
+                    const distV = Math.hypot(playerPos.x - vPos.x, playerPos.z - vPos.z);
+                    const vKey = `${vPos.x}_${vPos.z}`;
+                    if (distV < 80 && !this.spawnedVillages.has(vKey)) {
+                        this.spawnedVillages.add(vKey);
+                        
+                        const getGround = (x, z) => {
+                            if (world && typeof world.getHighestBlock === 'function') {
+                                const h = world.getHighestBlock(Math.floor(x), Math.floor(z));
+                                if (h > 0) return h;
+                            }
+                            if (this.game && this.game.world && typeof this.game.world.getHighestBlock === 'function') {
+                                const h = this.game.world.getHighestBlock(Math.floor(x), Math.floor(z));
+                                if (h > 0) return h;
+                            }
+                            return vPos.y || 64;
+                        };
 
-                    // Spawn Villagers in various spots across the village: well, blacksmith, library, farm, cabin
-                    const vOffsets = [
-                        { dx: 2, dz: 0 },
-                        { dx: -2, dz: 2 },
-                        { dx: 12, dz: 12 },
-                        { dx: -12, dz: 12 },
-                        { dx: 12, dz: -12 },
-                        { dx: -12, dz: -12 }
-                    ];
-                    for (const off of vOffsets) {
-                        const vx = vPos.x + off.dx;
-                        const vz = vPos.z + off.dz;
-                        const vy = getGround(vx, vz);
-                        const villager = new Mob('VILLAGER', new THREE.Vector3(vx, vy + 1, vz));
+                        // Spawn Iron Golem protector in village
+                        const gy = getGround(vPos.x + 3, vPos.z + 3);
+                        const golem = new Mob('GOLEM', new THREE.Vector3(vPos.x + 3, gy + 1, vPos.z + 3));
+                        this.addMob(golem);
+
+                        // Spawn Villagers in various spots across the village: well, blacksmith, library, farm, cabin
+                        const vOffsets = [
+                            { dx: 2, dz: 0 },
+                            { dx: -2, dz: 2 },
+                            { dx: 12, dz: 12 },
+                            { dx: -12, dz: 12 },
+                            { dx: 12, dz: -12 },
+                            { dx: -12, dz: -12 }
+                        ];
+                        for (const off of vOffsets) {
+                            const vx = vPos.x + off.dx;
+                            const vz = vPos.z + off.dz;
+                            const vy = getGround(vx, vz);
+                            const villager = new Mob('VILLAGER', new THREE.Vector3(vx, vy + 1, vz));
+                            this.addMob(villager);
+                        }
+
+                        // Spawn farm animals inside the village animal pen & hay bale area
+                        const penY = getGround(vPos.x - 8, vPos.z + 8);
+                        const sheep1 = new Mob('SHEEP', new THREE.Vector3(vPos.x - 8, penY + 1, vPos.z + 8));
+                        const sheep2 = new Mob('SHEEP', new THREE.Vector3(vPos.x - 7, penY + 1, vPos.z + 9));
+                        const cow1 = new Mob('COW', new THREE.Vector3(vPos.x - 9, penY + 1, vPos.z + 8));
+                        this.addMob(sheep1);
+                        this.addMob(sheep2);
+                        this.addMob(cow1);
+
+                        const hayY = getGround(vPos.x + 8, vPos.z + 7);
+                        const chicken1 = new Mob('CHICKEN', new THREE.Vector3(vPos.x + 8, hayY + 1, vPos.z + 7));
+                        this.addMob(chicken1);
+                    }
+                }
+            }
+
+            // Igloo basement inhabitants spawner (Villager + Zombie in holding cells)
+            if (!this.spawnedIgloos) this.spawnedIgloos = new Set();
+            if (currentDimension === 'overworld' && typeof window.getClosestIglooPosition === 'function') {
+                const iSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
+                const iPos = window.getClosestIglooPosition(playerPos.x, playerPos.z, iSeed);
+                if (iPos) {
+                    const distI = Math.hypot(playerPos.x - iPos.x, playerPos.z - iPos.z);
+                    const iKey = `${iPos.x}_${iPos.z}`;
+                    if (distI < 24 && playerPos.y < 52 && !this.spawnedIgloos.has(iKey)) {
+                        this.spawnedIgloos.add(iKey);
+                        const trapX = iPos.x - 1;
+                        const trapZ = iPos.z - 1;
+                        const baseY = (iPos.y || 64) - 20;
+                        const villager = new Mob('VILLAGER', new THREE.Vector3(trapX - 2.5, baseY + 1, trapZ));
                         this.addMob(villager);
+                        const zombie = new Mob('ZOMBIE', new THREE.Vector3(trapX + 2.5, baseY + 1, trapZ));
+                        this.addMob(zombie);
                     }
-
-                    // Spawn farm animals inside the village animal pen & hay bale area
-                    const penY = getGround(vPos.x - 8, vPos.z + 8);
-                    const sheep1 = new Mob('SHEEP', new THREE.Vector3(vPos.x - 8, penY + 1, vPos.z + 8));
-                    const sheep2 = new Mob('SHEEP', new THREE.Vector3(vPos.x - 7, penY + 1, vPos.z + 9));
-                    const cow1 = new Mob('COW', new THREE.Vector3(vPos.x - 9, penY + 1, vPos.z + 8));
-                    this.addMob(sheep1);
-                    this.addMob(sheep2);
-                    this.addMob(cow1);
-
-                    const hayY = getGround(vPos.x + 8, vPos.z + 7);
-                    const chicken1 = new Mob('CHICKEN', new THREE.Vector3(vPos.x + 8, hayY + 1, vPos.z + 7));
-                    this.addMob(chicken1);
                 }
             }
-        }
 
-        // Igloo basement inhabitants spawner (Villager + Zombie in holding cells)
-        if (!this.spawnedIgloos) this.spawnedIgloos = new Set();
-        if (currentDimension === 'overworld' && typeof window.getClosestIglooPosition === 'function') {
-            const iSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
-            const iPos = window.getClosestIglooPosition(playerPos.x, playerPos.z, iSeed);
-            if (iPos) {
-                const distI = Math.hypot(playerPos.x - iPos.x, playerPos.z - iPos.z);
-                const iKey = `${iPos.x}_${iPos.z}`;
-                if (distI < 24 && playerPos.y < 52 && !this.spawnedIgloos.has(iKey)) {
-                    this.spawnedIgloos.add(iKey);
-                    const trapX = iPos.x - 1;
-                    const trapZ = iPos.z - 1;
-                    const baseY = (iPos.y || 64) - 20;
-                    const villager = new Mob('VILLAGER', new THREE.Vector3(trapX - 2.5, baseY + 1, trapZ));
-                    this.addMob(villager);
-                    const zombie = new Mob('ZOMBIE', new THREE.Vector3(trapX + 2.5, baseY + 1, trapZ));
-                    this.addMob(zombie);
-                }
-            }
-        }
-
-        // Witch Hut inhabitant spawner (Witch inside swamp hut)
-        if (!this.spawnedWitchHuts) this.spawnedWitchHuts = new Set();
-        if (currentDimension === 'overworld' && typeof window.getClosestWitchHutPosition === 'function') {
-            const wSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
-            const wPos = window.getClosestWitchHutPosition(playerPos.x, playerPos.z, wSeed);
-            if (wPos) {
-                const distW = Math.hypot(playerPos.x - wPos.x, playerPos.z - wPos.z);
-                const wKey = `${wPos.x}_${wPos.z}`;
-                if (distW < 36 && !this.spawnedWitchHuts.has(wKey)) {
-                    this.spawnedWitchHuts.add(wKey);
-                    const floorY = (wPos.y || 64) + 3;
-                    const witch = new Mob('WITCH', new THREE.Vector3(wPos.x, floorY, wPos.z));
-                    this.addMob(witch);
+            // Witch Hut inhabitant spawner (Witch inside swamp hut)
+            if (!this.spawnedWitchHuts) this.spawnedWitchHuts = new Set();
+            if (currentDimension === 'overworld' && typeof window.getClosestWitchHutPosition === 'function') {
+                const wSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
+                const wPos = window.getClosestWitchHutPosition(playerPos.x, playerPos.z, wSeed);
+                if (wPos) {
+                    const distW = Math.hypot(playerPos.x - wPos.x, playerPos.z - wPos.z);
+                    const wKey = `${wPos.x}_${wPos.z}`;
+                    if (distW < 36 && !this.spawnedWitchHuts.has(wKey)) {
+                        this.spawnedWitchHuts.add(wKey);
+                        const floorY = (wPos.y || 64) + 3;
+                        const witch = new Mob('WITCH', new THREE.Vector3(wPos.x, floorY, wPos.z));
+                        this.addMob(witch);
+                    }
                 }
             }
         }
