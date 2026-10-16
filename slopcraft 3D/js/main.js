@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=113';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=113';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=113';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=113';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=113';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=113';
-import { AudioManager } from './audio.js?v=113';
-import { BiomeMap } from './map.js?v=113';
-import { DevMode } from './dev.js?v=113';
-import { ChatSystem } from './chat.js?v=113';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=114';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=114';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=114';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=114';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=114';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=114';
+import { AudioManager } from './audio.js?v=114';
+import { BiomeMap } from './map.js?v=114';
+import { DevMode } from './dev.js?v=114';
+import { ChatSystem } from './chat.js?v=114';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -547,7 +547,7 @@ class Game {
                 return;
             }
 
-            // Crops drops
+            // Crops drops (matching Minecraft exact drop quantities)
             if (oldType >= (BLOCKS.WHEAT_0 || 349) && oldType <= (BLOCKS.WHEAT_7 || 356)) {
                 const isMature = (oldType === (BLOCKS.WHEAT_7 || 356));
                 if (isMature) {
@@ -556,7 +556,7 @@ class Game {
                     wheatItem.maxStack = 64;
                     this.entityManager.spawnItem(wheatItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
 
-                    const seedCount = 1 + Math.floor(Math.random() * 3); // 1-3 seeds
+                    const seedCount = 1 + Math.floor(Math.random() * 4); // 1-4 seeds in Minecraft
                     const seedItem = new Item('material', 'wheat_seeds', {}, 'Wheat Seeds');
                     seedItem.stackable = true;
                     seedItem.maxStack = 64;
@@ -572,7 +572,7 @@ class Game {
 
             if (oldType >= (BLOCKS.CARROTS_0 || 357) && oldType <= (BLOCKS.CARROTS_3 || 360)) {
                 const isMature = (oldType === (BLOCKS.CARROTS_3 || 360));
-                const carrotCount = isMature ? (1 + Math.floor(Math.random() * 4)) : 1;
+                const carrotCount = isMature ? (2 + Math.floor(Math.random() * 4)) : 1; // 2-5 carrots in Minecraft
                 const carrotItem = new Item('food', 'carrot', {}, 'Carrot');
                 carrotItem.stackable = true;
                 carrotItem.maxStack = 64;
@@ -582,7 +582,7 @@ class Game {
 
             if (oldType >= (BLOCKS.POTATOES_0 || 361) && oldType <= (BLOCKS.POTATOES_3 || 364)) {
                 const isMature = (oldType === (BLOCKS.POTATOES_3 || 364));
-                const potatoCount = isMature ? (1 + Math.floor(Math.random() * 4)) : 1;
+                const potatoCount = isMature ? (2 + Math.floor(Math.random() * 4)) : 1; // 2-5 potatoes in Minecraft
                 const potatoItem = new Item('food', 'potato', {}, 'Potato');
                 potatoItem.stackable = true;
                 potatoItem.maxStack = 64;
@@ -604,7 +604,7 @@ class Game {
                     beetItem.maxStack = 64;
                     this.entityManager.spawnItem(beetItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
 
-                    const seedCount = 1 + Math.floor(Math.random() * 3);
+                    const seedCount = 1 + Math.floor(Math.random() * 4); // 1-4 seeds in Minecraft
                     const seedItem = new Item('material', 'beetroot_seeds', {}, 'Beetroot Seeds');
                     seedItem.stackable = true;
                     seedItem.maxStack = 64;
@@ -2488,7 +2488,11 @@ class Game {
                 // Consume one pearl
                 slot.count--;
                 if (slot.count <= 0) this.player.inventory.slots[this.player.selectedSlot] = null;
-                if (this.audio && this.audio.playHit) this.audio.playHit();
+                if (this.audio && this.audio.playEnderPearlThrow) {
+                    this.audio.playEnderPearlThrow();
+                } else if (this.audio && this.audio.playHit) {
+                    this.audio.playHit();
+                }
                 this.input.mouse.rightClick = false;
                 return;
             }
@@ -3051,13 +3055,19 @@ class Game {
                     if (nextCrop !== null) {
                         this.world.setBlock(bx, by, bz, nextCrop);
                     }
-                    if (this.audio && this.audio.playPop) this.audio.playPop(hit.blockPos);
-                    // Green sparkle particles
-                    for (let i = 0; i < 12; i++) {
+                    if (this.audio && this.audio.playBoneMeal) {
+                        this.audio.playBoneMeal(hit.blockPos);
+                    } else if (this.audio && this.audio.playPop) {
+                        this.audio.playPop(hit.blockPos);
+                    }
+                    // Authentic Minecraft happy_villager / bone meal green sparkle particles
+                    const greenShades = [0x2ecc71, 0x44dd55, 0x55ff55, 0x88ff66, 0x00ff44];
+                    for (let i = 0; i < 16; i++) {
                         const px = bx + 0.1 + Math.random() * 0.8;
                         const py = by + 0.1 + Math.random() * 0.8;
                         const pz = bz + 0.1 + Math.random() * 0.8;
-                        this.particles.emit({ x: px, y: py, z: pz }, 'block_break', 1, 0x2ecc71);
+                        const col = greenShades[Math.floor(Math.random() * greenShades.length)];
+                        this.particles.emit({ x: px, y: py, z: pz }, 'bonemeal', 1, col);
                     }
                     if (!this.input.creativeMode) {
                         slot.count--;
@@ -3798,9 +3808,10 @@ class Game {
                 if (pearl.mesh.material && typeof pearl.mesh.material.rotation === 'number') {
                     pearl.mesh.material.rotation += 8 * dt;
                 }
-                // Trail particles
-                if (this.particles && Math.random() < 0.4) {
-                    this.particles.emit(pearl.mesh.position.clone(), 'magic', 1, 0x22cc88);
+                // Trail particles - authentic Minecraft portal motes
+                if (this.particles && Math.random() < 0.6) {
+                    const col = Math.random() < 0.5 ? 0xc469c4 : 0x9a369a;
+                    this.particles.emit(pearl.mesh.position.clone(), 'portal', 1, col);
                 }
                 // Check block collision
                 const px = Math.floor(pearl.mesh.position.x);
@@ -3825,9 +3836,18 @@ class Game {
                         this.player.velocity.set(0, 0, 0);
                         // Take 2 damage from pearl teleport (like Minecraft)
                         this.player.takeDamage(2);
-                        // Effects
-                        this.particles.emit(this.player.position.clone(), 'magic', 30, 0x22cc88);
-                        if (this.audio && this.audio.playHit) this.audio.playHit();
+                        // Authentic Minecraft portal burst particles
+                        const pCols = [0xc469c4, 0x9a369a, 0x800080, 0xa020f0];
+                        for (let k = 0; k < 35; k++) {
+                            const c = pCols[Math.floor(Math.random() * pCols.length)];
+                            const offset = new THREE.Vector3((Math.random() - 0.5) * 0.8, Math.random() * 1.8, (Math.random() - 0.5) * 0.8);
+                            this.particles.emit(this.player.position.clone().add(offset), 'portal', 1, c);
+                        }
+                        if (this.audio && this.audio.playEnderPearlTeleport) {
+                            this.audio.playEnderPearlTeleport(this.player.position);
+                        } else if (this.audio && this.audio.playHit) {
+                            this.audio.playHit();
+                        }
                     }
                     // Clean up
                     this.engine.scene.remove(pearl.mesh);
@@ -4285,7 +4305,8 @@ class Game {
             const nextPos = p.position.clone().addScaledVector(p.velocity, dt);
             
             if (Math.random() < 0.7) {
-                this.particles.emit(p.position, 'spell', 1, 0x8a2be2);
+                const col = Math.random() < 0.5 ? 0xc469c4 : 0x9a369a;
+                this.particles.emit(p.position, 'portal', 1, col);
             }
             
             const rayDir = nextPos.clone().sub(p.position).normalize();
@@ -4298,14 +4319,18 @@ class Game {
             if (hit || p.life > 6.0) {
                 if (hit) {
                     const oldPos = this.player.position.clone();
-                    this.particles.emit(oldPos.add(new THREE.Vector3(0, 1, 0)), 'spell', 25, 0x8a2be2);
+                    this.particles.emit(oldPos.add(new THREE.Vector3(0, 1, 0)), 'portal', 25, 0xc469c4);
                     
                     this.player.position.set(hitPos.x, hitPos.y + 0.1, hitPos.z);
                     this.player.velocity.set(0, 0, 0);
                     this.player.fallDistance = 0;
                     
-                    this.particles.emit(this.player.position.clone().add(new THREE.Vector3(0, 1, 0)), 'spell', 30, 0x00ffaa);
-                    if (this.audio && this.audio.playHit) this.audio.playHit();
+                    this.particles.emit(this.player.position.clone().add(new THREE.Vector3(0, 1, 0)), 'portal', 35, 0xc469c4);
+                    if (this.audio && this.audio.playEnderPearlTeleport) {
+                        this.audio.playEnderPearlTeleport(this.player.position);
+                    } else if (this.audio && this.audio.playHit) {
+                        this.audio.playHit();
+                    }
                     
                     if (!this.player.isCreative) {
                         this.player.takeDamage(5); // 5 pearl damage (2.5 hearts)

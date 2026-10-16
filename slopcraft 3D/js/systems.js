@@ -139,8 +139,8 @@ export class LightingSystem {
         // 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 1.0 = midnight
         const states = [
             // Midnight - authentic Minecraft night (ambient light level 4, visible moonlight)
-            { t: 0.0, amb: new THREE.Color(0x384868), ambIntensity: 0.38, bg: new THREE.Color(0x0a0d18), top: new THREE.Color(0x12182a), sun: 0.0, moon: 0.32 },
-            { t: 0.2, amb: new THREE.Color(0x384868), ambIntensity: 0.38, bg: new THREE.Color(0x0a0d18), top: new THREE.Color(0x12182a), sun: 0.0, moon: 0.32 },
+            { t: 0.0, amb: new THREE.Color(0x7588a8), ambIntensity: 0.58, bg: new THREE.Color(0x0e1322), top: new THREE.Color(0x182238), sun: 0.0, moon: 0.25 },
+            { t: 0.2, amb: new THREE.Color(0x7588a8), ambIntensity: 0.58, bg: new THREE.Color(0x0e1322), top: new THREE.Color(0x182238), sun: 0.0, moon: 0.25 },
             // Sunrise - warm horizon, Minecraft blue top
             { t: 0.25, amb: new THREE.Color(0xffd8b0), ambIntensity: 0.65, bg: new THREE.Color(0xffa050), top: new THREE.Color(0x78a7ff), sun: 0.15, moon: 0.02 },
             // Day - authentic Minecraft sky blue (#78a7ff), crisp directional contrast and ambient fill
@@ -149,8 +149,8 @@ export class LightingSystem {
             // Sunset - orange/red horizon
             { t: 0.75, amb: new THREE.Color(0xffa880), ambIntensity: 0.60, bg: new THREE.Color(0xff6644), top: new THREE.Color(0x5878d0), sun: 0.12, moon: 0.02 },
             // Night
-            { t: 0.8, amb: new THREE.Color(0x384868), ambIntensity: 0.38, bg: new THREE.Color(0x0a0d18), top: new THREE.Color(0x12182a), sun: 0.0, moon: 0.32 },
-            { t: 1.0, amb: new THREE.Color(0x384868), ambIntensity: 0.38, bg: new THREE.Color(0x0a0d18), top: new THREE.Color(0x12182a), sun: 0.0, moon: 0.32 }
+            { t: 0.8, amb: new THREE.Color(0x7588a8), ambIntensity: 0.58, bg: new THREE.Color(0x0e1322), top: new THREE.Color(0x182238), sun: 0.0, moon: 0.25 },
+            { t: 1.0, amb: new THREE.Color(0x7588a8), ambIntensity: 0.58, bg: new THREE.Color(0x0e1322), top: new THREE.Color(0x182238), sun: 0.0, moon: 0.25 }
         ];
 
         for (let i = 0; i < states.length - 1; i++) {
@@ -496,6 +496,29 @@ export class ParticleSystem {
                     (Math.random()-0.5)*0.8
                 );
                 maxAge = 0.8 + Math.random() * 0.4;
+            } else if (type === 'portal') {
+                // Authentic Minecraft Nether/Ender portal particles: subtle drift, gentle upward float, purple/magenta
+                vel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 1.6,
+                    (Math.random() - 0.5) * 1.2 + 0.5,
+                    (Math.random() - 0.5) * 1.6
+                );
+                maxAge = 0.65 + Math.random() * 0.5;
+            } else if (type === 'bonemeal') {
+                // Authentic Minecraft happy_villager/bonemeal sparkles: upward burst from crop, decelerates and twinkles
+                vel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 1.4,
+                    0.9 + Math.random() * 1.5,
+                    (Math.random() - 0.5) * 1.4
+                );
+                maxAge = 0.75 + Math.random() * 0.45;
+            } else if (type === 'smoke') {
+                vel = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.8,
+                    0.8 + Math.random() * 1.0,
+                    (Math.random() - 0.5) * 0.8
+                );
+                maxAge = 0.8 + Math.random() * 0.6;
             } else {
                 vel = new THREE.Vector3(
                     (Math.random()-0.5)*5,
@@ -546,6 +569,23 @@ export class ParticleSystem {
                 p.vel.z *= Math.max(0, 1 - dt * 2.5);
                 this._dummy.rotation.x += dt * 6;
                 this._dummy.rotation.y += dt * 6;
+            } else if (p.type === 'portal') {
+                p.pos.addScaledVector(p.vel, dt);
+                p.vel.multiplyScalar(Math.max(0, 1 - dt * 1.8)); // gentle drag
+                this._dummy.rotation.x += dt * 3;
+                this._dummy.rotation.y += dt * 3;
+            } else if (p.type === 'bonemeal') {
+                p.pos.addScaledVector(p.vel, dt);
+                p.vel.x *= Math.max(0, 1 - dt * 2.2);
+                p.vel.z *= Math.max(0, 1 - dt * 2.2);
+                p.vel.y = Math.max(0.1, p.vel.y - 1.2 * dt);
+                this._dummy.rotation.x += dt * 4;
+                this._dummy.rotation.y += dt * 4;
+            } else if (p.type === 'smoke') {
+                p.pos.addScaledVector(p.vel, dt);
+                p.vel.multiplyScalar(Math.max(0, 1 - dt * 1.2));
+                this._dummy.rotation.x += dt;
+                this._dummy.rotation.y += dt;
             } else {
                 p.pos.addScaledVector(p.vel, dt);
                 p.vel.y -= 9.8 * dt; // gravity
@@ -558,6 +598,16 @@ export class ParticleSystem {
                 this._dummy.scale.set(0.35, 0.35, 0.35);
             } else if (p.type === 'eat') {
                 const s = 0.45 * Math.max(0.15, 1 - (p.age / p.maxAge) * 0.5);
+                this._dummy.scale.set(s, s, s);
+            } else if (p.type === 'portal') {
+                const s = 0.4 * Math.max(0.08, 1 - p.age / p.maxAge);
+                this._dummy.scale.set(s, s, s);
+            } else if (p.type === 'bonemeal') {
+                const prog = p.age / p.maxAge;
+                const s = 0.45 * Math.sin(prog * Math.PI);
+                this._dummy.scale.set(s, s, s);
+            } else if (p.type === 'smoke') {
+                const s = 0.35 + 0.35 * (p.age / p.maxAge);
                 this._dummy.scale.set(s, s, s);
             } else {
                 this._dummy.scale.set(1, 1, 1);
@@ -888,8 +938,21 @@ class UISystem {
         const blockDefs = (typeof BLOCKS !== 'undefined' && BLOCKS) ? BLOCKS : (window.BLOCKS_REF || window.BLOCKS);
         if (!blockDefs) return;
 
-        // Skip AIR and internal/invisible/removed blocks and multi-part sub-blocks (e.g. TALL_FERN_TOP: 144, KELP_PLANT: 248, BED_HEAD: 294)
-        const skip = new Set([0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 144, 194, 248, 294]);
+        // Skip AIR, internal/invisible/removed blocks, multi-part sub-blocks, growing crop stages, farmland, stems, and biome grass duplicates
+        const skip = new Set([
+            0, 27, 57, 58, 59, 77, 106, 111, 119, 126, 131, 144, 194, 248, 294,
+            // Biome grass duplicates (grass color dynamically adapts to biome)
+            37, 38, 42,
+            // Farmland (tilled in-game via hoe)
+            347, 348,
+            // Growing crop block stages (seeds & harvest items appear in materials/food tabs)
+            349, 350, 351, 352, 353, 354, 355, 356, // Wheat 0-7
+            357, 358, 359, 360,                     // Carrots 0-3
+            361, 362, 363, 364,                     // Potatoes 0-3
+            365, 366, 367, 368,                     // Beetroots 0-3
+            // Stems
+            371, 372                                // Pumpkin Stem, Melon Stem
+        ]);
         const seenIds = new Set();
         const entries = [];
         for (const [name, id] of Object.entries(blockDefs)) {

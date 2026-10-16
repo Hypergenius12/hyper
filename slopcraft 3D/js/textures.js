@@ -3681,8 +3681,10 @@ function generateBlockTexture(ctx, blockType, face, rng) {
         case BLOCKS.PUMPKIN_STEM:
         case BLOCKS.MELON_STEM:
             fillBase(ctx, 0, 0, 0, 0);
-            ctx.fillStyle = '#55aa33';
+            ctx.fillStyle = '#b88a38'; // Authentic Minecraft golden-tan/brown stem color
             ctx.fillRect(7, 6, 2, 10);
+            ctx.fillStyle = '#8f6723';
+            ctx.fillRect(7, 12, 2, 4);
             break;
 
         default:
@@ -4723,7 +4725,8 @@ export async function createTextureAtlas(useMinecraft = true) {
                         
                         // Dynamic colormap tinted textures are kept grayscale in atlas so vertex colors blend dynamically
                         const isWater = (texName === 'water_flow' || texName === 'water_still');
-                        const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || texName === 'vine' || texName.includes('fern') || texName.includes('tall_grass') || texName === 'lily_pad' || isWater);
+                        const isStem = (texName === 'pumpkin_stem' || texName === 'melon_stem');
+                        const requiresTint = (texName === 'grass_block_top' || texName.includes('leaves') || texName === 'vine' || texName.includes('fern') || texName.includes('tall_grass') || texName === 'lily_pad' || isWater || isStem);
                         
                         // Helper: force all pixels in atlas region to fully opaque
                         const forceOpaque = (ax, ay) => {
@@ -4744,6 +4747,8 @@ export async function createTextureAtlas(useMinecraft = true) {
                             
                             if (isWater) {
                                 tint = (bt === BLOCKS.SWAMP_WATER) ? '#617B59' : '#3F76E4';
+                            } else if (isStem) {
+                                tint = '#c19b33'; // Authentic Minecraft golden-tan/brown stem color
                             } else if (texName === 'grass_block_top') {
                                 if (bt === BLOCKS.SWAMP_GRASS) {
                                     tint = '#6a7039'; // Authentic dark murky swamp grass
@@ -5782,8 +5787,8 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 else if (char === 'S') ctx.fillStyle = palettes.stick.c; // stick
                 else if (char === 'T') ctx.fillStyle = palettes.stick.d; // stick dark
                 else if (char === 'G') ctx.fillStyle = p.g || p.h || p.c; // glow/gem
-                else if (char === 'B') ctx.fillStyle = '#000000'; // black border
-                else if (char === 'O') ctx.fillStyle = '#222222'; // outline
+                else if (char === 'B') ctx.fillStyle = p.b || '#000000'; // black border
+                else if (char === 'O') ctx.fillStyle = p.o || '#222222'; // outline
                 else if (char === 'L') ctx.fillStyle = p.l || '#3366CC'; // liquid dark
                 else if (char === 'W') ctx.fillStyle = p.w || '#66AAFF'; // liquid light
                 else if (char === 'A') ctx.fillStyle = '#111111'; // accent/dark shade
@@ -6135,23 +6140,23 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         } else if (itemSubtype === 'netherite_scrap') {
             shape = [
                 "                ",
-                "                ",
-                "      OOOO      ",
-                "     OHHHDO     ",
-                "    OHCCCDDO    ",
-                "   OHCCCCCDDO   ",
-                "   OHCDDCCCDDO  ",
-                "  OHCDDCCCCDDO  ",
-                "  OHCCCCDDCDDO  ",
-                "   ODDDCCCCDDO  ",
-                "    ODDDCCDDO   ",
-                "     ODDDDDO    ",
-                "      OOOO      ",
-                "                ",
-                "                ",
+                "         DD     ",
+                "       DDHHD    ",
+                "     DDHHCCHD   ",
+                "   DDHHCCCCCHD  ",
+                "  DCHCCCCCCCCCO ",
+                " OCCCCCCCCCCOO  ",
+                "  ODCCCCCCOO    ",
+                "   OOCCCOOCCO   ",
+                "  DCCOOOCCCCCO  ",
+                " DCCCCCCCCCCO   ",
+                "  DCCCCCCCCO    ",
+                "   DCCCCCOO     ",
+                "    OCCOO       ",
+                "     OO         ",
                 "                "
             ];
-            p = { c: '#493e3b', d: '#2b2321', h: '#786862' };
+            p = { c: '#654740', d: '#411e15', h: '#95867e', o: '#24110b' };
         } else if (itemSubtype === 'arrow') {
             shape = [
                 "             OO ",

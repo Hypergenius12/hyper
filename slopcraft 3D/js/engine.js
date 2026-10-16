@@ -1428,7 +1428,7 @@ export class World {
             transparent: false,
             side: THREE.FrontSide // Massive performance gain for opaque blocks
         });
-        const matCross = new THREE.MeshBasicMaterial({
+        const matCross = new THREE.MeshLambertMaterial({
             map: textureAtlas.texture,
             vertexColors: true,
             transparent: true,

@@ -523,6 +523,47 @@ export class AudioManager {
         this.playMC(`entity/villager/idle${v}`, 0.8, position).then(s => { if (!s) doFallback(); });
     }
 
+    playBoneMeal(position = null) {
+        const doFallback = () => {
+            const freqs = [520, 680, 840, 1040, 1280];
+            freqs.forEach((f, idx) => {
+                setTimeout(() => {
+                    this.playTone(f + (Math.random() - 0.5) * 80, 'sine', 0.08, 0.35, 120, position);
+                }, idx * 25);
+            });
+            this.playNoise(0.12, 0.25, position);
+        };
+        this.playMC('item/bone_meal/use', 0.85, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playEnderPearlThrow(position = null) {
+        const doFallback = () => {
+            this.playTone(460, 'sine', 0.2, 0.45, 180, position);
+        };
+        this.playMC('entity/ender_pearl/throw', 0.8, position).then(s => {
+            if (!s) {
+                this.playMC('random/bow', 0.7, position).then(s2 => {
+                    if (!s2) doFallback();
+                });
+            }
+        });
+    }
+
+    playEnderPearlTeleport(position = null) {
+        const doFallback = () => {
+            this.playTone(280, 'sine', 0.35, 0.6, 220, position);
+            this.playTone(440, 'triangle', 0.3, 0.5, -180, position);
+            this.playNoise(0.2, 0.3, position);
+        };
+        this.playMC('entity/enderman/teleport', 0.9, position).then(s => {
+            if (!s) {
+                this.playMC('item/chorus_fruit/teleport', 0.85, position).then(s2 => {
+                    if (!s2) doFallback();
+                });
+            }
+        });
+    }
+
     playChorusTeleport(position = null) {
         const doFallback = () => {
             this.playTone(320, 'sine', 0.25, 0.5, 200, position);
