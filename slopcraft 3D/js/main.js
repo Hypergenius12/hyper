@@ -2,16 +2,16 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=110';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=110';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=110';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=110';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=110';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=110';
-import { AudioManager } from './audio.js?v=110';
-import { BiomeMap } from './map.js?v=110';
-import { DevMode } from './dev.js?v=110';
-import { ChatSystem } from './chat.js?v=110';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=111';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=111';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=111';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=111';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=111';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=111';
+import { AudioManager } from './audio.js?v=111';
+import { BiomeMap } from './map.js?v=111';
+import { DevMode } from './dev.js?v=111';
+import { ChatSystem } from './chat.js?v=111';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -505,6 +505,119 @@ class Game {
 
 
         this.world.onBlockDestroyed = (x, y, z, oldType, newType) => {
+            // Tall grass / Fern / Tall Fern drop wheat seeds (12% chance in MC)
+            if (oldType === BLOCKS.TALL_GRASS || oldType === BLOCKS.FERN || oldType === BLOCKS.TALL_FERN) {
+                if (Math.random() < 0.12) {
+                    const seedItem = new Item('material', 'wheat_seeds', {}, 'Wheat Seeds');
+                    seedItem.stackable = true;
+                    seedItem.maxStack = 64;
+                    this.entityManager.spawnItem(seedItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
+            // Crops drops
+            if (oldType >= (BLOCKS.WHEAT_0 || 349) && oldType <= (BLOCKS.WHEAT_7 || 356)) {
+                const isMature = (oldType === (BLOCKS.WHEAT_7 || 356));
+                if (isMature) {
+                    const wheatItem = new Item('material', 'wheat', {}, 'Wheat');
+                    wheatItem.stackable = true;
+                    wheatItem.maxStack = 64;
+                    this.entityManager.spawnItem(wheatItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+
+                    const seedCount = 1 + Math.floor(Math.random() * 3); // 1-3 seeds
+                    const seedItem = new Item('material', 'wheat_seeds', {}, 'Wheat Seeds');
+                    seedItem.stackable = true;
+                    seedItem.maxStack = 64;
+                    this.entityManager.spawnItem(seedItem, seedCount, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                } else {
+                    const seedItem = new Item('material', 'wheat_seeds', {}, 'Wheat Seeds');
+                    seedItem.stackable = true;
+                    seedItem.maxStack = 64;
+                    this.entityManager.spawnItem(seedItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
+            if (oldType >= (BLOCKS.CARROTS_0 || 357) && oldType <= (BLOCKS.CARROTS_3 || 360)) {
+                const isMature = (oldType === (BLOCKS.CARROTS_3 || 360));
+                const carrotCount = isMature ? (1 + Math.floor(Math.random() * 4)) : 1;
+                const carrotItem = new Item('food', 'carrot', {}, 'Carrot');
+                carrotItem.stackable = true;
+                carrotItem.maxStack = 64;
+                this.entityManager.spawnItem(carrotItem, carrotCount, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                return;
+            }
+
+            if (oldType >= (BLOCKS.POTATOES_0 || 361) && oldType <= (BLOCKS.POTATOES_3 || 364)) {
+                const isMature = (oldType === (BLOCKS.POTATOES_3 || 364));
+                const potatoCount = isMature ? (1 + Math.floor(Math.random() * 4)) : 1;
+                const potatoItem = new Item('food', 'potato', {}, 'Potato');
+                potatoItem.stackable = true;
+                potatoItem.maxStack = 64;
+                this.entityManager.spawnItem(potatoItem, potatoCount, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                if (isMature && Math.random() < 0.02) {
+                    const pItem = new Item('food', 'poisonous_potato', {}, 'Poisonous Potato');
+                    pItem.stackable = true;
+                    pItem.maxStack = 64;
+                    this.entityManager.spawnItem(pItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
+            if (oldType >= (BLOCKS.BEETROOTS_0 || 365) && oldType <= (BLOCKS.BEETROOTS_3 || 368)) {
+                const isMature = (oldType === (BLOCKS.BEETROOTS_3 || 368));
+                if (isMature) {
+                    const beetItem = new Item('food', 'beetroot', {}, 'Beetroot');
+                    beetItem.stackable = true;
+                    beetItem.maxStack = 64;
+                    this.entityManager.spawnItem(beetItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+
+                    const seedCount = 1 + Math.floor(Math.random() * 3);
+                    const seedItem = new Item('material', 'beetroot_seeds', {}, 'Beetroot Seeds');
+                    seedItem.stackable = true;
+                    seedItem.maxStack = 64;
+                    this.entityManager.spawnItem(seedItem, seedCount, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                } else {
+                    const seedItem = new Item('material', 'beetroot_seeds', {}, 'Beetroot Seeds');
+                    seedItem.stackable = true;
+                    seedItem.maxStack = 64;
+                    this.entityManager.spawnItem(seedItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
+            if (oldType === (BLOCKS.PUMPKIN_STEM || 371)) {
+                const seedCount = Math.floor(Math.random() * 4);
+                if (seedCount > 0) {
+                    const seedItem = new Item('material', 'pumpkin_seeds', {}, 'Pumpkin Seeds');
+                    seedItem.stackable = true;
+                    seedItem.maxStack = 64;
+                    this.entityManager.spawnItem(seedItem, seedCount, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
+            if (oldType === (BLOCKS.MELON_STEM || 372)) {
+                const seedCount = Math.floor(Math.random() * 4);
+                if (seedCount > 0) {
+                    const seedItem = new Item('material', 'melon_seeds', {}, 'Melon Seeds');
+                    seedItem.stackable = true;
+                    seedItem.maxStack = 64;
+                    this.entityManager.spawnItem(seedItem, seedCount, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
+            if (oldType === BLOCKS.MELON) {
+                const sliceCount = 3 + Math.floor(Math.random() * 5); // 3-7
+                const sliceItem = new Item('food', 'melon_slice', {}, 'Melon Slice');
+                sliceItem.stackable = true;
+                sliceItem.maxStack = 64;
+                this.entityManager.spawnItem(sliceItem, sliceCount, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                return;
+            }
+
             const NO_DROP_BLOCKS = new Set([
                 BLOCKS.AIR,
                 BLOCKS.WATER,
@@ -2200,6 +2313,9 @@ class Game {
                     const replaceType = (props && props.isWaterlogged) ? BLOCKS.WATER : BLOCKS.AIR;
                     // The setBlock call will trigger onBlockDestroyed which spawns the item
                     this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, replaceType);
+                    if (this.player && !this.player.isCreative) {
+                        this.player.exhaustion = (this.player.exhaustion || 0) + 0.005;
+                    }
                     
                     if (blockType === BLOCKS.TORCH || blockType === BLOCKS.GLOWSTONE || blockType === BLOCKS.LANTERN || blockType === BLOCKS.SOUL_LANTERN) this.torchSystem.removeTorch(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
                     if (blockType === BLOCKS.TALL_FERN) {
@@ -2727,7 +2843,174 @@ class Game {
                 }
                 this.input.mouse.rightClick = false;
                 return;
-            } else if (slot && slot.item.type === 'block' && hit.hit) {
+            }
+
+            // Hoe Tilling -> Farmland
+            const isHoe = slot && slot.item && (
+                slot.item.subtype.startsWith('hoe_') ||
+                slot.item.subtype.endsWith('_hoe') ||
+                (slot.item.data && slot.item.data.equipData && slot.item.data.equipData.isHoe)
+            );
+            if (isHoe && hit.hit) {
+                const targetBlock = hit.blockType;
+                const canTill = (targetBlock === BLOCKS.GRASS || targetBlock === BLOCKS.DIRT || targetBlock === BLOCKS.COARSE_DIRT);
+                const bx = hit.blockPos.x, by = hit.blockPos.y, bz = hit.blockPos.z;
+                const aboveBlock = this.world.getBlock(bx, by + 1, bz);
+                const aboveProps = getBlockProperties(aboveBlock);
+                if (canTill && (aboveBlock === BLOCKS.AIR || !aboveProps.solid)) {
+                    // Check if water nearby for initial moistness
+                    let hasWater = false;
+                    for (let dx = -4; dx <= 4; dx++) {
+                        for (let dz = -4; dz <= 4; dz++) {
+                            for (let dy = 0; dy <= 1; dy++) {
+                                const b = this.world.getBlock(bx + dx, by + dy, bz + dz);
+                                if (b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER) {
+                                    hasWater = true;
+                                    break;
+                                }
+                            }
+                            if (hasWater) break;
+                        }
+                        if (hasWater) break;
+                    }
+                    const farmlandId = hasWater ? (BLOCKS.FARMLAND_MOIST || 348) : (BLOCKS.FARMLAND || 347);
+                    this.world.setBlock(bx, by, bz, farmlandId);
+                    if (this.audio && this.audio.playTill) {
+                        this.audio.playTill(hit.blockPos);
+                    } else if (this.audio && this.audio.playDig) {
+                        this.audio.playDig(BLOCKS.DIRT, hit.blockPos);
+                    }
+                    this.particles.emit({ x: bx + 0.5, y: by + 1.0, z: bz + 0.5 }, 'block_break', 8, 0x795548);
+
+                    // Durability deduction
+                    if (!this.input.creativeMode) {
+                        if (slot.item.data && slot.item.data.equipData) {
+                            const eq = slot.item.data.equipData;
+                            if (eq.durability !== undefined) {
+                                eq.durability -= 1;
+                                if (eq.durability <= 0) {
+                                    this.player.inventory.slots[this.player.selectedSlot] = null;
+                                    if (this.audio && this.audio.playHit) this.audio.playHit(this.player.position);
+                                }
+                            }
+                        }
+                    }
+                    this.isSwinging = true;
+                    this.swingProgress = 0;
+                    this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    if (this.ui.isOpen) {
+                        this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    }
+                    this.input.mouse.rightClick = false;
+                    return;
+                }
+            }
+
+            // Crop planting on Farmland
+            const SEED_TO_CROP = {
+                'wheat_seeds': BLOCKS.WHEAT_0,
+                'carrot': BLOCKS.CARROTS_0,
+                'potato': BLOCKS.POTATOES_0,
+                'beetroot_seeds': BLOCKS.BEETROOTS_0,
+                'pumpkin_seeds': BLOCKS.PUMPKIN_STEM,
+                'melon_seeds': BLOCKS.MELON_STEM
+            };
+            if (slot && slot.item && SEED_TO_CROP[slot.item.subtype] !== undefined && hit.hit) {
+                const targetBlock = hit.blockType;
+                if (targetBlock === BLOCKS.FARMLAND || targetBlock === BLOCKS.FARMLAND_MOIST) {
+                    const bx = hit.blockPos.x, by = hit.blockPos.y, bz = hit.blockPos.z;
+                    const aboveBlock = this.world.getBlock(bx, by + 1, bz);
+                    if (aboveBlock === BLOCKS.AIR) {
+                        const cropId = SEED_TO_CROP[slot.item.subtype];
+                        this.world.setBlock(bx, by + 1, bz, cropId);
+                        this.audio.playPlace(BLOCKS.GRASS, { x: bx, y: by + 1, z: bz });
+                        if (!this.input.creativeMode) {
+                            slot.count--;
+                            if (slot.count <= 0) {
+                                this.player.inventory.slots[this.player.selectedSlot] = null;
+                            }
+                        }
+                        this.isSwinging = true;
+                        this.swingProgress = 0;
+                        this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        if (this.ui.isOpen) {
+                            this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        }
+                        this.input.mouse.rightClick = false;
+                        return;
+                    }
+                }
+            }
+
+            // Bone meal on crops
+            if (slot && slot.item && slot.item.subtype === 'bone_meal' && hit.hit) {
+                const b = hit.blockType;
+                const bx = hit.blockPos.x, by = hit.blockPos.y, bz = hit.blockPos.z;
+                let advanced = false;
+                let nextCrop = null;
+
+                if (b >= BLOCKS.WHEAT_0 && b < BLOCKS.WHEAT_7) {
+                    const inc = Math.floor(2 + Math.random() * 4); // 2-5 stages
+                    nextCrop = Math.min(BLOCKS.WHEAT_7, b + inc);
+                    advanced = true;
+                } else if (b >= BLOCKS.CARROTS_0 && b < BLOCKS.CARROTS_3) {
+                    const inc = Math.floor(1 + Math.random() * 3);
+                    nextCrop = Math.min(BLOCKS.CARROTS_3, b + inc);
+                    advanced = true;
+                } else if (b >= BLOCKS.POTATOES_0 && b < BLOCKS.POTATOES_3) {
+                    const inc = Math.floor(1 + Math.random() * 3);
+                    nextCrop = Math.min(BLOCKS.POTATOES_3, b + inc);
+                    advanced = true;
+                } else if (b >= BLOCKS.BEETROOTS_0 && b < BLOCKS.BEETROOTS_3) {
+                    const inc = Math.floor(1 + Math.random() * 2);
+                    nextCrop = Math.min(BLOCKS.BEETROOTS_3, b + inc);
+                    advanced = true;
+                } else if (b === BLOCKS.PUMPKIN_STEM || b === BLOCKS.MELON_STEM) {
+                    // Try to grow fruit immediately on adjacent block
+                    const fruitBlock = (b === BLOCKS.PUMPKIN_STEM) ? (BLOCKS.PUMPKIN || 370) : (BLOCKS.MELON || 103);
+                    const offsets = [[1,0], [-1,0], [0,1], [0,-1]];
+                    for (const [ox, oz] of offsets) {
+                        const adjB = this.world.getBlock(bx + ox, by, bz + oz);
+                        const belowAdj = this.world.getBlock(bx + ox, by - 1, bz + oz);
+                        const pBelow = getBlockProperties(belowAdj);
+                        if (adjB === BLOCKS.AIR && pBelow && pBelow.solid) {
+                            this.world.setBlock(bx + ox, by, bz + oz, fruitBlock);
+                            advanced = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (advanced) {
+                    if (nextCrop !== null) {
+                        this.world.setBlock(bx, by, bz, nextCrop);
+                    }
+                    if (this.audio && this.audio.playPop) this.audio.playPop(hit.blockPos);
+                    // Green sparkle particles
+                    for (let i = 0; i < 12; i++) {
+                        const px = bx + 0.1 + Math.random() * 0.8;
+                        const py = by + 0.1 + Math.random() * 0.8;
+                        const pz = bz + 0.1 + Math.random() * 0.8;
+                        this.particles.emit({ x: px, y: py, z: pz }, 'block_break', 1, 0x2ecc71);
+                    }
+                    if (!this.input.creativeMode) {
+                        slot.count--;
+                        if (slot.count <= 0) {
+                            this.player.inventory.slots[this.player.selectedSlot] = null;
+                        }
+                    }
+                    this.isSwinging = true;
+                    this.swingProgress = 0;
+                    this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    if (this.ui.isOpen) {
+                        this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    }
+                    this.input.mouse.rightClick = false;
+                    return;
+                }
+            }
+
+            if (slot && slot.item.type === 'block' && hit.hit) {
                 // Place block
                 const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
                 const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
@@ -2938,76 +3221,77 @@ class Game {
                 return;
             } else if (slot && (slot.item.type === 'food' || FOOD_HEAL_MAP[slot.item.subtype] !== undefined || (slot.item.data && slot.item.data.heal > 0))) {
                 const subtype = slot.item.subtype;
-                const healAmount = (slot.item.data && slot.item.data.heal) || FOOD_HEAL_MAP[subtype] || 15;
-                this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
-                if (subtype === 'golden_apple') {
-                    this.player.health = Math.min(this.player.maxHealth + 20, this.player.health + 20);
-                }
-                this.audio.playEat(this.player.position);
-                
-                // Emitting food crumbs in front of player's mouth
-                const lookDir = this.player.getLookDirection();
-                const eyePos = this.player.getEyePosition();
-                const mouthPos = eyePos.clone().add(lookDir.clone().multiplyScalar(0.42)).add(new THREE.Vector3(0, -0.18, 0));
-                const colors = FOOD_PARTICLE_COLORS[subtype] || [0xb7803a, 0x8f591f, 0xd8a556];
-                for (let i = 0; i < 16; i++) {
-                    const col = colors[Math.floor(Math.random() * colors.length)];
-                    this.particles.emit(mouthPos, 'eat', 1, col);
-                }
+                const ate = this.player.eatFood(subtype, slot.item.data);
+                if (ate) {
+                    this.audio.playEat(this.player.position);
+                    if (this.player.hunger >= 20 && this.audio && this.audio.playBurp && Math.random() < 0.4) {
+                        this.audio.playBurp(this.player.position);
+                    }
+                    
+                    // Emitting food crumbs in front of player's mouth
+                    const lookDir = this.player.getLookDirection();
+                    const eyePos = this.player.getEyePosition();
+                    const mouthPos = eyePos.clone().add(lookDir.clone().multiplyScalar(0.42)).add(new THREE.Vector3(0, -0.18, 0));
+                    const colors = FOOD_PARTICLE_COLORS[subtype] || [0xb7803a, 0x8f591f, 0xd8a556];
+                    for (let i = 0; i < 16; i++) {
+                        const col = colors[Math.floor(Math.random() * colors.length)];
+                        this.particles.emit(mouthPos, 'eat', 1, col);
+                    }
 
-                // Chorus fruit teleportation
-                if (subtype === 'chorus_fruit') {
-                    const oldPos = this.player.position.clone();
-                    this.particles.emit(oldPos, 'portal', 30, 0xc469c4);
-                    let targetX = oldPos.x, targetY = oldPos.y, targetZ = oldPos.z;
-                    let foundSafe = false;
-                    for (let attempt = 0; attempt < 24; attempt++) {
-                        const rx = Math.floor(oldPos.x + (Math.random() - 0.5) * 16);
-                        const rz = Math.floor(oldPos.z + (Math.random() - 0.5) * 16);
-                        const ryBase = Math.floor(oldPos.y + (Math.random() - 0.5) * 12);
-                        for (let dy = 6; dy >= -6; dy--) {
-                            const cy = ryBase + dy;
-                            const bFloor = this.world.getBlock(rx, cy, rz);
-                            const bFeet = this.world.getBlock(rx, cy + 1, rz);
-                            const bHead = this.world.getBlock(rx, cy + 2, rz);
-                            const pFloor = getBlockProperties(bFloor);
-                            const pFeet = getBlockProperties(bFeet);
-                            const pHead = getBlockProperties(bHead);
-                            if (pFloor.solid && !pFeet.solid && !pHead.solid && bFloor !== BLOCKS.LAVA && bFloor !== BLOCKS.FIRE) {
-                                targetX = rx + 0.5;
-                                targetY = cy + 1.0;
-                                targetZ = rz + 0.5;
-                                foundSafe = true;
-                                break;
+                    // Chorus fruit teleportation
+                    if (subtype === 'chorus_fruit') {
+                        const oldPos = this.player.position.clone();
+                        this.particles.emit(oldPos, 'portal', 30, 0xc469c4);
+                        let targetX = oldPos.x, targetY = oldPos.y, targetZ = oldPos.z;
+                        let foundSafe = false;
+                        for (let attempt = 0; attempt < 24; attempt++) {
+                            const rx = Math.floor(oldPos.x + (Math.random() - 0.5) * 16);
+                            const rz = Math.floor(oldPos.z + (Math.random() - 0.5) * 16);
+                            const ryBase = Math.floor(oldPos.y + (Math.random() - 0.5) * 12);
+                            for (let dy = 6; dy >= -6; dy--) {
+                                const cy = ryBase + dy;
+                                const bFloor = this.world.getBlock(rx, cy, rz);
+                                const bFeet = this.world.getBlock(rx, cy + 1, rz);
+                                const bHead = this.world.getBlock(rx, cy + 2, rz);
+                                const pFloor = getBlockProperties(bFloor);
+                                const pFeet = getBlockProperties(bFeet);
+                                const pHead = getBlockProperties(bHead);
+                                if (pFloor.solid && !pFeet.solid && !pHead.solid && bFloor !== BLOCKS.LAVA && bFloor !== BLOCKS.FIRE) {
+                                    targetX = rx + 0.5;
+                                    targetY = cy + 1.0;
+                                    targetZ = rz + 0.5;
+                                    foundSafe = true;
+                                    break;
+                                }
+                            }
+                            if (foundSafe) break;
+                        }
+                        if (foundSafe) {
+                            this.player.position.set(targetX, targetY, targetZ);
+                            this.player.velocity.set(0, 0, 0);
+                            this.particles.emit(this.player.position, 'portal', 35, 0xc469c4);
+                            if (this.audio && this.audio.playChorusTeleport) {
+                                this.audio.playChorusTeleport(this.player.position);
+                            } else if (this.audio && this.audio.playPop) {
+                                this.audio.playPop(this.player.position);
                             }
                         }
-                        if (foundSafe) break;
                     }
-                    if (foundSafe) {
-                        this.player.position.set(targetX, targetY, targetZ);
-                        this.player.velocity.set(0, 0, 0);
-                        this.particles.emit(this.player.position, 'portal', 35, 0xc469c4);
-                        if (this.audio && this.audio.playChorusTeleport) {
-                            this.audio.playChorusTeleport(this.player.position);
-                        } else if (this.audio && this.audio.playPop) {
-                            this.audio.playPop(this.player.position);
+
+                    // Arm swing animation when eating
+                    this.isSwinging = true;
+                    this.swingProgress = 0;
+
+                    if (!this.input.creativeMode) {
+                        slot.count--;
+                        if (slot.count <= 0) {
+                            this.player.inventory.slots[this.player.selectedSlot] = null;
                         }
                     }
-                }
-
-                // Arm swing animation when eating
-                this.isSwinging = true;
-                this.swingProgress = 0;
-
-                if (!this.input.creativeMode) {
-                    slot.count--;
-                    if (slot.count <= 0) {
-                        this.player.inventory.slots[this.player.selectedSlot] = null;
+                    this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    if (this.ui.isOpen) {
+                        this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                     }
-                }
-                this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
-                if (this.ui.isOpen) {
-                    this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                 }
             }
             this.input.mouse.rightClick = false; // single action

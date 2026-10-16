@@ -1,5 +1,5 @@
-ï»¿import { getBiomeParams, getColumnInfo } from './generation.js?v=110';
-import { createNoise2D, seededRandom } from './noise.js?v=110';
+import { getBiomeParams, getColumnInfo } from './generation.js?v=111';
+import { createNoise2D, seededRandom } from './noise.js?v=111';
 
 export class BiomeMap {
     constructor(game) {
@@ -489,7 +489,7 @@ export class BiomeMap {
 
             this.ctx.fillStyle = '#94a3b8';
             this.ctx.font = '10px sans-serif';
-            this.ctx.fillText(`[C] Center  â€¢  [R-Click] Waypoint  â€¢  ${Math.round(this.zoom * 100)}%`, cardX + 10, cardY + 54);
+            this.ctx.fillText(`[C] Center  •  [R-Click] Waypoint  •  ${Math.round(this.zoom * 100)}%`, cardX + 10, cardY + 54);
             this.ctx.restore();
 
             // Compass Rose in top-right

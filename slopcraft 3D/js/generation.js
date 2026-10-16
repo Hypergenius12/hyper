@@ -1,10 +1,10 @@
-ï»¿// ============================================
-// generation.js â€” Procedural Generation, Biomes, Dungeons
 // ============================================
-import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=110';
-import { BLOCKS } from './textures.js?v=110';
+// generation.js — Procedural Generation, Biomes, Dungeons
+// ============================================
+import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=111';
+import { BLOCKS } from './textures.js?v=111';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=110';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=111';
 
 // Planet configurations
 export const BIOMES = {
@@ -206,7 +206,7 @@ export function generateAetherChunk(cx, cz, params) {
                                 safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
                             }
                         } else {
-                            // Default biome coverage (HOLYSTONE_MOUNTAINS base etc.) â€” sparse aether trees
+                            // Default biome coverage (HOLYSTONE_MOUNTAINS base etc.) — sparse aether trees
                             if (colRng() < 0.025) {
                                 generateAetherTree(blocks, x, y + 1, z, rng);
                             } else if (colRng() < 0.1) {
@@ -2292,7 +2292,7 @@ export function generateChunkTerrain(cx, cz, params) {
     return blocks;
 }
 
-// getDungeonInfo removed â€” dungeon data is embedded in chunk generation
+// getDungeonInfo removed — dungeon data is embedded in chunk generation
 
 // ============================================
 // Flora Generation
@@ -3407,7 +3407,7 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                     if (room.type === 'entrance' && wy <= minY + 2) {
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.WATER);
                     } else if (room.shape === 'pit' && dx <= rw * 0.4 && dz <= rd * 0.4 && wy === minY + 1) {
-                        // Sunken pit center â€” use lava for fire theme, water for ice, etc.
+                        // Sunken pit center — use lava for fire theme, water for ice, etc.
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR); // Dig the pit
                         if (wy === minY + 1) {
                             safeSetBlock(blocks, lx, minY, lz, BLOCKS.AIR); // Remove floor for pit
@@ -3567,18 +3567,18 @@ export function generateCabin(blocks, x, y, z, rng) {
     for (let pz = z - 4; pz <= z + 4; pz++) {
         const isEaveEdgeZ = (pz === z - 4 || pz === z + 4);
 
-        // Tier 1: Eaves overhang at x Â± 4, height y + 3
+        // Tier 1: Eaves overhang at x ± 4, height y + 3
         safeSetBlock(blocks, x - 4, y + 3, pz, BLOCKS.COBBLESTONE);
         safeSetBlock(blocks, x + 4, y + 3, pz, BLOCKS.COBBLESTONE);
 
-        // Tier 2: Slope step at x Â± 3 and x Â± 2, height y + 4
+        // Tier 2: Slope step at x ± 3 and x ± 2, height y + 4
         const t2Mat = isEaveEdgeZ ? BLOCKS.COBBLESTONE : BLOCKS.PLANKS;
         safeSetBlock(blocks, x - 3, y + 4, pz, t2Mat);
         safeSetBlock(blocks, x - 2, y + 4, pz, t2Mat);
         safeSetBlock(blocks, x + 2, y + 4, pz, t2Mat);
         safeSetBlock(blocks, x + 3, y + 4, pz, t2Mat);
 
-        // Tier 3: Upper slope at x Â± 1, height y + 5
+        // Tier 3: Upper slope at x ± 1, height y + 5
         const t3Mat = isEaveEdgeZ ? BLOCKS.COBBLESTONE : BLOCKS.PLANKS;
         safeSetBlock(blocks, x - 1, y + 5, pz, t3Mat);
         safeSetBlock(blocks, x + 1, y + 5, pz, t3Mat);

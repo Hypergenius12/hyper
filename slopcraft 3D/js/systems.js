@@ -1,9 +1,9 @@
-﻿// ============================================
+// ============================================
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js?v=110';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=110';
+import { BLOCKS, generateItemTexture } from './textures.js?v=111';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=111';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -994,6 +994,13 @@ class UISystem {
 
         // --- Equipment / Items Section ---
         const getEquipDataForSubtype = (sub) => {
+            // Hoes
+            if (sub === 'hoe_netherite' || sub === 'netherite_hoe') return { isHoe: true, damage: 1, durability: 2031, passive: 'Infernal Cultivation (Fireproof)' };
+            if (sub === 'hoe_diamond'   || sub === 'diamond_hoe')   return { isHoe: true, damage: 1, durability: 1561 };
+            if (sub === 'hoe_iron'      || sub === 'iron_hoe')      return { isHoe: true, damage: 1, durability: 250 };
+            if (sub === 'hoe_gold'      || sub === 'golden_hoe')    return { isHoe: true, damage: 1, durability: 32 };
+            if (sub === 'hoe_stone'     || sub === 'stone_hoe')     return { isHoe: true, damage: 1, durability: 131 };
+            if (sub === 'hoe_wood'      || sub === 'wooden_hoe')    return { isHoe: true, damage: 1, durability: 59 };
             // Netherite
             if (sub === 'sword_netherite')   return { damage: 11, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Infernal Might (Fireproof & High Knockback)' };
             if (sub === 'pickaxe_netherite') return { mineSpeed: 5.5, damage: 6, chopSpeed: 1.5, passive: 'Infernal Resilience (Fireproof)' };
@@ -1061,6 +1068,7 @@ class UISystem {
             { type: 'equipment', subtype: 'pickaxe_netherite', name: 'Netherite Pickaxe' },
             { type: 'equipment', subtype: 'axe_netherite',     name: 'Netherite Axe' },
             { type: 'equipment', subtype: 'shovel_netherite',  name: 'Netherite Shovel' },
+            { type: 'equipment', subtype: 'hoe_netherite',     name: 'Netherite Hoe' },
             // Ruby
             { type: 'equipment', subtype: 'sword_ruby',        name: 'Ruby Sword' },
             { type: 'equipment', subtype: 'pickaxe_ruby',      name: 'Ruby Pickaxe' },
@@ -1086,26 +1094,31 @@ class UISystem {
             { type: 'equipment', subtype: 'pickaxe_diamond', name: 'Diamond Pickaxe' },
             { type: 'equipment', subtype: 'axe_diamond',     name: 'Diamond Axe' },
             { type: 'equipment', subtype: 'shovel_diamond',  name: 'Diamond Shovel' },
+            { type: 'equipment', subtype: 'hoe_diamond',     name: 'Diamond Hoe' },
             // Iron
             { type: 'equipment', subtype: 'sword_iron',      name: 'Iron Sword' },
             { type: 'equipment', subtype: 'pickaxe_iron',    name: 'Iron Pickaxe' },
             { type: 'equipment', subtype: 'axe_iron',        name: 'Iron Axe' },
             { type: 'equipment', subtype: 'shovel_iron',     name: 'Iron Shovel' },
+            { type: 'equipment', subtype: 'hoe_iron',        name: 'Iron Hoe' },
             // Gold
             { type: 'equipment', subtype: 'sword_gold',      name: 'Golden Sword' },
             { type: 'equipment', subtype: 'pickaxe_gold',    name: 'Golden Pickaxe' },
             { type: 'equipment', subtype: 'axe_gold',        name: 'Golden Axe' },
             { type: 'equipment', subtype: 'shovel_gold',     name: 'Golden Shovel' },
+            { type: 'equipment', subtype: 'hoe_gold',        name: 'Golden Hoe' },
             // Stone
             { type: 'equipment', subtype: 'sword_stone',     name: 'Stone Sword' },
             { type: 'equipment', subtype: 'pickaxe_stone',   name: 'Stone Pickaxe' },
             { type: 'equipment', subtype: 'axe_stone',       name: 'Stone Axe' },
             { type: 'equipment', subtype: 'shovel_stone',    name: 'Stone Shovel' },
+            { type: 'equipment', subtype: 'hoe_stone',       name: 'Stone Hoe' },
             // Wood
             { type: 'equipment', subtype: 'sword_wood',      name: 'Wooden Sword' },
             { type: 'equipment', subtype: 'pickaxe_wood',    name: 'Wooden Pickaxe' },
             { type: 'equipment', subtype: 'axe_wood',        name: 'Wooden Axe' },
             { type: 'equipment', subtype: 'shovel_wood',     name: 'Wooden Shovel' },
+            { type: 'equipment', subtype: 'hoe_wood',        name: 'Wooden Hoe' },
             // Armor
             { type: 'equipment', subtype: 'helmet_iron',     name: 'Iron Helmet' },
             { type: 'equipment', subtype: 'chest_iron',      name: 'Iron Chestplate' },
@@ -1144,6 +1157,10 @@ class UISystem {
             { type: 'material',  subtype: 'book',            name: 'Book' },
             { type: 'material',  subtype: 'sugar',           name: 'Sugar' },
             { type: 'material',  subtype: 'wheat',           name: 'Wheat' },
+            { type: 'material',  subtype: 'wheat_seeds',     name: 'Wheat Seeds' },
+            { type: 'material',  subtype: 'pumpkin_seeds',   name: 'Pumpkin Seeds' },
+            { type: 'material',  subtype: 'melon_seeds',     name: 'Melon Seeds' },
+            { type: 'material',  subtype: 'beetroot_seeds',  name: 'Beetroot Seeds' },
             { type: 'material',  subtype: 'arrow',           name: 'Arrow' },
             { type: 'material',  subtype: 'compass',         name: 'Compass' },
             { type: 'material',  subtype: 'clock',           name: 'Clock' },
@@ -1180,6 +1197,16 @@ class UISystem {
             { type: 'food',      subtype: 'apple',           name: 'Apple' },
             { type: 'food',      subtype: 'golden_apple',    name: 'Golden Apple' },
             { type: 'food',      subtype: 'bread',           name: 'Bread' },
+            { type: 'food',      subtype: 'carrot',          name: 'Carrot' },
+            { type: 'food',      subtype: 'potato',          name: 'Potato' },
+            { type: 'food',      subtype: 'baked_potato',    name: 'Baked Potato' },
+            { type: 'food',      subtype: 'poisonous_potato',name: 'Poisonous Potato' },
+            { type: 'food',      subtype: 'beetroot',        name: 'Beetroot' },
+            { type: 'food',      subtype: 'beetroot_soup',   name: 'Beetroot Soup' },
+            { type: 'food',      subtype: 'melon_slice',     name: 'Melon Slice' },
+            { type: 'food',      subtype: 'sweet_berries',   name: 'Sweet Berries' },
+            { type: 'food',      subtype: 'cookie',          name: 'Cookie' },
+            { type: 'food',      subtype: 'pumpkin_pie',     name: 'Pumpkin Pie' },
         ];
 
         // Render equipment/item slots synchronously using generateItemTexture
@@ -1776,37 +1803,44 @@ class UISystem {
         // 3. Health Hearts (10 hearts total, 10 HP per heart)
         const healthBar = document.getElementById('mc-health-bar');
         if (healthBar) {
-            const maxHearts = 10;
-            const hpPerHeart = pMaxHealth / maxHearts; // 10 HP
-            const halfHp = hpPerHeart / 2; // 5 HP
+            if (player && player.isCreative) {
+                healthBar.style.display = 'none';
+                healthBar.classList.add('hidden');
+            } else {
+                healthBar.style.display = 'flex';
+                healthBar.classList.remove('hidden');
+                const maxHearts = 10;
+                const hpPerHeart = pMaxHealth / maxHearts; // 10 HP
+                const halfHp = hpPerHeart / 2; // 5 HP
 
-            if (this._prevHealth === undefined) this._prevHealth = pHealth;
-            const isHurt = pHealth < this._prevHealth;
-            this._prevHealth = pHealth;
+                if (this._prevHealth === undefined) this._prevHealth = pHealth;
+                const isHurt = pHealth < this._prevHealth;
+                this._prevHealth = pHealth;
 
-            let heartsHtml = '';
-            for (let i = 0; i < maxHearts; i++) {
-                const heartVal = (i + 1) * hpPerHeart;
-                let heartImg = 'heart_empty.png';
-                if (pHealth >= heartVal) {
-                    heartImg = isHurt ? 'heart_flash_full.png' : 'heart_full.png';
-                } else if (pHealth >= heartVal - halfHp) {
-                    heartImg = isHurt ? 'heart_flash_half.png' : 'heart_half.png';
-                } else {
-                    heartImg = isHurt ? 'heart_flash_empty.png' : 'heart_empty.png';
+                let heartsHtml = '';
+                for (let i = 0; i < maxHearts; i++) {
+                    const heartVal = (i + 1) * hpPerHeart;
+                    let heartImg = 'heart_empty.png';
+                    if (pHealth >= heartVal) {
+                        heartImg = isHurt ? 'heart_flash_full.png' : 'heart_full.png';
+                    } else if (pHealth >= heartVal - halfHp) {
+                        heartImg = isHurt ? 'heart_flash_half.png' : 'heart_half.png';
+                    } else {
+                        heartImg = isHurt ? 'heart_flash_empty.png' : 'heart_empty.png';
+                    }
+
+                    const lowHealthShake = (pHealth <= 20 && Math.random() > 0.6) ? 'transform: translateY(-2px);' : '';
+                    heartsHtml += `<img src="assets/mc/hud/${heartImg}" class="mc-heart" style="${lowHealthShake}" />`;
                 }
-
-                const lowHealthShake = (pHealth <= 20 && Math.random() > 0.6) ? 'transform: translateY(-2px);' : '';
-                heartsHtml += `<img src="assets/mc/hud/${heartImg}" class="mc-heart" style="${lowHealthShake}" />`;
+                healthBar.innerHTML = heartsHtml;
             }
-            healthBar.innerHTML = heartsHtml;
         }
 
         // 4. Armor Bar (10 chestplate icons)
         const armorBar = document.getElementById('mc-armor-bar');
         if (armorBar) {
             let totalArmor = 0;
-            if (player && player.inventory && player.inventory.armor) {
+            if (player && !player.isCreative && player.inventory && player.inventory.armor) {
                 for (const slot of player.inventory.armor) {
                     if (slot && slot.item && slot.item.data && slot.item.data.equipData) {
                         totalArmor += (slot.item.data.equipData.protection || 0);
@@ -1832,6 +1866,38 @@ class UISystem {
                 armorBar.innerHTML = armorHtml;
             } else {
                 armorBar.classList.add('hidden');
+            }
+        }
+
+        // 5. Hunger Bar (10 drumstick icons, 2 hunger per drumstick)
+        const hungerBar = document.getElementById('mc-hunger-bar');
+        if (hungerBar) {
+            if (player && player.isCreative) {
+                hungerBar.style.display = 'none';
+                hungerBar.classList.add('hidden');
+            } else {
+                hungerBar.style.display = 'flex';
+                hungerBar.classList.remove('hidden');
+                const pHunger = (player && player.hunger !== undefined) ? player.hunger : 20;
+                if (pHunger <= 6) {
+                    hungerBar.classList.add('mc-shaking');
+                } else {
+                    hungerBar.classList.remove('mc-shaking');
+                }
+                const maxFoodIcons = 10;
+                let foodHtml = '';
+                for (let i = 0; i < maxFoodIcons; i++) {
+                    const iconVal = (i + 1) * 2;
+                    let foodImg = 'food_empty.png';
+                    if (pHunger >= iconVal) {
+                        foodImg = 'food_full.png';
+                    } else if (pHunger >= iconVal - 1) {
+                        foodImg = 'food_half.png';
+                    }
+                    const lowHungerShake = (pHunger <= 6 && Math.random() > 0.6) ? 'transform: translateY(-2px);' : '';
+                    foodHtml += `<img src="assets/mc/hud/${foodImg}" class="mc-food" style="${lowHungerShake}" />`;
+                }
+                hungerBar.innerHTML = foodHtml;
             }
         }
     }
@@ -2770,6 +2836,7 @@ class UISystem {
         if (slot.item.type === 'material') return slot.item.subtype;
         if (slot.item.type === 'equipment') return slot.item.subtype;
         if (slot.item.type === 'spawn_egg') return slot.item.subtype;
+        if (slot.item.type === 'food') return slot.item.subtype;
         return null;
     }
 
@@ -2824,6 +2891,7 @@ class UISystem {
 
         // Utility to make a material item
         const mat = (subType, name, count = 1, icon = null) => ({ item: { type: 'material', subtype: subType, name, stackable: true, maxStack: 64, id: `mat_${subType}`, data: { icon }, description: '' }, count });
+        const food = (subType, name, count = 1) => ({ item: { type: 'food', subtype: subType, name, stackable: true, maxStack: 64, id: `food_${subType}_${Date.now()}`, data: {}, description: '' }, count });
         const equip = (subType, data, name, desc, count = 1) => ({ item: { type: 'equipment', subtype: subType, name, stackable: false, maxStack: 1, id: `equip_${subType}_${Date.now()}`, data: { equipData: data }, description: desc }, count });
         const block = (type, name, count = 1) => ({ item: { type: 'block', subtype: type, name, stackable: true, maxStack: 64, id: `block_${type}`, data: {}, description: '' }, count });
 
@@ -2904,6 +2972,19 @@ class UISystem {
                 !s[3] && s[4] === 'stick' && !s[5] &&
                 !s[6] && s[7] === 'stick' && !s[8])
                 return equip('shovel' + getMatSuffix(matType), { mineSpeed: 1.0, digSpeed, damage, chopSpeed: 1.0, passive }, toolName, `${toolName}. Dig Speed: ${digSpeed}x${passive ? ' · ' + passive : ''}`);
+            return null;
+        };
+
+        // Hoes: 2 mat top row, 2 stick middle column
+        const hoeRecipe = (matType, toolName, passive = '') => {
+            const isP1 = matchesMat(s[0], matType) && matchesMat(s[1], matType) && !s[2] &&
+                         !s[3] && s[4] === 'stick' && !s[5] &&
+                         !s[6] && s[7] === 'stick' && !s[8];
+            const isP2 = !s[0] && matchesMat(s[1], matType) && matchesMat(s[2], matType) &&
+                         !s[3] && s[4] === 'stick' && !s[5] &&
+                         !s[6] && s[7] === 'stick' && !s[8];
+            if (isP1 || isP2)
+                return equip('hoe' + getMatSuffix(matType), { isHoe: true, damage: 1, passive }, toolName, `${toolName}.${passive ? ' · ' + passive : ''}`);
             return null;
         };
 
@@ -3016,7 +3097,11 @@ class UISystem {
         if (getCount('bone_meal') === 1 && totalItems === 1) return mat('white_dye', 'White Dye', 1);
         if (getCount('netherite_scrap') === 4 && getCount('gold_ingot') === 4 && totalItems === 8) return mat('netherite_ingot', 'Netherite Ingot', 1);
 
-        if (getCount('wheat') === 3 && totalItems === 3) return mat('bread', 'Bread', 1);
+        if (getCount('wheat') === 3 && totalItems === 3) return food('bread', 'Bread', 1);
+        if (getCount(B.PUMPKIN) === 1 && totalItems === 1) return mat('pumpkin_seeds', 'Pumpkin Seeds', 4);
+        if (getCount('melon_slice') === 1 && totalItems === 1) return mat('melon_seeds', 'Melon Seeds', 1);
+        if (getCount('beetroot') === 6 && totalItems === 6) return food('beetroot_soup', 'Beetroot Soup', 1);
+        if (getCount(B.PUMPKIN) === 1 && getCount('sugar') === 1 && getCount('egg') === 1 && totalItems === 3) return food('pumpkin_pie', 'Pumpkin Pie', 1);
         if (getCount('flint') === 1 && getCount('stick') === 1 && getCount('feather') === 1 && totalItems === 3) return mat('arrow', 'Arrow', 4);
 
         // Flowers to Dyes (1 flower -> 1 dye)
@@ -3169,6 +3254,18 @@ class UISystem {
             r = shovelRecipe('gold_ingot', 2.5, 2, 'Golden Shovel'); if (r) return r;
             r = shovelRecipe(B.COBBLESTONE, 2.0, 2, 'Stone Shovel'); if (r) return r;
             r = shovelRecipe(B.PLANKS, 1.5, 1, 'Wooden Shovel'); if (r) return r;
+
+            // Hoes
+            r = hoeRecipe('netherite_ingot', 'Netherite Hoe', 'Infernal Cultivation (Fireproof)'); if (r) return r;
+            r = hoeRecipe('gravitite_ore', 'Gravitite Hoe', 'Levitation Cultivation'); if (r) return r;
+            r = hoeRecipe('ruby', 'Ruby Hoe'); if (r) return r;
+            r = hoeRecipe('sapphire', 'Sapphire Hoe'); if (r) return r;
+            r = hoeRecipe('zanite_gemstone', 'Zanite Hoe'); if (r) return r;
+            r = hoeRecipe('diamond', 'Diamond Hoe'); if (r) return r;
+            r = hoeRecipe('iron_ingot', 'Iron Hoe'); if (r) return r;
+            r = hoeRecipe('gold_ingot', 'Golden Hoe'); if (r) return r;
+            r = hoeRecipe(B.COBBLESTONE, 'Stone Hoe'); if (r) return r;
+            r = hoeRecipe(B.PLANKS, 'Wooden Hoe'); if (r) return r;
 
             r = armorRecipe2H('iron_ingot', 'Iron Helmet', 'head_iron', 2); if (r) return r;
             r = armorRecipeFull('iron_ingot', 'Iron Chestplate', 'chest_iron', 5); if (r) return r;
@@ -3432,6 +3529,10 @@ class UISystem {
             { name: "Stone Axe", desc: "Decent chopper.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),_],[blk(B.COBBLESTONE),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_stone'), outCount: 1, needs3x3: true },
             { name: "Gold Axe", desc: "Fast chopper.", grid: [[mat('gold_ingot'),mat('gold_ingot'),_],[mat('gold_ingot'),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_gold'), outCount: 1, needs3x3: true },
             { name: "Diamond Axe", desc: "Best chopper.", grid: [[mat('diamond'),mat('diamond'),_],[mat('diamond'),mat('stick'),_],[_,mat('stick'),_]], out: eqp('axe_diamond'), outCount: 1, needs3x3: true },
+            { name: "Iron Hoe", desc: "Tills soil for farming.", grid: [[mat('iron_ingot'),mat('iron_ingot'),_],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('hoe_iron'), outCount: 1, needs3x3: true },
+            { name: "Diamond Hoe", desc: "Long-lasting farming tool.", grid: [[mat('diamond'),mat('diamond'),_],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('hoe_diamond'), outCount: 1, needs3x3: true },
+            { name: "Bread", desc: "Restores hunger.", grid: [[_,_,_],[mat('wheat'),mat('wheat'),mat('wheat')],[_,_,_]], out: { type: 'food', subtype: 'bread' }, outCount: 1, needs3x3: false },
+            { name: "Pumpkin Seeds (4)", desc: "Plant to grow pumpkins.", grid: [[_,_,_],[_,blk(B.PUMPKIN),_],[_,_,_]], out: mat('pumpkin_seeds'), outCount: 4, needs3x3: false },
 
             { name: "Gold Helmet", desc: "Shiny protection.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')],[_,_,_]], out: eqp('helmet_gold'), outCount: 1, needs3x3: true },
             { name: "Gold Chestplate", desc: "Shiny protection.", grid: [[mat('gold_ingot'),_,mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: eqp('chest_gold'), outCount: 1, needs3x3: true },

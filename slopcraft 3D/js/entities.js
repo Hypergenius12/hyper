@@ -2,9 +2,9 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=110';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=110';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=110';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=111';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=111';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=111';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -20,6 +20,31 @@ const _tempVec3 = new THREE.Vector3();
 // ============================================
 // Inventory & Items
 // ============================================
+export const FOOD_DATA = {
+    'bread':            { hunger: 5, saturation: 6.0, heal: 0 },
+    'cooked_beef':      { hunger: 8, saturation: 12.8, heal: 0 },
+    'steak':            { hunger: 8, saturation: 12.8, heal: 0 },
+    'cooked_porkchop':  { hunger: 8, saturation: 12.8, heal: 0 },
+    'cooked_mutton':    { hunger: 6, saturation: 9.6, heal: 0 },
+    'cooked_chicken':   { hunger: 6, saturation: 7.2, heal: 0 },
+    'cooked_fish':      { hunger: 5, saturation: 6.0, heal: 0 },
+    'baked_potato':     { hunger: 5, saturation: 6.0, heal: 0 },
+    'apple':            { hunger: 4, saturation: 2.4, heal: 0 },
+    'golden_apple':     { hunger: 4, saturation: 9.6, heal: 10, absorption: true },
+    'carrot':           { hunger: 3, saturation: 3.6, heal: 0 },
+    'raw_beef':         { hunger: 3, saturation: 1.8, heal: 0 },
+    'raw_porkchop':     { hunger: 3, saturation: 1.8, heal: 0 },
+    'raw_mutton':       { hunger: 2, saturation: 1.2, heal: 0 },
+    'raw_chicken':      { hunger: 2, saturation: 1.2, heal: 0, hungerPoison: 0.3 },
+    'raw_fish':         { hunger: 2, saturation: 0.4, heal: 0 },
+    'melon_slice':      { hunger: 2, saturation: 1.2, heal: 0 },
+    'sweet_berries':    { hunger: 2, saturation: 1.2, heal: 0 },
+    'potato':           { hunger: 1, saturation: 0.6, heal: 0 },
+    'beetroot':         { hunger: 1, saturation: 1.2, heal: 0 },
+    'poisonous_potato': { hunger: 2, saturation: 1.2, poison: true },
+    'chorus_fruit':     { hunger: 4, saturation: 2.4, teleport: true }
+};
+
 let itemIdCounter = 0;
 export class Item {
     constructor(type, subtype, data = {}, name, desc) {
@@ -128,11 +153,35 @@ export class Player {
         this.burnTimer = 0;
         this.burnTickTimer = 0;
         this.naturalRegenTimer = 0;
+        this.fastRegenTimer = 0;
+        this.starveTimer = 0;
+        this.hunger = 20;
+        this.maxHunger = 20;
+        this.saturation = 5.0;
+        this.exhaustion = 0.0;
         this.isCreative = false;
         this.fallStartY = this.position.y;
         this.fallDistance = 0;
         this.spawnGraceTimer = 5.0; // 5 seconds of spawn invulnerability & no fall damage
         this.spawnPoint = null;
+    }
+
+    eatFood(subtype, itemData = {}) {
+        const fData = FOOD_DATA[subtype] || { hunger: itemData.heal ? Math.round(itemData.heal / 2.5) : 3, saturation: 2.0 };
+        if (!this.isCreative && this.hunger >= 20 && !fData.absorption && subtype !== 'golden_apple' && subtype !== 'chorus_fruit') {
+            return false;
+        }
+        this.hunger = Math.min(20, this.hunger + (fData.hunger || 0));
+        this.saturation = Math.min(this.hunger, this.saturation + (fData.saturation || 0));
+        if (subtype === 'golden_apple') {
+            this.health = Math.min(this.maxHealth + 20, this.health + 20);
+        } else if (fData.heal) {
+            this.health = Math.min(this.maxHealth, this.health + fData.heal);
+        }
+        if (fData.poison && Math.random() < 0.6) {
+            this.takeDamage(10);
+        }
+        return true;
     }
 
     update(dt, keys, mouse, world, sensitivity = 0.002) {
@@ -219,7 +268,9 @@ export class Player {
         }
 
         // Movement input
-        const speed = (keys.sprint && !shouldCrouch ? 9.5 : 6.0) * speedMult;
+        const canSprint = this.isCreative || (this.hunger > 6);
+        const isSprinting = keys.sprint && canSprint && !shouldCrouch;
+        const speed = (isSprinting ? 9.5 : 6.0) * speedMult;
         let moveDir = _tempMoveDir.set(0,0,0);
         
         if (keys.forward) moveDir.add(forward);
@@ -227,7 +278,12 @@ export class Player {
         if (keys.right) moveDir.add(right);
         if (keys.left) moveDir.sub(right);
         
-        if (moveDir.lengthSq() > 0) moveDir.normalize();
+        if (moveDir.lengthSq() > 0) {
+            moveDir.normalize();
+            if (!this.isCreative && this.grounded) {
+                this.exhaustion += (isSprinting ? 0.1 : 0.01) * dt;
+            }
+        }
 
         const blockIn = world.getBlock(this.position.x, this.position.y + 0.1, this.position.z);
         const blockProps = getBlockProperties(blockIn);
@@ -314,6 +370,9 @@ export class Player {
             if (this.grounded) {
                 this.velocity.y = this.jumpSpeed; // Normal jump force for regular ground
                 this.grounded = false;
+                if (!this.isCreative) {
+                    this.exhaustion += (isSprinting ? 0.2 : 0.05);
+                }
             } else if (inWater || inLava) {
                 // Minecraft-style liquid swimming: apply upward acceleration instead of instant snap
                 this.velocity.y += 18 * dt;
@@ -372,7 +431,22 @@ export class Player {
                 this.grounded = false;
                 this.fallDistance = 0;
                 if (window.game && window.game.particles) window.game.particles.emit(this.position, 'cloud', 10, 0xffffff);
-            } else if (!this.isCreative && !flying && !inWater && !inLava && !onLadder) {
+            } else {
+                // Farmland trampling on landing from a fall
+                const fx = Math.floor(this.position.x);
+                const fy = Math.floor(this.position.y - 0.2);
+                const fz = Math.floor(this.position.z);
+                if ((blockUnder === BLOCKS.FARMLAND || blockUnder === BLOCKS.FARMLAND_MOIST) && this.fallDistance > 0.5) {
+                    if (world) {
+                        world.setBlock(fx, fy, fz, BLOCKS.DIRT);
+                        if (world.checkSupport) world.checkSupport(fx, fy + 1, fz);
+                        if (window.game && window.game.audio && window.game.audio.playBreak) {
+                            window.game.audio.playBreak(BLOCKS.DIRT);
+                        }
+                    }
+                }
+            }
+            if (!this.isCreative && !flying && !inWater && !inLava && !onLadder) {
                 const dist = this.fallDistance;
                 if (dist > 15) {
                     // Fall damage: only when falling from > 15 blocks. Kill height is 70 blocks.
@@ -453,18 +527,70 @@ export class Player {
             this.health = 0;
         }
 
-        // Natural very slow health regeneration (5 HP / half-heart every 4 seconds)
-        if (!this.isCreative && this.health > 0 && this.health < this.maxHealth) {
-            this.naturalRegenTimer = (this.naturalRegenTimer || 0) + dt;
-            if (this.naturalRegenTimer >= 4.0) {
-                this.naturalRegenTimer = 0;
-                this.health = Math.min(this.maxHealth, this.health + 5);
+        // Hunger, exhaustion, natural health regeneration and starvation
+        if (!this.isCreative) {
+            // Drain exhaustion into saturation / hunger
+            while (this.exhaustion >= 4.0) {
+                this.exhaustion -= 4.0;
+                if (this.saturation > 0) {
+                    this.saturation = Math.max(0, this.saturation - 1.0);
+                } else {
+                    this.hunger = Math.max(0, this.hunger - 1);
+                }
             }
-        } else if (this.isCreative) {
+
+            // Health regeneration
+            if (this.health > 0 && this.health < this.maxHealth) {
+                if (this.hunger >= 20 && this.saturation > 0) {
+                    // Fast natural regen when full hunger & saturation
+                    this.fastRegenTimer = (this.fastRegenTimer || 0) + dt;
+                    if (this.fastRegenTimer >= 1.0) {
+                        this.fastRegenTimer = 0;
+                        this.health = Math.min(this.maxHealth, this.health + 10);
+                        this.exhaustion += 6.0;
+                    }
+                } else if (this.hunger >= 18) {
+                    // Standard natural regen (hunger >= 18)
+                    this.naturalRegenTimer = (this.naturalRegenTimer || 0) + dt;
+                    if (this.naturalRegenTimer >= 4.0) {
+                        this.naturalRegenTimer = 0;
+                        this.health = Math.min(this.maxHealth, this.health + 5);
+                        this.exhaustion += 6.0;
+                    }
+                } else {
+                    this.naturalRegenTimer = 0;
+                    this.fastRegenTimer = 0;
+                }
+            } else {
+                this.naturalRegenTimer = 0;
+                this.fastRegenTimer = 0;
+            }
+
+            // Starvation damage
+            if (this.hunger === 0) {
+                this.starveTimer = (this.starveTimer || 0) + dt;
+                if (this.starveTimer >= 4.0) {
+                    this.starveTimer = 0;
+                    if (this.health > 10) { // In Normal mode, stops at 1 heart (10 HP)
+                        this.takeDamage(10);
+                        const d = document.getElementById('damage-flash');
+                        if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
+                        if (window.game && window.game.audio && window.game.audio.playHit) {
+                            window.game.audio.playHit(this.position);
+                        }
+                    }
+                }
+            } else {
+                this.starveTimer = 0;
+            }
+        } else {
+            this.hunger = 20;
+            this.saturation = 20;
+            this.exhaustion = 0;
             this.health = this.maxHealth;
             this.naturalRegenTimer = 0;
-        } else {
-            this.naturalRegenTimer = 0;
+            this.fastRegenTimer = 0;
+            this.starveTimer = 0;
         }
 
         // Mana regen

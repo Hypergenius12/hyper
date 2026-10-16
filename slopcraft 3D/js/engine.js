@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=110';
-import { getBiomeParams } from './generation.js?v=110';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=111';
+import { getBiomeParams } from './generation.js?v=111';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -624,22 +624,6 @@ export class Chunk {
                             }
                         }
 
-                        // Diagonal 1
-                        _positions[posCount++] = x; _positions[posCount++] = y; _positions[posCount++] = z;
-                        _positions[posCount++] = x + 1; _positions[posCount++] = y; _positions[posCount++] = z + 1;
-                        _positions[posCount++] = x + 1; _positions[posCount++] = y + 1; _positions[posCount++] = z + 1;
-                        _positions[posCount++] = x; _positions[posCount++] = y + 1; _positions[posCount++] = z;
-                        
-                        _normals[posCount - 12] = 0; _normals[posCount - 11] = 1; _normals[posCount - 10] = 0;
-                        _normals[posCount - 9] = 0; _normals[posCount - 8] = 1; _normals[posCount - 7] = 0;
-                        _normals[posCount - 6] = 0; _normals[posCount - 5] = 1; _normals[posCount - 4] = 0;
-                        _normals[posCount - 3] = 0; _normals[posCount - 2] = 1; _normals[posCount - 1] = 0;
-
-                        _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
-                        _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
-                        _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
-                        _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
-
                         let plantR = 1.0, plantG = 1.0, plantB = 1.0;
                         if (blockType === BLOCKS.VINES) {
                             const bInfo = getBiomeParams(wxBase + x, wzBase + z, planetParams);
@@ -651,44 +635,96 @@ export class Chunk {
                             plantR = gCol[0]; plantG = gCol[1]; plantB = gCol[2];
                         }
 
-                        _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
-                        _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
-                        _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
-                        _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
+                        const y0 = props.isCrop ? (y - 1/16) : y;
+                        const y1 = props.isCrop ? (y - 1/16 + 1.0) : (y + 1);
 
-                        // Diagonal 2
-                        _positions[posCount++] = x; _positions[posCount++] = y; _positions[posCount++] = z + 1;
-                        _positions[posCount++] = x + 1; _positions[posCount++] = y; _positions[posCount++] = z;
-                        _positions[posCount++] = x + 1; _positions[posCount++] = y + 1; _positions[posCount++] = z;
-                        _positions[posCount++] = x; _positions[posCount++] = y + 1; _positions[posCount++] = z + 1;
+                        // Authentic Minecraft crop rendering (4 parallel planes) vs standard cross (2 diagonal planes)
+                        const isCropHash = props.isCrop && (blockType !== BLOCKS.PUMPKIN_STEM && blockType !== BLOCKS.MELON_STEM);
 
-                        _normals[posCount - 12] = 0; _normals[posCount - 11] = 1; _normals[posCount - 10] = 0;
-                        _normals[posCount - 9] = 0; _normals[posCount - 8] = 1; _normals[posCount - 7] = 0;
-                        _normals[posCount - 6] = 0; _normals[posCount - 5] = 1; _normals[posCount - 4] = 0;
-                        _normals[posCount - 3] = 0; _normals[posCount - 2] = 1; _normals[posCount - 1] = 0;
+                        if (isCropHash) {
+                            const planes = [
+                                [x, y0, z + 0.25, x + 1, y0, z + 0.25, x + 1, y1, z + 0.25, x, y1, z + 0.25],
+                                [x, y0, z + 0.75, x + 1, y0, z + 0.75, x + 1, y1, z + 0.75, x, y1, z + 0.75],
+                                [x + 0.25, y0, z, x + 0.25, y0, z + 1, x + 0.25, y1, z + 1, x + 0.25, y1, z],
+                                [x + 0.75, y0, z, x + 0.75, y0, z + 1, x + 0.75, y1, z + 1, x + 0.75, y1, z]
+                            ];
+                            for (const p of planes) {
+                                for (let vi = 0; vi < 12; vi += 3) {
+                                    _positions[posCount++] = p[vi];
+                                    _positions[posCount++] = p[vi + 1];
+                                    _positions[posCount++] = p[vi + 2];
+                                    _normals[posCount - 3] = 0; _normals[posCount - 2] = 1; _normals[posCount - 1] = 0;
+                                }
+                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
+                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
+                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
 
-                        _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
-                        _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
-                        _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
-                        _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                                _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                                _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
+                                _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
 
-                        _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
-                        _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
-                        _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
-                        _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
-
-                        if (blockType === BLOCKS.TORCH) {
-                            _glowCrossIndices[glowCrossIndexCount++] = vertexCount; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 1; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 2;
-                            _glowCrossIndices[glowCrossIndexCount++] = vertexCount; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 2; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 3;
-                            _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 4; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 5; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 6;
-                            _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 4; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 6; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 7;
+                                _crossIndices[crossIndexCount++] = vertexCount; _crossIndices[crossIndexCount++] = vertexCount + 1; _crossIndices[crossIndexCount++] = vertexCount + 2;
+                                _crossIndices[crossIndexCount++] = vertexCount; _crossIndices[crossIndexCount++] = vertexCount + 2; _crossIndices[crossIndexCount++] = vertexCount + 3;
+                                vertexCount += 4;
+                            }
                         } else {
-                            _crossIndices[crossIndexCount++] = vertexCount; _crossIndices[crossIndexCount++] = vertexCount + 1; _crossIndices[crossIndexCount++] = vertexCount + 2;
-                            _crossIndices[crossIndexCount++] = vertexCount; _crossIndices[crossIndexCount++] = vertexCount + 2; _crossIndices[crossIndexCount++] = vertexCount + 3;
-                            _crossIndices[crossIndexCount++] = vertexCount + 4; _crossIndices[crossIndexCount++] = vertexCount + 5; _crossIndices[crossIndexCount++] = vertexCount + 6;
-                            _crossIndices[crossIndexCount++] = vertexCount + 4; _crossIndices[crossIndexCount++] = vertexCount + 6; _crossIndices[crossIndexCount++] = vertexCount + 7;
+                            // Diagonal 1
+                            _positions[posCount++] = x; _positions[posCount++] = y0; _positions[posCount++] = z;
+                            _positions[posCount++] = x + 1; _positions[posCount++] = y0; _positions[posCount++] = z + 1;
+                            _positions[posCount++] = x + 1; _positions[posCount++] = y1; _positions[posCount++] = z + 1;
+                            _positions[posCount++] = x; _positions[posCount++] = y1; _positions[posCount++] = z;
+                            
+                            _normals[posCount - 12] = 0; _normals[posCount - 11] = 1; _normals[posCount - 10] = 0;
+                            _normals[posCount - 9] = 0; _normals[posCount - 8] = 1; _normals[posCount - 7] = 0;
+                            _normals[posCount - 6] = 0; _normals[posCount - 5] = 1; _normals[posCount - 4] = 0;
+                            _normals[posCount - 3] = 0; _normals[posCount - 2] = 1; _normals[posCount - 1] = 0;
+
+                            _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
+                            _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
+                            _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                            _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+
+                            _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                            _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                            _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
+                            _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
+
+                            // Diagonal 2
+                            _positions[posCount++] = x; _positions[posCount++] = y0; _positions[posCount++] = z + 1;
+                            _positions[posCount++] = x + 1; _positions[posCount++] = y0; _positions[posCount++] = z;
+                            _positions[posCount++] = x + 1; _positions[posCount++] = y1; _positions[posCount++] = z;
+                            _positions[posCount++] = x; _positions[posCount++] = y1; _positions[posCount++] = z + 1;
+
+                            _normals[posCount - 12] = 0; _normals[posCount - 11] = 1; _normals[posCount - 10] = 0;
+                            _normals[posCount - 9] = 0; _normals[posCount - 8] = 1; _normals[posCount - 7] = 0;
+                            _normals[posCount - 6] = 0; _normals[posCount - 5] = 1; _normals[posCount - 4] = 0;
+                            _normals[posCount - 3] = 0; _normals[posCount - 2] = 1; _normals[posCount - 1] = 0;
+
+                            _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
+                            _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
+                            _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                            _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+
+                            _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                            _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                            _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
+                            _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
+
+                            if (blockType === BLOCKS.TORCH) {
+                                _glowCrossIndices[glowCrossIndexCount++] = vertexCount; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 1; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 2;
+                                _glowCrossIndices[glowCrossIndexCount++] = vertexCount; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 2; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 3;
+                                _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 4; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 5; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 6;
+                                _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 4; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 6; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 7;
+                            } else {
+                                _crossIndices[crossIndexCount++] = vertexCount; _crossIndices[crossIndexCount++] = vertexCount + 1; _crossIndices[crossIndexCount++] = vertexCount + 2;
+                                _crossIndices[crossIndexCount++] = vertexCount; _crossIndices[crossIndexCount++] = vertexCount + 2; _crossIndices[crossIndexCount++] = vertexCount + 3;
+                                _crossIndices[crossIndexCount++] = vertexCount + 4; _crossIndices[crossIndexCount++] = vertexCount + 5; _crossIndices[crossIndexCount++] = vertexCount + 6;
+                                _crossIndices[crossIndexCount++] = vertexCount + 4; _crossIndices[crossIndexCount++] = vertexCount + 6; _crossIndices[crossIndexCount++] = vertexCount + 7;
+                            }
+                            vertexCount += 8;
                         }
-                        vertexCount += 8;
                     }
 
                     let currentBlockType = blockType;
@@ -711,7 +747,7 @@ export class Chunk {
                         }
                     }
 
-                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE || blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.END_GATEWAY || blockType === BLOCKS.CHORUS_PLANT || blockType === BLOCKS.DRAGON_EGG || props.isLantern) {
+                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE || blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.END_GATEWAY || blockType === BLOCKS.CHORUS_PLANT || blockType === BLOCKS.DRAGON_EGG || props.isLantern || props.isFarmland) {
                         const uvTop = atlas.getUV(blockType, 'top');
                         const uvSide = atlas.getUV(blockType, 'side');
                         const uvBottom = atlas.getUV(blockType, 'bottom');
@@ -793,6 +829,10 @@ export class Chunk {
                             pushCustomBox(x + 5/16, y + 13/16, z + 5/16, x + 11/16, y + 14/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
                             pushCustomBox(x + 5/16, y + 14/16, z + 5/16, x + 11/16, y + 15/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
                             pushCustomBox(x + 6/16, y + 15/16, z + 6/16, x + 10/16, y + 16/16, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                        } else if (props.isFarmland) {
+                            const belowBlock = (y > 0) ? this.getBlock(x, y - 1, z) : getBlockOptimized(wx, y - 1, wz);
+                            const cullBottom = getBlockProperties(belowBlock).solid && !getBlockProperties(belowBlock).isSlab;
+                            pushCustomBox(x, y, z, x + 1, y + 15/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, cullBottom ? 2 : 0, 1.0);
                         } else if (props.isSlab) {
                             const belowBlock = (y > 0) ? this.getBlock(x, y - 1, z) : getBlockOptimized(wx, y - 1, wz);
                             const cullBottom = getBlockProperties(belowBlock).solid && !getBlockProperties(belowBlock).isSlab;
@@ -1755,6 +1795,14 @@ export class World {
                 needsBreak = true;
             }
         }
+        else {
+            const pType = getBlockProperties(type);
+            if (pType && pType.isCrop) {
+                if (blockBelow !== window.BLOCKS.FARMLAND && blockBelow !== window.BLOCKS.FARMLAND_MOIST) {
+                    needsBreak = true;
+                }
+            }
+        }
 
         if (needsBreak) {
             const props = getBlockProperties(type);
@@ -2413,6 +2461,94 @@ export class World {
                             }
                         }
                     }
+                } else if (block === window.BLOCKS.FARMLAND || block === window.BLOCKS.FARMLAND_MOIST) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    // Check horizontal Chebyshev distance 4 and dy in [0, 1] for water
+                    let hasWater = false;
+                    for (let dx = -4; dx <= 4 && !hasWater; dx++) {
+                        for (let dz = -4; dz <= 4 && !hasWater; dz++) {
+                            for (let dy = 0; dy <= 1; dy++) {
+                                const b = this.getBlock(wx + dx, wy + dy, wz + dz);
+                                if (b === window.BLOCKS.WATER || b === window.BLOCKS.SWAMP_WATER) {
+                                    hasWater = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (hasWater) {
+                        if (block === window.BLOCKS.FARMLAND) {
+                            this.setBlock(wx, wy, wz, window.BLOCKS.FARMLAND_MOIST);
+                        }
+                    } else {
+                        if (block === window.BLOCKS.FARMLAND_MOIST) {
+                            this.setBlock(wx, wy, wz, window.BLOCKS.FARMLAND);
+                        } else {
+                            // Dry farmland with no crop above reverts to dirt over time
+                            const above = this.getBlock(wx, wy + 1, wz);
+                            const pAbove = getBlockProperties(above);
+                            if (!pAbove || !pAbove.isCrop) {
+                                if (Math.random() < 0.25) {
+                                    this.setBlock(wx, wy, wz, window.BLOCKS.DIRT);
+                                }
+                            }
+                        }
+                    }
+                } else if (block >= window.BLOCKS.WHEAT_0 && block <= window.BLOCKS.WHEAT_6) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    const below = this.getBlock(wx, wy - 1, wz);
+                    const isMoist = below === window.BLOCKS.FARMLAND_MOIST;
+                    if (Math.random() < (isMoist ? 0.35 : 0.12)) {
+                        this.setBlock(wx, wy, wz, block + 1);
+                    }
+                } else if (block >= window.BLOCKS.CARROTS_0 && block <= window.BLOCKS.CARROTS_2) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    const below = this.getBlock(wx, wy - 1, wz);
+                    const isMoist = below === window.BLOCKS.FARMLAND_MOIST;
+                    if (Math.random() < (isMoist ? 0.35 : 0.12)) {
+                        this.setBlock(wx, wy, wz, block + 1);
+                    }
+                } else if (block >= window.BLOCKS.POTATOES_0 && block <= window.BLOCKS.POTATOES_2) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    const below = this.getBlock(wx, wy - 1, wz);
+                    const isMoist = below === window.BLOCKS.FARMLAND_MOIST;
+                    if (Math.random() < (isMoist ? 0.35 : 0.12)) {
+                        this.setBlock(wx, wy, wz, block + 1);
+                    }
+                } else if (block >= window.BLOCKS.BEETROOTS_0 && block <= window.BLOCKS.BEETROOTS_2) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    const below = this.getBlock(wx, wy - 1, wz);
+                    const isMoist = below === window.BLOCKS.FARMLAND_MOIST;
+                    if (Math.random() < (isMoist ? 0.35 : 0.12)) {
+                        this.setBlock(wx, wy, wz, block + 1);
+                    }
+                } else if (block === window.BLOCKS.PUMPKIN_STEM || block === window.BLOCKS.MELON_STEM) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    if (Math.random() < 0.2) {
+                        const hDirs = [[1,0], [-1,0], [0,1], [0,-1]];
+                        const [dx, dz] = hDirs[Math.floor(Math.random() * hDirs.length)];
+                        const tx = wx + dx, ty = wy, tz = wz + dz;
+                        if (this.getBlock(tx, ty, tz) === window.BLOCKS.AIR) {
+                            const ground = this.getBlock(tx, ty - 1, tz);
+                            const pG = getBlockProperties(ground);
+                            if (pG && pG.solid && !pG.isLeaves && ground !== window.BLOCKS.AIR) {
+                                const fruit = (block === window.BLOCKS.PUMPKIN_STEM) ? window.BLOCKS.PUMPKIN : window.BLOCKS.MELON;
+                                this.setBlock(tx, ty, tz, fruit);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -2521,6 +2657,10 @@ export class World {
                                 if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) {
                                     continue;
                                 }
+                                if (bProps.isFarmland) {
+                                    if (py < y + 0.9375 && py + entityHeight > y) return true;
+                                    continue;
+                                }
                                 if (bProps.isSlab) {
                                     if (py < y + 0.5 && py + entityHeight > y) return true;
                                     continue;
@@ -2622,7 +2762,8 @@ export class World {
                                     if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
                                     if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
                                     let surfH = 1.0;
-                                    if (bProps.isSlab) surfH = 0.5;
+                                    if (bProps.isFarmland) surfH = 0.9375;
+                                    else if (bProps.isSlab) surfH = 0.5;
                                     else if (bProps.isStair) {
                                         const sFacing = (this.getData ? this.getData(x, y, z) : 0) & 3;
                                         let isHigh = false;

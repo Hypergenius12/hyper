@@ -1,8 +1,8 @@
-﻿// ============================================
+// ============================================
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=110';
+import { seededRandom } from './noise.js?v=111';
 
 // Block type IDs
 export const BLOCKS = {
@@ -333,11 +333,63 @@ export const BLOCKS = {
     RED_TERRACOTTA: 343,
     LIGHT_GRAY_TERRACOTTA: 344,
     NETHER_QUARTZ_ORE: 345,
-    NETHER_GOLD_ORE: 346
+    NETHER_GOLD_ORE: 346,
+
+    // Farming & Crops
+    FARMLAND: 347,
+    FARMLAND_MOIST: 348,
+    WHEAT_0: 349,
+    WHEAT_1: 350,
+    WHEAT_2: 351,
+    WHEAT_3: 352,
+    WHEAT_4: 353,
+    WHEAT_5: 354,
+    WHEAT_6: 355,
+    WHEAT_7: 356,
+    CARROTS_0: 357,
+    CARROTS_1: 358,
+    CARROTS_2: 359,
+    CARROTS_3: 360,
+    POTATOES_0: 361,
+    POTATOES_1: 362,
+    POTATOES_2: 363,
+    POTATOES_3: 364,
+    BEETROOTS_0: 365,
+    BEETROOTS_1: 366,
+    BEETROOTS_2: 367,
+    BEETROOTS_3: 368,
+    PUMPKIN: 370,
+    PUMPKIN_STEM: 371,
+    MELON_STEM: 372
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.FARMLAND]:              { name: 'Farmland',              health: 2, transparent: true, emissive: 0, solid: true, isFarmland: true, drops: BLOCKS.DIRT },
+    [BLOCKS.FARMLAND_MOIST]:        { name: 'Moist Farmland',        health: 2, transparent: true, emissive: 0, solid: true, isFarmland: true, drops: BLOCKS.DIRT },
+    [BLOCKS.PUMPKIN]:               { name: 'Pumpkin',               health: 5, transparent: false, emissive: 0, solid: true, drops: BLOCKS.PUMPKIN },
+    [BLOCKS.WHEAT_0]:               { name: 'Wheat Crop',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'wheat_seeds' },
+    [BLOCKS.WHEAT_1]:               { name: 'Wheat Crop',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'wheat_seeds' },
+    [BLOCKS.WHEAT_2]:               { name: 'Wheat Crop',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'wheat_seeds' },
+    [BLOCKS.WHEAT_3]:               { name: 'Wheat Crop',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'wheat_seeds' },
+    [BLOCKS.WHEAT_4]:               { name: 'Wheat Crop',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'wheat_seeds' },
+    [BLOCKS.WHEAT_5]:               { name: 'Wheat Crop',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'wheat_seeds' },
+    [BLOCKS.WHEAT_6]:               { name: 'Wheat Crop',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'wheat_seeds' },
+    [BLOCKS.WHEAT_7]:               { name: 'Wheat Crop',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'wheat' },
+    [BLOCKS.CARROTS_0]:             { name: 'Carrots',               health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'carrot' },
+    [BLOCKS.CARROTS_1]:             { name: 'Carrots',               health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'carrot' },
+    [BLOCKS.CARROTS_2]:             { name: 'Carrots',               health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'carrot' },
+    [BLOCKS.CARROTS_3]:             { name: 'Carrots',               health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'carrot' },
+    [BLOCKS.POTATOES_0]:            { name: 'Potatoes',              health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'potato' },
+    [BLOCKS.POTATOES_1]:            { name: 'Potatoes',              health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'potato' },
+    [BLOCKS.POTATOES_2]:            { name: 'Potatoes',              health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'potato' },
+    [BLOCKS.POTATOES_3]:            { name: 'Potatoes',              health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'potato' },
+    [BLOCKS.BEETROOTS_0]:           { name: 'Beetroots',             health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'beetroot_seeds' },
+    [BLOCKS.BEETROOTS_1]:           { name: 'Beetroots',             health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'beetroot_seeds' },
+    [BLOCKS.BEETROOTS_2]:           { name: 'Beetroots',             health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'beetroot_seeds' },
+    [BLOCKS.BEETROOTS_3]:           { name: 'Beetroots',             health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'beetroot' },
+    [BLOCKS.PUMPKIN_STEM]:          { name: 'Pumpkin Stem',          health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'pumpkin_seeds' },
+    [BLOCKS.MELON_STEM]:            { name: 'Melon Stem',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'melon_seeds' },
     [BLOCKS.NETHER_QUARTZ_ORE]:     { name: 'Nether Quartz Ore',     health: 6, transparent: false, emissive: 0, solid: true, drops: 'quartz' },
     [BLOCKS.NETHER_GOLD_ORE]:       { name: 'Nether Gold Ore',       health: 6, transparent: false, emissive: 0, solid: true, drops: 'gold_nugget' },
     [BLOCKS.EMERALD_ORE]:           { name: 'Emerald Ore',           health: 8, transparent: false, emissive: 0.1, solid: true, drops: 'emerald' },
@@ -3549,6 +3601,90 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             addPixels(ctx, rng, 'rgba(255,255,255,1.0)', 8);
             break;
 
+        case BLOCKS.FARMLAND:
+            if (face === 'top') {
+                fillBase(ctx, 115, 78, 48);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#4e331c';
+                for (let y = 1; y < TEX_SIZE; y += 2) ctx.fillRect(0, y, TEX_SIZE, 1);
+            } else {
+                generateBlockTexture(ctx, BLOCKS.DIRT, face, rng);
+            }
+            break;
+
+        case BLOCKS.FARMLAND_MOIST:
+            if (face === 'top') {
+                fillBase(ctx, 60, 38, 20);
+                addNoise(ctx, rng, 12);
+                ctx.fillStyle = '#2b1a0d';
+                for (let y = 1; y < TEX_SIZE; y += 2) ctx.fillRect(0, y, TEX_SIZE, 1);
+            } else {
+                generateBlockTexture(ctx, BLOCKS.DIRT, face, rng);
+            }
+            break;
+
+        case BLOCKS.PUMPKIN:
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 217, 118, 24);
+                addNoise(ctx, rng, 12);
+                ctx.fillStyle = '#593a18';
+                ctx.fillRect(7, 7, 2, 2);
+            } else {
+                fillBase(ctx, 217, 118, 24);
+                addNoise(ctx, rng, 10);
+                ctx.fillStyle = '#9e4e08';
+                for (let x = 0; x < TEX_SIZE; x += 4) ctx.fillRect(x, 0, 1, TEX_SIZE);
+            }
+            break;
+
+        case BLOCKS.WHEAT_0: case BLOCKS.WHEAT_1: case BLOCKS.WHEAT_2:
+        case BLOCKS.WHEAT_3: case BLOCKS.WHEAT_4: case BLOCKS.WHEAT_5:
+        case BLOCKS.WHEAT_6: case BLOCKS.WHEAT_7:
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.fillStyle = blockType === BLOCKS.WHEAT_7 ? '#e6c640' : '#55aa33';
+            ctx.fillRect(4, 10, 8, 6);
+            break;
+
+        case BLOCKS.CARROTS_0: case BLOCKS.CARROTS_1:
+        case BLOCKS.CARROTS_2: case BLOCKS.CARROTS_3:
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.fillStyle = '#2e8b22';
+            ctx.fillRect(4, 8, 8, 8);
+            if (blockType >= BLOCKS.CARROTS_2) {
+                ctx.fillStyle = '#e67300';
+                ctx.fillRect(6, 12, 4, 4);
+            }
+            break;
+
+        case BLOCKS.POTATOES_0: case BLOCKS.POTATOES_1:
+        case BLOCKS.POTATOES_2: case BLOCKS.POTATOES_3:
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.fillStyle = '#2e8b22';
+            ctx.fillRect(4, 8, 8, 8);
+            if (blockType >= BLOCKS.POTATOES_2) {
+                ctx.fillStyle = '#c49a45';
+                ctx.fillRect(6, 12, 4, 4);
+            }
+            break;
+
+        case BLOCKS.BEETROOTS_0: case BLOCKS.BEETROOTS_1:
+        case BLOCKS.BEETROOTS_2: case BLOCKS.BEETROOTS_3:
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.fillStyle = '#2e8b22';
+            ctx.fillRect(4, 9, 8, 7);
+            if (blockType >= BLOCKS.BEETROOTS_2) {
+                ctx.fillStyle = '#8b1e1e';
+                ctx.fillRect(6, 12, 4, 4);
+            }
+            break;
+
+        case BLOCKS.PUMPKIN_STEM:
+        case BLOCKS.MELON_STEM:
+            fillBase(ctx, 0, 0, 0, 0);
+            ctx.fillStyle = '#55aa33';
+            ctx.fillRect(7, 6, 2, 10);
+            break;
+
         default:
             fillBase(ctx, 255, 0, 255);
             break;
@@ -3562,7 +3698,7 @@ function hasFaceVariants(blockType) {
         BLOCKS.WARPED_NYLIUM, BLOCKS.WARPED_STEM, BLOCKS.BONE_BLOCK, BLOCKS.BASALT, BLOCKS.BLACKSTONE, BLOCKS.PODZOL, BLOCKS.GOLDEN_OAK_WOOD, BLOCKS.MAGIC_WOOD, BLOCKS.REDWOOD_LOG,
         BLOCKS.FLETCHING_TABLE, BLOCKS.SMOKER, BLOCKS.STONECUTTER,
         BLOCKS.MANGROVE_LOG, BLOCKS.MANGROVE_ROOTS, BLOCKS.MUDDY_MANGROVE_ROOTS, BLOCKS.ENCHANTED_AETHER_LOG,
-        BLOCKS.BIRCH_WOOD
+        BLOCKS.BIRCH_WOOD, BLOCKS.FARMLAND, BLOCKS.FARMLAND_MOIST, BLOCKS.PUMPKIN
     ].includes(blockType);
 }
 
@@ -3883,7 +4019,34 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.RED_TERRACOTTA]: 'red_terracotta',
     [BLOCKS.LIGHT_GRAY_TERRACOTTA]: 'light_gray_terracotta',
     [BLOCKS.NETHER_QUARTZ_ORE]: 'nether_quartz_ore',
-    [BLOCKS.NETHER_GOLD_ORE]: 'nether_gold_ore'
+    [BLOCKS.NETHER_GOLD_ORE]: 'nether_gold_ore',
+
+    // Farming & Crops
+    [BLOCKS.FARMLAND]: { top: 'farmland', side: 'dirt', bottom: 'dirt' },
+    [BLOCKS.FARMLAND_MOIST]: { top: 'farmland_moist', side: 'dirt', bottom: 'dirt' },
+    [BLOCKS.PUMPKIN]: { top: 'pumpkin_top', side: 'pumpkin_side', bottom: 'pumpkin_top' },
+    [BLOCKS.WHEAT_0]: 'wheat_stage0',
+    [BLOCKS.WHEAT_1]: 'wheat_stage1',
+    [BLOCKS.WHEAT_2]: 'wheat_stage2',
+    [BLOCKS.WHEAT_3]: 'wheat_stage3',
+    [BLOCKS.WHEAT_4]: 'wheat_stage4',
+    [BLOCKS.WHEAT_5]: 'wheat_stage5',
+    [BLOCKS.WHEAT_6]: 'wheat_stage6',
+    [BLOCKS.WHEAT_7]: 'wheat_stage7',
+    [BLOCKS.CARROTS_0]: 'carrots_stage0',
+    [BLOCKS.CARROTS_1]: 'carrots_stage1',
+    [BLOCKS.CARROTS_2]: 'carrots_stage2',
+    [BLOCKS.CARROTS_3]: 'carrots_stage3',
+    [BLOCKS.POTATOES_0]: 'potatoes_stage0',
+    [BLOCKS.POTATOES_1]: 'potatoes_stage1',
+    [BLOCKS.POTATOES_2]: 'potatoes_stage2',
+    [BLOCKS.POTATOES_3]: 'potatoes_stage3',
+    [BLOCKS.BEETROOTS_0]: 'beetroots_stage0',
+    [BLOCKS.BEETROOTS_1]: 'beetroots_stage1',
+    [BLOCKS.BEETROOTS_2]: 'beetroots_stage2',
+    [BLOCKS.BEETROOTS_3]: 'beetroots_stage3',
+    [BLOCKS.PUMPKIN_STEM]: 'pumpkin_stem',
+    [BLOCKS.MELON_STEM]: 'melon_stem'
 };
 
 let _mcChestPromise = null;
@@ -4381,7 +4544,52 @@ const LOCAL_ASSET_MAP = {
     "item/melon_slice": "assets/mc/item/melon_slice.png",
     "nether_quartz_ore": "assets/mc/block/nether_quartz_ore.png",
     "nether_gold_ore": "assets/mc/block/nether_gold_ore.png",
-    "end_sky": "assets/mc/block/end_sky.png"
+    "end_sky": "assets/mc/block/end_sky.png",
+
+    // Farming & Crops Blocks
+    "farmland": "assets/mc/block/farmland.png",
+    "farmland_moist": "assets/mc/block/farmland_moist.png",
+    "pumpkin_top": "assets/mc/block/pumpkin_top.png",
+    "pumpkin_side": "assets/mc/block/pumpkin_side.png",
+    "pumpkin_stem": "assets/mc/block/pumpkin_stem.png",
+    "melon_stem": "assets/mc/block/melon_stem.png",
+    "wheat_stage0": "assets/mc/block/wheat_stage0.png",
+    "wheat_stage1": "assets/mc/block/wheat_stage1.png",
+    "wheat_stage2": "assets/mc/block/wheat_stage2.png",
+    "wheat_stage3": "assets/mc/block/wheat_stage3.png",
+    "wheat_stage4": "assets/mc/block/wheat_stage4.png",
+    "wheat_stage5": "assets/mc/block/wheat_stage5.png",
+    "wheat_stage6": "assets/mc/block/wheat_stage6.png",
+    "wheat_stage7": "assets/mc/block/wheat_stage7.png",
+    "carrots_stage0": "assets/mc/block/carrots_stage0.png",
+    "carrots_stage1": "assets/mc/block/carrots_stage1.png",
+    "carrots_stage2": "assets/mc/block/carrots_stage2.png",
+    "carrots_stage3": "assets/mc/block/carrots_stage3.png",
+    "potatoes_stage0": "assets/mc/block/potatoes_stage0.png",
+    "potatoes_stage1": "assets/mc/block/potatoes_stage1.png",
+    "potatoes_stage2": "assets/mc/block/potatoes_stage2.png",
+    "potatoes_stage3": "assets/mc/block/potatoes_stage3.png",
+    "beetroots_stage0": "assets/mc/block/beetroots_stage0.png",
+    "beetroots_stage1": "assets/mc/block/beetroots_stage1.png",
+    "beetroots_stage2": "assets/mc/block/beetroots_stage2.png",
+    "beetroots_stage3": "assets/mc/block/beetroots_stage3.png",
+
+    // Farming & Food Items
+    "wooden_hoe": "assets/mc/item/wooden_hoe.png",
+    "stone_hoe": "assets/mc/item/stone_hoe.png",
+    "iron_hoe": "assets/mc/item/iron_hoe.png",
+    "golden_hoe": "assets/mc/item/golden_hoe.png",
+    "diamond_hoe": "assets/mc/item/diamond_hoe.png",
+    "netherite_hoe": "assets/mc/item/netherite_hoe.png",
+    "wheat_seeds": "assets/mc/item/wheat_seeds.png",
+    "carrot": "assets/mc/item/carrot.png",
+    "potato": "assets/mc/item/potato.png",
+    "baked_potato": "assets/mc/item/baked_potato.png",
+    "poisonous_potato": "assets/mc/item/poisonous_potato.png",
+    "beetroot": "assets/mc/item/beetroot.png",
+    "beetroot_seeds": "assets/mc/item/beetroot_seeds.png",
+    "pumpkin_seeds": "assets/mc/item/pumpkin_seeds.png",
+    "melon_seeds": "assets/mc/item/melon_seeds.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -5090,6 +5298,32 @@ export async function createTextureAtlas(useMinecraft = true) {
 // ----------------------------------------------------
 
 const MC_ITEM_MAP = {
+    // Hoes
+    'hoe_wood': 'wooden_hoe',
+    'hoe_wooden': 'wooden_hoe',
+    'wooden_hoe': 'wooden_hoe',
+    'hoe_stone': 'stone_hoe',
+    'stone_hoe': 'stone_hoe',
+    'hoe_iron': 'iron_hoe',
+    'iron_hoe': 'iron_hoe',
+    'hoe_gold': 'golden_hoe',
+    'golden_hoe': 'golden_hoe',
+    'hoe_diamond': 'diamond_hoe',
+    'diamond_hoe': 'diamond_hoe',
+    'hoe_netherite': 'netherite_hoe',
+    'netherite_hoe': 'netherite_hoe',
+
+    // Seeds & Crops
+    'wheat_seeds': 'wheat_seeds',
+    'carrot': 'carrot',
+    'potato': 'potato',
+    'baked_potato': 'baked_potato',
+    'poisonous_potato': 'poisonous_potato',
+    'beetroot': 'beetroot',
+    'beetroot_seeds': 'beetroot_seeds',
+    'pumpkin_seeds': 'pumpkin_seeds',
+    'melon_seeds': 'melon_seeds',
+
     'door': 'oak_door',
     'dungeon_door': 'oak_door',
     'oak_door': 'oak_door',
@@ -5678,6 +5912,25 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 " OSSO           ",
                 " OSO            ",
                 "  O             ",
+                "                "
+            ];
+        } else if (itemSubtype.includes('hoe')) {
+            shape = [
+                "     OOOOOO     ",
+                "    OBHHHDO     ",
+                "   OBHCCCCDO    ",
+                "   ODCO OSSO    ",
+                "   OO   OSSO    ",
+                "        OSSO    ",
+                "        OSSO    ",
+                "       OSSO     ",
+                "       OSSO     ",
+                "      OSSO      ",
+                "      OSSO      ",
+                "     OSSO       ",
+                "     OSSO       ",
+                "    OSSO        ",
+                "     OO         ",
                 "                "
             ];
         } else if (itemSubtype.includes('head')) {

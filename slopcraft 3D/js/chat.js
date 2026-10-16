@@ -1,10 +1,10 @@
-ï»¿// ============================================
-// chat.js â€” In-Game Chat & Command System
+// ============================================
+// chat.js — In-Game Chat & Command System
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockName } from './textures.js?v=110';
-import { BIOMES, getBiomeParams, getClosestStrongholdPosition, getClosestIglooPosition, getClosestWitchHutPosition, getClosestVillagePosition } from './generation.js?v=110';
-import { Mob, MOB_TYPES, Item } from './entities.js?v=110';
+import { BLOCKS, getBlockName } from './textures.js?v=111';
+import { BIOMES, getBiomeParams, getClosestStrongholdPosition, getClosestIglooPosition, getClosestWitchHutPosition, getClosestVillagePosition } from './generation.js?v=111';
+import { Mob, MOB_TYPES, Item } from './entities.js?v=111';
 
 export class ChatSystem {
     constructor(game) {
@@ -1139,23 +1139,23 @@ export class ChatSystem {
         if (args.length > 0) {
             const topic = args[0].toLowerCase();
             const helpMap = {
-                'tp': "/tp <x y z> or /tp <mob_name> â€” Teleport to coordinates or to a nearby mob",
-                'find': "/find <stronghold | igloo | witch_hut | biome <name> | spawn> â€” Locate structures, biomes, or world spawn",
-                'locate': "/locate <stronghold | igloo | witch_hut | biome <name> | spawn> â€” Locate structures or biomes",
-                'kill': "/kill [@s | @e | mob_name] â€” Kill player or mobs",
-                'summon': "/summon <mob_type> [x y z] â€” Spawn any mob (zombie, creeper, enderman, blaze, ender_dragon, etc.)",
-                'spawn': "/spawn â€” Teleport to the world spawn location",
-                'spawnpoint': "/spawnpoint [x y z] â€” Set your respawn point at current location or coordinates",
-                'give': "/give <item> [count] â€” Add items/blocks to inventory (diamond, sword, pearl, etc.)",
-                'gamemode': "/gamemode <creative|survival> â€” Change game mode",
-                'time': "/time set <day|noon|night|midnight|ticks> â€” Set time of day",
-                'weather': "/weather <clear|rain|thunder> â€” Change weather",
-                'clear': "/clear â€” Clear inventory slots",
-                'heal': "/heal â€” Restore full health and mana",
-                'fly': "/fly â€” Toggle creative flight",
-                'speed': "/speed <multiplier> â€” Change movement speed",
-                'dimension': "/dimension <overworld|nether|end|aether> â€” Travel to any dimension",
-                'seed': "/seed â€” Display current world seed"
+                'tp': "/tp <x y z> or /tp <mob_name> — Teleport to coordinates or to a nearby mob",
+                'find': "/find <stronghold | igloo | witch_hut | biome <name> | spawn> — Locate structures, biomes, or world spawn",
+                'locate': "/locate <stronghold | igloo | witch_hut | biome <name> | spawn> — Locate structures or biomes",
+                'kill': "/kill [@s | @e | mob_name] — Kill player or mobs",
+                'summon': "/summon <mob_type> [x y z] — Spawn any mob (zombie, creeper, enderman, blaze, ender_dragon, etc.)",
+                'spawn': "/spawn — Teleport to the world spawn location",
+                'spawnpoint': "/spawnpoint [x y z] — Set your respawn point at current location or coordinates",
+                'give': "/give <item> [count] — Add items/blocks to inventory (diamond, sword, pearl, etc.)",
+                'gamemode': "/gamemode <creative|survival> — Change game mode",
+                'time': "/time set <day|noon|night|midnight|ticks> — Set time of day",
+                'weather': "/weather <clear|rain|thunder> — Change weather",
+                'clear': "/clear — Clear inventory slots",
+                'heal': "/heal — Restore full health and mana",
+                'fly': "/fly — Toggle creative flight",
+                'speed': "/speed <multiplier> — Change movement speed",
+                'dimension': "/dimension <overworld|nether|end|aether> — Travel to any dimension",
+                'seed': "/seed — Display current world seed"
             };
             if (helpMap[topic]) {
                 this.addMessage(helpMap[topic], "#55ff55");
@@ -1164,19 +1164,19 @@ export class ChatSystem {
         }
 
         this.addMessage("=== Slopcraft 3D Commands (Creative Only) ===", "#ffff55");
-        this.addMessage("/tp <x y z | mob> â€” Teleport to coordinates or mob", "#ffffff");
-        this.addMessage("/find <stronghold | biome <name> | spawn> â€” Locate structures or biomes", "#ffffff");
-        this.addMessage("/kill [@s | @e | mob] â€” Kill self or mobs", "#ffffff");
-        this.addMessage("/summon <mob> [x y z] â€” Summon any mob into the world", "#ffffff");
-        this.addMessage("/spawnpoint [x y z] â€” Set respawn point", "#ffffff");
-        this.addMessage("/spawn â€” Teleport to world spawn", "#ffffff");
-        this.addMessage("/give <item> [count] â€” Give any block or item", "#ffffff");
-        this.addMessage("/gamemode <c|s> â€” Switch Creative / Survival", "#ffffff");
-        this.addMessage("/time set <day|noon|night|midnight> â€” Change time of day", "#ffffff");
-        this.addMessage("/weather <clear|rain|thunder> â€” Change weather", "#ffffff");
-        this.addMessage("/heal â€” Restore full HP & mana", "#ffffff");
-        this.addMessage("/clear â€” Clear player inventory", "#ffffff");
-        this.addMessage("/dimension <overworld|nether|end|aether> â€” Warp dimensions", "#ffffff");
+        this.addMessage("/tp <x y z | mob> — Teleport to coordinates or mob", "#ffffff");
+        this.addMessage("/find <stronghold | biome <name> | spawn> — Locate structures or biomes", "#ffffff");
+        this.addMessage("/kill [@s | @e | mob] — Kill self or mobs", "#ffffff");
+        this.addMessage("/summon <mob> [x y z] — Summon any mob into the world", "#ffffff");
+        this.addMessage("/spawnpoint [x y z] — Set respawn point", "#ffffff");
+        this.addMessage("/spawn — Teleport to world spawn", "#ffffff");
+        this.addMessage("/give <item> [count] — Give any block or item", "#ffffff");
+        this.addMessage("/gamemode <c|s> — Switch Creative / Survival", "#ffffff");
+        this.addMessage("/time set <day|noon|night|midnight> — Change time of day", "#ffffff");
+        this.addMessage("/weather <clear|rain|thunder> — Change weather", "#ffffff");
+        this.addMessage("/heal — Restore full HP & mana", "#ffffff");
+        this.addMessage("/clear — Clear player inventory", "#ffffff");
+        this.addMessage("/dimension <overworld|nether|end|aether> — Warp dimensions", "#ffffff");
     }
 }
 
