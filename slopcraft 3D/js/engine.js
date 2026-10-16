@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=121';
-import { getBiomeParams } from './generation.js?v=121';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=122';
+import { getBiomeParams } from './generation.js?v=122';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -870,7 +870,7 @@ export class Chunk {
                         }
                     }
 
-                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE || blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.END_GATEWAY || blockType === BLOCKS.CHORUS_PLANT || blockType === BLOCKS.CHORUS_FLOWER || blockType === BLOCKS.CHORUS_FLOWER_DEAD || blockType === BLOCKS.DRAGON_EGG || props.isLantern || props.isFarmland) {
+                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE || blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.END_GATEWAY || blockType === BLOCKS.CHORUS_PLANT || blockType === BLOCKS.CHORUS_FLOWER || blockType === BLOCKS.CHORUS_FLOWER_DEAD || blockType === BLOCKS.DRAGON_EGG || props.isLantern || props.isFarmland || props.isDirtPath) {
                         const uvTop = atlas.getUV(blockType, 'top');
                         const uvSide = atlas.getUV(blockType, 'side');
                         const uvBottom = atlas.getUV(blockType, 'bottom');
@@ -944,13 +944,13 @@ export class Chunk {
                         } else if (blockType === BLOCKS.STONECUTTER) {
                             // 9/16 tall stone base (0.5625)
                             pushCustomBox(x, y, z, x + 1, y + 9/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
-                            // Centered circular saw blade (authentic saw texture routed to transparent pass for pixel cutout)
+                            // Centered circular saw blade (authentic saw texture from stonecutter.json, rows 9..15 arc, routed to transparent pass for pixel cutout)
                             const uvSaw = atlas.getUV(blockType, 'front');
                             const isXAxis = (curData & 1) === 1;
                             if (isXAxis) {
-                                pushCustomBox(x + 7.5/16, y + 9/16, z + 2/16, x + 8.5/16, y + 15/16, z + 14/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0, false, false, true);
+                                pushCustomBox(x + 7.9/16, y + 9/16, z + 1/16, x + 8.1/16, y + 16/16, z + 15/16, x, y, z, uvSaw, uvSaw, uvSaw, 3, 1.0, false, false, true);
                             } else {
-                                pushCustomBox(x + 2/16, y + 9/16, z + 7.5/16, x + 14/16, y + 15/16, z + 8.5/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0, false, false, true);
+                                pushCustomBox(x + 1/16, y + 9/16, z + 7.9/16, x + 15/16, y + 16/16, z + 8.1/16, x, y, z, uvSaw, uvSaw, uvSaw, 3, 1.0, false, false, true);
                             }
                         } else if (blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE) {
                             // 13/16 tall frame (0.8125)
@@ -1005,7 +1005,7 @@ export class Chunk {
                             pushCustomBox(x + 5/16, y + 13/16, z + 5/16, x + 11/16, y + 14/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
                             pushCustomBox(x + 5/16, y + 14/16, z + 5/16, x + 11/16, y + 15/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
                             pushCustomBox(x + 6/16, y + 15/16, z + 6/16, x + 10/16, y + 16/16, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
-                        } else if (props.isFarmland) {
+                        } else if (props.isFarmland || props.isDirtPath) {
                             const belowBlock = (y > 0) ? this.getBlock(x, y - 1, z) : getBlockOptimized(wx, y - 1, wz);
                             const cullBottom = getBlockProperties(belowBlock).solid && !getBlockProperties(belowBlock).isSlab;
                             pushCustomBox(x, y, z, x + 1, y + 15/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, cullBottom ? 2 : 0, 1.0);
@@ -2155,6 +2155,13 @@ export class World {
             const isLava = type === BLOCKS.LAVA;
             const maxLevel = isLava ? 3 : 7;
             
+            const isWaterBlock = (b) => b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER;
+            const isSameFluid = (b1, b2) => {
+                if (b1 === b2) return true;
+                if (isWaterBlock(b1) && isWaterBlock(b2)) return true;
+                return false;
+            };
+
             const data = this.getData(x, y, z);
             const isFalling = (data === 8);
             const currentLevel = (data === 0 || isFalling) ? maxLevel : data;
@@ -2163,13 +2170,13 @@ export class World {
             if (data !== 0) {
                 let hasFeed = false;
                 const aboveBlock = this.getBlock(x, y + 1, z);
-                if (aboveBlock === type) hasFeed = true;
+                if (isSameFluid(aboveBlock, type)) hasFeed = true;
                 
                 if (!hasFeed && !isFalling) {
                     const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]];
                     for (const [dx, dz] of sides) {
                         const sideBlock = this.getBlock(x + dx, y, z + dz);
-                        if (sideBlock === type) {
+                        if (isSameFluid(sideBlock, type)) {
                             const sideData = this.getData(x + dx, y, z + dz);
                             const sideLevel = (sideData === 0 || sideData === 8) ? maxLevel : sideData;
                             if (sideLevel > currentLevel) { hasFeed = true; break; }
@@ -2206,39 +2213,39 @@ export class World {
                 this.queueLiquidUpdate(x, y - 1, z);
             } 
             // 3. Water-lava interactions
-            else if (belowProps.isLiquid && bBelow !== type) {
+            else if (belowProps.isLiquid && !isSameFluid(bBelow, type)) {
                 if (isWater && bBelow === BLOCKS.LAVA) {
                     this.setBlock(x, y - 1, z, BLOCKS.OBSIDIAN);
-                } else if (isLava && (bBelow === BLOCKS.WATER || bBelow === BLOCKS.SWAMP_WATER)) {
+                } else if (isLava && isWaterBlock(bBelow)) {
                     this.setBlock(x, y - 1, z, BLOCKS.STONE);
                 }
             } 
             // 4. Spread sideways if blocked below (solid block) or if it's a source block
             if ((!belowProps.isLiquid || data === 0) && currentLevel > 1) {
                 const nextLevel = currentLevel - 1;
-                    const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-                    for (const [dx, dz] of sides) {
-                        const sideBlock = this.getBlock(x + dx, y, z + dz);
-                        const sideProps = getBlockProperties(sideBlock);
+                const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                for (const [dx, dz] of sides) {
+                    const sideBlock = this.getBlock(x + dx, y, z + dz);
+                    const sideProps = getBlockProperties(sideBlock);
 
-                        if (sideBlock === BLOCKS.AIR || isWashablePlant(sideBlock, sideProps)) {
-                            this.setBlock(x + dx, y, z + dz, type);
-                            this.setData(x + dx, y, z + dz, nextLevel);
-                            this.queueLiquidUpdate(x + dx, y, z + dz);
-                        } else if (sideProps.isLiquid && sideBlock !== type) {
-                            // Sideways mixing
-                            const sideIsLava = sideBlock === BLOCKS.LAVA;
-                            if (isWater && sideIsLava) this.setBlock(x + dx, y, z + dz, BLOCKS.OBSIDIAN);
-                            else if (isLava && !sideIsLava) this.setBlock(x, y, z, BLOCKS.COBBLESTONE);
-                        } else if (sideBlock === type) {
-                            const sideData = this.getData(x + dx, y, z + dz);
-                            if (sideData !== 0 && sideData !== 8) {
-                                if (nextLevel > sideData) {
-                                    this.setData(x + dx, y, z + dz, nextLevel);
-                                    this.queueLiquidUpdate(x + dx, y, z + dz);
-                                }
+                    if (sideBlock === BLOCKS.AIR || isWashablePlant(sideBlock, sideProps)) {
+                        this.setBlock(x + dx, y, z + dz, type);
+                        this.setData(x + dx, y, z + dz, nextLevel);
+                        this.queueLiquidUpdate(x + dx, y, z + dz);
+                    } else if (sideProps.isLiquid && !isSameFluid(sideBlock, type)) {
+                        // Sideways mixing (water vs lava)
+                        const sideIsLava = sideBlock === BLOCKS.LAVA;
+                        if (isWater && sideIsLava) this.setBlock(x + dx, y, z + dz, BLOCKS.OBSIDIAN);
+                        else if (isLava && !sideIsLava) this.setBlock(x, y, z, BLOCKS.COBBLESTONE);
+                    } else if (isSameFluid(sideBlock, type)) {
+                        const sideData = this.getData(x + dx, y, z + dz);
+                        if (sideData !== 0 && sideData !== 8) {
+                            if (nextLevel > sideData) {
+                                this.setData(x + dx, y, z + dz, nextLevel);
+                                this.queueLiquidUpdate(x + dx, y, z + dz);
                             }
                         }
+                    }
                 }
             }
         }
@@ -2905,7 +2912,7 @@ export class World {
                                 if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) {
                                     continue;
                                 }
-                                if (bProps.isFarmland) {
+                                if (bProps.isFarmland || bProps.isDirtPath) {
                                     if (py < y + 0.9375 && py + entityHeight > y) return true;
                                     continue;
                                 }
@@ -3014,7 +3021,7 @@ export class World {
                                     if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) continue;
                                     if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) continue;
                                     let surfH = 1.0;
-                                    if (bProps.isFarmland) surfH = 0.9375;
+                                    if (bProps.isFarmland || bProps.isDirtPath) surfH = 0.9375;
                                     else if (bProps.isSlab) surfH = 0.5;
                                     else if (bProps.isStair) {
                                         const sFacing = (this.getData ? this.getData(x, y, z) : 0) & 3;
@@ -3076,7 +3083,7 @@ export class World {
             if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) return null;
 
             let surfH = 1.0;
-            if (bProps.isFarmland) surfH = 0.9375;
+            if (bProps.isFarmland || bProps.isDirtPath) surfH = 0.9375;
             else if (bProps.isSlab) surfH = 0.5;
             else if (bProps.isStair) {
                 const sFacing = (this.getData ? this.getData(x, y, z) : 0) & 3;

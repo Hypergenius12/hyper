@@ -734,7 +734,7 @@ const BLOCK_PROPS = {
     [BLOCKS.SCULK_CATALYST]:   { name: 'Sculk Catalyst',   health: 4, transparent: false, emissive: 0.4, solid: true, drops: BLOCKS.SCULK_CATALYST },
     [BLOCKS.SCULK_SHRIEKER]:   { name: 'Sculk Shrieker',   health: 4, transparent: true, emissive: 0.3, solid: true, drops: BLOCKS.SCULK_SHRIEKER },
     [BLOCKS.SCULK_SENSOR]:     { name: 'Sculk Sensor',     health: 2, transparent: false, emissive: 0.35, solid: true, drops: BLOCKS.SCULK_SENSOR },
-    [BLOCKS.DIRT_PATH]:        { name: 'Dirt Path',        health: 2, transparent: false, emissive: 0, solid: true, isDirtPath: true, drops: BLOCKS.DIRT }
+    [BLOCKS.DIRT_PATH]:        { name: 'Dirt Path',        health: 2, transparent: true, emissive: 0, solid: true, isDirtPath: true, drops: BLOCKS.DIRT }
 };
 
 export function getBlockProperties(type) {
@@ -4284,7 +4284,11 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.SCULK_CATALYST]: { top: 'sculk_catalyst_top', side: 'sculk_catalyst_side', bottom: 'sculk_catalyst_bottom' },
     [BLOCKS.SCULK_SHRIEKER]: { top: 'sculk_shrieker_top', side: 'sculk_shrieker_side', bottom: 'sculk_shrieker_bottom' },
     [BLOCKS.SCULK_SENSOR]: { top: 'sculk_sensor_top', side: 'sculk_sensor_side', bottom: 'sculk_sensor_bottom' },
-    [BLOCKS.SLIME_BLOCK]: 'slime_block'
+    [BLOCKS.SLIME_BLOCK]: 'slime_block',
+    [BLOCKS.DIRT_PATH]: { top: 'dirt_path_top', side: 'dirt_path_side', bottom: 'dirt' },
+    [BLOCKS.OAK_PLANKS]: 'oak_planks',
+    [BLOCKS.WHITE_WOOL]: 'white_wool',
+    [BLOCKS.CHISELED_POLISHED_BLACKSTONE]: 'chiseled_polished_blackstone'
 };
 
 let _mcChestPromise = null;
@@ -4876,7 +4880,19 @@ const LOCAL_ASSET_MAP = {
     "cocoa_beans": "assets/mc/item/cocoa_beans.png",
     "item/cocoa_beans": "assets/mc/item/cocoa_beans.png",
     "slime_block": "assets/mc/block/slime_block.png",
-    "block/slime_block": "assets/mc/block/slime_block.png"
+    "block/slime_block": "assets/mc/block/slime_block.png",
+    "dirt_path_top": "assets/mc/block/dirt_path_top.png",
+    "dirt_path_side": "assets/mc/block/dirt_path_side.png",
+    "deepslate_bricks": "assets/mc/block/deepslate_bricks.png",
+    "deepslate_tiles": "assets/mc/block/deepslate_tiles.png",
+    "red_nether_bricks": "assets/mc/block/red_nether_bricks.png",
+    "prismarine_bricks": "assets/mc/block/prismarine_bricks.png",
+    "mossy_stone_bricks": "assets/mc/block/mossy_stone_bricks.png",
+    "cut_sandstone": "assets/mc/block/cut_sandstone.png",
+    "polished_blackstone_bricks": "assets/mc/block/polished_blackstone_bricks.png",
+    "polished_blackstone": "assets/mc/block/polished_blackstone.png",
+    "warped_planks": "assets/mc/block/warped_planks.png",
+    "chiseled_polished_blackstone": "assets/mc/block/chiseled_polished_blackstone.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -5098,6 +5114,16 @@ export async function createTextureAtlas(useMinecraft = true) {
                             ctx.fillStyle = '#00e1d9';
                             ctx.fillRect(ax + 3, ay + 1, 3, 2);
                             ctx.fillRect(ax + 10, ay + 1, 3, 2);
+                        } else if (texName === 'stonecutter_side') {
+                            const ax = entry.col * TEX_SIZE;
+                            const ay = entry.row * TEX_SIZE;
+                            // In Minecraft assets, stonecutter_side.png has rows 0..6 transparent and rows 7..15 containing the 9-pixel solid stone plinth.
+                            // When rendered with pushCustomBox(x, y, z, x + 1, y + 9/16, z + 1) where height is 9/16,
+                            // the mesh UV samples v from 0 to 9/16 (rows 0 to 8).
+                            // Copy rows 7..15 into rows 0..8 of the atlas tile, so the 9-pixel base maps 1:1!
+                            ctx.drawImage(img, 0, 7, TEX_SIZE, 9, ax, ay, TEX_SIZE, 9);
+                            // Fill remaining rows 9..15 with the stone texture as well
+                            ctx.drawImage(img, 0, 7, TEX_SIZE, 7, ax, ay + 9, TEX_SIZE, 7);
                         } else if (img.width !== TEX_SIZE || img.height !== TEX_SIZE) {
                             if (img.height > img.width) {
                                 ctx.drawImage(img, 0, 0, img.width, img.width, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
@@ -5390,7 +5416,7 @@ export async function createTextureAtlas(useMinecraft = true) {
         // Generate 3 faces from atlas
         const top = getFaceCanvas('top');
         const side1 = getFaceCanvas('side');
-        const hasFront = uvMap[blockType] && uvMap[blockType]['front'];
+        const hasFront = uvMap[blockType] && uvMap[blockType]['front'] && blockType !== BLOCKS.STONECUTTER;
         const side2 = getFaceCanvas(hasFront ? 'front' : 'side');
 
         // Darken faces for 3D effect
@@ -5549,18 +5575,18 @@ export async function createTextureAtlas(useMinecraft = true) {
             iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, yOffset);
             iconCtx.drawImage(topScaled, 0, 0);
 
-            // Left face (lower 9 pixels of side1 plinth)
+            // Left face (9 pixels of plinth)
             iconCtx.setTransform(1, 0.5, 0, 1, 0, 15 * SCALE);
-            iconCtx.drawImage(side1Scaled, 0, 7 * SCALE, 16 * SCALE, 9 * SCALE, 0, 0, 16 * SCALE, 9 * SCALE);
+            iconCtx.drawImage(side1Scaled, 0, 0, 16 * SCALE, 9 * SCALE, 0, 0, 16 * SCALE, 9 * SCALE);
 
-            // Right face (lower 9 pixels of side2 plinth)
+            // Right face (9 pixels of plinth)
             iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 23 * SCALE);
-            iconCtx.drawImage(side2Scaled, 0, 7 * SCALE, 16 * SCALE, 9 * SCALE, 0, 0, 16 * SCALE, 9 * SCALE);
+            iconCtx.drawImage(side2Scaled, 0, 0, 16 * SCALE, 9 * SCALE, 0, 0, 16 * SCALE, 9 * SCALE);
 
-            // Center saw blade (front face texture, standing upright in the center slot)
-            const sawScaled = side2Scaled || side1Scaled;
-            iconCtx.setTransform(1, 0.5, 0, 1, 6 * SCALE, 2 * SCALE);
-            iconCtx.drawImage(sawScaled, 0, 0, 16 * SCALE, 16 * SCALE, 0, 0, 13 * SCALE, 13 * SCALE);
+            // Center saw blade (front face texture, standing upright in the center slot: rows 9..15 of saw texture)
+            const sawCanvas = getFaceCanvas('front');
+            iconCtx.setTransform(1, 0.5, 0, 1, 8 * SCALE, 3 * SCALE);
+            iconCtx.drawImage(sawCanvas, 1, 9, 14, 7, 0, 0, 14 * SCALE, 7 * SCALE);
 
             iconCtx.restore();
             return iconCanvas;

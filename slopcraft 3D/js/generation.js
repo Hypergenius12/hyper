@@ -919,9 +919,12 @@ export function getColumnInfo(wx, wz, params) {
         if (riverInfo.isRiver) {
             // River channel: water surface is at params.seaLevel, bed dips down to ~59.2
             elevation = Math.max(params.seaLevel - 3.0, elevation);
-        } else if (isSwamp) {
+        } else if (isSwamp || swampInfluence > 0) {
             // Swamp wetland: channels dip 1-2 blocks below seaLevel for shallow water; banks rise 1-3 blocks above
-            elevation = Math.max(params.seaLevel - 2.0, Math.min(params.seaLevel + 3.0, elevation));
+            // Smoothly ramp minimum elevation between swamp channels and inland ground to prevent sharp 3-block border tears
+            const effSwamp = isSwamp ? Math.max(swampInfluence, 0.5) : swampInfluence;
+            const minWetland = (params.seaLevel - 2.0) * effSwamp + (params.seaLevel + 1.2) * (1.0 - effSwamp);
+            elevation = Math.max(minWetland, elevation);
         } else if (contNoise >= 0.35) {
             // Inland dry land: guaranteed to be at least seaLevel + 1.2 (surfaceY >= 63)
             elevation = Math.max(params.seaLevel + 1.2, elevation);
@@ -946,6 +949,7 @@ export function getColumnInfo(wx, wz, params) {
         temp,
         moist,
         factor,
+        swampInfluence,
         colRng,
         bData: {
             isTerraced: isBadlands || terraceWeight > 0.5,
@@ -1513,9 +1517,12 @@ export function generateChunkTerrain(cx, cz, params) {
                 }
             }
 
-            // Surface opening allowance: Strictly restricted to rugged mountains/peaks (bCave >= 0.60).
-            // Plains, Swamps, Beaches, Forests NEVER get surface breach sinkholes!
-            const canOpenToSurface = (bCave >= 0.60) && (col.surfaceY > params.seaLevel + 8) && !isNearWater;
+            // Surface opening allowance:
+            // Plains has lower/rarer surface caves; other inland biomes have moderate natural openings.
+            // Wetlands, rivers, lakes, and oceans remain strictly watertight!
+            const isPlains = (col.biome === BIOMES.PLAINS || col.biome.name === 'Plains');
+            const isWaterBiome = (bCave <= 0.15) || (col.biome === BIOMES.SWAMP || col.biome.name === 'Swamp') || (col.swampInfluence && col.swampInfluence > 0.20);
+            const canOpenToSurface = !isWaterBiome && (col.surfaceY > params.seaLevel + 4) && !isNearWater;
             // Impermeable stone ceiling under rivers/lakes/oceans to prevent leaks
             const maxCaveY = isNearWater
                 ? Math.min(params.seaLevel - 7, col.surfaceY - 6)
@@ -1571,10 +1578,13 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 }
 
-                // (D) Surface Openings - only in high mountains (canOpenToSurface)
-                if (!carveAir && canOpenToSurface && y > 52 && y <= col.surfaceY + 1) {
+                // (D) Surface Openings - Biome-balanced cave mouths
+                if (!carveAir && canOpenToSurface && y > 48 && y <= col.surfaceY + 1) {
                     const breachNoise = params.caveNoise(wx * 0.038, y * 0.038, wz * 0.038);
-                    const breachThreshold = 0.42 + (y - 52) * 0.015;
+                    // Plains: high threshold (0.54) -> lower/rarer natural surface cave entrances
+                    // Other biomes (Forests, Taiga, Savanna, Deserts, Badlands, Mountains): moderate threshold (0.42 - 0.46)
+                    const baseThreshold = isPlains ? 0.54 : (0.46 - bCave * 0.08);
+                    const breachThreshold = baseThreshold + (y - 48) * 0.012;
                     if (breachNoise > breachThreshold) {
                         carveAir = true;
                     }
@@ -1809,7 +1819,7 @@ export function generateChunkTerrain(cx, cz, params) {
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
             const col = columns[x][z];
-            if (col.biome === BIOMES.SWAMP || col.biome.name === 'Swamp' || (col.bData && col.bData.isRiver)) continue; // Preserve authentic wetland water channels and rivers!
+            if (col.biome === BIOMES.SWAMP || col.biome.name === 'Swamp' || (col.swampInfluence && col.swampInfluence > 0.20) || (col.bData && col.bData.isRiver)) continue; // Preserve authentic wetland water channels and rivers!
             for (let y = params.seaLevel; y >= params.seaLevel - 1; y--) {
                 const idx = blockIndex(x, y, z);
                 const b = blocks[idx];
