@@ -1,8 +1,8 @@
-﻿// ============================================
+// ============================================
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=105';
+import { seededRandom } from './noise.js?v=106';
 
 // Block type IDs
 export const BLOCKS = {
@@ -331,11 +331,15 @@ export const BLOCKS = {
     WHITE_TERRACOTTA: 341,
     BROWN_TERRACOTTA: 342,
     RED_TERRACOTTA: 343,
-    LIGHT_GRAY_TERRACOTTA: 344
+    LIGHT_GRAY_TERRACOTTA: 344,
+    NETHER_QUARTZ_ORE: 345,
+    NETHER_GOLD_ORE: 346
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.NETHER_QUARTZ_ORE]:     { name: 'Nether Quartz Ore',     health: 6, transparent: false, emissive: 0, solid: true, drops: 'quartz' },
+    [BLOCKS.NETHER_GOLD_ORE]:       { name: 'Nether Gold Ore',       health: 6, transparent: false, emissive: 0, solid: true, drops: 'gold_nugget' },
     [BLOCKS.EMERALD_ORE]:           { name: 'Emerald Ore',           health: 8, transparent: false, emissive: 0.1, solid: true, drops: 'emerald' },
     [BLOCKS.MELON]:                 { name: 'Melon',                 health: 4, transparent: false, emissive: 0, solid: true, drops: 'melon_slice' },
     [BLOCKS.JUNGLE_LOG]:            { name: 'Jungle Log',            health: 6, transparent: false, emissive: 0, solid: true, drops: BLOCKS.JUNGLE_LOG, isLog: true, hasFacing: true },
@@ -1758,6 +1762,20 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillRect(10, 7, 1, 1);
             ctx.fillRect(6, 10, 1, 1);
             ctx.fillRect(9, 11, 1, 1);
+            break;
+        case BLOCKS.NETHER_QUARTZ_ORE:
+            fillBase(ctx, 110, 30, 30);
+            addNoise(ctx, rng, 20);
+            drawOreSpots(ctx, rng, '#ece8e1', 6);
+            addPixels(ctx, rng, '#d6cfc4', 6);
+            addPixels(ctx, rng, '#ffffff', 4);
+            break;
+        case BLOCKS.NETHER_GOLD_ORE:
+            fillBase(ctx, 110, 30, 30);
+            addNoise(ctx, rng, 20);
+            drawOreSpots(ctx, rng, '#fcee4b', 6);
+            addPixels(ctx, rng, '#e0a618', 6);
+            addPixels(ctx, rng, '#fff280', 4);
             break;
         case BLOCKS.EMERALD_ORE:
             fillBase(ctx, 120, 120, 120);
@@ -3851,7 +3869,9 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.WHITE_TERRACOTTA]: 'white_terracotta',
     [BLOCKS.BROWN_TERRACOTTA]: 'brown_terracotta',
     [BLOCKS.RED_TERRACOTTA]: 'red_terracotta',
-    [BLOCKS.LIGHT_GRAY_TERRACOTTA]: 'light_gray_terracotta'
+    [BLOCKS.LIGHT_GRAY_TERRACOTTA]: 'light_gray_terracotta',
+    [BLOCKS.NETHER_QUARTZ_ORE]: 'nether_quartz_ore',
+    [BLOCKS.NETHER_GOLD_ORE]: 'nether_gold_ore'
 };
 
 let _mcChestPromise = null;
@@ -4343,7 +4363,10 @@ const LOCAL_ASSET_MAP = {
     "red_terracotta": "assets/mc/block/red_terracotta.png",
     "light_gray_terracotta": "assets/mc/block/light_gray_terracotta.png",
     "melon_slice": "assets/mc/item/melon_slice.png",
-    "item/melon_slice": "assets/mc/item/melon_slice.png"
+    "item/melon_slice": "assets/mc/item/melon_slice.png",
+    "nether_quartz_ore": "assets/mc/block/nether_quartz_ore.png",
+    "nether_gold_ore": "assets/mc/block/nether_gold_ore.png",
+    "end_sky": "assets/mc/block/end_sky.png"
 };
 
 function loadMinecraftTexture(name) {

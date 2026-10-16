@@ -1,10 +1,10 @@
-﻿// ============================================
+// ============================================
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=105';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=105';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=105';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=106';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=106';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=106';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();

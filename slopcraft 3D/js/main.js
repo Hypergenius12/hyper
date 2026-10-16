@@ -1,17 +1,17 @@
-﻿// ============================================
+// ============================================
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=105';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=105';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=105';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=105';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=105';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=105';
-import { AudioManager } from './audio.js?v=105';
-import { BiomeMap } from './map.js?v=105';
-import { DevMode } from './dev.js?v=105';
-import { ChatSystem } from './chat.js?v=105';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=106';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=106';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=106';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=106';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=106';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=106';
+import { AudioManager } from './audio.js?v=106';
+import { BiomeMap } from './map.js?v=106';
+import { DevMode } from './dev.js?v=106';
+import { ChatSystem } from './chat.js?v=106';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -384,6 +384,7 @@ class Game {
         this.world.dimension = 'overworld';
         this.world.planetParams = this.planetParams;
         this.world.setCamera(this.engine.camera);
+        this.engine.matEndPortal = this.world.matEndPortal;
 
         // Chest Management
         this.chestInventories = new Map();
@@ -1372,13 +1373,22 @@ class Game {
             const type = inputItem.item.type;
             const subtype = inputItem.item.subtype;
             
-            if (type === 'block' && (subtype === window.BLOCKS.IRON_ORE || subtype === window.BLOCKS.GOLD_ORE || subtype === window.BLOCKS.CRYSTAL_ORE || subtype === window.BLOCKS.MANA_ORE)) {
+            if (type === 'block' && (
+                subtype === window.BLOCKS.IRON_ORE ||
+                subtype === window.BLOCKS.GOLD_ORE ||
+                subtype === window.BLOCKS.NETHER_GOLD_ORE ||
+                subtype === window.BLOCKS.NETHER_QUARTZ_ORE ||
+                subtype === window.BLOCKS.CRYSTAL_ORE ||
+                subtype === window.BLOCKS.MANA_ORE
+            )) {
                 // Return INGOT or GEM
                 let matSubtype = 'iron_ingot';
-                if (subtype === window.BLOCKS.GOLD_ORE) matSubtype = 'gold_ingot';
+                if (subtype === window.BLOCKS.GOLD_ORE || subtype === window.BLOCKS.NETHER_GOLD_ORE) matSubtype = 'gold_ingot';
+                if (subtype === window.BLOCKS.NETHER_QUARTZ_ORE) matSubtype = 'quartz';
                 if (subtype === window.BLOCKS.CRYSTAL_ORE) matSubtype = 'crystal_shard';
                 if (subtype === window.BLOCKS.MANA_ORE) matSubtype = 'mana_crystal';
-                return { type: 'material', subtype: matSubtype, name: matSubtype.replace('_', ' '), stackable: true, maxStack: 64, id: `mat_${matSubtype}` };
+                const matName = matSubtype === 'quartz' ? 'Nether Quartz' : matSubtype.replace('_', ' ');
+                return { type: 'material', subtype: matSubtype, name: matName, stackable: true, maxStack: 64, id: `mat_${matSubtype}` };
             }
             // Raw ore smelting (from mining drops)
             if (type === 'material' && subtype === 'raw_iron') {

@@ -1,4 +1,4 @@
-﻿import { Item, Mob, MOB_TYPES } from './entities.js?v=105';
+import { Item, Mob, MOB_TYPES } from './entities.js?v=106';
 
 export class DevMode {
     constructor(game) {

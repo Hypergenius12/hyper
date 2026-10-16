@@ -1,9 +1,9 @@
-﻿// ============================================
+// ============================================
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=105';
-import { getBiomeParams } from './generation.js?v=105';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=106';
+import { getBiomeParams } from './generation.js?v=106';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -1448,6 +1448,12 @@ export class World {
         this.sharedMaterials = [matOpaque, matCross, matGlowCross, matWater, matTransparent, matGlowOpaque, matGlowTransparent, matSlightGlowOpaque, matSlightGlowTransparent];
 
         // Authentic Minecraft End Portal cosmic parallax shader
+        const endSkyTex = new THREE.TextureLoader().load('assets/mc/block/end_sky.png');
+        endSkyTex.wrapS = THREE.RepeatWrapping;
+        endSkyTex.wrapT = THREE.RepeatWrapping;
+        endSkyTex.magFilter = THREE.NearestFilter;
+        endSkyTex.minFilter = THREE.NearestFilter;
+
         const endPortalTex = new THREE.TextureLoader().load('assets/mc/block/end_portal.png');
         endPortalTex.wrapS = THREE.RepeatWrapping;
         endPortalTex.wrapT = THREE.RepeatWrapping;
@@ -1456,53 +1462,70 @@ export class World {
 
         const matEndPortal = new THREE.ShaderMaterial({
             uniforms: {
+                tSky: { value: endSkyTex },
                 tPortal: { value: endPortalTex },
                 time: { value: 0 },
                 cameraPos: { value: new THREE.Vector3() }
             },
             vertexShader: `
+                varying vec4 vTexProj;
                 varying vec3 vWorldPos;
                 void main() {
                     vec4 wp = modelMatrix * vec4(position, 1.0);
                     vWorldPos = wp.xyz;
                     gl_Position = projectionMatrix * viewMatrix * wp;
+                    // Screen-space projective texture mapping identical to vanilla Minecraft core shaders
+                    vTexProj = vec4(gl_Position.x * 0.5 + gl_Position.w * 0.5,
+                                    gl_Position.y * 0.5 + gl_Position.w * 0.5,
+                                    gl_Position.z * 0.5,
+                                    gl_Position.w);
                 }
             `,
             fragmentShader: `
+                uniform sampler2D tSky;
                 uniform sampler2D tPortal;
                 uniform float time;
                 uniform vec3 cameraPos;
+                varying vec4 vTexProj;
                 varying vec3 vWorldPos;
 
-                vec2 rot(vec2 p, float a) {
-                    float s = sin(a), c = cos(a);
-                    return vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+                vec2 getLayerUV(vec2 baseP, float layer, float t) {
+                    float a = radians((layer * layer * 4321.0 + layer * 9.0) * 2.0);
+                    float s = sin(a);
+                    float c = cos(a);
+                    mat2 rot = mat2(c, -s, s, c);
+                    float sc = (4.5 - layer / 4.0) * 2.0;
+                    vec2 uv = (rot * baseP) * sc;
+                    uv += vec2(17.0 / layer, (2.0 + layer / 1.5) * (t * 0.08));
+                    return uv * 0.5 + 0.25;
                 }
 
                 void main() {
+                    vec2 p = vTexProj.xy / max(vTexProj.w, 0.0001);
                     vec3 dir = normalize(vWorldPos - cameraPos);
-                    vec2 p = vWorldPos.xz;
 
-                    // Multi-layer infinite cosmic parallax projection
-                    vec2 uv1 = rot(p * 0.14 + dir.xz * 1.8 + vec2(time * 0.02, time * 0.015), 0.5);
-                    vec2 uv2 = rot(p * 0.28 + dir.xz * 3.6 + vec2(-time * 0.025, time * 0.02), -0.8);
-                    vec2 uv3 = rot(p * 0.45 + dir.xz * 5.8 + vec2(time * 0.035, -time * 0.03), 1.3);
-                    vec2 uv4 = rot(p * 0.08 + dir.xz * 0.9 + vec2(-time * 0.01, -time * 0.012), 2.1);
-
-                    vec4 c1 = texture2D(tPortal, uv1);
-                    vec4 c2 = texture2D(tPortal, uv2);
-                    vec4 c3 = texture2D(tPortal, uv3);
-                    vec4 c4 = texture2D(tPortal, uv4);
-
+                    // Authentic Minecraft Java End Portal colors from rendertype_end_portal.fsh
                     vec3 col = vec3(0.0);
-                    col += c1.rgb * vec3(0.2, 0.35, 0.7);
-                    col += c2.rgb * vec3(0.6, 0.2, 0.8);
-                    col += c3.rgb * vec3(0.2, 0.8, 0.7);
-                    col += c4.rgb * vec3(0.5, 0.4, 0.9);
-                    col *= 2.2;
 
-                    float shimmer = 0.9 + 0.1 * sin(time * 4.0 + p.x * 2.0 + p.y * 2.0);
-                    col *= shimmer;
+                    // Base layer (end_sky.png)
+                    col += texture2D(tSky, getLayerUV(p + dir.xz * 0.015, 1.0, time)).rgb * vec3(0.022087, 0.098399, 0.110818);
+
+                    // 15 Portal Starfield layers (end_portal.png)
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.020, 2.0, time)).rgb * vec3(0.011892, 0.095924, 0.089485);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.025, 3.0, time)).rgb * vec3(0.027636, 0.101689, 0.100326);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.030, 4.0, time)).rgb * vec3(0.046564, 0.109883, 0.114838);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.035, 5.0, time)).rgb * vec3(0.064901, 0.117696, 0.097189);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.040, 6.0, time)).rgb * vec3(0.063761, 0.086895, 0.123646);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.045, 7.0, time)).rgb * vec3(0.084817, 0.111994, 0.166380);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.050, 8.0, time)).rgb * vec3(0.097489, 0.154120, 0.091064);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.055, 9.0, time)).rgb * vec3(0.106152, 0.131144, 0.195191);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.060, 10.0, time)).rgb * vec3(0.097721, 0.110188, 0.187229);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.065, 11.0, time)).rgb * vec3(0.133516, 0.138278, 0.148582);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.070, 12.0, time)).rgb * vec3(0.070006, 0.243332, 0.235792);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.075, 13.0, time)).rgb * vec3(0.196766, 0.142899, 0.214696);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.080, 14.0, time)).rgb * vec3(0.047281, 0.315338, 0.321970);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.085, 15.0, time)).rgb * vec3(0.204675, 0.390010, 0.302066);
+                    col += texture2D(tPortal, getLayerUV(p + dir.xz * 0.090, 16.0, time)).rgb * vec3(0.080955, 0.314821, 0.661491);
 
                     gl_FragColor = vec4(col, 1.0);
                 }

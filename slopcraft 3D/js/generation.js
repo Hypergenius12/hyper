@@ -1,10 +1,10 @@
 // ============================================
 // generation.js — Procedural Generation, Biomes, Dungeons
 // ============================================
-import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=105';
-import { BLOCKS } from './textures.js?v=105';
+import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=106';
+import { BLOCKS } from './textures.js?v=106';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=105';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=106';
 
 // Planet configurations
 export const BIOMES = {
@@ -4387,6 +4387,7 @@ if (typeof window !== 'undefined') {
     window.generateWitchHutStructure = generateWitchHutStructure;
     window.getBadlandsTerracotta = getBadlandsTerracotta;
     window.generateEndChunk = generateEndChunk;
+    window.generateNetherChunk = generateNetherChunk;
 }
 
 export function generateVillage(blocks, cx, cz, vPos, params) {
@@ -4651,8 +4652,8 @@ export function generateNetherChunk(cx, cz, params) {
                         if (colRng() < 0.03) {
                             safeSetBlock(blocks, x, y + 1, z, BLOCKS.FIRE, true);
                         }
-                        if (colRng() < 0.04) blocks[idx] = BLOCKS.CRYSTAL_ORE;
-                        if (colRng() < 0.02) blocks[idx] = BLOCKS.GOLD_ORE;
+                        if (colRng() < 0.035) blocks[idx] = BLOCKS.NETHER_QUARTZ_ORE;
+                        if (colRng() < 0.02) blocks[idx] = BLOCKS.NETHER_GOLD_ORE;
                     }
                 }
 
@@ -4691,10 +4692,51 @@ export function generateNetherChunk(cx, cz, params) {
         }
     }
 
+    // Authentic Minecraft Nether Ore Veins
+    // Nether Quartz Ore: 14 veins per chunk (size 4 to 10) embedded in netherrack/blackstone/basalt
+    for (let i = 0; i < 14; i++) {
+        const ox = Math.floor(rng() * CHUNK_SIZE);
+        const oz = Math.floor(rng() * CHUNK_SIZE);
+        const oy = 10 + Math.floor(rng() * 105);
+        generateNetherOreVein(blocks, ox, oy, oz, BLOCKS.NETHER_QUARTZ_ORE, 4, 10, rng);
+    }
+    // Nether Gold Ore: 10 veins per chunk (size 3 to 8) embedded in netherrack/blackstone/basalt
+    for (let i = 0; i < 10; i++) {
+        const ox = Math.floor(rng() * CHUNK_SIZE);
+        const oz = Math.floor(rng() * CHUNK_SIZE);
+        const oy = 10 + Math.floor(rng() * 105);
+        generateNetherOreVein(blocks, ox, oy, oz, BLOCKS.NETHER_GOLD_ORE, 3, 8, rng);
+    }
+
     // Fortress generation
     carveGlobalNetherStructures(blocks, cx, cz, params);
 
     return blocks;
+}
+
+function generateNetherOreVein(blocks, wx, y, wz, oreType, minSize, maxSize, rng) {
+    const size = minSize + Math.floor(rng() * (maxSize - minSize + 1));
+    let currentX = wx;
+    let currentY = y;
+    let currentZ = wz;
+    
+    for (let i = 0; i < size; i++) {
+        if (currentX >= 0 && currentX < CHUNK_SIZE && currentY >= 0 && currentY < CHUNK_HEIGHT && currentZ >= 0 && currentZ < CHUNK_SIZE) {
+            const idx = (currentY * CHUNK_SIZE * CHUNK_SIZE) + (currentZ * CHUNK_SIZE) + currentX;
+            const b = blocks[idx];
+            if (b === BLOCKS.NETHERRACK || b === BLOCKS.BLACKSTONE || b === BLOCKS.BASALT) {
+                blocks[idx] = oreType;
+            }
+        }
+        
+        const dir = Math.floor(rng() * 6);
+        if (dir === 0) currentX++;
+        else if (dir === 1) currentX--;
+        else if (dir === 2) currentY++;
+        else if (dir === 3) currentY--;
+        else if (dir === 4) currentZ++;
+        else if (dir === 5) currentZ--;
+    }
 }
 
 function generateNetherFossil(blocks, x, y, z, rng) {
