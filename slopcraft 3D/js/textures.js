@@ -733,7 +733,7 @@ const BLOCK_PROPS = {
     [BLOCKS.SCULK]:            { name: 'Sculk',            health: 1.5, transparent: false, emissive: 0.1, solid: true, drops: BLOCKS.SCULK },
     [BLOCKS.SCULK_CATALYST]:   { name: 'Sculk Catalyst',   health: 4, transparent: false, emissive: 0.4, solid: true, drops: BLOCKS.SCULK_CATALYST },
     [BLOCKS.SCULK_SHRIEKER]:   { name: 'Sculk Shrieker',   health: 4, transparent: true, emissive: 0.3, solid: true, drops: BLOCKS.SCULK_SHRIEKER },
-    [BLOCKS.SCULK_SENSOR]:     { name: 'Sculk Sensor',     health: 2, transparent: true, emissive: 0.3, solid: true, drops: BLOCKS.SCULK_SENSOR },
+    [BLOCKS.SCULK_SENSOR]:     { name: 'Sculk Sensor',     health: 2, transparent: false, emissive: 0.35, solid: true, drops: BLOCKS.SCULK_SENSOR },
     [BLOCKS.DIRT_PATH]:        { name: 'Dirt Path',        health: 2, transparent: false, emissive: 0, solid: true, isDirtPath: true, drops: BLOCKS.DIRT }
 };
 
@@ -5068,6 +5068,36 @@ export async function createTextureAtlas(useMinecraft = true) {
                             }
                         } else if (texName === 'end_portal_frame_side') {
                             ctx.drawImage(img, 0, 3, TEX_SIZE, 13, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                        } else if (texName === 'sculk_sensor_top') {
+                            const ax = entry.col * TEX_SIZE;
+                            const ay = entry.row * TEX_SIZE;
+                            ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, ax, ay, TEX_SIZE, TEX_SIZE);
+                            // Paint the 4 acoustic sensor tendrils
+                            ctx.fillStyle = '#00e1d9';
+                            ctx.fillRect(ax + 3, ay + 3, 3, 3);
+                            ctx.fillRect(ax + 10, ay + 3, 3, 3);
+                            ctx.fillRect(ax + 3, ay + 10, 3, 3);
+                            ctx.fillRect(ax + 10, ay + 10, 3, 3);
+                            ctx.fillStyle = '#005b63';
+                            ctx.fillRect(ax + 4, ay + 4, 1, 1);
+                            ctx.fillRect(ax + 11, ay + 4, 1, 1);
+                            ctx.fillRect(ax + 4, ay + 11, 1, 1);
+                            ctx.fillRect(ax + 11, ay + 11, 1, 1);
+                        } else if (texName === 'sculk_sensor_side') {
+                            const ax = entry.col * TEX_SIZE;
+                            const ay = entry.row * TEX_SIZE;
+                            // Solid dark sculk backdrop so it's not transparent/see-through
+                            ctx.fillStyle = '#071015';
+                            ctx.fillRect(ax, ay, TEX_SIZE, TEX_SIZE);
+                            // Draw base slab texture (rows 8-15)
+                            ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, ax, ay, TEX_SIZE, TEX_SIZE);
+                            // Draw acoustic tendril silhouettes rising above the base
+                            ctx.fillStyle = '#005b63';
+                            ctx.fillRect(ax + 3, ay + 3, 3, 5);
+                            ctx.fillRect(ax + 10, ay + 3, 3, 5);
+                            ctx.fillStyle = '#00e1d9';
+                            ctx.fillRect(ax + 3, ay + 1, 3, 2);
+                            ctx.fillRect(ax + 10, ay + 1, 3, 2);
                         } else if (img.width !== TEX_SIZE || img.height !== TEX_SIZE) {
                             if (img.height > img.width) {
                                 ctx.drawImage(img, 0, 0, img.width, img.width, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
@@ -5481,6 +5511,37 @@ export async function createTextureAtlas(useMinecraft = true) {
             return iconCanvas;
         }
 
+        if (blockType === BLOCKS.SCULK_SENSOR) {
+            iconCtx.save();
+            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
+            // Draw 3D isometric base slab (8 pixels high)
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 8 * SCALE);
+            iconCtx.drawImage(topScaled, 0, 0);
+
+            iconCtx.setTransform(1, 0.5, 0, 1, 0, 16 * SCALE);
+            iconCtx.drawImage(side1Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
+
+            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 24 * SCALE);
+            iconCtx.drawImage(side2Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
+
+            // Draw 4 glowing acoustic tendrils standing on the top face
+            const s = iconCanvas.width / 16;
+            const drawTendril = (tx, ty) => {
+                iconCtx.fillStyle = '#00ffff';
+                iconCtx.fillRect(tx * s, (ty - 3.2) * s, 1.8 * s, 3.5 * s);
+                iconCtx.fillStyle = '#00a8a0';
+                iconCtx.fillRect((tx + 0.4) * s, (ty - 1.8) * s, 1.0 * s, 2.0 * s);
+            };
+            iconCtx.resetTransform();
+            drawTendril(5.5, 7.5);
+            drawTendril(10.5, 7.5);
+            drawTendril(3.5, 10.5);
+            drawTendril(8.5, 12.5);
+
+            iconCtx.restore();
+            return iconCanvas;
+        }
+
         if (props.isStonecutter || blockType === BLOCKS.STONECUTTER) {
             iconCtx.save();
             const yOffset = 7 * SCALE;
@@ -5497,7 +5558,7 @@ export async function createTextureAtlas(useMinecraft = true) {
             iconCtx.drawImage(side2Scaled, 0, 7 * SCALE, 16 * SCALE, 9 * SCALE, 0, 0, 16 * SCALE, 9 * SCALE);
 
             // Center saw blade (front face texture, standing upright in the center slot)
-            const sawScaled = faceCanvases['front'] || side1Scaled;
+            const sawScaled = side2Scaled || side1Scaled;
             iconCtx.setTransform(1, 0.5, 0, 1, 6 * SCALE, 2 * SCALE);
             iconCtx.drawImage(sawScaled, 0, 0, 16 * SCALE, 16 * SCALE, 0, 0, 13 * SCALE, 13 * SCALE);
 

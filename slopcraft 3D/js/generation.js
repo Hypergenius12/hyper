@@ -13,7 +13,7 @@ export const BIOMES = {
     PLAINS: { name: 'Plains', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: false, grassColor: [0.569, 0.741, 0.349], foliageColor: [0.467, 0.671, 0.184] },
     DESERT: { name: 'Desert', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, hasDeadBush: true, hasCactus: true, grassColor: [0.749, 0.718, 0.333], foliageColor: [0.682, 0.643, 0.165] },
     BEACH: { name: 'Beach', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, isBeach: true, grassColor: [0.569, 0.741, 0.349], foliageColor: [0.467, 0.671, 0.184] },
-    BADLANDS: { name: 'Badlands', surface: BLOCKS.RED_SAND, dirt: BLOCKS.TERRACOTTA, freq: 0.5, hasTrees: false, hasDeadBush: true, hasDeadTrees: true, grassColor: [0.565, 0.506, 0.302], foliageColor: [0.620, 0.506, 0.302] },
+    BADLANDS: { name: 'Badlands', surface: BLOCKS.RED_SAND, dirt: BLOCKS.TERRACOTTA, freq: 0.5, hasTrees: false, hasDeadBush: true, hasDeadTrees: true, hasCactus: true, grassColor: [0.565, 0.506, 0.302], foliageColor: [0.620, 0.506, 0.302] },
     TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: false, grassColor: [0.502, 0.706, 0.592], foliageColor: [0.376, 0.631, 0.482] },
     ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true, grassColor: [0.502, 0.706, 0.592], foliageColor: [0.376, 0.631, 0.482] },
     MUSHROOM: { name: 'Mushroom', surface: BLOCKS.MYCELIUM, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true, grassColor: [0.333, 0.788, 0.247], foliageColor: [0.333, 0.788, 0.247] },
@@ -504,12 +504,12 @@ export class PlanetParams {
         // Terrain parameters tweaked for Minecraft-like ruggedness
         this.terrainScale = 300 + rng() * 200; // Large macro shapes
         this.terrainHeight = 40 + rng() * 20; // Taller hills and mountains (40-60 range)
-        this.baseHeight = 45 + rng() * 10; // Ensure enough depth for oceans and height for peaks
-        this.seaLevel = this.baseHeight - 8;
+        this.baseHeight = 62;
+        this.seaLevel = 62;
         
         // Caves
         this.caveScale = 15 + rng() * 15; // Tighter noise to make them more distinct
-        this.caveThreshold = 0.25 + rng() * 0.1; // Lowered significantly to create massive sprawling caves
+        this.caveThreshold = 0.48 + rng() * 0.06; // Balanced authentic Minecraft cave frequency
 
         this.dungeonFrequency = 0.08 + rng() * 0.04; // Dungeons are rare but findable
 
@@ -539,6 +539,72 @@ export class PlanetParams {
 export function generatePlanetParams(seed) {
     return new PlanetParams(seed);
 }
+
+// Biome-specific cave frequency scaling
+export function getBiomeCaveFactor(biome) {
+    if (!biome) return 0.35;
+    if (biome === BIOMES.PLAINS || biome.name === 'Plains') return 0.18; // Very rare caves deep underground; absolutely NO surface openings or ravines
+    if (biome === BIOMES.SWAMP || biome.name === 'Swamp') return 0.12; // Water-tight wetland, deep caves only
+    if (biome === BIOMES.BEACH || biome === BIOMES.DEEP_OCEAN || biome === BIOMES.CORAL_REEF || biome.isOcean || biome.isBeach) return 0.10;
+    if (biome === BIOMES.CHERRY_GROVE || biome === BIOMES.MYSTIC_GROVE || biome.name === 'Cherry Grove') return 0.22;
+    if (biome === BIOMES.DESERT || biome === BIOMES.OASIS || biome.name === 'Desert') return 0.32;
+    if (biome === BIOMES.BADLANDS || biome.name === 'Badlands') return 0.38;
+    if (biome === BIOMES.MUSHROOM || biome.name === 'Mushroom') return 0.25;
+    if (biome === BIOMES.FOREST || biome === BIOMES.BIRCH_FOREST || biome === BIOMES.DARK_FOREST || biome.name === 'Forest') return 0.42;
+    if (biome === BIOMES.TAIGA || biome === BIOMES.REDWOOD_FOREST || biome.name === 'Taiga') return 0.45;
+    if (biome === BIOMES.SAVANNA || biome.name === 'Savanna') return 0.40;
+    if (biome === BIOMES.VOLCANIC || biome.isVolcanic) return 0.60;
+    if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains') return 0.85; // Grand cavernous mountain chambers, ravines, and high-altitude mouths
+    return 0.35;
+}
+
+// Rare winding river channels that flow at seaLevel and integrate seamlessly with terrain
+export function getRiverInfo(wx, wz, params, contNoise) {
+    if (!params || !params.noise2D || params.isSuperflat) {
+        return { isRiver: false, riverFactor: 0, carvedElev: params ? params.seaLevel : 62 };
+    }
+    // Rivers exist in inland or near-coastal terrain (contNoise >= 0.28)
+    if (contNoise < 0.28) {
+        return { isRiver: false, riverFactor: 0, carvedElev: params.seaLevel };
+    }
+
+    // Rare river basin mask: rivers only carve through select regional valleys (~15-20% of inland territory)
+    const riverMask = (params.noise2D(wx * 0.00035 + 13579, wz * 0.00035 + 24680) + 1.0) * 0.5;
+    if (riverMask < 0.60) {
+        return { isRiver: false, riverFactor: 0, carvedElev: params.seaLevel };
+    }
+
+    // Continuous winding river centerline
+    const riverPath = params.noise2D(wx * 0.0016 + 8888, wz * 0.0016 + 8888) + params.noise2D(wx * 0.005 + 4444, wz * 0.005 + 4444) * 0.25;
+    const riverDist = Math.abs(riverPath);
+    const riverHalfWidth = 0.042; // Width of river channel
+
+    if (riverDist >= riverHalfWidth) {
+        return { isRiver: false, riverFactor: 0, carvedElev: params.seaLevel };
+    }
+
+    const maskWeight = Math.min(1.0, (riverMask - 0.60) / 0.12);
+    const norm = riverDist / riverHalfWidth; // 0 at centerline, 1 at channel boundary
+    const channelCurve = Math.cos(norm * Math.PI * 0.5); // Smooth cosine dropoff (1 at center -> 0 at banks)
+
+    // Smooth blend when entering oceans/coasts
+    let oceanBlend = 1.0;
+    if (contNoise < 0.35) {
+        oceanBlend = Math.max(0.0, Math.min(1.0, (contNoise - 0.28) / 0.07));
+    }
+
+    const riverFactor = channelCurve * maskWeight * oceanBlend;
+    // Parabolic riverbed carving: center dips 2.8 blocks below seaLevel (y = 59.2), edges rise to seaLevel + 1
+    const carvedElev = (params.seaLevel - 2.8) + Math.pow(norm, 2.0) * 3.8;
+    const isRiver = (riverFactor > 0.18 && norm < 0.85);
+
+    return {
+        isRiver,
+        riverFactor,
+        carvedElev
+    };
+}
+
 
 export function getBiomeParams(wx, wz, params) {
     if (params && params.isSuperflat) {
@@ -760,8 +826,12 @@ export function getColumnInfo(wx, wz, params) {
         baseElevation = baseElevation * (1.0 - swampInfluence) + targetSwampElev * swampInfluence;
     }
 
+    const isBadlands = (biome === BIOMES.BADLANDS || biome.name === 'Badlands');
+
     let climateMultiplier = 1.0;
-    climateMultiplier = climateMultiplier * (1.0 - desertInfluence) + 0.35 * desertInfluence;
+    if (!isBadlands) {
+        climateMultiplier = climateMultiplier * (1.0 - desertInfluence) + 0.35 * desertInfluence;
+    }
     climateMultiplier = climateMultiplier * (1.0 - plainsInfluence * 0.45) + 0.30 * (plainsInfluence * 0.45);
     factor *= climateMultiplier;
     // For swamps, guarantee gentle rolling wetland relief (channels dipping 1-2 blocks below seaLevel, banks 1-3 blocks above)
@@ -806,25 +876,50 @@ export function getColumnInfo(wx, wz, params) {
 
     let elevation = baseElevation + terrainOffset;
     
-    // Apply terracing (e.g. for Badlands)
-    if (terraceWeight > 0) {
+    // Authentic Minecraft Badlands (Mesa) Plateau & Canyon generation
+    if (isBadlands) {
+        const mesaPlateauNoise = params.noise2D(wx * 0.0055 + 333, wz * 0.0055 + 333) + params.noise2D(wx * 0.015 + 777, wz * 0.015 + 777) * 0.2;
+        if (mesaPlateauNoise > -0.06) {
+            // High Mesa Plateau: towering tableland rising to y = 82 - 96
+            const plateauH = 20 + smoothstep(-0.06, 0.25, mesaPlateauNoise) * 14;
+            const targetPlateau = params.seaLevel + 3 + plateauH;
+            const cliffBlend = smoothstep(-0.10, 0.02, mesaPlateauNoise);
+            elevation = Math.max(elevation, (params.seaLevel + 4) * (1.0 - cliffBlend) + targetPlateau * cliffBlend);
+            // Tableland top terracing / stepping
+            const terraceStep = 4;
+            const terraced = Math.floor(elevation / terraceStep) * terraceStep;
+            elevation = elevation * 0.4 + terraced * 0.6;
+        } else {
+            // Canyon Floor / Arroyo: winding lower valley at y = 65 - 68
+            const valleyElev = (params.seaLevel + 3.2) + smoothstep(-0.35, -0.06, mesaPlateauNoise) * 3.5;
+            elevation = Math.min(elevation, valleyElev);
+        }
+    } else if (terraceWeight > 0) {
         const terraceStep = 6;
         const terracedElevation = Math.floor(elevation / terraceStep) * terraceStep;
         const targetTerraced = elevation * 0.2 + terracedElevation * 0.8;
         elevation = elevation * (1.0 - terraceWeight) + targetTerraced * terraceWeight;
     }
 
+    // Carve rare natural winding rivers at seaLevel
+    const riverInfo = getRiverInfo(wx, wz, params, contNoise);
+    if (riverInfo.riverFactor > 0) {
+        elevation = elevation * (1.0 - riverInfo.riverFactor) + riverInfo.carvedElev * riverInfo.riverFactor;
+    }
+
     // Guarantee strict Minecraft terrain boundaries:
-    // 1. Inland dry biomes (contNoise >= 0.35 and not swamp/water) MUST NEVER dip below seaLevel + 1.2 (surfaceY >= 63).
-    //    This creates a solid natural dam/bank holding back any adjacent ocean or swamp water, completely eliminating
-    //    floating walls of water and sub-sea-level dry grass basins.
-    // 2. Swamps are shallow wetlands: channels dip 1-2 blocks below seaLevel (y=60-61) for shallow water; banks rise 1-3 blocks above (y=63-65).
-    // 3. Coastal transitions ramp smoothly up to inland elevation.
+    // 1. Rivers carve down to seaLevel - 2.8, water fills up to seaLevel
+    // 2. Inland dry biomes (contNoise >= 0.35 and not swamp/water/river) MUST NEVER dip below seaLevel + 1.2 (surfaceY >= 63).
+    // 3. Swamps are shallow wetlands: channels dip 1-2 blocks below seaLevel (y=60-61); banks rise 1-3 blocks above (y=63-65).
+    // 4. Coastal transitions ramp smoothly up to inland elevation.
     const isWaterBiome = (biome === BIOMES.DEEP_OCEAN || biome === BIOMES.OCEAN || biome === BIOMES.CORAL_REEF || biome === BIOMES.FROZEN_OCEAN || biome.isOcean || biome.isBeach || biome === BIOMES.BEACH);
     const isSwamp = (biome === BIOMES.SWAMP || biome.name === 'Swamp');
 
     if (!isWaterBiome) {
-        if (isSwamp) {
+        if (riverInfo.isRiver) {
+            // River channel: water surface is at params.seaLevel, bed dips down to ~59.2
+            elevation = Math.max(params.seaLevel - 3.0, elevation);
+        } else if (isSwamp) {
             // Swamp wetland: channels dip 1-2 blocks below seaLevel for shallow water; banks rise 1-3 blocks above
             elevation = Math.max(params.seaLevel - 2.0, Math.min(params.seaLevel + 3.0, elevation));
         } else if (contNoise >= 0.35) {
@@ -852,7 +947,12 @@ export function getColumnInfo(wx, wz, params) {
         moist,
         factor,
         colRng,
-        bData: { isTerraced: terraceWeight > 0.5, lakeSurfaceY: 0 }
+        bData: {
+            isTerraced: isBadlands || terraceWeight > 0.5,
+            lakeSurfaceY: 0,
+            isRiver: riverInfo.isRiver,
+            riverFactor: riverInfo.riverFactor
+        }
     };
 }
 
@@ -1290,7 +1390,7 @@ export function generateChunkTerrain(cx, cz, params) {
 
                 // Guarantee solid ground below sea level for inland dry terrain:
                 // Prevents accidental subterranean dips or air pockets below seaLevel in inland dry biomes
-                const isWaterBiome = (biome.isOcean || biome.isBeach || biome === BIOMES.SWAMP || col.contNoise < 0.33);
+                const isWaterBiome = (biome.isOcean || biome.isBeach || biome === BIOMES.SWAMP || col.contNoise < 0.33 || (col.bData && col.bData.isRiver));
                 if (!isWaterBiome && wy <= params.seaLevel) {
                     grad = Math.max(grad, 0.45);
                 }
@@ -1382,37 +1482,51 @@ export function generateChunkTerrain(cx, cz, params) {
     }
 
     // ============================================
-    // PASS 2: Caves & Cliffs 3D Cave Carvers & Ravines/Crevasses
+    // PASS 2: Caves & Cliffs 3D Cave Carvers & Ravines/Crevasses (Biome-Scaled & Optimized)
     // ============================================
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
             const wx = wxBase + x;
             const wz = wzBase + z;
             const col = columns[x][z];
+            const bCave = getBiomeCaveFactor(col.biome);
 
-            // 1. Ravine / Trench Carver (2D centerline check across the terrain)
-            const trenchMask = params.noise2D(wx * 0.0035 + 137, wz * 0.0035 + 137);
-            const isTrenchZone = (trenchMask > 0.28);
+            // 1. Ravine / Trench Carver (Restricted to rugged mountains/badlands where bCave >= 0.50)
             let inTrench = false;
             let trenchHalfWidth = 0;
             let trenchFloorY = 18;
 
-            if (isTrenchZone && col.surfaceY > params.seaLevel + 3) {
-                const trenchCenter = params.noise2D(wx * 0.008, wz * 0.008);
-                const trenchDist = Math.abs(trenchCenter);
-                const maxHalfWidth = 0.034 + (trenchMask - 0.28) * 0.04;
-                if (trenchDist < maxHalfWidth) {
-                    inTrench = true;
-                    const normDist = trenchDist / maxHalfWidth;
-                    trenchHalfWidth = 1.0 - normDist; // 1 at center, 0 at edge
-                    trenchFloorY = Math.max(12, Math.floor(18 + params.noise2D(wx * 0.02 + 50, wz * 0.02 + 50) * 6));
+            const isNearWater = (col.bData && (col.bData.isRiver || col.bData.lakeSurfaceY)) || col.surfaceY <= params.seaLevel + 3;
+
+            if (bCave >= 0.50 && col.surfaceY > params.seaLevel + 6 && !isNearWater) {
+                const trenchMask = params.noise2D(wx * 0.0035 + 137, wz * 0.0035 + 137);
+                if (trenchMask > 0.32) {
+                    const trenchCenter = params.noise2D(wx * 0.008, wz * 0.008);
+                    const trenchDist = Math.abs(trenchCenter);
+                    const maxHalfWidth = 0.030 + (trenchMask - 0.32) * 0.035;
+                    if (trenchDist < maxHalfWidth) {
+                        inTrench = true;
+                        const normDist = trenchDist / maxHalfWidth;
+                        trenchHalfWidth = 1.0 - normDist;
+                        trenchFloorY = Math.max(12, Math.floor(18 + params.noise2D(wx * 0.02 + 50, wz * 0.02 + 50) * 6));
+                    }
                 }
             }
 
-            // Surface opening allowance: In dry terrain safely above sea level, caves can naturally open to the sky
-            const canOpenToSurface = (col.surfaceY > params.seaLevel + 4) && 
-                                     (!col.bData || !col.bData.lakeSurfaceY || col.surfaceY > col.bData.lakeSurfaceY + 2);
-            const maxCaveY = canOpenToSurface ? (col.surfaceY + 1) : Math.min(54, col.surfaceY - 5);
+            // Surface opening allowance: Strictly restricted to rugged mountains/peaks (bCave >= 0.60).
+            // Plains, Swamps, Beaches, Forests NEVER get surface breach sinkholes!
+            const canOpenToSurface = (bCave >= 0.60) && (col.surfaceY > params.seaLevel + 8) && !isNearWater;
+            // Impermeable stone ceiling under rivers/lakes/oceans to prevent leaks
+            const maxCaveY = isNearWater
+                ? Math.min(params.seaLevel - 7, col.surfaceY - 6)
+                : (canOpenToSurface ? (col.surfaceY + 1) : Math.min(50, col.surfaceY - 5));
+
+            // Effective threshold scaled by biome:
+            // In Plains (bCave = 0.18): threshold increases by +0.18 -> caves are rare and deep!
+            // In Mountains (bCave = 0.85): threshold decreases -> cavernous mountain grottos!
+            const effectiveThreshold = params.caveThreshold + (1.0 - bCave) * 0.22;
+            const cheeseScale = params.caveScale * 1.4;
+            const noodleLimit = 0.006 * bCave;
 
             for (let y = 1; y <= maxCaveY; y++) {
                 const idx = blockIndex(x, y, z);
@@ -1420,7 +1534,7 @@ export function generateChunkTerrain(cx, cz, params) {
 
                 let carveAir = false;
 
-                // (A) Ravine / Trench Carver (Sheer cliffs with ledges down from surface)
+                // (A) Ravine / Trench Carver
                 if (inTrench && y >= trenchFloorY && y <= col.surfaceY + 1) {
                     const midY = (col.surfaceY + trenchFloorY) * 0.5;
                     const vertDist = Math.abs(y - midY) / Math.max(1, (col.surfaceY - trenchFloorY) * 0.5);
@@ -1433,36 +1547,34 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 }
 
-                // (B) Caves & Cliffs Massive 3D Cheese Caves
-                if (!carveAir && y <= 62) {
-                    const cheeseScale = params.caveScale * 1.4;
-                    const c = fbm3D(params.caveNoise, wx / cheeseScale, y / (cheeseScale * 0.7), wz / cheeseScale, 2);
-                    let threshold = params.caveThreshold;
-                    if (y >= 14 && y <= 46) {
-                        threshold *= 0.80; // massive cavernous chambers in deep strata
+                // (B) 3D Cheese Caves - FAST single-sample 3D simplex noise (over 2x faster than 2-octave FBM!)
+                if (!carveAir && y <= 58) {
+                    let th = effectiveThreshold;
+                    if (y >= 14 && y <= 42) {
+                        th *= 0.86; // deeper chambers
                     }
-                    if (c > threshold) {
-                        // Occasional natural stone pillar support
+                    const c = params.caveNoise(wx / cheeseScale, y / (cheeseScale * 0.7), wz / cheeseScale);
+                    if (c > th) {
                         const pillar = params.noise2D(wx * 0.07 + 33, wz * 0.07 + 33);
-                        if (pillar < 0.70) {
+                        if (pillar < 0.72) {
                             carveAir = true;
                         }
                     }
                 }
 
-                // (C) Winding Noodle / Spaghetti Caves (Tunnels linking cavern chambers)
-                if (!carveAir && y <= 58) {
+                // (C) Winding Noodle / Spaghetti Caves - scaled by biome
+                if (!carveAir && y <= 54 && noodleLimit > 0.001) {
                     const nA = params.noise3D(wx * 0.036, y * 0.046, wz * 0.036);
                     const nB = params.caveNoise(wx * 0.036 + 73, y * 0.046 + 73, wz * 0.036 + 73);
-                    if ((nA * nA + nB * nB) < 0.016) {
+                    if ((nA * nA + nB * nB) < noodleLimit) {
                         carveAir = true;
                     }
                 }
 
-                // (D) Natural Surface Openings: breaches to surface on hillsides, cliffs & plains sinkholes
-                if (!carveAir && canOpenToSurface && y > 48 && y <= col.surfaceY + 1) {
+                // (D) Surface Openings - only in high mountains (canOpenToSurface)
+                if (!carveAir && canOpenToSurface && y > 52 && y <= col.surfaceY + 1) {
                     const breachNoise = params.caveNoise(wx * 0.038, y * 0.038, wz * 0.038);
-                    const breachThreshold = 0.36 + (y - 48) * 0.014;
+                    const breachThreshold = 0.42 + (y - 52) * 0.015;
                     if (breachNoise > breachThreshold) {
                         carveAir = true;
                     }
@@ -1570,7 +1682,23 @@ export function generateChunkTerrain(cx, cz, params) {
                     let type;
                     if (isUnderwater) {
                         const waterDepth = Math.max(0, params.seaLevel - y);
-                        if (isColdBiome) {
+                        const isRiver = (bData && bData.isRiver);
+                        if (isRiver) {
+                            if (isBadlandsBiome || biome === BIOMES.DESERT || biome.name === 'Desert') {
+                                type = (surfaceNoise > 0.0) ? BLOCKS.RED_SAND : BLOCKS.GRAVEL;
+                            } else if (isColdBiome) {
+                                type = (surfaceNoise > 0.0) ? BLOCKS.GRAVEL : BLOCKS.DIRT;
+                            } else {
+                                // Authentic Minecraft riverbeds: sand, gravel, and clay
+                                if (surfaceNoise > 0.22) {
+                                    type = BLOCKS.SAND;
+                                } else if (surfaceNoise < -0.22) {
+                                    type = BLOCKS.CLAY;
+                                } else {
+                                    type = BLOCKS.GRAVEL;
+                                }
+                            }
+                        } else if (isColdBiome) {
                             type = BLOCKS.GRAVEL;
                         } else if (isSwamp) {
                             // Authentic Minecraft Swamp waterbeds: rich mud with patches of clay in shallow waters
@@ -1681,7 +1809,7 @@ export function generateChunkTerrain(cx, cz, params) {
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
             const col = columns[x][z];
-            if (col.biome === BIOMES.SWAMP || col.biome.name === 'Swamp') continue; // Preserve authentic wetland water channels!
+            if (col.biome === BIOMES.SWAMP || col.biome.name === 'Swamp' || (col.bData && col.bData.isRiver)) continue; // Preserve authentic wetland water channels and rivers!
             for (let y = params.seaLevel; y >= params.seaLevel - 1; y--) {
                 const idx = blockIndex(x, y, z);
                 const b = blocks[idx];
@@ -2089,7 +2217,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 generateCrystal(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if (biome.hasIceSpikes && r < 0.025) {
                 generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng, wx, wz, params);
-            } else if (biome.hasCactus && r < 0.01 && currentGroundBlock === BLOCKS.SAND) {
+            } else if (biome.hasCactus && r < 0.01 && (currentGroundBlock === BLOCKS.SAND || currentGroundBlock === BLOCKS.RED_SAND)) {
                 generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
             }
         }
