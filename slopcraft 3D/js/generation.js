@@ -1,10 +1,10 @@
 // ============================================
 // generation.js — Procedural Generation, Biomes, Dungeons
 // ============================================
-import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=107';
-import { BLOCKS } from './textures.js?v=107';
+import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=108';
+import { BLOCKS } from './textures.js?v=108';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=107';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=108';
 
 // Planet configurations
 export const BIOMES = {
@@ -14,7 +14,7 @@ export const BIOMES = {
     DESERT: { name: 'Desert', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, hasDeadBush: true, hasCactus: true, grassColor: [0.749, 0.718, 0.333], foliageColor: [0.682, 0.643, 0.165] },
     BEACH: { name: 'Beach', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, isBeach: true, grassColor: [0.569, 0.741, 0.349], foliageColor: [0.467, 0.671, 0.184] },
     BADLANDS: { name: 'Badlands', surface: BLOCKS.RED_SAND, dirt: BLOCKS.TERRACOTTA, freq: 0.5, hasTrees: false, hasDeadBush: true, hasDeadTrees: true, grassColor: [0.565, 0.506, 0.302], foliageColor: [0.620, 0.506, 0.302] },
-    TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, grassColor: [0.502, 0.706, 0.592], foliageColor: [0.376, 0.631, 0.482] },
+    TUNDRA: { name: 'Tundra', surface: BLOCKS.SNOW, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: false, grassColor: [0.502, 0.706, 0.592], foliageColor: [0.376, 0.631, 0.482] },
     ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true, grassColor: [0.502, 0.706, 0.592], foliageColor: [0.376, 0.631, 0.482] },
     MUSHROOM: { name: 'Mushroom', surface: BLOCKS.MYCELIUM, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true, grassColor: [0.333, 0.788, 0.247], foliageColor: [0.333, 0.788, 0.247] },
     VOLCANIC: { name: 'Volcanic', surface: BLOCKS.BASALT, dirt: BLOCKS.BLACKSTONE, freq: 0.5, hasTrees: false, isVolcanic: true, grassColor: [0.333, 0.333, 0.333], foliageColor: [0.267, 0.267, 0.267] },
@@ -1932,21 +1932,23 @@ export function generateChunkTerrain(cx, cz, params) {
                 }
             }
 
-            // Snowy Tundra: Snow-Covered Spruce Trees, Fallen Snow Logs, Ice Boulders & Ice Pools
+            // Snowy Tundra: Wide-open, vast snowy plains with rare solitary spruce trees (like authentic Minecraft Snowy Plains)
             if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
-                if (r < 0.024) {
-                    generateSnowyPineTree(blocks, tx, surfaceY + 1, tz, floraRng);
-                    continue;
-                } else if (r < 0.027) {
-                    generateFallenSnowLog(blocks, tx, surfaceY, tz, floraRng);
-                    continue;
-                } else if (r >= 0.045 && r < 0.052) {
-                    generateSnowBoulder(blocks, tx, surfaceY, tz, floraRng);
-                    continue;
-                } else if (r >= 0.052 && r < 0.058) {
-                    generateIcePatch(blocks, tx, surfaceY, tz, floraRng);
-                    continue;
+                if (r < 0.0035 && Math.abs(surfaceY - colInfo.surfaceY) <= 1) {
+                    // Anti-stacking check: verify that ground underneath is genuine terrain, not leaves or wood
+                    let isStacked = false;
+                    for (let cy = surfaceY; cy >= Math.max(1, surfaceY - 14); cy--) {
+                        const b = blocks[(cy * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx];
+                        if (b === BLOCKS.PINE_LEAVES || b === BLOCKS.LEAVES || b === BLOCKS.PINE_WOOD || b === BLOCKS.WOOD) {
+                            isStacked = true;
+                            break;
+                        }
+                    }
+                    if (!isStacked) {
+                        generatePineTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    }
                 }
+                continue;
             }
 
             // Taiga (Tiaga): Pine Trees, Fallen Pine Logs with mushrooms & Boulders
@@ -1993,9 +1995,22 @@ export function generateChunkTerrain(cx, cz, params) {
                 treeProbability = isNearWater ? 0.015 : ((colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.006 : 0.002);
             }
 
-            const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || (biome.isOasis && currentGroundBlock === BLOCKS.SAND) || currentGroundBlock === BLOCKS.SNOW;
+            const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || (biome.isOasis && currentGroundBlock === BLOCKS.SAND);
             if (treeProbability > 0 && r < treeProbability && isSoilForTree) {
-                generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                let isStacked = false;
+                for (let cy = surfaceY; cy >= Math.max(1, surfaceY - 14); cy--) {
+                    const b = blocks[(cy * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx];
+                    if (b === BLOCKS.PINE_LEAVES || b === BLOCKS.LEAVES || b === BLOCKS.BIRCH_LEAVES ||
+                        b === BLOCKS.DARK_OAK_LEAVES || b === BLOCKS.JUNGLE_LEAVES || b === BLOCKS.ACACIA_LEAVES ||
+                        b === BLOCKS.CHERRY_LEAVES || b === BLOCKS.PINE_WOOD || b === BLOCKS.WOOD ||
+                        b === BLOCKS.DARK_OAK_WOOD || b === BLOCKS.BIRCH_WOOD) {
+                        isStacked = true;
+                        break;
+                    }
+                }
+                if (!isStacked) {
+                    generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                }
             } else if (biome.hasDeadTrees && r < 0.005) {
                 generateDeadTree(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if (biome.hasMushrooms && r < 0.05) {
@@ -2179,11 +2194,11 @@ export function generateChunkTerrain(cx, cz, params) {
                         else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                     }
                 } else if (biome === BIOMES.TUNDRA || biome.name === 'Tundra') {
-                    if (fr < 0.12) {
+                    if (fr < 0.04 && Math.abs(surfaceY - colInfo.surfaceY) <= 1) {
                         const tundraRoll = floraRng();
-                        if (tundraRoll < 0.40) {
+                        if (tundraRoll < 0.45) {
                             safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.SWEET_BERRY_BUSH, true);
-                        } else if (tundraRoll < 0.70) {
+                        } else if (tundraRoll < 0.75) {
                             safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.FERN, true);
                         } else {
                             safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
@@ -2647,91 +2662,7 @@ function generatePineTree(blocks, x, y, z, rng) {
     }
 }
 
-function generateSnowyPineTree(blocks, x, y, z, rng) {
-    const height = 9 + Math.floor(rng() * 6);
-    for (let i = 0; i < height; i++) {
-        safeSetBlock(blocks, x, y + i, z, BLOCKS.PINE_WOOD, false, 0);
-    }
 
-    const topY = y + height;
-    safeSetBlock(blocks, x, topY + 1, z, BLOCKS.PINE_LEAVES, true);
-    safeSetBlock(blocks, x, topY + 2, z, BLOCKS.SNOW, true); // Snow dusting on very top leaf
-    safeSetBlock(blocks, x, topY, z, BLOCKS.PINE_LEAVES, true);
-
-    const startLeavesY = y + Math.max(3, Math.floor(height * 0.35));
-    for (let ly = topY; ly >= startLeavesY; ly--) {
-        const distFromTop = topY - ly;
-        let radius = 1;
-        if (distFromTop === 0) {
-            radius = 1;
-        } else if (distFromTop % 2 === 1) {
-            radius = Math.min(3, 1 + Math.floor(distFromTop / 3));
-        } else {
-            radius = Math.max(1, Math.min(2, Math.floor(distFromTop / 4)));
-        }
-
-        for (let dx = -radius; dx <= radius; dx++) {
-            for (let dz = -radius; dz <= radius; dz++) {
-                if (Math.abs(dx) === radius && Math.abs(dz) === radius) {
-                    if (radius > 1 || distFromTop % 2 === 0) continue;
-                }
-                const lx = x + dx;
-                const lz = z + dz;
-                safeSetBlock(blocks, lx, ly, lz, BLOCKS.PINE_LEAVES, true);
-                // Authentic Minecraft snowy spruce: place snow block atop any upward-facing leaf!
-                if (ly + 1 < CHUNK_HEIGHT) {
-                    safeSetBlock(blocks, lx, ly + 1, lz, BLOCKS.SNOW, true);
-                }
-            }
-        }
-    }
-}
-
-function generateFallenSnowLog(blocks, x, y, z, rng) {
-    const len = 3 + Math.floor(rng() * 3);
-    const dirX = rng() < 0.5 ? 1 : 0;
-    const dirZ = dirX === 1 ? 0 : 1;
-    for (let i = 0; i < len; i++) {
-        const lx = x + dirX * i;
-        const lz = z + dirZ * i;
-        safeSetBlock(blocks, lx, y, lz, BLOCKS.PINE_WOOD, false, 0);
-        safeSetBlock(blocks, lx, y + 1, lz, BLOCKS.SNOW, true);
-    }
-}
-
-function generateIcePatch(blocks, x, y, z, rng) {
-    const radius = 3 + Math.floor(rng() * 3);
-    for (let dx = -radius; dx <= radius; dx++) {
-        for (let dz = -radius; dz <= radius; dz++) {
-            const dist = Math.hypot(dx, dz);
-            if (dist > radius) continue;
-            const px = x + dx;
-            const pz = z + dz;
-            let block = BLOCKS.ICE;
-            if (dist < radius * 0.5) {
-                block = rng() < 0.6 ? (BLOCKS.PACKED_ICE || BLOCKS.ICE) : (BLOCKS.BLUE_ICE || BLOCKS.ICE);
-            }
-            safeSetBlock(blocks, px, y, pz, block, false);
-            // Clear snow directly above ice pool surface
-            safeSetBlock(blocks, px, y + 1, pz, BLOCKS.AIR, false);
-        }
-    }
-}
-
-function generateSnowBoulder(blocks, x, y, z, rng) {
-    const radius = 2 + Math.floor(rng() * 2);
-    for (let dx = -radius; dx <= radius; dx++) {
-        for (let dz = -radius; dz <= radius; dz++) {
-            for (let dy = 0; dy <= radius; dy++) {
-                if (dx * dx + dy * dy * 1.4 + dz * dz > radius * radius) continue;
-                const r = rng();
-                const b = r < 0.45 ? BLOCKS.COBBLESTONE : (r < 0.75 ? BLOCKS.STONE : (BLOCKS.PACKED_ICE || BLOCKS.ICE));
-                safeSetBlock(blocks, x + dx, y + dy, z + dz, b, false);
-                safeSetBlock(blocks, x + dx, y + dy + 1, z + dz, BLOCKS.SNOW, true);
-            }
-        }
-    }
-}
 
 function generateDarkOakTree(blocks, x, y, z, rng) {
     const height = 6 + Math.floor(rng() * 4);

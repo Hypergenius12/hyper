@@ -2,9 +2,9 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=107';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=107';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=107';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=108';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=108';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=108';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -2924,16 +2924,13 @@ export const MOB_TYPES = {
                 mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
             }
 
-            // Authentic Snow Golem snow trail: leaves a layer of snow as it walks!
-            if (mob.velocity.lengthSq() > 0.01 && world) {
-                const bx = Math.floor(mob.position.x);
-                const by = Math.floor(mob.position.y);
-                const bz = Math.floor(mob.position.z);
-                const cur = world.getBlock(bx, by, bz);
-                const below = world.getBlock(bx, by - 1, bz);
-                const pBelow = window.getBlockProperties ? window.getBlockProperties(below) : { solid: true };
-                if (cur === (window.BLOCKS.AIR || 0) && pBelow && pBelow.solid && below !== window.BLOCKS.ICE && below !== window.BLOCKS.PACKED_ICE && below !== window.BLOCKS.BLUE_ICE) {
-                    world.setBlock(bx, by, bz, window.BLOCKS.SNOW);
+            // Gentle cosmetic snow particles when walking (no world block modification, preventing pillar glitches)
+            if (mob.velocity.lengthSq() > 0.01 && window.game && window.game.particleSystem) {
+                if (Math.random() < 0.12) {
+                    window.game.particleSystem.createBlockBreakParticles(
+                        mob.position.x, mob.position.y + 0.1, mob.position.z,
+                        (window.BLOCKS && window.BLOCKS.SNOW) || 23, 1
+                    );
                 }
             }
         }
@@ -4239,7 +4236,7 @@ function pickRandomMobType(dimension = 'overworld', biome = 'plains', isDay = fa
         const passiveMobs = ['SHEEP', 'COW', 'PIG', 'CHICKEN', 'FROG', 'CAMEL', 'TURTLE'];
         if (biome === 'desert' && Math.random() < 0.6) return 'CAMEL';
         if (biome === 'swamp' && Math.random() < 0.6) return 'FROG';
-        if (biome === 'snow') return Math.random() < 0.55 ? 'POLAR_BEAR' : (Math.random() < 0.5 ? 'SNOW_GOLEM' : 'SHEEP');
+        if (biome === 'snow') return Math.random() < 0.65 ? 'POLAR_BEAR' : 'SHEEP';
         return passiveMobs[Math.floor(Math.random() * passiveMobs.length)];
     }
 
@@ -4253,8 +4250,8 @@ function pickRandomMobType(dimension = 'overworld', biome = 'plains', isDay = fa
     if (biome === 'snow') {
         const coldRoll = Math.random();
         if (coldRoll < 0.35) return 'POLAR_BEAR';
-        if (coldRoll < 0.55) return 'SNOW_GOLEM';
-        if (coldRoll < 0.80) return 'SKELETON';
+        if (coldRoll < 0.70) return 'SKELETON';
+        return 'ZOMBIE';
     }
 
     let r = Math.random() * TOTAL_MOB_WEIGHT;
