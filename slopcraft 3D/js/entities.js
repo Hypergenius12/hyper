@@ -2,9 +2,9 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=108';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=108';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=108';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=109';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=109';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=109';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -449,7 +449,8 @@ export class Player {
 
         // Void damage (except in Aether where falling drops into the Overworld sky)
         if (!this.isCreative && this.position.y < -10 && (!world || world.dimension !== 'aether')) {
-            this.takeDamage(1000);
+            this.spawnGraceTimer = 0;
+            this.health = 0;
         }
 
         // Natural very slow health regeneration (5 HP / half-heart every 4 seconds)

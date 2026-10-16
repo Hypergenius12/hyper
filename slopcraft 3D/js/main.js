@@ -2,16 +2,16 @@
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=108';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=108';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=108';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=108';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=108';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=108';
-import { AudioManager } from './audio.js?v=108';
-import { BiomeMap } from './map.js?v=108';
-import { DevMode } from './dev.js?v=108';
-import { ChatSystem } from './chat.js?v=108';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=109';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=109';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=109';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=109';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=109';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=109';
+import { AudioManager } from './audio.js?v=109';
+import { BiomeMap } from './map.js?v=109';
+import { DevMode } from './dev.js?v=109';
+import { ChatSystem } from './chat.js?v=109';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -1316,11 +1316,26 @@ class Game {
 
         const key = `${x},${y},${z}`;
         const bedData = this.beds.get(key);
-        const spawnX = bedData ? bedData.footPos.x + 0.5 : x + 0.5;
-        const spawnY = bedData ? bedData.footPos.y + 0.6 : y + 0.6;
-        const spawnZ = bedData ? bedData.footPos.z + 0.5 : z + 0.5;
+        let bFootX = x, bFootY = y, bFootZ = z;
+        if (!bedData && blockType === window.BLOCKS.BED_HEAD) {
+            if (this.world.getBlock(x, y, z + 1) === window.BLOCKS.RED_BED || getBlockProperties(this.world.getBlock(x, y, z + 1)).isBed) bFootZ = z + 1;
+            else if (this.world.getBlock(x - 1, y, z) === window.BLOCKS.RED_BED || getBlockProperties(this.world.getBlock(x - 1, y, z)).isBed) bFootX = x - 1;
+            else if (this.world.getBlock(x, y, z - 1) === window.BLOCKS.RED_BED || getBlockProperties(this.world.getBlock(x, y, z - 1)).isBed) bFootZ = z - 1;
+            else if (this.world.getBlock(x + 1, y, z) === window.BLOCKS.RED_BED || getBlockProperties(this.world.getBlock(x + 1, y, z)).isBed) bFootX = x + 1;
+        }
+        const footPos = bedData ? bedData.footPos : { x: bFootX, y: bFootY, z: bFootZ };
+        const spawnX = footPos.x + 0.5;
+        const spawnY = footPos.y + 0.6;
+        const spawnZ = footPos.z + 0.5;
 
-        this.player.spawnPoint = { x: spawnX, y: spawnY, z: spawnZ };
+        this.player.spawnPoint = {
+            x: spawnX,
+            y: spawnY,
+            z: spawnZ,
+            bedPos: { x: footPos.x, y: footPos.y, z: footPos.z },
+            isBed: true,
+            dimension: 'overworld'
+        };
 
         const time = this.lighting.timeOfDay;
         const isNight = (time > 0.72 || time < 0.23);
@@ -1353,6 +1368,129 @@ class Game {
                 fade.style.opacity = '0';
             }, 300);
         }, 1000);
+    }
+
+    resolveSafeOverworldSpawn() {
+        const sp = this.player.spawnPoint;
+        if (!sp) {
+            return findSafeSpawn(this.planetParams, 'overworld');
+        }
+
+        // If explicitly a non-bed spawnpoint (e.g. /spawnpoint command)
+        if (sp.isBed === false) {
+            return { x: sp.x, y: sp.y, z: sp.z };
+        }
+
+        // Locate bed block in the Overworld
+        const targetX = sp.bedPos ? sp.bedPos.x : Math.floor(sp.x);
+        const targetY = sp.bedPos ? sp.bedPos.y : Math.floor(sp.y - 0.5);
+        const targetZ = sp.bedPos ? sp.bedPos.z : Math.floor(sp.z);
+
+        // Search in a 1-block box around target for any bed block
+        let foundBedX = null, foundBedY = null, foundBedZ = null;
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dz = -1; dz <= 1; dz++) {
+                    const testX = targetX + dx;
+                    const testY = targetY + dy;
+                    const testZ = targetZ + dz;
+                    const b = this.world.getBlock(testX, testY, testZ);
+                    const bp = getBlockProperties(b);
+                    if (bp && (bp.isBed || bp.isBedHead)) {
+                        foundBedX = testX;
+                        foundBedY = testY;
+                        foundBedZ = testZ;
+                        break;
+                    }
+                }
+                if (foundBedX !== null) break;
+            }
+            if (foundBedX !== null) break;
+        }
+
+        if (foundBedX === null) {
+            // Bed is missing or destroyed!
+            this.showToast("Your home bed was missing or obstructed", 3000);
+            this.player.spawnPoint = null;
+            return findSafeSpawn(this.planetParams, 'overworld');
+        }
+
+        // Bed exists! Now find the safe adjacent block (standard Minecraft Java logic)
+        // Check surrounding horizontal positions around the bed:
+        const offsets = [
+            [1, 0], [-1, 0], [0, 1], [0, -1],
+            [1, 1], [-1, 1], [1, -1], [-1, -1],
+            [2, 0], [-2, 0], [0, 2], [0, -2]
+        ];
+
+        for (const [dx, dz] of offsets) {
+            for (const dy of [0, 1, -1]) {
+                const cx = foundBedX + dx;
+                const cy = foundBedY + dy;
+                const cz = foundBedZ + dz;
+
+                const bFeet = this.world.getBlock(cx, cy, cz);
+                const pFeet = getBlockProperties(bFeet);
+                if (pFeet && pFeet.solid) continue;
+                if (pFeet && (pFeet.isBed || pFeet.isBedHead)) continue;
+                if (bFeet === window.BLOCKS.WATER || bFeet === window.BLOCKS.SWAMP_WATER || bFeet === window.BLOCKS.LAVA || bFeet === window.BLOCKS.FIRE) continue;
+
+                const bHead = this.world.getBlock(cx, cy + 1, cz);
+                const pHead = getBlockProperties(bHead);
+                if (pHead && pHead.solid) continue;
+                if (bHead === window.BLOCKS.LAVA || bHead === window.BLOCKS.FIRE) continue;
+
+                const bGround = this.world.getBlock(cx, cy - 1, cz);
+                const pGround = getBlockProperties(bGround);
+                if (!pGround || !pGround.solid) continue;
+                if (pGround.isBed || pGround.isBedHead) continue;
+                if (bGround === window.BLOCKS.LAVA || bGround === window.BLOCKS.FIRE || bGround === window.BLOCKS.CACTUS) continue;
+
+                // Found safe unobstructed adjacent spot on solid ground
+                return { x: cx + 0.5, y: cy + 0.05, z: cz + 0.5 };
+            }
+        }
+
+        // If no adjacent spot is available, check if player can stand directly on top of the bed
+        const topY = foundBedY + 1;
+        const bTop1 = this.world.getBlock(foundBedX, topY, foundBedZ);
+        const pTop1 = getBlockProperties(bTop1);
+        const bTop2 = this.world.getBlock(foundBedX, topY + 1, foundBedZ);
+        const pTop2 = getBlockProperties(bTop2);
+
+        if ((!pTop1 || !pTop1.solid) && (!pTop2 || !pTop2.solid) && bTop1 !== window.BLOCKS.LAVA && bTop2 !== window.BLOCKS.LAVA && bTop1 !== window.BLOCKS.FIRE) {
+            return { x: foundBedX + 0.5, y: topY + 0.05, z: foundBedZ + 0.5 };
+        }
+
+        // Bed is fully obstructed
+        this.showToast("Your home bed was missing or obstructed", 3000);
+        this.player.spawnPoint = null;
+        return findSafeSpawn(this.planetParams, 'overworld');
+    }
+
+    respawnPlayer() {
+        this.player.health = this.player.maxHealth;
+        this.player.mana = this.player.maxMana;
+        this.player.burnTimer = 0;
+        this.player.velocity.set(0, 0, 0);
+        this.player.fallDistance = 0;
+        this.player.spawnGraceTimer = 5.0;
+
+        if (this.currentDimension !== 'overworld') {
+            // Player died in End, Nether, or Aether -> MUST warp to Overworld at last set spawnpoint
+            this.isWarping = false;
+            this.warpToNewPlanet('overworld', null, true);
+        } else {
+            // Already in Overworld: find safe bed spawnpoint or world spawn
+            const spawnPos = this.resolveSafeOverworldSpawn();
+            this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
+            this.player.velocity.set(0, 0, 0);
+            this.player.fallDistance = 0;
+            this.player.fallStartY = spawnPos.y;
+            this.player.spawnGraceTimer = 5.0;
+            if (this.loadChunksAroundPlayer) this.loadChunksAroundPlayer();
+            if (this.audio && this.audio.playMC) this.audio.playMC('random/levelup', 0.6);
+        }
     }
 
     showToast(msg, duration = 2500) {
@@ -2892,37 +3030,8 @@ class Game {
             }
 
             if (this.player.health <= 0) {
-                // Respawn
-                this.player.health = this.player.maxHealth;
-                this.player.mana = this.player.maxMana;
-                
-                if (this.currentDimension === 'aether') {
-                    // Warp to overworld on death
-                    this.warpToNewPlanet('overworld');
-                    return; // Skip standard respawn logic since warp handles it
-                }
-                
-                let spawnPos = null;
-                if (this.player.spawnPoint && this.currentDimension === 'overworld') {
-                    const sp = this.player.spawnPoint;
-                    const b = this.world.getBlock(Math.floor(sp.x), Math.floor(sp.y - 0.5), Math.floor(sp.z));
-                    const bp = getBlockProperties(b);
-                    if (bp && (bp.isBed || bp.isBedHead)) {
-                        spawnPos = { x: sp.x, y: sp.y + 0.1, z: sp.z };
-                    } else {
-                        this.showToast("Your home bed was missing or obstructed", 3000);
-                        this.player.spawnPoint = null;
-                    }
-                }
-                if (!spawnPos) {
-                    spawnPos = findSafeSpawn(this.planetParams, this.currentDimension);
-                }
-                this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
-                this.player.velocity.set(0, 0, 0);
-                this.player.fallDistance = 0;
-                this.player.fallStartY = spawnPos.y;
-                this.player.spawnGraceTimer = 5.0;
-                this.audio.playMC('random/levelup', 0.6);
+                this.respawnPlayer();
+                return;
             }
         }
 
@@ -3955,7 +4064,7 @@ class Game {
         }
     }
 
-    warpToNewPlanet(targetDim = 'nether', overrideSpawnPos = null) {
+    warpToNewPlanet(targetDim = 'nether', overrideSpawnPos = null, isDeathRespawn = false) {
         if (!this.isReady) return;
         this.isReady = false;
         this.isWarping = true;
@@ -3964,7 +4073,7 @@ class Game {
         const isEnd = targetDim === 'end';
         const isWarpingToDim = targetDim !== 'overworld';
 
-        if (isWarpingToDim && !overrideSpawnPos) {
+        if (isWarpingToDim && !overrideSpawnPos && !isDeathRespawn) {
             // Save the exact position we left from and the portal type
             this.overworldReturnPos = this.player.position.clone();
             this.lastPortalDim = targetDim;
@@ -3975,7 +4084,7 @@ class Game {
         fade.style.position = 'fixed';
         fade.style.top = '0'; fade.style.left = '0';
         fade.style.width = '100%'; fade.style.height = '100%';
-        fade.style.backgroundColor = isWarpingToDim ? (isAether ? 'white' : (isEnd ? '#0b0217' : '#400000')) : (overrideSpawnPos ? '#c8e6ff' : 'white');
+        fade.style.backgroundColor = isDeathRespawn ? '#000000' : (isWarpingToDim ? (isAether ? 'white' : (isEnd ? '#0b0217' : '#400000')) : (overrideSpawnPos ? '#c8e6ff' : 'white'));
         fade.style.opacity = '0';
         fade.style.transition = 'opacity 1.5s ease-in-out';
         fade.style.zIndex = '9999';
@@ -4012,6 +4121,12 @@ class Game {
             }
             this.burningBlocks.clear();
 
+            // Clear bed meshes from old dimension
+            for (const bed of this.beds.values()) {
+                if (bed && bed.mesh) this.engine.scene.remove(bed.mesh);
+            }
+            this.beds.clear();
+
             // Clear entities
             for (const mob of this.entityManager.mobs) mob.dispose();
             this.entityManager.mobs = [];
@@ -4020,7 +4135,14 @@ class Game {
 
             // Reset Player
             let spawnPos;
-            if (overrideSpawnPos) {
+            if (isDeathRespawn) {
+                this.pendingPortal = null;
+                if (this.player.spawnPoint) {
+                    spawnPos = { x: this.player.spawnPoint.x, y: this.player.spawnPoint.y, z: this.player.spawnPoint.z };
+                } else {
+                    spawnPos = findSafeSpawn(this.planetParams, 'overworld');
+                }
+            } else if (overrideSpawnPos) {
                 spawnPos = overrideSpawnPos;
                 this.pendingPortal = null;
             } else if (isWarpingToDim) {
@@ -4032,7 +4154,13 @@ class Game {
                 this.pendingPortal = (returnDim === 'end') ? null : { pos: spawnPos, isNether: returnDim === 'nether', isAether: returnDim === 'aether' };
             }
 
-            if (overrideSpawnPos) {
+            if (isDeathRespawn) {
+                this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
+                this.player.velocity.set(0, 0, 0);
+                this.player.fallDistance = 0;
+                this.player.fallStartY = spawnPos.y;
+                this.player.spawnGraceTimer = 5.0;
+            } else if (overrideSpawnPos) {
                 this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
                 this.player.velocity.set(0, -10, 0); // Gentle falling through clouds
                 this.player.fallDistance = 0;
@@ -4079,6 +4207,21 @@ class Game {
                         this.world.scene.add(mesh);
                     }
                 }
+            }
+
+            // If death respawn, validate bed spawnpoint and finalize safe position now that Overworld chunks are loaded
+            if (isDeathRespawn) {
+                const finalSpawn = this.resolveSafeOverworldSpawn();
+                this.player.position.set(finalSpawn.x, finalSpawn.y, finalSpawn.z);
+                this.player.velocity.set(0, 0, 0);
+                this.player.fallDistance = 0;
+                this.player.fallStartY = finalSpawn.y;
+                this.player.spawnGraceTimer = 5.0;
+
+                if (Math.hypot(finalSpawn.x - spawnPos.x, finalSpawn.z - spawnPos.z) > 16) {
+                    this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), 0);
+                }
+                if (this.audio && this.audio.playMC) this.audio.playMC('random/levelup', 0.6);
             }
 
             if (targetDim === 'end') {
@@ -4564,7 +4707,7 @@ class Game {
         if (scr) scr.classList.add('hidden');
         
         if (this.currentDimension === 'end') {
-            this.warpToNewPlanet('aether');
+            this.warpToNewPlanet('overworld', null, true);
         }
     }
 

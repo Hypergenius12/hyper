@@ -2,9 +2,9 @@
 // chat.js — In-Game Chat & Command System
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockName } from './textures.js?v=108';
-import { BIOMES, getBiomeParams, getClosestStrongholdPosition, getClosestIglooPosition, getClosestWitchHutPosition } from './generation.js?v=108';
-import { Mob, MOB_TYPES, Item } from './entities.js?v=108';
+import { BLOCKS, getBlockName } from './textures.js?v=109';
+import { BIOMES, getBiomeParams, getClosestStrongholdPosition, getClosestIglooPosition, getClosestWitchHutPosition } from './generation.js?v=109';
+import { Mob, MOB_TYPES, Item } from './entities.js?v=109';
 
 export class ChatSystem {
     constructor(game) {
@@ -360,6 +360,12 @@ export class ChatSystem {
                 this.cmdSpawn();
                 break;
 
+            case 'spawnpoint':
+            case 'setspawn':
+            case 'setworldspawn':
+                this.cmdSpawnpoint(args);
+                break;
+
             case 'give':
             case 'item':
                 this.cmdGive(args);
@@ -603,7 +609,8 @@ export class ChatSystem {
         const target = (args[0] || '@s').toLowerCase();
 
         if (target === '@s' || target === 'player' || target === 'self') {
-            this.game.player.takeDamage(1000);
+            this.game.player.spawnGraceTimer = 0;
+            this.game.player.health = 0;
             this.addMessage("Killed Player", "#ffffff");
             return;
         }
@@ -708,9 +715,33 @@ export class ChatSystem {
     // /spawn
     // --------------------------------------------
     cmdSpawn() {
-        const sp = this.game.player.spawnPoint || { x: 0.5, y: 64, z: 0.5 };
+        const sp = (this.game.resolveSafeOverworldSpawn && this.game.currentDimension === 'overworld') 
+            ? this.game.resolveSafeOverworldSpawn() 
+            : (this.game.player.spawnPoint || { x: 0.5, y: 64, z: 0.5 });
         this.teleportPlayer(sp.x, sp.y, sp.z);
-        this.addMessage(`Teleported to world spawn [X: ${Math.round(sp.x)}, Y: ${Math.round(sp.y)}, Z: ${Math.round(sp.z)}]`, "#55ff55");
+        this.addMessage(`Teleported to spawn [X: ${Math.round(sp.x)}, Y: ${Math.round(sp.y)}, Z: ${Math.round(sp.z)}]`, "#55ff55");
+    }
+
+    // --------------------------------------------
+    // /spawnpoint [x y z]
+    // --------------------------------------------
+    cmdSpawnpoint(args) {
+        let x = this.game.player.position.x;
+        let y = this.game.player.position.y;
+        let z = this.game.player.position.z;
+
+        if (args.length >= 3) {
+            const px = parseFloat(args[0]);
+            const py = parseFloat(args[1]);
+            const pz = parseFloat(args[2]);
+            if (!isNaN(px) && !isNaN(py) && !isNaN(pz)) {
+                x = px; y = py; z = pz;
+            }
+        }
+
+        this.game.player.spawnPoint = { x, y, z, isBed: false, dimension: this.game.currentDimension || 'overworld' };
+        this.addMessage(`Set spawn point to [X: ${x.toFixed(1)}, Y: ${y.toFixed(1)}, Z: ${z.toFixed(1)}]`, "#55ff55");
+        if (this.game.audio && this.game.audio.playPop) this.game.audio.playPop();
     }
 
     // --------------------------------------------
@@ -1101,6 +1132,7 @@ export class ChatSystem {
                 'kill': "/kill [@s | @e | mob_name] — Kill player or mobs",
                 'summon': "/summon <mob_type> [x y z] — Spawn any mob (zombie, creeper, enderman, blaze, ender_dragon, etc.)",
                 'spawn': "/spawn — Teleport to the world spawn location",
+                'spawnpoint': "/spawnpoint [x y z] — Set your respawn point at current location or coordinates",
                 'give': "/give <item> [count] — Add items/blocks to inventory (diamond, sword, pearl, etc.)",
                 'gamemode': "/gamemode <creative|survival> — Change game mode",
                 'time': "/time set <day|noon|night|midnight|ticks> — Set time of day",
@@ -1123,6 +1155,7 @@ export class ChatSystem {
         this.addMessage("/find <stronghold | biome <name> | spawn> — Locate structures or biomes", "#ffffff");
         this.addMessage("/kill [@s | @e | mob] — Kill self or mobs", "#ffffff");
         this.addMessage("/summon <mob> [x y z] — Summon any mob into the world", "#ffffff");
+        this.addMessage("/spawnpoint [x y z] — Set respawn point", "#ffffff");
         this.addMessage("/spawn — Teleport to world spawn", "#ffffff");
         this.addMessage("/give <item> [count] — Give any block or item", "#ffffff");
         this.addMessage("/gamemode <c|s> — Switch Creative / Survival", "#ffffff");
