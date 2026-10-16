@@ -1,10 +1,10 @@
 // ============================================
 // generation.js — Procedural Generation, Biomes, Dungeons
 // ============================================
-import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=104';
-import { BLOCKS } from './textures.js?v=104';
+import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=105';
+import { BLOCKS } from './textures.js?v=105';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=104';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=105';
 
 // Planet configurations
 export const BIOMES = {
@@ -444,6 +444,40 @@ export function matchBiomeSeed(seed) {
     }
 
     return null;
+}
+
+export function getBadlandsTerracotta(wx, y, wz, noise2D) {
+    const bandNoise = noise2D ? noise2D(wx * 0.02, wz * 0.02) * 1.5 : 0;
+    const layer = Math.floor(y + bandNoise) % 16;
+    switch (layer) {
+        case 0:
+        case 1:
+            return BLOCKS.ORANGE_TERRACOTTA || BLOCKS.TERRACOTTA;
+        case 2:
+            return BLOCKS.WHITE_TERRACOTTA || BLOCKS.TERRACOTTA;
+        case 3:
+        case 4:
+            return BLOCKS.TERRACOTTA;
+        case 5:
+            return BLOCKS.YELLOW_TERRACOTTA || BLOCKS.TERRACOTTA;
+        case 6:
+        case 7:
+            return BLOCKS.BROWN_TERRACOTTA || BLOCKS.TERRACOTTA;
+        case 8:
+            return BLOCKS.TERRACOTTA;
+        case 9:
+        case 10:
+            return BLOCKS.RED_TERRACOTTA || BLOCKS.TERRACOTTA;
+        case 11:
+            return BLOCKS.WHITE_TERRACOTTA || BLOCKS.TERRACOTTA;
+        case 12:
+            return BLOCKS.LIGHT_GRAY_TERRACOTTA || BLOCKS.TERRACOTTA;
+        case 13:
+        case 14:
+            return BLOCKS.ORANGE_TERRACOTTA || BLOCKS.TERRACOTTA;
+        default:
+            return BLOCKS.TERRACOTTA;
+    }
 }
 
 export class PlanetParams {
@@ -1042,10 +1076,11 @@ function generateOreVein(blocks, wx, y, wz, oreType, minSize, maxSize, rng) {
     let currentZ = wz;
     
     for (let i = 0; i < size; i++) {
-        // Place ore if it's within chunk bounds and is stone
+        // Place ore if it's within chunk bounds and is stone or terracotta
         if (currentX >= 0 && currentX < CHUNK_SIZE && currentY >= 0 && currentY < CHUNK_HEIGHT && currentZ >= 0 && currentZ < CHUNK_SIZE) {
             const idx = (currentY * CHUNK_SIZE * CHUNK_SIZE) + (currentZ * CHUNK_SIZE) + currentX;
-            if (blocks[idx] === BLOCKS.STONE) {
+            const b = blocks[idx];
+            if (b === BLOCKS.STONE || b === BLOCKS.TERRACOTTA || (b >= BLOCKS.ORANGE_TERRACOTTA && b <= BLOCKS.LIGHT_GRAY_TERRACOTTA)) {
                 blocks[idx] = oreType;
             }
         }
@@ -1431,8 +1466,9 @@ export function generateChunkTerrain(cx, cz, params) {
             const dither2 = params.noise2D(wx * 0.44 + 800, wz * 0.44 + 800) * 0.4;
             const surfaceNoise = dither1 + dither2;
 
-            // Organic topsoil depth (2 to 4 blocks deep, varies by slope and noise like Minecraft)
-            const soilLimit = 2 + Math.floor((params.noise2D(wx * 0.08 + 111, wz * 0.08 + 111) + 1.0) * 1.1);
+            // Organic topsoil depth (Badlands penetrates deep with multi-colored strata like Minecraft)
+            const isBadlandsBiome = (biome === BIOMES.BADLANDS || biome.name === 'Badlands');
+            const soilLimit = isBadlandsBiome ? 35 : (2 + Math.floor((params.noise2D(wx * 0.08 + 111, wz * 0.08 + 111) + 1.0) * 1.1));
 
             let depth = -1;
             let hitTrueSurface = false;
@@ -1467,7 +1503,8 @@ export function generateChunkTerrain(cx, cz, params) {
                         if (isColdBiome) {
                             type = BLOCKS.GRAVEL;
                         } else if (isSwamp) {
-                            type = BLOCKS.MUD; // Underwater beds in swamps are always rich mud
+                            // Authentic Minecraft Swamp waterbeds: rich mud with patches of clay in shallow waters
+                            type = (waterDepth <= 3 && surfaceNoise > 0.18) ? BLOCKS.CLAY : BLOCKS.MUD;
                         } else if (isActualCoastalBeach) {
                             // Shallow water shelf is authentic Minecraft sand with gravel transitions on coastal shores
                             type = (waterDepth <= 3 || surfaceNoise > -0.25) ? BLOCKS.SAND : BLOCKS.GRAVEL;
@@ -1494,8 +1531,9 @@ export function generateChunkTerrain(cx, cz, params) {
                     } else if (isSwamp) {
                         const isWaterEdge = (y <= params.seaLevel + 1);
                         type = (isSwampMud || (isWaterEdge && surfaceNoise > 0.15)) ? BLOCKS.MUD : BLOCKS.SWAMP_GRASS;
-                    } else if (biome === BIOMES.BADLANDS || biome.name === 'Badlands') {
-                        type = (weirdness < 0.44 && temp > 0.74) ? BLOCKS.RED_SAND : BLOCKS.TERRACOTTA;
+                    } else if (isBadlandsBiome) {
+                        // Authentic Minecraft Badlands: red sand in flat lower areas, colorful terracotta strata on mesas and cliffs
+                        type = (y <= params.seaLevel + 3 || surfaceNoise > 0.38) ? BLOCKS.RED_SAND : getBadlandsTerracotta(wx, y, wz, params.noise2D);
                     } else if (biome === BIOMES.ICE_SPIKES || biome.name === 'Ice Spikes') {
                         // Authentic Ice Spikes: packed ice and blue ice floor (no snow on bottom)
                         const iceRoll = colRng();
@@ -1528,8 +1566,9 @@ export function generateChunkTerrain(cx, cz, params) {
                         type = (colRng() < 0.65) ? BLOCKS.PACKED_ICE : BLOCKS.BLUE_ICE;
                     } else if (surfaceBlock === BLOCKS.SAND) {
                         type = (depth >= 3 && (temp > 0.75 || hasSandyBeach)) ? BLOCKS.SANDSTONE : BLOCKS.SAND;
-                    } else if (surfaceBlock === BLOCKS.RED_SAND || surfaceBlock === BLOCKS.TERRACOTTA) {
-                        type = BLOCKS.TERRACOTTA;
+                    } else if (isBadlandsBiome || surfaceBlock === BLOCKS.RED_SAND || surfaceBlock === BLOCKS.TERRACOTTA || (surfaceBlock >= BLOCKS.ORANGE_TERRACOTTA && surfaceBlock <= BLOCKS.LIGHT_GRAY_TERRACOTTA)) {
+                        // Multi-colored banded terracotta strata
+                        type = getBadlandsTerracotta(wx, y, wz, params.noise2D);
                     } else if (surfaceBlock === BLOCKS.MUD) {
                         type = (colRng() < 0.6) ? BLOCKS.MUD : BLOCKS.DIRT;
                     } else if (surfaceBlock === BLOCKS.GRAVEL) {
@@ -1627,13 +1666,22 @@ export function generateChunkTerrain(cx, cz, params) {
     // ============================================
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
-            const { surfaceY, colRng } = columns[x][z];
+            const { surfaceY, colRng, biome } = columns[x][z];
+            const isMountain = (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains');
+            const isBadlands = (biome === BIOMES.BADLANDS || biome.name === 'Badlands');
+
             for (let y = 1; y < surfaceY - 4; y++) {
                 const idx = blockIndex(x, y, z);
-                if (blocks[idx] === BLOCKS.STONE && colRng() < 0.02) {
+                const curBlock = blocks[idx];
+                const isSolidHost = (curBlock === BLOCKS.STONE || (isBadlands && (curBlock === BLOCKS.TERRACOTTA || (curBlock >= BLOCKS.ORANGE_TERRACOTTA && curBlock <= BLOCKS.LIGHT_GRAY_TERRACOTTA))));
+                if (isSolidHost && colRng() < 0.02) {
                     let oreType = BLOCKS.IRON_ORE;
                     let minS = 1, maxS = 6;
-                    if (y < 15 && colRng() < 0.15) { oreType = BLOCKS.DIAMOND_ORE; minS = 1; maxS = 4; }
+                    if (isMountain && y >= 55 && y <= 125 && colRng() < 0.28) {
+                        oreType = BLOCKS.EMERALD_ORE || BLOCKS.DIAMOND_ORE; minS = 1; maxS = 2; // Mountain exclusive Emerald Ore!
+                    } else if (isBadlands && y >= 32 && y <= 85 && colRng() < 0.30) {
+                        oreType = BLOCKS.GOLD_ORE; minS = 2; maxS = 6; // Badlands extra high altitude gold!
+                    } else if (y < 15 && colRng() < 0.15) { oreType = BLOCKS.DIAMOND_ORE; minS = 1; maxS = 4; }
                     else if (y < 22 && colRng() < 0.18) { oreType = BLOCKS.RUBY_ORE; minS = 1; maxS = 4; }
                     else if (y < 22 && colRng() < 0.18) { oreType = BLOCKS.SAPPHIRE_ORE; minS = 1; maxS = 4; }
                     else if (y < 20 && colRng() < 0.2) { oreType = BLOCKS.CRYSTAL_ORE; minS = 1; maxS = 3; }
@@ -1745,6 +1793,36 @@ export function generateChunkTerrain(cx, cz, params) {
                 iPos.y = col.surfaceY;
                 generateIglooStructure(blocks, cx, cz, iPos, params);
                 break;
+            }
+        }
+    }
+
+    // ============================================
+    // PASS 5.8: Rare Swamp Witch Huts
+    // ============================================
+    const witchHuts = getWitchHutPositions(params.seed);
+    for (const wPos of witchHuts) {
+        if (Math.abs(cx * CHUNK_SIZE + 8 - wPos.x) <= 16 && Math.abs(cz * CHUNK_SIZE + 8 - wPos.z) <= 16) {
+            const col = getColumnInfo(wPos.x, wPos.z, params);
+            if (col.biome === BIOMES.SWAMP || col.biome.name === 'Swamp') {
+                wPos.y = Math.max(params.seaLevel, col.surfaceY);
+                generateWitchHutStructure(blocks, cx, cz, wPos, params);
+                break;
+            }
+        }
+    }
+
+    // ============================================
+    // PASS 5.9: Rare Desert Wells
+    // ============================================
+    const wellRng = seededRandom(params.seed + cx * 65537 + cz * 49157);
+    if (wellRng() < 0.035) {
+        const midX = 8, midZ = 8;
+        const col = columns[midX][midZ];
+        if (col.biome === BIOMES.DESERT || col.biome.name === 'Desert') {
+            const sY = getTopGround(midX, midZ);
+            if (sY >= params.seaLevel + 1 && sY < CHUNK_HEIGHT - 8) {
+                generateDesertWell(blocks, midX, sY, midZ, wellRng);
             }
         }
     }
@@ -2119,7 +2197,25 @@ export function generateChunkTerrain(cx, cz, params) {
                         else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                     }
                 } else if (biome.jungleFlora || biome === BIOMES.JUNGLE || biome.name === 'Jungle') {
-                    if (fr < 0.32) {
+                    if (r < 0.016 && isSoil) {
+                        // Wild melon patch (rare clustering like Minecraft)
+                        const melonCount = 2 + Math.floor(floraRng() * 4);
+                        for (let mi = 0; mi < melonCount; mi++) {
+                            const mdx = Math.floor((floraRng() - 0.5) * 5);
+                            const mdz = Math.floor((floraRng() - 0.5) * 5);
+                            const mx = tx + mdx;
+                            const mz = tz + mdz;
+                            if (mx >= 0 && mx < CHUNK_SIZE && mz >= 0 && mz < CHUNK_SIZE) {
+                                let mGroundY = getTopGround(mx, mz);
+                                if (mGroundY > 0 && mGroundY < CHUNK_HEIGHT - 2) {
+                                    const gBlock = blocks[(mGroundY * CHUNK_SIZE * CHUNK_SIZE) + (mz * CHUNK_SIZE) + mx];
+                                    if (gBlock === BLOCKS.GRASS || gBlock === BLOCKS.DIRT) {
+                                        safeSetBlock(blocks, mx, mGroundY + 1, mz, BLOCKS.MELON, true);
+                                    }
+                                }
+                            }
+                        }
+                    } else if (fr < 0.32) {
                         const jungleRoll = floraRng();
                         if (jungleRoll < 0.65) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                         else {
@@ -2128,12 +2224,12 @@ export function generateChunkTerrain(cx, cz, params) {
                         }
                     }
                 } else if (biome.swampFlora || biome === BIOMES.SWAMP || biome.name === 'Swamp') {
-                    if (fr < 0.12) {
+                    if (fr < 0.16) {
                         const swRoll = floraRng();
-                        if (swRoll < 0.82) {
+                        if (swRoll < 0.65) {
                             safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                        } else if (swRoll < 0.92) {
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.BLUE_FLOWER, true);
+                        } else if (swRoll < 0.88) {
+                            safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.BLUE_FLOWER, true); // Authentic Swamp Blue Orchids
                         } else {
                             const swShroom = floraRng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
                             safeSetBlock(blocks, tx, surfaceY + 1, tz, swShroom, true);
@@ -2718,14 +2814,25 @@ function generateCherryTree(blocks, x, y, z, rng) {
 
 function generateJungleTree(blocks, x, y, z, rng) {
     const isMega = rng() < 0.35;
+    const logType = BLOCKS.JUNGLE_LOG || BLOCKS.WOOD;
+    const leafType = BLOCKS.JUNGLE_LEAVES || BLOCKS.LEAVES;
+
     if (isMega) {
-        const height = 12 + Math.floor(rng() * 8);
+        const height = 14 + Math.floor(rng() * 10);
         for (let i = -1; i < height; i++) {
             const onlyAir = i < 0;
-            safeSetBlock(blocks, x, y + i, z, BLOCKS.WOOD, onlyAir, 0);
-            safeSetBlock(blocks, x + 1, y + i, z, BLOCKS.WOOD, onlyAir, 0);
-            safeSetBlock(blocks, x, y + i, z + 1, BLOCKS.WOOD, onlyAir, 0);
-            safeSetBlock(blocks, x + 1, y + i, z + 1, BLOCKS.WOOD, onlyAir, 0);
+            safeSetBlock(blocks, x, y + i, z, logType, onlyAir, 0);
+            safeSetBlock(blocks, x + 1, y + i, z, logType, onlyAir, 0);
+            safeSetBlock(blocks, x, y + i, z + 1, logType, onlyAir, 0);
+            safeSetBlock(blocks, x + 1, y + i, z + 1, logType, onlyAir, 0);
+
+            // Hanging vines draped along the massive 2x2 trunk
+            if (i >= 0 && i < height - 2 && rng() < 0.45) {
+                if (rng() < 0.5) safeSetBlock(blocks, x - 1, y + i, z, BLOCKS.VINES, true);
+                if (rng() < 0.5) safeSetBlock(blocks, x + 2, y + i, z, BLOCKS.VINES, true);
+                if (rng() < 0.5) safeSetBlock(blocks, x, y + i, z - 1, BLOCKS.VINES, true);
+                if (rng() < 0.5) safeSetBlock(blocks, x, y + i, z + 2, BLOCKS.VINES, true);
+            }
         }
         const topY = y + height;
         for (let dy = -3; dy <= 1; dy++) {
@@ -2734,8 +2841,8 @@ function generateJungleTree(blocks, x, y, z, rng) {
                 for (let dz = -rad; dz <= rad + 1; dz++) {
                     const distSq = (dx - 0.5) * (dx - 0.5) + (dz - 0.5) * (dz - 0.5);
                     if (distSq > (rad + 0.8) * (rad + 0.8)) continue;
-                    safeSetBlock(blocks, x + dx, topY + dy, z + dz, BLOCKS.LEAVES, true);
-                    if (dy <= -1 && distSq > rad * rad && rng() < 0.3) {
+                    safeSetBlock(blocks, x + dx, topY + dy, z + dz, leafType, true);
+                    if (dy <= -1 && distSq > rad * rad && rng() < 0.4) {
                         const vLen = 2 + Math.floor(rng() * 5);
                         for (let v = 1; v <= vLen; v++) {
                             safeSetBlock(blocks, x + dx, topY + dy - v, z + dz, BLOCKS.VINES, true);
@@ -2745,11 +2852,26 @@ function generateJungleTree(blocks, x, y, z, rng) {
             }
         }
     } else {
-        const height = 6 + Math.floor(rng() * 4);
+        const isBush = rng() < 0.30;
+        if (isBush) {
+            // Authentic Minecraft Jungle Bush: single log core with small round leaf canopy
+            safeSetBlock(blocks, x, y, z, logType, false, 0);
+            safeSetBlock(blocks, x, y + 1, z, leafType, true);
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dz = -1; dz <= 1; dz++) {
+                    safeSetBlock(blocks, x + dx, y, z + dz, leafType, true);
+                }
+            }
+            return;
+        }
+
+        const height = 6 + Math.floor(rng() * 5);
         for (let i = 0; i < height; i++) {
-            safeSetBlock(blocks, x, y + i, z, BLOCKS.WOOD, false, 0);
+            safeSetBlock(blocks, x, y + i, z, logType, false, 0);
             if (rng() < 0.4) safeSetBlock(blocks, x + 1, y + i, z, BLOCKS.VINES, true);
             if (rng() < 0.4) safeSetBlock(blocks, x - 1, y + i, z, BLOCKS.VINES, true);
+            if (rng() < 0.4) safeSetBlock(blocks, x, y + i, z + 1, BLOCKS.VINES, true);
+            if (rng() < 0.4) safeSetBlock(blocks, x, y + i, z - 1, BLOCKS.VINES, true);
         }
         const topY = y + height;
         for (let dy = -2; dy <= 1; dy++) {
@@ -2757,7 +2879,7 @@ function generateJungleTree(blocks, x, y, z, rng) {
             for (let dx = -rad; dx <= rad; dx++) {
                 for (let dz = -rad; dz <= rad; dz++) {
                     if (Math.abs(dx) === rad && Math.abs(dz) === rad && rng() < 0.5) continue;
-                    safeSetBlock(blocks, x + dx, topY + dy, z + dz, BLOCKS.LEAVES, true);
+                    safeSetBlock(blocks, x + dx, topY + dy, z + dz, leafType, true);
                 }
             }
         }
@@ -4060,11 +4182,210 @@ export function generateIglooStructure(blocks, cx, cz, iPos, params) {
     }
 }
 
+export function getWitchHutPositions(seed = 12345) {
+    const s = Math.abs(typeof seed === 'string' ? hashSeed(seed) : seed) || 12345;
+    const huts = [];
+    for (let rx = -5; rx <= 5; rx++) {
+        for (let rz = -5; rz <= 5; rz++) {
+            const rRng = seededRandom(s + rx * 73619283 ^ rz * 18273645);
+            const wx = rx * 340 + Math.floor((rRng() - 0.5) * 180);
+            const wz = rz * 340 + Math.floor((rRng() - 0.5) * 180);
+            huts.push({ x: wx, y: 64, z: wz });
+        }
+    }
+    return huts;
+}
+
+export function getClosestWitchHutPosition(px, pz, seed = 12345) {
+    const list = getWitchHutPositions(seed);
+    if (!list.length) return null;
+    let best = list[0];
+    let bestDist = Infinity;
+    for (const h of list) {
+        const dx = h.x - px;
+        const dz = h.z - pz;
+        const d = dx * dx + dz * dz;
+        if (d < bestDist) {
+            bestDist = d;
+            best = h;
+        }
+    }
+    return best;
+}
+
+export function generateWitchHutStructure(blocks, cx, cz, hutPos, params) {
+    const wxBase = cx * CHUNK_SIZE;
+    const wzBase = cz * CHUNK_SIZE;
+
+    const floorY = (hutPos.y || params.seaLevel) + 2;
+    const lxCenter = hutPos.x - wxBase;
+    const lzCenter = hutPos.z - wzBase;
+
+    const logBlock = BLOCKS.DARK_OAK_WOOD || BLOCKS.WOOD;
+    const plankBlock = BLOCKS.PLANKS;
+    const fenceBlock = BLOCKS.OAK_FENCE || logBlock;
+
+    // 1. Stilts (4 corner pillars from floorY down into mud/waterbed)
+    const stilts = [
+        [-3, -3], [3, -3], [-3, 3], [3, 3]
+    ];
+    for (const [sx, sz] of stilts) {
+        const lx = lxCenter + sx;
+        const lz = lzCenter + sz;
+        if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+            for (let dy = 0; dy <= 8; dy++) {
+                const py = floorY - dy;
+                if (py <= 1) break;
+                const idx = (py * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+                const cur = blocks[idx];
+                blocks[idx] = logBlock;
+                if (cur === BLOCKS.STONE || cur === BLOCKS.DIRT || cur === BLOCKS.MUD) break;
+            }
+        }
+    }
+
+    // 2. Floor Platform (7x7 from -3 to 3)
+    for (let dx = -3; dx <= 3; dx++) {
+        for (let dz = -3; dz <= 3; dz++) {
+            const lx = lxCenter + dx;
+            const lz = lzCenter + dz;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                safeSetBlock(blocks, lx, floorY, lz, plankBlock);
+            }
+        }
+    }
+
+    // 3. Front Porch / Steps (dz = 4, dx = -1 to 1)
+    for (let dx = -1; dx <= 1; dx++) {
+        const lx = lxCenter + dx;
+        const lz = lzCenter + 4;
+        if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+            safeSetBlock(blocks, lx, floorY, lz, plankBlock);
+            safeSetBlock(blocks, lx, floorY - 1, lz, plankBlock);
+        }
+    }
+
+    // 4. Walls (dy = 1 to 3 above floorY)
+    for (let dy = 1; dy <= 3; dy++) {
+        for (let dx = -3; dx <= 3; dx++) {
+            for (let dz = -3; dz <= 3; dz++) {
+                const lx = lxCenter + dx;
+                const lz = lzCenter + dz;
+                if (lx < 0 || lx >= CHUNK_SIZE || lz < 0 || lz >= CHUNK_SIZE) continue;
+
+                const isCorner = Math.abs(dx) === 3 && Math.abs(dz) === 3;
+                const isWall = Math.abs(dx) === 3 || Math.abs(dz) === 3;
+
+                if (isCorner) {
+                    safeSetBlock(blocks, lx, floorY + dy, lz, logBlock);
+                } else if (isWall) {
+                    // Front door opening
+                    if (dz === 3 && dx === 0 && dy <= 2) {
+                        safeSetBlock(blocks, lx, floorY + dy, lz, BLOCKS.AIR);
+                    }
+                    // Windows (open with fence or air)
+                    else if (((Math.abs(dx) === 3 && dz === 0) || (Math.abs(dz) === 3 && dx === 0)) && dy === 2) {
+                        safeSetBlock(blocks, lx, floorY + dy, lz, fenceBlock);
+                    } else {
+                        safeSetBlock(blocks, lx, floorY + dy, lz, plankBlock);
+                    }
+                } else {
+                    safeSetBlock(blocks, lx, floorY + dy, lz, BLOCKS.AIR);
+                }
+            }
+        }
+    }
+
+    // 5. Stepped Overhanging Roof (dy = 4 to 6)
+    // dy = 4: 9x9 base
+    for (let dx = -4; dx <= 4; dx++) {
+        for (let dz = -4; dz <= 4; dz++) {
+            const lx = lxCenter + dx;
+            const lz = lzCenter + dz;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                safeSetBlock(blocks, lx, floorY + 4, lz, logBlock);
+            }
+        }
+    }
+    // dy = 5: 7x7 mid
+    for (let dx = -3; dx <= 3; dx++) {
+        for (let dz = -3; dz <= 3; dz++) {
+            const lx = lxCenter + dx;
+            const lz = lzCenter + dz;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                safeSetBlock(blocks, lx, floorY + 5, lz, plankBlock);
+            }
+        }
+    }
+    // dy = 6: 5x5 top
+    for (let dx = -2; dx <= 2; dx++) {
+        for (let dz = -2; dz <= 2; dz++) {
+            const lx = lxCenter + dx;
+            const lz = lzCenter + dz;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                safeSetBlock(blocks, lx, floorY + 6, lz, plankBlock);
+            }
+        }
+    }
+
+    // 6. Interior Furniture (Floor + 1)
+    const props = [
+        { dx: -2, dz: -2, dy: 1, b: BLOCKS.CRAFTING_TABLE },
+        { dx: 2, dz: -2, dy: 1, b: BLOCKS.CAULDRON },
+        { dx: -2, dz: 1, dy: 1, b: BLOCKS.RED_MUSHROOM },
+        { dx: 0, dz: -2, dy: 3, b: BLOCKS.TORCH }
+    ];
+    for (const p of props) {
+        const lx = lxCenter + p.dx;
+        const lz = lzCenter + p.dz;
+        if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+            safeSetBlock(blocks, lx, floorY + p.dy, lz, p.b);
+        }
+    }
+}
+
+export function generateDesertWell(blocks, x, y, z, rng) {
+    if (x - 2 < 0 || x + 2 >= CHUNK_SIZE || z - 2 < 0 || z + 2 >= CHUNK_SIZE) return;
+    if (y + 4 >= CHUNK_HEIGHT || y < 10) return;
+
+    // 1. Sandstone basin rim (5x5) at y
+    for (let dx = -2; dx <= 2; dx++) {
+        for (let dz = -2; dz <= 2; dz++) {
+            const isBorder = (Math.abs(dx) === 2 || Math.abs(dz) === 2);
+            if (isBorder) {
+                safeSetBlock(blocks, x + dx, y, z + dz, BLOCKS.SANDSTONE);
+            } else {
+                safeSetBlock(blocks, x + dx, y, z + dz, BLOCKS.WATER);
+                safeSetBlock(blocks, x + dx, y - 1, z + dz, BLOCKS.SANDSTONE);
+            }
+        }
+    }
+
+    // 2. Corner pillars (4 sandstone pillars, height 2)
+    const pillars = [
+        [-1, -1], [1, -1], [-1, 1], [1, 1]
+    ];
+    for (const [px, pz] of pillars) {
+        safeSetBlock(blocks, x + px, y + 1, z + pz, BLOCKS.SANDSTONE);
+        safeSetBlock(blocks, x + px, y + 2, z + pz, BLOCKS.SANDSTONE);
+    }
+
+    // 3. Sandstone roof slab cross atop pillars at y + 3
+    safeSetBlock(blocks, x, y + 3, z, BLOCKS.SMOOTH_SANDSTONE || BLOCKS.SANDSTONE);
+    for (const [px, pz] of pillars) {
+        safeSetBlock(blocks, x + px, y + 3, z + pz, BLOCKS.SANDSTONE);
+    }
+}
+
 if (typeof window !== 'undefined') {
     window.getVillagePositions = getVillagePositions;
     window.getClosestVillagePosition = getClosestVillagePosition;
     window.getIglooPositions = getIglooPositions;
     window.getClosestIglooPosition = getClosestIglooPosition;
+    window.getWitchHutPositions = getWitchHutPositions;
+    window.getClosestWitchHutPosition = getClosestWitchHutPosition;
+    window.generateWitchHutStructure = generateWitchHutStructure;
+    window.getBadlandsTerracotta = getBadlandsTerracotta;
     window.generateEndChunk = generateEndChunk;
 }
 
@@ -4833,4 +5154,5 @@ export function generateEndChunk(cx, cz, params) {
 
     return blocks;
 }
+
 

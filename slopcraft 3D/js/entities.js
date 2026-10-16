@@ -1,10 +1,10 @@
-// ============================================
+﻿// ============================================
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=104';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=104';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=104';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=105';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=105';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=105';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -2599,6 +2599,101 @@ export const MOB_TYPES = {
             }
         }
     },
+    WITCH: {
+        name: 'Witch', health: 26, damage: 5, speed: 1.1, hostile: true, color: 0x443152,
+        size: 0.85, xpDrop: 5, lootChance: 0.9,
+        buildMesh: () => {
+            const group = new THREE.Group();
+
+            const headGeo = new THREE.BoxGeometry(0.50, 0.625, 0.50);
+            const headMats = getMobBoxMaterials('WITCH', { u: 0, v: 0, w: 8, h: 10, d: 8 }, { part: 'head_front' });
+            const head = new THREE.Mesh(headGeo, headMats);
+            head.position.set(0, 1.625, 0);
+            head.name = 'head';
+            head.castShadow = true;
+
+            const noseGeo = new THREE.BoxGeometry(0.125, 0.25, 0.125);
+            const noseMats = getMobBoxMaterials('WITCH', { u: 24, v: 0, w: 2, h: 4, d: 2 }, { part: 'head_front' });
+            const nose = new THREE.Mesh(noseGeo, noseMats);
+            nose.position.set(0, -0.08, 0.3125);
+            nose.castShadow = true;
+            head.add(nose);
+
+            const brimGeo = new THREE.BoxGeometry(0.65, 0.08, 0.65);
+            const brimMats = getMobBoxMaterials('WITCH', { u: 0, v: 64, w: 10, h: 2, d: 10 }, { part: 'hat_brim' });
+            const brim = new THREE.Mesh(brimGeo, brimMats);
+            brim.position.set(0, 0.35, 0);
+            head.add(brim);
+
+            const midGeo = new THREE.BoxGeometry(0.44, 0.25, 0.44);
+            const midMats = getMobBoxMaterials('WITCH', { u: 0, v: 76, w: 7, h: 4, d: 7 }, { part: 'hat_mid' });
+            const mid = new THREE.Mesh(midGeo, midMats);
+            mid.position.set(0, 0.50, -0.03);
+            mid.rotation.x = -0.15;
+            head.add(mid);
+
+            const topGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+            const topMats = getMobBoxMaterials('WITCH', { u: 0, v: 87, w: 4, h: 4, d: 4 }, { part: 'hat_top' });
+            const hatTop = new THREE.Mesh(topGeo, topMats);
+            hatTop.position.set(0, 0.70, -0.08);
+            hatTop.rotation.x = -0.3;
+            head.add(hatTop);
+
+            group.add(head);
+
+            const bodyGeo = new THREE.BoxGeometry(0.50, 0.75, 0.375);
+            const bodyMats = getMobBoxMaterials('WITCH', { u: 16, v: 20, w: 8, h: 12, d: 6 }, { part: 'body' });
+            const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.position.set(0, 0.9375, 0);
+            body.name = 'body';
+            body.castShadow = true;
+            group.add(body);
+
+            const armsGeo = new THREE.BoxGeometry(0.50, 0.40, 0.25);
+            const armsMats = getMobBoxMaterials('WITCH', { u: 40, v: 38, w: 8, h: 8, d: 4 }, { part: 'arm' });
+            const arms = new THREE.Mesh(armsGeo, armsMats);
+            arms.position.set(0, 0.98, 0.22);
+            arms.rotation.x = -0.3;
+            arms.name = 'arms';
+            arms.castShadow = true;
+            group.add(arms);
+
+            const legGeo = new THREE.BoxGeometry(0.25, 0.65, 0.25);
+            const llMats = getMobBoxMaterials('WITCH', { u: 0, v: 22, w: 4, h: 12, d: 4 }, { part: 'leg' });
+            const ll = new THREE.Mesh(legGeo, llMats);
+            ll.position.set(-0.13, 0.325, 0);
+            ll.name = 'leftLeg';
+            ll.castShadow = true;
+            group.add(ll);
+
+            const rlMats = getMobBoxMaterials('WITCH', { u: 0, v: 22, w: 4, h: 12, d: 4 }, { part: 'leg' });
+            const rl = new THREE.Mesh(legGeo, rlMats);
+            rl.position.set(0.13, 0.325, 0);
+            rl.name = 'rightLeg';
+            rl.castShadow = true;
+            group.add(rl);
+
+            return group;
+        },
+        animate: (mesh, dt, age, isMoving) => {
+            const head = mesh.getObjectByName('head');
+            const ll = mesh.getObjectByName('leftLeg');
+            const rl = mesh.getObjectByName('rightLeg');
+
+            if (head) {
+                head.rotation.y = Math.sin(age * 2.0) * 0.12;
+            }
+
+            if (isMoving) {
+                const swing = Math.sin(age * 4.5) * 0.4;
+                if (ll) ll.rotation.x = swing;
+                if (rl) rl.rotation.x = -swing;
+            } else {
+                if (ll) ll.rotation.x *= 0.85;
+                if (rl) rl.rotation.x *= 0.85;
+            }
+        }
+    },
     POLAR_BEAR: {
         name: 'Polar Bear', health: 30, damage: 6, speed: 2.2, hostile: false, color: 0xf5f5f0,
         size: 1.4, xpDrop: 5, lootChance: 0.8,
@@ -4149,7 +4244,12 @@ function pickRandomMobType(dimension = 'overworld', biome = 'plains', isDay = fa
     }
 
     if (biome === 'desert' && Math.random() < 0.5) return 'CAMEL';
-    if (biome === 'swamp' && Math.random() < 0.6) return Math.random() < 0.5 ? 'FROG' : 'SLIME';
+    if (biome === 'swamp') {
+        const swRoll = Math.random();
+        if (swRoll < 0.35) return 'WITCH';
+        if (swRoll < 0.70) return 'SLIME';
+        return 'FROG';
+    }
     if (biome === 'snow') {
         const coldRoll = Math.random();
         if (coldRoll < 0.35) return 'POLAR_BEAR';
@@ -4958,6 +5058,23 @@ export class EntityManager {
             }
         }
 
+        // Witch Hut inhabitant spawner (Witch inside swamp hut)
+        if (!this.spawnedWitchHuts) this.spawnedWitchHuts = new Set();
+        if (currentDimension === 'overworld' && typeof window.getClosestWitchHutPosition === 'function') {
+            const wSeed = (window.worldGenParams ? window.worldGenParams.seed : 12345);
+            const wPos = window.getClosestWitchHutPosition(playerPos.x, playerPos.z, wSeed);
+            if (wPos) {
+                const distW = Math.hypot(playerPos.x - wPos.x, playerPos.z - wPos.z);
+                const wKey = `${wPos.x}_${wPos.z}`;
+                if (distW < 36 && !this.spawnedWitchHuts.has(wKey)) {
+                    this.spawnedWitchHuts.add(wKey);
+                    const floorY = (wPos.y || 64) + 3;
+                    const witch = new Mob('WITCH', new THREE.Vector3(wPos.x, floorY, wPos.z));
+                    this.addMob(witch);
+                }
+            }
+        }
+
         // Mob Spawning with timer
         this.spawnTimer += dt;
         if (this.spawnTimer > 2.0 && this.mobs.length < 20) {
@@ -5082,9 +5199,21 @@ export class EntityManager {
             mob.update(dt, world, playerPos, isDay, currentDimension);
             
             // Mob deals damage to player
-            if (player && mob.alive && mob.didAttack && mob.position.distanceTo(playerPos) < 2.0) {
+            const maxReach = (mob.type === 'WITCH') ? 9.0 : 2.0;
+            if (player && mob.alive && mob.didAttack && mob.position.distanceTo(playerPos) < maxReach) {
                 player.takeDamage(mob.damage);
                 mob.didAttack = false;
+                if (mob.type === 'WITCH') {
+                    if (window.game && window.game.audio && window.game.audio.playPotionThrow) {
+                        window.game.audio.playPotionThrow(mob.position);
+                    }
+                    if (window.game && window.game.audio && window.game.audio.playPotionSplash) {
+                        setTimeout(() => window.game.audio.playPotionSplash(playerPos), 150);
+                    }
+                    if (window.game && window.game.particles) {
+                        window.game.particles.emit(playerPos, 'magic', 18, 0x800080);
+                    }
+                }
                 // Damage flash
                 const d = document.getElementById('damage-flash');
                 if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
@@ -5188,6 +5317,11 @@ export class EntityManager {
                     snowballItem.stackable = true;
                     snowballItem.maxStack = 16;
                     this.spawnItem(snowballItem, 2 + Math.floor(Math.random() * 5), mob.position.clone());
+                } else if (mob.type === 'WITCH') {
+                    const dRoll = Math.random();
+                    if (dRoll < 0.35) this.spawnItem(Item.materialItem('glowstone_dust', 'Glowstone Dust', 'Magical glowing dust.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                    else if (dRoll < 0.65) this.spawnItem(Item.materialItem('gunpowder', 'Gunpowder', 'Explosive powder.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                    else this.spawnItem(Item.materialItem('stick', 'Stick', 'Crafting component.'), 1 + Math.floor(Math.random() * 3), mob.position.clone());
                 } else if (['COD', 'SALMON', 'TROPICAL_FISH', 'PUFFERFISH'].includes(mob.type)) {
                     this.spawnItem(Item.foodItem('raw_fish', 10, 'Raw Fish', 'Heals some health.'), 1, mob.position.clone());
                 } else if (mob.type === 'TURTLE') {
@@ -5320,3 +5454,4 @@ export class EntityManager {
         return this.raycast(origin, direction, maxDist);
     }
 }
+

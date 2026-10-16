@@ -1,17 +1,17 @@
-// ============================================
+﻿// ============================================
 // main.js — Entry Point and Game Loop
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=104';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=104';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=104';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=104';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=104';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=104';
-import { AudioManager } from './audio.js?v=104';
-import { BiomeMap } from './map.js?v=104';
-import { DevMode } from './dev.js?v=104';
-import { ChatSystem } from './chat.js?v=104';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=105';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=105';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=105';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=105';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=105';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=105';
+import { AudioManager } from './audio.js?v=105';
+import { BiomeMap } from './map.js?v=105';
+import { DevMode } from './dev.js?v=105';
+import { ChatSystem } from './chat.js?v=105';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -4645,3 +4645,4 @@ const initGame = () => {
     }
 };
 initGame();
+

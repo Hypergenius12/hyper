@@ -1,9 +1,9 @@
-// ============================================
+﻿// ============================================
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=104';
-import { getBiomeParams } from './generation.js?v=104';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=105';
+import { getBiomeParams } from './generation.js?v=105';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -634,10 +634,21 @@ export class Chunk {
                         _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
                         _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
 
-                        _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO;
-                        _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO;
-                        _colors[colorCount++] = topAO; _colors[colorCount++] = topAO; _colors[colorCount++] = topAO;
-                        _colors[colorCount++] = topAO; _colors[colorCount++] = topAO; _colors[colorCount++] = topAO;
+                        let plantR = 1.0, plantG = 1.0, plantB = 1.0;
+                        if (blockType === BLOCKS.VINES) {
+                            const bInfo = getBiomeParams(wxBase + x, wzBase + z, planetParams);
+                            const fCol = (bInfo && bInfo.biome && bInfo.biome.foliageColor) ? bInfo.biome.foliageColor : [0.416, 0.439, 0.224];
+                            plantR = fCol[0]; plantG = fCol[1]; plantB = fCol[2];
+                        } else if (blockType === BLOCKS.TALL_GRASS || blockType === BLOCKS.FERN || blockType === BLOCKS.OASIS_FERN) {
+                            const bInfo = getBiomeParams(wxBase + x, wzBase + z, planetParams);
+                            const gCol = (bInfo && bInfo.biome && bInfo.biome.grassColor) ? bInfo.biome.grassColor : [0.475, 0.753, 0.353];
+                            plantR = gCol[0]; plantG = gCol[1]; plantB = gCol[2];
+                        }
+
+                        _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                        _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                        _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
+                        _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
 
                         // Diagonal 2
                         _positions[posCount++] = x; _positions[posCount++] = y; _positions[posCount++] = z + 1;
@@ -655,10 +666,10 @@ export class Chunk {
                         _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
                         _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
 
-                        _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO;
-                        _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO; _colors[colorCount++] = bottomAO;
-                        _colors[colorCount++] = topAO; _colors[colorCount++] = topAO; _colors[colorCount++] = topAO;
-                        _colors[colorCount++] = topAO; _colors[colorCount++] = topAO; _colors[colorCount++] = topAO;
+                        _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                        _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
+                        _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
+                        _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
 
                         if (blockType === BLOCKS.TORCH) {
                             _glowCrossIndices[glowCrossIndexCount++] = vertexCount; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 1; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 2;
@@ -2653,3 +2664,4 @@ export class World {
         return { position, velocity, grounded };
     }
 }
+

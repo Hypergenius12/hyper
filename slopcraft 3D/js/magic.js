@@ -1,8 +1,8 @@
-// ============================================
+﻿// ============================================
 // magic.js — Spells, Modifiers, Wands, Projectiles
 // ============================================
 import * as THREE from 'three';
-import { generateSpellTexture } from './textures.js?v=104';
+import { generateSpellTexture } from './textures.js?v=105';
 
 const _tempVecProj1 = new THREE.Vector3();
 const _tempVecProj2 = new THREE.Vector3();
@@ -440,3 +440,4 @@ export function generateRandomModifier() {
     const key = keys[Math.floor(Math.random() * keys.length)];
     return new Modifier(key);
 }
+

@@ -1,9 +1,9 @@
-// ============================================
+﻿// ============================================
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js?v=104';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=104';
+import { BLOCKS, generateItemTexture } from './textures.js?v=105';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=105';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -3827,3 +3827,4 @@ export class MeteorShowerSystem {
         }
     }
 }
+

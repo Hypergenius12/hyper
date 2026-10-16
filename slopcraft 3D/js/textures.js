@@ -1,8 +1,8 @@
-// ============================================
+﻿// ============================================
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=104';
+import { seededRandom } from './noise.js?v=105';
 
 // Block type IDs
 export const BLOCKS = {
@@ -321,11 +321,31 @@ export const BLOCKS = {
     CHORUS_FLOWER: 331,
     CHORUS_FLOWER_DEAD: 332,
     END_GATEWAY: 333,
-    SWEET_BERRY_BUSH: 334
+    SWEET_BERRY_BUSH: 334,
+    EMERALD_ORE: 335,
+    MELON: 336,
+    JUNGLE_LOG: 337,
+    JUNGLE_LEAVES: 338,
+    ORANGE_TERRACOTTA: 339,
+    YELLOW_TERRACOTTA: 340,
+    WHITE_TERRACOTTA: 341,
+    BROWN_TERRACOTTA: 342,
+    RED_TERRACOTTA: 343,
+    LIGHT_GRAY_TERRACOTTA: 344
 };
 
 // Block properties
 const BLOCK_PROPS = {
+    [BLOCKS.EMERALD_ORE]:           { name: 'Emerald Ore',           health: 8, transparent: false, emissive: 0.1, solid: true, drops: 'emerald' },
+    [BLOCKS.MELON]:                 { name: 'Melon',                 health: 4, transparent: false, emissive: 0, solid: true, drops: 'melon_slice' },
+    [BLOCKS.JUNGLE_LOG]:            { name: 'Jungle Log',            health: 6, transparent: false, emissive: 0, solid: true, drops: BLOCKS.JUNGLE_LOG, isLog: true, hasFacing: true },
+    [BLOCKS.JUNGLE_LEAVES]:         { name: 'Jungle Leaves',         health: 1, transparent: true, emissive: 0, solid: true, drops: null, isLeaves: true, flammable: true },
+    [BLOCKS.ORANGE_TERRACOTTA]:     { name: 'Orange Terracotta',     health: 8, transparent: false, emissive: 0, solid: true, drops: BLOCKS.ORANGE_TERRACOTTA },
+    [BLOCKS.YELLOW_TERRACOTTA]:     { name: 'Yellow Terracotta',     health: 8, transparent: false, emissive: 0, solid: true, drops: BLOCKS.YELLOW_TERRACOTTA },
+    [BLOCKS.WHITE_TERRACOTTA]:      { name: 'White Terracotta',      health: 8, transparent: false, emissive: 0, solid: true, drops: BLOCKS.WHITE_TERRACOTTA },
+    [BLOCKS.BROWN_TERRACOTTA]:      { name: 'Brown Terracotta',      health: 8, transparent: false, emissive: 0, solid: true, drops: BLOCKS.BROWN_TERRACOTTA },
+    [BLOCKS.RED_TERRACOTTA]:        { name: 'Red Terracotta',        health: 8, transparent: false, emissive: 0, solid: true, drops: BLOCKS.RED_TERRACOTTA },
+    [BLOCKS.LIGHT_GRAY_TERRACOTTA]: { name: 'Light Gray Terracotta', health: 8, transparent: false, emissive: 0, solid: true, drops: BLOCKS.LIGHT_GRAY_TERRACOTTA },
     [BLOCKS.END_PORTAL_FRAME_EYE]:  { name: 'End Portal Frame',      health: 20, transparent: true, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.END_PORTAL]:            { name: 'End Portal',            health: 0, transparent: true, emissive: 1.0, solid: false, drops: null, isEndPortal: true },
     [BLOCKS.END_STONE]:             { name: 'End Stone',             health: 15, transparent: false, emissive: 0, solid: true, drops: BLOCKS.END_STONE },
@@ -1570,23 +1590,24 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         case BLOCKS.VINES:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            // Grayscale vine so vertex foliage color tints authentically in any biome
             // Vine 1 (left)
-            ctx.fillStyle = '#2d6a25'; // Darker green
+            ctx.fillStyle = '#7a7a7a';
             ctx.fillRect(2, 0, 1, 4); ctx.fillRect(2, 4, 2, 1);
             ctx.fillRect(3, 5, 1, 3); ctx.fillRect(3, 8, 2, 1);
             ctx.fillRect(4, 9, 1, 4); ctx.fillRect(4, 13, 2, 1);
             ctx.fillRect(5, 14, 1, 2);
             // Vine 2 (middle)
-            ctx.fillStyle = '#3ca02d'; // Mid green
+            ctx.fillStyle = '#b5b5b5';
             ctx.fillRect(8, 0, 2, 2); ctx.fillRect(7, 2, 1, 3);
             ctx.fillRect(6, 5, 1, 2); ctx.fillRect(7, 7, 2, 2);
             ctx.fillRect(8, 9, 1, 3);
             // Vine 3 (right)
-            ctx.fillStyle = '#1f4c19'; // Very dark green
+            ctx.fillStyle = '#555555';
             ctx.fillRect(12, 0, 1, 6); ctx.fillRect(13, 6, 1, 2);
             ctx.fillRect(12, 8, 1, 3); ctx.fillRect(11, 11, 1, 4);
-            // Additional leaves/details
-            ctx.fillStyle = '#4cc736'; // Light green highlight
+            // Additional leaf highlights
+            ctx.fillStyle = '#e0e0e0';
             ctx.fillRect(1, 2, 1, 1); ctx.fillRect(4, 6, 1, 1);
             ctx.fillRect(9, 1, 1, 1); ctx.fillRect(5, 4, 1, 1);
             ctx.fillRect(14, 7, 1, 1); ctx.fillRect(10, 10, 1, 1);
@@ -1737,6 +1758,70 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             ctx.fillRect(10, 7, 1, 1);
             ctx.fillRect(6, 10, 1, 1);
             ctx.fillRect(9, 11, 1, 1);
+            break;
+        case BLOCKS.EMERALD_ORE:
+            fillBase(ctx, 120, 120, 120);
+            addNoise(ctx, rng, 20);
+            drawOreSpots(ctx, rng, '#17dd62', 5);
+            addPixels(ctx, rng, 'rgba(10,180,60,0.9)', 8);
+            addPixels(ctx, rng, 'rgba(120,255,160,0.8)', 4);
+            break;
+        case BLOCKS.MELON:
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 115, 155, 35);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#4f721d';
+                ctx.beginPath(); ctx.arc(8, 8, 5, 0, Math.PI * 2); ctx.stroke();
+            } else {
+                fillBase(ctx, 115, 155, 35);
+                addNoise(ctx, rng, 15);
+                ctx.fillStyle = '#4f721d';
+                for (let mx = 1; mx < TEX_SIZE; mx += 4) {
+                    ctx.fillRect(mx, 0, 2, TEX_SIZE);
+                }
+            }
+            break;
+        case BLOCKS.JUNGLE_LOG:
+            if (face === 'top' || face === 'bottom') {
+                fillBase(ctx, 150, 115, 75);
+                ctx.strokeStyle = '#8c603a';
+                ctx.beginPath(); ctx.arc(8, 8, 3, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(8, 8, 6, 0, Math.PI * 2); ctx.stroke();
+            } else {
+                fillBase(ctx, 90, 68, 42);
+                addNoise(ctx, rng, 20);
+                addStripes(ctx, rng, '#46321f', 'v', 4);
+            }
+            break;
+        case BLOCKS.JUNGLE_LEAVES:
+            fillBase(ctx, 48, 140, 24);
+            addNoise(ctx, rng, 25);
+            addPixels(ctx, rng, '#1e6810', 30);
+            addPixels(ctx, rng, '#66e838', 25);
+            break;
+        case BLOCKS.ORANGE_TERRACOTTA:
+            fillBase(ctx, 161, 83, 37);
+            addNoise(ctx, rng, 10);
+            break;
+        case BLOCKS.YELLOW_TERRACOTTA:
+            fillBase(ctx, 186, 133, 35);
+            addNoise(ctx, rng, 10);
+            break;
+        case BLOCKS.WHITE_TERRACOTTA:
+            fillBase(ctx, 209, 178, 161);
+            addNoise(ctx, rng, 10);
+            break;
+        case BLOCKS.BROWN_TERRACOTTA:
+            fillBase(ctx, 77, 51, 35);
+            addNoise(ctx, rng, 10);
+            break;
+        case BLOCKS.RED_TERRACOTTA:
+            fillBase(ctx, 142, 60, 46);
+            addNoise(ctx, rng, 10);
+            break;
+        case BLOCKS.LIGHT_GRAY_TERRACOTTA:
+            fillBase(ctx, 135, 107, 98);
+            addNoise(ctx, rng, 10);
             break;
         case BLOCKS.PLANKS:
             drawPlanks(ctx, rng, 160, 130, 75, 'rgba(90, 65, 30, 0.7)', 'rgba(120, 90, 50, 0.5)');
@@ -3756,7 +3841,17 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.CHORUS_FLOWER]: 'chorus_flower',
     [BLOCKS.CHORUS_FLOWER_DEAD]: 'chorus_flower_dead',
     [BLOCKS.END_GATEWAY]: 'end_portal',
-    [BLOCKS.SWEET_BERRY_BUSH]: 'sweet_berry_bush'
+    [BLOCKS.SWEET_BERRY_BUSH]: 'sweet_berry_bush',
+    [BLOCKS.EMERALD_ORE]: 'emerald_ore',
+    [BLOCKS.MELON]: { top: 'melon_top', side: 'melon_side', bottom: 'melon_top' },
+    [BLOCKS.JUNGLE_LOG]: { top: 'jungle_log_top', side: 'jungle_log', bottom: 'jungle_log_top' },
+    [BLOCKS.JUNGLE_LEAVES]: 'jungle_leaves',
+    [BLOCKS.ORANGE_TERRACOTTA]: 'orange_terracotta',
+    [BLOCKS.YELLOW_TERRACOTTA]: 'yellow_terracotta',
+    [BLOCKS.WHITE_TERRACOTTA]: 'white_terracotta',
+    [BLOCKS.BROWN_TERRACOTTA]: 'brown_terracotta',
+    [BLOCKS.RED_TERRACOTTA]: 'red_terracotta',
+    [BLOCKS.LIGHT_GRAY_TERRACOTTA]: 'light_gray_terracotta'
 };
 
 let _mcChestPromise = null;
@@ -4234,7 +4329,21 @@ const LOCAL_ASSET_MAP = {
     "sweet_berries": "assets/mc/item/sweet_berries.png",
     "item/sweet_berries": "assets/mc/item/sweet_berries.png",
     "snowball": "assets/mc/item/snowball.png",
-    "item/snowball": "assets/mc/item/snowball.png"
+    "item/snowball": "assets/mc/item/snowball.png",
+    "emerald_ore": "assets/mc/block/emerald_ore.png",
+    "melon_side": "assets/mc/block/melon_side.png",
+    "melon_top": "assets/mc/block/melon_top.png",
+    "jungle_log": "assets/mc/block/jungle_log.png",
+    "jungle_log_top": "assets/mc/block/jungle_log_top.png",
+    "jungle_leaves": "assets/mc/block/jungle_leaves.png",
+    "orange_terracotta": "assets/mc/block/orange_terracotta.png",
+    "yellow_terracotta": "assets/mc/block/yellow_terracotta.png",
+    "white_terracotta": "assets/mc/block/white_terracotta.png",
+    "brown_terracotta": "assets/mc/block/brown_terracotta.png",
+    "red_terracotta": "assets/mc/block/red_terracotta.png",
+    "light_gray_terracotta": "assets/mc/block/light_gray_terracotta.png",
+    "melon_slice": "assets/mc/item/melon_slice.png",
+    "item/melon_slice": "assets/mc/item/melon_slice.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -4388,11 +4497,19 @@ export async function createTextureAtlas(useMinecraft = true) {
                             if (isWater) {
                                 tint = (bt === BLOCKS.SWAMP_WATER) ? '#617B59' : '#3F76E4';
                             } else if (texName === 'grass_block_top') {
-                                tint = '#79c05a'; // Standard vibrant Minecraft plains grass green
+                                if (bt === BLOCKS.SWAMP_GRASS) {
+                                    tint = '#6a7039'; // Authentic dark murky swamp grass
+                                } else if (bt === BLOCKS.SAVANNA_GRASS) {
+                                    tint = '#bfb755'; // Authentic dry golden savanna grass
+                                } else {
+                                    tint = '#79c05a'; // Standard vibrant Minecraft plains grass green
+                                }
                             } else if (texName.includes('leaves')) {
-                                tint = (bt === BLOCKS.CHERRY_LEAVES) ? '#ffffff' : (bt === BLOCKS.PINE_LEAVES ? '#4f855f' : '#59ae30');
+                                tint = (bt === BLOCKS.CHERRY_LEAVES) ? '#ffffff' : ((bt === BLOCKS.PINE_LEAVES) ? '#4f855f' : ((bt === BLOCKS.JUNGLE_LEAVES) ? '#30bb0b' : '#59ae30'));
                             } else if (texName === 'lily_pad') {
                                 tint = '#208030';
+                            } else if (texName === 'vine') {
+                                tint = '#ffffff'; // Kept grayscale in atlas so vertex colors dynamically apply authentic biome foliage color!
                             } else {
                                 tint = '#79c05a';
                             }
@@ -5044,6 +5161,8 @@ const MC_ITEM_MAP = {
     'chorus_fruit': 'chorus_fruit',
     'sweet_berries': 'sweet_berries',
     'snowball': 'snowball',
+    'melon_slice': 'melon_slice',
+    'emerald': 'emerald',
     'helmet_iron': 'iron_helmet',
     'chest_iron': 'iron_chestplate',
     'legs_iron': 'iron_leggings',
@@ -6470,6 +6589,25 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         ctx.fillStyle = '#a8bccc';
         ctx.arc(cx3 + 2, cy3 + 2, 2, 0, Math.PI * 2);
         return canvas;
+    } else if (itemSubtype === 'melon_slice') {
+        ctx.fillStyle = '#4c8c20'; // Green outer rind
+        ctx.beginPath(); ctx.arc(8, 8, 7, 0.2, Math.PI - 0.2); ctx.fill();
+        ctx.fillStyle = '#d2e89b'; // Pale inner rind
+        ctx.beginPath(); ctx.arc(8, 8, 6, 0.2, Math.PI - 0.2); ctx.fill();
+        ctx.fillStyle = '#c72424'; // Red fruit
+        ctx.beginPath(); ctx.arc(8, 8, 5, 0.2, Math.PI - 0.2); ctx.fill();
+        ctx.fillStyle = '#222222'; // Black seeds
+        ctx.fillRect(6, 9, 1, 1); ctx.fillRect(9, 9, 1, 1); ctx.fillRect(7, 10, 1, 1);
+        return canvas;
+    } else if (itemSubtype === 'emerald') {
+        const cx4 = TEX_SIZE / 2, cy4 = TEX_SIZE / 2;
+        ctx.fillStyle = '#17dd62';
+        ctx.beginPath(); ctx.ellipse(cx4, cy4, 4, 6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#6ef59c';
+        ctx.beginPath(); ctx.ellipse(cx4 - 1, cy4 - 1, 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0b8235';
+        ctx.beginPath(); ctx.ellipse(cx4 + 1, cy4 + 1, 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+        return canvas;
     }
 
     if (shape.length > 0) {
@@ -6576,6 +6714,10 @@ const MC_MOB_SKIN_CONFIG = {
     VILLAGER: { path: 'villager/villager.png',
         head_front: [8,8,8,10], head_back: [24,8,8,10], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,10],
         body: [16,20,8,18], leg: [0,22,4,12], arm: [44,22,16,8] },
+    WITCH: { path: 'witch/witch.png',
+        head_front: [8,8,8,10], head_back: [24,8,8,10], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,10],
+        body: [16,20,8,18], leg: [0,22,4,12], arm: [44,22,16,8],
+        hat_brim: [0,64,10,2], hat_mid: [0,76,7,4], hat_top: [0,87,4,4] },
     POLAR_BEAR: { path: 'polar_bear/polarbear.png',
         head_front: [9,9,7,7], head_back: [25,9,7,7], head_top: [9,0,7,9], head_bottom: [16,0,7,9], head_side: [0,9,9,7],
         body: [10,29,12,10], leg: [50,30,4,10], snout: [3,47,5,3] },
@@ -7103,6 +7245,21 @@ export function generateMobTexture(mobType, part = 'body', onLoaded = null) {
         } else {
             rect(0, 7, 16, 2, 'rgba(0,0,0,0.2)');
             rect(0, 12, 16, 4, 'rgba(255,255,255,0.25)');
+        }
+    }
+
+    // --- WITCH ---
+    else if (mobType === 'WITCH') {
+        fill('#443152'); noise(68, 49, 82, 12, 30); // Dark purple robe
+        if (part === 'head_front') {
+            fill('#bda38a'); // pale villager skin
+            rect(3, 4, 3, 3, '#4a154b'); // purple eye
+            rect(10, 4, 3, 3, '#4a154b');
+            rect(6, 7, 4, 6, '#9c8168'); // nose
+            dot(6, 10, '#226b2b'); // iconic green wart!
+        } else if (part === 'hat_brim' || part === 'hat_mid' || part === 'hat_top') {
+            fill('#212121'); noise(33, 33, 33, 8, 25); // black witch hat
+            if (part === 'hat_brim') rect(0, 14, 16, 2, '#2f7535'); // green hat band
         }
     }
 
@@ -8172,5 +8329,6 @@ export function createExtrudedItemMesh(sourceCanvas, scale = 0.5, thickness = 0.
     const mesh = new THREE.Mesh(geometry, material);
     return mesh;
 }
+
 
 

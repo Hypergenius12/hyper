@@ -1,8 +1,8 @@
-// ============================================
+﻿// ============================================
 // audio.js — SFX Synthesizer using Web Audio API
 // ============================================
 
-import { BLOCKS, getBlockProperties } from './textures.js?v=104';
+import { BLOCKS, getBlockProperties } from './textures.js?v=105';
 
 export class AudioManager {
     constructor() {
@@ -543,4 +543,28 @@ export class AudioManager {
         };
         this.playMC('entity/snowball/throw', 0.7, position).then(s => { if (!s) doFallback(); });
     }
+
+    playWitchCelebrate(position = null) {
+        const doFallback = () => {
+            this.playTone(320, 'triangle', 0.15, 0.5, 60, position);
+            setTimeout(() => this.playTone(480, 'triangle', 0.25, 0.5, -80, position), 120);
+        };
+        this.playMC('entity/witch/celebrate', 0.85, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playPotionThrow(position = null) {
+        const doFallback = () => {
+            this.playTone(380, 'sine', 0.1, 0.35, 120, position);
+        };
+        this.playMC('entity/witch/throw', 0.75, position).then(s => { if (!s) doFallback(); });
+    }
+
+    playPotionSplash(position = null) {
+        const doFallback = () => {
+            this.playNoise(0.2, 0.5, position);
+            this.playTone(600, 'sine', 0.15, 0.4, -200, position);
+        };
+        this.playMC('entity/potion/splash', 0.85, position).then(s => { if (!s) doFallback(); });
+    }
 }
+
