@@ -2627,7 +2627,7 @@ export class World {
         return { hit: false };
     }
 
-    collide(position, velocity, entityWidth = 0.6, entityHeight = 1.8, isSneaking = false) {
+    collide(position, velocity, entityWidth = 0.6, entityHeight = 1.8, isSneaking = false, stepHeight = 0.55) {
         // AABB vs Voxel Grid collision
         const hw = entityWidth / 2;
 
@@ -2814,23 +2814,101 @@ export class World {
             }
         }
 
-        // X-axis
+        // Top surface evaluation helper for obstacle stepping
+        const getBlockTopY = (x, y, z, px, pz) => {
+            const block = this.getBlock(x, y, z);
+            const bProps = getBlockProperties(block);
+            if (!bProps || !bProps.solid) return null;
+            if ((block === window.BLOCKS.DUNGEON_DOOR || block === window.BLOCKS.DUNGEON_DOOR_TOP) && this.isDoorOpen && this.isDoorOpen(x, y, z)) return null;
+            if (bProps.isFenceGate && this.isGateOpen && this.isGateOpen(x, y, z)) return null;
+
+            let surfH = 1.0;
+            if (bProps.isFarmland) surfH = 0.9375;
+            else if (bProps.isSlab) surfH = 0.5;
+            else if (bProps.isStair) {
+                const sFacing = (this.getData ? this.getData(x, y, z) : 0) & 3;
+                let isHigh = false;
+                const fracX = px - Math.floor(px);
+                const fracZ = pz - Math.floor(pz);
+                if (sFacing === 0 && fracZ < 0.5) isHigh = true;
+                else if (sFacing === 1 && fracX >= 0.5) isHigh = true;
+                else if (sFacing === 2 && fracZ >= 0.5) isHigh = true;
+                else if (sFacing === 3 && fracX < 0.5) isHigh = true;
+                surfH = isHigh ? 1.0 : 0.5;
+            } else if (bProps.isBed || bProps.isBedHead || bProps.isStonecutter || block === window.BLOCKS.STONECUTTER) {
+                surfH = 0.5625;
+            } else if (block === window.BLOCKS.PORTAL_FRAME || block === window.BLOCKS.END_PORTAL_FRAME_EYE) {
+                surfH = 0.8125;
+            } else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) {
+                surfH = 1.5;
+            }
+            return y + surfH;
+        };
+
+        const findFootprintSurfaceY = (px, py, pz, maxStep) => {
+            const minX = Math.floor(px - hw + 0.01);
+            const maxX = Math.floor(px + hw - 0.01);
+            const minZ = Math.floor(pz - hw + 0.01);
+            const maxZ = Math.floor(pz + hw - 0.01);
+            const minY = Math.floor(py - 0.2);
+            const maxY = Math.floor(py + maxStep);
+            let highest = null;
+            for (let y = maxY; y >= minY; y--) {
+                for (let x = minX; x <= maxX; x++) {
+                    for (let z = minZ; z <= maxZ; z++) {
+                        const topY = getBlockTopY(x, y, z, px, pz);
+                        if (topY !== null && topY <= py + maxStep + 0.01) {
+                            if (highest === null || topY > highest) {
+                                highest = topY;
+                            }
+                        }
+                    }
+                }
+            }
+            return highest;
+        };
+
+        const canStep = (grounded || checkCollision(position.x, position.y - 0.08, position.z)) && (stepHeight > 0);
+
+        // X-axis: collision and half-block auto-walk step-up
         if (checkCollision(targetX, targetY, position.z)) {
-            // Auto step-up for slabs and stairs (0.6 blocks like Minecraft)
-            if (grounded && !checkCollision(targetX, targetY + 0.6, position.z)) {
-                targetY += 0.5;
-            } else {
+            let stepped = false;
+            if (canStep) {
+                const stepSurf = findFootprintSurfaceY(targetX, targetY, position.z, stepHeight);
+                if (stepSurf !== null) {
+                    const diff = stepSurf - targetY;
+                    if (diff > 0.001 && diff <= stepHeight + 0.01) {
+                        if (!checkCollision(position.x, stepSurf, position.z) && !checkCollision(targetX, stepSurf, position.z)) {
+                            targetY = stepSurf;
+                            grounded = true;
+                            stepped = true;
+                        }
+                    }
+                }
+            }
+            if (!stepped) {
                 velocity.x = 0;
                 targetX = position.x;
             }
         }
 
-        // Z-axis
+        // Z-axis: collision and half-block auto-walk step-up
         if (checkCollision(targetX, targetY, targetZ)) {
-            // Auto step-up for slabs and stairs (0.6 blocks like Minecraft)
-            if (grounded && !checkCollision(targetX, targetY + 0.6, targetZ)) {
-                targetY += 0.5;
-            } else {
+            let stepped = false;
+            if (canStep) {
+                const stepSurf = findFootprintSurfaceY(targetX, targetY, targetZ, stepHeight);
+                if (stepSurf !== null) {
+                    const diff = stepSurf - targetY;
+                    if (diff > 0.001 && diff <= stepHeight + 0.01) {
+                        if (!checkCollision(targetX, stepSurf, position.z) && !checkCollision(targetX, stepSurf, targetZ)) {
+                            targetY = stepSurf;
+                            grounded = true;
+                            stepped = true;
+                        }
+                    }
+                }
+            }
+            if (!stepped) {
                 velocity.z = 0;
                 targetZ = position.z;
             }

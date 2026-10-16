@@ -263,8 +263,9 @@ export class LightingSystem {
             }
         }
 
+        const bMult = (this.brightnessMultiplier !== undefined) ? this.brightnessMultiplier : 1.0;
         this.ambientLight.color.copy(state.amb);
-        this.ambientLight.intensity = state.ambIntensity;
+        this.ambientLight.intensity = state.ambIntensity * bMult;
 
         this.sunLight.intensity = state.sun;
         this.moonLight.intensity = state.moon;

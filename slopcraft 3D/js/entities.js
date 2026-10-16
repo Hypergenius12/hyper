@@ -164,6 +164,7 @@ export class Player {
         this.fallDistance = 0;
         this.spawnGraceTimer = 5.0; // 5 seconds of spawn invulnerability & no fall damage
         this.spawnPoint = null;
+        this.stepHeight = 0.55; // Auto walk over any height difference of half a block or less (slabs, stairs, farmland)
     }
 
     eatFood(subtype, itemData = {}) {
@@ -439,7 +440,7 @@ export class Player {
         // Collision
         const wasGrounded = this.grounded;
         const velStep = this.velocity.clone().multiplyScalar(dt);
-        const colResult = world.collide(this.position, velStep, this.width, this.height, keys.crouch && this.grounded);
+        const colResult = world.collide(this.position, velStep, this.width, this.height, keys.crouch && this.grounded, (this.stepHeight !== undefined ? this.stepHeight : 0.55));
         
         // Update state based on collision
         this.position.copy(colResult.position);

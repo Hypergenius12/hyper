@@ -1,17 +1,19 @@
 // ============================================
-// main.js — Entry Point and Game Loop
+// ============================================
+// main.js - Entry Point and Game Loop
+// ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=111';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=111';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=111';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=111';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=111';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=111';
-import { AudioManager } from './audio.js?v=111';
-import { BiomeMap } from './map.js?v=111';
-import { DevMode } from './dev.js?v=111';
-import { ChatSystem } from './chat.js?v=111';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=113';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=113';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=113';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=113';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=113';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=113';
+import { AudioManager } from './audio.js?v=113';
+import { BiomeMap } from './map.js?v=113';
+import { DevMode } from './dev.js?v=113';
+import { ChatSystem } from './chat.js?v=113';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -316,6 +318,26 @@ class Game {
         this.thrownPearls = [];
         this.beds = new Map();
         this.isPaused = false;
+
+        // Settings / Options defaults and saved state
+        const storedRenderDist = localStorage.getItem('slopcraft_render_dist');
+        this.renderDistance = storedRenderDist ? parseInt(storedRenderDist) : 8;
+
+        const storedFov = localStorage.getItem('slopcraft_fov');
+        this.fov = storedFov ? parseInt(storedFov) : 75;
+
+        const storedSens = localStorage.getItem('slopcraft_sensitivity');
+        this.sensitivityVal = storedSens ? parseInt(storedSens) : 100;
+        this.mouseSensitivity = (this.sensitivityVal / 100) * 0.002;
+
+        const storedVol = localStorage.getItem('slopcraft_volume');
+        this.masterVolume = (storedVol !== null) ? parseInt(storedVol) / 100 : 1.0;
+
+        const storedBright = localStorage.getItem('slopcraft_brightness');
+        this.brightnessVal = (storedBright !== null) ? parseInt(storedBright) : 100;
+
+        this.autoJumpEnabled = localStorage.getItem('slopcraft_autojump') !== 'false';
+        this.viewBobbingEnabled = localStorage.getItem('slopcraft_viewbobbing') !== 'false';
         
         this._boundLoop = this.loop.bind(this);
 
@@ -332,6 +354,10 @@ class Game {
 
         const canvas = document.getElementById('game-canvas');
         this.engine.init(canvas);
+        if (this.fov) {
+            this.engine.camera.fov = this.fov;
+            this.engine.camera.updateProjectionMatrix();
+        }
 
         // Setup Post-processing
         this.renderPass = new RenderPass(this.engine.scene, this.engine.camera);
@@ -385,6 +411,9 @@ class Game {
         this.world.dimension = 'overworld';
         this.world.planetParams = this.planetParams;
         this.world.setCamera(this.engine.camera);
+        if (this.renderDistance) {
+            this.world.setRenderDistance(this.renderDistance);
+        }
         this.engine.matEndPortal = this.world.matEndPortal;
 
         // Chest Management
@@ -740,6 +769,17 @@ class Game {
         this.player.velocity.set(0, 0, 0);
         this.player.spawnGraceTimer = 5.0;
 
+        // Apply initial options state to systems and player
+        if (this.lighting && this.brightnessVal !== undefined) {
+            this.lighting.brightnessMultiplier = 0.75 + (this.brightnessVal / 100) * 0.5;
+        }
+        if (this.audio && this.masterVolume !== undefined) {
+            this.audio.setMasterVolume(this.masterVolume);
+        }
+        if (this.player) {
+            this.player.stepHeight = (this.autoJumpEnabled !== false) ? 0.55 : 0.0;
+        }
+
         this.entityManager = new EntityManager(this.engine.scene, this.atlas);
         this.projectileManager = new ProjectileManager(this.engine.scene);
         this.cloudSystem = new CloudSystem(this.engine.scene);
@@ -916,28 +956,7 @@ class Game {
             };
         }
 
-        const fovSlider = document.getElementById('fov-slider');
-        const fovVal = document.getElementById('fov-val');
-        if (fovSlider) {
-            fovSlider.addEventListener('input', (e) => {
-                const val = parseInt(e.target.value);
-                if(fovVal) fovVal.textContent = val;
-                this.engine.camera.fov = val;
-                this.engine.camera.updateProjectionMatrix();
-            });
-        }
-
-
-        // Settings Handlers
-        const slider = document.getElementById('render-distance-slider');
-        const sliderVal = document.getElementById('render-distance-val');
-        if (slider && sliderVal) {
-            slider.addEventListener('input', (e) => {
-                const val = parseInt(e.target.value);
-                sliderVal.textContent = val;
-                if (this.world) this.world.setRenderDistance(val);
-            });
-        }
+        if (this.syncOptionsUI) this.syncOptionsUI();
 
         // Pointer lock listener for pausing
         document.addEventListener('pointerlockchange', () => {
@@ -3059,7 +3078,7 @@ class Game {
                 // Place block
                 const placePos = { x: hit.blockPos.x + hit.normal.x, y: hit.blockPos.y + hit.normal.y, z: hit.blockPos.z + hit.normal.z };
                 const curBlock = this.world.getBlock(placePos.x, placePos.y, placePos.z);
-                // Prevent placing blocks inside the player's AABB (0.6 wide × 1.8 tall)
+                // Prevent placing blocks inside the player's AABB (0.6 wide �- 1.8 tall)
                 const placeProps = getBlockProperties(slot.item.subtype);
                 const isWaterPlant = placeProps.isWaterlogged || [
                     BLOCKS.SEAGRASS, BLOCKS.KELP, BLOCKS.KELP_PLANT, BLOCKS.RED_KELP, BLOCKS.BROWN_KELP,
@@ -3484,7 +3503,8 @@ class Game {
             
             this.input.keys._creativeFlying = this.input.creativeMode && this.input._creativeFlying;
             this.input.keys._creativeMode = this.input.creativeMode;
-            this.player.update(dt, this.input.keys, this.input.mouse, this.world);
+            const sensitivity = (this.mouseSensitivity !== undefined) ? this.mouseSensitivity : 0.002;
+            this.player.update(dt, this.input.keys, this.input.mouse, this.world, sensitivity);
             this.handleInput(dt);
 
             // Sync fresh swing state and update Steve's 3D model exactly once per frame
@@ -3523,7 +3543,7 @@ class Game {
             this.bobPhase *= Math.pow(0.5, dt * 10);
         }
 
-        const bobOffset = Math.sin(this.bobPhase) * 0.02; // Very subtle bob
+        const bobOffset = (this.viewBobbingEnabled !== false) ? Math.sin(this.bobPhase) * 0.02 : 0; // Very subtle bob
 
         // Update Camera to match perspective mode
         const eyePos = this.player.getEyePosition();
@@ -5196,6 +5216,238 @@ class Game {
 
 }
 
+// Global Options UI Manager - keeps Start screen & Pause menu in two-way sync
+function setupOptionsUI(game) {
+    const formatPercent = (v) => `${v}%`;
+    const formatBrightness = (v) => {
+        if (v <= 0) return 'Moody';
+        if (v >= 100) return 'Bright';
+        return `+${v}%`;
+    };
+    const formatRaw = (v) => `${v}`;
+
+    const registeredSyncs = [];
+
+    function bindRangeOption({
+        startSliderId,
+        pauseSliderId,
+        startValId,
+        pauseValId,
+        storageKey,
+        defaultVal,
+        formatFn = formatRaw,
+        onApply
+    }) {
+        const startSlider = document.getElementById(startSliderId);
+        const pauseSlider = document.getElementById(pauseSliderId);
+        const startVal = document.getElementById(startValId);
+        const pauseVal = document.getElementById(pauseValId);
+
+        const updateAll = (val, triggerApply = true) => {
+            const formatted = formatFn(val);
+            if (startSlider && parseInt(startSlider.value) !== val) startSlider.value = val;
+            if (pauseSlider && parseInt(pauseSlider.value) !== val) pauseSlider.value = val;
+            if (startVal) startVal.textContent = formatted;
+            if (pauseVal) pauseVal.textContent = formatted;
+            try {
+                localStorage.setItem(storageKey, val.toString());
+            } catch (e) {}
+            if (triggerApply && onApply) onApply(val);
+        };
+
+        if (startSlider) {
+            startSlider.addEventListener('input', (e) => updateAll(parseInt(e.target.value)));
+        }
+        if (pauseSlider) {
+            pauseSlider.addEventListener('input', (e) => updateAll(parseInt(e.target.value)));
+        }
+
+        const syncFn = () => {
+            let val = defaultVal;
+            try {
+                const stored = localStorage.getItem(storageKey);
+                if (stored !== null) val = parseInt(stored);
+            } catch (e) {}
+            updateAll(val, true);
+        };
+
+        registeredSyncs.push(syncFn);
+        syncFn();
+    }
+
+    function bindToggleOption({
+        startToggleId,
+        pauseToggleId,
+        storageKey,
+        defaultVal,
+        onApply
+    }) {
+        const startToggle = document.getElementById(startToggleId);
+        const pauseToggle = document.getElementById(pauseToggleId);
+
+        const updateAll = (val, triggerApply = true) => {
+            if (startToggle && startToggle.checked !== val) startToggle.checked = val;
+            if (pauseToggle && pauseToggle.checked !== val) pauseToggle.checked = val;
+            try {
+                localStorage.setItem(storageKey, val ? 'true' : 'false');
+            } catch (e) {}
+            if (triggerApply && onApply) onApply(val);
+        };
+
+        if (startToggle) {
+            startToggle.addEventListener('change', (e) => updateAll(e.target.checked));
+        }
+        if (pauseToggle) {
+            pauseToggle.addEventListener('change', (e) => updateAll(e.target.checked));
+        }
+
+        const syncFn = () => {
+            let val = defaultVal;
+            try {
+                const stored = localStorage.getItem(storageKey);
+                if (stored !== null) val = (stored === 'true');
+            } catch (e) {}
+            updateAll(val, true);
+        };
+
+        registeredSyncs.push(syncFn);
+        syncFn();
+    }
+
+    // 1. Render Distance (2-16 chunks)
+    bindRangeOption({
+        startSliderId: 'start-render-distance-slider',
+        pauseSliderId: 'render-distance-slider',
+        startValId: 'start-render-distance-val',
+        pauseValId: 'render-distance-val',
+        storageKey: 'slopcraft_render_dist',
+        defaultVal: 8,
+        onApply: (val) => {
+            if (game) game.renderDistance = val;
+            if (game && game.world) game.world.setRenderDistance(val);
+        }
+    });
+
+    // 2. Field of View (30-110)
+    bindRangeOption({
+        startSliderId: 'start-fov-slider',
+        pauseSliderId: 'fov-slider',
+        startValId: 'start-fov-val',
+        pauseValId: 'fov-val',
+        storageKey: 'slopcraft_fov',
+        defaultVal: 75,
+        onApply: (val) => {
+            if (game) game.fov = val;
+            if (game && game.engine && game.engine.camera) {
+                game.engine.camera.fov = val;
+                game.engine.camera.updateProjectionMatrix();
+            }
+        }
+    });
+
+    // 3. Mouse Sensitivity (20%-200%)
+    bindRangeOption({
+        startSliderId: 'start-sensitivity-slider',
+        pauseSliderId: 'sensitivity-slider',
+        startValId: 'start-sensitivity-val',
+        pauseValId: 'sensitivity-val',
+        storageKey: 'slopcraft_sensitivity',
+        defaultVal: 100,
+        formatFn: formatPercent,
+        onApply: (val) => {
+            if (game) {
+                game.sensitivityVal = val;
+                game.mouseSensitivity = (val / 100) * 0.002;
+            }
+        }
+    });
+
+    // 4. Volume (0%-100%)
+    bindRangeOption({
+        startSliderId: 'start-volume-slider',
+        pauseSliderId: 'volume-slider',
+        startValId: 'start-volume-val',
+        pauseValId: 'volume-val',
+        storageKey: 'slopcraft_volume',
+        defaultVal: 100,
+        formatFn: formatPercent,
+        onApply: (val) => {
+            const vol = val / 100;
+            if (game) {
+                game.masterVolume = vol;
+                if (game.audio) game.audio.setMasterVolume(vol);
+            }
+        }
+    });
+
+    // 5. Brightness (0%-100%)
+    bindRangeOption({
+        startSliderId: 'start-brightness-slider',
+        pauseSliderId: 'brightness-slider',
+        startValId: 'start-brightness-val',
+        pauseValId: 'brightness-val',
+        storageKey: 'slopcraft_brightness',
+        defaultVal: 100,
+        formatFn: formatBrightness,
+        onApply: (val) => {
+            if (game) {
+                game.brightnessVal = val;
+                if (game.lighting) {
+                    game.lighting.brightnessMultiplier = 0.75 + (val / 100) * 0.5;
+                }
+            }
+        }
+    });
+
+    // 6. Auto-Jump (Step-Assist half-block)
+    bindToggleOption({
+        startToggleId: 'start-autojump-toggle',
+        pauseToggleId: 'pause-autojump-toggle',
+        storageKey: 'slopcraft_autojump',
+        defaultVal: true,
+        onApply: (val) => {
+            if (game) {
+                game.autoJumpEnabled = val;
+                if (game.player) {
+                    game.player.stepHeight = val ? 0.55 : 0.0;
+                }
+            }
+        }
+    });
+
+    // 7. View Bobbing
+    bindToggleOption({
+        startToggleId: 'start-viewbobbing-toggle',
+        pauseToggleId: 'pause-viewbobbing-toggle',
+        storageKey: 'slopcraft_viewbobbing',
+        defaultVal: true,
+        onApply: (val) => {
+            if (game) {
+                game.viewBobbingEnabled = val;
+            }
+        }
+    });
+
+    // 8. Distance Blur (Bokeh)
+    bindToggleOption({
+        startToggleId: 'start-blur-toggle',
+        pauseToggleId: 'pause-blur-toggle',
+        storageKey: 'slopcraft_blur',
+        defaultVal: false,
+        onApply: (val) => {
+            if (game && game.bokehPass) {
+                game.bokehPass.enabled = val;
+            }
+        }
+    });
+
+    if (game) {
+        game.syncOptionsUI = () => {
+            registeredSyncs.forEach(fn => fn());
+        };
+    }
+}
+
 // Start game on load
 const initGame = () => {
     const game = new Game();
@@ -5208,23 +5460,8 @@ const initGame = () => {
 
     const startBtn = document.getElementById('btn-new-game');
 
-    const startBlurToggle = document.getElementById('start-blur-toggle');
-    const pauseBlurToggle = document.getElementById('pause-blur-toggle');
-    const useBlur = localStorage.getItem('slopcraft_blur') === 'true'; // default false
-    if (startBlurToggle) {
-        startBlurToggle.checked = useBlur;
-        startBlurToggle.addEventListener('change', (e) => {
-            localStorage.setItem('slopcraft_blur', e.target.checked);
-            if (window.game && window.game.bokehPass) window.game.bokehPass.enabled = e.target.checked;
-        });
-    }
-    if (pauseBlurToggle) {
-        pauseBlurToggle.checked = useBlur;
-        pauseBlurToggle.addEventListener('change', (e) => {
-            localStorage.setItem('slopcraft_blur', e.target.checked);
-            if (window.game && window.game.bokehPass) window.game.bokehPass.enabled = e.target.checked;
-        });
-    }
+    // Global Options UI Manager - keeps Start screen & Pause menu in two-way sync
+    setupOptionsUI(game);
 
 
     // Random Splash Text

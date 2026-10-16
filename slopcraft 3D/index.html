@@ -8,8 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SlopCraft 3D</title>
     <meta name="description" content="Explore infinite procedurally generated planets with dungeons, magic wands, and epic bossfights.">
-    <link rel="stylesheet" href="css/style.css?v=112">
-    <link rel="stylesheet" href="css/geometric.css?v=112">
+    <link rel="stylesheet" href="css/style.css?v=113">
+    <link rel="stylesheet" href="css/geometric.css?v=113">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-LCRDCCZRXM"></script>
@@ -51,17 +51,52 @@
             </div>
 
             <!-- Start Screen Options Panel -->
-            <div id="start-options-panel" class="hidden" style="margin: 12px 0 16px 0; background: rgba(0,0,0,0.75); border: 2px solid #555; padding: 14px 20px; box-sizing: border-box; width: 340px; display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <label style="color: #fff; font-family: 'Minecraftia'; font-size: 13px; text-shadow: 1px 1px 0 #000; cursor: pointer;">
-                        <input type="checkbox" id="start-blur-toggle"> Distance Blur
-                    </label>
+            <div id="start-options-panel" class="hidden" style="margin: 12px 0 16px 0; background: rgba(0,0,0,0.85); border: 3px solid #555; padding: 14px 18px; box-sizing: border-box; width: 440px; display: flex; flex-direction: column; gap: 10px; max-height: 55vh; overflow-y: auto;">
+                <h3 style="color: #ffff55; font-family: 'Minecraftia', sans-serif; font-size: 14px; text-shadow: 1px 1px 0 #000; margin: 0 0 4px 0;">Options</h3>
+                <div class="pause-options-grid">
+                    <div class="pause-option-box">
+                        <label>Render Dist: <span id="start-render-distance-val">8</span></label>
+                        <input type="range" id="start-render-distance-slider" min="2" max="16" value="8">
+                    </div>
+                    <div class="pause-option-box">
+                        <label>FOV: <span id="start-fov-val">75</span></label>
+                        <input type="range" id="start-fov-slider" min="30" max="110" value="75">
+                    </div>
+                    <div class="pause-option-box">
+                        <label>Sensitivity: <span id="start-sensitivity-val">100%</span></label>
+                        <input type="range" id="start-sensitivity-slider" min="20" max="200" value="100">
+                    </div>
+                    <div class="pause-option-box">
+                        <label>Volume: <span id="start-volume-val">100%</span></label>
+                        <input type="range" id="start-volume-slider" min="0" max="100" value="100">
+                    </div>
+                    <div class="pause-option-box" style="grid-column: span 2;">
+                        <label>Brightness: <span id="start-brightness-val">Bright</span></label>
+                        <input type="range" id="start-brightness-slider" min="0" max="100" value="100">
+                    </div>
+                </div>
+                <div class="pause-toggles-row">
+                    <div class="pause-toggle-box">
+                        <label>
+                            <input type="checkbox" id="start-autojump-toggle" checked> Auto-Jump
+                        </label>
+                    </div>
+                    <div class="pause-toggle-box">
+                        <label>
+                            <input type="checkbox" id="start-viewbobbing-toggle" checked> View Bobbing
+                        </label>
+                    </div>
+                    <div class="pause-toggle-box" style="grid-column: span 2;">
+                        <label>
+                            <input type="checkbox" id="start-blur-toggle"> Distance Blur
+                        </label>
+                    </div>
                 </div>
             </div>
 
             <p class="start-hint" style="margin-top: 14px;">Click to lock mouse · WASD to move · Space to jump · E for Inventory</p>
 
-            <div style="position: fixed; bottom: 12px; left: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Slopcraft 3D v112</div>
+            <div style="position: fixed; bottom: 12px; left: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Slopcraft 3D v113</div>
             <div style="position: fixed; bottom: 12px; right: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Copyright Mojang AB / Slopcraft Team</div>
         </div>
     </div>
@@ -86,18 +121,40 @@
                 <!-- Options Grid: 2 columns / Spread-out layout -->
                 <div class="pause-options-grid">
                     <div class="pause-option-box">
-                        <label>Render Distance: <span id="render-distance-val">8</span></label>
+                        <label>Render Dist: <span id="render-distance-val">8</span></label>
                         <input type="range" id="render-distance-slider" min="2" max="16" value="8">
                     </div>
                     <div class="pause-option-box">
-                        <label>Field of View: <span id="fov-val">75</span></label>
-                        <input type="range" id="fov-slider" min="30" max="120" value="75">
+                        <label>FOV: <span id="fov-val">75</span></label>
+                        <input type="range" id="fov-slider" min="30" max="110" value="75">
+                    </div>
+                    <div class="pause-option-box">
+                        <label>Sensitivity: <span id="sensitivity-val">100%</span></label>
+                        <input type="range" id="sensitivity-slider" min="20" max="200" value="100">
+                    </div>
+                    <div class="pause-option-box">
+                        <label>Volume: <span id="volume-val">100%</span></label>
+                        <input type="range" id="volume-slider" min="0" max="100" value="100">
+                    </div>
+                    <div class="pause-option-box" style="grid-column: span 2;">
+                        <label>Brightness: <span id="brightness-val">Bright</span></label>
+                        <input type="range" id="brightness-slider" min="0" max="100" value="100">
                     </div>
                 </div>
 
                 <!-- Toggles row -->
-                <div class="pause-toggles-row" style="justify-content: center;">
+                <div class="pause-toggles-row">
                     <div class="pause-toggle-box">
+                        <label>
+                            <input type="checkbox" id="pause-autojump-toggle" checked> Auto-Jump
+                        </label>
+                    </div>
+                    <div class="pause-toggle-box">
+                        <label>
+                            <input type="checkbox" id="pause-viewbobbing-toggle" checked> View Bobbing
+                        </label>
+                    </div>
+                    <div class="pause-toggle-box" style="grid-column: span 2;">
                         <label>
                             <input type="checkbox" id="pause-blur-toggle"> Distance Blur
                         </label>
@@ -463,7 +520,7 @@
         }
     }
     </script>
-    <script type="module" src="js/main.js?v=112"></script>
+    <script type="module" src="js/main.js?v=113"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>
 </body>

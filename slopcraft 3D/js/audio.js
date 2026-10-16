@@ -1,8 +1,8 @@
 // ============================================
-// audio.js — SFX Synthesizer using Web Audio API
+// audio.js - SFX Synthesizer using Web Audio API
 // ============================================
 
-import { BLOCKS, getBlockProperties } from './textures.js?v=111';
+import { BLOCKS, getBlockProperties } from './textures.js?v=113';
 
 export class AudioManager {
     constructor() {
@@ -11,6 +11,7 @@ export class AudioManager {
         this.underwaterFilter = null;
         this.camera = null;
         this._isUnderwater = false;
+        this.masterVolume = 1.0;
 
         // Background music player
         this.musicGain = null;
@@ -31,13 +32,23 @@ export class AudioManager {
         this.lastTrackIndex = -1;
     }
 
+    setMasterVolume(volume) {
+        this.masterVolume = Math.max(0, Math.min(1, volume));
+        if (this.masterGain && this.ctx) {
+            this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
+        }
+        if (this.musicAudio) {
+            this.musicAudio.volume = Math.max(0, Math.min(1, 0.45 * this.masterVolume));
+        }
+    }
+
     _ensureContext() {
         if (this.ctx) return;
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         
         // Master gain connects to underwater lowpass filter, which connects to destination
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = 1.0;
+        this.masterGain.gain.value = (this.masterVolume !== undefined ? this.masterVolume : 1.0);
 
         this.underwaterFilter = this.ctx.createBiquadFilter();
         this.underwaterFilter.type = 'lowpass';
