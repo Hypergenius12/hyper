@@ -2,9 +2,9 @@
 // entities.js — Player, Mobs, Bosses, Inventory
 // ============================================
 import * as THREE from 'three';
-import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=111';
-import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=111';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=111';
+import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=115';
+import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=115';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=115';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -2539,9 +2539,9 @@ export const MOB_TYPES = {
         buildMesh: () => {
             const group = new THREE.Group();
 
-            // Broad Sculk Torso / Chest: 18x21x11 -> (1.125, 1.3125, 0.6875), UV: { u: 0, v: 32, w: 18, h: 21, d: 11 }
+            // Broad Sculk Torso / Chest: 18x21x11 -> (1.125, 1.3125, 0.6875), UV: { u: 0, v: 0, w: 18, h: 21, d: 11 }
             const chestGeo = new THREE.BoxGeometry(1.125, 1.3125, 0.6875);
-            const chestMats = getMobBoxMaterials('WARDEN', { u: 0, v: 32, w: 18, h: 21, d: 11 }, { part: 'body' });
+            const chestMats = getMobBoxMaterials('WARDEN', { u: 0, v: 0, w: 18, h: 21, d: 11 }, { part: 'body' });
             const chest = new THREE.Mesh(chestGeo, chestMats);
             chest.position.set(0, 1.65, 0);
             chest.name = 'chest';
@@ -2556,9 +2556,9 @@ export const MOB_TYPES = {
             heart.name = 'heart';
             chest.add(heart);
 
-            // Massive Eyeless Head: 16x16x16 -> (1.0, 1.0, 1.0), UV: { u: 0, v: 0, w: 16, h: 16, d: 16 }
+            // Massive Eyeless Head: 16x16x16 -> (1.0, 1.0, 1.0), UV: { u: 0, v: 32, w: 16, h: 16, d: 16 }
             const headGeo = new THREE.BoxGeometry(1.0, 1.0, 1.0);
-            const headMats = getMobBoxMaterials('WARDEN', { u: 0, v: 0, w: 16, h: 16, d: 16 }, { part: 'head_front' });
+            const headMats = getMobBoxMaterials('WARDEN', { u: 0, v: 32, w: 16, h: 16, d: 16 }, { part: 'head_front' });
             const head = new THREE.Mesh(headGeo, headMats);
             head.position.set(0, 2.7, 0);
             head.name = 'head';
@@ -2566,14 +2566,14 @@ export const MOB_TYPES = {
 
             // Left Tendril (Sculk antenna that vibrates): 16x16 plane/box -> (0.06, 0.85, 0.85)
             const tendrilGeo = new THREE.BoxGeometry(0.06, 0.85, 0.85);
-            const ltMats = getMobBoxMaterials('WARDEN', { u: 52, v: 32, w: 16, h: 16, d: 1 }, { part: 'tendril' });
+            const ltMats = getMobBoxMaterials('WARDEN', { u: 58, v: 0, w: 16, h: 16, d: 1 }, { part: 'tendril' });
             const leftTendril = new THREE.Mesh(tendrilGeo, ltMats);
             leftTendril.position.set(-0.52, 0.35, 0);
             leftTendril.name = 'leftTendril';
             head.add(leftTendril);
 
             // Right Tendril:
-            const rtMats = getMobBoxMaterials('WARDEN', { u: 52, v: 0, w: 16, h: 16, d: 1 }, { part: 'tendril' });
+            const rtMats = getMobBoxMaterials('WARDEN', { u: 52, v: 32, w: 16, h: 16, d: 1 }, { part: 'tendril' });
             const rightTendril = new THREE.Mesh(tendrilGeo, rtMats);
             rightTendril.position.set(0.52, 0.35, 0);
             rightTendril.name = 'rightTendril';
@@ -2582,17 +2582,17 @@ export const MOB_TYPES = {
             group.add(head);
 
             // Massive Heavy Arms: 8x28x8 -> (0.5, 1.75, 0.5)
-            // Left Arm: UV: { u: 44, v: 50, w: 8, h: 28, d: 8 }
+            // Left Arm: UV: { u: 0, v: 64, w: 8, h: 28, d: 8 }
             const armGeo = new THREE.BoxGeometry(0.5, 1.75, 0.5);
-            const laMats = getMobBoxMaterials('WARDEN', { u: 44, v: 50, w: 8, h: 28, d: 8 }, { part: 'arm' });
+            const laMats = getMobBoxMaterials('WARDEN', { u: 0, v: 64, w: 8, h: 28, d: 8 }, { part: 'arm' });
             const la = new THREE.Mesh(armGeo, laMats);
             la.position.set(-0.85, 1.45, 0);
             la.name = 'leftArm';
             la.castShadow = true;
             group.add(la);
 
-            // Right Arm: UV: { u: 36, v: 86, w: 8, h: 28, d: 8 }
-            const raMats = getMobBoxMaterials('WARDEN', { u: 36, v: 86, w: 8, h: 28, d: 8 }, { part: 'arm' });
+            // Right Arm: UV: { u: 44, v: 50, w: 8, h: 28, d: 8 }
+            const raMats = getMobBoxMaterials('WARDEN', { u: 44, v: 50, w: 8, h: 28, d: 8 }, { part: 'arm' });
             const ra = new THREE.Mesh(armGeo, raMats);
             ra.position.set(0.85, 1.45, 0);
             ra.name = 'rightArm';
@@ -4088,7 +4088,7 @@ export const MOB_TYPES = {
         }
     },
     END_CRYSTAL: {
-        name: 'End Crystal', health: 1, damage: 0, speed: 0, hostile: false, isStationary: true, isCrystal: true,
+        name: 'End Crystal', health: 1, damage: 0, speed: 0, hostile: false, isStationary: true, isCrystal: true, flying: true,
         size: 1.5, xpDrop: 0, lootChance: 0,
         buildMesh: () => {
             const group = new THREE.Group();
@@ -4692,6 +4692,17 @@ export class Mob {
     update(dt, world, playerPos, isDay = false, currentDimension = 'overworld') {
         if (!this.alive) return;
         this.age += dt;
+
+        if (this.config.isStationary || this.type === 'END_CRYSTAL') {
+            this.velocity.set(0, 0, 0);
+            if (this.mesh) {
+                this.mesh.position.copy(this.position);
+                if (this.config.animate) {
+                    this.config.animate(this.mesh, dt, this.age, false);
+                }
+            }
+            return;
+        }
         
         const feetBlock = world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y), Math.floor(this.position.z));
         const midBlock = world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y + this.size * 0.5), Math.floor(this.position.z));

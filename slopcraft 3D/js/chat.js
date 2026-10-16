@@ -2,9 +2,9 @@
 // chat.js  -  In-Game Chat & Command System
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockName } from './textures.js?v=111';
-import { BIOMES, getBiomeParams, getClosestStrongholdPosition, getClosestIglooPosition, getClosestWitchHutPosition, getClosestVillagePosition } from './generation.js?v=111';
-import { Mob, MOB_TYPES, Item } from './entities.js?v=111';
+import { BLOCKS, getBlockName } from './textures.js?v=115';
+import { BIOMES, getBiomeParams, getClosestStrongholdPosition, getClosestIglooPosition, getClosestWitchHutPosition, getClosestVillagePosition } from './generation.js?v=115';
+import { Mob, MOB_TYPES, Item } from './entities.js?v=115';
 
 export class ChatSystem {
     constructor(game) {

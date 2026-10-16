@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=111';
-import { getBiomeParams } from './generation.js?v=111';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=115';
+import { getBiomeParams } from './generation.js?v=115';
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -14,7 +14,7 @@ export const CHUNK_HEIGHT = 128;
 export class InputManager {
     constructor() {
         this.keys = { forward: false, backward: false, left: false, right: false, jump: false, sprint: false, crouch: false };
-        this.mouse = { dx: 0, dy: 0, leftClick: false, rightClick: false, middleClick: false, scrollDelta: 0 };
+        this.mouse = { dx: 0, dy: 0, leftClick: false, rightClick: false, middleClick: false, scrollDelta: 0, leftDown: false, rightDown: false };
         this.menuKeys = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false, togglePerspective: false };
         this._menuKeysDown = { inventory: false, spellConfig: false, pause: false, planet: false, debug: false, dropItem: false, map: false, devMode: false, togglePerspective: false };
         this.hotbarIndex = -1;
@@ -42,15 +42,15 @@ export class InputManager {
 
         document.addEventListener('mousedown', (e) => {
             if (!this.isLocked) return;
-            if (e.button === 0) this.mouse.leftClick = true;
+            if (e.button === 0) { this.mouse.leftClick = true; this.mouse.leftDown = true; }
             if (e.button === 1) { this.mouse.middleClick = true; e.preventDefault(); }
-            if (e.button === 2) this.mouse.rightClick = true;
+            if (e.button === 2) { this.mouse.rightClick = true; this.mouse.rightDown = true; }
         }, false);
 
         document.addEventListener('mouseup', (e) => {
-            if (e.button === 0) this.mouse.leftClick = false;
+            if (e.button === 0) { this.mouse.leftClick = false; this.mouse.leftDown = false; }
             if (e.button === 1) this.mouse.middleClick = false;
-            if (e.button === 2) this.mouse.rightClick = false;
+            if (e.button === 2) { this.mouse.rightClick = false; this.mouse.rightDown = false; }
         }, false);
 
         document.addEventListener('auxclick', (e) => {
@@ -758,22 +758,65 @@ export class Chunk {
                             const pAbove = getBlockProperties(aboveBlock);
                             const isHanging = pAbove.solid || pAbove.isFence || pAbove.isWall;
 
+                            const lx0 = x + 5/16, lx1 = x + 11/16;
+                            const lz0 = z + 5/16, lz1 = z + 11/16;
+                            const ly0 = isHanging ? (y + 2/16) : y;
+                            const ly1 = isHanging ? (y + 13/16) : (y + 11/16);
+
+                            const addLanternQuad = (p0, p1, p2, p3, u0, v0, u1, v1) => {
+                                _positions[posCount++] = p0[0]; _positions[posCount++] = p0[1]; _positions[posCount++] = p0[2];
+                                _positions[posCount++] = p1[0]; _positions[posCount++] = p1[1]; _positions[posCount++] = p1[2];
+                                _positions[posCount++] = p2[0]; _positions[posCount++] = p2[1]; _positions[posCount++] = p2[2];
+                                _positions[posCount++] = p3[0]; _positions[posCount++] = p3[1]; _positions[posCount++] = p3[2];
+
+                                for (let k = 0; k < 4; k++) {
+                                    _normals[posCount - 12 + k * 3] = 0; _normals[posCount - 11 + k * 3] = 1; _normals[posCount - 10 + k * 3] = 0;
+                                    _colors[colorCount++] = 1.0; _colors[colorCount++] = 1.0; _colors[colorCount++] = 1.0;
+                                }
+
+                                _uvs[uvCount++] = u0; _uvs[uvCount++] = v0;
+                                _uvs[uvCount++] = u1; _uvs[uvCount++] = v0;
+                                _uvs[uvCount++] = u1; _uvs[uvCount++] = v1;
+                                _uvs[uvCount++] = u0; _uvs[uvCount++] = v1;
+
+                                const base = vertexCount;
+                                _glowTransparentIndices[glowTransparentIndexCount++] = base;
+                                _glowTransparentIndices[glowTransparentIndexCount++] = base + 1;
+                                _glowTransparentIndices[glowTransparentIndexCount++] = base + 2;
+                                _glowTransparentIndices[glowTransparentIndexCount++] = base;
+                                _glowTransparentIndices[glowTransparentIndexCount++] = base + 2;
+                                _glowTransparentIndices[glowTransparentIndexCount++] = base + 3;
+                                vertexCount += 4;
+                            };
+
+                            const su0 = uvSide.u, su1 = uvSide.u + uvSide.uSize;
+                            const sv0 = uvSide.v, sv1 = uvSide.v + uvSide.vSize;
+
+                            // 4 Outer Faces of Lantern Body (Full authentic texture on each face)
+                            // South face (+Z)
+                            addLanternQuad([lx0, ly0, lz1], [lx1, ly0, lz1], [lx1, ly1, lz1], [lx0, ly1, lz1], su0, sv0, su1, sv1);
+                            // North face (-Z)
+                            addLanternQuad([lx1, ly0, lz0], [lx0, ly0, lz0], [lx0, ly1, lz0], [lx1, ly1, lz0], su0, sv0, su1, sv1);
+                            // East face (+X)
+                            addLanternQuad([lx1, ly0, lz1], [lx1, ly0, lz0], [lx1, ly1, lz0], [lx1, ly1, lz1], su0, sv0, su1, sv1);
+                            // West face (-X)
+                            addLanternQuad([lx0, ly0, lz0], [lx0, ly0, lz1], [lx0, ly1, lz1], [lx0, ly1, lz0], su0, sv0, su1, sv1);
+
+                            // Top face (+Y)
+                            addLanternQuad([lx0, ly1, lz1], [lx1, ly1, lz1], [lx1, ly1, lz0], [lx0, ly1, lz0], su0, sv0, su1, sv1);
+                            // Bottom face (-Y)
+                            addLanternQuad([lx0, ly0, lz0], [lx1, ly0, lz0], [lx1, ly0, lz1], [lx0, ly0, lz1], su0, sv0, su1, sv1);
+
+                            // 2 Internal Diagonals so lantern is fully vibrant from all 3D angles
+                            addLanternQuad([lx0, ly0, lz0], [lx1, ly0, lz1], [lx1, ly1, lz1], [lx0, ly1, lz0], su0, sv0, su1, sv1);
+                            addLanternQuad([lx0, ly0, lz1], [lx1, ly0, lz0], [lx1, ly1, lz0], [lx0, ly1, lz1], su0, sv0, su1, sv1);
+
+                            // If hanging, draw top connecting chain loop up to ceiling
                             if (isHanging) {
-                                // Hanging lantern: shifts down slightly with a top connecting chain loop
-                                // Body: 6x7x6 (pixels: 5 to 11 in X/Z, 1 to 8 in Y)
-                                pushCustomBox(x + 5/16, y + 1/16, z + 5/16, x + 11/16, y + 8/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
-                                // Cap: 4x2x4 (pixels: 6 to 10 in X/Z, 8 to 10 in Y)
-                                pushCustomBox(x + 6/16, y + 8/16, z + 6/16, x + 10/16, y + 10/16, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
-                                // Chain hanger up to ceiling: 2x6x2 (pixels: 7 to 9 in X/Z, 10 to 16 in Y)
-                                pushCustomBox(x + 7/16, y + 10/16, z + 7/16, x + 9/16, y + 1.0, z + 9/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
-                            } else {
-                                // Standing lantern on ground:
-                                // Body: 6x7x6 (pixels: 5 to 11 in X/Z, 0 to 7 in Y)
-                                pushCustomBox(x + 5/16, y, z + 5/16, x + 11/16, y + 7/16, z + 11/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
-                                // Cap: 4x2x4 (pixels: 6 to 10 in X/Z, 7 to 9 in Y)
-                                pushCustomBox(x + 6/16, y + 7/16, z + 6/16, x + 10/16, y + 9/16, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
-                                // Ring handle: 2x2x2 (pixels: 7 to 9 in X/Z, 9 to 11 in Y)
-                                pushCustomBox(x + 7/16, y + 9/16, z + 7/16, x + 9/16, y + 11/16, z + 9/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
+                                const cx0 = x + 7/16, cx1 = x + 9/16;
+                                const cz0 = z + 7/16, cz1 = z + 9/16;
+                                addLanternQuad([cx0, ly1, cz0], [cx1, ly1, cz1], [cx1, y + 1.0, cz1], [cx0, y + 1.0, cz0], su0, sv0, su1, sv1);
+                                addLanternQuad([cx0, ly1, cz1], [cx1, ly1, cz0], [cx1, y + 1.0, cz0], [cx0, y + 1.0, cz1], su0, sv0, su1, sv1);
                             }
                         } else if (blockType === BLOCKS.STONECUTTER) {
                             // 9/16 tall stone base (0.5625)
@@ -2565,6 +2608,17 @@ export class World {
                             }
                         }
                     }
+                } else {
+                    const bProps = getBlockProperties(block);
+                    if (bProps && bProps.isSapling) {
+                        const wx = chunk.cx * 16 + rx;
+                        const wy = ry;
+                        const wz = chunk.cz * 16 + rz;
+                        // Natural sapling growth tick (~12% chance when chosen)
+                        if (Math.random() < 0.12) {
+                            growSapling(this, wx, wy, wz, block);
+                        }
+                    }
                 }
             }
         }
@@ -2934,4 +2988,296 @@ export class World {
         return { position, velocity, grounded };
     }
 }
+
+export function growSapling(world, wx, wy, wz, saplingType, particles = null, audio = null) {
+    if (!world) return false;
+    saplingType = Number(saplingType);
+    
+    // Check 4 possible 2x2 corner arrangements containing (wx, wz)
+    const offsets = [[0, 0], [-1, 0], [0, -1], [-1, -1]];
+    let is2x2 = false;
+    let base2x2X = wx;
+    let base2x2Z = wz;
+
+    for (const [ox, oz] of offsets) {
+        const bx = wx + ox;
+        const bz = wz + oz;
+        const b00 = world.getBlock(bx, wy, bz);
+        const b10 = world.getBlock(bx + 1, wy, bz);
+        const b01 = world.getBlock(bx, wy, bz + 1);
+        const b11 = world.getBlock(bx + 1, wy, bz + 1);
+        if (b00 === saplingType && b10 === saplingType && b01 === saplingType && b11 === saplingType) {
+            is2x2 = true;
+            base2x2X = bx;
+            base2x2Z = bz;
+            break;
+        }
+    }
+
+    const oakSap = (window.BLOCKS && window.BLOCKS.OAK_SAPLING) || 373;
+    const spruceSap = (window.BLOCKS && window.BLOCKS.SPRUCE_SAPLING) || 374;
+    const birchSap = (window.BLOCKS && window.BLOCKS.BIRCH_SAPLING) || 375;
+    const jungleSap = (window.BLOCKS && window.BLOCKS.JUNGLE_SAPLING) || 376;
+    const acaciaSap = (window.BLOCKS && window.BLOCKS.ACACIA_SAPLING) || 377;
+    const darkOakSap = (window.BLOCKS && window.BLOCKS.DARK_OAK_SAPLING) || 378;
+
+    const oakWood = (window.BLOCKS && window.BLOCKS.WOOD) || 5;
+    const oakLeaves = (window.BLOCKS && window.BLOCKS.LEAVES) || 18;
+    const spruceWood = (window.BLOCKS && window.BLOCKS.PINE_WOOD) || 39;
+    const spruceLeaves = (window.BLOCKS && window.BLOCKS.PINE_LEAVES) || 40;
+    const birchWood = (window.BLOCKS && window.BLOCKS.BIRCH_WOOD) || 45;
+    const birchLeaves = (window.BLOCKS && window.BLOCKS.BIRCH_LEAVES) || 46;
+    const jungleLeaves = (window.BLOCKS && (window.BLOCKS.JUNGLE_LEAVES || window.BLOCKS.LEAVES)) || 18;
+    const acaciaWood = (window.BLOCKS && window.BLOCKS.ACACIA_WOOD) || 51;
+    const acaciaLeaves = (window.BLOCKS && window.BLOCKS.ACACIA_LEAVES) || 52;
+    const darkOakWood = (window.BLOCKS && window.BLOCKS.DARK_OAK_WOOD) || 47;
+    const darkOakLeaves = (window.BLOCKS && window.BLOCKS.DARK_OAK_LEAVES) || 48;
+    const vinesId = (window.BLOCKS && window.BLOCKS.VINES) || 63;
+    const airId = (window.BLOCKS && window.BLOCKS.AIR) || 0;
+
+    const safeSet = (sx, sy, sz, type, onlyAir = false) => {
+        if (sy < 0 || sy >= CHUNK_HEIGHT) return;
+        if (onlyAir) {
+            const cur = world.getBlock(sx, sy, sz);
+            if (cur !== airId) return;
+        }
+        world.setBlock(sx, sy, sz, type);
+    };
+
+    if (is2x2) {
+        // Clear 4 saplings
+        safeSet(base2x2X, wy, base2x2Z, airId);
+        safeSet(base2x2X + 1, wy, base2x2Z, airId);
+        safeSet(base2x2X, wy, base2x2Z + 1, airId);
+        safeSet(base2x2X + 1, wy, base2x2Z + 1, airId);
+
+        let woodType = oakWood;
+        let leafType = oakLeaves;
+        if (saplingType === spruceSap) { woodType = spruceWood; leafType = spruceLeaves; }
+        else if (saplingType === birchSap) { woodType = birchWood; leafType = birchLeaves; }
+        else if (saplingType === jungleSap) { woodType = oakWood; leafType = jungleLeaves; }
+        else if (saplingType === acaciaSap) { woodType = acaciaWood; leafType = acaciaLeaves; }
+        else if (saplingType === darkOakSap) { woodType = darkOakWood; leafType = darkOakLeaves; }
+
+        if (saplingType === darkOakSap) {
+            // Authentic Minecraft Dark Oak Tree: 2x2 trunk, 7-10 tall, thick broad canopy
+            const height = 7 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < height; i++) {
+                safeSet(base2x2X, wy + i, base2x2Z, woodType);
+                safeSet(base2x2X + 1, wy + i, base2x2Z, woodType);
+                safeSet(base2x2X, wy + i, base2x2Z + 1, woodType);
+                safeSet(base2x2X + 1, wy + i, base2x2Z + 1, woodType);
+            }
+            // Branch logs
+            safeSet(base2x2X - 1, wy + height - 2, base2x2Z, woodType);
+            safeSet(base2x2X + 2, wy + height - 2, base2x2Z + 1, woodType);
+            
+            // Canopy
+            const topY = wy + height;
+            for (let dy = -2; dy <= 1; dy++) {
+                const rad = (dy === 1) ? 2 : (dy === -2 ? 3 : 4);
+                for (let dx = -rad; dx <= rad + 1; dx++) {
+                    for (let dz = -rad; dz <= rad + 1; dz++) {
+                        const distSq = (dx - 0.5) * (dx - 0.5) + (dz - 0.5) * (dz - 0.5);
+                        if (distSq > (rad + 0.6) * (rad + 0.6)) continue;
+                        safeSet(base2x2X + dx, topY + dy, base2x2Z + dz, leafType, true);
+                    }
+                }
+            }
+        } else if (saplingType === spruceSap) {
+            // Mega Spruce Tree: 20-28 tall, tapered conical canopy
+            const height = 20 + Math.floor(Math.random() * 8);
+            for (let i = 0; i < height; i++) {
+                safeSet(base2x2X, wy + i, base2x2Z, woodType);
+                safeSet(base2x2X + 1, wy + i, base2x2Z, woodType);
+                safeSet(base2x2X, wy + i, base2x2Z + 1, woodType);
+                safeSet(base2x2X + 1, wy + i, base2x2Z + 1, woodType);
+            }
+            const topY = wy + height;
+            safeSet(base2x2X, topY + 1, base2x2Z, leafType);
+            safeSet(base2x2X + 1, topY + 1, base2x2Z, leafType);
+            safeSet(base2x2X, topY + 1, base2x2Z + 1, leafType);
+            safeSet(base2x2X + 1, topY + 1, base2x2Z + 1, leafType);
+
+            for (let ly = topY; ly >= wy + 4; ly--) {
+                const distFromTop = topY - ly;
+                const rad = Math.min(4, 1 + Math.floor(distFromTop / 3));
+                for (let dx = -rad; dx <= rad + 1; dx++) {
+                    for (let dz = -rad; dz <= rad + 1; dz++) {
+                        const distSq = (dx - 0.5) * (dx - 0.5) + (dz - 0.5) * (dz - 0.5);
+                        if (distSq > (rad + 0.5) * (rad + 0.5)) continue;
+                        safeSet(base2x2X + dx, ly, base2x2Z + dz, leafType, true);
+                    }
+                }
+            }
+        } else if (saplingType === jungleSap) {
+            // Mega Jungle Tree: 16-24 tall, draped vines, massive dome
+            const height = 16 + Math.floor(Math.random() * 8);
+            for (let i = 0; i < height; i++) {
+                safeSet(base2x2X, wy + i, base2x2Z, woodType);
+                safeSet(base2x2X + 1, wy + i, base2x2Z, woodType);
+                safeSet(base2x2X, wy + i, base2x2Z + 1, woodType);
+                safeSet(base2x2X + 1, wy + i, base2x2Z + 1, woodType);
+
+                if (i >= 0 && i < height - 2 && Math.random() < 0.4) {
+                    safeSet(base2x2X - 1, wy + i, base2x2Z, vinesId, true);
+                    safeSet(base2x2X + 2, wy + i, base2x2Z, vinesId, true);
+                    safeSet(base2x2X, wy + i, base2x2Z - 1, vinesId, true);
+                    safeSet(base2x2X, wy + i, base2x2Z + 2, vinesId, true);
+                }
+            }
+            const topY = wy + height;
+            for (let dy = -3; dy <= 1; dy++) {
+                const rad = (dy === 1) ? 2 : (dy === -3 ? 3 : 4);
+                for (let dx = -rad; dx <= rad + 1; dx++) {
+                    for (let dz = -rad; dz <= rad + 1; dz++) {
+                        const distSq = (dx - 0.5) * (dx - 0.5) + (dz - 0.5) * (dz - 0.5);
+                        if (distSq > (rad + 0.8) * (rad + 0.8)) continue;
+                        safeSet(base2x2X + dx, topY + dy, base2x2Z + dz, leafType, true);
+                    }
+                }
+            }
+        } else {
+            // Generic 2x2 Giant Tree (Oak / Birch / Acacia)
+            const height = 12 + Math.floor(Math.random() * 6);
+            for (let i = 0; i < height; i++) {
+                safeSet(base2x2X, wy + i, base2x2Z, woodType);
+                safeSet(base2x2X + 1, wy + i, base2x2Z, woodType);
+                safeSet(base2x2X, wy + i, base2x2Z + 1, woodType);
+                safeSet(base2x2X + 1, wy + i, base2x2Z + 1, woodType);
+            }
+            const topY = wy + height;
+            for (let dy = -2; dy <= 2; dy++) {
+                const rad = (Math.abs(dy) === 2) ? 2 : 4;
+                for (let dx = -rad; dx <= rad + 1; dx++) {
+                    for (let dz = -rad; dz <= rad + 1; dz++) {
+                        const distSq = (dx - 0.5) * (dx - 0.5) + (dz - 0.5) * (dz - 0.5);
+                        if (distSq > (rad + 0.6) * (rad + 0.6)) continue;
+                        safeSet(base2x2X + dx, topY + dy, base2x2Z + dz, leafType, true);
+                    }
+                }
+            }
+        }
+
+        if (particles) particles.emit({ x: base2x2X + 1, y: wy + 2, z: base2x2Z + 1 }, 'leaf', 20, 0x55ff55);
+        if (audio && audio.playDig) audio.playDig(woodType);
+        return true;
+    }
+
+    // Single 1x1 Sapling Growth
+    if (saplingType === darkOakSap) {
+        // Dark oak requires 2x2 to grow (authentic Minecraft mechanics)
+        return false;
+    }
+
+    safeSet(wx, wy, wz, airId);
+
+    if (saplingType === spruceSap) {
+        // Standard Spruce (Pine) Tree
+        const height = 7 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < height; i++) safeSet(wx, wy + i, wz, spruceWood);
+        const topY = wy + height;
+        safeSet(wx, topY + 1, wz, spruceLeaves, true);
+        safeSet(wx, topY, wz, spruceLeaves, true);
+        for (let ly = topY; ly >= wy + 3; ly--) {
+            const dist = topY - ly;
+            const rad = (dist === 0) ? 1 : ((dist % 2 === 1) ? Math.min(2, 1 + Math.floor(dist / 3)) : 1);
+            for (let dx = -rad; dx <= rad; dx++) {
+                for (let dz = -rad; dz <= rad; dz++) {
+                    if (Math.abs(dx) === rad && Math.abs(dz) === rad && rad > 1) continue;
+                    safeSet(wx + dx, ly, wz + dz, spruceLeaves, true);
+                }
+            }
+        }
+    } else if (saplingType === birchSap) {
+        // Birch Tree
+        const height = 5 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < height; i++) safeSet(wx, wy + i, wz, birchWood);
+        const topY = wy + height;
+        for (let ly = topY - 2; ly <= topY - 1; ly++) {
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dz = -2; dz <= 2; dz++) {
+                    if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && (ly === topY - 1 || Math.random() < 0.5)) continue;
+                    safeSet(wx + dx, ly, wz + dz, birchLeaves, true);
+                }
+            }
+        }
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = -1; dz <= 1; dz++) {
+                if (Math.abs(dx) === 1 && Math.abs(dz) === 1 && Math.random() < 0.4) continue;
+                safeSet(wx + dx, topY, wz + dz, birchLeaves, true);
+            }
+        }
+        safeSet(wx, topY + 1, wz, birchLeaves, true);
+        safeSet(wx + 1, topY + 1, wz, birchLeaves, true);
+        safeSet(wx - 1, topY + 1, wz, birchLeaves, true);
+        safeSet(wx, topY + 1, wz + 1, birchLeaves, true);
+        safeSet(wx, topY + 1, wz - 1, birchLeaves, true);
+    } else if (saplingType === jungleSap) {
+        // Jungle Tree
+        const height = 6 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < height; i++) {
+            safeSet(wx, wy + i, wz, oakWood);
+            if (Math.random() < 0.4) safeSet(wx + 1, wy + i, wz, vinesId, true);
+            if (Math.random() < 0.4) safeSet(wx - 1, wy + i, wz, vinesId, true);
+        }
+        const topY = wy + height;
+        for (let dy = -2; dy <= 1; dy++) {
+            const rad = (dy === 1) ? 1 : 2;
+            for (let dx = -rad; dx <= rad; dx++) {
+                for (let dz = -rad; dz <= rad; dz++) {
+                    if (Math.abs(dx) === rad && Math.abs(dz) === rad && Math.random() < 0.5) continue;
+                    safeSet(wx + dx, topY + dy, wz + dz, jungleLeaves, true);
+                }
+            }
+        }
+    } else if (saplingType === acaciaSap) {
+        // Acacia Tree
+        const baseH = 2 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < baseH; i++) safeSet(wx, wy + i, wz, acaciaWood);
+        const cardDirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const d = cardDirs[Math.floor(Math.random() * 4)];
+        let bx = wx, by = wy + baseH, bz = wz;
+        for (let s = 0; s < 3; s++) {
+            bx += d[0]; bz += d[1]; by++;
+            safeSet(bx, by, bz, acaciaWood);
+        }
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dz = -2; dz <= 2; dz++) {
+                if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
+                safeSet(bx + dx, by, bz + dz, acaciaLeaves, true);
+            }
+        }
+        safeSet(bx, by + 1, bz, acaciaLeaves, true);
+    } else {
+        // Standard Oak Tree
+        const height = 5 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < height; i++) safeSet(wx, wy + i, wz, oakWood);
+        const topY = wy + height;
+        for (let ly = topY - 2; ly <= topY - 1; ly++) {
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dz = -2; dz <= 2; dz++) {
+                    if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && (ly === topY - 1 || Math.random() < 0.5)) continue;
+                    safeSet(wx + dx, ly, wz + dz, oakLeaves, true);
+                }
+            }
+        }
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = -1; dz <= 1; dz++) {
+                if (Math.abs(dx) === 1 && Math.abs(dz) === 1 && Math.random() < 0.4) continue;
+                safeSet(wx + dx, topY, wz + dz, oakLeaves, true);
+            }
+        }
+        safeSet(wx, topY + 1, wz, oakLeaves, true);
+        safeSet(wx + 1, topY + 1, wz, oakLeaves, true);
+        safeSet(wx - 1, topY + 1, wz, oakLeaves, true);
+        safeSet(wx, topY + 1, wz + 1, oakLeaves, true);
+        safeSet(wx, topY + 1, wz - 1, oakLeaves, true);
+    }
+
+    if (particles) particles.emit({ x: wx + 0.5, y: wy + 1.5, z: wz + 0.5 }, 'leaf', 15, 0x55ff55);
+    if (audio && audio.playDig) audio.playDig(oakWood);
+    return true;
+}
+
 

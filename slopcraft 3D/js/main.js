@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk } from './engine.js?v=114';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=114';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=114';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=114';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=114';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=114';
-import { AudioManager } from './audio.js?v=114';
-import { BiomeMap } from './map.js?v=114';
-import { DevMode } from './dev.js?v=114';
-import { ChatSystem } from './chat.js?v=114';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=115';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=115';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=115';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=115';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=115';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=115';
+import { AudioManager } from './audio.js?v=115';
+import { BiomeMap } from './map.js?v=115';
+import { DevMode } from './dev.js?v=115';
+import { ChatSystem } from './chat.js?v=115';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -535,6 +535,32 @@ class Game {
 
 
         this.world.onBlockDestroyed = (x, y, z, oldType, newType) => {
+            // Leaf blocks drop saplings (5% chance, matching Minecraft)
+            const leafSaplingMap = {
+                [BLOCKS.LEAVES]: { sapling: BLOCKS.OAK_SAPLING, name: 'Oak Sapling' },
+                [BLOCKS.PINE_LEAVES]: { sapling: BLOCKS.SPRUCE_SAPLING, name: 'Spruce Sapling' },
+                [BLOCKS.BIRCH_LEAVES]: { sapling: BLOCKS.BIRCH_SAPLING, name: 'Birch Sapling' },
+                [BLOCKS.JUNGLE_LEAVES]: { sapling: BLOCKS.JUNGLE_SAPLING, name: 'Jungle Sapling' },
+                [BLOCKS.ACACIA_LEAVES]: { sapling: BLOCKS.ACACIA_SAPLING, name: 'Acacia Sapling' },
+                [BLOCKS.DARK_OAK_LEAVES]: { sapling: BLOCKS.DARK_OAK_SAPLING, name: 'Dark Oak Sapling' },
+            };
+            if (leafSaplingMap[oldType]) {
+                if (Math.random() < 0.05) {
+                    const info = leafSaplingMap[oldType];
+                    const item = new Item('block', info.sapling, {}, info.name);
+                    item.stackable = true;
+                    item.maxStack = 64;
+                    this.entityManager.spawnItem(item, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                if (oldType === BLOCKS.LEAVES && Math.random() < 0.005) {
+                    const appleItem = new Item('food', 'apple', {}, 'Apple');
+                    appleItem.stackable = true;
+                    appleItem.maxStack = 64;
+                    this.entityManager.spawnItem(appleItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
             // Tall grass / Fern / Tall Fern drop wheat seeds (50% chance, 20% chance of dropping 2)
             if (oldType === BLOCKS.TALL_GRASS || oldType === BLOCKS.FERN || oldType === BLOCKS.TALL_FERN) {
                 if (Math.random() < 0.50) {
@@ -789,6 +815,8 @@ class Game {
         this.burningBlocks = new Map();
         this.thrownEnderPearls = [];
         this.flyingEyesOfEnder = [];
+        this.arrows = [];
+        this.bowCharge = 0;
         this.dragonDefeated = false;
         this.showingCredits = false;
 
@@ -2461,6 +2489,41 @@ class Game {
             }
         }
 
+        // Bow Charging and Shooting
+        const curHeldSlot = this.player ? this.player.inventory.slots[this.player.selectedSlot] : null;
+        const isHoldingBow = curHeldSlot && curHeldSlot.item && curHeldSlot.item.subtype === 'bow';
+        if (isHoldingBow) {
+            const hasArrow = this.player.isCreative || this.input.creativeMode || 
+                (this.player.inventory.slots && this.player.inventory.slots.some(s => s && s.item && s.item.subtype === 'arrow'));
+
+            if (this.input.mouse.rightDown) {
+                if (!hasArrow) {
+                    if (this.input.mouse.rightClick) {
+                        this.showToast('You have no arrows!', 2000);
+                        if (this.audio && this.audio.playClick) this.audio.playClick();
+                        this.input.mouse.rightClick = false;
+                    }
+                    this.bowCharge = 0;
+                } else {
+                    this.bowCharge = Math.min(1.0, (this.bowCharge || 0) + dt / 1.0);
+                    // Visual pull animation: draw back bow viewmodel
+                    if (this.viewModel) {
+                        this.viewModel.position.z = -this.bowCharge * 0.18;
+                        this.viewModel.position.x = -this.bowCharge * 0.08;
+                        this.viewModel.rotation.y = this.bowCharge * 0.25;
+                    }
+                    this.input.mouse.rightClick = false; // consume right click so it doesn't place blocks
+                }
+            } else {
+                if (this.bowCharge && this.bowCharge > 0.1) {
+                    this.shootArrow(this.bowCharge);
+                }
+                this.bowCharge = 0;
+            }
+        } else {
+            this.bowCharge = 0;
+        }
+
         // Right click actions
         if (this.input.mouse.rightClick) {
             const slot = this.player.inventory.slots[this.player.selectedSlot];
@@ -3048,6 +3111,15 @@ class Game {
                             advanced = true;
                             break;
                         }
+                    }
+                } else {
+                    const hitProps = getBlockProperties(b);
+                    if (hitProps && hitProps.isSapling) {
+                        // 45% chance to advance/grow sapling immediately into full tree (or 2x2 mega tree)
+                        if (Math.random() < 0.45) {
+                            growSapling(this.world, bx, by, bz, b, this.particles, this.audio);
+                        }
+                        advanced = true;
                     }
                 }
 
@@ -4375,6 +4447,71 @@ class Game {
             }
         }
 
+        // Update Bow Arrow Projectiles
+        if (this.arrows && this.arrows.length > 0) {
+            for (let i = this.arrows.length - 1; i >= 0; i--) {
+                const arr = this.arrows[i];
+                arr.life += dt;
+                arr.velocity.y -= 18 * dt; // authentic Minecraft arrow gravity
+                const nextPos = arr.position.clone().addScaledVector(arr.velocity, dt);
+                const stepVec = nextPos.clone().sub(arr.position);
+                const stepDist = stepVec.length();
+                const stepDir = stepVec.clone().normalize();
+
+                // Rotate arrow mesh along travel direction
+                if (stepDist > 0.001) {
+                    arr.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), stepDir);
+                }
+
+                // Crit particle trail
+                if (arr.critical && Math.random() < 0.6) {
+                    this.particles.emit(arr.position, 'crit', 1, 0xffff66);
+                }
+
+                // 1. Check mob collisions
+                let mobHit = null;
+                if (this.entityManager && this.entityManager.mobs) {
+                    const eHit = this.entityManager.raycast(arr.position, stepDir, stepDist + 0.3);
+                    if (eHit && eHit.hit && eHit.mob) {
+                        mobHit = eHit.mob;
+                    }
+                }
+
+                if (mobHit) {
+                    mobHit.takeDamage(arr.damage, stepDir.clone().multiplyScalar(2.0));
+                    if (this.audio && this.audio.playHit) this.audio.playHit();
+                    if (arr.critical) {
+                        this.particles.emit(arr.position, 'crit', 12, 0xffff33);
+                    } else {
+                        this.particles.emit(arr.position, 'blood', 6, 0xff2222);
+                    }
+                    this.engine.scene.remove(arr.mesh);
+                    this.arrows.splice(i, 1);
+                    continue;
+                }
+
+                // 2. Check world block collisions
+                const blockHit = this.world.raycast(arr.position, stepDir, stepDist);
+                if (blockHit && blockHit.hit) {
+                    if (this.audio && this.audio.playPop) this.audio.playPop(blockHit.point);
+                    this.particles.emit(blockHit.point, 'smoke', 4, 0xaaaaaa);
+                    this.engine.scene.remove(arr.mesh);
+                    this.arrows.splice(i, 1);
+                    continue;
+                }
+
+                // 3. Despawn if out of bounds or expired
+                if (arr.life > 10.0 || arr.position.y < -30) {
+                    this.engine.scene.remove(arr.mesh);
+                    this.arrows.splice(i, 1);
+                    continue;
+                }
+
+                arr.position.copy(nextPos);
+                arr.mesh.position.copy(nextPos);
+            }
+        }
+
         // Update particles
         if (this.particles) this.particles.update(dt);
         
@@ -4792,7 +4929,7 @@ class Game {
             }
 
             if (targetDim === 'end') {
-                const pillarHeights = [76, 82, 72, 88, 78, 84, 74, 90];
+                const pillarHeights = [73, 79, 85, 91, 73, 79, 85, 91];
                 for (let i = 0; i < 8; i++) {
                     const angle = i * Math.PI / 4;
                     const px = Math.round(Math.cos(angle) * 38);
@@ -5199,6 +5336,84 @@ class Game {
             this.world.setBlock(p.x, p.y, p.z, portalBlock);
         }
         return true;
+    }
+
+    shootArrow(charge) {
+        // In survival mode, consume 1 arrow from inventory
+        if (!this.player.isCreative && !this.input.creativeMode) {
+            const arrowSlot = this.player.inventory.slots.find(s => s && s.item && s.item.subtype === 'arrow');
+            if (arrowSlot) {
+                arrowSlot.count--;
+                if (arrowSlot.count <= 0) {
+                    const idx = this.player.inventory.slots.indexOf(arrowSlot);
+                    if (idx !== -1) this.player.inventory.slots[idx] = null;
+                }
+                if (this.ui) {
+                    this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    if (this.ui.isOpen) {
+                        this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                        this.ui.renderGrid(this.ui.elements.mainGrid, this.player.inventory.slots.slice(9, 36), 9, this.player, 'inventory');
+                    }
+                }
+            }
+        }
+
+        if (this.audio && this.audio.playBow) {
+            this.audio.playBow();
+        }
+
+        this.isSwinging = true;
+        this.swingProgress = 0;
+
+        const eyePos = this.player.getEyePosition();
+        const lookDir = this.player.getLookDirection();
+
+        // Authentic 3D Arrow Mesh: shaft, flint tip, feather fletching
+        const arrowGroup = new THREE.Group();
+        
+        // Shaft: slender brown wooden rod (0.04 x 0.04 x 0.6)
+        const shaftGeo = new THREE.BoxGeometry(0.04, 0.04, 0.6);
+        const shaftMat = new THREE.MeshLambertMaterial({ color: 0x8a603c });
+        const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
+        arrowGroup.add(shaftMesh);
+
+        // Arrowhead: sharp gray flint tip (0.08 x 0.08 x 0.12)
+        const tipGeo = new THREE.ConeGeometry(0.06, 0.14, 4);
+        tipGeo.rotateX(Math.PI / 2);
+        const tipMat = new THREE.MeshLambertMaterial({ color: 0x555555 });
+        const tipMesh = new THREE.Mesh(tipGeo, tipMat);
+        tipMesh.position.set(0, 0, 0.35);
+        arrowGroup.add(tipMesh);
+
+        // Fletching: white feather vanes at back (0.12 x 0.12 x 0.15)
+        const fletchGeo = new THREE.BoxGeometry(0.02, 0.12, 0.15);
+        const fletchMat = new THREE.MeshBasicMaterial({ color: 0xdddddd });
+        const fletch1 = new THREE.Mesh(fletchGeo, fletchMat);
+        fletch1.position.set(0, 0, -0.22);
+        const fletch2 = new THREE.Mesh(fletchGeo, fletchMat);
+        fletch2.rotation.z = Math.PI / 2;
+        fletch2.position.set(0, 0, -0.22);
+        arrowGroup.add(fletch1);
+        arrowGroup.add(fletch2);
+
+        const spawnPos = eyePos.clone().addScaledVector(lookDir, 0.5);
+        arrowGroup.position.copy(spawnPos);
+        arrowGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), lookDir);
+
+        this.engine.scene.add(arrowGroup);
+
+        const speed = 18 + charge * 24; // 18 to 42 blocks/sec
+        const damage = Math.round(4 + charge * 6); // 4 to 10 damage
+        const isCrit = charge >= 0.95;
+
+        this.arrows.push({
+            mesh: arrowGroup,
+            position: spawnPos,
+            velocity: lookDir.clone().multiplyScalar(speed),
+            damage: damage,
+            critical: isCrit,
+            life: 0
+        });
     }
 
     checkAndActivateEndPortal(bx, by, bz) {

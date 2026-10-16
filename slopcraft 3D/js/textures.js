@@ -2,7 +2,7 @@
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=111';
+import { seededRandom } from './noise.js?v=115';
 
 // Block type IDs
 export const BLOCKS = {
@@ -357,10 +357,19 @@ export const BLOCKS = {
     BEETROOTS_0: 365,
     BEETROOTS_1: 366,
     BEETROOTS_2: 367,
-    BEETROOTS_3: 368,
     PUMPKIN: 370,
     PUMPKIN_STEM: 371,
-    MELON_STEM: 372
+    MELON_STEM: 372,
+    OAK_SAPLING: 373,
+    SPRUCE_SAPLING: 374,
+    BIRCH_SAPLING: 375,
+    JUNGLE_SAPLING: 376,
+    ACACIA_SAPLING: 377,
+    DARK_OAK_SAPLING: 378,
+    SCULK: 379,
+    SCULK_CATALYST: 380,
+    SCULK_SHRIEKER: 381,
+    SCULK_SENSOR: 382
 };
 
 // Block properties
@@ -707,7 +716,21 @@ const BLOCK_PROPS = {
     [BLOCKS.LAVENDER]:      { name: 'Lavender',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null, flammable: true },
     [BLOCKS.PODZOL]:        { name: 'Podzol',         health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
     [BLOCKS.RUBY_ORE]:      { name: 'Ruby Ore',       health: 8, transparent: false, emissive: 0.3, solid: true, drops: null },
-    [BLOCKS.SAPPHIRE_ORE]:  { name: 'Sapphire Ore',   health: 8, transparent: false, emissive: 0.3, solid: true, drops: null }
+    [BLOCKS.SAPPHIRE_ORE]:  { name: 'Sapphire Ore',   health: 8, transparent: false, emissive: 0.3, solid: true, drops: null },
+
+    // Saplings
+    [BLOCKS.OAK_SAPLING]:      { name: 'Oak Sapling',      health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isSapling: true, saplingType: 'oak', drops: BLOCKS.OAK_SAPLING },
+    [BLOCKS.SPRUCE_SAPLING]:   { name: 'Spruce Sapling',   health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isSapling: true, saplingType: 'spruce', drops: BLOCKS.SPRUCE_SAPLING },
+    [BLOCKS.BIRCH_SAPLING]:    { name: 'Birch Sapling',    health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isSapling: true, saplingType: 'birch', drops: BLOCKS.BIRCH_SAPLING },
+    [BLOCKS.JUNGLE_SAPLING]:   { name: 'Jungle Sapling',   health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isSapling: true, saplingType: 'jungle', drops: BLOCKS.JUNGLE_SAPLING },
+    [BLOCKS.ACACIA_SAPLING]:   { name: 'Acacia Sapling',   health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isSapling: true, saplingType: 'acacia', drops: BLOCKS.ACACIA_SAPLING },
+    [BLOCKS.DARK_OAK_SAPLING]: { name: 'Dark Oak Sapling', health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isSapling: true, saplingType: 'dark_oak', drops: BLOCKS.DARK_OAK_SAPLING },
+
+    // Sculk Blocks
+    [BLOCKS.SCULK]:            { name: 'Sculk',            health: 1.5, transparent: false, emissive: 0.1, solid: true, drops: BLOCKS.SCULK },
+    [BLOCKS.SCULK_CATALYST]:   { name: 'Sculk Catalyst',   health: 4, transparent: false, emissive: 0.4, solid: true, drops: BLOCKS.SCULK_CATALYST },
+    [BLOCKS.SCULK_SHRIEKER]:   { name: 'Sculk Shrieker',   health: 4, transparent: true, emissive: 0.3, solid: true, drops: BLOCKS.SCULK_SHRIEKER },
+    [BLOCKS.SCULK_SENSOR]:     { name: 'Sculk Sensor',     health: 2, transparent: true, emissive: 0.3, solid: true, drops: BLOCKS.SCULK_SENSOR }
 };
 
 export function getBlockProperties(type) {
@@ -3743,7 +3766,7 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.ICE]: 'ice',
     [BLOCKS.PACKED_ICE]: 'packed_ice',
     [BLOCKS.BLUE_ICE]: 'blue_ice',
-    [BLOCKS.LAVA]: 'lava_flow',
+    [BLOCKS.LAVA]: 'lava_still',
     [BLOCKS.PORTAL_FRAME]: { top: 'end_portal_frame_top', side: 'end_portal_frame_side', bottom: 'end_stone' },
     [BLOCKS.END_PORTAL_FRAME_EYE]: { top: 'end_portal_frame_top', eye: 'end_portal_frame_eye', side: 'end_portal_frame_side', bottom: 'end_stone' },
     [BLOCKS.END_PORTAL]: 'end_portal',
@@ -4048,7 +4071,21 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.BEETROOTS_2]: 'beetroots_stage2',
     [BLOCKS.BEETROOTS_3]: 'beetroots_stage3',
     [BLOCKS.PUMPKIN_STEM]: 'pumpkin_stem',
-    [BLOCKS.MELON_STEM]: 'melon_stem'
+    [BLOCKS.MELON_STEM]: 'melon_stem',
+
+    // Saplings
+    [BLOCKS.OAK_SAPLING]: 'oak_sapling',
+    [BLOCKS.SPRUCE_SAPLING]: 'spruce_sapling',
+    [BLOCKS.BIRCH_SAPLING]: 'birch_sapling',
+    [BLOCKS.JUNGLE_SAPLING]: 'jungle_sapling',
+    [BLOCKS.ACACIA_SAPLING]: 'acacia_sapling',
+    [BLOCKS.DARK_OAK_SAPLING]: 'dark_oak_sapling',
+
+    // Sculk
+    [BLOCKS.SCULK]: 'sculk',
+    [BLOCKS.SCULK_CATALYST]: { top: 'sculk_catalyst_top', side: 'sculk_catalyst_side', bottom: 'sculk_catalyst_bottom' },
+    [BLOCKS.SCULK_SHRIEKER]: { top: 'sculk_shrieker_top', side: 'sculk_shrieker_side', bottom: 'sculk_shrieker_bottom' },
+    [BLOCKS.SCULK_SENSOR]: { top: 'sculk_sensor_top', side: 'sculk_sensor_side', bottom: 'sculk_sensor_bottom' }
 };
 
 let _mcChestPromise = null;
@@ -4099,6 +4136,33 @@ function loadMinecraftChestTexture(face) {
 }
 
 const LOCAL_ASSET_MAP = {
+    // Saplings
+    "oak_sapling": "assets/mc/block/oak_sapling.png",
+    "spruce_sapling": "assets/mc/block/spruce_sapling.png",
+    "birch_sapling": "assets/mc/block/birch_sapling.png",
+    "jungle_sapling": "assets/mc/block/jungle_sapling.png",
+    "acacia_sapling": "assets/mc/block/acacia_sapling.png",
+    "dark_oak_sapling": "assets/mc/block/dark_oak_sapling.png",
+
+    // Lava
+    "lava_still": "assets/mc/block/lava_still.png",
+    "lava_flow": "assets/mc/block/lava_flow.png",
+
+    // Sculk
+    "sculk": "assets/mc/block/sculk.png",
+    "sculk_catalyst_side": "assets/mc/block/sculk_catalyst_side.png",
+    "sculk_catalyst_top": "assets/mc/block/sculk_catalyst_top.png",
+    "sculk_catalyst_bottom": "assets/mc/block/sculk_catalyst_bottom.png",
+    "sculk_shrieker_side": "assets/mc/block/sculk_shrieker_side.png",
+    "sculk_shrieker_top": "assets/mc/block/sculk_shrieker_top.png",
+    "sculk_shrieker_inner_top": "assets/mc/block/sculk_shrieker_inner_top.png",
+    "sculk_shrieker_bottom": "assets/mc/block/sculk_shrieker_bottom.png",
+    "sculk_sensor_side": "assets/mc/block/sculk_sensor_side.png",
+    "sculk_sensor_top": "assets/mc/block/sculk_sensor_top.png",
+    "sculk_sensor_bottom": "assets/mc/block/sculk_sensor_bottom.png",
+    "sculk_sensor_tendril_active": "assets/mc/block/sculk_sensor_tendril_active.png",
+    "sculk_sensor_tendril_inactive": "assets/mc/block/sculk_sensor_tendril_inactive.png",
+
     "lantern": "assets/mc/block/lantern.png",
     "soul_lantern": "assets/mc/block/soul_lantern.png",
     "item/lantern": "assets/mc/item/lantern.png",
@@ -4782,7 +4846,11 @@ export async function createTextureAtlas(useMinecraft = true) {
                         } else if (texName === 'end_portal_frame_side') {
                             ctx.drawImage(img, 0, 3, TEX_SIZE, 13, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         } else if (img.width !== TEX_SIZE || img.height !== TEX_SIZE) {
-                            ctx.drawImage(img, 0, 0, img.width, img.height, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                            if (img.height > img.width) {
+                                ctx.drawImage(img, 0, 0, img.width, img.width, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                            } else {
+                                ctx.drawImage(img, 0, 0, img.width, img.height, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                            }
                         } else {
                             ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         }
@@ -4793,13 +4861,16 @@ export async function createTextureAtlas(useMinecraft = true) {
                         }
                         
                         // If animated strip, save it to animatedFrames
-                        if (img.width === TEX_SIZE && img.height > TEX_SIZE) {
+                        if (img.height > img.width) {
+                            const frameSize = img.width;
+                            const numFrames = Math.floor(img.height / frameSize);
                             const forceOpaqueFlag = isWater;
                             const frameInfo = animatedFrames.find(f => f.x === entry.col * TEX_SIZE && f.y === entry.row * TEX_SIZE);
                             if (frameInfo) {
                                 frameInfo.isMC = true;
                                 frameInfo.img = img;
-                                frameInfo.frames = img.height / TEX_SIZE;
+                                frameInfo.frameSize = frameSize;
+                                frameInfo.frames = numFrames;
                                 frameInfo.tint = tintColor;
                                 frameInfo.forceOpaque = forceOpaqueFlag;
                             } else {
@@ -4808,7 +4879,8 @@ export async function createTextureAtlas(useMinecraft = true) {
                                     y: entry.row * TEX_SIZE,
                                     isMC: true,
                                     img: img,
-                                    frames: img.height / TEX_SIZE,
+                                    frameSize: frameSize,
+                                    frames: numFrames,
                                     tint: tintColor,
                                     forceOpaque: forceOpaqueFlag,
                                 });
@@ -5248,23 +5320,26 @@ export async function createTextureAtlas(useMinecraft = true) {
         for (const frame of animatedFrames) {
             if (frame.isMC) {
                 const totalFrames = frame.frames || 1;
-                const currentFrame = Math.floor(time / 100) % totalFrames;
+                const frameSize = frame.frameSize || TEX_SIZE;
+                const isLava = frame.img && frame.img.src && frame.img.src.includes('lava');
+                const frameInterval = isLava ? 160 : 100;
+                const currentFrame = Math.floor(time / frameInterval) % totalFrames;
                 if (frame.lastFrame === currentFrame) continue;
                 frame.lastFrame = currentFrame;
                 
                 ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
-                ctx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
+                ctx.drawImage(frame.img, 0, currentFrame * frameSize, frameSize, frameSize, frame.x, frame.y, TEX_SIZE, TEX_SIZE);
                 
                 // If it requires tint, multiply tint color over it
                 if (frame.tint) {
                     tmpCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-                    tmpCtx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                    tmpCtx.drawImage(frame.img, 0, currentFrame * frameSize, frameSize, frameSize, 0, 0, TEX_SIZE, TEX_SIZE);
                     tmpCtx.globalCompositeOperation = 'multiply';
                     tmpCtx.fillStyle = frame.tint;
                     tmpCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
                     // Restore alpha
                     tmpCtx.globalCompositeOperation = 'destination-in';
-                    tmpCtx.drawImage(frame.img, 0, currentFrame * TEX_SIZE, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                    tmpCtx.drawImage(frame.img, 0, currentFrame * frameSize, frameSize, frameSize, 0, 0, TEX_SIZE, TEX_SIZE);
                     tmpCtx.globalCompositeOperation = 'source-over';
                     
                     ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
@@ -7011,8 +7086,8 @@ const MC_MOB_SKIN_CONFIG = {
         head_front: [6,10,8,10], head_back: [20,10,8,10], head_top: [6,0,8,6], head_bottom: [14,0,8,6], head_side: [0,10,6,10],
         body: [18,40,18,12], leg: [37,0,6,16], arm: [60,58,8,30] },
     WARDEN: { path: 'warden/warden.png',
-        head_front: [16,16,16,16], head_back: [48,16,16,16], head_top: [16,0,16,16], head_bottom: [32,0,16,16], head_side: [0,16,16,16],
-        body: [11,43,18,21], leg: [76,40,6,13], arm: [44,50,8,28] },
+        head_front: [16,48,16,16], head_back: [48,48,16,16], head_top: [16,32,16,16], head_bottom: [32,32,16,16], head_side: [0,48,16,16],
+        body: [11,11,18,21], leg: [76,76,6,13], arm: [44,58,8,28] },
     VILLAGER: { path: 'villager/villager.png',
         head_front: [8,8,8,10], head_back: [24,8,8,10], head_top: [8,0,8,8], head_bottom: [16,0,8,8], head_side: [0,8,8,10],
         body: [16,20,8,18], leg: [0,22,4,12], arm: [44,22,16,8] },
@@ -7828,6 +7903,7 @@ export function getSteveSkinCanvas() {
 export async function initSteveSkin() {
     const cvs = getSteveSkinCanvas();
     const ctx = cvs.getContext('2d', { willReadFrequently: true });
+    getStevePartTextures(); // Ensure canvases are allocated
 
     return new Promise((resolve) => {
         const local = new Image();

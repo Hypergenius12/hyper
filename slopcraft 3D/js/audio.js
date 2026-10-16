@@ -2,7 +2,7 @@
 // audio.js - SFX Synthesizer using Web Audio API
 // ============================================
 
-import { BLOCKS, getBlockProperties } from './textures.js?v=113';
+import { BLOCKS, getBlockProperties } from './textures.js?v=115';
 
 export class AudioManager {
     constructor() {
@@ -457,6 +457,12 @@ export class AudioManager {
 
     playCast(position = null) {
         this.playMC('random/bow', 0.8, position).then(s => { if(!s) this.playTone(600, 'sine', 0.3, 0.3, 400, position); });
+    }
+
+    playBow(position = null) {
+        this.playMC('random/bow', 1.0, position).then(s => {
+            if (!s) this.playTone(450, 'triangle', 0.2, 0.4, 250, position);
+        });
     }
 
     playPortalTravel(position = null) {

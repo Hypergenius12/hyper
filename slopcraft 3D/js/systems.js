@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js?v=111';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=111';
+import { BLOCKS, generateItemTexture } from './textures.js?v=115';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=115';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -228,11 +228,11 @@ export class LightingSystem {
         let state;
         if (currentDimension === 'nether') {
             state = {
-                amb: new THREE.Color(0x551a1a),
-                ambIntensity: 0.6,
-                bg: new THREE.Color(0x220000),
-                top: new THREE.Color(0x662222),
-                sun: 0,
+                amb: new THREE.Color(0x944040),
+                ambIntensity: 0.95,
+                bg: new THREE.Color(0x3d0b0b),
+                top: new THREE.Color(0x882c2c),
+                sun: 0.25,
                 moon: 0
             };
         } else if (currentDimension === 'aether') {
@@ -282,8 +282,8 @@ export class LightingSystem {
                     this.scene.fog.near = 16;
                     this.scene.fog.far = renderBlocks * 0.75;
                 } else if (currentDimension === 'nether') {
-                    this.scene.fog.near = 20;
-                    this.scene.fog.far = renderBlocks * 0.85;
+                    this.scene.fog.near = 35;
+                    this.scene.fog.far = renderBlocks * 1.1;
                 } else if (currentDimension === 'end') {
                     this.scene.fog.near = 50;
                     this.scene.fog.far = renderBlocks * 1.5;
@@ -297,7 +297,7 @@ export class LightingSystem {
                 } else if (currentDimension === 'aether') {
                     this.scene.fog.density = 0.02;
                 } else if (currentDimension === 'nether') {
-                    this.scene.fog.density = 0.015;
+                    this.scene.fog.density = 0.007;
                 } else if (currentDimension === 'end') {
                     this.scene.fog.density = 0.0025;
                 } else {
@@ -972,7 +972,7 @@ class UISystem {
                 117, 118, 120, 121, 122, 123, 125, 129, 130, 132, 133, 134, 135, 136, 137, 138, 143, 185, 186
             ]);
             const lower = nameStr.toLowerCase();
-            if (naturalIds.has(id) || lower.includes('ore') || lower.includes('leaves') || lower.includes('log') || lower.includes('grass') || lower.includes('dirt') || lower.includes('flower') || lower.includes('plant') || lower.includes('vine') || lower.includes('root') || lower.includes('stem') || lower.includes('coral') || lower.includes('nylium') || lower.includes('shroom') || lower.includes('sprout') || lower.includes('soil') || lower.includes('sand') || lower.includes('cloud') || lower.includes('fern')) {
+            if (naturalIds.has(id) || lower.includes('ore') || lower.includes('leaves') || lower.includes('sapling') || lower.includes('sculk') || lower.includes('log') || lower.includes('grass') || lower.includes('dirt') || lower.includes('flower') || lower.includes('plant') || lower.includes('vine') || lower.includes('root') || lower.includes('stem') || lower.includes('coral') || lower.includes('nylium') || lower.includes('shroom') || lower.includes('sprout') || lower.includes('soil') || lower.includes('sand') || lower.includes('cloud') || lower.includes('fern')) {
                 return 'natural';
             }
             return 'building';
