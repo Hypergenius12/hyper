@@ -24,6 +24,14 @@ function createStaticServer(rootDir, port) {
         req.on('error', () => {});
         res.on('error', () => {});
 
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+        if (req.method === 'OPTIONS') {
+            res.writeHead(204);
+            res.end();
+            return;
+        }
+
         let reqPath = decodeURIComponent(req.url.split('?')[0]);
         if (reqPath === '/' || reqPath.endsWith('/')) {
             reqPath += 'index.html';
@@ -121,6 +129,8 @@ const slopcraftRoot = path.resolve(__dirname, 'slopcraft 3D');
 
 createStaticServer(hyperRoot, 8000);
 createStaticServer(slopcraftRoot, 8060);
+createStaticServer(hyperRoot, 8089);
+createStaticServer(hyperRoot, 5500);
 
 // Keep-alive timer to prevent event loop starvation in background processes
 setInterval(() => {}, 1000 * 60 * 60);

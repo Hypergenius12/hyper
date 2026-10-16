@@ -2,7 +2,7 @@
 // textures.js — Procedural Texture Atlas + Block Definitions
 // ============================================
 import * as THREE from 'three';
-import { seededRandom } from './noise.js?v=106';
+import { seededRandom } from './noise.js?v=107';
 
 // Block type IDs
 export const BLOCKS = {
@@ -4316,6 +4316,9 @@ const LOCAL_ASSET_MAP = {
     "sapphire_axe": "assets/mc/item/sapphire_axe.png",
     "sapphire_shovel": "assets/mc/item/sapphire_shovel.png",
     "quartz": "assets/mc/item/quartz.png",
+    "item/quartz": "assets/mc/item/quartz.png",
+    "nether_quartz": "assets/mc/item/quartz.png",
+    "item/nether_quartz": "assets/mc/item/quartz.png",
     "netherite_scrap": "assets/mc/item/netherite_scrap.png",
     "large_fern_bottom": "assets/mc/block/large_fern_bottom.png",
     "large_fern_top": "assets/mc/block/large_fern_top.png",
@@ -5239,6 +5242,8 @@ const MC_ITEM_MAP = {
     'axe_gravitite': 'gravitite_axe',
     'shovel_gravitite': 'gravitite_shovel',
     'quartz': 'quartz',
+    'nether_quartz': 'quartz',
+    'item/quartz': 'quartz',
     'netherite_scrap': 'netherite_scrap',
     'lapis_lazuli': 'lapis_lazuli',
     'lapis': 'lapis_lazuli',
@@ -5481,7 +5486,9 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         'bow': { c: '#8d6e63', d: '#5d4037', h: '#ffffff' },
         'compass': { c: '#888888', d: '#555555', h: '#cccccc', b: '#ff2222' },
         'clock': { c: '#3366cc', d: '#cc9900', h: '#ffee44', b: '#222222' },
-        'golden_apple': { c: '#ffcc00', d: '#c69200', h: '#fff480' }
+        'golden_apple': { c: '#ffcc00', d: '#c69200', h: '#fff480' },
+        'quartz': { c: '#ede6df', d: '#c2b8ad', h: '#ffffff', b: '#8c7e73' },
+        'nether_quartz': { c: '#ede6df', d: '#c2b8ad', h: '#ffffff', b: '#8c7e73' }
     };
 
     // Helper to determine material tier from subtype
