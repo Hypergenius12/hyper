@@ -2,8 +2,59 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=116';
-import { getBiomeParams } from './generation.js?v=116';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=120';
+import { getBiomeParams } from './generation.js?v=120';
+
+// ============================================
+// Shader Customization: Wrapped Diffuse Lighting
+// ============================================
+// Solves standard Lambert limitation where block tops are 0% lit when light sources (torches,
+// campfires, lanterns) are placed at or below the block's top face.
+if (THREE.ShaderChunk && !THREE.ShaderChunk._slopcraftWrappedLambert) {
+    THREE.ShaderChunk._slopcraftWrappedLambert = true;
+    THREE.ShaderChunk.lights_lambert_pars_fragment = `
+varying vec3 vViewPosition;
+
+struct LambertMaterial {
+\tvec3 diffuseColor;
+\tfloat specularStrength;
+};
+
+void RE_Direct_Lambert( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material, inout ReflectedLight reflectedLight ) {
+
+\tfloat rawDot = dot( geometryNormal, directLight.direction );
+\tfloat dotNL = saturate( rawDot );
+
+\t// Slopcraft Dynamic Light Wrapping:
+\t// Allows block tops and voxel surfaces to receive wrap illumination from lights level with or below them.
+\t// In view space, world UP (0, 1, 0) is (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz.
+\tfloat upFactor = dot( geometryNormal, ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz );
+\tif ( upFactor > 0.25 ) {
+\t\t// Top face: wrap lighting so torches/lanterns on walls/floors or below the block illuminate the top face
+\t\tfloat topWrap = saturate( ( rawDot + 0.65 ) / 1.65 );
+\t\tdotNL = max( dotNL, topWrap * 0.95 );
+\t} else if ( upFactor > -0.25 ) {
+\t\t// Side wall faces: soft wrap to eliminate harsh pitch-black crevices next to torches
+\t\tfloat sideWrap = saturate( ( rawDot + 0.35 ) / 1.35 );
+\t\tdotNL = max( dotNL, sideWrap * 0.85 );
+\t}
+
+\tvec3 irradiance = dotNL * directLight.color;
+
+\treflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
+
+}
+
+void RE_IndirectDiffuse_Lambert( const in vec3 irradiance, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material, inout ReflectedLight reflectedLight ) {
+
+\treflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );
+
+}
+
+#define RE_Direct\t\t\t\tRE_Direct_Lambert
+#define RE_IndirectDiffuse\t\tRE_IndirectDiffuse_Lambert
+`;
+}
 
 export const CHUNK_SIZE = 16;
 export const CHUNK_HEIGHT = 128;
@@ -2291,7 +2342,7 @@ export class World {
                             this.onChestGenerated(wx, y, wz);
                         } else if (blockType === window.BLOCKS.DUNGEON_DOOR && this.onDoorGenerated) {
                             this.onDoorGenerated(wx, y, wz);
-                        } else if (blockType === window.BLOCKS.TORCH && this.onTorchGenerated) {
+                        } else if ((blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.LANTERN || blockType === window.BLOCKS.SOUL_LANTERN || blockType === window.BLOCKS.GLOWSTONE) && this.onTorchGenerated) {
                             this.onTorchGenerated(wx, y, wz);
                         } else if (blockType === window.BLOCKS.FURNACE && this.onFurnaceGenerated) {
                             this.onFurnaceGenerated(wx, y, wz);

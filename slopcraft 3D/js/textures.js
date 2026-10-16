@@ -370,7 +370,8 @@ export const BLOCKS = {
     SCULK_CATALYST: 380,
     SCULK_SHRIEKER: 381,
     SCULK_SENSOR: 382,
-    DIRT_PATH: 383
+    DIRT_PATH: 383,
+    SLIME_BLOCK: 384
 };
 
 // Block properties
@@ -530,6 +531,7 @@ const BLOCK_PROPS = {
     [BLOCKS.LAPIS_BLOCK]:       { name: 'Lapis Block',       health: 6, transparent: false, emissive: 0, solid: true, drops: null },
     [BLOCKS.REDSTONE_BLOCK]:    { name: 'Redstone Block',    health: 6, transparent: false, emissive: 0.6, solid: true, drops: null },
     [BLOCKS.COAL_BLOCK]:        { name: 'Coal Block',        health: 6, transparent: false, emissive: 0, solid: true, drops: null, flammable: true },
+    [BLOCKS.SLIME_BLOCK]:       { name: 'Slime Block',       health: 1, transparent: true,  emissive: 0, solid: true, drops: BLOCKS.SLIME_BLOCK },
     [BLOCKS.AIR]:           { name: 'Air',           health: 0, transparent: true,  emissive: 0, solid: false, drops: null },
     [BLOCKS.GRASS]:         { name: 'Grass',         health: 3, transparent: false, emissive: 0, solid: true, drops: BLOCKS.DIRT },
     [BLOCKS.DIRT]:          { name: 'Dirt',           health: 3, transparent: false, emissive: 0, solid: true, drops: null },
@@ -3193,6 +3195,17 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         }
 
+        case BLOCKS.SLIME_BLOCK: {
+            fillBase(ctx, 110, 195, 80);
+            addNoise(ctx, rng, 15);
+            ctx.strokeStyle = '#559933';
+            ctx.strokeRect(1, 1, 14, 14);
+            ctx.fillStyle = '#7acc55';
+            ctx.fillRect(4, 4, 8, 8);
+            addPixels(ctx, rng, '#a0ee77', 20);
+            break;
+        }
+
         case BLOCKS.ENCHANTED_AETHER_LEAVES: {
             fillBase(ctx, 0, 0, 0, 0);
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
@@ -4270,7 +4283,8 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.SCULK]: 'sculk',
     [BLOCKS.SCULK_CATALYST]: { top: 'sculk_catalyst_top', side: 'sculk_catalyst_side', bottom: 'sculk_catalyst_bottom' },
     [BLOCKS.SCULK_SHRIEKER]: { top: 'sculk_shrieker_top', side: 'sculk_shrieker_side', bottom: 'sculk_shrieker_bottom' },
-    [BLOCKS.SCULK_SENSOR]: { top: 'sculk_sensor_top', side: 'sculk_sensor_side', bottom: 'sculk_sensor_bottom' }
+    [BLOCKS.SCULK_SENSOR]: { top: 'sculk_sensor_top', side: 'sculk_sensor_side', bottom: 'sculk_sensor_bottom' },
+    [BLOCKS.SLIME_BLOCK]: 'slime_block'
 };
 
 let _mcChestPromise = null;
@@ -4854,7 +4868,15 @@ const LOCAL_ASSET_MAP = {
     "pumpkin_pie": "assets/mc/item/pumpkin_pie.png",
     "item/pumpkin_pie": "assets/mc/item/pumpkin_pie.png",
     "beetroot_soup": "assets/mc/item/beetroot_soup.png",
-    "item/beetroot_soup": "assets/mc/item/beetroot_soup.png"
+    "item/beetroot_soup": "assets/mc/item/beetroot_soup.png",
+    "slime_ball": "assets/mc/item/slime_ball.png",
+    "item/slime_ball": "assets/mc/item/slime_ball.png",
+    "magma_cream": "assets/mc/item/magma_cream.png",
+    "item/magma_cream": "assets/mc/item/magma_cream.png",
+    "cocoa_beans": "assets/mc/item/cocoa_beans.png",
+    "item/cocoa_beans": "assets/mc/item/cocoa_beans.png",
+    "slime_block": "assets/mc/block/slime_block.png",
+    "block/slime_block": "assets/mc/block/slime_block.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -5837,6 +5859,11 @@ const MC_ITEM_MAP = {
     'cookie': 'cookie',
     'pumpkin_pie': 'pumpkin_pie',
     'beetroot_soup': 'beetroot_soup',
+    'slime_ball': 'slime_ball',
+    'slimeball': 'slime_ball',
+    'magma_cream': 'magma_cream',
+    'lavaslime_ball': 'magma_cream',
+    'cocoa_beans': 'cocoa_beans',
     'stonecutter': 'stonecutter_side',
     'lantern': 'item/lantern',
     'soul_lantern': 'item/soul_lantern',
@@ -7287,6 +7314,68 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         ctx.fillStyle = '#3f8c27';
         ctx.fillRect(7, 5, 1, 1);
         ctx.fillRect(8, 6, 1, 1);
+        return canvas;
+    } else if (itemSubtype === 'slime_ball' || itemSubtype === 'slimeball') {
+        // Authentic Minecraft Slimeball (16x16 pixel art)
+        const S_OUTLINE = '#2c5921';
+        const S_BASE = '#5fad44';
+        const S_DARK = '#43802e';
+        const S_LITE = '#87db67';
+        const S_WHITE = '#b8ff9e';
+        ctx.fillStyle = S_OUTLINE;
+        ctx.fillRect(5, 3, 6, 1);
+        ctx.fillRect(4, 4, 8, 1);
+        ctx.fillRect(3, 5, 10, 6);
+        ctx.fillRect(4, 11, 8, 1);
+        ctx.fillRect(5, 12, 6, 1);
+        ctx.fillStyle = S_DARK;
+        ctx.fillRect(4, 5, 8, 6);
+        ctx.fillStyle = S_BASE;
+        ctx.fillRect(5, 5, 6, 5);
+        ctx.fillStyle = S_LITE;
+        ctx.fillRect(5, 5, 3, 3);
+        ctx.fillRect(6, 4, 4, 1);
+        ctx.fillStyle = S_WHITE;
+        ctx.fillRect(5, 5, 2, 2);
+        return canvas;
+    } else if (itemSubtype === 'magma_cream' || itemSubtype === 'lavaslime_ball') {
+        // Authentic Minecraft Magma Cream (16x16 pixel art)
+        const M_OUT = '#4a0808';
+        const M_RED = '#821313';
+        const M_ORANGE = '#d94c14';
+        const M_YELL = '#f7aa1b';
+        const M_LITE = '#fff066';
+        ctx.fillStyle = M_OUT;
+        ctx.fillRect(5, 3, 6, 1);
+        ctx.fillRect(4, 4, 8, 1);
+        ctx.fillRect(3, 5, 10, 6);
+        ctx.fillRect(4, 11, 8, 1);
+        ctx.fillRect(5, 12, 6, 1);
+        ctx.fillStyle = M_RED;
+        ctx.fillRect(4, 5, 8, 6);
+        ctx.fillStyle = M_ORANGE;
+        ctx.fillRect(5, 5, 6, 5);
+        ctx.fillStyle = M_YELL;
+        ctx.fillRect(6, 6, 4, 3);
+        ctx.fillStyle = M_LITE;
+        ctx.fillRect(7, 6, 2, 2);
+        return canvas;
+    } else if (itemSubtype === 'cocoa_beans') {
+        // Authentic Minecraft Cocoa Beans (16x16 pixel art)
+        const C_OUT = '#3a200d';
+        const C_BASE = '#70421e';
+        const C_LITE = '#9e6231';
+        const C_DARK = '#4a2a11';
+        ctx.fillStyle = C_OUT;
+        ctx.fillRect(6, 4, 4, 1);
+        ctx.fillRect(5, 5, 6, 6);
+        ctx.fillRect(6, 11, 4, 1);
+        ctx.fillStyle = C_BASE;
+        ctx.fillRect(6, 5, 4, 6);
+        ctx.fillStyle = C_LITE;
+        ctx.fillRect(6, 5, 2, 3);
+        ctx.fillStyle = C_DARK;
+        ctx.fillRect(7, 8, 3, 3);
         return canvas;
     } else if (itemSubtype === 'sweet_berries') {
         // Cluster of small bright red berries with green stem

@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, generateItemTexture } from './textures.js?v=116';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=116';
+import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=120';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=120';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -13,12 +13,14 @@ export class LightingSystem {
         this.dayLength = 600; // seconds
         this.weather = 'clear'; // 'clear' | 'rain' | 'thunder'
 
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.92);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.36);
         this.scene.add(this.ambientLight);
 
-        this.sunLight = new THREE.DirectionalLight(0xffffff, 0.12);
+        this.sunLight = new THREE.DirectionalLight(0xffffff, 0.82);
         this.sunLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.sunLight);
+        this.caveFactor = 0.0;
+        this.lastAmbientIntensity = 0.36;
 
         // Load Sun Texture (assets/mc/environment/sun.png with jsdelivr CDN fallback)
         const texLoader = new THREE.TextureLoader();
@@ -139,18 +141,18 @@ export class LightingSystem {
         // 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 1.0 = midnight
         const states = [
             // Midnight - authentic Minecraft night (ambient light level 4, visible moonlight)
-            { t: 0.0, amb: new THREE.Color(0x7588a8), ambIntensity: 0.58, bg: new THREE.Color(0x0e1322), top: new THREE.Color(0x182238), sun: 0.0, moon: 0.25 },
-            { t: 0.2, amb: new THREE.Color(0x7588a8), ambIntensity: 0.58, bg: new THREE.Color(0x0e1322), top: new THREE.Color(0x182238), sun: 0.0, moon: 0.25 },
+            { t: 0.0, amb: new THREE.Color(0x354058), ambIntensity: 0.14, bg: new THREE.Color(0x0a0e18), top: new THREE.Color(0x121a2c), sun: 0.0, moon: 0.28 },
+            { t: 0.2, amb: new THREE.Color(0x354058), ambIntensity: 0.14, bg: new THREE.Color(0x0a0e18), top: new THREE.Color(0x121a2c), sun: 0.0, moon: 0.28 },
             // Sunrise - warm horizon, Minecraft blue top
-            { t: 0.25, amb: new THREE.Color(0xffd8b0), ambIntensity: 0.65, bg: new THREE.Color(0xffa050), top: new THREE.Color(0x78a7ff), sun: 0.15, moon: 0.02 },
+            { t: 0.25, amb: new THREE.Color(0xffcca0), ambIntensity: 0.32, bg: new THREE.Color(0xff8833), top: new THREE.Color(0x78a7ff), sun: 0.65, moon: 0.02 },
             // Day - authentic Minecraft sky blue (#78a7ff), crisp directional contrast and ambient fill
-            { t: 0.3, amb: new THREE.Color(0xffffff), ambIntensity: 0.90, bg: new THREE.Color(0x78a7ff), top: new THREE.Color(0xdcebff), sun: 0.12, moon: 0.0 },
-            { t: 0.7, amb: new THREE.Color(0xffffff), ambIntensity: 0.90, bg: new THREE.Color(0x78a7ff), top: new THREE.Color(0xdcebff), sun: 0.12, moon: 0.0 },
+            { t: 0.3, amb: new THREE.Color(0xe8f0ff), ambIntensity: 0.36, bg: new THREE.Color(0x78a7ff), top: new THREE.Color(0xdcebff), sun: 0.82, moon: 0.0 },
+            { t: 0.7, amb: new THREE.Color(0xe8f0ff), ambIntensity: 0.36, bg: new THREE.Color(0x78a7ff), top: new THREE.Color(0xdcebff), sun: 0.82, moon: 0.0 },
             // Sunset - orange/red horizon
-            { t: 0.75, amb: new THREE.Color(0xffa880), ambIntensity: 0.60, bg: new THREE.Color(0xff6644), top: new THREE.Color(0x5878d0), sun: 0.12, moon: 0.02 },
+            { t: 0.75, amb: new THREE.Color(0xff9870), ambIntensity: 0.30, bg: new THREE.Color(0xff5533), top: new THREE.Color(0x5878d0), sun: 0.55, moon: 0.02 },
             // Night
-            { t: 0.8, amb: new THREE.Color(0x7588a8), ambIntensity: 0.58, bg: new THREE.Color(0x0e1322), top: new THREE.Color(0x182238), sun: 0.0, moon: 0.25 },
-            { t: 1.0, amb: new THREE.Color(0x7588a8), ambIntensity: 0.58, bg: new THREE.Color(0x0e1322), top: new THREE.Color(0x182238), sun: 0.0, moon: 0.25 }
+            { t: 0.8, amb: new THREE.Color(0x354058), ambIntensity: 0.14, bg: new THREE.Color(0x0a0e18), top: new THREE.Color(0x121a2c), sun: 0.0, moon: 0.28 },
+            { t: 1.0, amb: new THREE.Color(0x354058), ambIntensity: 0.14, bg: new THREE.Color(0x0a0e18), top: new THREE.Color(0x121a2c), sun: 0.0, moon: 0.28 }
         ];
 
         if (!this._cachedColors) {
@@ -236,29 +238,29 @@ export class LightingSystem {
         let state;
         if (currentDimension === 'nether') {
             state = {
-                amb: new THREE.Color(0x944040),
-                ambIntensity: 0.95,
+                amb: new THREE.Color(0x6a2c2c),
+                ambIntensity: 0.50,
                 bg: new THREE.Color(0x3d0b0b),
                 top: new THREE.Color(0x882c2c),
-                sun: 0.25,
+                sun: 0.30,
                 moon: 0
             };
         } else if (currentDimension === 'aether') {
             state = {
                 amb: new THREE.Color(0xeef6ff),
-                ambIntensity: 0.95,
+                ambIntensity: 0.65,
                 bg: new THREE.Color(0xddeeff),
                 top: new THREE.Color(0xffffff),
-                sun: 0.15,
+                sun: 0.40,
                 moon: 0
             };
         } else if (currentDimension === 'end') {
             state = {
-                amb: new THREE.Color(0xd0beea), // Pale lavender cosmic glow
-                ambIntensity: 1.35,             // Beautifully illuminated End islands
+                amb: new THREE.Color(0x6d528b), // Pale lavender cosmic glow
+                ambIntensity: 0.55,             // Beautifully illuminated End islands
                 bg: new THREE.Color(0x150b22),  // Deep void purple
                 top: new THREE.Color(0x321a4f), // Rich dark violet sky
-                sun: 0.35,                      // Soft directional light for block depth
+                sun: 0.40,                      // Soft directional light for block depth
                 moon: 0
             };
         } else {
@@ -271,14 +273,59 @@ export class LightingSystem {
             }
         }
 
-        const bMult = (this.brightnessMultiplier !== undefined) ? this.brightnessMultiplier : 1.0;
-        this.ambientLight.color.copy(state.amb);
-        this.ambientLight.intensity = state.ambIntensity * bMult;
+        // Dynamic Underground & Cave Ambient Lighting
+        if (this.caveFactor === undefined) this.caveFactor = 0.0;
+        let targetCaveFactor = 0.0;
 
-        this.sunLight.intensity = state.sun;
-        this.moonLight.intensity = state.moon;
+        if (this.world && currentDimension === 'overworld' && cameraPos) {
+            const cx = Math.floor(cameraPos.x);
+            const cy = Math.floor(cameraPos.y);
+            const cz = Math.floor(cameraPos.z);
+            
+            // Sample overhead column for solid ceiling up to chunk height
+            let solidAbove = 0;
+            let firstSolidDist = 999;
+            for (let dy = 2; dy < 48; dy++) {
+                const y = cy + dy;
+                if (y >= 128) break;
+                const b = this.world.getBlock(cx, y, cz);
+                if (b && b !== BLOCKS.AIR) {
+                    const props = getBlockProperties(b);
+                    if (!props || !props.transparent) {
+                        solidAbove++;
+                        if (firstSolidDist === 999) firstSolidDist = dy;
+                    }
+                }
+            }
+
+            // Underground depth & overhead occlusion
+            if (solidAbove >= 2 && firstSolidDist < 32) {
+                const depthBoost = Math.max(0, Math.min(1.0, (64 - cy) / 45));
+                const roofDensity = Math.min(1.0, solidAbove / 5);
+                targetCaveFactor = Math.min(1.0, Math.max(0.5, 0.5 + 0.5 * depthBoost) * roofDensity);
+            } else if (cy < 50 && solidAbove >= 1) {
+                targetCaveFactor = Math.min(1.0, (50 - cy) / 32);
+            }
+        }
+
+        this.caveFactor = THREE.MathUtils.lerp(this.caveFactor, targetCaveFactor, Math.min(1.0, dt * 3.0));
+        this.lastAmbientIntensity = THREE.MathUtils.lerp(state.ambIntensity, 0.08, this.caveFactor);
+
+        const bMult = (this.brightnessMultiplier !== undefined) ? this.brightnessMultiplier : 1.0;
+        const caveColor = new THREE.Color(0x0e111a);
+        const finalAmbColor = state.amb.clone().lerp(caveColor, this.caveFactor * 0.7);
+        const finalAmbIntensity = this.lastAmbientIntensity * bMult;
+
+        this.ambientLight.color.copy(finalAmbColor);
+        this.ambientLight.intensity = finalAmbIntensity;
+
+        // Sunlight & moonlight blocked underground
+        this.sunLight.intensity = state.sun * (1.0 - this.caveFactor);
+        this.moonLight.intensity = state.moon * (1.0 - this.caveFactor);
         
-        this.scene.background = isUnderwater ? new THREE.Color(0x3377aa) : state.bg;
+        const currentBg = isUnderwater ? new THREE.Color(0x3377aa) : (this.caveFactor > 0.05 ? state.bg.clone().lerp(caveColor, this.caveFactor) : state.bg);
+        this.scene.background = currentBg;
+
         if (this.scene.fog) {
             this.scene.fog.color.copy(this.scene.background);
             const renderBlocks = (this.world?.renderDistance || 8) * 16;
@@ -296,8 +343,10 @@ export class LightingSystem {
                     this.scene.fog.near = 50;
                     this.scene.fog.far = renderBlocks * 1.5;
                 } else {
-                    this.scene.fog.near = renderBlocks * 0.65;
-                    this.scene.fog.far = renderBlocks * 0.98;
+                    const caveFar = (this.caveFactor > 0.1) ? Math.max(28, renderBlocks * (1.0 - this.caveFactor * 0.5)) : renderBlocks * 0.98;
+                    const caveNear = (this.caveFactor > 0.1) ? Math.max(6, renderBlocks * 0.65 * (1.0 - this.caveFactor * 0.5)) : renderBlocks * 0.65;
+                    this.scene.fog.near = caveNear;
+                    this.scene.fog.far = caveFar;
                 }
             } else {
                 if (isUnderwater) {
@@ -309,7 +358,8 @@ export class LightingSystem {
                 } else if (currentDimension === 'end') {
                     this.scene.fog.density = 0.0025;
                 } else {
-                    this.scene.fog.density = this.scene.fog.baseDensity || 0.003;
+                    const caveDensity = (this.caveFactor > 0.1) ? 0.012 : (this.scene.fog.baseDensity || 0.003);
+                    this.scene.fog.density = THREE.MathUtils.lerp(this.scene.fog.density, caveDensity, 0.05);
                 }
             }
         }
@@ -398,7 +448,7 @@ export class TorchLightSystem {
         if (this.torches.has(key)) return;
         
         this.torches.set(key, {
-            position: new THREE.Vector3(x + 0.5, y + 0.75, z + 0.5),
+            position: new THREE.Vector3(x + 0.5, y + 0.92, z + 0.5),
             flickerOffset: Math.random() * 100
         });
     }
@@ -3168,11 +3218,19 @@ class UISystem {
 
         if (getCount(B.SUGARCANE) === 1 && totalItems === 1) return mat('sugar', 'Sugar', 1);
         if (getCount(B.SUGARCANE) === 3 && totalItems === 3) return mat('paper', 'Paper', 3);
-        if (getCount('paper') === 3 && getCount('leather') === 1 && totalItems === 4) return mat('book', 'Book', 1);
+        if (getCount('paper') === 3 && (getCount('leather') === 1 || totalItems === 3) && (totalItems === 4 || totalItems === 3)) return mat('book', 'Book', 1);
         if (getCount(B.SANDSTONE) === 4 && totalItems === 4) return block(B.SANDSTONE, 'Smooth Sandstone', 4);
 
-        // Workstations crafted in 2x2 or 3x3
+        // Workstations & Utility Blocks
         if (getCount('flint') === 2 && (countAnyPlank === 4 || countAnyPlank === 2) && totalItems === (2 + countAnyPlank)) return block(B.FLETCHING_TABLE, 'Fletching Table', 1);
+        if (getCount('iron_ingot') === 1 && getCount(B.STONE) === 3 && totalItems === 4) return block(B.STONECUTTER, 'Stonecutter', 1);
+        if ((getCount(B.POINTED_DRIPSTONE_DOWN) + getCount(B.POINTED_DRIPSTONE_UP)) === 4 && totalItems === 4) return block(B.DRIPSTONE_BLOCK, 'Dripstone Block', 1);
+        if ((getCount('slime_ball') === 4 || getCount('slimeball') === 4) && totalItems === 4) return block(B.SLIME_BLOCK, 'Slime Block', 1);
+        if ((getCount('slime_ball') === 9 || getCount('slimeball') === 9) && totalItems === 9) return block(B.SLIME_BLOCK, 'Slime Block', 1);
+        if (getCount(B.SLIME_BLOCK) === 1 && totalItems === 1) return mat('slime_ball', 'Slimeball', 9);
+        if ((getCount('slime_ball') === 1 || getCount('slimeball') === 1) && getCount('blaze_powder') === 1 && totalItems === 2) return mat('lavaslime_ball', 'Magma Cream', 1);
+        if (getCount('string') === 4 && (getCount('slime_ball') === 1 || getCount('slimeball') === 1) && totalItems === 5) return mat('lead', 'Lead', 2);
+        if (getCount('gunpowder') === 5 && getCount(B.SAND) === 4 && totalItems === 9) return block(B.TNT, 'TNT', 1);
 
         // Reverse Storage is 1 item -> 9 items.
         if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
@@ -3189,11 +3247,18 @@ class UISystem {
         if (getCount('bone_meal') === 1 && totalItems === 1) return mat('white_dye', 'White Dye', 1);
         if (getCount('netherite_scrap') === 4 && getCount('gold_ingot') === 4 && totalItems === 8) return mat('netherite_ingot', 'Netherite Ingot', 1);
 
+        // Food & Agriculture
         if (getCount('wheat') === 3 && totalItems === 3) return food('bread', 'Bread', 1);
+        if (getCount('wheat') === 2 && (getCount('cocoa_beans') === 1 || getCount('sugar') === 1) && totalItems === 3) return food('cookie', 'Cookie', 8);
+        if (getCount('wheat') === 3 && getCount('sugar') === 2 && getCount('egg') === 1 && totalItems === 6) return block(B.CAKE, 'Cake', 1);
         if (getCount(B.PUMPKIN) === 1 && totalItems === 1) return mat('pumpkin_seeds', 'Pumpkin Seeds', 4);
         if (getCount('melon_slice') === 1 && totalItems === 1) return mat('melon_seeds', 'Melon Seeds', 1);
         if (getCount('beetroot') === 6 && totalItems === 6) return food('beetroot_soup', 'Beetroot Soup', 1);
+        if (getCount('beetroot') >= 1 && getCount('bowl') === 1 && totalItems === (getCount('beetroot') + 1)) return food('beetroot_soup', 'Beetroot Soup', 1);
+        if (countAnyPlank === 3 && totalItems === 3) return mat('bowl', 'Bowl', 4);
         if (getCount(B.PUMPKIN) === 1 && getCount('sugar') === 1 && getCount('egg') === 1 && totalItems === 3) return food('pumpkin_pie', 'Pumpkin Pie', 1);
+        if (getCount('gold_nugget') === 8 && getCount('carrot') === 1 && totalItems === 9) return food('golden_carrot', 'Golden Carrot', 1);
+        if (getCount('gold_nugget') === 8 && getCount('melon_slice') === 1 && totalItems === 9) return mat('glistering_melon', 'Glistering Melon', 1);
         if (getCount('flint') === 1 && getCount('stick') === 1 && getCount('feather') === 1 && totalItems === 3) return mat('arrow', 'Arrow', 4);
 
         // Flowers to Dyes (1 flower -> 1 dye)
@@ -3624,6 +3689,17 @@ class UISystem {
             { name: "Iron Hoe", desc: "Tills soil for farming.", grid: [[mat('iron_ingot'),mat('iron_ingot'),_],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('hoe_iron'), outCount: 1, needs3x3: true },
             { name: "Diamond Hoe", desc: "Long-lasting farming tool.", grid: [[mat('diamond'),mat('diamond'),_],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('hoe_diamond'), outCount: 1, needs3x3: true },
             { name: "Bread", desc: "Restores hunger.", grid: [[_,_,_],[mat('wheat'),mat('wheat'),mat('wheat')],[_,_,_]], out: { type: 'food', subtype: 'bread' }, outCount: 1, needs3x3: false },
+            { name: "Cookie (8)", desc: "Sweet snack made with cocoa.", grid: [[_,_,_],[mat('wheat'),mat('cocoa_beans'),mat('wheat')],[_,_,_]], out: { type: 'food', subtype: 'cookie' }, outCount: 8, needs3x3: false },
+            { name: "Cake", desc: "Celebratory multi-slice food.", grid: [[mat('sugar'),mat('egg'),mat('sugar')],[mat('wheat'),mat('wheat'),mat('wheat')],[_,_,_]], out: blk(B.CAKE), outCount: 1, needs3x3: true },
+            { name: "Pumpkin Pie", desc: "Hearty dessert.", grid: [[_,_,_],[blk(B.PUMPKIN),mat('sugar'),mat('egg')],[_,_,_]], out: { type: 'food', subtype: 'pumpkin_pie' }, outCount: 1, needs3x3: false },
+            { name: "Beetroot Soup", desc: "Nutritious red stew.", grid: [[mat('beetroot'),mat('beetroot'),mat('beetroot')],[mat('beetroot'),mat('beetroot'),mat('beetroot')],[_,_,_]], out: { type: 'food', subtype: 'beetroot_soup' }, outCount: 1, needs3x3: true },
+            { name: "Golden Carrot", desc: "High-saturation golden food.", grid: [[mat('gold_nugget'),mat('gold_nugget'),mat('gold_nugget')],[mat('gold_nugget'),mat('carrot'),mat('gold_nugget')],[mat('gold_nugget'),mat('gold_nugget'),mat('gold_nugget')]], out: { type: 'food', subtype: 'golden_carrot' }, outCount: 1, needs3x3: true },
+            { name: "Stonecutter", desc: "Precision masonry saw workstation.", grid: [[_,mat('iron_ingot'),_],[blk(B.STONE),blk(B.STONE),blk(B.STONE)],[_,_,_]], out: blk(B.STONECUTTER), outCount: 1, needs3x3: true },
+            { name: "Dripstone Block", desc: "Solid dripstone block.", grid: [[_,_,_],[blk(B.POINTED_DRIPSTONE_DOWN),blk(B.POINTED_DRIPSTONE_DOWN),_],[blk(B.POINTED_DRIPSTONE_DOWN),blk(B.POINTED_DRIPSTONE_DOWN),_]], out: blk(B.DRIPSTONE_BLOCK), outCount: 1, needs3x3: false },
+            { name: "Slime Block", desc: "Bouncy compact gelatin block.", grid: [[mat('slime_ball'),mat('slime_ball'),mat('slime_ball')],[mat('slime_ball'),mat('slime_ball'),mat('slime_ball')],[mat('slime_ball'),mat('slime_ball'),mat('slime_ball')]], out: blk(B.SLIME_BLOCK), outCount: 1, needs3x3: true },
+            { name: "Magma Cream", desc: "Infused slimeball for potions and fire wands.", grid: [[_,_,_],[mat('slime_ball'),mat('blaze_powder'),_],[_,_,_]], out: mat('lavaslime_ball'), outCount: 1, needs3x3: false },
+            { name: "TNT", desc: "Explosive block.", grid: [[mat('gunpowder'),blk(B.SAND),mat('gunpowder')],[blk(B.SAND),mat('gunpowder'),blk(B.SAND)],[mat('gunpowder'),blk(B.SAND),mat('gunpowder')]], out: blk(B.TNT), outCount: 1, needs3x3: true },
+            { name: "Lead (2)", desc: "Leash for creatures.", grid: [[mat('string'),mat('string'),_],[mat('string'),mat('slime_ball'),_],[_,_,mat('string')]], out: mat('lead'), outCount: 2, needs3x3: true },
             { name: "Pumpkin Seeds (4)", desc: "Plant to grow pumpkins.", grid: [[_,_,_],[_,blk(B.PUMPKIN),_],[_,_,_]], out: mat('pumpkin_seeds'), outCount: 4, needs3x3: false },
 
             { name: "Gold Helmet", desc: "Shiny protection.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')],[_,_,_]], out: eqp('helmet_gold'), outCount: 1, needs3x3: true },

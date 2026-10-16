@@ -2088,7 +2088,7 @@ export function generateChunkTerrain(cx, cz, params) {
             } else if (biome.hasCrystals && r < 0.03) {
                 generateCrystal(blocks, tx, surfaceY + 1, tz, floraRng);
             } else if (biome.hasIceSpikes && r < 0.025) {
-                generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng);
+                generateIceSpike(blocks, tx, surfaceY + 1, tz, floraRng, wx, wz, params);
             } else if (biome.hasCactus && r < 0.01 && currentGroundBlock === BLOCKS.SAND) {
                 generateCactus(blocks, tx, surfaceY + 1, tz, floraRng);
             }
@@ -2966,42 +2966,73 @@ function generateCrystal(blocks, x, y, z, rng) {
     for (let i = 0; i < height; i++) safeSetBlock(blocks, x, y + i, z, BLOCKS.ALIEN_CRYSTAL);
 }
 
-function generateIceSpike(blocks, x, y, z, rng) {
+function generateIceSpike(blocks, x, y, z, rng, wx = 0, wz = 0, params = null) {
     const random = rng || Math.random;
-    // Minecraft ice spikes: 75% standard spikes (height 12-22), 25% giant spikes (height 28-42)
-    const isGiant = random() < 0.25;
-    const height = isGiant ? (26 + Math.floor(random() * 16)) : (10 + Math.floor(random() * 12));
-    const baseRadius = isGiant ? 3 : (random() < 0.45 ? 2 : 1);
 
-    // Anchor base into ground/ice sheet (down to 2 blocks below surface)
-    for (let dy = -2; dy <= 0; dy++) {
+    let centerFactor = 0.5;
+    if (params && params.noise2D && (wx !== 0 || wz !== 0)) {
+        // Measure distance to the edge of the Ice Spikes biome
+        let edgeDist = 999;
+        const testDists = [8, 16, 28, 44, 64, 88];
+        for (const dist of testDists) {
+            if (getBiomeParams(wx + dist, wz, params).biome !== BIOMES.ICE_SPIKES) { edgeDist = Math.min(edgeDist, dist); break; }
+            if (getBiomeParams(wx - dist, wz, params).biome !== BIOMES.ICE_SPIKES) { edgeDist = Math.min(edgeDist, dist); break; }
+            if (getBiomeParams(wx, wz + dist, params).biome !== BIOMES.ICE_SPIKES) { edgeDist = Math.min(edgeDist, dist); break; }
+            if (getBiomeParams(wx, wz - dist, params).biome !== BIOMES.ICE_SPIKES) { edgeDist = Math.min(edgeDist, dist); break; }
+        }
+        if (edgeDist === 999) edgeDist = 96;
+        // Edge factor: near 0 at borders, approaching 1.0 deep in center of large biomes
+        centerFactor = Math.min(1.0, Math.max(0.0, (edgeDist - 6) / 48));
+    }
+
+    // Ice spikes start short at edges (height 6-12), scaling taller toward center (up to 45-56 in large biome centers)
+    let minH, maxH, baseRadius;
+    if (centerFactor < 0.25) {
+        // Biome border or small biome: short spikes
+        minH = 6; maxH = 12;
+        baseRadius = 1;
+    } else if (centerFactor < 0.65) {
+        // Mid biome: medium spikes
+        minH = 14; maxH = 26;
+        baseRadius = random() < 0.6 ? 2 : 1;
+    } else {
+        // Deep in center of large biome: giant massive spires
+        const isSuperGiant = random() < 0.45;
+        minH = isSuperGiant ? 34 : 24;
+        maxH = isSuperGiant ? 54 : 36;
+        baseRadius = isSuperGiant ? 3 : 2;
+    }
+
+    const height = minH + Math.floor(random() * (maxH - minH + 1));
+
+    // Anchor base into ground/ice sheet (2-3 blocks deep) with consistent solid core
+    for (let dy = -3; dy <= 0; dy++) {
         for (let dx = -baseRadius; dx <= baseRadius; dx++) {
             for (let dz = -baseRadius; dz <= baseRadius; dz++) {
-                if (dx * dx + dz * dz <= baseRadius * baseRadius) {
-                    const block = random() < 0.65 ? BLOCKS.PACKED_ICE : BLOCKS.BLUE_ICE;
-                    safeSetBlock(blocks, x + dx, y + dy, z + dz, block);
+                const distSq = dx * dx + dz * dz;
+                if (distSq <= baseRadius * baseRadius) {
+                    // Consistent structure: dense blue ice inner core, packed ice collar (no scattered random speckles)
+                    const isCore = (distSq <= 1.0);
+                    safeSetBlock(blocks, x + dx, y + dy, z + dz, isCore ? BLOCKS.BLUE_ICE : BLOCKS.PACKED_ICE);
                 }
             }
         }
     }
 
-    // Build tapered ice spire
+    // Build tapered ice spire with consistent geometry (Packed Ice outer mantle, solid Blue Ice central core)
+    const coreHeight = Math.floor(height * 0.65);
     for (let dy = 0; dy < height; dy++) {
         const progress = dy / height; // 0 to 1
         let radius = Math.round(baseRadius * (1 - progress));
-        if (progress > 0.85) radius = 0; // tapered tip
+        if (progress > 0.82) radius = 0; // tapered tip
 
         for (let dx = -radius; dx <= radius; dx++) {
             for (let dz = -radius; dz <= radius; dz++) {
                 const distSq = dx * dx + dz * dz;
                 if (distSq <= radius * radius + 0.35) {
-                    const isCore = (distSq <= Math.max(0, radius - 1) * Math.max(0, radius - 1));
-                    let iceType;
-                    if (isCore) {
-                        iceType = random() < 0.7 ? BLOCKS.BLUE_ICE : BLOCKS.PACKED_ICE;
-                    } else {
-                        iceType = random() < 0.75 ? BLOCKS.PACKED_ICE : (random() < 0.5 ? BLOCKS.BLUE_ICE : BLOCKS.ICE);
-                    }
+                    // Solid central blue ice core for wide spires; pure packed ice outer layer
+                    const isCore = (baseRadius >= 2 && distSq <= 0.5 && dy <= coreHeight);
+                    const iceType = isCore ? BLOCKS.BLUE_ICE : BLOCKS.PACKED_ICE;
                     safeSetBlock(blocks, x + dx, y + dy, z + dz, iceType);
                 }
             }
@@ -3010,8 +3041,8 @@ function generateIceSpike(blocks, x, y, z, rng) {
 
     // Sharp spire needle at top
     safeSetBlock(blocks, x, y + height, z, BLOCKS.PACKED_ICE);
-    if (isGiant) {
-        safeSetBlock(blocks, x, y + height + 1, z, BLOCKS.BLUE_ICE);
+    if (baseRadius >= 3 && height >= 32) {
+        safeSetBlock(blocks, x, y + height + 1, z, BLOCKS.PACKED_ICE);
     }
 }
 
@@ -3524,13 +3555,14 @@ export function generatePortalStructure(blocks, x, y, z, rng, type = 'nether') {
             if (rng() < 0.25) continue; // missing blocks
             
             if (px === x || px === x + 3 || py === y || py === y + 4) {
-                safeSetBlock(blocks, px, py, z, rng() < 0.35 ? frame1 : frame2, true);
+                // In Minecraft, ruined portal frame is mostly regular obsidian with rare crying obsidian
+                safeSetBlock(blocks, px, py, z, (rng() < 0.18 ? frame2 : frame1), true);
             }
         }
     }
 
     if (type === 'nether') {
-        // Large authentic Nether corruption bleed across the ground
+        // Large authentic Nether corruption bleed across the ground (netherrack, magma, stone - no crying obsidian or soul sand at the base)
         const centerX = x + 1.5;
         const centerZ = z;
         for (let dx = -7; dx <= 7; dx++) {
@@ -3544,10 +3576,9 @@ export function generatePortalStructure(blocks, x, y, z, rng, type = 'nether') {
                     for (let dy = 1; dy <= depth; dy++) {
                         const roll = rng();
                         let blockId = BLOCKS.NETHERRACK;
-                        if (roll < 0.22 && BLOCKS.MAGMA) blockId = BLOCKS.MAGMA;
-                        else if (roll < 0.32 && BLOCKS.CRYING_OBSIDIAN) blockId = BLOCKS.CRYING_OBSIDIAN;
-                        else if (roll < 0.42 && BLOCKS.SOUL_SAND) blockId = BLOCKS.SOUL_SAND;
-                        else if (roll < 0.48 && BLOCKS.SOUL_SOIL) blockId = BLOCKS.SOUL_SOIL;
+                        if (roll < 0.30 && BLOCKS.MAGMA) blockId = BLOCKS.MAGMA;
+                        else if (roll < 0.45 && BLOCKS.COBBLESTONE) blockId = BLOCKS.COBBLESTONE;
+                        else if (roll < 0.55 && BLOCKS.STONE) blockId = BLOCKS.STONE;
                         safeSetBlock(blocks, px, y - dy, pz, blockId, true);
                     }
                     // Fire on top of netherrack/magma
@@ -3557,11 +3588,11 @@ export function generatePortalStructure(blocks, x, y, z, rng, type = 'nether') {
                 }
             }
         }
-        // Occasional ruined crying obsidian / obsidian pillar stump
+        // Occasional ruined obsidian pillar stump
         if (rng() < 0.7) {
             const ox = x + (rng() < 0.5 ? -2 : 5);
             const oz = z + Math.floor((rng() - 0.5) * 4);
-            safeSetBlock(blocks, ox, y, oz, BLOCKS.CRYING_OBSIDIAN, true);
+            safeSetBlock(blocks, ox, y, oz, BLOCKS.OBSIDIAN, true);
             if (rng() < 0.5) safeSetBlock(blocks, ox, y + 1, oz, BLOCKS.OBSIDIAN, true);
         }
     } else {

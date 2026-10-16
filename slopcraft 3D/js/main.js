@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=119';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=119';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=119';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=119';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=119';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=119';
-import { AudioManager } from './audio.js?v=119';
-import { BiomeMap } from './map.js?v=119';
-import { DevMode } from './dev.js?v=119';
-import { ChatSystem } from './chat.js?v=119';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=120';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=120';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=120';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=120';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=120';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=120';
+import { AudioManager } from './audio.js?v=120';
+import { BiomeMap } from './map.js?v=120';
+import { DevMode } from './dev.js?v=120';
+import { ChatSystem } from './chat.js?v=120';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -1772,6 +1772,10 @@ class Game {
     respawnPlayer() {
         this.player.health = this.player.maxHealth;
         this.player.mana = this.player.maxMana;
+        this.player.hunger = 20;
+        this.player.saturation = 5.0;
+        this.player.exhaustion = 0;
+        this.player.hungerEffectTimer = 0;
         this.player.burnTimer = 0;
         this.player.velocity.set(0, 0, 0);
         this.player.fallDistance = 0;
@@ -3875,7 +3879,7 @@ class Game {
                     if (this.audio && this.audio.playExplode) this.audio.playExplode();
                     setTimeout(() => {
                         this.engine.scene.background = prevColor;
-                        if (this.lighting.ambientLight) this.lighting.ambientLight.intensity = 0.92;
+                        if (this.lighting.ambientLight) this.lighting.ambientLight.intensity = (this.lighting.lastAmbientIntensity !== undefined ? this.lighting.lastAmbientIntensity : 0.36);
                     }, 70);
                 }
             } else if (isCold && Math.random() < 0.35) {
