@@ -428,7 +428,7 @@ export class Chunk {
         const wxBase = this.cx * CHUNK_SIZE;
         const wzBase = this.cz * CHUNK_SIZE;
 
-        const pushCustomBox = (minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, uvTop, uvSide, uvBottom, cullMask = 0, aoMult = 1.0, isGlowing = false, isEndPortal = false) => {
+        const pushCustomBox = (minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, uvTop, uvSide, uvBottom, cullMask = 0, aoMult = 1.0, isGlowing = false, isEndPortal = false, isTransparent = false) => {
             const addBoxQuad = (base) => {
                 if (isEndPortal) {
                     _endPortalIndices[endPortalIndexCount++] = base;
@@ -444,6 +444,13 @@ export class Chunk {
                     _glowTransparentIndices[glowTransparentIndexCount++] = base;
                     _glowTransparentIndices[glowTransparentIndexCount++] = base + 2;
                     _glowTransparentIndices[glowTransparentIndexCount++] = base + 3;
+                } else if (isTransparent) {
+                    _transparentIndices[transparentIndexCount++] = base;
+                    _transparentIndices[transparentIndexCount++] = base + 1;
+                    _transparentIndices[transparentIndexCount++] = base + 2;
+                    _transparentIndices[transparentIndexCount++] = base;
+                    _transparentIndices[transparentIndexCount++] = base + 2;
+                    _transparentIndices[transparentIndexCount++] = base + 3;
                 } else {
                     _opaqueIndices[opaqueIndexCount++] = base;
                     _opaqueIndices[opaqueIndexCount++] = base + 1;
@@ -602,8 +609,73 @@ export class Chunk {
                     const wx = wxBase + x;
                     const wz = wzBase + z;
 
-                    if (props.isCross) {
+                    if (props.isLilyPad) {
                         const uvInfo = atlas.getUV(blockType, 'side');
+                        const padY = y + 0.015;
+                        _positions[posCount++] = x;     _positions[posCount++] = padY; _positions[posCount++] = z;
+                        _positions[posCount++] = x + 1; _positions[posCount++] = padY; _positions[posCount++] = z;
+                        _positions[posCount++] = x + 1; _positions[posCount++] = padY; _positions[posCount++] = z + 1;
+                        _positions[posCount++] = x;     _positions[posCount++] = padY; _positions[posCount++] = z + 1;
+
+                        for (let k = 0; k < 4; k++) {
+                            _normals[posCount - 12 + k * 3] = 0;
+                            _normals[posCount - 11 + k * 3] = 1;
+                            _normals[posCount - 10 + k * 3] = 0;
+                            _colors[colorCount++] = 1.0;
+                            _colors[colorCount++] = 1.0;
+                            _colors[colorCount++] = 1.0;
+                        }
+
+                        _uvs[uvCount++] = uvInfo.u;                 _uvs[uvCount++] = uvInfo.v;
+                        _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
+                        _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                        _uvs[uvCount++] = uvInfo.u;                 _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+
+                        _transparentIndices[transparentIndexCount++] = vertexCount;
+                        _transparentIndices[transparentIndexCount++] = vertexCount + 1;
+                        _transparentIndices[transparentIndexCount++] = vertexCount + 2;
+                        _transparentIndices[transparentIndexCount++] = vertexCount;
+                        _transparentIndices[transparentIndexCount++] = vertexCount + 2;
+                        _transparentIndices[transparentIndexCount++] = vertexCount + 3;
+                        vertexCount += 4;
+                        continue;
+                    }
+
+                    if (props.isCross) {
+                        let uvInfo;
+                        if (blockType === BLOCKS.POINTED_DRIPSTONE_DOWN) {
+                            const bAbove = (y + 1 < CHUNK_HEIGHT) ? this.getBlock(x, y + 1, z) : getBlockOptimized(wx, y + 1, wz);
+                            const bBelow = (y > 0) ? this.getBlock(x, y - 1, z) : getBlockOptimized(wx, y - 1, wz);
+                            let stage = 'tip';
+                            if (bBelow === BLOCKS.POINTED_DRIPSTONE_UP) {
+                                stage = 'merge';
+                            } else if (bBelow !== BLOCKS.POINTED_DRIPSTONE_DOWN) {
+                                stage = 'tip';
+                            } else if (bAbove !== BLOCKS.POINTED_DRIPSTONE_DOWN) {
+                                stage = 'base';
+                            } else {
+                                const bBelow2 = (y > 1) ? this.getBlock(x, y - 2, z) : getBlockOptimized(wx, y - 2, wz);
+                                stage = (bBelow2 !== BLOCKS.POINTED_DRIPSTONE_DOWN && bBelow2 !== BLOCKS.POINTED_DRIPSTONE_UP) ? 'frustum' : 'middle';
+                            }
+                            uvInfo = atlas.getUV(blockType, stage);
+                        } else if (blockType === BLOCKS.POINTED_DRIPSTONE_UP) {
+                            const bAbove = (y + 1 < CHUNK_HEIGHT) ? this.getBlock(x, y + 1, z) : getBlockOptimized(wx, y + 1, wz);
+                            const bBelow = (y > 0) ? this.getBlock(x, y - 1, z) : getBlockOptimized(wx, y - 1, wz);
+                            let stage = 'tip';
+                            if (bAbove === BLOCKS.POINTED_DRIPSTONE_DOWN) {
+                                stage = 'merge';
+                            } else if (bAbove !== BLOCKS.POINTED_DRIPSTONE_UP) {
+                                stage = 'tip';
+                            } else if (bBelow !== BLOCKS.POINTED_DRIPSTONE_UP) {
+                                stage = 'base';
+                            } else {
+                                const bAbove2 = (y + 2 < CHUNK_HEIGHT) ? this.getBlock(x, y + 2, z) : getBlockOptimized(wx, y + 2, wz);
+                                stage = (bAbove2 !== BLOCKS.POINTED_DRIPSTONE_UP && bAbove2 !== BLOCKS.POINTED_DRIPSTONE_DOWN) ? 'frustum' : 'middle';
+                            }
+                            uvInfo = atlas.getUV(blockType, stage);
+                        } else {
+                            uvInfo = atlas.getUV(blockType, 'side');
+                        }
                         
                         let topAO = 1.0;
                         let bottomAO = 1.0;
@@ -747,7 +819,7 @@ export class Chunk {
                         }
                     }
 
-                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE || blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.END_GATEWAY || blockType === BLOCKS.CHORUS_PLANT || blockType === BLOCKS.DRAGON_EGG || props.isLantern || props.isFarmland) {
+                    if (props.isSlab || props.isStair || props.isFence || props.isWall || blockType === BLOCKS.STONECUTTER || blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE || blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.END_GATEWAY || blockType === BLOCKS.CHORUS_PLANT || blockType === BLOCKS.CHORUS_FLOWER || blockType === BLOCKS.CHORUS_FLOWER_DEAD || blockType === BLOCKS.DRAGON_EGG || props.isLantern || props.isFarmland) {
                         const uvTop = atlas.getUV(blockType, 'top');
                         const uvSide = atlas.getUV(blockType, 'side');
                         const uvBottom = atlas.getUV(blockType, 'bottom');
@@ -821,13 +893,13 @@ export class Chunk {
                         } else if (blockType === BLOCKS.STONECUTTER) {
                             // 9/16 tall stone base (0.5625)
                             pushCustomBox(x, y, z, x + 1, y + 9/16, z + 1, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0);
-                            // Centered circular saw blade (authentic saw texture)
+                            // Centered circular saw blade (authentic saw texture routed to transparent pass for pixel cutout)
                             const uvSaw = atlas.getUV(blockType, 'front');
                             const isXAxis = (curData & 1) === 1;
                             if (isXAxis) {
-                                pushCustomBox(x + 7.5/16, y + 9/16, z + 2/16, x + 8.5/16, y + 15/16, z + 14/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0);
+                                pushCustomBox(x + 7.5/16, y + 9/16, z + 2/16, x + 8.5/16, y + 15/16, z + 14/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0, false, false, true);
                             } else {
-                                pushCustomBox(x + 2/16, y + 9/16, z + 7.5/16, x + 14/16, y + 15/16, z + 8.5/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0);
+                                pushCustomBox(x + 2/16, y + 9/16, z + 7.5/16, x + 14/16, y + 15/16, z + 8.5/16, x, y, z, uvSaw, uvSaw, uvSaw, 0, 1.0, false, false, true);
                             }
                         } else if (blockType === BLOCKS.PORTAL_FRAME || blockType === BLOCKS.END_PORTAL_FRAME_EYE) {
                             // 13/16 tall frame (0.8125)
@@ -846,22 +918,32 @@ export class Chunk {
                                 pushCustomBox(x, y + 11.9/16, z, x + 1, y + 12.1/16, z + 1, x, y, z, uvTop, uvTop, uvTop, 0, 1.0, false, true);
                             }
                         } else if (blockType === BLOCKS.CHORUS_PLANT) {
-                            // Authentic Minecraft chorus plant stalk (12/16 thick column with side arms towards adjacent chorus blocks)
+                            // Authentic Minecraft chorus plant stalk (8/16 core column with 6-directional connecting arms)
                             const canConn = (bx, by, bz) => {
                                 const b = (bx >= 0 && bx < CHUNK_SIZE && bz >= 0 && bz < CHUNK_SIZE && by >= 0 && by < CHUNK_HEIGHT)
                                     ? this.getBlock(bx, by, bz)
                                     : getBlockOptimized(wxBase + bx, by, wzBase + bz);
-                                return b === BLOCKS.CHORUS_PLANT || b === BLOCKS.CHORUS_FLOWER || b === BLOCKS.END_STONE;
+                                return b === BLOCKS.CHORUS_PLANT || b === BLOCKS.CHORUS_FLOWER || b === BLOCKS.CHORUS_FLOWER_DEAD || b === BLOCKS.END_STONE;
                             };
-                            const connW = canConn(x - 1, y, z);
-                            const connE = canConn(x + 1, y, z);
-                            const connN = canConn(x, y, z - 1);
-                            const connS = canConn(x, y, z + 1);
-                            const minX = connW ? x : x + 2/16;
-                            const maxX = connE ? x + 1 : x + 14/16;
-                            const minZ = connN ? z : z + 2/16;
-                            const maxZ = connS ? z + 1 : z + 14/16;
-                            pushCustomBox(minX, y, minZ, maxX, y + 1, maxZ, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false);
+                            // Central 8x8x8 core cube
+                            pushCustomBox(x + 4/16, y + 4/16, z + 4/16, x + 12/16, y + 12/16, z + 12/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                            // 6 connecting branches to adjacent chorus parts/ground
+                            if (canConn(x, y + 1, z)) pushCustomBox(x + 4/16, y + 12/16, z + 4/16, x + 12/16, y + 1.0, z + 12/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                            if (canConn(x, y - 1, z)) pushCustomBox(x + 4/16, y, z + 4/16, x + 12/16, y + 4/16, z + 12/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                            if (canConn(x, y, z - 1)) pushCustomBox(x + 4/16, y + 4/16, z, x + 12/16, y + 12/16, z + 4/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                            if (canConn(x, y, z + 1)) pushCustomBox(x + 4/16, y + 4/16, z + 12/16, x + 12/16, y + 12/16, z + 1.0, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                            if (canConn(x - 1, y, z)) pushCustomBox(x, y + 4/16, z + 4/16, x + 4/16, y + 12/16, z + 12/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                            if (canConn(x + 1, y, z)) pushCustomBox(x + 12/16, y + 4/16, z + 4/16, x + 1.0, y + 12/16, z + 12/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                        } else if (blockType === BLOCKS.CHORUS_FLOWER || blockType === BLOCKS.CHORUS_FLOWER_DEAD) {
+                            // Authentic Minecraft Chorus Flower model from template_chorus_flower.json:
+                            // 1. Core cube [4,4,4] to [12,12,12]
+                            pushCustomBox(x + 4/16, y + 4/16, z + 4/16, x + 12/16, y + 12/16, z + 12/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                            // 2. Z-cross slab [2,2,6] to [14,14,10]
+                            pushCustomBox(x + 2/16, y + 2/16, z + 6/16, x + 14/16, y + 14/16, z + 10/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                            // 3. X-cross slab [6,2,2] to [10,14,14]
+                            pushCustomBox(x + 6/16, y + 2/16, z + 2/16, x + 10/16, y + 14/16, z + 14/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
+                            // 4. Y-cross slab [2,6,2] to [14,10,14]
+                            pushCustomBox(x + 2/16, y + 6/16, z + 2/16, x + 14/16, y + 10/16, z + 14/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, false, false, true);
                         } else if (blockType === BLOCKS.DRAGON_EGG) {
                             // Authentic Minecraft 8-element dragon egg model from block/dragon_egg.json:
                             pushCustomBox(x + 3/16, y +  0/16, z + 3/16, x + 13/16, y +  1/16, z + 13/16, x, y, z, uvTop, uvSide, uvBottom, 0, 1.0, true);
@@ -2606,6 +2688,53 @@ export class World {
                             }
                         }
                     }
+                } else if (block === window.BLOCKS.POINTED_DRIPSTONE_DOWN) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    const below = this.getBlock(wx, wy - 1, wz);
+                    // Authentic Minecraft dripstone dripping water particles
+                    if (window.game && window.game.particles && (below === window.BLOCKS.AIR || below === window.BLOCKS.POINTED_DRIPSTONE_UP)) {
+                        if (Math.random() < 0.35) {
+                            window.game.particles.emit(new THREE.Vector3(wx + 0.5, wy + 0.1, wz + 0.5), 'splash', 1, 0x3366cc);
+                        }
+                    }
+                    // Growth tick (~15% chance when chosen)
+                    if (Math.random() < 0.15) {
+                        let topY = wy;
+                        while (topY < 250 && this.getBlock(wx, topY + 1, wz) === window.BLOCKS.POINTED_DRIPSTONE_DOWN) {
+                            topY++;
+                        }
+                        const attachBlock = this.getBlock(wx, topY + 1, wz);
+                        const waterSource = this.getBlock(wx, topY + 2, wz);
+                        const hasWater = (waterSource === window.BLOCKS.WATER || waterSource === window.BLOCKS.SWAMP_WATER || attachBlock === window.BLOCKS.DRIPSTONE_BLOCK);
+                        if (hasWater) {
+                            let tipY = wy;
+                            while (tipY > 1 && this.getBlock(wx, tipY - 1, wz) === window.BLOCKS.POINTED_DRIPSTONE_DOWN) {
+                                tipY--;
+                            }
+                            const blockUnderTip = this.getBlock(wx, tipY - 1, wz);
+                            if (blockUnderTip === window.BLOCKS.AIR) {
+                                this.setBlock(wx, tipY - 1, wz, window.BLOCKS.POINTED_DRIPSTONE_DOWN);
+                            } else if (blockUnderTip !== window.BLOCKS.POINTED_DRIPSTONE_UP) {
+                                // Search downwards for floor/stalagmite up to 10 blocks to grow upward towards tip
+                                for (let dy = 1; dy <= 10; dy++) {
+                                    const bCheck = this.getBlock(wx, tipY - dy, wz);
+                                    if (bCheck === window.BLOCKS.POINTED_DRIPSTONE_UP) {
+                                        if (this.getBlock(wx, tipY - dy + 1, wz) === window.BLOCKS.AIR) {
+                                            this.setBlock(wx, tipY - dy + 1, wz, window.BLOCKS.POINTED_DRIPSTONE_UP);
+                                        }
+                                        break;
+                                    } else if (getBlockProperties(bCheck).solid) {
+                                        if (this.getBlock(wx, tipY - dy + 1, wz) === window.BLOCKS.AIR) {
+                                            this.setBlock(wx, tipY - dy + 1, wz, window.BLOCKS.POINTED_DRIPSTONE_UP);
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 } else {
                     const bProps = getBlockProperties(block);
                     if (bProps && bProps.isSapling) {
@@ -2757,6 +2886,10 @@ export class World {
                                     if (py < y + 0.5625 && py + entityHeight > y) return true;
                                     continue;
                                 }
+                                if (bProps.isLilyPad || block === window.BLOCKS.LILY_PAD) {
+                                    if (py < y + 0.015 && py + entityHeight > y) return true;
+                                    continue;
+                                }
                                 if (block === window.BLOCKS.PORTAL_FRAME || block === window.BLOCKS.END_PORTAL_FRAME_EYE) {
                                     if (py < y + 0.8125 && py + entityHeight > y) return true;
                                     continue;
@@ -2842,6 +2975,7 @@ export class World {
                                         surfH = isHigh ? 1.0 : 0.5;
                                     }
                                     else if (bProps.isBed || bProps.isBedHead || bProps.isStonecutter || block === window.BLOCKS.STONECUTTER) surfH = 0.5625;
+                                    else if (bProps.isLilyPad || block === window.BLOCKS.LILY_PAD) surfH = 0.015;
                                     else if (block === window.BLOCKS.PORTAL_FRAME || block === window.BLOCKS.END_PORTAL_FRAME_EYE) surfH = 0.8125;
                                     else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) surfH = 1.5;
                                     if (highestSurfaceY === null || (y + surfH) > highestSurfaceY) {
@@ -2905,6 +3039,8 @@ export class World {
                 surfH = isHigh ? 1.0 : 0.5;
             } else if (bProps.isBed || bProps.isBedHead || bProps.isStonecutter || block === window.BLOCKS.STONECUTTER) {
                 surfH = 0.5625;
+            } else if (bProps.isLilyPad || block === window.BLOCKS.LILY_PAD) {
+                surfH = 0.015;
             } else if (block === window.BLOCKS.PORTAL_FRAME || block === window.BLOCKS.END_PORTAL_FRAME_EYE) {
                 surfH = 0.8125;
             } else if (bProps.isFence || bProps.isWall || bProps.isFenceGate) {

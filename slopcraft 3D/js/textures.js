@@ -647,7 +647,7 @@ const BLOCK_PROPS = {
     [BLOCKS.SEASHELL_1]:    { name: 'Scallop Shell',  health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: false, drops: BLOCKS.SEASHELL_1 },
     [BLOCKS.SEASHELL_2]:    { name: 'Nautilus Shell', health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: false, drops: BLOCKS.SEASHELL_2 },
     [BLOCKS.SEASHELL_3]:    { name: 'Conch Shell',    health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: false, drops: BLOCKS.SEASHELL_3 },
-    [BLOCKS.LILY_PAD]:      { name: 'Lily Pad',       health: 1, transparent: true, emissive: 0, solid: false, isCross: true, drops: null },
+    [BLOCKS.LILY_PAD]:      { name: 'Lily Pad',       health: 1, transparent: true, emissive: 0, solid: false, isCross: false, isLilyPad: true, drops: null },
     [BLOCKS.ALGAE]:         { name: 'Algae',          health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isWaterlogged: true, drops: null },
     [BLOCKS.PINE_WOOD]:     { name: 'Pine Wood',      health: 5, transparent: false, emissive: 0, solid: true, drops: null, flammable: true, isLog: true },
     [BLOCKS.PINE_LEAVES]:   { name: 'Pine Leaves',    health: 1, transparent: true, emissive: 0, solid: true, drops: null, flammable: true },
@@ -3092,6 +3092,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
         case BLOCKS.STONECUTTER: {
             if (face === 'front') {
                 ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                // Circular toothed iron saw blade
                 ctx.fillStyle = '#dfe4ea';
                 ctx.beginPath();
                 ctx.arc(8, 8, 6.5, 0, Math.PI * 2);
@@ -3104,18 +3105,30 @@ function generateBlockTexture(ctx, blockType, face, rng) {
                 ctx.lineWidth = 1;
                 for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
                     ctx.beginPath();
-                    ctx.moveTo(8 + Math.cos(a) * 4, 8 + Math.sin(a) * 4);
-                    ctx.lineTo(8 + Math.cos(a) * 7, 8 + Math.sin(a) * 7);
+                    ctx.moveTo(8 + Math.cos(a) * 3.5, 8 + Math.sin(a) * 3.5);
+                    ctx.lineTo(8 + Math.cos(a) * 6.8, 8 + Math.sin(a) * 6.8);
                     ctx.stroke();
                 }
+            } else if (face === 'top') {
+                fillBase(ctx, 128, 128, 132);
+                addNoise(ctx, rng, 10);
+                // Dark recessed top center area
+                ctx.fillStyle = '#5c5e62';
+                ctx.fillRect(2, 2, 12, 12);
+                // Center slot for saw blade
+                ctx.fillStyle = '#222325';
+                ctx.fillRect(7, 1, 2, 14);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 115, 115, 120);
+                addNoise(ctx, rng, 12);
             } else {
-                fillBase(ctx, 120, 120, 125);
-                addNoise(ctx, rng, 15);
-                ctx.fillStyle = '#9095a0';
-                ctx.fillRect(0, 10, 16, 6);
-                ctx.fillStyle = '#dcdfe5';
-                ctx.fillRect(6, 2, 4, 8);
-                ctx.fillRect(4, 4, 8, 4);
+                // Side: stone plinth with dark beveled top and base border
+                fillBase(ctx, 122, 122, 126);
+                addNoise(ctx, rng, 10);
+                ctx.fillStyle = '#9aa0a6';
+                ctx.fillRect(0, 12, 16, 4); // bottom plinth
+                ctx.fillStyle = '#55585c';
+                ctx.fillRect(0, 0, 16, 2);  // top dark rim
             }
             break;
         }
@@ -3663,6 +3676,141 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
 
+        case BLOCKS.SCULK:
+            fillBase(ctx, 11, 20, 25);
+            addNoise(ctx, rng, 10);
+            addPixels(ctx, rng, '#00e1d9', 10);
+            addPixels(ctx, rng, '#04464c', 16);
+            break;
+
+        case BLOCKS.SCULK_CATALYST:
+            if (face === 'top') {
+                fillBase(ctx, 11, 20, 25);
+                addNoise(ctx, rng, 8);
+                // Glowing soul center
+                ctx.fillStyle = '#00e1d9';
+                ctx.fillRect(5, 5, 6, 6);
+                ctx.fillStyle = '#b7ffff';
+                ctx.fillRect(7, 7, 2, 2);
+                // Bone perimeter
+                ctx.strokeStyle = '#e6e2ce';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(1, 1, 14, 14);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 11, 20, 25);
+                addNoise(ctx, rng, 8);
+            } else {
+                fillBase(ctx, 11, 20, 25);
+                addNoise(ctx, rng, 8);
+                // Lower half bone plinth
+                ctx.fillStyle = '#e2deca';
+                ctx.fillRect(0, 9, 16, 7);
+                ctx.fillStyle = '#b5ae96';
+                ctx.fillRect(0, 15, 16, 1);
+                addPixels(ctx, rng, '#00e1d9', 6);
+            }
+            break;
+
+        case BLOCKS.SCULK_SHRIEKER:
+            if (face === 'top') {
+                fillBase(ctx, 11, 20, 25);
+                addNoise(ctx, rng, 8);
+                // 4 bone corner horns
+                ctx.fillStyle = '#e8e4d0';
+                ctx.fillRect(0, 0, 3, 3);
+                ctx.fillRect(13, 0, 3, 3);
+                ctx.fillRect(0, 13, 3, 3);
+                ctx.fillRect(13, 13, 3, 3);
+                // Dark central shrieker soul vortex
+                ctx.fillStyle = '#050b0f';
+                ctx.fillRect(5, 5, 6, 6);
+                ctx.fillStyle = '#00e1d9';
+                ctx.fillRect(6, 6, 4, 4);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 11, 20, 25);
+                addNoise(ctx, rng, 8);
+            } else {
+                fillBase(ctx, 11, 20, 25);
+                addNoise(ctx, rng, 8);
+                // Bone horn rims along top
+                ctx.fillStyle = '#e8e4d0';
+                ctx.fillRect(0, 0, 3, 4);
+                ctx.fillRect(13, 0, 3, 4);
+                // Soul wave resonance lines
+                ctx.fillStyle = '#00e1d9';
+                ctx.fillRect(4, 7, 8, 2);
+                ctx.fillRect(6, 11, 4, 2);
+            }
+            break;
+
+        case BLOCKS.SCULK_SENSOR:
+            if (face === 'top') {
+                fillBase(ctx, 11, 20, 25);
+                addNoise(ctx, rng, 8);
+                // 4 cyan acoustic sensor tendrils
+                ctx.fillStyle = '#00e1d9';
+                ctx.fillRect(3, 3, 3, 3);
+                ctx.fillRect(10, 3, 3, 3);
+                ctx.fillRect(3, 10, 3, 3);
+                ctx.fillRect(10, 10, 3, 3);
+                ctx.fillStyle = '#04464c';
+                ctx.fillRect(4, 4, 1, 1);
+                ctx.fillRect(11, 4, 1, 1);
+                ctx.fillRect(4, 11, 1, 1);
+                ctx.fillRect(11, 11, 1, 1);
+            } else if (face === 'bottom') {
+                fillBase(ctx, 11, 20, 25);
+                addNoise(ctx, rng, 8);
+            } else {
+                fillBase(ctx, 11, 20, 25);
+                addNoise(ctx, rng, 8);
+                ctx.fillStyle = '#005b63';
+                ctx.fillRect(0, 10, 16, 3);
+                ctx.fillStyle = '#00e1d9';
+                ctx.fillRect(4, 3, 2, 4);
+                ctx.fillRect(10, 3, 2, 4);
+            }
+            break;
+
+        case BLOCKS.DRIPSTONE_BLOCK:
+            fillBase(ctx, 134, 107, 92);
+            addNoise(ctx, rng, 14);
+            addPixels(ctx, rng, '#6b5448', 12);
+            addPixels(ctx, rng, '#a58674', 10);
+            break;
+
+        case BLOCKS.POINTED_DRIPSTONE_DOWN:
+        case BLOCKS.POINTED_DRIPSTONE_UP: {
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            const isDown = (blockType === BLOCKS.POINTED_DRIPSTONE_DOWN);
+            const colorMain = '#8a6e5d';
+            ctx.fillStyle = colorMain;
+            if (face === 'base') {
+                ctx.fillRect(4, 0, 8, 16);
+            } else if (face === 'middle') {
+                ctx.fillRect(5, 0, 6, 16);
+            } else if (face === 'frustum') {
+                if (isDown) {
+                    ctx.fillRect(5, 0, 6, 8);
+                    ctx.fillRect(6, 8, 4, 8);
+                } else {
+                    ctx.fillRect(6, 0, 4, 8);
+                    ctx.fillRect(5, 8, 6, 8);
+                }
+            } else if (face === 'merge') {
+                ctx.fillRect(6, 0, 4, 16);
+            } else {
+                if (isDown) {
+                    ctx.fillRect(6, 0, 4, 8);
+                    ctx.fillRect(7, 8, 2, 8);
+                } else {
+                    ctx.fillRect(7, 0, 2, 8);
+                    ctx.fillRect(6, 8, 4, 8);
+                }
+            }
+            break;
+        }
+
         case BLOCKS.PUMPKIN:
             if (face === 'top' || face === 'bottom') {
                 fillBase(ctx, 217, 118, 24);
@@ -3740,7 +3888,9 @@ function hasFaceVariants(blockType) {
         BLOCKS.WARPED_NYLIUM, BLOCKS.WARPED_STEM, BLOCKS.BONE_BLOCK, BLOCKS.BASALT, BLOCKS.BLACKSTONE, BLOCKS.PODZOL, BLOCKS.GOLDEN_OAK_WOOD, BLOCKS.MAGIC_WOOD, BLOCKS.REDWOOD_LOG,
         BLOCKS.FLETCHING_TABLE, BLOCKS.SMOKER, BLOCKS.STONECUTTER,
         BLOCKS.MANGROVE_LOG, BLOCKS.MANGROVE_ROOTS, BLOCKS.MUDDY_MANGROVE_ROOTS, BLOCKS.ENCHANTED_AETHER_LOG,
-        BLOCKS.BIRCH_WOOD, BLOCKS.FARMLAND, BLOCKS.FARMLAND_MOIST, BLOCKS.DIRT_PATH, BLOCKS.PUMPKIN, BLOCKS.JUNGLE_LOG
+        BLOCKS.BIRCH_WOOD, BLOCKS.FARMLAND, BLOCKS.FARMLAND_MOIST, BLOCKS.DIRT_PATH, BLOCKS.PUMPKIN, BLOCKS.JUNGLE_LOG,
+        BLOCKS.SCULK_CATALYST, BLOCKS.SCULK_SHRIEKER, BLOCKS.SCULK_SENSOR,
+        BLOCKS.POINTED_DRIPSTONE_DOWN, BLOCKS.POINTED_DRIPSTONE_UP
     ].includes(blockType);
 }
 
@@ -3984,8 +4134,26 @@ const MC_TEXTURE_MAP = {
     [BLOCKS.AZALEA_LEAVES]: 'azalea_leaves',
     [BLOCKS.FLOWERING_AZALEA_LEAVES]: 'flowering_azalea_leaves',
     [BLOCKS.DRIPSTONE_BLOCK]: 'dripstone_block',
-    [BLOCKS.POINTED_DRIPSTONE_DOWN]: 'pointed_dripstone_down_tip',
-    [BLOCKS.POINTED_DRIPSTONE_UP]: 'pointed_dripstone_up_tip',
+    [BLOCKS.POINTED_DRIPSTONE_DOWN]: {
+        tip: 'pointed_dripstone_down_tip',
+        frustum: 'pointed_dripstone_down_frustum',
+        middle: 'pointed_dripstone_down_middle',
+        base: 'pointed_dripstone_down_base',
+        merge: 'pointed_dripstone_down_tip_merge',
+        side: 'pointed_dripstone_down_tip',
+        top: 'pointed_dripstone_down_tip',
+        bottom: 'pointed_dripstone_down_tip'
+    },
+    [BLOCKS.POINTED_DRIPSTONE_UP]: {
+        tip: 'pointed_dripstone_up_tip',
+        frustum: 'pointed_dripstone_up_frustum',
+        middle: 'pointed_dripstone_up_middle',
+        base: 'pointed_dripstone_up_base',
+        merge: 'pointed_dripstone_up_tip_merge',
+        side: 'pointed_dripstone_up_tip',
+        top: 'pointed_dripstone_up_tip',
+        bottom: 'pointed_dripstone_up_tip'
+    },
     [BLOCKS.DUNGEON_BRICK]: 'deepslate_bricks',
     [BLOCKS.DUNGEON_FLOOR]: 'deepslate_tiles',
     [BLOCKS.PALM_WOOD]: { top: 'jungle_log_top', side: 'jungle_log', bottom: 'jungle_log_top' },
@@ -4341,7 +4509,15 @@ const LOCAL_ASSET_MAP = {
     "rooted_dirt": "assets/mc/block/rooted_dirt.png",
     "dripstone_block": "assets/mc/block/dripstone_block.png",
     "pointed_dripstone_down_tip": "assets/mc/block/pointed_dripstone_down_tip.png",
+    "pointed_dripstone_down_frustum": "assets/mc/block/pointed_dripstone_down_frustum.png",
+    "pointed_dripstone_down_middle": "assets/mc/block/pointed_dripstone_down_middle.png",
+    "pointed_dripstone_down_base": "assets/mc/block/pointed_dripstone_down_base.png",
+    "pointed_dripstone_down_tip_merge": "assets/mc/block/pointed_dripstone_down_tip_merge.png",
     "pointed_dripstone_up_tip": "assets/mc/block/pointed_dripstone_up_tip.png",
+    "pointed_dripstone_up_frustum": "assets/mc/block/pointed_dripstone_up_frustum.png",
+    "pointed_dripstone_up_middle": "assets/mc/block/pointed_dripstone_up_middle.png",
+    "pointed_dripstone_up_base": "assets/mc/block/pointed_dripstone_up_base.png",
+    "pointed_dripstone_up_tip_merge": "assets/mc/block/pointed_dripstone_up_tip_merge.png",
     "spore_blossom": "assets/mc/block/spore_blossom.png",
     "cave_vines": "assets/mc/block/cave_vines.png",
     "azalea_leaves": "assets/mc/block/azalea_leaves.png",
@@ -4672,7 +4848,13 @@ const LOCAL_ASSET_MAP = {
     "beetroot": "assets/mc/item/beetroot.png",
     "beetroot_seeds": "assets/mc/item/beetroot_seeds.png",
     "pumpkin_seeds": "assets/mc/item/pumpkin_seeds.png",
-    "melon_seeds": "assets/mc/item/melon_seeds.png"
+    "melon_seeds": "assets/mc/item/melon_seeds.png",
+    "cookie": "assets/mc/item/cookie.png",
+    "item/cookie": "assets/mc/item/cookie.png",
+    "pumpkin_pie": "assets/mc/item/pumpkin_pie.png",
+    "item/pumpkin_pie": "assets/mc/item/pumpkin_pie.png",
+    "beetroot_soup": "assets/mc/item/beetroot_soup.png",
+    "item/beetroot_soup": "assets/mc/item/beetroot_soup.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -4730,7 +4912,9 @@ export async function createTextureAtlas(useMinecraft = true) {
             uvMap[bt] = {};
             const faces = (bt === BLOCKS.END_PORTAL_FRAME_EYE)
                 ? ['top', 'side', 'bottom', 'front', 'eye']
-                : ['top', 'side', 'bottom', 'front'];
+                : ((bt === BLOCKS.POINTED_DRIPSTONE_DOWN || bt === BLOCKS.POINTED_DRIPSTONE_UP)
+                    ? ['tip', 'frustum', 'middle', 'base', 'merge', 'side', 'top', 'bottom']
+                    : ['top', 'side', 'bottom', 'front']);
             for (const face of faces) {
                 entries.push({ blockType: bt, face, col, row });
                 uvMap[bt][face] = { col, row };
@@ -4964,7 +5148,8 @@ export async function createTextureAtlas(useMinecraft = true) {
         else if (face === 'bottom' || face === 'ny') faceKey = 'bottom';
         else if (face === 'front' || face === 'pz') faceKey = 'front';
         else if (face === 'eye') faceKey = 'eye';
-        const entry = map[faceKey] || map.side || map.top;
+        else if (map && map[face]) faceKey = face;
+        const entry = map[faceKey] || map.tip || map.side || map.top;
         
         return {
             u: entry.col * uUnit + epsU,
@@ -5000,8 +5185,8 @@ export async function createTextureAtlas(useMinecraft = true) {
             return faceCvs;
         };
 
-        if (props.isCross) {
-            // Flat 2D for cross models (torch, flowers, saplings) - enlarged to fill slot nicely
+        if (props.isCross || blockType === BLOCKS.CHORUS_PLANT || blockType === BLOCKS.CHORUS_FLOWER || blockType === BLOCKS.CHORUS_FLOWER_DEAD) {
+            // Flat 2D for cross models and chorus plants/flowers - enlarged to fill slot nicely
             const tmp = getFaceCanvas('side');
             const pad = 2 * SCALE;
             const drawSize = (TEX_SIZE * 2 - 4) * SCALE;
@@ -5274,15 +5459,39 @@ export async function createTextureAtlas(useMinecraft = true) {
             return iconCanvas;
         }
 
-        if (props.isSlab) {
+        if (props.isStonecutter || blockType === BLOCKS.STONECUTTER) {
             iconCtx.save();
-            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 8 * SCALE * 0.5);
+            const yOffset = 7 * SCALE;
+            // Stone plinth top face (9/16 height, recessed by 7 pixels from top)
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, yOffset);
             iconCtx.drawImage(topScaled, 0, 0);
 
-            iconCtx.setTransform(1, 0.5, 0, 1, 0, 12 * SCALE);
+            // Left face (lower 9 pixels of side1 plinth)
+            iconCtx.setTransform(1, 0.5, 0, 1, 0, 15 * SCALE);
+            iconCtx.drawImage(side1Scaled, 0, 7 * SCALE, 16 * SCALE, 9 * SCALE, 0, 0, 16 * SCALE, 9 * SCALE);
+
+            // Right face (lower 9 pixels of side2 plinth)
+            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 23 * SCALE);
+            iconCtx.drawImage(side2Scaled, 0, 7 * SCALE, 16 * SCALE, 9 * SCALE, 0, 0, 16 * SCALE, 9 * SCALE);
+
+            // Center saw blade (front face texture, standing upright in the center slot)
+            const sawScaled = faceCanvases['front'] || side1Scaled;
+            iconCtx.setTransform(1, 0.5, 0, 1, 6 * SCALE, 2 * SCALE);
+            iconCtx.drawImage(sawScaled, 0, 0, 16 * SCALE, 16 * SCALE, 0, 0, 13 * SCALE, 13 * SCALE);
+
+            iconCtx.restore();
+            return iconCanvas;
+        }
+
+        if (props.isSlab) {
+            iconCtx.save();
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 8 * SCALE);
+            iconCtx.drawImage(topScaled, 0, 0);
+
+            iconCtx.setTransform(1, 0.5, 0, 1, 0, 16 * SCALE);
             iconCtx.drawImage(side1Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
 
-            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 20 * SCALE);
+            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 24 * SCALE);
             iconCtx.drawImage(side2Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
             iconCtx.restore();
             return iconCanvas;
@@ -5290,22 +5499,29 @@ export async function createTextureAtlas(useMinecraft = true) {
 
         if (props.isStair) {
             iconCtx.save();
-            // Lower slab base
-            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 8 * SCALE * 0.5);
-            iconCtx.drawImage(topScaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE);
-
-            iconCtx.setTransform(1, 0.5, 0, 1, 0, 12 * SCALE);
-            iconCtx.drawImage(side1Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
-
-            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 20 * SCALE);
-            iconCtx.drawImage(side2Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
-
-            // Upper back step
+            // 1. Upper top tread (horizontal diamond, back half)
             iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 0);
             iconCtx.drawImage(topScaled, 0, 0, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
 
+            // 2. Lower top tread (horizontal diamond, front half shifted down by 8 * SCALE)
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 8 * SCALE);
+            iconCtx.drawImage(topScaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE);
+
+            // 3. Vertical step riser connecting upper tread front edge to lower tread back edge
+            iconCtx.setTransform(1, 0.5, 0, 1, 8 * SCALE, 4 * SCALE);
+            iconCtx.drawImage(side1Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
+
+            // 4. Lower front face
+            iconCtx.setTransform(1, 0.5, 0, 1, 0, 16 * SCALE);
+            iconCtx.drawImage(side1Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
+
+            // 5. Right profile face (seamless authentic L-shape)
             iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 16 * SCALE);
-            iconCtx.drawImage(side2Scaled, 0, 0, 8 * SCALE, 8 * SCALE, 8 * SCALE, 0, 8 * SCALE, 8 * SCALE);
+            // Back half: full 16 height (u = 8*SCALE to 16*SCALE)
+            iconCtx.drawImage(side2Scaled, 8 * SCALE, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 8 * SCALE, 16 * SCALE);
+            // Front half: bottom 8 height (u = 0 to 8*SCALE)
+            iconCtx.drawImage(side2Scaled, 0, 8 * SCALE, 8 * SCALE, 8 * SCALE, 0, 8 * SCALE, 8 * SCALE, 8 * SCALE);
+
             iconCtx.restore();
             return iconCanvas;
         }
@@ -5338,8 +5554,13 @@ export async function createTextureAtlas(useMinecraft = true) {
             if (frame.isMC) {
                 const totalFrames = frame.frames || 1;
                 const frameSize = frame.frameSize || TEX_SIZE;
-                const isLava = frame.img && frame.img.src && frame.img.src.includes('lava');
-                const frameInterval = isLava ? 160 : 100;
+                const src = (frame.img && frame.img.src) ? frame.img.src : '';
+                let frameInterval = 100;
+                if (src.includes('lava')) {
+                    frameInterval = 160;
+                } else if (src.includes('sculk') || src.includes('crimson')) {
+                    frameInterval = 40; // Fast, snappy, authentic pulse for sculk and crimson flora animations
+                }
                 const currentFrame = Math.floor(time / frameInterval) % totalFrames;
                 if (frame.lastFrame === currentFrame) continue;
                 frame.lastFrame = currentFrame;
@@ -5613,6 +5834,9 @@ const MC_ITEM_MAP = {
     'coal_block': 'coal_block',
     'fletching_table': 'fletching_table_front',
     'smoker': 'smoker_front',
+    'cookie': 'cookie',
+    'pumpkin_pie': 'pumpkin_pie',
+    'beetroot_soup': 'beetroot_soup',
     'stonecutter': 'stonecutter_side',
     'lantern': 'item/lantern',
     'soul_lantern': 'item/soul_lantern',
@@ -5698,6 +5922,10 @@ const _itemCanvasCache = new Map();
 export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     if (typeof itemSubtype !== 'string') {
         itemSubtype = (itemSubtype !== undefined && itemSubtype !== null) ? String(itemSubtype) : '';
+    }
+
+    if (itemSubtype === 'stonecutter' || itemType === 'stonecutter' || itemSubtype === BLOCKS.STONECUTTER || itemType === BLOCKS.STONECUTTER) {
+        return getBlockIcon(BLOCKS.STONECUTTER, onLoaded);
     }
 
     const TEX_SIZE = 16;
@@ -6954,13 +7182,111 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         ctx.restore();
         return canvas;
     } else if (itemSubtype === 'chorus_fruit') {
-        const cx2 = TEX_SIZE / 2, cy2 = TEX_SIZE / 2;
-        ctx.fillStyle = '#8f4f8f';
-        ctx.beginPath(); ctx.arc(cx2, cy2, 5.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#b773b7';
-        ctx.beginPath(); ctx.arc(cx2 - 1, cy2 - 1, 3.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#572b57';
-        ctx.fillRect(cx2 - 1, cy2 - 7, 2, 3);
+        // Authentic Minecraft Chorus Fruit (16x16 pixel art)
+        const C_OUT = '#2e122e';
+        const C_DARK = '#592659';
+        const C_MID = '#8f498f';
+        const C_LITE = '#be72be';
+        const C_STEM = '#3f1a3f';
+        ctx.fillStyle = C_STEM;
+        ctx.fillRect(7, 1, 2, 3);
+        ctx.fillStyle = C_OUT;
+        ctx.fillRect(4, 3, 8, 10);
+        ctx.fillRect(3, 5, 10, 6);
+        ctx.fillRect(5, 13, 6, 2);
+        ctx.fillStyle = C_MID;
+        ctx.fillRect(4, 4, 7, 8);
+        ctx.fillRect(4, 12, 6, 2);
+        ctx.fillStyle = C_LITE;
+        ctx.fillRect(5, 4, 3, 3);
+        ctx.fillRect(5, 8, 2, 2);
+        ctx.fillStyle = C_DARK;
+        ctx.fillRect(8, 7, 3, 4);
+        ctx.fillRect(6, 12, 4, 1);
+        return canvas;
+    } else if (itemSubtype === 'cookie') {
+        // Authentic Minecraft Cookie (16x16 pixel art)
+        const C_BASE = '#d3934d';
+        const C_DARK = '#8e5623';
+        const C_CHIP = '#432612';
+        const C_CHIP_DARK = '#251508';
+        const C_LITE = '#eab977';
+        ctx.fillStyle = C_BASE;
+        ctx.fillRect(4, 2, 8, 12);
+        ctx.fillRect(2, 4, 12, 8);
+        ctx.fillRect(3, 3, 10, 10);
+        ctx.fillStyle = C_LITE;
+        ctx.fillRect(4, 2, 8, 1);
+        ctx.fillRect(2, 4, 1, 8);
+        ctx.fillStyle = C_DARK;
+        ctx.fillRect(4, 13, 8, 1);
+        ctx.fillRect(13, 4, 1, 8);
+        ctx.fillRect(12, 12, 1, 1);
+        ctx.fillStyle = C_CHIP;
+        ctx.fillRect(4, 5, 2, 2);
+        ctx.fillRect(9, 4, 2, 2);
+        ctx.fillRect(7, 8, 2, 2);
+        ctx.fillRect(4, 10, 2, 2);
+        ctx.fillRect(10, 9, 2, 2);
+        ctx.fillStyle = C_CHIP_DARK;
+        ctx.fillRect(5, 6, 1, 1);
+        ctx.fillRect(10, 5, 1, 1);
+        ctx.fillRect(8, 9, 1, 1);
+        ctx.fillRect(5, 11, 1, 1);
+        ctx.fillRect(11, 10, 1, 1);
+        return canvas;
+    } else if (itemSubtype === 'pumpkin_pie') {
+        // Authentic Minecraft Pumpkin Pie (16x16 pixel art)
+        const P_CRUST = '#ca7c38';
+        const P_DARKCRUST = '#7f3f11';
+        const P_LITECRUST = '#ebb479';
+        const P_FILL = '#cc6317';
+        const P_DARKFILL = '#9e460b';
+        const P_WHITE = '#ffffff';
+        ctx.fillStyle = P_DARKCRUST;
+        ctx.fillRect(2, 12, 12, 2);
+        ctx.fillRect(1, 10, 14, 2);
+        ctx.fillStyle = P_CRUST;
+        ctx.fillRect(1, 8, 14, 2);
+        ctx.fillStyle = P_LITECRUST;
+        ctx.fillRect(2, 7, 12, 1);
+        ctx.fillStyle = P_FILL;
+        ctx.fillRect(3, 4, 10, 4);
+        ctx.fillRect(4, 3, 8, 2);
+        ctx.fillStyle = P_DARKFILL;
+        ctx.fillRect(3, 7, 10, 1);
+        ctx.fillRect(11, 5, 2, 2);
+        ctx.fillStyle = P_WHITE;
+        ctx.fillRect(7, 3, 2, 2);
+        return canvas;
+    } else if (itemSubtype === 'beetroot_soup') {
+        // Authentic Minecraft Beetroot Soup in Wooden Bowl (16x16 pixel art)
+        const B_WOOD = '#996633';
+        const B_DARKWOOD = '#5c3d1e';
+        const B_LITEWOOD = '#c48f5a';
+        const S_RED = '#a61c2e';
+        const S_DARKRED = '#660d18';
+        const S_BRIGHTRED = '#d92b41';
+        ctx.fillStyle = B_LITEWOOD;
+        ctx.fillRect(2, 6, 12, 1);
+        ctx.fillStyle = B_WOOD;
+        ctx.fillRect(2, 7, 12, 4);
+        ctx.fillRect(4, 11, 8, 2);
+        ctx.fillRect(5, 13, 6, 1);
+        ctx.fillStyle = B_DARKWOOD;
+        ctx.fillRect(13, 7, 1, 4);
+        ctx.fillRect(11, 11, 1, 2);
+        ctx.fillRect(5, 13, 6, 1);
+        ctx.fillStyle = S_RED;
+        ctx.fillRect(3, 5, 10, 3);
+        ctx.fillStyle = S_BRIGHTRED;
+        ctx.fillRect(5, 5, 3, 1);
+        ctx.fillRect(4, 6, 2, 1);
+        ctx.fillStyle = S_DARKRED;
+        ctx.fillRect(9, 6, 3, 2);
+        ctx.fillStyle = '#3f8c27';
+        ctx.fillRect(7, 5, 1, 1);
+        ctx.fillRect(8, 6, 1, 1);
         return canvas;
     } else if (itemSubtype === 'sweet_berries') {
         // Cluster of small bright red berries with green stem

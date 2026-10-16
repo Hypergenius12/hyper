@@ -502,8 +502,17 @@ export class SpellProjectile {
     dispose() {
         if (this.mesh) {
             if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
-            this.mesh.geometry.dispose();
-            this.mesh.material.dispose();
+            this.mesh.traverse(child => {
+                if (child.isMesh) {
+                    if (child.geometry) child.geometry.dispose();
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(m => m.dispose());
+                    } else if (child.material) {
+                        child.material.dispose();
+                    }
+                }
+            });
+            this.mesh = null;
         }
     }
 }

@@ -2176,20 +2176,15 @@ export function generateChunkTerrain(cx, cz, params) {
                         const aboveIdx = (y * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
                         const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && y < CHUNK_HEIGHT) ? blocks[aboveIdx] : BLOCKS.WATER;
                         if (biome === BIOMES.SWAMP || biome === BIOMES.OASIS) {
-                            if (cRng < 0.5) {
-                                if (aboveBlock === BLOCKS.WATER || aboveBlock === BLOCKS.SWAMP_WATER) {
-                                    safeSetBlock(blocks, tx, y, tz, BLOCKS.ALGAE, false);
-                                }
-                            } else {
-                                const waterTopY = (bData && bData.lakeSurfaceY > 0) ? bData.lakeSurfaceY : params.seaLevel;
-                                const padY = waterTopY + 1;
-                                const waterIdx = (waterTopY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                                const waterBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && waterTopY < CHUNK_HEIGHT) ? blocks[waterIdx] : BLOCKS.AIR;
-                                const padIdx = (padY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                                const padBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && padY < CHUNK_HEIGHT) ? blocks[padIdx] : BLOCKS.AIR;
-                                if ((waterBlock === BLOCKS.WATER || waterBlock === BLOCKS.SWAMP_WATER) && (padBlock === BLOCKS.AIR || padBlock === BLOCKS.WATER || padBlock === BLOCKS.SWAMP_WATER)) {
-                                    safeSetBlock(blocks, tx, padY, tz, BLOCKS.LILY_PAD, false);
-                                }
+                            const waterTopY = (bData && bData.lakeSurfaceY > 0) ? bData.lakeSurfaceY : params.seaLevel;
+                            const padY = waterTopY + 1;
+                            const waterIdx = (waterTopY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                            const waterBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && waterTopY < CHUNK_HEIGHT) ? blocks[waterIdx] : BLOCKS.AIR;
+                            const padIdx = (padY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
+                            const padBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE && padY < CHUNK_HEIGHT) ? blocks[padIdx] : BLOCKS.AIR;
+                            // Lily pads float directly atop undisturbed water surface in air
+                            if ((waterBlock === BLOCKS.WATER || waterBlock === BLOCKS.SWAMP_WATER) && padBlock === BLOCKS.AIR && cRng < 0.25) {
+                                safeSetBlock(blocks, tx, padY, tz, BLOCKS.LILY_PAD, false);
                             }
                         } else {
                             if (aboveBlock === BLOCKS.WATER) {
@@ -4306,29 +4301,41 @@ export function generateIglooStructure(blocks, cx, cz, iPos, params) {
 export function getWitchHutPositions(seed = 12345) {
     const s = Math.abs(typeof seed === 'string' ? hashSeed(seed) : seed) || 12345;
     const huts = [];
-    for (let rx = -5; rx <= 5; rx++) {
-        for (let rz = -5; rz <= 5; rz++) {
+    for (let rx = -7; rx <= 7; rx++) {
+        for (let rz = -7; rz <= 7; rz++) {
             const rRng = seededRandom(s + rx * 73619283 ^ rz * 18273645);
-            const wx = rx * 340 + Math.floor((rRng() - 0.5) * 180);
-            const wz = rz * 340 + Math.floor((rRng() - 0.5) * 180);
+            const wx = rx * 220 + Math.floor((rRng() - 0.5) * 140);
+            const wz = rz * 220 + Math.floor((rRng() - 0.5) * 140);
             huts.push({ x: wx, y: 64, z: wz });
         }
     }
     return huts;
 }
 
-export function getClosestWitchHutPosition(px, pz, seed = 12345) {
+export function getClosestWitchHutPosition(px, pz, seed = 12345, params = null) {
     const list = getWitchHutPositions(seed);
     if (!list.length) return null;
-    let best = list[0];
+    if (!params || !params.noise2D) {
+        if (typeof window !== 'undefined' && window.worldGenParams && window.worldGenParams.noise2D) {
+            params = window.worldGenParams;
+        } else if (typeof window !== 'undefined' && window.game && window.game.planetParams && window.game.planetParams.noise2D) {
+            params = window.game.planetParams;
+        } else {
+            params = new PlanetParams(seed);
+        }
+    }
+    let best = null;
     let bestDist = Infinity;
     for (const h of list) {
-        const dx = h.x - px;
-        const dz = h.z - pz;
-        const d = dx * dx + dz * dz;
-        if (d < bestDist) {
-            bestDist = d;
-            best = h;
+        const col = getColumnInfo(h.x, h.z, params);
+        if (col && (col.biome === BIOMES.SWAMP || (col.biome && col.biome.name === 'Swamp'))) {
+            const dx = h.x - px;
+            const dz = h.z - pz;
+            const d = dx * dx + dz * dz;
+            if (d < bestDist) {
+                bestDist = d;
+                best = { x: h.x, y: Math.max(params.seaLevel || 62, col.surfaceY), z: h.z };
+            }
         }
     }
     return best;
@@ -5437,32 +5444,63 @@ export function generateEndChunk(cx, cz, params) {
                         blocks[idx] = endStoneId;
                     }
 
-                    // Procedural Chorus Trees on outer islands
+                    // Procedural Authentic Branching Chorus Trees on outer islands
                     const treeRng = seededRandom(params.seed + wx * 1013 + wz * 719);
-                    if (treeRng() < 0.05 && lx >= 2 && lx < CHUNK_SIZE - 2 && lz >= 2 && lz < CHUNK_SIZE - 2 && topY < CHUNK_HEIGHT - 10) {
-                        const trunkH = 3 + Math.floor(treeRng() * 3);
-                        // Vertical stalk
+                    if (treeRng() < 0.05 && lx >= 3 && lx < CHUNK_SIZE - 3 && lz >= 3 && lz < CHUNK_SIZE - 3 && topY < CHUNK_HEIGHT - 18) {
+                        const trunkH = 4 + Math.floor(treeRng() * 5); // 4 to 8 blocks tall
                         for (let ty = 1; ty <= trunkH; ty++) {
                             const idx = ((topY + ty) * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
                             blocks[idx] = chorusPlantId;
                         }
-                        // Flower atop trunk
-                        blocks[((topY + trunkH + 1) * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx] = chorusFlowerId;
+                        // Flower atop trunk tip if not branching from the top
+                        if (treeRng() < 0.4) {
+                            blocks[((topY + trunkH + 1) * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx] = chorusFlowerId;
+                        }
 
-                        // Branch 1
-                        const b1Dir = treeRng() < 0.5 ? 1 : -1;
-                        const b1X = lx + b1Dir;
-                        const b1Y = topY + trunkH - 1;
-                        blocks[(b1Y * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + b1X] = chorusPlantId;
-                        blocks[((b1Y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + b1X] = chorusPlantId;
-                        blocks[((b1Y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + b1X] = chorusFlowerId;
+                        // 2 to 4 branches stemming outward
+                        const branchCount = 2 + Math.floor(treeRng() * 3);
+                        const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+                        // Shuffle dirs
+                        for (let i = dirs.length - 1; i > 0; i--) {
+                            const j = Math.floor(treeRng() * (i + 1));
+                            [dirs[i], dirs[j]] = [dirs[j], dirs[i]];
+                        }
 
-                        // Branch 2
-                        const b2Dir = treeRng() < 0.5 ? 1 : -1;
-                        const b2Z = lz + b2Dir;
-                        const b2Y = topY + trunkH;
-                        blocks[(b2Y * CHUNK_SIZE * CHUNK_SIZE) + (b2Z * CHUNK_SIZE) + lx] = chorusPlantId;
-                        blocks[((b2Y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (b2Z * CHUNK_SIZE) + lx] = chorusFlowerId;
+                        for (let b = 0; b < branchCount; b++) {
+                            const [bdx, bdz] = dirs[b % dirs.length];
+                            const branchStartH = Math.max(2, trunkH - b - Math.floor(treeRng() * 2));
+                            const bx = lx + bdx;
+                            const bz = lz + bdz;
+                            const by = topY + branchStartH;
+                            if (bx < 1 || bx >= CHUNK_SIZE - 1 || bz < 1 || bz >= CHUNK_SIZE - 1) continue;
+
+                            // Horizontal elbow
+                            blocks[(by * CHUNK_SIZE * CHUNK_SIZE) + (bz * CHUNK_SIZE) + bx] = chorusPlantId;
+                            // Upward branch stalk (2-4 blocks tall)
+                            const branchH = 2 + Math.floor(treeRng() * 3);
+                            for (let u = 1; u <= branchH; u++) {
+                                if (by + u < CHUNK_HEIGHT - 2) {
+                                    blocks[((by + u) * CHUNK_SIZE * CHUNK_SIZE) + (bz * CHUNK_SIZE) + bx] = chorusPlantId;
+                                }
+                            }
+                            // Subsidiary sub-branch (35% chance)
+                            if (treeRng() < 0.35) {
+                                const subDirs = dirs.filter(([sx, sz]) => sx !== -bdx || sz !== -bdz);
+                                const [sdx, sdz] = subDirs[Math.floor(treeRng() * subDirs.length)];
+                                const sx = bx + sdx;
+                                const sz = bz + sdz;
+                                const sy = by + branchH - 1;
+                                if (sx >= 1 && sx < CHUNK_SIZE - 1 && sz >= 1 && sz < CHUNK_SIZE - 1 && sy < CHUNK_HEIGHT - 3) {
+                                    blocks[(sy * CHUNK_SIZE * CHUNK_SIZE) + (sz * CHUNK_SIZE) + sx] = chorusPlantId;
+                                    blocks[((sy + 1) * CHUNK_SIZE * CHUNK_SIZE) + (sz * CHUNK_SIZE) + sx] = chorusPlantId;
+                                    blocks[((sy + 2) * CHUNK_SIZE * CHUNK_SIZE) + (sz * CHUNK_SIZE) + sx] = chorusFlowerId;
+                                }
+                            }
+                            // Chorus flower crowning the main branch tip
+                            if (by + branchH + 1 < CHUNK_HEIGHT - 1) {
+                                blocks[((by + branchH + 1) * CHUNK_SIZE * CHUNK_SIZE) + (bz * CHUNK_SIZE) + bx] = chorusFlowerId;
+                            }
+                        }
                     }
                 }
             }

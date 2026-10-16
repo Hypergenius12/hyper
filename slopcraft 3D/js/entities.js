@@ -3745,6 +3745,101 @@ export const MOB_TYPES = {
             if (mob.wanderDir.lengthSq() > 0 && mob.mesh) mob.mesh.rotation.y = Math.atan2(mob.wanderDir.x, mob.wanderDir.z);
         }
     },
+    CAT: {
+        name: 'Cat', health: 10, damage: 0, speed: 2.4, hostile: false, color: 0x1a1a1a,
+        size: 0.5, xpDrop: 2, lootChance: 0.5, lootTable: [{ item: { type: 'material', subtype: 'string' }, weight: 1 }],
+        buildMesh: () => {
+            const group = new THREE.Group();
+            // Slender cat body (4, 4, 10) in MC coords -> (0.25, 0.25, 0.60)
+            const bodyGeo = new THREE.BoxGeometry(0.25, 0.25, 0.60);
+            const blackMat = new THREE.MeshLambertMaterial({ color: 0x161616 });
+            const body = new THREE.Mesh(bodyGeo, blackMat);
+            body.position.set(0, 0.35, 0);
+            body.name = 'body';
+            group.add(body);
+
+            // Head (5, 4, 5) -> (0.30, 0.25, 0.28)
+            const headGeo = new THREE.BoxGeometry(0.30, 0.25, 0.28);
+            const head = new THREE.Mesh(headGeo, blackMat);
+            head.position.set(0, 0.48, 0.32);
+            head.name = 'head';
+
+            // Green eyes
+            const eyeGeo = new THREE.BoxGeometry(0.06, 0.05, 0.02);
+            const eyeMat = new THREE.MeshLambertMaterial({ color: 0x33ff55 });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(0.08, 0.04, 0.145);
+            head.add(eyeL);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeR.position.set(-0.08, 0.04, 0.145);
+            head.add(eyeR);
+
+            // Two pointed ears
+            const earGeo = new THREE.BoxGeometry(0.07, 0.08, 0.06);
+            const earL = new THREE.Mesh(earGeo, blackMat);
+            earL.position.set(0.10, 0.16, 0);
+            head.add(earL);
+            const earR = new THREE.Mesh(earGeo, blackMat);
+            earR.position.set(-0.10, 0.16, 0);
+            head.add(earR);
+
+            group.add(head);
+
+            // 4 Legs (2, 6, 2) -> (0.12, 0.35, 0.12)
+            const legGeo = new THREE.BoxGeometry(0.12, 0.35, 0.12);
+            legGeo.translate(0, -0.175, 0);
+            const fl = new THREE.Mesh(legGeo, blackMat);
+            fl.position.set(-0.08, 0.35, 0.20);
+            fl.name = 'front_left_leg';
+            group.add(fl);
+
+            const fr = new THREE.Mesh(legGeo, blackMat);
+            fr.position.set(0.08, 0.35, 0.20);
+            fr.name = 'front_right_leg';
+            group.add(fr);
+
+            const bl = new THREE.Mesh(legGeo, blackMat);
+            bl.position.set(-0.08, 0.35, -0.20);
+            bl.name = 'back_left_leg';
+            group.add(bl);
+
+            const br = new THREE.Mesh(legGeo, blackMat);
+            br.position.set(0.08, 0.35, -0.20);
+            br.name = 'back_right_leg';
+            group.add(br);
+
+            // Tail
+            const tailGeo = new THREE.BoxGeometry(0.06, 0.06, 0.40);
+            tailGeo.translate(0, 0, -0.20);
+            const tail = new THREE.Mesh(tailGeo, blackMat);
+            tail.position.set(0, 0.42, -0.30);
+            tail.rotation.x = Math.PI / 4;
+            tail.name = 'tail';
+            group.add(tail);
+
+            return group;
+        },
+        animate: (mesh, animTime, isMoving) => {
+            const fl = mesh.getObjectByName('front_left_leg');
+            const fr = mesh.getObjectByName('front_right_leg');
+            const bl = mesh.getObjectByName('back_left_leg');
+            const br = mesh.getObjectByName('back_right_leg');
+            const tail = mesh.getObjectByName('tail');
+            if (isMoving && fl && fr && bl && br) {
+                const s = Math.sin(animTime * 8);
+                fl.rotation.x = s * 0.6;
+                fr.rotation.x = -s * 0.6;
+                bl.rotation.x = -s * 0.6;
+                br.rotation.x = s * 0.6;
+            } else if (fl && fr && bl && br) {
+                fl.rotation.x = 0; fr.rotation.x = 0;
+                bl.rotation.x = 0; br.rotation.x = 0;
+            }
+            if (tail) {
+                tail.rotation.y = Math.sin(animTime * 4) * 0.25;
+            }
+        }
+    },
     FROG: {
         name: 'Frog', health: 10, damage: 0, speed: 4.0, hostile: false, color: 0x22cc44,
         size: 0.4, xpDrop: 1, lootChance: 0.2,
@@ -5432,8 +5527,9 @@ export class EntityManager {
             // Witch Hut inhabitant spawner (Witch inside swamp hut)
             if (!this.spawnedWitchHuts) this.spawnedWitchHuts = new Set();
             if (currentDimension === 'overworld' && typeof window.getClosestWitchHutPosition === 'function') {
-                const wSeed = (window.worldGenParams ? window.worldGenParams.seed : ((window.game && window.game.planetParams) ? window.game.planetParams.seed : 12345));
-                const wPos = window.getClosestWitchHutPosition(playerPos.x, playerPos.z, wSeed);
+                const wParams = window.worldGenParams || (window.game && window.game.planetParams);
+                const wSeed = wParams ? wParams.seed : 12345;
+                const wPos = window.getClosestWitchHutPosition(playerPos.x, playerPos.z, wSeed, wParams);
                 if (wPos) {
                     const distW = Math.hypot(playerPos.x - wPos.x, playerPos.z - wPos.z);
                     const wKey = `${wPos.x}_${wPos.z}`;
@@ -5442,6 +5538,8 @@ export class EntityManager {
                         const floorY = (wPos.y || 64) + 3;
                         const witch = new Mob('WITCH', new THREE.Vector3(wPos.x, floorY, wPos.z));
                         this.addMob(witch);
+                        const cat = new Mob('CAT', new THREE.Vector3(wPos.x + 1, floorY, wPos.z + 1));
+                        this.addMob(cat);
                     }
                 }
             }

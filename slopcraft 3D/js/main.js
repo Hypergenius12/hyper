@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=118';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=118';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=118';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=118';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=118';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=118';
-import { AudioManager } from './audio.js?v=118';
-import { BiomeMap } from './map.js?v=118';
-import { DevMode } from './dev.js?v=118';
-import { ChatSystem } from './chat.js?v=118';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=119';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=119';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=119';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=119';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=119';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=119';
+import { AudioManager } from './audio.js?v=119';
+import { BiomeMap } from './map.js?v=119';
+import { DevMode } from './dev.js?v=119';
+import { ChatSystem } from './chat.js?v=119';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -2095,8 +2095,8 @@ class Game {
                     geom.setIndex(indices);
                     geom.computeVertexNormals();
                     this.heldItemMesh = new THREE.Mesh(geom, mat);
-                } else if (blockProps.isBed || blockProps.isBedHead || blockProps.isLantern || blockProps.isFence || blockProps.isFenceGate || blockProps.isWall) {
-                    // Bed/Lantern/Fence/Gate/Wall held in hand: Extruded 2D item sprite like authentic Minecraft
+                } else if (blockProps.isBed || blockProps.isBedHead || blockProps.isLantern || blockProps.isFence || blockProps.isFenceGate || blockProps.isWall || slot.item.subtype === BLOCKS.CHORUS_PLANT || slot.item.subtype === BLOCKS.CHORUS_FLOWER) {
+                    // Bed/Lantern/Fence/Gate/Wall/Chorus held in hand: Extruded 2D item sprite like authentic Minecraft
                     const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype, (c) => {
                         if (this.heldItemMesh && this.heldItemMesh.userData && this.heldItemMesh.userData.item === slot.item) {
                             const newExtruded = createExtrudedItemMesh(c, 0.45, 0.035);
@@ -3386,7 +3386,19 @@ class Game {
                             }
                         }
 
-                        this.world.setBlock(placePos.x, placePos.y, placePos.z, slot.item.subtype, blockData);
+                        let blockToPlace = slot.item.subtype;
+                        if (blockToPlace === BLOCKS.POINTED_DRIPSTONE_DOWN || blockToPlace === BLOCKS.POINTED_DRIPSTONE_UP) {
+                            // Auto-orient based on hit normal and neighbor blocks like real Minecraft
+                            const bAbove = this.world.getBlock(placePos.x, placePos.y + 1, placePos.z);
+                            const bBelow = this.world.getBlock(placePos.x, placePos.y - 1, placePos.z);
+                            if (hit.normal.y < 0 || bAbove === BLOCKS.POINTED_DRIPSTONE_DOWN || getBlockProperties(bAbove).solid) {
+                                blockToPlace = BLOCKS.POINTED_DRIPSTONE_DOWN;
+                            } else if (hit.normal.y > 0 || bBelow === BLOCKS.POINTED_DRIPSTONE_UP || getBlockProperties(bBelow).solid) {
+                                blockToPlace = BLOCKS.POINTED_DRIPSTONE_UP;
+                            }
+                        }
+
+                        this.world.setBlock(placePos.x, placePos.y, placePos.z, blockToPlace, blockData);
                         if (slot.item.subtype === BLOCKS.TORCH || slot.item.subtype === BLOCKS.GLOWSTONE || slot.item.subtype === BLOCKS.LANTERN || slot.item.subtype === BLOCKS.SOUL_LANTERN) this.torchSystem.addTorch(placePos.x, placePos.y, placePos.z);
                         this.audio.playPlace(slot.item.subtype, placePos);
                         if (!this.input.creativeMode) {
@@ -4688,9 +4700,9 @@ class Game {
                 const pChunkZ = Math.floor(this.player.position.z / 16);
                 const prevVisibility = [];
 
-                // Only render chunks within the minimap viewport (~80 blocks radius)
+                // Only render chunks within the minimap viewport (~80 blocks radius, 5 chunks)
                 for (const chunk of this.world.chunks.values()) {
-                    const isNear = Math.abs(chunk.cx - pChunkX) <= 2 && Math.abs(chunk.cz - pChunkZ) <= 2;
+                    const isNear = Math.abs(chunk.cx - pChunkX) <= 5 && Math.abs(chunk.cz - pChunkZ) <= 5;
                     if (chunk.mesh) {
                         prevVisibility.push({ chunk, vis: chunk.mesh.visible, waterVis: chunk.waterMesh ? chunk.waterMesh.visible : false });
                         chunk.mesh.visible = isNear;
