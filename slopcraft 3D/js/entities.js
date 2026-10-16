@@ -197,6 +197,41 @@ export class Player {
         this.rotation.pitch -= mouse.dy * sensitivity;
         this.rotation.pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, this.rotation.pitch));
 
+        // Spectator Mode: Noclip free flight, invulnerable, no collision
+        if (this.isSpectator) {
+            this.burnTimer = 0;
+            this.burnTickTimer = 0;
+            this.health = this.maxHealth;
+            this.hunger = 20;
+            this.saturation = 20;
+            this.exhaustion = 0;
+
+            const forward = _tempVec1.set(-Math.sin(this.rotation.yaw), 0, -Math.cos(this.rotation.yaw)).normalize();
+            const right = _tempVec2.set(Math.cos(this.rotation.yaw), 0, -Math.sin(this.rotation.yaw)).normalize();
+            const specSpeed = keys.sprint ? 24.0 : 12.0;
+            let moveDir = _tempMoveDir.set(0, 0, 0);
+            if (keys.forward) moveDir.add(forward);
+            if (keys.backward) moveDir.sub(forward);
+            if (keys.right) moveDir.add(right);
+            if (keys.left) moveDir.sub(right);
+            if (moveDir.lengthSq() > 0) moveDir.normalize();
+
+            this.velocity.x = moveDir.x * specSpeed;
+            this.velocity.z = moveDir.z * specSpeed;
+            if (keys.jump) {
+                this.velocity.y = specSpeed;
+            } else if (keys.crouch) {
+                this.velocity.y = -specSpeed;
+            } else {
+                this.velocity.y = 0;
+            }
+
+            this.position.addScaledVector(this.velocity, dt);
+            this.grounded = false;
+            this.fallDistance = 0;
+            return;
+        }
+
         // Direction vectors
         const forward = _tempVec1.set(-Math.sin(this.rotation.yaw), 0, -Math.cos(this.rotation.yaw)).normalize();
         const right = _tempVec2.set(Math.cos(this.rotation.yaw), 0, -Math.sin(this.rotation.yaw)).normalize();
@@ -571,7 +606,7 @@ export class Player {
                 this.starveTimer = (this.starveTimer || 0) + dt;
                 if (this.starveTimer >= 4.0) {
                     this.starveTimer = 0;
-                    if (this.health > 10) { // In Normal mode, stops at 1 heart (10 HP)
+                    if (this.isHardcore || this.health > 10) { // In Hardcore, starves all the way to death! In Normal, stops at 1 heart (10 HP)
                         this.takeDamage(10);
                         const d = document.getElementById('damage-flash');
                         if (d) { d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 200); }
@@ -1061,7 +1096,7 @@ export class Player {
     }
 
     takeDamage(amt) {
-        if (this.isCreative || (this.spawnGraceTimer !== undefined && this.spawnGraceTimer > 0)) return false;
+        if (this.isCreative || this.isSpectator || (this.spawnGraceTimer !== undefined && this.spawnGraceTimer > 0)) return false;
         if (this.health <= 0) return true;
         
         let protection = 0;

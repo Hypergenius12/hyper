@@ -138,9 +138,9 @@ export class LightingSystem {
     _getLightState(time) {
         // 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 1.0 = midnight
         const states = [
-            // Midnight - authentic Minecraft night (light level 4)
-            { t: 0.0, amb: new THREE.Color(0x283248), ambIntensity: 0.22, bg: new THREE.Color(0x0c0f18), top: new THREE.Color(0x141a2c), sun: 0.0, moon: 0.12 },
-            { t: 0.2, amb: new THREE.Color(0x283248), ambIntensity: 0.22, bg: new THREE.Color(0x0c0f18), top: new THREE.Color(0x141a2c), sun: 0.0, moon: 0.12 },
+            // Midnight - authentic Minecraft night (ambient light level 4, visible moonlight)
+            { t: 0.0, amb: new THREE.Color(0x384868), ambIntensity: 0.38, bg: new THREE.Color(0x0a0d18), top: new THREE.Color(0x12182a), sun: 0.0, moon: 0.32 },
+            { t: 0.2, amb: new THREE.Color(0x384868), ambIntensity: 0.38, bg: new THREE.Color(0x0a0d18), top: new THREE.Color(0x12182a), sun: 0.0, moon: 0.32 },
             // Sunrise - warm horizon, Minecraft blue top
             { t: 0.25, amb: new THREE.Color(0xffd8b0), ambIntensity: 0.65, bg: new THREE.Color(0xffa050), top: new THREE.Color(0x78a7ff), sun: 0.15, moon: 0.02 },
             // Day - authentic Minecraft sky blue (#78a7ff), crisp directional contrast and ambient fill
@@ -149,8 +149,8 @@ export class LightingSystem {
             // Sunset - orange/red horizon
             { t: 0.75, amb: new THREE.Color(0xffa880), ambIntensity: 0.60, bg: new THREE.Color(0xff6644), top: new THREE.Color(0x5878d0), sun: 0.12, moon: 0.02 },
             // Night
-            { t: 0.8, amb: new THREE.Color(0x283248), ambIntensity: 0.22, bg: new THREE.Color(0x0c0f18), top: new THREE.Color(0x141a2c), sun: 0.0, moon: 0.12 },
-            { t: 1.0, amb: new THREE.Color(0x283248), ambIntensity: 0.22, bg: new THREE.Color(0x0c0f18), top: new THREE.Color(0x141a2c), sun: 0.0, moon: 0.12 }
+            { t: 0.8, amb: new THREE.Color(0x384868), ambIntensity: 0.38, bg: new THREE.Color(0x0a0d18), top: new THREE.Color(0x12182a), sun: 0.0, moon: 0.32 },
+            { t: 1.0, amb: new THREE.Color(0x384868), ambIntensity: 0.38, bg: new THREE.Color(0x0a0d18), top: new THREE.Color(0x12182a), sun: 0.0, moon: 0.32 }
         ];
 
         for (let i = 0; i < states.length - 1; i++) {
@@ -169,8 +169,11 @@ export class LightingSystem {
     }
     
     update(dt, cameraPos, isUnderwater = false, currentDimension = 'overworld') {
-        this.timeOfDay += dt / this.dayLength;
-        if (this.timeOfDay > 1) this.timeOfDay -= 1;
+        // Nether and End do NOT have day/night cycles; time advances only in the Overworld
+        if (currentDimension === 'overworld') {
+            this.timeOfDay += dt / this.dayLength;
+            if (this.timeOfDay > 1) this.timeOfDay -= 1;
+        }
 
         const angle = (this.timeOfDay - 0.5) * Math.PI * 2;
         const moonAngle = angle + Math.PI;
@@ -1803,7 +1806,7 @@ class UISystem {
         // 3. Health Hearts (10 hearts total, 10 HP per heart)
         const healthBar = document.getElementById('mc-health-bar');
         if (healthBar) {
-            if (player && player.isCreative) {
+            if (player && (player.isCreative || player.isSpectator)) {
                 healthBar.style.display = 'none';
                 healthBar.classList.add('hidden');
             } else {
@@ -1817,16 +1820,24 @@ class UISystem {
                 const isHurt = pHealth < this._prevHealth;
                 this._prevHealth = pHealth;
 
+                const isHardcore = !!(player && player.isHardcore);
+
                 let heartsHtml = '';
                 for (let i = 0; i < maxHearts; i++) {
                     const heartVal = (i + 1) * hpPerHeart;
-                    let heartImg = 'heart_empty.png';
+                    let heartImg = isHardcore ? 'heart_hardcore_empty.png' : 'heart_empty.png';
                     if (pHealth >= heartVal) {
-                        heartImg = isHurt ? 'heart_flash_full.png' : 'heart_full.png';
+                        heartImg = isHardcore
+                            ? (isHurt ? 'heart_hardcore_flash_full.png' : 'heart_hardcore_full.png')
+                            : (isHurt ? 'heart_flash_full.png' : 'heart_full.png');
                     } else if (pHealth >= heartVal - halfHp) {
-                        heartImg = isHurt ? 'heart_flash_half.png' : 'heart_half.png';
+                        heartImg = isHardcore
+                            ? (isHurt ? 'heart_hardcore_flash_half.png' : 'heart_hardcore_half.png')
+                            : (isHurt ? 'heart_flash_half.png' : 'heart_half.png');
                     } else {
-                        heartImg = isHurt ? 'heart_flash_empty.png' : 'heart_empty.png';
+                        heartImg = isHardcore
+                            ? 'heart_hardcore_empty.png'
+                            : (isHurt ? 'heart_flash_empty.png' : 'heart_empty.png');
                     }
 
                     const lowHealthShake = (pHealth <= 20 && Math.random() > 0.6) ? 'transform: translateY(-2px);' : '';
@@ -1840,7 +1851,7 @@ class UISystem {
         const armorBar = document.getElementById('mc-armor-bar');
         if (armorBar) {
             let totalArmor = 0;
-            if (player && !player.isCreative && player.inventory && player.inventory.armor) {
+            if (player && !player.isCreative && !player.isSpectator && player.inventory && player.inventory.armor) {
                 for (const slot of player.inventory.armor) {
                     if (slot && slot.item && slot.item.data && slot.item.data.equipData) {
                         totalArmor += (slot.item.data.equipData.protection || 0);
@@ -1872,7 +1883,7 @@ class UISystem {
         // 5. Hunger Bar (10 drumstick icons, 2 hunger per drumstick)
         const hungerBar = document.getElementById('mc-hunger-bar');
         if (hungerBar) {
-            if (player && player.isCreative) {
+            if (player && (player.isCreative || player.isSpectator)) {
                 hungerBar.style.display = 'none';
                 hungerBar.classList.add('hidden');
             } else {
@@ -1899,6 +1910,12 @@ class UISystem {
                 }
                 hungerBar.innerHTML = foodHtml;
             }
+        }
+
+        // Hide mana bar in spectator mode
+        const manaContainer = document.getElementById('mc-mana-container');
+        if (manaContainer && player && player.isSpectator) {
+            manaContainer.style.display = 'none';
         }
     }
 
@@ -2902,6 +2919,7 @@ class UISystem {
             [B.CHERRY_LOG]: { block: B.CHERRY_PLANKS, name: 'Cherry Planks' },
             [B.AUTUMN_WOOD]: { block: B.AUTUMN_PLANKS, name: 'Autumn Planks' },
             [B.PALM_WOOD]: { block: B.PALM_PLANKS, name: 'Palm Planks' },
+            [B.JUNGLE_LOG]: { block: B.PALM_PLANKS, name: 'Jungle Planks' },
             [B.PINE_WOOD]: { block: B.PINE_PLANKS, name: 'Pine Planks' },
             [B.CRIMSON_STEM]: { block: B.CRIMSON_PLANKS, name: 'Crimson Planks' },
             [B.DARK_OAK_WOOD]: { block: B.DARK_OAK_PLANKS, name: 'Dark Oak Planks' },

@@ -1862,7 +1862,7 @@ export class World {
             chunk.setBlock(lx, wy, lz, type);
             chunk.setData(lx, wy, lz, dataValue);
             
-            if (this.onBlockDestroyed) {
+            if (this.onBlockDestroyed && (type === window.BLOCKS.AIR || type === window.BLOCKS.WATER || type === window.BLOCKS.SWAMP_WATER || type === window.BLOCKS.LAVA)) {
                 this.onBlockDestroyed(wx, wy, wz, oldType, type);
             }
             

@@ -637,6 +637,10 @@ class Game {
                 BLOCKS.TALL_FERN,
                 BLOCKS.FERN,
                 BLOCKS.TALL_GRASS,
+                BLOCKS.PORTAL_FRAME,
+                window.BLOCKS.END_PORTAL_FRAME_EYE,
+                window.BLOCKS.END_PORTAL,
+                window.BLOCKS.END_GATEWAY,
             ]);
             if (NO_DROP_BLOCKS.has(oldType)) return;
             const props = getBlockProperties(oldType);
@@ -716,6 +720,18 @@ class Game {
 
         // Entities
         this.player = new Player();
+        if (this.selectedGameMode === 'Hardcore') {
+            this.player.isHardcore = true;
+            this.player.isCreative = false;
+        } else if (this.selectedGameMode === 'Creative') {
+            this.player.isCreative = true;
+            this.player.isHardcore = false;
+            if (this.input && this.input.keys) this.input.keys._creativeMode = true;
+        } else {
+            this.player.isHardcore = false;
+            this.player.isCreative = false;
+            if (this.input && this.input.keys) this.input.keys._creativeMode = false;
+        }
         // Spawn player at safe location
         const spawnPos = findSafeSpawn(this.planetParams);
         this.player.position.set(spawnPos.x, spawnPos.y, spawnPos.z);
@@ -1709,6 +1725,24 @@ class Game {
         }
     }
 
+    handleHardcoreGameOver() {
+        if (this._isHardcoreGameOver) return;
+        this._isHardcoreGameOver = true;
+        if (document.exitPointerLock) document.exitPointerLock();
+        const screen = document.getElementById('hardcore-game-over-screen');
+        if (screen) {
+            screen.classList.remove('hidden');
+        }
+        const scoreVal = document.getElementById('hardcore-score-val');
+        if (scoreVal) {
+            const score = Math.floor(this.player.score || 0);
+            scoreVal.textContent = `${score}`;
+        }
+        if (this.audio && this.audio.playMC) {
+            this.audio.playMC('random/classic_hurt', 0.8);
+        }
+    }
+
     showToast(msg, duration = 2500) {
         const el = document.getElementById('creative-toast');
         if (!el) return;
@@ -1918,6 +1952,10 @@ class Game {
 
     handleInput(dt) {
         if (!this.input.isPointerLocked()) return;
+        if (this.player && this.player.isSpectator) {
+            if (this.viewModel) this.viewModel.visible = false;
+            return;
+        }
 
         // Hotbar selection via keys
         if (this.input.hotbarIndex >= 0) {
@@ -2682,10 +2720,12 @@ class Game {
                 this.isSwinging = true;
                 this.swingProgress = 0;
                 
-                const frameId = window.BLOCKS.PORTAL_FRAME || 120;
+                const frameId = window.BLOCKS.PORTAL_FRAME || 26;
+                const frameEyeId = window.BLOCKS.END_PORTAL_FRAME_EYE || 326;
                 if (hit.hit && hit.blockType === frameId) {
-                    // Place eye into frame
-                    this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, window.BLOCKS.END_PORTAL_FRAME_EYE || 326);
+                    // Place eye into frame without breaking or resetting orientation data
+                    const curData = this.world.getData(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    this.world.setBlock(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z, frameEyeId, curData);
                     this.particles.emit(new THREE.Vector3(hit.blockPos.x + 0.5, hit.blockPos.y + 0.8, hit.blockPos.z + 0.5), 'spell', 15, 0x11ffaa);
                     if (this.audio && this.audio.playEyePlace) this.audio.playEyePlace(hit.blockPos);
                     else if (this.audio && this.audio.playClick) this.audio.playClick();
@@ -2702,6 +2742,10 @@ class Game {
                     }
                     
                     this.checkAndActivateEndPortal(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    this.input.mouse.rightClick = false;
+                    return;
+                } else if (hit.hit && hit.blockType === frameEyeId) {
+                    // Frame already has an eye — do nothing, don't waste eye or break frame!
                     this.input.mouse.rightClick = false;
                     return;
                 } else {
@@ -2846,9 +2890,10 @@ class Game {
             }
 
             // Hoe Tilling -> Farmland
+            const subtypeStr = (slot && slot.item && typeof slot.item.subtype === 'string') ? slot.item.subtype : '';
             const isHoe = slot && slot.item && (
-                slot.item.subtype.startsWith('hoe_') ||
-                slot.item.subtype.endsWith('_hoe') ||
+                subtypeStr.startsWith('hoe_') ||
+                subtypeStr.endsWith('_hoe') ||
                 (slot.item.data && slot.item.data.equipData && slot.item.data.equipData.isHoe)
             );
             if (isHoe && hit.hit) {
@@ -3457,6 +3502,10 @@ class Game {
             }
 
             if (this.player.health <= 0) {
+                if (this.player.isHardcore) {
+                    this.handleHardcoreGameOver();
+                    return;
+                }
                 this.respawnPlayer();
                 return;
             }
@@ -5212,6 +5261,51 @@ const initGame = () => {
         };
     }
 
+    // Game Mode Cycle (Survival -> Hardcore -> Creative -> Survival)
+    let selectedGameMode = 'Survival';
+    const modeBtn = document.getElementById('btn-gamemode');
+    if (modeBtn) {
+        modeBtn.onclick = () => {
+            if (selectedGameMode === 'Survival') selectedGameMode = 'Hardcore';
+            else if (selectedGameMode === 'Hardcore') selectedGameMode = 'Creative';
+            else selectedGameMode = 'Survival';
+
+            modeBtn.textContent = `Mode: ${selectedGameMode}`;
+            if (selectedGameMode === 'Hardcore') {
+                modeBtn.style.color = '#ff5555';
+            } else if (selectedGameMode === 'Creative') {
+                modeBtn.style.color = '#55ff55';
+            } else {
+                modeBtn.style.color = '';
+            }
+        };
+    }
+
+    // Hardcore Game Over screen buttons
+    const spectateBtn = document.getElementById('btn-hardcore-spectate');
+    if (spectateBtn) {
+        spectateBtn.onclick = () => {
+            const goScreen = document.getElementById('hardcore-game-over-screen');
+            if (goScreen) goScreen.classList.add('hidden');
+            if (game.player) {
+                game.player.isSpectator = true;
+                game.player.health = 100;
+                game.player.hunger = 20;
+            }
+            game._isHardcoreGameOver = false;
+            if (game.canvas && game.canvas.requestPointerLock) {
+                game.canvas.requestPointerLock();
+            }
+        };
+    }
+
+    const titleBtn = document.getElementById('btn-hardcore-title');
+    if (titleBtn) {
+        titleBtn.onclick = () => {
+            window.location.reload();
+        };
+    }
+
     if (startBtn) {
         startBtn.onclick = () => {
             document.getElementById('start-screen').classList.add('hidden');
@@ -5219,6 +5313,8 @@ const initGame = () => {
             if (hotbar) hotbar.classList.remove('hidden');
             const mcHud = document.getElementById('mc-hud-container');
             if (mcHud) mcHud.classList.remove('hidden');
+
+            game.selectedGameMode = selectedGameMode;
             game.start();
         };
     } else {

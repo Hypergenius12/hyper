@@ -8,8 +8,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SlopCraft 3D</title>
     <meta name="description" content="Explore infinite procedurally generated planets with dungeons, magic wands, and epic bossfights.">
-    <link rel="stylesheet" href="css/style.css?v=111">
-    <link rel="stylesheet" href="css/geometric.css?v=111">
+    <link rel="stylesheet" href="css/style.css?v=112">
+    <link rel="stylesheet" href="css/geometric.css?v=112">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>">
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-LCRDCCZRXM"></script>
@@ -42,9 +42,12 @@
                 <input id="seed-input" type="text" placeholder="(random)" maxlength="40" class="mc-input" style="width: 220px;" />
             </div>
 
-            <div class="start-actions">
-                <button id="btn-new-game" class="mc-btn">Play Game</button>
-                <button id="btn-toggle-options" class="mc-btn">Options...</button>
+            <div class="start-actions" style="display: flex; flex-direction: column; gap: 8px; width: 340px; margin: 0 auto;">
+                <button id="btn-new-game" class="mc-btn" style="width: 100%;">Play Game</button>
+                <div style="display: flex; gap: 8px; width: 100%;">
+                    <button id="btn-gamemode" class="mc-btn" style="flex: 1; font-size: 13px;">Mode: Survival</button>
+                    <button id="btn-toggle-options" class="mc-btn" style="flex: 1; font-size: 13px;">Options...</button>
+                </div>
             </div>
 
             <!-- Start Screen Options Panel -->
@@ -58,8 +61,18 @@
 
             <p class="start-hint" style="margin-top: 14px;">Click to lock mouse · WASD to move · Space to jump · E for Inventory</p>
 
-            <div style="position: fixed; bottom: 12px; left: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Slopcraft 3D v108</div>
+            <div style="position: fixed; bottom: 12px; left: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Slopcraft 3D v112</div>
             <div style="position: fixed; bottom: 12px; right: 16px; color: #ffffff; text-shadow: 1px 1px 0 #000; font-family: 'Minecraftia'; font-size: 13px; pointer-events: none;">Copyright Mojang AB / Slopcraft Team</div>
+        </div>
+    </div>
+
+    <!-- Hardcore Game Over Screen -->
+    <div id="hardcore-game-over-screen" class="hidden" style="position: fixed; inset: 0; background: rgba(120, 0, 0, 0.72); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+        <h1 style="color: #ffffff; font-family: 'Minecraftia', sans-serif; font-size: 46px; text-shadow: 3px 3px 0 #3f0000; margin: 0 0 12px 0; letter-spacing: 1px;">Game Over!</h1>
+        <div id="hardcore-score-text" style="color: #ffffff; font-family: 'Minecraftia', sans-serif; font-size: 18px; text-shadow: 2px 2px 0 #000; margin-bottom: 24px;">Score: <span id="hardcore-score-val" style="color: #ffff55;">0</span></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 300px;">
+            <button id="btn-hardcore-spectate" class="mc-btn" style="width: 100%;">Spectate World</button>
+            <button id="btn-hardcore-title" class="mc-btn" style="width: 100%;">Title Screen</button>
         </div>
     </div>
 
@@ -450,7 +463,7 @@
         }
     }
     </script>
-    <script type="module" src="js/main.js?v=111"></script>
+    <script type="module" src="js/main.js?v=112"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>
 </body>
