@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=117';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=117';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=117';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=117';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=117';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=117';
-import { AudioManager } from './audio.js?v=117';
-import { BiomeMap } from './map.js?v=117';
-import { DevMode } from './dev.js?v=117';
-import { ChatSystem } from './chat.js?v=117';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=118';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=118';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=118';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=118';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=118';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=118';
+import { AudioManager } from './audio.js?v=118';
+import { BiomeMap } from './map.js?v=118';
+import { DevMode } from './dev.js?v=118';
+import { ChatSystem } from './chat.js?v=118';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -856,6 +856,26 @@ class Game {
 
         this.entityManager.createExplosion = (pos, radius = 5) => {
             this.explode(pos.x, pos.y, pos.z, radius);
+        };
+
+        this.entityManager.shootSkeletonArrow = (fromPos, targetPos) => {
+            const eyePos = fromPos.clone().add(new THREE.Vector3(0, 1.2, 0));
+            const targetEye = targetPos.clone().add(new THREE.Vector3(0, 1.0, 0));
+            const dir = targetEye.clone().sub(eyePos).normalize();
+            const stats = {
+                speed: 22,
+                damage: 6,
+                lifetime: 4,
+                count: 1,
+                pierce: 0,
+                radius: 0.8,
+                element: 'PHYSICAL'
+            };
+            const proj = new SpellProjectile(eyePos, dir, stats, 0xd4d4d4);
+            proj.isMobProjectile = true;
+            this.projectileManager.add(proj);
+            if (this.audio && this.audio.playShoot) this.audio.playShoot();
+            else if (this.audio && this.audio.playHit) this.audio.playHit(eyePos);
         };
 
         document.getElementById('btn-skip-credits')?.addEventListener('click', () => {
@@ -3039,6 +3059,50 @@ class Game {
                 }
             }
 
+            // Shovel Flattening -> Dirt Path
+            const isShovel = slot && slot.item && (
+                subtypeStr.startsWith('shovel_') ||
+                subtypeStr.endsWith('_shovel') ||
+                (slot.item.data && slot.item.data.equipData && slot.item.data.equipData.isShovel)
+            );
+            if (isShovel && hit.hit) {
+                const targetBlock = hit.blockType;
+                const canFlatten = (targetBlock === BLOCKS.GRASS || targetBlock === BLOCKS.DIRT || targetBlock === BLOCKS.COARSE_DIRT || targetBlock === BLOCKS.SWAMP_GRASS || targetBlock === BLOCKS.SAVANNA_GRASS || targetBlock === BLOCKS.PODZOL);
+                const bx = hit.blockPos.x, by = hit.blockPos.y, bz = hit.blockPos.z;
+                const aboveBlock = this.world.getBlock(bx, by + 1, bz);
+                const aboveProps = getBlockProperties(aboveBlock);
+                if (canFlatten && (aboveBlock === BLOCKS.AIR || !aboveProps.solid)) {
+                    const pathBlockId = (BLOCKS.DIRT_PATH || 383);
+                    this.world.setBlock(bx, by, bz, pathBlockId);
+                    if (this.audio && this.audio.playDig) {
+                        this.audio.playDig(BLOCKS.DIRT, hit.blockPos);
+                    }
+                    this.particles.emit({ x: bx + 0.5, y: by + 1.0, z: bz + 0.5 }, 'block_break', 8, 0x8b6534);
+
+                    // Durability deduction
+                    if (!this.input.creativeMode) {
+                        if (slot.item.data && slot.item.data.equipData) {
+                            const eq = slot.item.data.equipData;
+                            if (eq.durability !== undefined) {
+                                eq.durability -= 1;
+                                if (eq.durability <= 0) {
+                                    this.player.inventory.slots[this.player.selectedSlot] = null;
+                                    if (this.audio && this.audio.playHit) this.audio.playHit(this.player.position);
+                                }
+                            }
+                        }
+                    }
+                    this.isSwinging = true;
+                    this.swingProgress = 0;
+                    this.ui.renderGrid(this.ui.elements.mainHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    if (this.ui.isOpen) {
+                        this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
+                    }
+                    this.input.mouse.rightClick = false;
+                    return;
+                }
+            }
+
             // Crop planting on Farmland
             const SEED_TO_CROP = {
                 'wheat_seeds': BLOCKS.WHEAT_0,
@@ -5124,6 +5188,42 @@ class Game {
                 for (let y = startY; y < startY + 5; y++) {
                     if (z === startZ && x >= startX && x < startX + 4) continue; // Don't delete portal
                     this.world.setBlock(x, y, z, window.BLOCKS.AIR);
+                }
+            }
+        }
+
+        // Spread authentic Netherrack, Magma, Crying Obsidian, and Fire around Nether portals
+        if (!isAether && window.BLOCKS.NETHERRACK) {
+            const centerX = startX + 1.5;
+            const centerZ = startZ + 0.5;
+            for (let dx = -6; dx <= 6; dx++) {
+                for (let dz = -6; dz <= 6; dz++) {
+                    const dist = Math.hypot(dx, dz) + (Math.random() * 2 - 1);
+                    if (dist <= 5.8) {
+                        const wx = Math.floor(centerX + dx);
+                        const wz = Math.floor(centerZ + dz);
+                        // Bleed nether blocks down into the ground
+                        for (let dy = 0; dy <= 2; dy++) {
+                            const curY = startY - 1 - dy;
+                            const curB = this.world.getBlock(wx, curY, wz);
+                            if (curB !== window.BLOCKS.AIR && curB !== window.BLOCKS.BEDROCK && curB !== window.BLOCKS.PORTAL && curB !== window.BLOCKS.OBSIDIAN) {
+                                const roll = Math.random();
+                                let bleedBlock = window.BLOCKS.NETHERRACK;
+                                if (roll < 0.22 && window.BLOCKS.MAGMA) bleedBlock = window.BLOCKS.MAGMA;
+                                else if (roll < 0.32 && window.BLOCKS.CRYING_OBSIDIAN) bleedBlock = window.BLOCKS.CRYING_OBSIDIAN;
+                                else if (roll < 0.40 && window.BLOCKS.SOUL_SOIL) bleedBlock = window.BLOCKS.SOUL_SOIL;
+                                this.world.setBlock(wx, curY, wz, bleedBlock);
+                            }
+                        }
+                        // Occasional fire on top surface
+                        if (Math.random() < 0.16 && dist > 1.8 && window.BLOCKS.FIRE) {
+                            const topBlock = this.world.getBlock(wx, startY, wz);
+                            const belowBlock = this.world.getBlock(wx, startY - 1, wz);
+                            if (topBlock === window.BLOCKS.AIR && belowBlock !== window.BLOCKS.AIR && belowBlock !== window.BLOCKS.LAVA) {
+                                this.world.setBlock(wx, startY, wz, window.BLOCKS.FIRE);
+                            }
+                        }
+                    }
                 }
             }
         }

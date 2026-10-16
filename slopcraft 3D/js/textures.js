@@ -369,7 +369,8 @@ export const BLOCKS = {
     SCULK: 379,
     SCULK_CATALYST: 380,
     SCULK_SHRIEKER: 381,
-    SCULK_SENSOR: 382
+    SCULK_SENSOR: 382,
+    DIRT_PATH: 383
 };
 
 // Block properties
@@ -730,7 +731,8 @@ const BLOCK_PROPS = {
     [BLOCKS.SCULK]:            { name: 'Sculk',            health: 1.5, transparent: false, emissive: 0.1, solid: true, drops: BLOCKS.SCULK },
     [BLOCKS.SCULK_CATALYST]:   { name: 'Sculk Catalyst',   health: 4, transparent: false, emissive: 0.4, solid: true, drops: BLOCKS.SCULK_CATALYST },
     [BLOCKS.SCULK_SHRIEKER]:   { name: 'Sculk Shrieker',   health: 4, transparent: true, emissive: 0.3, solid: true, drops: BLOCKS.SCULK_SHRIEKER },
-    [BLOCKS.SCULK_SENSOR]:     { name: 'Sculk Sensor',     health: 2, transparent: true, emissive: 0.3, solid: true, drops: BLOCKS.SCULK_SENSOR }
+    [BLOCKS.SCULK_SENSOR]:     { name: 'Sculk Sensor',     health: 2, transparent: true, emissive: 0.3, solid: true, drops: BLOCKS.SCULK_SENSOR },
+    [BLOCKS.DIRT_PATH]:        { name: 'Dirt Path',        health: 2, transparent: false, emissive: 0, solid: true, isDirtPath: true, drops: BLOCKS.DIRT }
 };
 
 export function getBlockProperties(type) {
@@ -3646,6 +3648,21 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             }
             break;
 
+        case BLOCKS.DIRT_PATH:
+            if (face === 'top') {
+                fillBase(ctx, 155, 120, 68);
+                addNoise(ctx, rng, 16);
+                addPixels(ctx, rng, '#8b6534', 16);
+                addPixels(ctx, rng, '#c29b5a', 14);
+            } else if (face === 'bottom') {
+                generateBlockTexture(ctx, BLOCKS.DIRT, face, rng);
+            } else {
+                generateBlockTexture(ctx, BLOCKS.DIRT, face, rng);
+                ctx.fillStyle = '#9b7844';
+                ctx.fillRect(0, 0, TEX_SIZE, 3);
+            }
+            break;
+
         case BLOCKS.PUMPKIN:
             if (face === 'top' || face === 'bottom') {
                 fillBase(ctx, 217, 118, 24);
@@ -3723,7 +3740,7 @@ function hasFaceVariants(blockType) {
         BLOCKS.WARPED_NYLIUM, BLOCKS.WARPED_STEM, BLOCKS.BONE_BLOCK, BLOCKS.BASALT, BLOCKS.BLACKSTONE, BLOCKS.PODZOL, BLOCKS.GOLDEN_OAK_WOOD, BLOCKS.MAGIC_WOOD, BLOCKS.REDWOOD_LOG,
         BLOCKS.FLETCHING_TABLE, BLOCKS.SMOKER, BLOCKS.STONECUTTER,
         BLOCKS.MANGROVE_LOG, BLOCKS.MANGROVE_ROOTS, BLOCKS.MUDDY_MANGROVE_ROOTS, BLOCKS.ENCHANTED_AETHER_LOG,
-        BLOCKS.BIRCH_WOOD, BLOCKS.FARMLAND, BLOCKS.FARMLAND_MOIST, BLOCKS.PUMPKIN, BLOCKS.JUNGLE_LOG
+        BLOCKS.BIRCH_WOOD, BLOCKS.FARMLAND, BLOCKS.FARMLAND_MOIST, BLOCKS.DIRT_PATH, BLOCKS.PUMPKIN, BLOCKS.JUNGLE_LOG
     ].includes(blockType);
 }
 

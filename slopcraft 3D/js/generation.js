@@ -1382,7 +1382,7 @@ export function generateChunkTerrain(cx, cz, params) {
     }
 
     // ============================================
-    // PASS 2: 3D Cave Carvers & Global Dungeons (Subterranean Only)
+    // PASS 2: Caves & Cliffs 3D Cave Carvers & Ravines/Crevasses
     // ============================================
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
@@ -1390,15 +1390,85 @@ export function generateChunkTerrain(cx, cz, params) {
             const wz = wzBase + z;
             const col = columns[x][z];
 
-            // Subterranean rule: Caves strictly carve underground (never pierce top 5 blocks of surface)
-            const maxCaveY = Math.min(54, col.surfaceY - 5);
+            // 1. Ravine / Trench Carver (2D centerline check across the terrain)
+            const trenchMask = params.noise2D(wx * 0.0035 + 137, wz * 0.0035 + 137);
+            const isTrenchZone = (trenchMask > 0.28);
+            let inTrench = false;
+            let trenchHalfWidth = 0;
+            let trenchFloorY = 18;
+
+            if (isTrenchZone && col.surfaceY > params.seaLevel + 3) {
+                const trenchCenter = params.noise2D(wx * 0.008, wz * 0.008);
+                const trenchDist = Math.abs(trenchCenter);
+                const maxHalfWidth = 0.034 + (trenchMask - 0.28) * 0.04;
+                if (trenchDist < maxHalfWidth) {
+                    inTrench = true;
+                    const normDist = trenchDist / maxHalfWidth;
+                    trenchHalfWidth = 1.0 - normDist; // 1 at center, 0 at edge
+                    trenchFloorY = Math.max(12, Math.floor(18 + params.noise2D(wx * 0.02 + 50, wz * 0.02 + 50) * 6));
+                }
+            }
+
+            // Surface opening allowance: In dry terrain safely above sea level, caves can naturally open to the sky
+            const canOpenToSurface = (col.surfaceY > params.seaLevel + 4) && 
+                                     (!col.bData || !col.bData.lakeSurfaceY || col.surfaceY > col.bData.lakeSurfaceY + 2);
+            const maxCaveY = canOpenToSurface ? (col.surfaceY + 1) : Math.min(54, col.surfaceY - 5);
 
             for (let y = 1; y <= maxCaveY; y++) {
                 const idx = blockIndex(x, y, z);
                 if (blocks[idx] !== BLOCKS.STONE) continue;
 
-                const c = fbm3D(params.caveNoise, wx / params.caveScale, y / (params.caveScale * 0.8), wz / params.caveScale, 3);
-                if (c > params.caveThreshold) {
+                let carveAir = false;
+
+                // (A) Ravine / Trench Carver (Sheer cliffs with ledges down from surface)
+                if (inTrench && y >= trenchFloorY && y <= col.surfaceY + 1) {
+                    const midY = (col.surfaceY + trenchFloorY) * 0.5;
+                    const vertDist = Math.abs(y - midY) / Math.max(1, (col.surfaceY - trenchFloorY) * 0.5);
+                    const widthFactor = 1.0 - vertDist * 0.32;
+                    if (trenchHalfWidth * widthFactor > 0.20) {
+                        const ledge = Math.sin(y * 0.45 + wx * 0.1) * Math.cos(wz * 0.1);
+                        if (!(ledge > 0.88 && trenchHalfWidth * widthFactor < 0.42)) {
+                            carveAir = true;
+                        }
+                    }
+                }
+
+                // (B) Caves & Cliffs Massive 3D Cheese Caves
+                if (!carveAir && y <= 62) {
+                    const cheeseScale = params.caveScale * 1.4;
+                    const c = fbm3D(params.caveNoise, wx / cheeseScale, y / (cheeseScale * 0.7), wz / cheeseScale, 2);
+                    let threshold = params.caveThreshold;
+                    if (y >= 14 && y <= 46) {
+                        threshold *= 0.80; // massive cavernous chambers in deep strata
+                    }
+                    if (c > threshold) {
+                        // Occasional natural stone pillar support
+                        const pillar = params.noise2D(wx * 0.07 + 33, wz * 0.07 + 33);
+                        if (pillar < 0.70) {
+                            carveAir = true;
+                        }
+                    }
+                }
+
+                // (C) Winding Noodle / Spaghetti Caves (Tunnels linking cavern chambers)
+                if (!carveAir && y <= 58) {
+                    const nA = params.noise3D(wx * 0.036, y * 0.046, wz * 0.036);
+                    const nB = params.caveNoise(wx * 0.036 + 73, y * 0.046 + 73, wz * 0.036 + 73);
+                    if ((nA * nA + nB * nB) < 0.016) {
+                        carveAir = true;
+                    }
+                }
+
+                // (D) Natural Surface Openings: breaches to surface on hillsides, cliffs & plains sinkholes
+                if (!carveAir && canOpenToSurface && y > 48 && y <= col.surfaceY + 1) {
+                    const breachNoise = params.caveNoise(wx * 0.038, y * 0.038, wz * 0.038);
+                    const breachThreshold = 0.36 + (y - 48) * 0.014;
+                    if (breachNoise > breachThreshold) {
+                        carveAir = true;
+                    }
+                }
+
+                if (carveAir) {
                     if (y <= 9) {
                         blocks[idx] = BLOCKS.LAVA; // Deep underground lava lakes
                     } else {
@@ -3452,23 +3522,62 @@ export function generatePortalStructure(blocks, x, y, z, rng, type = 'nether') {
     else if (type === 'cavern') { frame1 = BLOCKS.DIRT; frame2 = BLOCKS.GRASS; base = BLOCKS.STONE; }
     else if (type === 'highlands') { frame1 = BLOCKS.STONE; frame2 = BLOCKS.COBBLESTONE; base = BLOCKS.DIRT; }
 
-    // 4x5 ruined portal
+    // 4x5 ruined portal frame
     for (let px = x; px < x + 4; px++) {
         for (let py = y; py < y + 5; py++) {
             // More degraded frame
-            if (rng() < 0.3) continue; // missing blocks
+            if (rng() < 0.25) continue; // missing blocks
             
             if (px === x || px === x + 3 || py === y || py === y + 4) {
-                safeSetBlock(blocks, px, py, z, rng() < 0.2 ? frame1 : frame2, true);
+                safeSetBlock(blocks, px, py, z, rng() < 0.35 ? frame1 : frame2, true);
             }
         }
     }
-    // Base platform
-    for (let px = x - 1; px < x + 5; px++) {
-        for (let pz = z - 2; pz < z + 3; pz++) {
-            if (rng() < 0.6) safeSetBlock(blocks, px, y - 1, pz, base, true);
+
+    if (type === 'nether') {
+        // Large authentic Nether corruption bleed across the ground
+        const centerX = x + 1.5;
+        const centerZ = z;
+        for (let dx = -7; dx <= 7; dx++) {
+            for (let dz = -7; dz <= 7; dz++) {
+                const dist = Math.hypot(dx, dz) + (rng() * 2 - 1);
+                if (dist <= 6.5) {
+                    const px = Math.floor(centerX + dx);
+                    const pz = Math.floor(centerZ + dz);
+                    // Bleed down 2-3 layers into the ground
+                    const depth = dist < 3 ? 3 : (dist < 5 ? 2 : 1);
+                    for (let dy = 1; dy <= depth; dy++) {
+                        const roll = rng();
+                        let blockId = BLOCKS.NETHERRACK;
+                        if (roll < 0.22 && BLOCKS.MAGMA) blockId = BLOCKS.MAGMA;
+                        else if (roll < 0.32 && BLOCKS.CRYING_OBSIDIAN) blockId = BLOCKS.CRYING_OBSIDIAN;
+                        else if (roll < 0.42 && BLOCKS.SOUL_SAND) blockId = BLOCKS.SOUL_SAND;
+                        else if (roll < 0.48 && BLOCKS.SOUL_SOIL) blockId = BLOCKS.SOUL_SOIL;
+                        safeSetBlock(blocks, px, y - dy, pz, blockId, true);
+                    }
+                    // Fire on top of netherrack/magma
+                    if (rng() < 0.20 && dist > 1.8 && dist < 6.0 && BLOCKS.FIRE) {
+                        safeSetBlock(blocks, px, y, pz, BLOCKS.FIRE, true);
+                    }
+                }
+            }
+        }
+        // Occasional ruined crying obsidian / obsidian pillar stump
+        if (rng() < 0.7) {
+            const ox = x + (rng() < 0.5 ? -2 : 5);
+            const oz = z + Math.floor((rng() - 0.5) * 4);
+            safeSetBlock(blocks, ox, y, oz, BLOCKS.CRYING_OBSIDIAN, true);
+            if (rng() < 0.5) safeSetBlock(blocks, ox, y + 1, oz, BLOCKS.OBSIDIAN, true);
+        }
+    } else {
+        // Base platform for other portals
+        for (let px = x - 2; px < x + 6; px++) {
+            for (let pz = z - 3; pz < z + 4; pz++) {
+                if (rng() < 0.7) safeSetBlock(blocks, px, y - 1, pz, base, true);
+            }
         }
     }
+
     // Add a chest with loot
     if (rng() < 0.8) {
         safeSetBlock(blocks, x + 1, y, z + 1, BLOCKS.CHEST_BLOCK, true);
@@ -3479,7 +3588,70 @@ export function generatePortalStructure(blocks, x, y, z, rng, type = 'nether') {
     }
 }
 
-export function generateCabin(blocks, x, y, z, rng) {
+export function getVillagePalette(biome) {
+    const b = (biome && typeof biome === 'object') ? (biome.name || '') : String(biome || '');
+    const isDesert = (biome === BIOMES.DESERT || b.toLowerCase().includes('desert'));
+    const isSavanna = (biome === BIOMES.SAVANNA || b.toLowerCase().includes('savanna'));
+    const isTaiga = (biome === BIOMES.TAIGA || biome === BIOMES.SNOWY_PLAINS || biome === BIOMES.TUNDRA || biome === BIOMES.SNOWY_TAIGA || biome === BIOMES.PINE_FOREST || b.toLowerCase().includes('taiga') || b.toLowerCase().includes('snow') || b.toLowerCase().includes('tundra') || b.toLowerCase().includes('pine'));
+
+    if (isDesert) {
+        return {
+            wood: BLOCKS.SMOOTH_SANDSTONE || BLOCKS.SANDSTONE,
+            planks: BLOCKS.CUT_SANDSTONE || BLOCKS.SANDSTONE,
+            stone: BLOCKS.SANDSTONE,
+            stoneBricks: BLOCKS.SMOOTH_SANDSTONE || BLOCKS.SANDSTONE,
+            path: BLOCKS.SMOOTH_SANDSTONE || BLOCKS.SANDSTONE,
+            fence: BLOCKS.ACACIA_FENCE || BLOCKS.OAK_FENCE || BLOCKS.WOOD,
+            roof: BLOCKS.TERRACOTTA,
+            cropBorder: BLOCKS.SANDSTONE,
+            accent: BLOCKS.ORANGE_TERRACOTTA || BLOCKS.TERRACOTTA
+        };
+    } else if (isSavanna) {
+        return {
+            wood: BLOCKS.ACACIA_WOOD,
+            planks: BLOCKS.ACACIA_PLANKS || BLOCKS.PLANKS,
+            stone: BLOCKS.TERRACOTTA,
+            stoneBricks: BLOCKS.COBBLESTONE,
+            path: (BLOCKS.DIRT_PATH || 383),
+            fence: BLOCKS.ACACIA_FENCE || BLOCKS.OAK_FENCE || BLOCKS.WOOD,
+            roof: BLOCKS.ACACIA_WOOD,
+            cropBorder: BLOCKS.ACACIA_WOOD,
+            accent: BLOCKS.ORANGE_TERRACOTTA || BLOCKS.TERRACOTTA
+        };
+    } else if (isTaiga) {
+        return {
+            wood: BLOCKS.PINE_WOOD || BLOCKS.WOOD,
+            planks: BLOCKS.PINE_WOOD || BLOCKS.PLANKS,
+            stone: BLOCKS.COBBLESTONE,
+            stoneBricks: BLOCKS.MOSSY_COBBLESTONE || BLOCKS.COBBLESTONE,
+            path: (BLOCKS.DIRT_PATH || 383),
+            fence: BLOCKS.SPRUCE_FENCE || BLOCKS.OAK_FENCE || BLOCKS.WOOD,
+            roof: BLOCKS.PINE_WOOD || BLOCKS.WOOD,
+            cropBorder: BLOCKS.PINE_WOOD || BLOCKS.WOOD,
+            accent: BLOCKS.PACKED_ICE || BLOCKS.COBBLESTONE
+        };
+    } else {
+        // Plains and default
+        return {
+            wood: BLOCKS.WOOD,
+            planks: BLOCKS.PLANKS,
+            stone: BLOCKS.COBBLESTONE,
+            stoneBricks: BLOCKS.STONE_BRICKS || BLOCKS.COBBLESTONE,
+            path: (BLOCKS.DIRT_PATH || 383),
+            fence: BLOCKS.OAK_FENCE || BLOCKS.WOOD,
+            roof: BLOCKS.PLANKS,
+            cropBorder: BLOCKS.WOOD,
+            accent: BLOCKS.COBBLESTONE
+        };
+    }
+}
+
+export function generateCabin(blocks, x, y, z, rng, palette = null) {
+    const wood = palette ? palette.wood : BLOCKS.WOOD;
+    const planks = palette ? palette.planks : BLOCKS.PLANKS;
+    const stone = palette ? palette.stone : BLOCKS.COBBLESTONE;
+    const roof = palette ? palette.roof : planks;
+
     // Solid foundation down into ground so house never floats on uneven terrain
     for (let px = x - 3; px <= x + 3; px++) {
         for (let pz = z - 3; pz <= z + 3; pz++) {
@@ -3489,7 +3661,7 @@ export function generateCabin(blocks, x, y, z, rng) {
                 const idx = (fy * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
                 const cur = (px >= 0 && px < CHUNK_SIZE && pz >= 0 && pz < CHUNK_SIZE) ? blocks[idx] : BLOCKS.AIR;
                 if (cur === BLOCKS.AIR || cur === BLOCKS.WATER || cur === BLOCKS.SWAMP_WATER) {
-                    safeSetBlock(blocks, px, fy, pz, BLOCKS.COBBLESTONE);
+                    safeSetBlock(blocks, px, fy, pz, stone);
                 } else {
                     break; // hit solid ground
                 }
@@ -3501,7 +3673,7 @@ export function generateCabin(blocks, x, y, z, rng) {
     for (let px = x - 3; px <= x + 3; px++) {
         for (let pz = z - 3; pz <= z + 3; pz++) {
             const isBorder = px === x - 3 || px === x + 3 || pz === z - 3 || pz === z + 3;
-            safeSetBlock(blocks, px, y - 1, pz, isBorder ? BLOCKS.COBBLESTONE : BLOCKS.PLANKS);
+            safeSetBlock(blocks, px, y - 1, pz, isBorder ? stone : planks);
         }
     }
 
@@ -3522,7 +3694,7 @@ export function generateCabin(blocks, x, y, z, rng) {
                 const isWall = px === x - 3 || px === x + 3 || pz === z - 3 || pz === z + 3;
 
                 if (isCorner) {
-                    safeSetBlock(blocks, px, py, pz, BLOCKS.WOOD); // Corner log pillars
+                    safeSetBlock(blocks, px, py, pz, wood); // Corner log pillars
                 } else if (isWall) {
                     if (pz === z - 3 && px === x) {
                         // Front door doorway: replaces wall blocks for an actual passageway!
@@ -3531,10 +3703,10 @@ export function generateCabin(blocks, x, y, z, rng) {
                         } else if (py === y + 1) {
                             safeSetBlock(blocks, px, py, pz, BLOCKS.DUNGEON_DOOR_TOP); // Top door block
                         } else {
-                            safeSetBlock(blocks, px, py, pz, BLOCKS.PLANKS); // Solid lintel header over door
+                            safeSetBlock(blocks, px, py, pz, planks); // Solid lintel header over door
                         }
                     } else if (py === y) {
-                        safeSetBlock(blocks, px, py, pz, BLOCKS.COBBLESTONE); // Stone foundation base
+                        safeSetBlock(blocks, px, py, pz, stone); // Stone foundation base
                     } else if (py === y + 1 || py === y + 2) {
                         // Glass windows
                         const isWindow = (
@@ -3542,9 +3714,9 @@ export function generateCabin(blocks, x, y, z, rng) {
                             (px === x + 3 && (pz === z - 1 || pz === z + 1)) ||
                             (pz === z + 3 && (px === x - 1 || px === x + 1))
                         );
-                        safeSetBlock(blocks, px, py, pz, isWindow ? BLOCKS.GLASS : BLOCKS.PLANKS);
+                        safeSetBlock(blocks, px, py, pz, isWindow ? BLOCKS.GLASS : planks);
                     } else {
-                        safeSetBlock(blocks, px, py, pz, BLOCKS.PLANKS);
+                        safeSetBlock(blocks, px, py, pz, planks);
                     }
                 }
             }
@@ -3552,7 +3724,7 @@ export function generateCabin(blocks, x, y, z, rng) {
     }
 
     // Doorstep outside & clear entryway
-    safeSetBlock(blocks, x, y - 1, z - 4, BLOCKS.COBBLESTONE);
+    safeSetBlock(blocks, x, y - 1, z - 4, stone);
     safeSetBlock(blocks, x, y, z - 4, BLOCKS.AIR);
     safeSetBlock(blocks, x, y + 1, z - 4, BLOCKS.AIR);
     safeSetBlock(blocks, x, y, z - 2, BLOCKS.AIR);
@@ -3563,75 +3735,73 @@ export function generateCabin(blocks, x, y, z, rng) {
     safeSetBlock(blocks, x + 1, y + 2, z - 4, BLOCKS.TORCH);
 
     // Pitched A-Frame Gable Roof
-    // Slopes up towards center ridge (x) along the Z axis, with front & back overhangs (z - 4 to z + 4)
     for (let pz = z - 4; pz <= z + 4; pz++) {
         const isEaveEdgeZ = (pz === z - 4 || pz === z + 4);
 
         // Tier 1: Eaves overhang at x +/- 4, height y + 3
-        safeSetBlock(blocks, x - 4, y + 3, pz, BLOCKS.COBBLESTONE);
-        safeSetBlock(blocks, x + 4, y + 3, pz, BLOCKS.COBBLESTONE);
+        safeSetBlock(blocks, x - 4, y + 3, pz, isEaveEdgeZ ? stone : roof);
+        safeSetBlock(blocks, x + 4, y + 3, pz, isEaveEdgeZ ? stone : roof);
 
         // Tier 2: Slope step at x +/- 3 and x +/- 2, height y + 4
-        const t2Mat = isEaveEdgeZ ? BLOCKS.COBBLESTONE : BLOCKS.PLANKS;
+        const t2Mat = isEaveEdgeZ ? stone : roof;
         safeSetBlock(blocks, x - 3, y + 4, pz, t2Mat);
         safeSetBlock(blocks, x - 2, y + 4, pz, t2Mat);
         safeSetBlock(blocks, x + 2, y + 4, pz, t2Mat);
         safeSetBlock(blocks, x + 3, y + 4, pz, t2Mat);
 
         // Tier 3: Upper slope at x +/- 1, height y + 5
-        const t3Mat = isEaveEdgeZ ? BLOCKS.COBBLESTONE : BLOCKS.PLANKS;
+        const t3Mat = isEaveEdgeZ ? stone : roof;
         safeSetBlock(blocks, x - 1, y + 5, pz, t3Mat);
         safeSetBlock(blocks, x + 1, y + 5, pz, t3Mat);
 
         // Tier 4: Peak Ridge Line at x, height y + 6
-        safeSetBlock(blocks, x, y + 6, pz, isEaveEdgeZ ? BLOCKS.COBBLESTONE : BLOCKS.WOOD);
+        safeSetBlock(blocks, x, y + 6, pz, isEaveEdgeZ ? stone : wood);
     }
 
     // Enclose triangular gables on front and back
     for (const pz of [z - 3, z + 3]) {
-        safeSetBlock(blocks, x - 2, y + 4, pz, BLOCKS.PLANKS);
-        safeSetBlock(blocks, x - 1, y + 4, pz, BLOCKS.PLANKS);
+        safeSetBlock(blocks, x - 2, y + 4, pz, planks);
+        safeSetBlock(blocks, x - 1, y + 4, pz, planks);
         safeSetBlock(blocks, x,     y + 4, pz, BLOCKS.GLASS); // Attic roundel / window
-        safeSetBlock(blocks, x + 1, y + 4, pz, BLOCKS.PLANKS);
-        safeSetBlock(blocks, x + 2, y + 4, pz, BLOCKS.PLANKS);
-        safeSetBlock(blocks, x - 1, y + 5, pz, BLOCKS.PLANKS);
-        safeSetBlock(blocks, x,     y + 5, pz, BLOCKS.PLANKS);
-        safeSetBlock(blocks, x + 1, y + 5, pz, BLOCKS.PLANKS);
+        safeSetBlock(blocks, x + 1, y + 4, pz, planks);
+        safeSetBlock(blocks, x + 2, y + 4, pz, planks);
+        safeSetBlock(blocks, x - 1, y + 5, pz, planks);
+        safeSetBlock(blocks, x,     y + 5, pz, planks);
+        safeSetBlock(blocks, x + 1, y + 5, pz, planks);
     }
 
     // Ceiling beams inside
     for (let px = x - 2; px <= x + 2; px++) {
-        safeSetBlock(blocks, px, y + 3, z - 1, BLOCKS.WOOD);
-        safeSetBlock(blocks, px, y + 3, z + 1, BLOCKS.WOOD);
+        safeSetBlock(blocks, px, y + 3, z - 1, wood);
+        safeSetBlock(blocks, px, y + 3, z + 1, wood);
     }
 
     // Interior Furnishings
-    // Bed (Back Left)
-    safeSetBlock(blocks, x - 2, y, z + 2, BLOCKS.WOOL); // Bed foot
-    safeSetBlock(blocks, x - 2, y, z + 1, BLOCKS.SNOW); // Pillow / head
-    // Chest (Back Right)
+    safeSetBlock(blocks, x - 2, y, z + 2, BLOCKS.WOOL);
+    safeSetBlock(blocks, x - 2, y, z + 1, BLOCKS.SNOW);
     safeSetBlock(blocks, x + 2, y, z + 2, BLOCKS.CHEST_BLOCK);
-    // Furnace (Right Wall)
     safeSetBlock(blocks, x + 2, y, z, BLOCKS.FURNACE);
-    // Crafting Table (Left Wall)
     safeSetBlock(blocks, x - 2, y, z - 1, BLOCKS.CRAFTING_TABLE);
-    // Bookshelf (Left Wall)
     safeSetBlock(blocks, x - 2, y, z, BLOCKS.BOOKSHELF);
-    // Cozy Lighting
     safeSetBlock(blocks, x - 1, y + 2, z + 2, BLOCKS.TORCH);
     safeSetBlock(blocks, x + 1, y + 2, z + 2, BLOCKS.TORCH);
 }
 
-export function generateBlacksmith(blocks, x, y, z, rng) {
+export function generateBlacksmith(blocks, x, y, z, rng, palette = null) {
+    const wood = palette ? palette.wood : BLOCKS.WOOD;
+    const planks = palette ? palette.planks : BLOCKS.PLANKS;
+    const stone = palette ? palette.stone : BLOCKS.COBBLESTONE;
+    const roof = palette ? (palette.stoneBricks || palette.stone) : BLOCKS.COBBLESTONE;
+
     // 8x7 Blacksmith shop with forge terrace, 2 furnaces, stonecutter, lava basin, and interior loot room
     for (let px = x - 4; px <= x + 4; px++) {
         for (let pz = z - 3; pz <= z + 3; pz++) {
             for (let dy = 1; dy <= 5; dy++) {
                 const fy = y - dy;
                 if (fy < 1) break;
-                safeSetBlock(blocks, px, fy, pz, BLOCKS.COBBLESTONE);
+                safeSetBlock(blocks, px, fy, pz, stone);
             }
-            safeSetBlock(blocks, px, y - 1, pz, BLOCKS.COBBLESTONE);
+            safeSetBlock(blocks, px, y - 1, pz, stone);
         }
     }
     // Clear interior/terrace
@@ -3644,42 +3814,41 @@ export function generateBlacksmith(blocks, x, y, z, rng) {
     }
     // Walls & pillars
     for (let py = y; py < y + 3; py++) {
-        // Enclosed back & right room (x to x+3, z-2 to z+2)
         for (let px = x; px <= x + 3; px++) {
             for (let pz = z - 2; pz <= z + 2; pz++) {
                 const isWall = (px === x || px === x + 3 || pz === z - 2 || pz === z + 2);
                 const isCorner = (px === x + 3) && (pz === z - 2 || pz === z + 2);
                 if (isCorner) {
-                    safeSetBlock(blocks, px, py, pz, BLOCKS.WOOD);
+                    safeSetBlock(blocks, px, py, pz, wood);
                 } else if (isWall) {
                     if (px === x && pz === z && py <= y + 1) {
                         safeSetBlock(blocks, px, py, pz, (py === y) ? BLOCKS.DUNGEON_DOOR : BLOCKS.DUNGEON_DOOR_TOP);
                     } else if (pz === z + 2 && px === x + 1 && py === y + 1) {
                         safeSetBlock(blocks, px, py, pz, BLOCKS.GLASS);
                     } else {
-                        safeSetBlock(blocks, px, py, pz, BLOCKS.PLANKS);
+                        safeSetBlock(blocks, px, py, pz, planks);
                     }
                 }
             }
         }
-        // Corner pillars for open forge area (x - 3)
-        safeSetBlock(blocks, x - 3, py, z - 2, BLOCKS.WOOD);
-        safeSetBlock(blocks, x - 3, py, z + 2, BLOCKS.WOOD);
+        // Corner pillars for open forge area
+        safeSetBlock(blocks, x - 3, py, z - 2, wood);
+        safeSetBlock(blocks, x - 3, py, z + 2, wood);
     }
-    // Roof: flat cobblestone roof with overhang
+    // Roof: flat stone roof with overhang
     for (let px = x - 4; px <= x + 4; px++) {
         for (let pz = z - 3; pz <= z + 3; pz++) {
-            safeSetBlock(blocks, px, y + 3, pz, BLOCKS.COBBLESTONE);
+            safeSetBlock(blocks, px, y + 3, pz, roof);
         }
     }
-    // Forge appliances on terrace (x - 2 to x - 1)
+    // Forge appliances on terrace
     safeSetBlock(blocks, x - 2, y, z - 1, BLOCKS.FURNACE);
     safeSetBlock(blocks, x - 1, y, z - 1, BLOCKS.FURNACE);
     safeSetBlock(blocks, x - 2, y, z + 1, BLOCKS.STONECUTTER);
-    safeSetBlock(blocks, x - 1, y, z + 1, BLOCKS.COBBLESTONE);
+    safeSetBlock(blocks, x - 1, y, z + 1, stone);
     // Lava pool
     safeSetBlock(blocks, x - 1, y - 1, z, BLOCKS.LAVA);
-    safeSetBlock(blocks, x - 2, y, z, BLOCKS.IRON_BLOCK); // anvil stand
+    safeSetBlock(blocks, x - 2, y, z, BLOCKS.IRON_BLOCK);
     // Interior room: chest with blacksmith loot
     safeSetBlock(blocks, x + 2, y, z + 1, BLOCKS.CHEST_BLOCK);
     safeSetBlock(blocks, x + 2, y, z - 1, BLOCKS.CRAFTING_TABLE);
@@ -3687,16 +3856,22 @@ export function generateBlacksmith(blocks, x, y, z, rng) {
     safeSetBlock(blocks, x - 2, y + 2, z, BLOCKS.TORCH);
 }
 
-export function generateLibrary(blocks, x, y, z, rng) {
+export function generateLibrary(blocks, x, y, z, rng, palette = null) {
+    const wood = palette ? palette.wood : BLOCKS.WOOD;
+    const planks = palette ? palette.planks : BLOCKS.PLANKS;
+    const stone = palette ? palette.stone : BLOCKS.COBBLESTONE;
+    const stoneBricks = palette ? palette.stoneBricks : (BLOCKS.STONE_BRICKS || BLOCKS.COBBLESTONE);
+    const roof = palette ? palette.roof : planks;
+
     // 7x7 Village Library with bookshelves, desks, and lantern
     for (let px = x - 3; px <= x + 3; px++) {
         for (let pz = z - 3; pz <= z + 3; pz++) {
             for (let dy = 1; dy <= 5; dy++) {
                 const fy = y - dy;
                 if (fy < 1) break;
-                safeSetBlock(blocks, px, fy, pz, BLOCKS.COBBLESTONE);
+                safeSetBlock(blocks, px, fy, pz, stone);
             }
-            safeSetBlock(blocks, px, y - 1, pz, BLOCKS.PLANKS);
+            safeSetBlock(blocks, px, y - 1, pz, planks);
         }
     }
     for (let py = y; py <= y + 4; py++) {
@@ -3712,14 +3887,14 @@ export function generateLibrary(blocks, x, y, z, rng) {
                 const isWall = (px === x - 3 || px === x + 3 || pz === z - 3 || pz === z + 3);
                 const isCorner = (px === x - 3 || px === x + 3) && (pz === z - 3 || pz === z + 3);
                 if (isCorner) {
-                    safeSetBlock(blocks, px, py, pz, BLOCKS.WOOD);
+                    safeSetBlock(blocks, px, py, pz, wood);
                 } else if (isWall) {
                     if (pz === z - 3 && px === x && py <= y + 1) {
                         safeSetBlock(blocks, px, py, pz, (py === y) ? BLOCKS.DUNGEON_DOOR : BLOCKS.DUNGEON_DOOR_TOP);
                     } else if (py === y + 1 && ((px === x - 3 && pz === z) || (px === x + 3 && pz === z) || (pz === z + 3 && px === x))) {
                         safeSetBlock(blocks, px, py, pz, BLOCKS.GLASS);
                     } else {
-                        safeSetBlock(blocks, px, py, pz, BLOCKS.STONE_BRICKS);
+                        safeSetBlock(blocks, px, py, pz, stoneBricks);
                     }
                 }
             }
@@ -3728,7 +3903,7 @@ export function generateLibrary(blocks, x, y, z, rng) {
     // Roof
     for (let px = x - 3; px <= x + 3; px++) {
         for (let pz = z - 3; pz <= z + 3; pz++) {
-            safeSetBlock(blocks, px, y + 4, pz, BLOCKS.PLANKS);
+            safeSetBlock(blocks, px, y + 4, pz, roof);
         }
     }
     // Interior Bookshelves along back and sides
@@ -3742,10 +3917,15 @@ export function generateLibrary(blocks, x, y, z, rng) {
     // Reading desk
     safeSetBlock(blocks, x, y, z, BLOCKS.CRAFTING_TABLE);
     safeSetBlock(blocks, x, y + 1, z, BLOCKS.LANTERN);
-    safeSetBlock(blocks, x + 1, y, z, BLOCKS.WOOD);
+    safeSetBlock(blocks, x + 1, y, z, wood);
 }
 
-export function generateFarmhouse(blocks, x, y, z, rng) {
+export function generateFarmhouse(blocks, x, y, z, rng, palette = null) {
+    const wood = palette ? palette.wood : BLOCKS.WOOD;
+    const planks = palette ? palette.planks : BLOCKS.PLANKS;
+    const roof = palette ? palette.roof : planks;
+    const fenceId = palette ? palette.fence : (BLOCKS.OAK_FENCE || wood);
+
     // Farmhouse with adjacent fenced crop field
     for (let px = x - 4; px <= x + 4; px++) {
         for (let pz = z - 3; pz <= z + 3; pz++) {
@@ -3759,7 +3939,7 @@ export function generateFarmhouse(blocks, x, y, z, rng) {
     // Farmer's hut (x to x+4)
     for (let px = x; px <= x + 4; px++) {
         for (let pz = z - 3; pz <= z + 3; pz++) {
-            safeSetBlock(blocks, px, y - 1, pz, BLOCKS.PLANKS);
+            safeSetBlock(blocks, px, y - 1, pz, planks);
         }
     }
     for (let py = y; py <= y + 3; py++) {
@@ -3779,7 +3959,7 @@ export function generateFarmhouse(blocks, x, y, z, rng) {
                     } else if (py === y + 1 && (px === x + 4 && pz === z)) {
                         safeSetBlock(blocks, px, py, pz, BLOCKS.GLASS);
                     } else {
-                        safeSetBlock(blocks, px, py, pz, BLOCKS.WOOD);
+                        safeSetBlock(blocks, px, py, pz, wood);
                     }
                 }
             }
@@ -3788,7 +3968,7 @@ export function generateFarmhouse(blocks, x, y, z, rng) {
     // Hut roof
     for (let px = x - 1; px <= x + 5; px++) {
         for (let pz = z - 4; pz <= z + 4; pz++) {
-            safeSetBlock(blocks, px, y + 3, pz, BLOCKS.PLANKS);
+            safeSetBlock(blocks, px, y + 3, pz, roof);
         }
     }
     safeSetBlock(blocks, x + 3, y, z + 2, BLOCKS.WOOL);
@@ -3796,7 +3976,6 @@ export function generateFarmhouse(blocks, x, y, z, rng) {
     safeSetBlock(blocks, x + 2, y + 2, z, BLOCKS.TORCH);
 
     // Fenced Crop Field (x-4 to x-1)
-    const fenceId = BLOCKS.OAK_FENCE || BLOCKS.WOOD;
     for (let px = x - 4; px < x; px++) {
         for (let pz = z - 3; pz <= z + 3; pz++) {
             const isBorder = (px === x - 4 || pz === z - 3 || pz === z + 3);
@@ -4338,9 +4517,6 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
     const wzBase = cz * CHUNK_SIZE;
     const rng = seededRandom(params.seed + vPos.x * 37 + vPos.z * 109);
 
-    const fenceId = BLOCKS.OAK_FENCE || BLOCKS.WOOD;
-    const lanternId = BLOCKS.LANTERN || BLOCKS.TORCH;
-
     // Determine actual surface height at village center
     const centerCol = getColumnInfo(vPos.x, vPos.z, params);
     if (!centerCol) return;
@@ -4351,6 +4527,10 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
     const villageY = centerCol.surfaceY;
     if (villageY <= params.seaLevel) return;
     vPos.y = villageY;
+
+    const palette = getVillagePalette(centerBiome);
+    const fenceId = palette.fence;
+    const lanternId = BLOCKS.LANTERN || BLOCKS.TORCH;
 
     // 1. Village Center Well at (vPos.x, villageY, vPos.z)
     const lxCenter = vPos.x - wxBase;
@@ -4365,14 +4545,14 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
                 for (let dy = 1; dy <= 8; dy++) {
                     const fy = villageY - dy;
                     if (fy < 1) break;
-                    safeSetBlock(blocks, lx, fy, lz, BLOCKS.COBBLESTONE);
+                    safeSetBlock(blocks, lx, fy, lz, palette.stone);
                 }
                 if (r2 <= 1) {
                     safeSetBlock(blocks, lx, villageY - 1, lz, BLOCKS.WATER);
                     safeSetBlock(blocks, lx, villageY, lz, BLOCKS.AIR);
                 } else if (r2 <= 4) {
-                    safeSetBlock(blocks, lx, villageY - 1, lz, BLOCKS.COBBLESTONE);
-                    safeSetBlock(blocks, lx, villageY, lz, BLOCKS.COBBLESTONE);
+                    safeSetBlock(blocks, lx, villageY - 1, lz, palette.stone);
+                    safeSetBlock(blocks, lx, villageY, lz, palette.stone);
                 }
                 if (Math.abs(dx) === 1 && Math.abs(dz) === 1) {
                     for (let py = 1; py <= 3; py++) {
@@ -4380,7 +4560,7 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
                     }
                 }
                 if (Math.abs(dx) <= 2 && Math.abs(dz) <= 2) {
-                    safeSetBlock(blocks, lx, villageY + 4, lz, BLOCKS.COBBLESTONE);
+                    safeSetBlock(blocks, lx, villageY + 4, lz, palette.roof || palette.stone);
                 }
                 if (dx === 0 && dz === 0) {
                     safeSetBlock(blocks, lx, villageY + 3, lz, lanternId);
@@ -4468,7 +4648,7 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
             let py = pCol ? pCol.surfaceY : villageY;
             if (py <= 0) py = villageY;
 
-            safeSetBlock(blocks, lx, py - 1, lz, BLOCKS.GRAVEL);
+            safeSetBlock(blocks, lx, py - 1, lz, palette.path);
             safeSetBlock(blocks, lx, py, lz, BLOCKS.AIR);
             safeSetBlock(blocks, lx, py + 1, lz, BLOCKS.AIR);
 
@@ -4499,7 +4679,7 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
                 const isCorner = (fx === -11 || fx === -4) && (fz === -12 || fz === -5);
 
                 if (isBorder) {
-                    safeSetBlock(blocks, lx, farm1Y - 1, lz, BLOCKS.WOOD);
+                    safeSetBlock(blocks, lx, farm1Y - 1, lz, palette.cropBorder || BLOCKS.WOOD);
                     safeSetBlock(blocks, lx, farm1Y, lz, BLOCKS.AIR);
                     if (isCorner) {
                         safeSetBlock(blocks, lx, farm1Y, lz, fenceId);
@@ -4546,7 +4726,7 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
                 const isCorner = (fx === 4 || fx === 11) && (fz === -12 || fz === -5);
 
                 if (isBorder) {
-                    safeSetBlock(blocks, lx, farm2Y - 1, lz, BLOCKS.WOOD);
+                    safeSetBlock(blocks, lx, farm2Y - 1, lz, palette.cropBorder || BLOCKS.WOOD);
                     safeSetBlock(blocks, lx, farm2Y, lz, BLOCKS.AIR);
                     if (isCorner) {
                         safeSetBlock(blocks, lx, farm2Y, lz, fenceId);
@@ -4668,7 +4848,7 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
     const bsX = vPos.x + 14 - wxBase;
     const bsZ = vPos.z + 14 - wzBase;
     if (bsX >= -5 && bsX <= CHUNK_SIZE + 5 && bsZ >= -5 && bsZ <= CHUNK_SIZE + 5) {
-        generateBlacksmith(blocks, bsX, bsY, bsZ, rng);
+        generateBlacksmith(blocks, bsX, bsY, bsZ, rng, palette);
     }
 
     // (B) Library at (-14, +14)
@@ -4677,7 +4857,7 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
     const libX = vPos.x - 14 - wxBase;
     const libZ = vPos.z + 14 - wzBase;
     if (libX >= -5 && libX <= CHUNK_SIZE + 5 && libZ >= -5 && libZ <= CHUNK_SIZE + 5) {
-        generateLibrary(blocks, libX, libY, libZ, rng);
+        generateLibrary(blocks, libX, libY, libZ, rng, palette);
     }
 
     // (C) Farmhouse at (+14, -14)
@@ -4686,7 +4866,7 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
     const farmX = vPos.x + 14 - wxBase;
     const farmZ = vPos.z - 14 - wzBase;
     if (farmX >= -5 && farmX <= CHUNK_SIZE + 5 && farmZ >= -5 && farmZ <= CHUNK_SIZE + 5) {
-        generateFarmhouse(blocks, farmX, farmY, farmZ, rng);
+        generateFarmhouse(blocks, farmX, farmY, farmZ, rng, palette);
     }
 
     // (D) Peasant Cottage at (-14, -14)
@@ -4695,7 +4875,7 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
     const cotX = vPos.x - 14 - wxBase;
     const cotZ = vPos.z - 14 - wzBase;
     if (cotX >= -5 && cotX <= CHUNK_SIZE + 5 && cotZ >= -5 && cotZ <= CHUNK_SIZE + 5) {
-        generateCabin(blocks, cotX, cotY, cotZ, rng);
+        generateCabin(blocks, cotX, cotY, cotZ, rng, palette);
     }
 }
 

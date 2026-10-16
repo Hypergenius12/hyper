@@ -4876,12 +4876,49 @@ export class Mob {
         if (!this.wanderTimer) this.wanderTimer = 0;
         if (!this.wanderDir) this.wanderDir = new THREE.Vector3(0, 0, 0);
         
-        if (this.hostile && dist < 20) {
+        if (this.hostile && dist < 22) {
             const dir = _tempVec3.subVectors(playerPos, this.position);
             if (!this.flying) dir.y = 0;
             if (dir.length() > 0) dir.normalize();
-            
-            if (dist > 1.5) {
+
+            // Face player
+            if (this.mesh) {
+                this.mesh.rotation.y = Math.atan2(dir.x, dir.z);
+            }
+
+            // Special Skeleton Ranged Tactical AI
+            if (this.type === 'SKELETON') {
+                if (!this.shootTimer) this.shootTimer = 1.0 + Math.random() * 1.5;
+                this.shootTimer -= dt;
+
+                if (dist < 6.0) {
+                    // Back up away from player
+                    this.isMoving = true;
+                    this.velocity.x = -dir.x * this.speed * 0.8;
+                    this.velocity.z = -dir.z * this.speed * 0.8;
+                } else if (dist > 14.0) {
+                    // Close the distance
+                    this.isMoving = true;
+                    this.velocity.x = dir.x * this.speed;
+                    this.velocity.z = dir.z * this.speed;
+                } else {
+                    // Strafe side to side while in archery range
+                    this.isMoving = true;
+                    const strafeX = -dir.z;
+                    const strafeZ = dir.x;
+                    const strafeSign = (Math.sin(this.age * 2.0) > 0 ? 1 : -1);
+                    this.velocity.x = strafeX * this.speed * 0.7 * strafeSign;
+                    this.velocity.z = strafeZ * this.speed * 0.7 * strafeSign;
+                }
+
+                // Fire arrow
+                if (this.shootTimer <= 0 && dist < 20) {
+                    this.shootTimer = 1.8 + Math.random() * 0.8;
+                    if (this.manager && this.manager.shootSkeletonArrow) {
+                        this.manager.shootSkeletonArrow(this.position, playerPos);
+                    }
+                }
+            } else if (dist > 1.5) {
                 this.isMoving = true;
                 this.velocity.x = dir.x * this.speed;
                 this.velocity.z = dir.z * this.speed;
@@ -4890,30 +4927,35 @@ export class Mob {
                     const targetY = playerPos.y + 1;
                     this.velocity.y = (targetY - this.position.y) * 2;
                 }
-                
-                // Face player
-                if (this.mesh) {
-                    this.mesh.rotation.y = Math.atan2(dir.x, dir.z);
-                }
-                
-                // Jump over obstacles (non-flying mobs)
-                if (!this.flying && this.grounded && Math.random() < dt * 3) {
-                    // Check if blocked ahead
-                    const aheadX = Math.floor(this.position.x + dir.x);
-                    const aheadY = Math.floor(this.position.y);
-                    const aheadZ = Math.floor(this.position.z + dir.z);
-                    const blockAhead = world.getBlock(aheadX, aheadY, aheadZ);
-                    if (getBlockProperties(blockAhead).solid) {
-                        this.velocity.y = 7;
-                        this.grounded = false;
-                    }
-                }
             } else {
                 this.velocity.x *= 0.8;
                 this.velocity.z *= 0.8;
                 if (this.attackCooldown <= 0) {
                     this.attackCooldown = 1.0;
                     this.didAttack = true;
+                }
+            }
+
+            // Smart jump assist & obstacle climbing (non-flying mobs)
+            if (!this.flying) {
+                const aheadX = Math.floor(this.position.x + dir.x * 0.65);
+                const aheadY = Math.floor(this.position.y);
+                const aheadZ = Math.floor(this.position.z + dir.z * 0.65);
+                const blockAhead = world.getBlock(aheadX, aheadY, aheadZ);
+                const isBlocked = getBlockProperties(blockAhead).solid;
+
+                if (isBlocked) {
+                    if (this.type === 'SPIDER') {
+                        // Spiders climb walls smoothly
+                        this.velocity.y = 5.0;
+                    } else if (this.grounded) {
+                        // Check if block above is open to jump over
+                        const blockAbove = world.getBlock(aheadX, aheadY + 1, aheadZ);
+                        if (!getBlockProperties(blockAbove).solid) {
+                            this.velocity.y = 7.0;
+                            this.grounded = false;
+                        }
+                    }
                 }
             }
         } else {
@@ -5407,15 +5449,54 @@ export class EntityManager {
 
         // Mob Spawning with timer
         this.spawnTimer += dt;
-        if (this.spawnTimer > 2.0 && this.mobs.length < 20) {
+        if (this.spawnTimer > 1.5 && this.mobs.length < 24) {
             this.spawnTimer = 0;
-            if (Math.random() < 0.4) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = 18 + Math.random() * 20;
-                const sx = playerPos.x + Math.cos(angle) * dist;
-                const sz = playerPos.z + Math.sin(angle) * dist;
-                
-                // Find surface
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 16 + Math.random() * 22;
+            const sx = Math.floor(playerPos.x + Math.cos(angle) * dist);
+            const sz = Math.floor(playerPos.z + Math.sin(angle) * dist);
+
+            // 1. Attempt Subterranean / Cave Darkness Spawn (Hostile mobs spawn in the dark regardless of time of day!)
+            const tryCaveSpawn = (Math.random() < 0.55 || playerPos.y < 58);
+            let caveSpawnFound = false;
+
+            if (tryCaveSpawn && currentDimension === 'overworld') {
+                const minY = Math.max(8, Math.floor(playerPos.y - 18));
+                const maxY = Math.min(62, Math.floor(playerPos.y + 12));
+
+                for (let y = maxY; y >= minY; y--) {
+                    const bFloor = world.getBlock(sx, y - 1, sz);
+                    const bAir1 = world.getBlock(sx, y, sz);
+                    const bAir2 = world.getBlock(sx, y + 1, sz);
+
+                    const floorProps = getBlockProperties(bFloor);
+                    if (floorProps.solid && bFloor !== BLOCKS.LAVA && bAir1 === BLOCKS.AIR && bAir2 === BLOCKS.AIR) {
+                        // Check if block has roof overhead blocking daylight (cave / darkness)
+                        let hasRoof = false;
+                        for (let checkY = y + 2; checkY <= Math.min(127, y + 28); checkY++) {
+                            const roofB = world.getBlock(sx, checkY, sz);
+                            if (getBlockProperties(roofB).solid) {
+                                hasRoof = true;
+                                break;
+                            }
+                        }
+
+                        if (hasRoof || !isDay) {
+                            const caveHostiles = ['ZOMBIE', 'SKELETON', 'SPIDER', 'CREEPER', 'ENDERMAN'];
+                            if (y <= 36) caveHostiles.push('SLIME');
+                            const chosenType = caveHostiles[Math.floor(Math.random() * caveHostiles.length)];
+
+                            const mob = new Mob(chosenType, new THREE.Vector3(sx + 0.5, y, sz + 0.5));
+                            this.addMob(mob);
+                            caveSpawnFound = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 2. Surface Spawning (when cave spawn not used or did not find a spot)
+            if (!caveSpawnFound && this.mobs.length < 24) {
                 for (let y = 127; y > 0; y--) {
                     const b = world.getBlock(sx, y, sz);
                     if (b !== BLOCKS.AIR && b !== BLOCKS.LAVA) {
@@ -5466,9 +5547,7 @@ export class EntityManager {
                         let spawnY = y + 2;
                         if (config.flying) spawnY = y + 5 + Math.random() * 10;
                         if (config.waterOnly) {
-                            // Find highest non-solid block from surface
                             spawnY = y;
-                            // Ensure they don't clip into shallow lake floors
                             const floorDist = Math.floor(Math.random() * 2);
                             for (let i = 0; i < floorDist; i++) {
                                 const below = world.getBlock(sx, spawnY - 1, sz);
@@ -5477,10 +5556,9 @@ export class EntityManager {
                             }
                         }
                         
-                        const spawnCount = config.waterOnly ? (Math.floor(Math.random() * 3) + 2) : 1; // 2 to 4 fish per spawn attempt
-                        
+                        const spawnCount = config.waterOnly ? (Math.floor(Math.random() * 3) + 2) : 1;
                         for (let i = 0; i < spawnCount; i++) {
-                            if (this.mobs.length >= 30) break; // Increased global limit slightly if spawning groups
+                            if (this.mobs.length >= 30) break;
                             const offsetX = config.waterOnly ? (Math.random() - 0.5) * 4 : 0;
                             const offsetZ = config.waterOnly ? (Math.random() - 0.5) * 4 : 0;
                             const mob = new Mob(type, new THREE.Vector3(sx + offsetX, spawnY, sz + offsetZ));
