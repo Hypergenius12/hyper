@@ -1,5 +1,5 @@
 // ============================================
-// generation.js — Procedural Generation, Biomes, Dungeons
+// generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=111';
 import { BLOCKS } from './textures.js?v=111';
@@ -206,7 +206,7 @@ export function generateAetherChunk(cx, cz, params) {
                                 safeSetBlock(blocks, x, y + 1, z, BLOCKS.AETHER_TALL_GRASS, true);
                             }
                         } else {
-                            // Default biome coverage (HOLYSTONE_MOUNTAINS base etc.) — sparse aether trees
+                            // Default biome coverage (HOLYSTONE_MOUNTAINS base etc.)  -  sparse aether trees
                             if (colRng() < 0.025) {
                                 generateAetherTree(blocks, x, y + 1, z, rng);
                             } else if (colRng() < 0.1) {
@@ -2292,7 +2292,7 @@ export function generateChunkTerrain(cx, cz, params) {
     return blocks;
 }
 
-// getDungeonInfo removed — dungeon data is embedded in chunk generation
+// getDungeonInfo removed  -  dungeon data is embedded in chunk generation
 
 // ============================================
 // Flora Generation
@@ -3407,7 +3407,7 @@ function carveRoomInChunk(blocks, cx, cz, room) {
                     if (room.type === 'entrance' && wy <= minY + 2) {
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.WATER);
                     } else if (room.shape === 'pit' && dx <= rw * 0.4 && dz <= rd * 0.4 && wy === minY + 1) {
-                        // Sunken pit center — use lava for fire theme, water for ice, etc.
+                        // Sunken pit center  -  use lava for fire theme, water for ice, etc.
                         safeSetBlock(blocks, lx, wy, lz, BLOCKS.AIR); // Dig the pit
                         if (wy === minY + 1) {
                             safeSetBlock(blocks, lx, minY, lz, BLOCKS.AIR); // Remove floor for pit
@@ -3567,18 +3567,18 @@ export function generateCabin(blocks, x, y, z, rng) {
     for (let pz = z - 4; pz <= z + 4; pz++) {
         const isEaveEdgeZ = (pz === z - 4 || pz === z + 4);
 
-        // Tier 1: Eaves overhang at x ± 4, height y + 3
+        // Tier 1: Eaves overhang at x +/- 4, height y + 3
         safeSetBlock(blocks, x - 4, y + 3, pz, BLOCKS.COBBLESTONE);
         safeSetBlock(blocks, x + 4, y + 3, pz, BLOCKS.COBBLESTONE);
 
-        // Tier 2: Slope step at x ± 3 and x ± 2, height y + 4
+        // Tier 2: Slope step at x +/- 3 and x +/- 2, height y + 4
         const t2Mat = isEaveEdgeZ ? BLOCKS.COBBLESTONE : BLOCKS.PLANKS;
         safeSetBlock(blocks, x - 3, y + 4, pz, t2Mat);
         safeSetBlock(blocks, x - 2, y + 4, pz, t2Mat);
         safeSetBlock(blocks, x + 2, y + 4, pz, t2Mat);
         safeSetBlock(blocks, x + 3, y + 4, pz, t2Mat);
 
-        // Tier 3: Upper slope at x ± 1, height y + 5
+        // Tier 3: Upper slope at x +/- 1, height y + 5
         const t3Mat = isEaveEdgeZ ? BLOCKS.COBBLESTONE : BLOCKS.PLANKS;
         safeSetBlock(blocks, x - 1, y + 5, pz, t3Mat);
         safeSetBlock(blocks, x + 1, y + 5, pz, t3Mat);
@@ -3807,12 +3807,19 @@ export function generateFarmhouse(blocks, x, y, z, rng) {
                 if (pz === z) {
                     safeSetBlock(blocks, px, y - 1, pz, BLOCKS.WATER);
                 } else {
-                    safeSetBlock(blocks, px, y - 1, pz, BLOCKS.DIRT);
-                    safeSetBlock(blocks, px, y, pz, BLOCKS.WHITE_FLOWER);
+                    safeSetBlock(blocks, px, y - 1, pz, BLOCKS.FARMLAND_MOIST);
+                    let crop = BLOCKS.WHEAT_7;
+                    if (pz === z - 2) crop = BLOCKS.CARROTS_3;
+                    else if (pz === z - 1) crop = BLOCKS.CARROTS_2;
+                    else if (pz === z + 1) crop = BLOCKS.POTATOES_3;
+                    else if (pz === z + 2) crop = BLOCKS.POTATOES_2;
+                    safeSetBlock(blocks, px, y, pz, crop);
                 }
             }
         }
     }
+    safeSetBlock(blocks, x - 4, y + 1, z - 3, BLOCKS.LANTERN || BLOCKS.TORCH);
+    safeSetBlock(blocks, x - 4, y + 1, z + 3, BLOCKS.LANTERN || BLOCKS.TORCH);
 }
 
 export function generateWatchtower(blocks, x, y, z, rng) {
@@ -4313,6 +4320,7 @@ export function generateDesertWell(blocks, x, y, z, rng) {
 }
 
 if (typeof window !== 'undefined') {
+    window.generateVillage = generateVillage;
     window.getVillagePositions = getVillagePositions;
     window.getClosestVillagePosition = getClosestVillagePosition;
     window.getIglooPositions = getIglooPositions;
@@ -4442,6 +4450,15 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
         }
     }
 
+    // (E) Connecting paths to Farms, Animal Pen, and Community areas
+    addPath(vPos.x - 7, vPos.z - 4);
+    addPath(vPos.x - 8, vPos.z - 4);
+    addPath(vPos.x + 7, vPos.z - 4);
+    addPath(vPos.x + 8, vPos.z - 4);
+    addPath(vPos.x - 8, vPos.z + 4);
+    addPath(vPos.x - 8, vPos.z + 5);
+    addPath(vPos.x + 7, vPos.z + 4);
+
     // Carve & surface the path points that fall within this chunk
     for (const pt of pathPoints.values()) {
         const lx = pt.wx - wxBase;
@@ -4463,24 +4480,182 @@ export function generateVillage(blocks, cx, cz, vPos, params) {
         }
     }
 
-    // 3. Village Crop Farm Field at (-5 to +5, -6 to -10)
-    for (let fx = -4; fx <= 4; fx++) {
-        for (let fz = -10; fz <= -6; fz++) {
+    // 3. Multi-Crop Village Farms & Community Features
+    // (A) Farm 1: Wheat & Beetroot Farm (fx = -11 to -4, fz = -12 to -5)
+    const farm1Col = getColumnInfo(vPos.x - 7, vPos.z - 8, params);
+    const farm1Y = farm1Col ? farm1Col.surfaceY : villageY;
+    for (let fx = -11; fx <= -4; fx++) {
+        for (let fz = -12; fz <= -5; fz++) {
             const lx = vPos.x + fx - wxBase;
             const lz = vPos.z + fz - wzBase;
             if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
-                const fCol = getColumnInfo(vPos.x + fx, vPos.z + fz, params);
-                const fy = fCol ? fCol.surfaceY : villageY;
-                const isBorder = (fx === -4 || fx === 4 || fz === -10 || fz === -6);
+                for (let dy = 2; dy <= 6; dy++) {
+                    const fy = farm1Y - dy;
+                    if (fy < 1) break;
+                    safeSetBlock(blocks, lx, fy, lz, BLOCKS.DIRT);
+                }
+
+                const isBorder = (fx === -11 || fx === -4 || fz === -12 || fz === -5);
+                const isCorner = (fx === -11 || fx === -4) && (fz === -12 || fz === -5);
+
                 if (isBorder) {
-                    safeSetBlock(blocks, lx, fy - 1, lz, BLOCKS.WOOD);
-                    safeSetBlock(blocks, lx, fy, lz, fenceId);
-                } else if (fx === 0) {
-                    safeSetBlock(blocks, lx, fy - 1, lz, BLOCKS.WATER);
-                    safeSetBlock(blocks, lx, fy, lz, BLOCKS.AIR);
+                    safeSetBlock(blocks, lx, farm1Y - 1, lz, BLOCKS.WOOD);
+                    safeSetBlock(blocks, lx, farm1Y, lz, BLOCKS.AIR);
+                    if (isCorner) {
+                        safeSetBlock(blocks, lx, farm1Y, lz, fenceId);
+                        safeSetBlock(blocks, lx, farm1Y + 1, lz, fenceId);
+                        safeSetBlock(blocks, lx, farm1Y + 2, lz, lanternId);
+                    }
+                } else if (fx === -8) {
+                    safeSetBlock(blocks, lx, farm1Y - 1, lz, BLOCKS.WATER);
+                    safeSetBlock(blocks, lx, farm1Y, lz, BLOCKS.AIR);
+                    safeSetBlock(blocks, lx, farm1Y + 1, lz, BLOCKS.AIR);
                 } else {
-                    safeSetBlock(blocks, lx, fy - 1, lz, BLOCKS.DIRT);
-                    safeSetBlock(blocks, lx, fy, lz, (Math.abs(fx) % 2 === 0) ? BLOCKS.YELLOW_FLOWER : BLOCKS.WHITE_FLOWER);
+                    safeSetBlock(blocks, lx, farm1Y - 1, lz, BLOCKS.FARMLAND_MOIST);
+                    safeSetBlock(blocks, lx, farm1Y + 1, lz, BLOCKS.AIR);
+
+                    let crop = BLOCKS.WHEAT_7;
+                    if (fx <= -9) {
+                        const stage = (Math.abs(fx + fz) % 3);
+                        crop = stage === 0 ? BLOCKS.WHEAT_7 : (stage === 1 ? BLOCKS.WHEAT_6 : BLOCKS.WHEAT_5);
+                    } else {
+                        const stage = (Math.abs(fx + fz) % 2);
+                        crop = stage === 0 ? BLOCKS.BEETROOTS_3 : BLOCKS.BEETROOTS_2;
+                    }
+                    safeSetBlock(blocks, lx, farm1Y, lz, crop);
+                }
+            }
+        }
+    }
+
+    // (B) Farm 2: Carrot & Potato Farm (fx = 4 to 11, fz = -12 to -5)
+    const farm2Col = getColumnInfo(vPos.x + 7, vPos.z - 8, params);
+    const farm2Y = farm2Col ? farm2Col.surfaceY : villageY;
+    for (let fx = 4; fx <= 11; fx++) {
+        for (let fz = -12; fz <= -5; fz++) {
+            const lx = vPos.x + fx - wxBase;
+            const lz = vPos.z + fz - wzBase;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                for (let dy = 2; dy <= 6; dy++) {
+                    const fy = farm2Y - dy;
+                    if (fy < 1) break;
+                    safeSetBlock(blocks, lx, fy, lz, BLOCKS.DIRT);
+                }
+
+                const isBorder = (fx === 4 || fx === 11 || fz === -12 || fz === -5);
+                const isCorner = (fx === 4 || fx === 11) && (fz === -12 || fz === -5);
+
+                if (isBorder) {
+                    safeSetBlock(blocks, lx, farm2Y - 1, lz, BLOCKS.WOOD);
+                    safeSetBlock(blocks, lx, farm2Y, lz, BLOCKS.AIR);
+                    if (isCorner) {
+                        safeSetBlock(blocks, lx, farm2Y, lz, fenceId);
+                        safeSetBlock(blocks, lx, farm2Y + 1, lz, fenceId);
+                        safeSetBlock(blocks, lx, farm2Y + 2, lz, lanternId);
+                    }
+                } else if (fx === 7) {
+                    safeSetBlock(blocks, lx, farm2Y - 1, lz, BLOCKS.WATER);
+                    safeSetBlock(blocks, lx, farm2Y, lz, BLOCKS.AIR);
+                    safeSetBlock(blocks, lx, farm2Y + 1, lz, BLOCKS.AIR);
+                } else {
+                    safeSetBlock(blocks, lx, farm2Y - 1, lz, BLOCKS.FARMLAND_MOIST);
+                    safeSetBlock(blocks, lx, farm2Y + 1, lz, BLOCKS.AIR);
+
+                    let crop = BLOCKS.CARROTS_3;
+                    if (fx <= 6) {
+                        const stage = (Math.abs(fx + fz) % 2);
+                        crop = stage === 0 ? BLOCKS.CARROTS_3 : BLOCKS.CARROTS_2;
+                    } else {
+                        const stage = (Math.abs(fx + fz) % 2);
+                        crop = stage === 0 ? BLOCKS.POTATOES_3 : BLOCKS.POTATOES_2;
+                    }
+                    safeSetBlock(blocks, lx, farm2Y, lz, crop);
+                }
+            }
+        }
+    }
+
+    // (C) Village Animal Pen (fx = -12 to -5, fz = 5 to 12)
+    const penCol = getColumnInfo(vPos.x - 8, vPos.z + 8, params);
+    const penY = penCol ? penCol.surfaceY : villageY;
+    for (let fx = -12; fx <= -5; fx++) {
+        for (let fz = 5; fz <= 12; fz++) {
+            const lx = vPos.x + fx - wxBase;
+            const lz = vPos.z + fz - wzBase;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                for (let dy = 2; dy <= 6; dy++) {
+                    const fy = penY - dy;
+                    if (fy < 1) break;
+                    safeSetBlock(blocks, lx, fy, lz, BLOCKS.DIRT);
+                }
+
+                const isBorder = (fx === -12 || fx === -5 || fz === 5 || fz === 12);
+                const isCorner = (fx === -12 || fx === -5) && (fz === 5 || fz === 12);
+                const isGate = (fx === -8 && fz === 5);
+
+                const floorType = (Math.abs(fx * 3 + fz * 7) % 3 === 0) ? BLOCKS.DIRT : BLOCKS.GRASS;
+                safeSetBlock(blocks, lx, penY - 1, lz, floorType);
+                safeSetBlock(blocks, lx, penY + 1, lz, BLOCKS.AIR);
+
+                if (isGate) {
+                    safeSetBlock(blocks, lx, penY, lz, BLOCKS.OAK_FENCE_GATE || BLOCKS.AIR);
+                } else if (isBorder) {
+                    safeSetBlock(blocks, lx, penY, lz, fenceId);
+                    if (isCorner) {
+                        safeSetBlock(blocks, lx, penY + 1, lz, fenceId);
+                        safeSetBlock(blocks, lx, penY + 2, lz, lanternId);
+                    }
+                } else if (fx === -11 && fz === 11) {
+                    safeSetBlock(blocks, lx, penY - 1, lz, BLOCKS.COBBLESTONE);
+                    safeSetBlock(blocks, lx, penY, lz, BLOCKS.WATER);
+                } else {
+                    safeSetBlock(blocks, lx, penY, lz, BLOCKS.AIR);
+                }
+            }
+        }
+    }
+
+    // (D) Village Hay Bale Stacks & Pumpkin Patch (fx = 5 to 11, fz = 5 to 11)
+    const hayCol = getColumnInfo(vPos.x + 8, vPos.z + 8, params);
+    const hayY = hayCol ? hayCol.surfaceY : villageY;
+    for (let fx = 5; fx <= 11; fx++) {
+        for (let fz = 5; fz <= 11; fz++) {
+            const lx = vPos.x + fx - wxBase;
+            const lz = vPos.z + fz - wzBase;
+            if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+                for (let dy = 2; dy <= 6; dy++) {
+                    const fy = hayY - dy;
+                    if (fy < 1) break;
+                    safeSetBlock(blocks, lx, fy, lz, BLOCKS.DIRT);
+                }
+
+                safeSetBlock(blocks, lx, hayY, lz, BLOCKS.AIR);
+                safeSetBlock(blocks, lx, hayY + 1, lz, BLOCKS.AIR);
+                safeSetBlock(blocks, lx, hayY + 2, lz, BLOCKS.AIR);
+
+                const isGravel = (fx === 5 || fz === 5);
+                safeSetBlock(blocks, lx, hayY - 1, lz, isGravel ? BLOCKS.GRAVEL : BLOCKS.DIRT);
+
+                // Hay Bale Stack 1: 3x2 base at (fx = 7..9, fz = 7..8)
+                if (fx >= 7 && fx <= 9 && fz >= 7 && fz <= 8) {
+                    safeSetBlock(blocks, lx, hayY, lz, BLOCKS.YELLOW_WOOL);
+                    if (fx >= 7 && fx <= 8 && fz === 7) {
+                        safeSetBlock(blocks, lx, hayY + 1, lz, BLOCKS.YELLOW_WOOL);
+                    }
+                }
+                // Hay Bale Stack 2: 2x1 at (fx = 10..11, fz = 9)
+                else if ((fx === 10 || fx === 11) && fz === 9) {
+                    safeSetBlock(blocks, lx, hayY, lz, BLOCKS.YELLOW_WOOL);
+                }
+                // Pumpkins
+                else if ((fx === 6 && fz === 8) || (fx === 8 && fz === 9) || (fx === 10 && fz === 7)) {
+                    safeSetBlock(blocks, lx, hayY, lz, BLOCKS.PUMPKIN);
+                }
+                // Corner lantern post
+                else if (fx === 5 && fz === 5) {
+                    safeSetBlock(blocks, lx, hayY, lz, fenceId);
+                    safeSetBlock(blocks, lx, hayY + 1, lz, fenceId);
+                    safeSetBlock(blocks, lx, hayY + 2, lz, lanternId);
                 }
             }
         }

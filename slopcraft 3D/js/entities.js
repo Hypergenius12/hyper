@@ -1368,6 +1368,7 @@ export const MOB_TYPES = {
             const bodyGeo = new THREE.BoxGeometry(0.75, 0.50, 1.0);
             const bodyMats = getMobBoxMaterials('SHEEP', { u: 28, v: 8, w: 8, h: 6, l: 16 }, { isBody: true, skinKey: 'sheep/sheep_fur.png', part: 'body' });
             const body = new THREE.Mesh(bodyGeo, bodyMats);
+            body.name = 'body_wool';
             body.position.set(0, 1.0, 0);
             body.castShadow = true;
             group.add(body);
@@ -1384,6 +1385,7 @@ export const MOB_TYPES = {
             const headWoolGeo = new THREE.BoxGeometry(0.40, 0.40, 0.40);
             const headWoolMats = getMobBoxMaterials('SHEEP', { u: 0, v: 0, w: 6, h: 6, d: 6 }, { isOverlay: true, transparent: true, skinKey: 'sheep/sheep_fur.png', part: 'head_front' });
             const headWool = new THREE.Mesh(headWoolGeo, headWoolMats);
+            headWool.name = 'head_wool';
             headWool.position.set(0, 0.02, -0.06);
             headWool.castShadow = false; // Overlay mesh does not cast shadow to prevent black shadow acne on head
             head.add(headWool); // Child of head!
@@ -4576,10 +4578,11 @@ export class ItemEntity {
 }
 
 export class Mob {
-    constructor(typeKey, position, posY, posZ) {
+    constructor(typeKey, position, posY, posZ, options = {}) {
         this.type = typeKey;
         const config = MOB_TYPES[typeKey] || MOB_TYPES.SLIME;
         this.config = config;
+        const opts = (typeof posY === 'object' && posY !== null && typeof posY.x !== 'number') ? posY : (options || {});
         if (position && typeof position.clone === 'function') {
             this.position = position.clone();
         } else if (typeof position === 'number') {
@@ -4614,6 +4617,11 @@ export class Mob {
         this.poisonTickTimer = 0;
         this.originalSpeed = config.speed;
         
+        // 1% chance for any sheep spawned to be a pink sheep
+        if (this.type === 'SHEEP') {
+            this.isPinkSheep = (opts.isPinkSheep !== undefined) ? opts.isPinkSheep : (Math.random() < 0.01);
+        }
+
         // Health bar
         this.healthBar = null;
     }
@@ -4643,6 +4651,20 @@ export class Mob {
                     }
                 }
             });
+
+            // If Pink Sheep, tint wool parts to authentic Minecraft pink
+            if (this.type === 'SHEEP' && this.isPinkSheep) {
+                const pinkColor = 0xf48bc9;
+                this.mesh.traverse(child => {
+                    if (child.isMesh && (child.name === 'body_wool' || child.name === 'head_wool')) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(m => m.color.setHex(pinkColor));
+                        } else if (child.material) {
+                            child.material.color.setHex(pinkColor);
+                        }
+                    }
+                });
+            }
 
             // Add health bar above mob
             const barGroup = new THREE.Group();
@@ -5253,6 +5275,19 @@ export class EntityManager {
                         const villager = new Mob('VILLAGER', new THREE.Vector3(vx, vy + 1, vz));
                         this.addMob(villager);
                     }
+
+                    // Spawn farm animals inside the village animal pen & hay bale area
+                    const penY = getGround(vPos.x - 8, vPos.z + 8);
+                    const sheep1 = new Mob('SHEEP', new THREE.Vector3(vPos.x - 8, penY + 1, vPos.z + 8));
+                    const sheep2 = new Mob('SHEEP', new THREE.Vector3(vPos.x - 7, penY + 1, vPos.z + 9));
+                    const cow1 = new Mob('COW', new THREE.Vector3(vPos.x - 9, penY + 1, vPos.z + 8));
+                    this.addMob(sheep1);
+                    this.addMob(sheep2);
+                    this.addMob(cow1);
+
+                    const hayY = getGround(vPos.x + 8, vPos.z + 7);
+                    const chicken1 = new Mob('CHICKEN', new THREE.Vector3(vPos.x + 8, hayY + 1, vPos.z + 7));
+                    this.addMob(chicken1);
                 }
             }
         }
@@ -5525,7 +5560,9 @@ export class EntityManager {
             
             if (mob.justDied) {
                 if (mob.type === 'SHEEP') {
-                    this.spawnItem(Item.blockItem(BLOCKS.WOOL, 'Wool'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                    const woolBlock = mob.isPinkSheep ? (BLOCKS.PINK_WOOL || BLOCKS.WOOL) : BLOCKS.WOOL;
+                    const woolName = mob.isPinkSheep ? 'Pink Wool' : 'Wool';
+                    this.spawnItem(Item.blockItem(woolBlock, woolName), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                     this.spawnItem(Item.foodItem('raw_mutton', 12, 'Raw Mutton', 'Heals some health.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 } else if (mob.type === 'COW') {
                     this.spawnItem(Item.foodItem('raw_beef', 15, 'Raw Beef', 'Heals some health.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());

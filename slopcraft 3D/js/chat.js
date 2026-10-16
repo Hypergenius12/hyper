@@ -1,5 +1,5 @@
 // ============================================
-// chat.js — In-Game Chat & Command System
+// chat.js  -  In-Game Chat & Command System
 // ============================================
 import * as THREE from 'three';
 import { BLOCKS, getBlockName } from './textures.js?v=111';
@@ -25,7 +25,7 @@ export class ChatSystem {
         this.commandsList = [
             'tp', 'find', 'locate', 'kill', 'summon', 'spawn', 'give',
             'gamemode', 'time', 'weather', 'clear', 'heal', 'fly',
-            'speed', 'dimension', 'seed', 'help'
+            'speed', 'dimension', 'seed', 'tps', 'help'
         ];
     }
 
@@ -320,15 +320,6 @@ export class ChatSystem {
     // Command Execution & Creative Verification
     // ============================================
     executeCommand(commandString) {
-        // Strict Creative mode requirement:
-        // Commands are ONLY available in Creative Mode!
-        const isCreative = (this.game.player && this.game.player.isCreative) || (this.game.input && this.game.input.creativeMode);
-
-        if (!isCreative) {
-            this.addMessage("Commands are only available in Creative mode! (Press 'C' to switch to Creative)", "#ff5555");
-            return;
-        }
-
         const trimmed = commandString.slice(1).trim();
         if (!trimmed) return;
 
@@ -336,7 +327,20 @@ export class ChatSystem {
         const cmd = tokens[0].toLowerCase();
         const args = tokens.slice(1);
 
+        // Strict Creative mode requirement for cheat/builder commands, but allow informational queries (/tps, /help, /seed) in all modes
+        const isInfoCmd = (cmd === 'tps' || cmd === 'help' || cmd === 'seed');
+        const isCreative = (this.game.player && this.game.player.isCreative) || (this.game.input && this.game.input.creativeMode);
+
+        if (!isCreative && !isInfoCmd) {
+            this.addMessage("Commands are only available in Creative mode! (Press 'C' to switch to Creative)", "#ff5555");
+            return;
+        }
+
         switch (cmd) {
+            case 'tps':
+                this.cmdTps();
+                break;
+
             case 'tp':
             case 'teleport':
                 this.cmdTp(args);
@@ -1139,23 +1143,23 @@ export class ChatSystem {
         if (args.length > 0) {
             const topic = args[0].toLowerCase();
             const helpMap = {
-                'tp': "/tp <x y z> or /tp <mob_name> — Teleport to coordinates or to a nearby mob",
-                'find': "/find <stronghold | igloo | witch_hut | biome <name> | spawn> — Locate structures, biomes, or world spawn",
-                'locate': "/locate <stronghold | igloo | witch_hut | biome <name> | spawn> — Locate structures or biomes",
-                'kill': "/kill [@s | @e | mob_name] — Kill player or mobs",
-                'summon': "/summon <mob_type> [x y z] — Spawn any mob (zombie, creeper, enderman, blaze, ender_dragon, etc.)",
-                'spawn': "/spawn — Teleport to the world spawn location",
-                'spawnpoint': "/spawnpoint [x y z] — Set your respawn point at current location or coordinates",
-                'give': "/give <item> [count] — Add items/blocks to inventory (diamond, sword, pearl, etc.)",
-                'gamemode': "/gamemode <creative|survival> — Change game mode",
-                'time': "/time set <day|noon|night|midnight|ticks> — Set time of day",
-                'weather': "/weather <clear|rain|thunder> — Change weather",
-                'clear': "/clear — Clear inventory slots",
-                'heal': "/heal — Restore full health and mana",
-                'fly': "/fly — Toggle creative flight",
-                'speed': "/speed <multiplier> — Change movement speed",
-                'dimension': "/dimension <overworld|nether|end|aether> — Travel to any dimension",
-                'seed': "/seed — Display current world seed"
+                'tp': "/tp <x y z> or /tp <mob_name>  -  Teleport to coordinates or to a nearby mob",
+                'find': "/find <stronghold | igloo | witch_hut | biome <name> | spawn>  -  Locate structures, biomes, or world spawn",
+                'locate': "/locate <stronghold | igloo | witch_hut | biome <name> | spawn>  -  Locate structures or biomes",
+                'kill': "/kill [@s | @e | mob_name]  -  Kill player or mobs",
+                'summon': "/summon <mob_type> [x y z]  -  Spawn any mob (zombie, creeper, enderman, blaze, ender_dragon, etc.)",
+                'spawn': "/spawn  -  Teleport to the world spawn location",
+                'spawnpoint': "/spawnpoint [x y z]  -  Set your respawn point at current location or coordinates",
+                'give': "/give <item> [count]  -  Add items/blocks to inventory (diamond, sword, pearl, etc.)",
+                'gamemode': "/gamemode <creative|survival>  -  Change game mode",
+                'time': "/time set <day|noon|night|midnight|ticks>  -  Set time of day",
+                'weather': "/weather <clear|rain|thunder>  -  Change weather",
+                'clear': "/clear  -  Clear inventory slots",
+                'heal': "/heal  -  Restore full health and mana",
+                'fly': "/fly  -  Toggle creative flight",
+                'speed': "/speed <multiplier>  -  Change movement speed",
+                'dimension': "/dimension <overworld|nether|end|aether>  -  Travel to any dimension",
+                'seed': "/seed  -  Display current world seed"
             };
             if (helpMap[topic]) {
                 this.addMessage(helpMap[topic], "#55ff55");
@@ -1164,19 +1168,37 @@ export class ChatSystem {
         }
 
         this.addMessage("=== Slopcraft 3D Commands (Creative Only) ===", "#ffff55");
-        this.addMessage("/tp <x y z | mob> — Teleport to coordinates or mob", "#ffffff");
-        this.addMessage("/find <stronghold | biome <name> | spawn> — Locate structures or biomes", "#ffffff");
-        this.addMessage("/kill [@s | @e | mob] — Kill self or mobs", "#ffffff");
-        this.addMessage("/summon <mob> [x y z] — Summon any mob into the world", "#ffffff");
-        this.addMessage("/spawnpoint [x y z] — Set respawn point", "#ffffff");
-        this.addMessage("/spawn — Teleport to world spawn", "#ffffff");
-        this.addMessage("/give <item> [count] — Give any block or item", "#ffffff");
-        this.addMessage("/gamemode <c|s> — Switch Creative / Survival", "#ffffff");
-        this.addMessage("/time set <day|noon|night|midnight> — Change time of day", "#ffffff");
-        this.addMessage("/weather <clear|rain|thunder> — Change weather", "#ffffff");
-        this.addMessage("/heal — Restore full HP & mana", "#ffffff");
-        this.addMessage("/clear — Clear player inventory", "#ffffff");
-        this.addMessage("/dimension <overworld|nether|end|aether> — Warp dimensions", "#ffffff");
+        this.addMessage("/tp <x y z | mob>  -  Teleport to coordinates or mob", "#ffffff");
+        this.addMessage("/find <stronghold | biome <name> | spawn>  -  Locate structures or biomes", "#ffffff");
+        this.addMessage("/kill [@s | @e | mob]  -  Kill self or mobs", "#ffffff");
+        this.addMessage("/summon <mob> [x y z]  -  Summon any mob into the world", "#ffffff");
+        this.addMessage("/spawnpoint [x y z]  -  Set respawn point", "#ffffff");
+        this.addMessage("/spawn  -  Teleport to world spawn", "#ffffff");
+        this.addMessage("/give <item> [count]  -  Give any block or item", "#ffffff");
+        this.addMessage("/gamemode <c|s>  -  Switch Creative / Survival", "#ffffff");
+        this.addMessage("/time set <day|noon|night|midnight>  -  Change time of day", "#ffffff");
+        this.addMessage("/weather <clear|rain|thunder>  -  Change weather", "#ffffff");
+        this.addMessage("/heal  -  Restore full HP & mana", "#ffffff");
+        this.addMessage("/clear  -  Clear player inventory", "#ffffff");
+        this.addMessage("/dimension <overworld|nether|end|aether>  -  Warp dimensions", "#ffffff");
+        this.addMessage("/tps  -  Display ticks per second and tick latency", "#ffffff");
+    }
+
+    // --------------------------------------------
+    // /tps
+    // --------------------------------------------
+    cmdTps() {
+        const tpsData = (this.game && typeof this.game.getTPS === 'function')
+            ? this.game.getTPS()
+            : { tps1s: 20.0, tps5s: 20.0, tps15s: 20.0, mspt: 16.6 };
+
+        const colorVal = (val) => {
+            return (typeof val === 'number') ? val.toFixed(1) : val;
+        };
+
+        const tpsColor = tpsData.tps1s >= 19.0 ? '#55ff55' : (tpsData.tps1s >= 15.0 ? '#ffff55' : '#ff5555');
+        this.addMessage(`TPS from last 1s, 5s, 15s: ${colorVal(tpsData.tps1s)}, ${colorVal(tpsData.tps5s)}, ${colorVal(tpsData.tps15s)}`, tpsColor);
+        this.addMessage(`Tick time: ${tpsData.mspt.toFixed(1)}ms (Target: 20.0 TPS, 50.0ms)`, '#aaaaaa');
     }
 }
 

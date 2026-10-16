@@ -338,6 +338,7 @@ class Game {
 
         this.autoJumpEnabled = localStorage.getItem('slopcraft_autojump') !== 'false';
         this.viewBobbingEnabled = localStorage.getItem('slopcraft_viewbobbing') !== 'false';
+        this.tpsHistory = [];
         
         this._boundLoop = this.loop.bind(this);
 
@@ -534,13 +535,14 @@ class Game {
 
 
         this.world.onBlockDestroyed = (x, y, z, oldType, newType) => {
-            // Tall grass / Fern / Tall Fern drop wheat seeds (12% chance in MC)
+            // Tall grass / Fern / Tall Fern drop wheat seeds (50% chance, 20% chance of dropping 2)
             if (oldType === BLOCKS.TALL_GRASS || oldType === BLOCKS.FERN || oldType === BLOCKS.TALL_FERN) {
-                if (Math.random() < 0.12) {
+                if (Math.random() < 0.50) {
+                    const count = Math.random() < 0.20 ? 2 : 1;
                     const seedItem = new Item('material', 'wheat_seeds', {}, 'Wheat Seeds');
                     seedItem.stackable = true;
                     seedItem.maxStack = 64;
-                    this.entityManager.spawnItem(seedItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                    this.entityManager.spawnItem(seedItem, count, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
                 }
                 return;
             }
@@ -2926,7 +2928,7 @@ class Game {
                     let hasWater = false;
                     for (let dx = -4; dx <= 4; dx++) {
                         for (let dz = -4; dz <= 4; dz++) {
-                            for (let dy = 0; dy <= 1; dy++) {
+                            for (let dy = -1; dy <= 1; dy++) {
                                 const b = this.world.getBlock(bx + dx, by + dy, bz + dz);
                                 if (b === BLOCKS.WATER || b === BLOCKS.SWAMP_WATER) {
                                     hasWater = true;
@@ -3362,6 +3364,41 @@ class Game {
         }
     }
 
+    getTPS() {
+        if (!this.tpsHistory || this.tpsHistory.length === 0) {
+            return { tps1s: 20.0, tps5s: 20.0, tps15s: 20.0, mspt: 16.6 };
+        }
+        const now = performance.now();
+        const calcWindow = (windowMs) => {
+            const cutoff = now - windowMs;
+            let count = 0;
+            let sumDt = 0;
+            for (let i = this.tpsHistory.length - 1; i >= 0; i--) {
+                const entry = this.tpsHistory[i];
+                if (entry.time < cutoff) break;
+                count++;
+                sumDt += entry.dt;
+            }
+            if (count === 0 || sumDt <= 0) return 20.0;
+            const avgDt = sumDt / count;
+            // Minecraft target TPS is 20. If average dt <= 0.05s (20+ FPS), TPS is 20.0.
+            // If dt > 0.05s, TPS drops to (1 / avgDt)
+            const tps = avgDt <= 0.05 ? 20.0 : Math.min(20.0, 1.0 / avgDt);
+            return Math.round(tps * 10) / 10;
+        };
+
+        const tps1s = calcWindow(1000);
+        const tps5s = calcWindow(5000);
+        const tps15s = calcWindow(15000);
+
+        const recentEntries = this.tpsHistory.filter(e => e.time >= now - 1000);
+        const mspt = recentEntries.length > 0
+            ? Math.round((recentEntries.reduce((acc, e) => acc + e.dt, 0) / recentEntries.length) * 10000) / 10
+            : 16.6;
+
+        return { tps1s, tps5s, tps15s, mspt };
+    }
+
     loop() {
         requestAnimationFrame(this._boundLoop);
 
@@ -3380,6 +3417,14 @@ class Game {
         const time = performance.now();
         const dt = Math.min((time - this.lastTime) / 1000, 0.1);
         this.lastTime = time;
+
+        // TPS history tracking (rolling 15 seconds)
+        if (!this.tpsHistory) this.tpsHistory = [];
+        this.tpsHistory.push({ time, dt });
+        const tpsCutoff = time - 15000;
+        while (this.tpsHistory.length > 0 && this.tpsHistory[0].time < tpsCutoff) {
+            this.tpsHistory.shift();
+        }
 
         // FPS counter
         this.frames++;

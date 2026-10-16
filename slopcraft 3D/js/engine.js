@@ -2292,11 +2292,11 @@ export class World {
     }
 
     tickRandomBlocks() {
-        // Pick 96 random blocks per active chunk (approx 3 per subchunk like Minecraft)
+        // Pick random blocks per active chunk (increased to 220 to speed up hydration and crop growth by 1/3rd)
         for (const chunk of this.chunks.values()) {
             if (!chunk.blocks || chunk.blocks[0] === undefined) continue;
             
-            for (let i = 0; i < 160; i++) {
+            for (let i = 0; i < 220; i++) {
                 const rx = Math.floor(Math.random() * 16);
                 const ry = Math.floor(Math.random() * CHUNK_HEIGHT);
                 const rz = Math.floor(Math.random() * 16);
@@ -2461,15 +2461,30 @@ export class World {
                             }
                         }
                     }
+                } else if (block === window.BLOCKS.WATER || block === window.BLOCKS.SWAMP_WATER) {
+                    const wx = chunk.cx * 16 + rx;
+                    const wy = ry;
+                    const wz = chunk.cz * 16 + rz;
+                    // Water actively wets dry farmland in a 9x9 area (dx: -4..4, dz: -4..4, dy: -1..1) 1/3rd faster
+                    for (let dx = -4; dx <= 4; dx++) {
+                        for (let dz = -4; dz <= 4; dz++) {
+                            for (let dy = -1; dy <= 1; dy++) {
+                                const targetBlock = this.getBlock(wx + dx, wy + dy, wz + dz);
+                                if (targetBlock === window.BLOCKS.FARMLAND) {
+                                    this.setBlock(wx + dx, wy + dy, wz + dz, window.BLOCKS.FARMLAND_MOIST);
+                                }
+                            }
+                        }
+                    }
                 } else if (block === window.BLOCKS.FARMLAND || block === window.BLOCKS.FARMLAND_MOIST) {
                     const wx = chunk.cx * 16 + rx;
                     const wy = ry;
                     const wz = chunk.cz * 16 + rz;
-                    // Check horizontal Chebyshev distance 4 and dy in [0, 1] for water
+                    // Check horizontal 9x9 area (Chebyshev distance 4) and dy in [-1, 1] for water
                     let hasWater = false;
                     for (let dx = -4; dx <= 4 && !hasWater; dx++) {
                         for (let dz = -4; dz <= 4 && !hasWater; dz++) {
-                            for (let dy = 0; dy <= 1; dy++) {
+                            for (let dy = -1; dy <= 1; dy++) {
                                 const b = this.getBlock(wx + dx, wy + dy, wz + dz);
                                 if (b === window.BLOCKS.WATER || b === window.BLOCKS.SWAMP_WATER) {
                                     hasWater = true;
@@ -2502,7 +2517,8 @@ export class World {
                     const wz = chunk.cz * 16 + rz;
                     const below = this.getBlock(wx, wy - 1, wz);
                     const isMoist = below === window.BLOCKS.FARMLAND_MOIST;
-                    if (Math.random() < (isMoist ? 0.35 : 0.12)) {
+                    // Crops grow 1/3rd faster: moist 0.47 (was 0.35), dry 0.16 (was 0.12)
+                    if (Math.random() < (isMoist ? 0.47 : 0.16)) {
                         this.setBlock(wx, wy, wz, block + 1);
                     }
                 } else if (block >= window.BLOCKS.CARROTS_0 && block <= window.BLOCKS.CARROTS_2) {
@@ -2511,7 +2527,7 @@ export class World {
                     const wz = chunk.cz * 16 + rz;
                     const below = this.getBlock(wx, wy - 1, wz);
                     const isMoist = below === window.BLOCKS.FARMLAND_MOIST;
-                    if (Math.random() < (isMoist ? 0.35 : 0.12)) {
+                    if (Math.random() < (isMoist ? 0.47 : 0.16)) {
                         this.setBlock(wx, wy, wz, block + 1);
                     }
                 } else if (block >= window.BLOCKS.POTATOES_0 && block <= window.BLOCKS.POTATOES_2) {
@@ -2520,7 +2536,7 @@ export class World {
                     const wz = chunk.cz * 16 + rz;
                     const below = this.getBlock(wx, wy - 1, wz);
                     const isMoist = below === window.BLOCKS.FARMLAND_MOIST;
-                    if (Math.random() < (isMoist ? 0.35 : 0.12)) {
+                    if (Math.random() < (isMoist ? 0.47 : 0.16)) {
                         this.setBlock(wx, wy, wz, block + 1);
                     }
                 } else if (block >= window.BLOCKS.BEETROOTS_0 && block <= window.BLOCKS.BEETROOTS_2) {
@@ -2529,14 +2545,14 @@ export class World {
                     const wz = chunk.cz * 16 + rz;
                     const below = this.getBlock(wx, wy - 1, wz);
                     const isMoist = below === window.BLOCKS.FARMLAND_MOIST;
-                    if (Math.random() < (isMoist ? 0.35 : 0.12)) {
+                    if (Math.random() < (isMoist ? 0.47 : 0.16)) {
                         this.setBlock(wx, wy, wz, block + 1);
                     }
                 } else if (block === window.BLOCKS.PUMPKIN_STEM || block === window.BLOCKS.MELON_STEM) {
                     const wx = chunk.cx * 16 + rx;
                     const wy = ry;
                     const wz = chunk.cz * 16 + rz;
-                    if (Math.random() < 0.2) {
+                    if (Math.random() < 0.27) {
                         const hDirs = [[1,0], [-1,0], [0,1], [0,-1]];
                         const [dx, dz] = hDirs[Math.floor(Math.random() * hDirs.length)];
                         const tx = wx + dx, ty = wy, tz = wz + dz;
