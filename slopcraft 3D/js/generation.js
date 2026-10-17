@@ -2,14 +2,14 @@
 // generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=116';
-import { BLOCKS } from './textures.js?v=130';
+import { BLOCKS } from './textures.js?v=131';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=130';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=131';
 
 // Planet configurations
 export const BIOMES = {
     FOREST: { name: 'Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: true, grassColor: [0.475, 0.753, 0.353], foliageColor: [0.349, 0.682, 0.188] },
-    BIRCH_FOREST: { name: 'Birch Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isBirch: true, grassColor: [0.502, 0.765, 0.373], foliageColor: [0.380, 0.690, 0.220] },
+    BIRCH_FOREST: { name: 'Birch Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isBirch: true, grassColor: [0.533, 0.737, 0.439], foliageColor: [0.502, 0.655, 0.333] },
     PLAINS: { name: 'Plains', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 1.0, hasTrees: false, grassColor: [0.569, 0.741, 0.349], foliageColor: [0.467, 0.671, 0.184] },
     DESERT: { name: 'Desert', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, hasDeadBush: true, hasCactus: true, grassColor: [0.749, 0.718, 0.333], foliageColor: [0.682, 0.643, 0.165] },
     BEACH: { name: 'Beach', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.5, hasTrees: false, isBeach: true, grassColor: [0.569, 0.741, 0.349], foliageColor: [0.467, 0.671, 0.184] },
@@ -28,7 +28,7 @@ export const BIOMES = {
     CORAL_REEF: { name: 'Coral Reef', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.3, hasTrees: false, isCoralReef: true, grassColor: [0.557, 0.725, 0.443], foliageColor: [0.443, 0.655, 0.302] },
     DARK_FOREST: { name: 'Dark Forest', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isDark: true, hasMushrooms: true, grassColor: [0.314, 0.478, 0.196], foliageColor: [0.314, 0.478, 0.196] },
     MYSTIC_GROVE: { name: 'Mystic Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.6, hasTrees: true, isMystic: true, grassColor: [0.478, 0.902, 0.710], foliageColor: [0.322, 0.851, 0.639] },
-    TAIGA: { name: 'Taiga', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isTaiga: true, grassColor: [0.410, 0.680, 0.440], foliageColor: [0.340, 0.580, 0.360] },
+    TAIGA: { name: 'Taiga', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, isTaiga: true, grassColor: [0.525, 0.718, 0.514], foliageColor: [0.408, 0.647, 0.369] },
     REDWOOD_FOREST: { name: 'Redwood Forest', surface: BLOCKS.PODZOL, dirt: BLOCKS.DIRT, freq: 0.5, hasTrees: true, isRedwood: true, isTaiga: true, grassColor: [0.525, 0.718, 0.514], foliageColor: [0.408, 0.647, 0.369] }
 };
 

@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=130';
-import { getBiomeParams } from './generation.js?v=130';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=131';
+import { getBiomeParams } from './generation.js?v=131';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -1227,7 +1227,14 @@ export class Chunk {
                                 }
                             }
 
-                            const uvInfo = atlas.getUV(currentBlockType, texName);
+                            let uvInfo;
+                            if ((currentBlockType === BLOCKS.GRASS || currentBlockType === BLOCKS.SWAMP_GRASS || currentBlockType === BLOCKS.SAVANNA_GRASS) && face.name !== 'top' && face.name !== 'bottom') {
+                                const bInfo = getBiomeParams(wx, wz, planetParams);
+                                const bName = (bInfo && bInfo.biome && bInfo.biome.name) ? bInfo.biome.name : 'Plains';
+                                uvInfo = atlas.getUV(currentBlockType, 'side', bName);
+                            } else {
+                                uvInfo = atlas.getUV(currentBlockType, texName);
+                            }
 
                             // 4 vertices per face
                             for (let i = 0; i < 4; i++) {
