@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=133';
-import { getBiomeParams } from './generation.js?v=133';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=134';
+import { getBiomeParams } from './generation.js?v=134';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -489,6 +489,9 @@ export class Chunk {
             return 0;
         };
 
+        const wxBase = this.cx * CHUNK_SIZE;
+        const wzBase = this.cz * CHUNK_SIZE;
+
         // 5x5 Biome Color Blending: smooth continuous gradient across biome boundaries
         const plainsR = 145 / 255, plainsG = 189 / 255, plainsB = 89 / 255;
         const BLEND_RAD = 2; // 5x5 smoothing kernel
@@ -561,9 +564,6 @@ export class Chunk {
         let slightGlowTransparentIndexCount = 0;
 
         let vertexCount = 0;
-
-        const wxBase = this.cx * CHUNK_SIZE;
-        const wzBase = this.cz * CHUNK_SIZE;
 
         const pushCustomBox = (minX, minY, minZ, maxX, maxY, maxZ, bx, by, bz, uvTop, uvSide, uvBottom, cullMask = 0, aoMult = 1.0, isGlowing = false, isEndPortal = false, isTransparent = false) => {
             const addBoxQuad = (base) => {
@@ -839,9 +839,8 @@ export class Chunk {
                             const fCol = (bInfo && bInfo.biome && bInfo.biome.foliageColor) ? bInfo.biome.foliageColor : [0.416, 0.439, 0.224];
                             plantR = fCol[0]; plantG = fCol[1]; plantB = fCol[2];
                         } else if (blockType === BLOCKS.TALL_GRASS || blockType === BLOCKS.FERN || blockType === BLOCKS.OASIS_FERN) {
-                            const bInfo = getBiomeParams(wxBase + x, wzBase + z, planetParams);
-                            const gCol = (bInfo && bInfo.biome && bInfo.biome.grassColor) ? bInfo.biome.grassColor : [0.475, 0.753, 0.353];
-                            plantR = gCol[0]; plantG = gCol[1]; plantB = gCol[2];
+                            const bColIdx = (z * CHUNK_SIZE + x) * 3;
+                            plantR = blendedGrass[bColIdx]; plantG = blendedGrass[bColIdx + 1]; plantB = blendedGrass[bColIdx + 2];
                         }
 
                         const y0 = props.isCrop ? (y - 1/16) : y;
