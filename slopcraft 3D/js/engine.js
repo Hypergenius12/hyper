@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=141';
-import { getBiomeParams } from './generation.js?v=141';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=142';
+import { getBiomeParams } from './generation.js?v=142';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -1895,6 +1895,7 @@ export class World {
             vertexColors: true,
             transparent: true,
             alphaTest: 0.5,
+            depthWrite: true,
             side: THREE.DoubleSide
         });
         const matGlowCross = new THREE.MeshBasicMaterial({
@@ -1902,6 +1903,7 @@ export class World {
             vertexColors: true,
             transparent: true,
             alphaTest: 0.5,
+            depthWrite: true,
             side: THREE.DoubleSide
         });
         const matWater = new THREE.MeshLambertMaterial({
@@ -1918,6 +1920,7 @@ export class World {
             vertexColors: true,
             transparent: true,
             alphaTest: 0.25,
+            depthWrite: true,
             side: THREE.DoubleSide
         });
         const matGlowOpaque = new THREE.MeshBasicMaterial({
@@ -1930,6 +1933,7 @@ export class World {
             vertexColors: true,
             transparent: true,
             alphaTest: 0.1,
+            depthWrite: true,
             side: THREE.DoubleSide
         });
         const matSlightGlowOpaque = new THREE.MeshLambertMaterial({
@@ -1946,6 +1950,7 @@ export class World {
             vertexColors: true,
             transparent: true,
             alphaTest: 0.25,
+            depthWrite: true,
             side: THREE.DoubleSide,
             emissive: new THREE.Color(0xffffff),
             emissiveMap: textureAtlas.texture,
