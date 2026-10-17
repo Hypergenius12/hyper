@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=146';
-import { getBiomeParams } from './generation.js?v=146';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=147';
+import { getBiomeParams } from './generation.js?v=147';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -161,27 +161,31 @@ export class InputManager {
     }
 
     onKeyDown(e) {
-        // Shift + Escape: Free cursor without opening pause menu for live tweaking
-        if ((e.code === 'Escape' || e.key === 'Escape') && e.shiftKey) {
+        // If the user is typing in an input field (like creative search or chat), ignore game hotkeys!
+        const activeTag = document.activeElement ? document.activeElement.tagName : '';
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+            if (e.code === 'Escape') {
+                document.activeElement.blur();
+            }
+            return;
+        }
+
+        // 'L' key or Shift + Escape: Free cursor without opening pause menu so user can adjust lighting
+        const isLKey = (e.code === 'KeyL' || (!e.repeat && (e.key === 'l' || e.key === 'L'))) && !e.ctrlKey && !e.altKey && !e.metaKey;
+        const isShiftEsc = (e.code === 'Escape' || e.key === 'Escape') && e.shiftKey;
+        if (isLKey || isShiftEsc) {
             e.preventDefault();
             e.stopPropagation();
             if (this.isLocked) {
+                window._freeMouse = true;
                 window._shiftEscapeUnlocked = true;
                 if (document.exitPointerLock) document.exitPointerLock();
                 const studioPanel = document.getElementById('lighting-studio-panel');
                 if (studioPanel) studioPanel.classList.remove('minimized');
             } else {
+                window._freeMouse = false;
                 window._shiftEscapeUnlocked = false;
                 this.requestPointerLock();
-            }
-            return;
-        }
-
-        // If the user is typing in an input field (like creative search), ignore game hotkeys!
-        const activeTag = document.activeElement ? document.activeElement.tagName : '';
-        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
-            if (e.code === 'Escape') {
-                document.activeElement.blur();
             }
             return;
         }
@@ -233,7 +237,7 @@ export class InputManager {
         }
 
         if (e.code === 'Tab' || e.code === 'F3' || e.code === 'F5') e.preventDefault();
-        if (!this.isLocked && !['Escape', 'KeyE', 'KeyF', 'KeyP', 'Tab', 'KeyI', 'F3', 'F5', 'KeyQ', 'KeyM', 'KeyU'].includes(e.code)) return;
+        if (!this.isLocked && !['Escape', 'KeyE', 'KeyF', 'KeyP', 'Tab', 'KeyI', 'F3', 'F5', 'KeyQ', 'KeyM', 'KeyU', 'KeyL'].includes(e.code)) return;
 
         switch (e.code) {
             case 'KeyW': case 'ArrowUp': this.keys.forward = true; break;

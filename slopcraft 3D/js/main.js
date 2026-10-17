@@ -4,13 +4,13 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=146';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=146';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=146';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=146';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=146';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=146';
-import { initLightingStudio } from './lighting-studio.js?v=146';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=147';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=147';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=147';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=147';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=147';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=147';
+import { initLightingStudio } from './lighting-studio.js?v=147';
 import { AudioManager } from './audio.js?v=139';
 import { BiomeMap } from './map.js?v=139';
 import { DevMode } from './dev.js?v=139';
@@ -1023,8 +1023,8 @@ class Game {
             const devModeOpen = this.devMode && this.devMode.isOpen;
             const mapOpen = this.biomeMap && this.biomeMap.isOpen;
             const chatOpen = this.chat && this.chat.isOpen;
-            const shiftEscapeUnlocked = window._shiftEscapeUnlocked;
-            if (!this.input.isLocked && !this.ui.isOpen && !devModeOpen && !mapOpen && !chatOpen && !shiftEscapeUnlocked && document.getElementById('start-screen').classList.contains('hidden')) {
+            const freeMouse = window._freeMouse || window._shiftEscapeUnlocked;
+            if (!this.input.isLocked && !this.ui.isOpen && !devModeOpen && !mapOpen && !chatOpen && !freeMouse && document.getElementById('start-screen').classList.contains('hidden')) {
                 // We lost pointer lock but the inventory/map/dev/chat is not open, show pause
                 if (ps) ps.classList.remove('hidden');
                 this.isPaused = true;
@@ -1032,35 +1032,46 @@ class Game {
                 if (ps) ps.classList.add('hidden');
                 if (this.input.isLocked) {
                     this.isPaused = false;
+                    window._freeMouse = false;
                     window._shiftEscapeUnlocked = false;
                 }
             }
         });
 
-        // Global Shift + Escape listener to release or reclaim mouse without opening pause menu
+        // Global 'L' or 'Shift + Escape' listener to release or reclaim mouse without opening pause menu
         window.addEventListener('keydown', (e) => {
-            if ((e.code === 'Escape' || e.key === 'Escape') && e.shiftKey) {
+            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+
+            const isLKey = (e.code === 'KeyL' || (!e.repeat && (e.key === 'l' || e.key === 'L'))) && !e.ctrlKey && !e.altKey && !e.metaKey;
+            const isShiftEsc = (e.code === 'Escape' || e.key === 'Escape') && e.shiftKey;
+
+            if (isLKey || isShiftEsc) {
                 e.preventDefault();
                 e.stopPropagation();
                 if (this.input.isLocked) {
+                    window._freeMouse = true;
                     window._shiftEscapeUnlocked = true;
                     if (document.exitPointerLock) document.exitPointerLock();
                     const studioPanel = document.getElementById('lighting-studio-panel');
                     if (studioPanel) studioPanel.classList.remove('minimized');
                 } else {
+                    window._freeMouse = false;
                     window._shiftEscapeUnlocked = false;
                     this.input.requestPointerLock();
                 }
             } else if (e.code === 'Escape' && !e.shiftKey) {
-                // Regular Escape cancels Shift+Escape free cursor mode
+                // Regular Escape cancels free mouse mode and allows normal pause menu
+                window._freeMouse = false;
                 window._shiftEscapeUnlocked = false;
             }
         }, true);
 
-        // Clicking the 3D canvas while unlocked via Shift+Escape re-locks the mouse
+        // Clicking the 3D canvas while unlocked via L / Shift+Escape re-locks the mouse
         if (this.engine && this.engine.renderer && this.engine.renderer.domElement) {
             this.engine.renderer.domElement.addEventListener('click', () => {
-                if (window._shiftEscapeUnlocked && !this.input.isLocked) {
+                if ((window._freeMouse || window._shiftEscapeUnlocked) && !this.input.isLocked) {
+                    window._freeMouse = false;
                     window._shiftEscapeUnlocked = false;
                     this.input.requestPointerLock();
                 }
