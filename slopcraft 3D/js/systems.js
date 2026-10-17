@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=144';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=144';
+import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=145';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=145';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -110,7 +110,8 @@ export class LightingSystem {
                 bottomColor: { value: new THREE.Color(0x182030) },
                 sunDirection: { value: new THREE.Vector3(0, 1, 0) },
                 sunGlowColor: { value: new THREE.Color(0xffa458) },
-                sunGlowIntensity: { value: 0.0 }
+                sunGlowIntensity: { value: 0.0 },
+                skyExponent: { value: 1.15 }
             },
             vertexShader: `
                 varying vec3 vWorldPosition;
@@ -127,6 +128,7 @@ export class LightingSystem {
                 uniform vec3 sunDirection;
                 uniform vec3 sunGlowColor;
                 uniform float sunGlowIntensity;
+                uniform float skyExponent;
                 varying vec3 vWorldPosition;
 
                 void main() {
@@ -137,7 +139,7 @@ export class LightingSystem {
                     if (y >= 0.0) {
                         // Authentic Minecraft celestial hemisphere fade:
                         // Gentle, smooth fade from soft milky horizon haze to pale azure zenith
-                        float t = clamp(pow(y, 1.15), 0.0, 1.0);
+                        float t = clamp(pow(y, max(0.05, skyExponent)), 0.0, 1.0);
                         col = mix(horizonColor, topColor, t);
                     } else {
                         // Smooth fade into void below horizon
@@ -304,15 +306,30 @@ export class LightingSystem {
             if (this.timeOfDay > 1) this.timeOfDay -= 1;
         }
 
+        const cfg = (window._customLightingConfig && window._customLightingConfig.active) ? window._customLightingConfig : null;
+
+        if (cfg) {
+            if (cfg.dayLength !== undefined && cfg.dayLength > 0) {
+                this.dayLength = cfg.dayLength;
+            }
+            if (cfg.freezeTime) {
+                this.timeOfDay = cfg.timeOfDay;
+            }
+            if (cfg.weatherForce && cfg.weatherForce !== 'auto') {
+                this.weather = cfg.weatherForce;
+            }
+        }
+
         const angle = (this.timeOfDay - 0.5) * Math.PI * 2;
         const moonAngle = angle + Math.PI;
         
         // In Minecraft, the celestial axis rotates across the sky with a slight diagonal tilt to cast dynamic shadows
         const celestialDist = 280; // Distance towards sky dome for authentic scale
+        const sunTilt = (cfg && cfg.sunTilt !== undefined) ? cfg.sunTilt : 32;
         this.sunLight.position.set(
             cameraPos.x + Math.sin(angle) * 80,
             cameraPos.y + Math.cos(angle) * 80,
-            cameraPos.z + 32
+            cameraPos.z + sunTilt
         );
         this.sunLight.target.position.copy(cameraPos);
         this.sunLight.target.updateMatrixWorld();
@@ -328,7 +345,7 @@ export class LightingSystem {
         this.moonLight.position.set(
             cameraPos.x + Math.sin(moonAngle) * 80,
             cameraPos.y + Math.cos(moonAngle) * 80,
-            cameraPos.z - 32
+            cameraPos.z - sunTilt
         );
         this.moonLight.target.position.copy(cameraPos);
         this.moonLight.target.updateMatrixWorld();
@@ -339,6 +356,15 @@ export class LightingSystem {
             cameraPos.z
         );
         this.moonMesh.lookAt(cameraPos);
+
+        if (cfg && cfg.celestialScale !== undefined) {
+            const s = Math.max(0.2, cfg.celestialScale);
+            this.sunMesh.scale.set(s, s, s);
+            this.moonMesh.scale.set(s, s, s);
+        } else {
+            this.sunMesh.scale.set(1, 1, 1);
+            this.moonMesh.scale.set(1, 1, 1);
+        }
 
         // Advance moon phase each in-game day (8 lunar phases in 4x2 grid)
         if (this.moonTexture) {
@@ -393,17 +419,16 @@ export class LightingSystem {
         }
 
         // Live Lighting Studio Override
-        if (window._customLightingConfig && window._customLightingConfig.active) {
-            const cfg = window._customLightingConfig;
-            if (cfg.freezeTime) {
-                this.timeOfDay = cfg.timeOfDay;
-            }
+        if (cfg) {
             if (cfg.ambIntensity !== undefined) state.ambIntensity = cfg.ambIntensity;
             if (cfg.sunIntensity !== undefined) state.sun = cfg.sunIntensity;
             if (cfg.ambColor) state.amb.set(cfg.ambColor);
             if (cfg.sunColor) this.sunLight.color.set(cfg.sunColor);
+            if (cfg.moonIntensity !== undefined) state.moon = cfg.moonIntensity;
+            if (cfg.moonColor) this.moonLight.color.set(cfg.moonColor);
             if (cfg.skyTopColor && this.skyMat && this.skyMat.uniforms.topColor) {
                 this.skyMat.uniforms.topColor.value.set(cfg.skyTopColor);
+                state.top.set(cfg.skyTopColor);
             }
             if (cfg.skyHorizonColor && this.skyMat && this.skyMat.uniforms.horizonColor) {
                 this.skyMat.uniforms.horizonColor.value.set(cfg.skyHorizonColor);
@@ -412,6 +437,12 @@ export class LightingSystem {
             if (cfg.skyBottomColor && this.skyMat && this.skyMat.uniforms.bottomColor) {
                 this.skyMat.uniforms.bottomColor.value.set(cfg.skyBottomColor);
             }
+            if (cfg.skyExponent !== undefined && this.skyMat && this.skyMat.uniforms.skyExponent) {
+                this.skyMat.uniforms.skyExponent.value = cfg.skyExponent;
+            }
+            if (cfg.sunGlowIntensity !== undefined) state.glow = cfg.sunGlowIntensity;
+            if (cfg.sunGlowColor) state.glowColor = new THREE.Color(cfg.sunGlowColor);
+            if (cfg.brightnessMultiplier !== undefined) this.brightnessMultiplier = cfg.brightnessMultiplier;
         }
 
         // Dynamic Underground & Cave Ambient Lighting
@@ -441,7 +472,6 @@ export class LightingSystem {
 
             // Underground depth & overhead occlusion:
             // True caves require substantial subterranean rock overhead (solidAbove >= 5 and cy < 60).
-            // Being under a single tree trunk or a 1-2 block overhang on the surface must NOT plunge the world into darkness!
             if (cy < 60 && solidAbove >= 5 && firstSolidDist < 24) {
                 const depthBoost = Math.max(0, Math.min(1.0, (56 - cy) / 40));
                 const roofDensity = Math.min(1.0, (solidAbove - 4) / 6);
@@ -452,8 +482,8 @@ export class LightingSystem {
         }
 
         this.caveFactor = THREE.MathUtils.lerp(this.caveFactor, targetCaveFactor, Math.min(1.0, dt * 3.0));
-        const caveFloor = (window._customLightingConfig && window._customLightingConfig.active && window._customLightingConfig.caveFloorAmb !== undefined)
-            ? window._customLightingConfig.caveFloorAmb
+        const caveFloor = (cfg && cfg.caveFloorAmb !== undefined)
+            ? cfg.caveFloorAmb
             : 0.20;
         this.lastAmbientIntensity = THREE.MathUtils.lerp(state.ambIntensity, caveFloor, this.caveFactor);
 
@@ -504,8 +534,10 @@ export class LightingSystem {
                 } else if (currentDimension === 'end') {
                     this.scene.fog.density = 0.0025;
                 } else {
-                    const caveDensity = (this.caveFactor > 0.1) ? 0.012 : (this.scene.fog.baseDensity || 0.003);
-                    this.scene.fog.density = THREE.MathUtils.lerp(this.scene.fog.density, caveDensity, 0.05);
+                    const defaultCaveDensity = (cfg && cfg.caveFogDensity !== undefined) ? cfg.caveFogDensity : 0.012;
+                    const defaultOverworldDensity = (cfg && cfg.fogDensity !== undefined) ? cfg.fogDensity : (this.scene.fog.baseDensity || 0.003);
+                    const targetDensity = (this.caveFactor > 0.1) ? defaultCaveDensity : defaultOverworldDensity;
+                    this.scene.fog.density = THREE.MathUtils.lerp(this.scene.fog.density, targetDensity, 0.05);
                 }
             }
         }
@@ -522,6 +554,9 @@ export class LightingSystem {
                 const warmFog = isSunrise ? new THREE.Color(0xffba84) : new THREE.Color(0xf08855);
                 this.scene.fog.color.lerp(warmFog, Math.min(1, horizonFrac * 0.35));
             }
+            if (cfg && !cfg.fogMatchHorizon && cfg.customFogColor) {
+                this.scene.fog.color.set(cfg.customFogColor);
+            }
         }
 
         // Update SkyDome gradient uniforms (perfect seamless match with horizon fog)
@@ -537,15 +572,33 @@ export class LightingSystem {
         // Update star field visibility
         if (this._stars) {
             const t = this.timeOfDay;
-            // Stars visible from ~0.8 (nightfall) to ~0.2 (dawn)
             let starOpacity = 0;
             if (t > 0.8 || t < 0.2) {
                 starOpacity = t > 0.8 ? (t - 0.8) / 0.1 : (0.2 - t) / 0.1;
                 starOpacity = Math.min(1, starOpacity);
             }
-            this._stars.material.opacity = starOpacity * 0.9;
-            this._stars.visible = starOpacity > 0.01;
+            const starMult = (cfg && cfg.starBrightness !== undefined) ? cfg.starBrightness : 1.0;
+            this._stars.material.opacity = starOpacity * 0.9 * starMult;
+            this._stars.visible = this._stars.material.opacity > 0.01;
             this._stars.position.copy(cameraPos);
+        }
+
+        // Live CloudSystem Overrides
+        if (window.game && window.game.cloudSystem && cfg) {
+            const cs = window.game.cloudSystem;
+            if (cfg.cloudVisible !== undefined && cs.clouds) {
+                cs.clouds.visible = cfg.cloudVisible;
+            }
+            if (cfg.cloudOpacity !== undefined && cs.cloudMat) {
+                cs.cloudMat.opacity = cfg.cloudOpacity;
+            }
+            if (cfg.cloudColor && cs.cloudMat) {
+                cs.cloudMat.color.set(cfg.cloudColor);
+            }
+            if (cfg.cloudAltitude !== undefined && cs.clouds) {
+                cs.cloudAltitude = cfg.cloudAltitude;
+                cs.clouds.position.y = cfg.cloudAltitude;
+            }
         }
     }
 
@@ -628,16 +681,30 @@ export class TorchLightSystem {
                 const torch = torchDists[i].torch;
                 light.position.copy(torch.position);
                 
+                const cfg = (window._customLightingConfig && window._customLightingConfig.active) ? window._customLightingConfig : null;
                 const t = this._time + torch.flickerOffset;
-                const flicker = Math.sin(t * 7.3) * 0.15
+                const flickerAmp = (cfg && cfg.torchFlicker !== undefined) ? cfg.torchFlicker : 0.20;
+                const flicker = (Math.sin(t * 7.3) * 0.15
                               + Math.sin(t * 13.7) * 0.08
-                              + Math.sin(t * 23.1) * 0.04;
-                light.intensity = 8.0 * (1 + flicker);
+                              + Math.sin(t * 23.1) * 0.04) * (flickerAmp / 0.20);
+
+                const baseTorchIntensity = (cfg && cfg.torchIntensity !== undefined) ? cfg.torchIntensity : 8.0;
+                light.intensity = baseTorchIntensity * (1 + flicker);
                 
-                const r = 1.0;
-                const g = 0.38 + flicker * 0.15;
-                const b = 0.0;
-                light.color.setRGB(r, g, b);
+                if (cfg && cfg.torchDistance !== undefined) {
+                    light.distance = cfg.torchDistance;
+                } else {
+                    light.distance = 60;
+                }
+
+                if (cfg && cfg.torchColor) {
+                    light.color.set(cfg.torchColor);
+                } else {
+                    const r = 1.0;
+                    const g = 0.38 + flicker * 0.15;
+                    const b = 0.0;
+                    light.color.setRGB(r, g, b);
+                }
             } else {
                 light.intensity = 0;
                 light.position.set(0, -10000, 0);

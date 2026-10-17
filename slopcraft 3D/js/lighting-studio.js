@@ -8,16 +8,52 @@ export function initLightingStudio() {
 
     const defaultConfig = {
         active: true,
+        // Celestial & Sun
         freezeTime: true,
         timeOfDay: 0.50,
-        ambIntensity: 0.75,
+        dayLength: 600,
+        sunTilt: 32,
         sunIntensity: 0.65,
-        ambColor: "#dce5f4",
         sunColor: "#fff8ea",
+        moonIntensity: 0.20,
+        moonColor: "#3c4a6e",
+        celestialScale: 1.0,
+
+        // Ambient & Brightness
+        ambIntensity: 0.75,
+        ambColor: "#dce5f4",
+        brightnessMultiplier: 1.0,
+
+        // Caves & Underground
+        caveFloorAmb: 0.20,
+        caveFogDensity: 0.012,
+
+        // Sky Dome & Horizon
         skyTopColor: "#78a7ff",
         skyHorizonColor: "#c0d8ff",
         skyBottomColor: "#182030",
-        caveFloorAmb: 0.20
+        skyExponent: 1.15,
+        sunGlowIntensity: 0.70,
+        sunGlowColor: "#ffa458",
+
+        // Fog & Atmosphere
+        fogDensity: 0.0030,
+        fogMatchHorizon: true,
+        customFogColor: "#c0d8ff",
+
+        // Torches & Point Lights
+        torchIntensity: 8.0,
+        torchDistance: 60,
+        torchColor: "#ff7711",
+        torchFlicker: 0.20,
+
+        // Clouds, Stars & Weather
+        cloudVisible: true,
+        cloudOpacity: 0.82,
+        cloudColor: "#ffffff",
+        cloudAltitude: 128,
+        starBrightness: 1.0,
+        weatherForce: 'clear'
     };
 
     window._customLightingConfig = { ...defaultConfig };
@@ -30,7 +66,7 @@ export function initLightingStudio() {
             top: 14px;
             right: 14px;
             z-index: 100000;
-            background: rgba(18, 24, 38, 0.88);
+            background: rgba(18, 24, 38, 0.90);
             border: 1px solid rgba(255, 255, 255, 0.25);
             border-radius: 8px;
             color: #fff;
@@ -39,8 +75,8 @@ export function initLightingStudio() {
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.45);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -48,7 +84,7 @@ export function initLightingStudio() {
             transition: all 0.2s ease;
         }
         #lighting-studio-toggle:hover {
-            background: rgba(30, 40, 60, 0.95);
+            background: rgba(30, 42, 64, 0.98);
             border-color: #58a6ff;
             transform: translateY(-1px);
         }
@@ -56,13 +92,13 @@ export function initLightingStudio() {
             position: fixed;
             top: 56px;
             right: 14px;
-            width: 320px;
+            width: 340px;
             max-height: calc(100vh - 72px);
-            background: rgba(14, 18, 28, 0.92);
-            backdrop-filter: blur(14px);
+            background: rgba(14, 18, 28, 0.94);
+            backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.18);
             border-radius: 12px;
-            box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.65);
             z-index: 100000;
             color: #e6edf3;
             font-family: 'Space Grotesk', system-ui, sans-serif;
@@ -104,21 +140,51 @@ export function initLightingStudio() {
             padding: 12px 14px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
-        .ls-section-title {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #7d8590;
+        .ls-accordion {
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            overflow: hidden;
+        }
+        .ls-accordion-header {
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 11px;
             font-weight: 700;
-            margin-top: 4px;
-            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+            color: #8b949e;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .ls-accordion-header:hover {
+            background: rgba(255, 255, 255, 0.09);
+            color: #e6edf3;
+        }
+        .ls-accordion-content {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+        .ls-accordion.collapsed .ls-accordion-content {
+            display: none;
+        }
+        .ls-accordion-arrow {
+            font-size: 9px;
+            transition: transform 0.2s ease;
+        }
+        .ls-accordion.collapsed .ls-accordion-arrow {
+            transform: rotate(-90deg);
         }
         .ls-row {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 3px;
         }
         .ls-label-row {
             display: flex;
@@ -146,11 +212,22 @@ export function initLightingStudio() {
             justify-content: space-between;
             align-items: center;
             padding: 2px 0;
+            font-size: 11px;
+        }
+        .ls-color-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ls-color-hex {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #8b949e;
         }
         .ls-color-input {
-            width: 32px;
-            height: 24px;
-            border: 1px solid rgba(255,255,255,0.2);
+            width: 28px;
+            height: 22px;
+            border: 1px solid rgba(255,255,255,0.25);
             border-radius: 4px;
             background: none;
             cursor: pointer;
@@ -162,12 +239,39 @@ export function initLightingStudio() {
             gap: 8px;
             font-size: 11px;
             cursor: pointer;
+            color: #c9d1d9;
+        }
+        .ls-btn-group {
+            display: flex;
+            gap: 4px;
+        }
+        .ls-group-btn {
+            flex: 1;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #c9d1d9;
+            padding: 5px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s ease;
+        }
+        .ls-group-btn:hover {
+            background: rgba(56, 139, 253, 0.25);
+            border-color: #388bfd;
+            color: #fff;
+        }
+        .ls-group-btn.active {
+            background: #238636;
+            border-color: #3fb950;
+            color: #fff;
+            font-weight: 600;
         }
         .ls-presets {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 6px;
-            margin-top: 4px;
         }
         .ls-preset-btn {
             background: rgba(255,255,255,0.08);
@@ -175,7 +279,7 @@ export function initLightingStudio() {
             color: #c9d1d9;
             padding: 6px 8px;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 10.5px;
             cursor: pointer;
             transition: all 0.15s ease;
             text-align: center;
@@ -196,7 +300,7 @@ export function initLightingStudio() {
             cursor: pointer;
             text-align: center;
             transition: all 0.2s ease;
-            margin-top: 6px;
+            margin-top: 4px;
         }
         .ls-copy-btn:hover {
             background: #2ea043;
@@ -204,13 +308,13 @@ export function initLightingStudio() {
         }
         .ls-json-box {
             width: 100%;
-            height: 80px;
-            background: rgba(0,0,0,0.4);
+            height: 90px;
+            background: rgba(0,0,0,0.5);
             border: 1px solid rgba(255,255,255,0.12);
             border-radius: 6px;
             color: #7ee787;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
+            font-size: 9.5px;
             padding: 6px;
             box-sizing: border-box;
             resize: vertical;
@@ -228,8 +332,8 @@ export function initLightingStudio() {
     const container = document.createElement('div');
     container.id = 'lighting-studio-container';
 
-    // Stop all clicks/touches from passing through to canvas/pointer lock
-    ['mousedown', 'mouseup', 'click', 'pointerdown', 'pointerup', 'keydown', 'keyup', 'touchstart', 'touchend'].forEach(evt => {
+    // Stop all clicks/touches/keys from leaking into the game
+    ['mousedown', 'mouseup', 'click', 'pointerdown', 'pointerup', 'keydown', 'keyup', 'touchstart', 'touchend', 'wheel'].forEach(evt => {
         container.addEventListener(evt, e => e.stopPropagation());
     });
 
@@ -244,110 +348,423 @@ export function initLightingStudio() {
     panel.id = 'lighting-studio-panel';
     panel.innerHTML = `
         <div class="ls-header">
-            <span>🎨 Live Lighting Studio</span>
+            <span>🎨 Slopcraft Lighting Studio</span>
             <button class="ls-close-btn" id="ls-close-btn" title="Minimize Panel">✕</button>
         </div>
         <div class="ls-body">
-            <div class="ls-section-title">Day/Night Cycle</div>
-            <div class="ls-row">
-                <div class="ls-label-row">
-                    <span>Time of Day</span>
-                    <span class="ls-val" id="val-timeOfDay">0.50 (Noon)</span>
-                </div>
-                <input type="range" class="ls-input-range" id="input-timeOfDay" min="0" max="1" step="0.005" value="0.50">
-            </div>
-            <label class="ls-checkbox-row">
-                <input type="checkbox" id="input-freezeTime" checked>
-                <span>Freeze Time of Day</span>
-            </label>
 
-            <div class="ls-section-title">Intensity & Brightness</div>
-            <div class="ls-row">
-                <div class="ls-label-row">
-                    <span>Ambient Light Intensity</span>
-                    <span class="ls-val" id="val-ambIntensity">0.75</span>
+            <!-- 1. Celestial & Sun -->
+            <div class="ls-accordion" id="sec-celestial">
+                <div class="ls-accordion-header">
+                    <span>☀️ Celestial & Sun Mechanics</span>
+                    <span class="ls-accordion-arrow">▼</span>
                 </div>
-                <input type="range" class="ls-input-range" id="input-ambIntensity" min="0.10" max="2.50" step="0.01" value="0.75">
-            </div>
-            <div class="ls-row">
-                <div class="ls-label-row">
-                    <span>Sun Light Intensity</span>
-                    <span class="ls-val" id="val-sunIntensity">0.65</span>
+                <div class="ls-accordion-content">
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Time of Day</span>
+                            <span class="ls-val" id="val-timeOfDay">0.50 (Noon)</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-timeOfDay" min="0" max="1" step="0.005" value="0.50">
+                    </div>
+                    <label class="ls-checkbox-row">
+                        <input type="checkbox" id="input-freezeTime" checked>
+                        <span>Freeze Time of Day</span>
+                    </label>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Day Cycle Length (s)</span>
+                            <span class="ls-val" id="val-dayLength">600s</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-dayLength" min="30" max="1800" step="10" value="600">
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Sun Orbit Tilt (Z-Offset)</span>
+                            <span class="ls-val" id="val-sunTilt">32</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-sunTilt" min="-80" max="80" step="1" value="32">
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Sun Light Intensity</span>
+                            <span class="ls-val" id="val-sunIntensity">0.65</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-sunIntensity" min="0.00" max="2.50" step="0.01" value="0.65">
+                    </div>
+                    <div class="ls-color-row">
+                        <span>Sun Light Tint</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-sunColor">#fff8ea</span>
+                            <input type="color" class="ls-color-input" id="input-sunColor" value="#fff8ea">
+                        </div>
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Moon Light Intensity</span>
+                            <span class="ls-val" id="val-moonIntensity">0.20</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-moonIntensity" min="0.00" max="1.00" step="0.01" value="0.20">
+                    </div>
+                    <div class="ls-color-row">
+                        <span>Moon Light Tint</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-moonColor">#3c4a6e</span>
+                            <input type="color" class="ls-color-input" id="input-moonColor" value="#3c4a6e">
+                        </div>
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Sun/Moon Sky Mesh Size</span>
+                            <span class="ls-val" id="val-celestialScale">1.00x</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-celestialScale" min="0.4" max="3.0" step="0.1" value="1.0">
+                    </div>
                 </div>
-                <input type="range" class="ls-input-range" id="input-sunIntensity" min="0.00" max="2.50" step="0.01" value="0.65">
-            </div>
-            <div class="ls-row">
-                <div class="ls-label-row">
-                    <span>Cave Darkness Floor</span>
-                    <span class="ls-val" id="val-caveFloorAmb">0.20</span>
-                </div>
-                <input type="range" class="ls-input-range" id="input-caveFloorAmb" min="0.05" max="0.80" step="0.01" value="0.20">
             </div>
 
-            <div class="ls-section-title">Colors & Sky</div>
-            <div class="ls-color-row">
-                <span>Ambient Light Tint</span>
-                <input type="color" class="ls-color-input" id="input-ambColor" value="#dce5f4">
-            </div>
-            <div class="ls-color-row">
-                <span>Sun Light Tint</span>
-                <input type="color" class="ls-color-input" id="input-sunColor" value="#fff8ea">
-            </div>
-            <div class="ls-color-row">
-                <span>Sky Zenith (Top)</span>
-                <input type="color" class="ls-color-input" id="input-skyTopColor" value="#78a7ff">
-            </div>
-            <div class="ls-color-row">
-                <span>Sky Horizon</span>
-                <input type="color" class="ls-color-input" id="input-skyHorizonColor" value="#c0d8ff">
-            </div>
-            <div class="ls-color-row">
-                <span>Sky Bottom / Void</span>
-                <input type="color" class="ls-color-input" id="input-skyBottomColor" value="#182030">
+            <!-- 2. Ambient & Surface -->
+            <div class="ls-accordion" id="sec-ambient">
+                <div class="ls-accordion-header">
+                    <span>💡 Ambient & Surface Lighting</span>
+                    <span class="ls-accordion-arrow">▼</span>
+                </div>
+                <div class="ls-accordion-content">
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Ambient Light Intensity</span>
+                            <span class="ls-val" id="val-ambIntensity">0.75</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-ambIntensity" min="0.10" max="2.50" step="0.01" value="0.75">
+                    </div>
+                    <div class="ls-color-row">
+                        <span>Ambient Light Tint</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-ambColor">#dce5f4</span>
+                            <input type="color" class="ls-color-input" id="input-ambColor" value="#dce5f4">
+                        </div>
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Global Brightness Multiplier</span>
+                            <span class="ls-val" id="val-brightnessMultiplier">1.00x</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-brightnessMultiplier" min="0.50" max="2.00" step="0.05" value="1.00">
+                    </div>
+                </div>
             </div>
 
-            <div class="ls-section-title">Quick Presets</div>
-            <div class="ls-presets">
-                <button class="ls-preset-btn" id="preset-radiant">☀️ Radiant Day</button>
-                <button class="ls-preset-btn" id="preset-mc">⛏️ Classic MC</button>
-                <button class="ls-preset-btn" id="preset-superbright">⚡ Extra Bright</button>
-                <button class="ls-preset-btn" id="preset-sunset">🌅 Sunset</button>
-                <button class="ls-preset-btn" id="preset-night">🌙 Night</button>
-                <button class="ls-preset-btn" id="preset-reset">🔄 Reset</button>
+            <!-- 3. Caves & Underground -->
+            <div class="ls-accordion" id="sec-caves">
+                <div class="ls-accordion-header">
+                    <span>⛏️ Caves & Underground</span>
+                    <span class="ls-accordion-arrow">▼</span>
+                </div>
+                <div class="ls-accordion-content">
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Cave Darkness Floor</span>
+                            <span class="ls-val" id="val-caveFloorAmb">0.20</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-caveFloorAmb" min="0.00" max="0.80" step="0.01" value="0.20">
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Deep Cave Fog Density</span>
+                            <span class="ls-val" id="val-caveFogDensity">0.012</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-caveFogDensity" min="0.000" max="0.040" step="0.001" value="0.012">
+                    </div>
+                </div>
             </div>
 
-            <div class="ls-section-title">Export Config</div>
-            <button class="ls-copy-btn" id="ls-copy-btn">📋 Copy Config JSON</button>
-            <textarea class="ls-json-box" id="ls-json-box" readonly></textarea>
-            <div class="ls-note">Slide to tune. Click "Copy Config JSON" and paste it in chat so Antigravity can bake it as the permanent default!</div>
+            <!-- 4. Sky Dome & Atmosphere -->
+            <div class="ls-accordion" id="sec-sky">
+                <div class="ls-accordion-header">
+                    <span>🌫️ Sky Dome & Atmosphere</span>
+                    <span class="ls-accordion-arrow">▼</span>
+                </div>
+                <div class="ls-accordion-content">
+                    <div class="ls-color-row">
+                        <span>Sky Zenith (Top)</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-skyTopColor">#78a7ff</span>
+                            <input type="color" class="ls-color-input" id="input-skyTopColor" value="#78a7ff">
+                        </div>
+                    </div>
+                    <div class="ls-color-row">
+                        <span>Sky Horizon Haze</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-skyHorizonColor">#c0d8ff</span>
+                            <input type="color" class="ls-color-input" id="input-skyHorizonColor" value="#c0d8ff">
+                        </div>
+                    </div>
+                    <div class="ls-color-row">
+                        <span>Sky Void / Bottom</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-skyBottomColor">#182030</span>
+                            <input type="color" class="ls-color-input" id="input-skyBottomColor" value="#182030">
+                        </div>
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Sky Gradient Curve (Exponent)</span>
+                            <span class="ls-val" id="val-skyExponent">1.15</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-skyExponent" min="0.40" max="3.00" step="0.05" value="1.15">
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Sunrise/Sunset Glow Intensity</span>
+                            <span class="ls-val" id="val-sunGlowIntensity">0.70</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-sunGlowIntensity" min="0.00" max="1.50" step="0.05" value="0.70">
+                    </div>
+                    <div class="ls-color-row">
+                        <span>Sunrise/Sunset Glow Color</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-sunGlowColor">#ffa458</span>
+                            <input type="color" class="ls-color-input" id="input-sunGlowColor" value="#ffa458">
+                        </div>
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Overworld Fog Density</span>
+                            <span class="ls-val" id="val-fogDensity">0.0030</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-fogDensity" min="0.0000" max="0.0150" step="0.0005" value="0.0030">
+                    </div>
+                    <label class="ls-checkbox-row">
+                        <input type="checkbox" id="input-fogMatchHorizon" checked>
+                        <span>Fog Auto-Matches Horizon Color</span>
+                    </label>
+                    <div class="ls-color-row" id="row-customFogColor">
+                        <span>Custom Fog Color</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-customFogColor">#c0d8ff</span>
+                            <input type="color" class="ls-color-input" id="input-customFogColor" value="#c0d8ff">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Torches & Point Lights -->
+            <div class="ls-accordion" id="sec-torches">
+                <div class="ls-accordion-header">
+                    <span>🔥 Torches & Point Lights</span>
+                    <span class="ls-accordion-arrow">▼</span>
+                </div>
+                <div class="ls-accordion-content">
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Torch Light Intensity</span>
+                            <span class="ls-val" id="val-torchIntensity">8.0</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-torchIntensity" min="0.0" max="25.0" step="0.5" value="8.0">
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Torch Light Radius / Range</span>
+                            <span class="ls-val" id="val-torchDistance">60m</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-torchDistance" min="10" max="100" step="5" value="60">
+                    </div>
+                    <div class="ls-color-row">
+                        <span>Torch Light Tint</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-torchColor">#ff7711</span>
+                            <input type="color" class="ls-color-input" id="input-torchColor" value="#ff7711">
+                        </div>
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Torch Flame Flicker Amount</span>
+                            <span class="ls-val" id="val-torchFlicker">0.20</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-torchFlicker" min="0.00" max="0.80" step="0.02" value="0.20">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Clouds, Stars & Weather -->
+            <div class="ls-accordion" id="sec-clouds">
+                <div class="ls-accordion-header">
+                    <span>☁️ Clouds, Stars & Weather</span>
+                    <span class="ls-accordion-arrow">▼</span>
+                </div>
+                <div class="ls-accordion-content">
+                    <label class="ls-checkbox-row">
+                        <input type="checkbox" id="input-cloudVisible" checked>
+                        <span>Render 3D Volumetric Clouds</span>
+                    </label>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Cloud Opacity</span>
+                            <span class="ls-val" id="val-cloudOpacity">0.82</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-cloudOpacity" min="0.10" max="1.00" step="0.02" value="0.82">
+                    </div>
+                    <div class="ls-color-row">
+                        <span>Cloud Tint</span>
+                        <div class="ls-color-right">
+                            <span class="ls-color-hex" id="hex-cloudColor">#ffffff</span>
+                            <input type="color" class="ls-color-input" id="input-cloudColor" value="#ffffff">
+                        </div>
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Cloud Altitude Y</span>
+                            <span class="ls-val" id="val-cloudAltitude">128</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-cloudAltitude" min="64" max="192" step="4" value="128">
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row">
+                            <span>Night Stars Brightness</span>
+                            <span class="ls-val" id="val-starBrightness">1.00x</span>
+                        </div>
+                        <input type="range" class="ls-input-range" id="input-starBrightness" min="0.00" max="2.50" step="0.05" value="1.00">
+                    </div>
+                    <div class="ls-row">
+                        <div class="ls-label-row"><span>Weather Mode</span></div>
+                        <div class="ls-btn-group" id="weather-buttons">
+                            <button class="ls-group-btn active" data-weather="clear">☀️ Clear</button>
+                            <button class="ls-group-btn" data-weather="rain">🌧️ Rain</button>
+                            <button class="ls-group-btn" data-weather="thunder">⚡ Thunder</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Presets -->
+            <div class="ls-accordion" id="sec-presets">
+                <div class="ls-accordion-header">
+                    <span>🎨 Lighting Presets</span>
+                    <span class="ls-accordion-arrow">▼</span>
+                </div>
+                <div class="ls-accordion-content">
+                    <div class="ls-presets">
+                        <button class="ls-preset-btn" id="preset-radiant">☀️ Modern 1.20 Day</button>
+                        <button class="ls-preset-btn" id="preset-mc">⛏️ Classic Beta 1.7</button>
+                        <button class="ls-preset-btn" id="preset-sunset">🌅 Golden Sunset</button>
+                        <button class="ls-preset-btn" id="preset-night">🌙 Moody Midnight</button>
+                        <button class="ls-preset-btn" id="preset-campfire">🕯️ Cozy Campfire</button>
+                        <button class="ls-preset-btn" id="preset-horror">👻 Deep Horror</button>
+                        <button class="ls-preset-btn" id="preset-desert">🏜️ Desert High Noon</button>
+                        <button class="ls-preset-btn" id="preset-superbright">⚡ Extra Bright</button>
+                        <button class="ls-preset-btn" style="grid-column: span 2;" id="preset-reset">🔄 Reset to Defaults</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. Export Config -->
+            <div class="ls-accordion" id="sec-export">
+                <div class="ls-accordion-header">
+                    <span>📋 Export & Save Config</span>
+                    <span class="ls-accordion-arrow">▼</span>
+                </div>
+                <div class="ls-accordion-content">
+                    <button class="ls-copy-btn" id="ls-copy-btn">📋 Copy Config JSON</button>
+                    <textarea class="ls-json-box" id="ls-json-box" readonly></textarea>
+                    <div class="ls-note">Slide to tune any setting. Click "Copy Config JSON" and paste it in chat so Antigravity can bake it as the permanent default!</div>
+                </div>
+            </div>
+
         </div>
     `;
     container.appendChild(panel);
     document.body.appendChild(container);
 
-    // Elements
-    const inputTimeOfDay = panel.querySelector('#input-timeOfDay');
-    const valTimeOfDay = panel.querySelector('#val-timeOfDay');
-    const inputFreezeTime = panel.querySelector('#input-freezeTime');
+    // Accordion Toggle Handling
+    panel.querySelectorAll('.ls-accordion-header').forEach(hdr => {
+        hdr.addEventListener('click', () => {
+            hdr.parentElement.classList.toggle('collapsed');
+        });
+    });
 
-    const inputAmbIntensity = panel.querySelector('#input-ambIntensity');
-    const valAmbIntensity = panel.querySelector('#val-ambIntensity');
+    // Elements Lookup
+    const inputs = {
+        // Celestial
+        timeOfDay: panel.querySelector('#input-timeOfDay'),
+        freezeTime: panel.querySelector('#input-freezeTime'),
+        dayLength: panel.querySelector('#input-dayLength'),
+        sunTilt: panel.querySelector('#input-sunTilt'),
+        sunIntensity: panel.querySelector('#input-sunIntensity'),
+        sunColor: panel.querySelector('#input-sunColor'),
+        moonIntensity: panel.querySelector('#input-moonIntensity'),
+        moonColor: panel.querySelector('#input-moonColor'),
+        celestialScale: panel.querySelector('#input-celestialScale'),
 
-    const inputSunIntensity = panel.querySelector('#input-sunIntensity');
-    const valSunIntensity = panel.querySelector('#val-sunIntensity');
+        // Ambient & Brightness
+        ambIntensity: panel.querySelector('#input-ambIntensity'),
+        ambColor: panel.querySelector('#input-ambColor'),
+        brightnessMultiplier: panel.querySelector('#input-brightnessMultiplier'),
 
-    const inputCaveFloorAmb = panel.querySelector('#input-caveFloorAmb');
-    const valCaveFloorAmb = panel.querySelector('#val-caveFloorAmb');
+        // Caves
+        caveFloorAmb: panel.querySelector('#input-caveFloorAmb'),
+        caveFogDensity: panel.querySelector('#input-caveFogDensity'),
 
-    const inputAmbColor = panel.querySelector('#input-ambColor');
-    const inputSunColor = panel.querySelector('#input-sunColor');
-    const inputSkyTopColor = panel.querySelector('#input-skyTopColor');
-    const inputSkyHorizonColor = panel.querySelector('#input-skyHorizonColor');
-    const inputSkyBottomColor = panel.querySelector('#input-skyBottomColor');
+        // Sky & Atmosphere
+        skyTopColor: panel.querySelector('#input-skyTopColor'),
+        skyHorizonColor: panel.querySelector('#input-skyHorizonColor'),
+        skyBottomColor: panel.querySelector('#input-skyBottomColor'),
+        skyExponent: panel.querySelector('#input-skyExponent'),
+        sunGlowIntensity: panel.querySelector('#input-sunGlowIntensity'),
+        sunGlowColor: panel.querySelector('#input-sunGlowColor'),
+        fogDensity: panel.querySelector('#input-fogDensity'),
+        fogMatchHorizon: panel.querySelector('#input-fogMatchHorizon'),
+        customFogColor: panel.querySelector('#input-customFogColor'),
 
-    const copyBtn = panel.querySelector('#ls-copy-btn');
-    const jsonBox = panel.querySelector('#ls-json-box');
-    const closeBtn = panel.querySelector('#ls-close-btn');
+        // Torches
+        torchIntensity: panel.querySelector('#input-torchIntensity'),
+        torchDistance: panel.querySelector('#input-torchDistance'),
+        torchColor: panel.querySelector('#input-torchColor'),
+        torchFlicker: panel.querySelector('#input-torchFlicker'),
+
+        // Clouds & Stars
+        cloudVisible: panel.querySelector('#input-cloudVisible'),
+        cloudOpacity: panel.querySelector('#input-cloudOpacity'),
+        cloudColor: panel.querySelector('#input-cloudColor'),
+        cloudAltitude: panel.querySelector('#input-cloudAltitude'),
+        starBrightness: panel.querySelector('#input-starBrightness')
+    };
+
+    const labels = {
+        timeOfDay: panel.querySelector('#val-timeOfDay'),
+        dayLength: panel.querySelector('#val-dayLength'),
+        sunTilt: panel.querySelector('#val-sunTilt'),
+        sunIntensity: panel.querySelector('#val-sunIntensity'),
+        moonIntensity: panel.querySelector('#val-moonIntensity'),
+        celestialScale: panel.querySelector('#val-celestialScale'),
+        ambIntensity: panel.querySelector('#val-ambIntensity'),
+        brightnessMultiplier: panel.querySelector('#val-brightnessMultiplier'),
+        caveFloorAmb: panel.querySelector('#val-caveFloorAmb'),
+        caveFogDensity: panel.querySelector('#val-caveFogDensity'),
+        skyExponent: panel.querySelector('#val-skyExponent'),
+        sunGlowIntensity: panel.querySelector('#val-sunGlowIntensity'),
+        fogDensity: panel.querySelector('#val-fogDensity'),
+        torchIntensity: panel.querySelector('#val-torchIntensity'),
+        torchDistance: panel.querySelector('#val-torchDistance'),
+        torchFlicker: panel.querySelector('#val-torchFlicker'),
+        cloudOpacity: panel.querySelector('#val-cloudOpacity'),
+        cloudAltitude: panel.querySelector('#val-cloudAltitude'),
+        starBrightness: panel.querySelector('#val-starBrightness')
+    };
+
+    const hexLabels = {
+        sunColor: panel.querySelector('#hex-sunColor'),
+        moonColor: panel.querySelector('#hex-moonColor'),
+        ambColor: panel.querySelector('#hex-ambColor'),
+        skyTopColor: panel.querySelector('#hex-skyTopColor'),
+        skyHorizonColor: panel.querySelector('#hex-skyHorizonColor'),
+        skyBottomColor: panel.querySelector('#hex-skyBottomColor'),
+        sunGlowColor: panel.querySelector('#hex-sunGlowColor'),
+        customFogColor: panel.querySelector('#hex-customFogColor'),
+        torchColor: panel.querySelector('#hex-torchColor'),
+        cloudColor: panel.querySelector('#hex-cloudColor')
+    };
+
+    let currentWeather = 'clear';
 
     function getTimeLabel(t) {
         const totalMinutes = Math.floor(t * 24 * 60);
@@ -367,55 +784,127 @@ export function initLightingStudio() {
     function updateConfig() {
         const cfg = {
             active: true,
-            freezeTime: inputFreezeTime.checked,
-            timeOfDay: parseFloat(inputTimeOfDay.value),
-            ambIntensity: parseFloat(inputAmbIntensity.value),
-            sunIntensity: parseFloat(inputSunIntensity.value),
-            ambColor: inputAmbColor.value,
-            sunColor: inputSunColor.value,
-            skyTopColor: inputSkyTopColor.value,
-            skyHorizonColor: inputSkyHorizonColor.value,
-            skyBottomColor: inputSkyBottomColor.value,
-            caveFloorAmb: parseFloat(inputCaveFloorAmb.value)
+            freezeTime: inputs.freezeTime.checked,
+            timeOfDay: parseFloat(inputs.timeOfDay.value),
+            dayLength: parseFloat(inputs.dayLength.value),
+            sunTilt: parseFloat(inputs.sunTilt.value),
+            sunIntensity: parseFloat(inputs.sunIntensity.value),
+            sunColor: inputs.sunColor.value,
+            moonIntensity: parseFloat(inputs.moonIntensity.value),
+            moonColor: inputs.moonColor.value,
+            celestialScale: parseFloat(inputs.celestialScale.value),
+
+            ambIntensity: parseFloat(inputs.ambIntensity.value),
+            ambColor: inputs.ambColor.value,
+            brightnessMultiplier: parseFloat(inputs.brightnessMultiplier.value),
+
+            caveFloorAmb: parseFloat(inputs.caveFloorAmb.value),
+            caveFogDensity: parseFloat(inputs.caveFogDensity.value),
+
+            skyTopColor: inputs.skyTopColor.value,
+            skyHorizonColor: inputs.skyHorizonColor.value,
+            skyBottomColor: inputs.skyBottomColor.value,
+            skyExponent: parseFloat(inputs.skyExponent.value),
+            sunGlowIntensity: parseFloat(inputs.sunGlowIntensity.value),
+            sunGlowColor: inputs.sunGlowColor.value,
+
+            fogDensity: parseFloat(inputs.fogDensity.value),
+            fogMatchHorizon: inputs.fogMatchHorizon.checked,
+            customFogColor: inputs.customFogColor.value,
+
+            torchIntensity: parseFloat(inputs.torchIntensity.value),
+            torchDistance: parseFloat(inputs.torchDistance.value),
+            torchColor: inputs.torchColor.value,
+            torchFlicker: parseFloat(inputs.torchFlicker.value),
+
+            cloudVisible: inputs.cloudVisible.checked,
+            cloudOpacity: parseFloat(inputs.cloudOpacity.value),
+            cloudColor: inputs.cloudColor.value,
+            cloudAltitude: parseFloat(inputs.cloudAltitude.value),
+            starBrightness: parseFloat(inputs.starBrightness.value),
+            weatherForce: currentWeather
         };
 
         window._customLightingConfig = cfg;
 
-        valTimeOfDay.textContent = getTimeLabel(cfg.timeOfDay);
-        valAmbIntensity.textContent = cfg.ambIntensity.toFixed(2);
-        valSunIntensity.textContent = cfg.sunIntensity.toFixed(2);
-        valCaveFloorAmb.textContent = cfg.caveFloorAmb.toFixed(2);
+        // Update labels
+        labels.timeOfDay.textContent = getTimeLabel(cfg.timeOfDay);
+        labels.dayLength.textContent = `${cfg.dayLength}s`;
+        labels.sunTilt.textContent = cfg.sunTilt.toString();
+        labels.sunIntensity.textContent = cfg.sunIntensity.toFixed(2);
+        labels.moonIntensity.textContent = cfg.moonIntensity.toFixed(2);
+        labels.celestialScale.textContent = `${cfg.celestialScale.toFixed(1)}x`;
+        labels.ambIntensity.textContent = cfg.ambIntensity.toFixed(2);
+        labels.brightnessMultiplier.textContent = `${cfg.brightnessMultiplier.toFixed(2)}x`;
+        labels.caveFloorAmb.textContent = cfg.caveFloorAmb.toFixed(2);
+        labels.caveFogDensity.textContent = cfg.caveFogDensity.toFixed(3);
+        labels.skyExponent.textContent = cfg.skyExponent.toFixed(2);
+        labels.sunGlowIntensity.textContent = cfg.sunGlowIntensity.toFixed(2);
+        labels.fogDensity.textContent = cfg.fogDensity.toFixed(4);
+        labels.torchIntensity.textContent = cfg.torchIntensity.toFixed(1);
+        labels.torchDistance.textContent = `${cfg.torchDistance}m`;
+        labels.torchFlicker.textContent = cfg.torchFlicker.toFixed(2);
+        labels.cloudOpacity.textContent = cfg.cloudOpacity.toFixed(2);
+        labels.cloudAltitude.textContent = cfg.cloudAltitude.toString();
+        labels.starBrightness.textContent = `${cfg.starBrightness.toFixed(2)}x`;
 
-        jsonBox.value = JSON.stringify(cfg, null, 2);
+        // Update hex indicators
+        for (const [key, el] of Object.entries(hexLabels)) {
+            if (el && cfg[key]) el.textContent = cfg[key];
+        }
+
+        const jsonBox = panel.querySelector('#ls-json-box');
+        if (jsonBox) jsonBox.value = JSON.stringify(cfg, null, 2);
     }
 
-    function applyPreset(preset) {
-        if (preset.timeOfDay !== undefined) inputTimeOfDay.value = preset.timeOfDay;
-        if (preset.freezeTime !== undefined) inputFreezeTime.checked = preset.freezeTime;
-        if (preset.ambIntensity !== undefined) inputAmbIntensity.value = preset.ambIntensity;
-        if (preset.sunIntensity !== undefined) inputSunIntensity.value = preset.sunIntensity;
-        if (preset.ambColor !== undefined) inputAmbColor.value = preset.ambColor;
-        if (preset.sunColor !== undefined) inputSunColor.value = preset.sunColor;
-        if (preset.skyTopColor !== undefined) inputSkyTopColor.value = preset.skyTopColor;
-        if (preset.skyHorizonColor !== undefined) inputSkyHorizonColor.value = preset.skyHorizonColor;
-        if (preset.skyBottomColor !== undefined) inputSkyBottomColor.value = preset.skyBottomColor;
-        if (preset.caveFloorAmb !== undefined) inputCaveFloorAmb.value = preset.caveFloorAmb;
+    function applyPreset(p) {
+        for (const [k, v] of Object.entries(p)) {
+            if (inputs[k] !== undefined) {
+                if (inputs[k].type === 'checkbox') {
+                    inputs[k].checked = v;
+                } else {
+                    inputs[k].value = v;
+                }
+            }
+        }
+        if (p.weatherForce) {
+            currentWeather = p.weatherForce;
+            panel.querySelectorAll('.ls-group-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.weather === currentWeather);
+            });
+        }
         updateConfig();
     }
 
-    // Event Listeners
-    [inputTimeOfDay, inputFreezeTime, inputAmbIntensity, inputSunIntensity, inputCaveFloorAmb, inputAmbColor, inputSunColor, inputSkyTopColor, inputSkyHorizonColor, inputSkyBottomColor].forEach(el => {
-        el.addEventListener('input', updateConfig);
-        el.addEventListener('change', updateConfig);
+    // Attach listeners
+    Object.values(inputs).forEach(input => {
+        if (!input) return;
+        input.addEventListener('input', updateConfig);
+        input.addEventListener('change', updateConfig);
     });
 
+    // Weather buttons
+    panel.querySelectorAll('#weather-buttons button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            panel.querySelectorAll('#weather-buttons button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentWeather = btn.dataset.weather;
+            updateConfig();
+        });
+    });
+
+    // Toggle and Close
     toggleBtn.addEventListener('click', () => {
         panel.classList.toggle('minimized');
     });
 
-    closeBtn.addEventListener('click', () => {
+    panel.querySelector('#ls-close-btn').addEventListener('click', () => {
         panel.classList.add('minimized');
     });
+
+    // Copy Button
+    const copyBtn = panel.querySelector('#ls-copy-btn');
+    const jsonBox = panel.querySelector('#ls-json-box');
 
     copyBtn.addEventListener('click', () => {
         updateConfig();
@@ -442,65 +931,188 @@ export function initLightingStudio() {
     panel.querySelector('#preset-radiant').addEventListener('click', () => {
         applyPreset({
             timeOfDay: 0.50,
-            ambIntensity: 0.75,
-            sunIntensity: 0.65,
+            freezeTime: true,
+            ambIntensity: 0.78,
+            sunIntensity: 0.68,
             ambColor: "#dce5f4",
             sunColor: "#fff8ea",
             skyTopColor: "#78a7ff",
             skyHorizonColor: "#c0d8ff",
-            caveFloorAmb: 0.20
+            skyBottomColor: "#182030",
+            skyExponent: 1.15,
+            caveFloorAmb: 0.22,
+            sunTilt: 32,
+            torchIntensity: 8.5,
+            torchColor: "#ff7711",
+            torchDistance: 60,
+            cloudOpacity: 0.85,
+            cloudColor: "#ffffff",
+            cloudAltitude: 128,
+            fogDensity: 0.0028,
+            weatherForce: 'clear'
         });
     });
 
     panel.querySelector('#preset-mc').addEventListener('click', () => {
         applyPreset({
             timeOfDay: 0.50,
-            ambIntensity: 0.45,
-            sunIntensity: 0.55,
-            ambColor: "#dce5f4",
-            sunColor: "#fff8ea",
-            skyTopColor: "#78a7ff",
-            skyHorizonColor: "#c0d8ff",
-            caveFloorAmb: 0.16
-        });
-    });
-
-    panel.querySelector('#preset-superbright').addEventListener('click', () => {
-        applyPreset({
-            timeOfDay: 0.50,
-            ambIntensity: 1.00,
-            sunIntensity: 0.75,
-            ambColor: "#e6efff",
+            freezeTime: true,
+            ambIntensity: 0.60,
+            sunIntensity: 0.80,
+            ambColor: "#b0c4de",
             sunColor: "#ffffff",
-            skyTopColor: "#6ea0ff",
-            skyHorizonColor: "#c8e0ff",
-            caveFloorAmb: 0.28
+            skyTopColor: "#5b8cff",
+            skyHorizonColor: "#9ec4ff",
+            skyBottomColor: "#000000",
+            skyExponent: 1.00,
+            caveFloorAmb: 0.14,
+            sunTilt: 45,
+            torchIntensity: 7.0,
+            torchColor: "#ff8800",
+            torchDistance: 50,
+            fogDensity: 0.0040,
+            weatherForce: 'clear'
         });
     });
 
     panel.querySelector('#preset-sunset').addEventListener('click', () => {
         applyPreset({
             timeOfDay: 0.75,
-            ambIntensity: 0.55,
-            sunIntensity: 0.35,
-            ambColor: "#ffbe98",
-            sunColor: "#f57838",
-            skyTopColor: "#4e5878",
-            skyHorizonColor: "#f08855",
-            caveFloorAmb: 0.18
+            freezeTime: true,
+            ambIntensity: 0.62,
+            sunIntensity: 0.45,
+            ambColor: "#ffc8a0",
+            sunColor: "#ff8844",
+            skyTopColor: "#58648c",
+            skyHorizonColor: "#ff9955",
+            skyBottomColor: "#1a1220",
+            skyExponent: 1.30,
+            sunGlowIntensity: 1.10,
+            sunGlowColor: "#ff6a22",
+            caveFloorAmb: 0.16,
+            sunTilt: 20,
+            torchIntensity: 10.0,
+            torchColor: "#ff6600",
+            fogDensity: 0.0035,
+            cloudColor: "#ffbaa0",
+            cloudOpacity: 0.90,
+            weatherForce: 'clear'
         });
     });
 
     panel.querySelector('#preset-night').addEventListener('click', () => {
         applyPreset({
             timeOfDay: 0.00,
-            ambIntensity: 0.16,
+            freezeTime: true,
+            ambIntensity: 0.18,
             sunIntensity: 0.00,
-            ambColor: "#2c3548",
-            sunColor: "#aaccff",
-            skyTopColor: "#080c18",
-            skyHorizonColor: "#101626",
-            caveFloorAmb: 0.12
+            moonIntensity: 0.28,
+            moonColor: "#5577aa",
+            ambColor: "#202a40",
+            skyTopColor: "#060914",
+            skyHorizonColor: "#0f1628",
+            skyBottomColor: "#020408",
+            skyExponent: 1.20,
+            caveFloorAmb: 0.12,
+            torchIntensity: 12.0,
+            torchColor: "#ff6a00",
+            torchDistance: 70,
+            starBrightness: 1.5,
+            cloudOpacity: 0.50,
+            cloudColor: "#404c64",
+            fogDensity: 0.0045,
+            weatherForce: 'clear'
+        });
+    });
+
+    panel.querySelector('#preset-campfire').addEventListener('click', () => {
+        applyPreset({
+            timeOfDay: 0.78,
+            freezeTime: true,
+            ambIntensity: 0.35,
+            sunIntensity: 0.10,
+            ambColor: "#403848",
+            skyTopColor: "#1c2238",
+            skyHorizonColor: "#5a4858",
+            skyBottomColor: "#0a0c14",
+            caveFloorAmb: 0.10,
+            torchIntensity: 15.0,
+            torchColor: "#ff8c1a",
+            torchDistance: 80,
+            torchFlicker: 0.35,
+            starBrightness: 1.2,
+            fogDensity: 0.0035,
+            weatherForce: 'clear'
+        });
+    });
+
+    panel.querySelector('#preset-horror').addEventListener('click', () => {
+        applyPreset({
+            timeOfDay: 0.97,
+            freezeTime: true,
+            ambIntensity: 0.10,
+            sunIntensity: 0.00,
+            moonIntensity: 0.08,
+            moonColor: "#2a3548",
+            ambColor: "#0d111a",
+            skyTopColor: "#020306",
+            skyHorizonColor: "#080c14",
+            skyBottomColor: "#000000",
+            caveFloorAmb: 0.00,
+            caveFogDensity: 0.035,
+            torchIntensity: 6.5,
+            torchDistance: 35,
+            torchColor: "#ff5500",
+            torchFlicker: 0.40,
+            fogDensity: 0.0090,
+            fogMatchHorizon: false,
+            customFogColor: "#080c14",
+            cloudOpacity: 0.30,
+            starBrightness: 0.4,
+            weatherForce: 'thunder'
+        });
+    });
+
+    panel.querySelector('#preset-desert').addEventListener('click', () => {
+        applyPreset({
+            timeOfDay: 0.50,
+            freezeTime: true,
+            ambIntensity: 0.88,
+            sunIntensity: 0.85,
+            ambColor: "#fff4e0",
+            sunColor: "#fff2d0",
+            skyTopColor: "#6ea4ff",
+            skyHorizonColor: "#e6ecf8",
+            skyBottomColor: "#2a2218",
+            skyExponent: 1.05,
+            caveFloorAmb: 0.25,
+            sunTilt: 10,
+            fogDensity: 0.0020,
+            cloudOpacity: 0.40,
+            cloudColor: "#ffffff",
+            cloudAltitude: 140,
+            weatherForce: 'clear'
+        });
+    });
+
+    panel.querySelector('#preset-superbright').addEventListener('click', () => {
+        applyPreset({
+            timeOfDay: 0.50,
+            freezeTime: true,
+            ambIntensity: 1.20,
+            sunIntensity: 0.90,
+            ambColor: "#ffffff",
+            sunColor: "#ffffff",
+            skyTopColor: "#78a7ff",
+            skyHorizonColor: "#c0d8ff",
+            skyBottomColor: "#202838",
+            caveFloorAmb: 0.50,
+            brightnessMultiplier: 1.30,
+            sunTilt: 32,
+            torchIntensity: 10.0,
+            fogDensity: 0.0010,
+            cloudOpacity: 0.80,
+            weatherForce: 'clear'
         });
     });
 
@@ -508,6 +1120,6 @@ export function initLightingStudio() {
         applyPreset(defaultConfig);
     });
 
-    // Initialize initial state
+    // Initialize display values
     updateConfig();
 }
