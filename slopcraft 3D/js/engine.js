@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=128';
-import { getBiomeParams } from './generation.js?v=128';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=129';
+import { getBiomeParams } from './generation.js?v=129';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -382,7 +382,53 @@ const MAX_INDICES = Math.floor(MAX_VERTICES / 4 * 6);
 const _positions = new Float32Array(MAX_VERTICES * 3);
 const _normals = new Float32Array(MAX_VERTICES * 3);
 const _uvs = new Float32Array(MAX_VERTICES * 2);
+const _uv2s = new Float32Array(MAX_VERTICES * 2);
 const _colors = new Float32Array(MAX_VERTICES * 3);
+
+export function getBlockLightEmission(blockType) {
+    if (!blockType) return 0;
+    if (blockType === BLOCKS.TORCH) return 14;
+    if (blockType === BLOCKS.LAVA) return 15;
+    if (blockType === BLOCKS.GLOWSTONE) return 15;
+    if (blockType === BLOCKS.SHROOMLIGHT) return 15;
+    if (blockType === BLOCKS.FIRE) return 15;
+    if (blockType === BLOCKS.SOUL_FIRE) return 10;
+    if (blockType === BLOCKS.LANTERN) return 15;
+    if (blockType === BLOCKS.SOUL_LANTERN) return 10;
+    if (blockType === BLOCKS.MAGMA || blockType === BLOCKS.MAGMA_STONE) return 3;
+    if (blockType === BLOCKS.END_PORTAL || blockType === BLOCKS.END_GATEWAY) return 15;
+    if (blockType === BLOCKS.CAVERN_PORTAL || blockType === BLOCKS.HIGHLANDS_PORTAL) return 15;
+    if (blockType === BLOCKS.AETHER_PORTAL) return 11;
+    if (blockType === BLOCKS.AETHER_CRYSTAL) return 12;
+    if (blockType === BLOCKS.SCULK_CATALYST) return 6;
+    if (blockType === BLOCKS.SCULK_SENSOR || blockType === BLOCKS.SCULK_SHRIEKER) return 5;
+    const props = getBlockProperties(blockType);
+    if (props && props.emissive) {
+        return Math.min(15, Math.max(1, Math.round(props.emissive * 15)));
+    }
+    return 0;
+}
+
+export function getBlockLightOpacity(blockType) {
+    if (!blockType || blockType === BLOCKS.AIR) return 1;
+    if (blockType === BLOCKS.WATER || blockType === BLOCKS.SWAMP_WATER) return 2;
+    if (blockType === BLOCKS.ICE || blockType === BLOCKS.GLASS || blockType === BLOCKS.TINTED_GLASS) return 1;
+    const props = getBlockProperties(blockType);
+    if (!props) return 15;
+    if (props.isCross || props.isCrop || props.isLilyPad || props.isLantern) return 1;
+    if (props.isSlab || props.isStair || props.isFence || props.isWall || props.isBed || props.isBedHead || props.isFenceGate) return 1;
+    if (props.transparent && !props.solid) return 1;
+    if (props.isLeaves) return 1;
+    if (props.transparent) return 1;
+    return 15;
+}
+
+const _lightDirs = [
+    [1, 0, 0], [-1, 0, 0],
+    [0, 1, 0], [0, -1, 0],
+    [0, 0, 1], [0, 0, -1]
+];
+const _lightQueue = new Int32Array(65536);
 
 const _opaqueIndices = new Uint32Array(MAX_INDICES);
 const _crossIndices = new Uint32Array(MAX_INDICES);
@@ -404,10 +450,12 @@ export class Chunk {
         this.cz = cz;
         this.blocks = new Uint16Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
         this.data = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
+        this.light = new Uint8Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
         this.mesh = null;
         this.waterMesh = null;
         this.endPortalMesh = null;
         this.dirty = false;
+        this.lightDirty = true;
     }
 
     getBlock(lx, ly, lz) {
@@ -419,6 +467,7 @@ export class Chunk {
         if (lx < 0 || lx >= CHUNK_SIZE || ly < 0 || ly >= CHUNK_HEIGHT || lz < 0 || lz >= CHUNK_SIZE) return;
         this.blocks[(ly * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx] = type;
         this.dirty = true;
+        this.lightDirty = true;
     }
 
     getData(lx, ly, lz) {
@@ -429,6 +478,274 @@ export class Chunk {
     setData(lx, ly, lz, dataValue) {
         if (lx < 0 || lx >= CHUNK_SIZE || ly < 0 || ly >= CHUNK_HEIGHT || lz < 0 || lz >= CHUNK_SIZE) return;
         this.data[(ly * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx] = dataValue;
+    }
+
+    getBlockLight(lx, ly, lz) {
+        if (lx < 0 || lx >= CHUNK_SIZE || ly < 0 || ly >= CHUNK_HEIGHT || lz < 0 || lz >= CHUNK_SIZE) return 0;
+        return this.light[(ly * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx] & 0x0F;
+    }
+
+    setBlockLight(lx, ly, lz, val) {
+        if (lx < 0 || lx >= CHUNK_SIZE || ly < 0 || ly >= CHUNK_HEIGHT || lz < 0 || lz >= CHUNK_SIZE) return;
+        const idx = (ly * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+        this.light[idx] = (this.light[idx] & 0xF0) | (val & 0x0F);
+    }
+
+    getSkyLight(lx, ly, lz) {
+        if (lx < 0 || lx >= CHUNK_SIZE || ly < 0 || ly >= CHUNK_HEIGHT || lz < 0 || lz >= CHUNK_SIZE) return 15;
+        return (this.light[(ly * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx] >> 4) & 0x0F;
+    }
+
+    setSkyLight(lx, ly, lz, val) {
+        if (lx < 0 || lx >= CHUNK_SIZE || ly < 0 || ly >= CHUNK_HEIGHT || lz < 0 || lz >= CHUNK_SIZE) return;
+        const idx = (ly * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx;
+        this.light[idx] = (this.light[idx] & 0x0F) | ((val & 0x0F) << 4);
+    }
+
+    computeLighting(neighborChunks) {
+        const light = this.light;
+        const blocks = this.blocks;
+        const isNether = (window.currentDimension === 'nether' || (window.worldGenParams && window.worldGenParams.dimension === 'nether'));
+        const isEnd = (window.currentDimension === 'end' || (window.worldGenParams && window.worldGenParams.dimension === 'end'));
+        const hasSky = !isNether && !isEnd;
+
+        // 1. Sky Light Column Initialization
+        if (hasSky) {
+            for (let x = 0; x < CHUNK_SIZE; x++) {
+                for (let z = 0; z < CHUNK_SIZE; z++) {
+                    let sl = 15;
+                    for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) {
+                        const idx = (y * 256) + (z * 16) + x;
+                        const op = getBlockLightOpacity(blocks[idx]);
+                        if (sl === 15 && op < 15) {
+                            light[idx] = (light[idx] & 0x0F) | (15 << 4);
+                        } else {
+                            sl = 0;
+                            light[idx] = (light[idx] & 0x0F);
+                        }
+                    }
+                }
+            }
+
+            // 2. Sky Light BFS (lateral spill)
+            let qHead = 0, qTail = 0;
+            for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                for (let z = 0; z < CHUNK_SIZE; z++) {
+                    for (let x = 0; x < CHUNK_SIZE; x++) {
+                        const idx = (y * 256) + (z * 16) + x;
+                        const sl = (light[idx] >> 4) & 0x0F;
+                        if (sl === 15) {
+                            for (let i = 0; i < 6; i++) {
+                                const nx = x + _lightDirs[i][0];
+                                const ny = y + _lightDirs[i][1];
+                                const nz = z + _lightDirs[i][2];
+                                if (nx >= 0 && nx < CHUNK_SIZE && ny >= 0 && ny < CHUNK_HEIGHT && nz >= 0 && nz < CHUNK_SIZE) {
+                                    const nIdx = (ny * 256) + (nz * 16) + nx;
+                                    const nSl = (light[nIdx] >> 4) & 0x0F;
+                                    if (nSl < 14 && getBlockLightOpacity(blocks[nIdx]) < 15) {
+                                        _lightQueue[qTail++] = x | (y << 4) | (z << 11);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Seed sky light from neighbor chunks at borders
+            if (neighborChunks) {
+                const cW = neighborChunks[0][1];
+                if (cW && cW.light) {
+                    for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                        for (let z = 0; z < CHUNK_SIZE; z++) {
+                            const nSL = (cW.light[(y * 256) + (z * 16) + 15] >> 4) & 0x0F;
+                            const idx = (y * 256) + (z * 16) + 0;
+                            const op = getBlockLightOpacity(blocks[idx]);
+                            if (op < 15 && nSL - op > ((light[idx] >> 4) & 0x0F)) {
+                                light[idx] = (light[idx] & 0x0F) | ((nSL - op) << 4);
+                                _lightQueue[qTail++] = 0 | (y << 4) | (z << 11);
+                            }
+                        }
+                    }
+                }
+                const cE = neighborChunks[2][1];
+                if (cE && cE.light) {
+                    for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                        for (let z = 0; z < CHUNK_SIZE; z++) {
+                            const nSL = (cE.light[(y * 256) + (z * 16) + 0] >> 4) & 0x0F;
+                            const idx = (y * 256) + (z * 16) + 15;
+                            const op = getBlockLightOpacity(blocks[idx]);
+                            if (op < 15 && nSL - op > ((light[idx] >> 4) & 0x0F)) {
+                                light[idx] = (light[idx] & 0x0F) | ((nSL - op) << 4);
+                                _lightQueue[qTail++] = 15 | (y << 4) | (z << 11);
+                            }
+                        }
+                    }
+                }
+                const cN = neighborChunks[1][0];
+                if (cN && cN.light) {
+                    for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                        for (let x = 0; x < CHUNK_SIZE; x++) {
+                            const nSL = (cN.light[(y * 256) + (15 * 16) + x] >> 4) & 0x0F;
+                            const idx = (y * 256) + (0 * 16) + x;
+                            const op = getBlockLightOpacity(blocks[idx]);
+                            if (op < 15 && nSL - op > ((light[idx] >> 4) & 0x0F)) {
+                                light[idx] = (light[idx] & 0x0F) | ((nSL - op) << 4);
+                                _lightQueue[qTail++] = x | (y << 4) | (0 << 11);
+                            }
+                        }
+                    }
+                }
+                const cS = neighborChunks[1][2];
+                if (cS && cS.light) {
+                    for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                        for (let x = 0; x < CHUNK_SIZE; x++) {
+                            const nSL = (cS.light[(y * 256) + (0 * 16) + x] >> 4) & 0x0F;
+                            const idx = (y * 256) + (15 * 16) + x;
+                            const op = getBlockLightOpacity(blocks[idx]);
+                            if (op < 15 && nSL - op > ((light[idx] >> 4) & 0x0F)) {
+                                light[idx] = (light[idx] & 0x0F) | ((nSL - op) << 4);
+                                _lightQueue[qTail++] = x | (y << 4) | (15 << 11);
+                            }
+                        }
+                    }
+                }
+            }
+
+            while (qHead < qTail) {
+                const node = _lightQueue[qHead++];
+                const x = node & 0x0F;
+                const y = (node >> 4) & 0x7F;
+                const z = (node >> 11) & 0x0F;
+                const idx = (y * 256) + (z * 16) + x;
+                const curSL = (light[idx] >> 4) & 0x0F;
+                if (curSL <= 1) continue;
+
+                for (let i = 0; i < 6; i++) {
+                    const nx = x + _lightDirs[i][0];
+                    const ny = y + _lightDirs[i][1];
+                    const nz = z + _lightDirs[i][2];
+                    if (nx < 0 || nx >= CHUNK_SIZE || ny < 0 || ny >= CHUNK_HEIGHT || nz < 0 || nz >= CHUNK_SIZE) continue;
+                    const nIdx = (ny * 256) + (nz * 16) + nx;
+                    const op = getBlockLightOpacity(blocks[nIdx]);
+                    if (op >= 15) continue;
+                    const nextSL = curSL - op;
+                    const curNSL = (light[nIdx] >> 4) & 0x0F;
+                    if (nextSL > curNSL) {
+                        light[nIdx] = (light[nIdx] & 0x0F) | (nextSL << 4);
+                        _lightQueue[qTail++] = nx | (ny << 4) | (nz << 11);
+                    }
+                }
+            }
+        } else {
+            for (let i = 0; i < light.length; i++) {
+                light[i] &= 0x0F;
+            }
+        }
+
+        // 3. Block Light BFS (Emitters: Torches, Lava, Glowstone, Lanterns, etc.)
+        let qHead = 0, qTail = 0;
+        for (let y = 0; y < CHUNK_HEIGHT; y++) {
+            for (let z = 0; z < CHUNK_SIZE; z++) {
+                for (let x = 0; x < CHUNK_SIZE; x++) {
+                    const idx = (y * 256) + (z * 16) + x;
+                    const em = getBlockLightEmission(blocks[idx]);
+                    if (em > 0) {
+                        light[idx] = (light[idx] & 0xF0) | em;
+                        _lightQueue[qTail++] = x | (y << 4) | (z << 11);
+                    } else {
+                        light[idx] = (light[idx] & 0xF0);
+                    }
+                }
+            }
+        }
+
+        // Seed block light from neighbor chunks at borders
+        if (neighborChunks) {
+            const cW = neighborChunks[0][1];
+            if (cW && cW.light) {
+                for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                    for (let z = 0; z < CHUNK_SIZE; z++) {
+                        const nBL = cW.light[(y * 256) + (z * 16) + 15] & 0x0F;
+                        const idx = (y * 256) + (z * 16) + 0;
+                        const op = getBlockLightOpacity(blocks[idx]);
+                        if (op < 15 && nBL - op > (light[idx] & 0x0F)) {
+                            light[idx] = (light[idx] & 0xF0) | (nBL - op);
+                            _lightQueue[qTail++] = 0 | (y << 4) | (z << 11);
+                        }
+                    }
+                }
+            }
+            const cE = neighborChunks[2][1];
+            if (cE && cE.light) {
+                for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                    for (let z = 0; z < CHUNK_SIZE; z++) {
+                        const nBL = cE.light[(y * 256) + (z * 16) + 0] & 0x0F;
+                        const idx = (y * 256) + (z * 16) + 15;
+                        const op = getBlockLightOpacity(blocks[idx]);
+                        if (op < 15 && nBL - op > (light[idx] & 0x0F)) {
+                            light[idx] = (light[idx] & 0xF0) | (nBL - op);
+                            _lightQueue[qTail++] = 15 | (y << 4) | (z << 11);
+                        }
+                    }
+                }
+            }
+            const cN = neighborChunks[1][0];
+            if (cN && cN.light) {
+                for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                    for (let x = 0; x < CHUNK_SIZE; x++) {
+                        const nBL = cN.light[(y * 256) + (15 * 16) + x] & 0x0F;
+                        const idx = (y * 256) + (0 * 16) + x;
+                        const op = getBlockLightOpacity(blocks[idx]);
+                        if (op < 15 && nBL - op > (light[idx] & 0x0F)) {
+                            light[idx] = (light[idx] & 0xF0) | (nBL - op);
+                            _lightQueue[qTail++] = x | (y << 4) | (0 << 11);
+                        }
+                    }
+                }
+            }
+            const cS = neighborChunks[1][2];
+            if (cS && cS.light) {
+                for (let y = 0; y < CHUNK_HEIGHT; y++) {
+                    for (let x = 0; x < CHUNK_SIZE; x++) {
+                        const nBL = cS.light[(y * 256) + (0 * 16) + x] & 0x0F;
+                        const idx = (y * 256) + (15 * 16) + x;
+                        const op = getBlockLightOpacity(blocks[idx]);
+                        if (op < 15 && nBL - op > (light[idx] & 0x0F)) {
+                            light[idx] = (light[idx] & 0xF0) | (nBL - op);
+                            _lightQueue[qTail++] = x | (y << 4) | (15 << 11);
+                        }
+                    }
+                }
+            }
+        }
+
+        while (qHead < qTail) {
+            const node = _lightQueue[qHead++];
+            const x = node & 0x0F;
+            const y = (node >> 4) & 0x7F;
+            const z = (node >> 11) & 0x0F;
+            const idx = (y * 256) + (z * 16) + x;
+            const curBL = light[idx] & 0x0F;
+            if (curBL <= 1) continue;
+
+            for (let i = 0; i < 6; i++) {
+                const nx = x + _lightDirs[i][0];
+                const ny = y + _lightDirs[i][1];
+                const nz = z + _lightDirs[i][2];
+                if (nx < 0 || nx >= CHUNK_SIZE || ny < 0 || ny >= CHUNK_HEIGHT || nz < 0 || nz >= CHUNK_SIZE) continue;
+                const nIdx = (ny * 256) + (nz * 16) + nx;
+                const op = getBlockLightOpacity(blocks[nIdx]);
+                if (op >= 15) continue;
+                const nextBL = curBL - op;
+                const curNBL = light[nIdx] & 0x0F;
+                if (nextBL > curNBL) {
+                    light[nIdx] = (light[nIdx] & 0xF0) | nextBL;
+                    _lightQueue[qTail++] = nx | (ny << 4) | (nz << 11);
+                }
+            }
+        }
     }
 
     buildMesh(atlas, neighborChunks, planetParams = null) {
@@ -463,8 +780,35 @@ export class Chunk {
             return 0;
         };
 
+        if (this.lightDirty || !this.light) {
+            this.computeLighting(neighborChunks);
+            this.lightDirty = false;
+        }
+
+        const getLightOptimized = (wx, wy, wz) => {
+            if (wy >= CHUNK_HEIGHT) return 0xF0; // SL = 15, BL = 0
+            if (wy < 0) return 0x00; // SL = 0, BL = 0
+            const dcx = Math.floor(wx / CHUNK_SIZE) - this.cx;
+            const dcz = Math.floor(wz / CHUNK_SIZE) - this.cz;
+            if (dcx === 0 && dcz === 0) {
+                const lx = wx - this.cx * CHUNK_SIZE;
+                const lz = wz - this.cz * CHUNK_SIZE;
+                return this.light ? this.light[(wy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx] : 0xF0;
+            }
+            if (dcx >= -1 && dcx <= 1 && dcz >= -1 && dcz <= 1) {
+                const c = neighborChunks[dcx + 1][dcz + 1];
+                if (c && c.light) {
+                    const lx = wx - (this.cx + dcx) * CHUNK_SIZE;
+                    const lz = wz - (this.cz + dcz) * CHUNK_SIZE;
+                    return c.light[(wy * CHUNK_SIZE * CHUNK_SIZE) + (lz * CHUNK_SIZE) + lx];
+                }
+            }
+            return 0xF0;
+        };
+
         let posCount = 0;
         let uvCount = 0;
+        let uv2Count = 0;
         let colorCount = 0;
 
         let opaqueIndexCount = 0;
@@ -533,6 +877,11 @@ export class Chunk {
                 _uvs[uvCount++] = uvTop.u + (maxX - bx) * uvTop.uSize; _uvs[uvCount++] = uvTop.v + (maxZ - bz) * uvTop.vSize;
                 _uvs[uvCount++] = uvTop.u + (minX - bx) * uvTop.uSize; _uvs[uvCount++] = uvTop.v + (maxZ - bz) * uvTop.vSize;
 
+                const lTop = isGlowing ? 0x0E : getLightOptimized(wxBase + bx, Math.min(CHUNK_HEIGHT - 1, Math.floor(maxY) + 1), wzBase + bz);
+                const uTop = ((lTop & 0x0F) + 0.5) / 16.0;
+                const vTop = (((lTop >> 4) & 0x0F) + 0.5) / 16.0;
+                for (let k = 0; k < 4; k++) { _uv2s[uv2Count++] = uTop; _uv2s[uv2Count++] = vTop; }
+
                 const base = vertexCount;
                 addBoxQuad(base);
                 vertexCount += 4;
@@ -555,6 +904,11 @@ export class Chunk {
                 _uvs[uvCount++] = uvBottom.u + (maxX - bx) * uvBottom.uSize; _uvs[uvCount++] = uvBottom.v + (minZ - bz) * uvBottom.vSize;
                 _uvs[uvCount++] = uvBottom.u + (maxX - bx) * uvBottom.uSize; _uvs[uvCount++] = uvBottom.v + (maxZ - bz) * uvBottom.vSize;
                 _uvs[uvCount++] = uvBottom.u + (minX - bx) * uvBottom.uSize; _uvs[uvCount++] = uvBottom.v + (maxZ - bz) * uvBottom.vSize;
+
+                const lBot = isGlowing ? 0x0E : getLightOptimized(wxBase + bx, Math.max(0, Math.floor(minY) - 1), wzBase + bz);
+                const uBot = ((lBot & 0x0F) + 0.5) / 16.0;
+                const vBot = (((lBot >> 4) & 0x0F) + 0.5) / 16.0;
+                for (let k = 0; k < 4; k++) { _uv2s[uv2Count++] = uBot; _uv2s[uv2Count++] = vBot; }
 
                 const base = vertexCount;
                 addBoxQuad(base);
@@ -579,6 +933,11 @@ export class Chunk {
                 _uvs[uvCount++] = uvSide.u + (maxZ - bz) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
                 _uvs[uvCount++] = uvSide.u + (minZ - bz) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
 
+                const lEast = isGlowing ? 0x0E : getLightOptimized(wxBase + bx + 1, Math.floor(minY), wzBase + bz);
+                const uEast = ((lEast & 0x0F) + 0.5) / 16.0;
+                const vEast = (((lEast >> 4) & 0x0F) + 0.5) / 16.0;
+                for (let k = 0; k < 4; k++) { _uv2s[uv2Count++] = uEast; _uv2s[uv2Count++] = vEast; }
+
                 const base = vertexCount;
                 addBoxQuad(base);
                 vertexCount += 4;
@@ -601,6 +960,11 @@ export class Chunk {
                 _uvs[uvCount++] = uvSide.u + (1 - (minZ - bz)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
                 _uvs[uvCount++] = uvSide.u + (1 - (minZ - bz)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
                 _uvs[uvCount++] = uvSide.u + (1 - (maxZ - bz)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+
+                const lWest = isGlowing ? 0x0E : getLightOptimized(wxBase + bx - 1, Math.floor(minY), wzBase + bz);
+                const uWest = ((lWest & 0x0F) + 0.5) / 16.0;
+                const vWest = (((lWest >> 4) & 0x0F) + 0.5) / 16.0;
+                for (let k = 0; k < 4; k++) { _uv2s[uv2Count++] = uWest; _uv2s[uv2Count++] = vWest; }
 
                 const base = vertexCount;
                 addBoxQuad(base);
@@ -625,6 +989,11 @@ export class Chunk {
                 _uvs[uvCount++] = uvSide.u + (maxX - bx) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
                 _uvs[uvCount++] = uvSide.u + (minX - bx) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
 
+                const lSouth = isGlowing ? 0x0E : getLightOptimized(wxBase + bx, Math.floor(minY), wzBase + bz + 1);
+                const uSouth = ((lSouth & 0x0F) + 0.5) / 16.0;
+                const vSouth = (((lSouth >> 4) & 0x0F) + 0.5) / 16.0;
+                for (let k = 0; k < 4; k++) { _uv2s[uv2Count++] = uSouth; _uv2s[uv2Count++] = vSouth; }
+
                 const base = vertexCount;
                 addBoxQuad(base);
                 vertexCount += 4;
@@ -647,6 +1016,11 @@ export class Chunk {
                 _uvs[uvCount++] = uvSide.u + (1 - (minX - bx)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (minY - by) * uvSide.vSize;
                 _uvs[uvCount++] = uvSide.u + (1 - (minX - bx)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
                 _uvs[uvCount++] = uvSide.u + (1 - (maxX - bx)) * uvSide.uSize; _uvs[uvCount++] = uvSide.v + (maxY - by) * uvSide.vSize;
+
+                const lNorth = isGlowing ? 0x0E : getLightOptimized(wxBase + bx, Math.floor(minY), wzBase + bz - 1);
+                const uNorth = ((lNorth & 0x0F) + 0.5) / 16.0;
+                const vNorth = (((lNorth >> 4) & 0x0F) + 0.5) / 16.0;
+                for (let k = 0; k < 4; k++) { _uv2s[uv2Count++] = uNorth; _uv2s[uv2Count++] = vNorth; }
 
                 const base = vertexCount;
                 addBoxQuad(base);
@@ -685,6 +1059,11 @@ export class Chunk {
                         _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
                         _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
                         _uvs[uvCount++] = uvInfo.u;                 _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+
+                        const lPad = getLightOptimized(wx, y + 1, wz);
+                        const uPad = ((lPad & 0x0F) + 0.5) / 16.0;
+                        const vPad = (((lPad >> 4) & 0x0F) + 0.5) / 16.0;
+                        for (let k = 0; k < 4; k++) { _uv2s[uv2Count++] = uPad; _uv2s[uv2Count++] = vPad; }
 
                         _transparentIndices[transparentIndexCount++] = vertexCount;
                         _transparentIndices[transparentIndexCount++] = vertexCount + 1;
@@ -787,6 +1166,11 @@ export class Chunk {
                                 _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
                                 _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
 
+                                const lCrop = getLightOptimized(wx, y, wz);
+                                const uCrop = ((lCrop & 0x0F) + 0.5) / 16.0;
+                                const vCrop = (((lCrop >> 4) & 0x0F) + 0.5) / 16.0;
+                                for (let k = 0; k < 4; k++) { _uv2s[uv2Count++] = uCrop; _uv2s[uv2Count++] = vCrop; }
+
                                 _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
                                 _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
                                 _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
@@ -838,6 +1222,14 @@ export class Chunk {
                             _colors[colorCount++] = bottomAO * plantR; _colors[colorCount++] = bottomAO * plantG; _colors[colorCount++] = bottomAO * plantB;
                             _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
                             _colors[colorCount++] = topAO * plantR; _colors[colorCount++] = topAO * plantG; _colors[colorCount++] = topAO * plantB;
+
+                            const isTorch = (blockType === BLOCKS.TORCH);
+                            const lCross = getLightOptimized(wx, y, wz);
+                            const blCross = isTorch ? 14 : (lCross & 0x0F);
+                            const slCross = (lCross >> 4) & 0x0F;
+                            const uCross = (blCross + 0.5) / 16.0;
+                            const vCross = (slCross + 0.5) / 16.0;
+                            for (let k = 0; k < 8; k++) { _uv2s[uv2Count++] = uCross; _uv2s[uv2Count++] = vCross; }
 
                             if (blockType === BLOCKS.TORCH) {
                                 _glowCrossIndices[glowCrossIndexCount++] = vertexCount; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 1; _glowCrossIndices[glowCrossIndexCount++] = vertexCount + 2;
@@ -905,6 +1297,12 @@ export class Chunk {
                                 _uvs[uvCount++] = u1; _uvs[uvCount++] = v0;
                                 _uvs[uvCount++] = u1; _uvs[uvCount++] = v1;
                                 _uvs[uvCount++] = u0; _uvs[uvCount++] = v1;
+
+                                const isSoul = (blockType === BLOCKS.SOUL_LANTERN);
+                                const lLantern = getLightOptimized(wx, y, wz);
+                                const uLan = (isSoul ? 10.5 : 15.5) / 16.0;
+                                const vLan = (((lLantern >> 4) & 0x0F) + 0.5) / 16.0;
+                                for (let k = 0; k < 4; k++) { _uv2s[uv2Count++] = uLan; _uv2s[uv2Count++] = vLan; }
 
                                 const base = vertexCount;
                                 _glowTransparentIndices[glowTransparentIndexCount++] = base;
@@ -1288,16 +1686,74 @@ export class Chunk {
                                 _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize; // top left
                             }
 
-                            // Calculate ambient occlusion
+                            // Calculate vertex smooth lighting and ambient occlusion
+                            const nx = wx + face.dir[0];
+                            const ny = y + face.dir[1];
+                            const nz = wz + face.dir[2];
+                            const faceLight = getLightOptimized(nx, ny, nz);
+                            const faceBL = faceLight & 0x0F;
+                            const faceSL = (faceLight >> 4) & 0x0F;
+
+                            for (let i = 0; i < 4; i++) {
+                                const v = face.v[i];
+                                let vertBL = faceBL;
+                                let vertSL = faceSL;
+
+                                let dx1 = 0, dy1 = 0, dz1 = 0;
+                                let dx2 = 0, dy2 = 0, dz2 = 0;
+                                if (face.dir[0] !== 0) { // X face
+                                    dy1 = v[1] === 1 ? 1 : -1;
+                                    dz2 = v[2] === 1 ? 1 : -1;
+                                } else if (face.dir[1] !== 0) { // Y face
+                                    dx1 = v[0] === 1 ? 1 : -1;
+                                    dz2 = v[2] === 1 ? 1 : -1;
+                                } else { // Z face
+                                    dx1 = v[0] === 1 ? 1 : -1;
+                                    dy2 = v[1] === 1 ? 1 : -1;
+                                }
+
+                                const s1Solid = _isSolid(wx, y, wz, face.dir[0] + dx1, face.dir[1] + dy1, face.dir[2] + dz1, getBlockOptimized);
+                                const s2Solid = _isSolid(wx, y, wz, face.dir[0] + dx2, face.dir[1] + dy2, face.dir[2] + dz2, getBlockOptimized);
+
+                                let sumBL = faceBL;
+                                let sumSL = faceSL;
+                                let count = 1;
+
+                                if (!s1Solid) {
+                                    const l1 = getLightOptimized(nx + dx1, ny + dy1, nz + dz1);
+                                    sumBL += l1 & 0x0F;
+                                    sumSL += (l1 >> 4) & 0x0F;
+                                    count++;
+                                }
+                                if (!s2Solid) {
+                                    const l2 = getLightOptimized(nx + dx2, ny + dy2, nz + dz2);
+                                    sumBL += l2 & 0x0F;
+                                    sumSL += (l2 >> 4) & 0x0F;
+                                    count++;
+                                }
+                                if (!s1Solid && !s2Solid) {
+                                    const l3 = getLightOptimized(nx + dx1 + dx2, ny + dy1 + dy2, nz + dz1 + dz2);
+                                    sumBL += l3 & 0x0F;
+                                    sumSL += (l3 >> 4) & 0x0F;
+                                    count++;
+                                }
+
+                                vertBL = Math.round(sumBL / count);
+                                vertSL = Math.round(sumSL / count);
+
+                                _uv2s[uv2Count++] = (vertBL + 0.5) / 16.0;
+                                _uv2s[uv2Count++] = (vertSL + 0.5) / 16.0;
+                            }
+
                             const aoColor = calculateVertexAO(wx, y, wz, face, getBlockOptimized, currentBlockType);
 
                             // Authentic Minecraft directional face shading multipliers:
-                            // Top (+Y): 1.0, Bottom (-Y): 0.55, Z-sides (South/North): 0.85, X-sides (East/West): 0.75
+                            // Top faces (+Y): 100%, North/South faces (Z): 80%, East/West faces (X): 60%, Bottom faces (-Y): 50%
                             let faceShade = 1.0;
                             if (face.dir[1] > 0) faceShade = 1.0;
-                            else if (face.dir[1] < 0) faceShade = 0.55;
-                            else if (face.dir[2] !== 0) faceShade = 0.85;
-                            else if (face.dir[0] !== 0) faceShade = 0.75;
+                            else if (face.dir[1] < 0) faceShade = 0.5;
+                            else if (face.dir[2] !== 0) faceShade = 0.8;
+                            else if (face.dir[0] !== 0) faceShade = 0.6;
                             
                             let waterFade = 0;
                             if (effectiveNeighborType === BLOCKS.WATER || effectiveNeighborType === BLOCKS.SWAMP_WATER || neighborType === BLOCKS.WATER || neighborType === BLOCKS.SWAMP_WATER) {
@@ -1398,6 +1854,9 @@ export class Chunk {
         geometry.setAttribute('position', new THREE.BufferAttribute(_positions.slice(0, posCount), 3));
         geometry.setAttribute('normal', new THREE.BufferAttribute(_normals.slice(0, posCount), 3));
         geometry.setAttribute('uv', new THREE.BufferAttribute(_uvs.slice(0, uvCount), 2));
+        const uv2Attr = new THREE.BufferAttribute(_uv2s.slice(0, uv2Count), 2);
+        geometry.setAttribute('uv1', uv2Attr);
+        geometry.setAttribute('uv2', uv2Attr);
         geometry.setAttribute('color', new THREE.BufferAttribute(_colors.slice(0, colorCount), 3));
 
         geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(CHUNK_SIZE/2, CHUNK_HEIGHT/2, CHUNK_SIZE/2), 65);
@@ -1432,6 +1891,8 @@ export class Chunk {
             waterGeometry.setAttribute('position', geometry.attributes.position);
             waterGeometry.setAttribute('normal', geometry.attributes.normal);
             waterGeometry.setAttribute('uv', geometry.attributes.uv);
+            waterGeometry.setAttribute('uv1', geometry.attributes.uv1);
+            waterGeometry.setAttribute('uv2', geometry.attributes.uv2);
             waterGeometry.setAttribute('color', geometry.attributes.color);
             waterGeometry.boundingSphere = geometry.boundingSphere;
             waterGeometry.boundingBox = geometry.boundingBox;
@@ -1465,6 +1926,8 @@ export class Chunk {
             endPortalGeometry.setAttribute('position', geometry.attributes.position);
             endPortalGeometry.setAttribute('normal', geometry.attributes.normal);
             endPortalGeometry.setAttribute('uv', geometry.attributes.uv);
+            endPortalGeometry.setAttribute('uv1', geometry.attributes.uv1);
+            endPortalGeometry.setAttribute('uv2', geometry.attributes.uv2);
             endPortalGeometry.setAttribute('color', geometry.attributes.color);
             endPortalGeometry.boundingSphere = geometry.boundingSphere;
             endPortalGeometry.boundingBox = geometry.boundingBox;
@@ -1600,16 +2063,23 @@ export class World {
         this.frustum = new THREE.Frustum();
         this.projScreenMatrix = new THREE.Matrix4();
         
-        // Initialize shared materials to drastically reduce GC and WebGL overhead
-        // MeshLambertMaterial gives classic Minecraft Gouraud diffuse shading and torch lighting
-        const matOpaque = new THREE.MeshLambertMaterial({
+        // 16x16 Minecraft 2D LightMap Texture (X = Block Light 0..15, Y = Sky Light 0..15)
+        this.lightMapTexture = this.createLightMapTexture();
+        this.updateLightMap(1.0, 0, 'overworld');
+
+        // All block materials use native MeshBasicMaterial sampling the LightMap and vertex colors
+        const matOpaque = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
+            lightMap: this.lightMapTexture,
+            lightMapIntensity: Math.PI,
             vertexColors: true,
             transparent: false,
-            side: THREE.FrontSide // Massive performance gain for opaque blocks
+            side: THREE.FrontSide
         });
-        const matCross = new THREE.MeshLambertMaterial({
+        const matCross = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
+            lightMap: this.lightMapTexture,
+            lightMapIntensity: Math.PI,
             vertexColors: true,
             transparent: true,
             alphaTest: 0.5,
@@ -1617,22 +2087,28 @@ export class World {
         });
         const matGlowCross = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
+            lightMap: this.lightMapTexture,
+            lightMapIntensity: Math.PI,
             vertexColors: true,
             transparent: true,
             alphaTest: 0.5,
             side: THREE.DoubleSide
         });
-        const matWater = new THREE.MeshLambertMaterial({
+        const matWater = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
-            color: new THREE.Color(0xffffff), // Authentic MC water texture colors (already colored blue in texture)
+            lightMap: this.lightMapTexture,
+            lightMapIntensity: Math.PI,
+            color: new THREE.Color(0xffffff),
             vertexColors: true,
             transparent: true,
-            opacity: 0.65, // Authentic translucent water
-            depthWrite: false, // Prevents z-sorting fighting and clipping underwater terrain
+            opacity: 0.65,
+            depthWrite: false,
             side: THREE.DoubleSide
         });
-        const matTransparent = new THREE.MeshLambertMaterial({
+        const matTransparent = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
+            lightMap: this.lightMapTexture,
+            lightMapIntensity: Math.PI,
             vertexColors: true,
             transparent: true,
             alphaTest: 0.25,
@@ -1640,34 +2116,36 @@ export class World {
         });
         const matGlowOpaque = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
+            lightMap: this.lightMapTexture,
+            lightMapIntensity: Math.PI,
             vertexColors: true,
-            side: THREE.FrontSide // Massive performance gain for opaque blocks
+            side: THREE.FrontSide
         });
         const matGlowTransparent = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
+            lightMap: this.lightMapTexture,
+            lightMapIntensity: Math.PI,
             vertexColors: true,
             transparent: true,
             alphaTest: 0.1,
             side: THREE.DoubleSide
         });
-        const matSlightGlowOpaque = new THREE.MeshLambertMaterial({
+        const matSlightGlowOpaque = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
+            lightMap: this.lightMapTexture,
+            lightMapIntensity: Math.PI,
             vertexColors: true,
             transparent: false,
-            side: THREE.FrontSide,
-            emissive: new THREE.Color(0xffffff),
-            emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 0.2
+            side: THREE.FrontSide
         });
-        const matSlightGlowTransparent = new THREE.MeshLambertMaterial({
+        const matSlightGlowTransparent = new THREE.MeshBasicMaterial({
             map: textureAtlas.texture,
+            lightMap: this.lightMapTexture,
+            lightMapIntensity: Math.PI,
             vertexColors: true,
             transparent: true,
             alphaTest: 0.25,
-            side: THREE.DoubleSide,
-            emissive: new THREE.Color(0xffffff),
-            emissiveMap: textureAtlas.texture,
-            emissiveIntensity: 0.2
+            side: THREE.DoubleSide
         });
         this.matWater = matWater;
         textureAtlas.matWater = matWater;
@@ -1842,6 +2320,31 @@ export class World {
         const chunk = this.chunks.get(chunkKey);
         if (chunk) return chunk.getData(lx, wy, lz);
         return 0;
+    }
+
+    getBlockLight(wx, wy, wz) {
+        wx = Math.floor(wx); wy = Math.floor(wy); wz = Math.floor(wz);
+        if (wy < 0 || wy >= CHUNK_HEIGHT) return 0;
+        const cx = Math.floor(wx / CHUNK_SIZE);
+        const cz = Math.floor(wz / CHUNK_SIZE);
+        const chunk = this.chunks.get(this.getChunkKey(cx, cz));
+        if (!chunk) return 0;
+        const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        return chunk.getBlockLight(lx, wy, lz);
+    }
+
+    getSkyLight(wx, wy, wz) {
+        wx = Math.floor(wx); wy = Math.floor(wy); wz = Math.floor(wz);
+        if (wy >= CHUNK_HEIGHT) return 15;
+        if (wy < 0) return 0;
+        const cx = Math.floor(wx / CHUNK_SIZE);
+        const cz = Math.floor(wz / CHUNK_SIZE);
+        const chunk = this.chunks.get(this.getChunkKey(cx, cz));
+        if (!chunk) return 15;
+        const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+        return chunk.getSkyLight(lx, wy, lz);
     }
 
     getHighestBlock(x, z) {
@@ -2101,6 +2604,15 @@ export class World {
 
             if (oldType !== type) {
                 this.checkAdjacentSupports(wx, wy, wz);
+                const isLightBlock = (b) => {
+                    return b === window.BLOCKS.TORCH || b === window.BLOCKS.LAVA || b === window.BLOCKS.GLOWSTONE || b === window.BLOCKS.LANTERN || b === window.BLOCKS.SOUL_LANTERN || b === window.BLOCKS.FIRE || b === window.BLOCKS.SOUL_FIRE || b === window.BLOCKS.SHROOMLIGHT;
+                };
+                if (isLightBlock(oldType) || isLightBlock(type)) {
+                    this._markChunkDirty(cx - 1, cz);
+                    this._markChunkDirty(cx + 1, cz);
+                    this._markChunkDirty(cx, cz - 1);
+                    this._markChunkDirty(cx, cz + 1);
+                }
             }
 
             if (!this.chunksToBuild.includes(chunk)) {
@@ -2122,10 +2634,77 @@ export class World {
         }
     }
 
+    createLightMapTexture() {
+        const data = new Uint8Array(16 * 16 * 4);
+        const texture = new THREE.DataTexture(data, 16, 16, THREE.RGBAFormat);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.generateMipmaps = false;
+        texture.channel = 2;
+        texture.needsUpdate = true;
+        return texture;
+    }
+
+    updateLightMap(sunFactor = 1.0, flickerTime = 0, dimension = 'overworld') {
+        if (!this.lightMapTexture) return;
+        const data = this.lightMapTexture.image.data;
+        const isNether = (dimension === 'nether');
+        const isEnd = (dimension === 'end');
+        const ambientBase = isNether ? 0.12 : (isEnd ? 0.08 : 0.045);
+        const flicker = 1.0 + Math.sin(flickerTime * 7.3) * 0.015 + Math.cos(flickerTime * 13.1) * 0.01;
+
+        for (let sl = 0; sl < 16; sl++) {
+            const fs = (15 - sl) / 15.0;
+            const skyRaw = (sl === 0) ? 0.0 : (1.0 - fs) / (fs * 3.0 + 1.0);
+
+            for (let bl = 0; bl < 16; bl++) {
+                const fb = (15 - bl) / 15.0;
+                const blRaw = (bl === 0) ? 0.0 : ((1.0 - fb) / (fb * 3.0 + 1.0)) * flicker;
+
+                // Warm torch fire curve
+                const tr = blRaw * 1.0;
+                const tg = blRaw * (blRaw * 0.40 + 0.55);
+                const tb = blRaw * (blRaw * blRaw * 0.50 + 0.25);
+
+                let skyR = 0, skyG = 0, skyB = 0;
+                if (!isNether && !isEnd) {
+                    const dayR = skyRaw * sunFactor;
+                    const dayG = skyRaw * sunFactor;
+                    const dayB = skyRaw * sunFactor;
+
+                    const nightFactor = (1.0 - sunFactor);
+                    const nightR = skyRaw * nightFactor * 0.08;
+                    const nightG = skyRaw * nightFactor * 0.10;
+                    const nightB = skyRaw * nightFactor * 0.24;
+
+                    skyR = dayR + nightR;
+                    skyG = dayG + nightG;
+                    skyB = dayB + nightB;
+                } else if (isNether) {
+                    skyR = 0.08; skyG = 0.02; skyB = 0.02;
+                } else if (isEnd) {
+                    skyR = 0.04; skyG = 0.02; skyB = 0.06;
+                }
+
+                const r = Math.min(1.0, tr + skyR + ambientBase);
+                const g = Math.min(1.0, tg + skyG + ambientBase);
+                const b = Math.min(1.0, tb + skyB + ambientBase * 1.25);
+
+                const idx = (sl * 16 + bl) * 4;
+                data[idx] = Math.round(r * 255);
+                data[idx + 1] = Math.round(g * 255);
+                data[idx + 2] = Math.round(b * 255);
+                data[idx + 3] = 255;
+            }
+        }
+        this.lightMapTexture.needsUpdate = true;
+    }
+
     _markChunkDirty(cx, cz) {
         const chunk = this.chunks.get(this.getChunkKey(cx, cz));
         if (chunk) {
             chunk.dirty = true;
+            chunk.lightDirty = true;
             if (!this.chunksToBuild.includes(chunk)) {
                 this.chunksToBuild.push(chunk);
             }

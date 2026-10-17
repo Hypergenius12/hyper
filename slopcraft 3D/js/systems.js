@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=128';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=128';
+import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=129';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=129';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -447,6 +447,27 @@ export class LightingSystem {
             this._stars.visible = starOpacity > 0.01;
             this._stars.position.copy(cameraPos);
         }
+
+        // Update Minecraft 2D LightMap texture
+        let sunFactor = 0.0;
+        if (currentDimension === 'overworld') {
+            const t = this.timeOfDay;
+            if (t >= 0.28 && t <= 0.72) {
+                sunFactor = 1.0;
+            } else if (t >= 0.22 && t < 0.28) {
+                sunFactor = (t - 0.22) / 0.06;
+            } else if (t > 0.72 && t <= 0.78) {
+                sunFactor = 1.0 - (t - 0.72) / 0.06;
+            } else {
+                sunFactor = 0.0;
+            }
+            if (this.weather === 'rain' || this.weather === 'thunder') {
+                sunFactor *= 0.6;
+            }
+        }
+        if (this.world && this.world.updateLightMap) {
+            this.world.updateLightMap(sunFactor, this.timeOfDay * 1000, currentDimension);
+        }
     }
 
     _buildStars() {
@@ -481,27 +502,14 @@ export class TorchLightSystem {
         this.scene = scene;
         this.torches = new Map();
         this._time = 0;
-        
-        // Light Pool to drastically improve FPS (max 8 dynamic lights ever compiled in shader)
-        this.poolSize = 8;
+        this.poolSize = 0;
         this.lightPool = [];
-        for (let i = 0; i < this.poolSize; i++) {
-            const light = new THREE.PointLight(0xff6a00, 0, 60);
-            light.decay = 1.0;
-            light.position.set(0, -10000, 0); // Hide initially
-            this.scene.add(light);
-            this.lightPool.push(light);
-        }
     }
 
     addTorch(x, y, z) {
         const key = `${x},${y},${z}`;
         if (this.torches.has(key)) return;
-        
-        this.torches.set(key, {
-            position: new THREE.Vector3(x + 0.5, y + 0.92, z + 0.5),
-            flickerOffset: Math.random() * 100
-        });
+        this.torches.set(key, { x, y, z });
     }
 
     removeTorch(x, y, z) {
@@ -510,38 +518,7 @@ export class TorchLightSystem {
     }
 
     update(dt, camPos) {
-        this._time += dt;
-        
-        const torchDists = [];
-        for (const torch of this.torches.values()) {
-            const distSq = camPos ? torch.position.distanceToSquared(camPos) : 0;
-            torchDists.push({ torch, distSq });
-        }
-        
-        torchDists.sort((a, b) => a.distSq - b.distSq);
-        
-        for (let i = 0; i < this.poolSize; i++) {
-            const light = this.lightPool[i];
-            
-            if (i < torchDists.length && (!camPos || torchDists[i].distSq < 1000)) { // ~31 blocks radius
-                const torch = torchDists[i].torch;
-                light.position.copy(torch.position);
-                
-                const t = this._time + torch.flickerOffset;
-                const flicker = Math.sin(t * 7.3) * 0.15
-                              + Math.sin(t * 13.7) * 0.08
-                              + Math.sin(t * 23.1) * 0.04;
-                light.intensity = 8.0 * (1 + flicker);
-                
-                const r = 1.0;
-                const g = 0.38 + flicker * 0.15;
-                const b = 0.0;
-                light.color.setRGB(r, g, b);
-            } else {
-                light.intensity = 0;
-                light.position.set(0, -10000, 0);
-            }
-        }
+        // Voxel lighting engine handles block light propagation directly on the grid
     }
 }
 
