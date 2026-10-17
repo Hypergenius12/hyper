@@ -2,9 +2,9 @@
 // generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=116';
-import { BLOCKS } from './textures.js?v=137';
+import { BLOCKS } from './textures.js?v=138';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=137';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=138';
 
 // Planet configurations
 export const BIOMES = {
@@ -542,20 +542,20 @@ export function generatePlanetParams(seed) {
 
 // Biome-specific cave frequency scaling
 export function getBiomeCaveFactor(biome) {
-    if (!biome) return 0.35;
-    if (biome === BIOMES.PLAINS || biome.name === 'Plains') return 0.18; // Very rare caves deep underground; absolutely NO surface openings or ravines
+    if (!biome) return 0.38;
+    if (biome === BIOMES.PLAINS || biome.name === 'Plains') return 0.28; // Subterranean caves with natural open entrances
     if (biome === BIOMES.SWAMP || biome.name === 'Swamp') return 0.12; // Water-tight wetland, deep caves only
     if (biome === BIOMES.BEACH || biome === BIOMES.DEEP_OCEAN || biome === BIOMES.CORAL_REEF || biome.isOcean || biome.isBeach) return 0.10;
-    if (biome === BIOMES.CHERRY_GROVE || biome === BIOMES.MYSTIC_GROVE || biome.name === 'Cherry Grove') return 0.22;
-    if (biome === BIOMES.DESERT || biome === BIOMES.OASIS || biome.name === 'Desert') return 0.32;
-    if (biome === BIOMES.BADLANDS || biome.name === 'Badlands') return 0.38;
+    if (biome === BIOMES.CHERRY_GROVE || biome === BIOMES.MYSTIC_GROVE || biome.name === 'Cherry Grove') return 0.28;
+    if (biome === BIOMES.DESERT || biome === BIOMES.OASIS || biome.name === 'Desert') return 0.36;
+    if (biome === BIOMES.BADLANDS || biome.name === 'Badlands') return 0.44;
     if (biome === BIOMES.MUSHROOM || biome.name === 'Mushroom') return 0.25;
-    if (biome === BIOMES.FOREST || biome === BIOMES.BIRCH_FOREST || biome === BIOMES.DARK_FOREST || biome.name === 'Forest') return 0.42;
-    if (biome === BIOMES.TAIGA || biome === BIOMES.REDWOOD_FOREST || biome.name === 'Taiga') return 0.45;
-    if (biome === BIOMES.SAVANNA || biome.name === 'Savanna') return 0.40;
-    if (biome === BIOMES.VOLCANIC || biome.isVolcanic) return 0.60;
-    if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains') return 0.85; // Grand cavernous mountain chambers, ravines, and high-altitude mouths
-    return 0.35;
+    if (biome === BIOMES.FOREST || biome === BIOMES.BIRCH_FOREST || biome === BIOMES.DARK_FOREST || biome.name === 'Forest') return 0.48;
+    if (biome === BIOMES.TAIGA || biome === BIOMES.REDWOOD_FOREST || biome.name === 'Taiga') return 0.48;
+    if (biome === BIOMES.SAVANNA || biome.name === 'Savanna') return 0.44;
+    if (biome === BIOMES.VOLCANIC || biome.isVolcanic) return 0.65;
+    if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains') return 0.88; // Grand cavernous mountain chambers, ravines, and high-altitude mouths
+    return 0.38;
 }
 
 // Rare winding river channels that flow at seaLevel and integrate seamlessly with terrain
@@ -1543,18 +1543,18 @@ export function generateChunkTerrain(cx, cz, params) {
             // Wetlands, rivers, lakes, and oceans remain strictly watertight!
             const isPlains = (col.biome === BIOMES.PLAINS || col.biome.name === 'Plains');
             const isWaterBiome = (bCave <= 0.15) || (col.biome === BIOMES.SWAMP || col.biome.name === 'Swamp') || (col.swampInfluence && col.swampInfluence > 0.20);
-            const canOpenToSurface = !isWaterBiome && (col.surfaceY > params.seaLevel + 4) && !isNearWater;
+            const canOpenToSurface = !isWaterBiome && (col.surfaceY > params.seaLevel + 2) && !isNearWater;
             // Impermeable stone ceiling under rivers/lakes/oceans to prevent leaks
             const maxCaveY = isNearWater
                 ? Math.min(params.seaLevel - 7, col.surfaceY - 6)
                 : (canOpenToSurface ? (col.surfaceY + 1) : Math.min(50, col.surfaceY - 5));
 
             // Effective threshold scaled by biome:
-            // In Plains (bCave = 0.18): threshold increases by +0.18 -> caves are rare and deep!
-            // In Mountains (bCave = 0.85): threshold decreases -> cavernous mountain grottos!
-            const effectiveThreshold = params.caveThreshold + (1.0 - bCave) * 0.22;
+            // In Plains (bCave = 0.28): threshold allows natural cave mouth exploration
+            // In Mountains (bCave = 0.88): cavernous mountain grottos!
+            const effectiveThreshold = params.caveThreshold + (1.0 - bCave) * 0.20;
             const cheeseScale = params.caveScale * 1.4;
-            const noodleLimit = 0.006 * bCave;
+            const noodleLimit = 0.007 * bCave;
 
             for (let y = 1; y <= maxCaveY; y++) {
                 const idx = blockIndex(x, y, z);
@@ -1599,13 +1599,12 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 }
 
-                // (D) Surface Openings - Biome-balanced cave mouths
-                if (!carveAir && canOpenToSurface && y > 48 && y <= col.surfaceY + 1) {
+                // (D) Surface Openings - Natural open cave mouths & hillside tunnels
+                if (!carveAir && canOpenToSurface && y > 46 && y <= col.surfaceY + 1) {
                     const breachNoise = params.caveNoise(wx * 0.038, y * 0.038, wz * 0.038);
-                    // Plains: high threshold (0.54) -> lower/rarer natural surface cave entrances
-                    // Other biomes (Forests, Taiga, Savanna, Deserts, Badlands, Mountains): moderate threshold (0.42 - 0.46)
-                    const baseThreshold = isPlains ? 0.54 : (0.46 - bCave * 0.08);
-                    const breachThreshold = baseThreshold + (y - 48) * 0.012;
+                    // Slightly more common surface cave mouths across biomes
+                    const baseThreshold = isPlains ? 0.42 : (0.35 - bCave * 0.08);
+                    const breachThreshold = baseThreshold + (y - 46) * 0.007;
                     if (breachNoise > breachThreshold) {
                         carveAir = true;
                     }
@@ -2524,10 +2523,11 @@ export function generateChunkTerrain(cx, cz, params) {
                         }
                     }
                 } else if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
-                    if (fr < 0.25) {
+                    // Dark Forest: clean floor under thick canopy with sparse tall grass, mostly mushrooms and occasional red flower
+                    if (fr < 0.09) {
                         const dfRoll = floraRng();
-                        if (dfRoll < 0.65) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                        else if (dfRoll < 0.85) {
+                        if (dfRoll < 0.20) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                        else if (dfRoll < 0.75) {
                             const shroom = floraRng() < 0.5 ? BLOCKS.BROWN_MUSHROOM : BLOCKS.RED_MUSHROOM;
                             safeSetBlock(blocks, tx, surfaceY + 1, tz, shroom, true);
                         } else {
@@ -2535,24 +2535,33 @@ export function generateChunkTerrain(cx, cz, params) {
                         }
                     }
                 } else if (biome.savannaFlora || biome === BIOMES.SAVANNA || biome.name === 'Savanna') {
-                    if (fr < 0.2) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                    if (fr < 0.16) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                 } else if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains') {
-                    if (fr < 0.15) {
-                        if (floraRng() < 0.8) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                    if (fr < 0.10) {
+                        if (floraRng() < 0.7) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
                         else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.WHITE_FLOWER, true);
                     }
-                } else if (biome === BIOMES.PLAINS || biome.name === 'Plains') {
-                    // Authentic Minecraft Plains: tall grass with scattered dandelions and poppies (strictly NO mushrooms!)
-                    if (fr < 0.22) {
+                } else if (biome === BIOMES.FOREST || biome === BIOMES.BIRCH_FOREST || biome.name === 'Forest' || biome.name === 'Birch Forest' || biome.hasTrees) {
+                    // Clean, authentic forest floor: sparse tall grass (~6%) and occasional wildflowers (~3%)
+                    if (fr < 0.06) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                    } else if (fr < 0.26) {
+                    } else if (fr < 0.09) {
+                        const r3 = floraRng();
+                        const flowerType = r3 < 0.35 ? BLOCKS.RED_FLOWER : (r3 < 0.65 ? BLOCKS.YELLOW_FLOWER : BLOCKS.BLUE_FLOWER);
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);
+                    }
+                } else if (biome === BIOMES.PLAINS || biome.name === 'Plains') {
+                    // Authentic Minecraft Plains: moderate tall grass with scattered dandelions and poppies
+                    if (fr < 0.15) {
+                        safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
+                    } else if (fr < 0.19) {
                         const fl = floraRng() < 0.55 ? BLOCKS.YELLOW_FLOWER : BLOCKS.RED_FLOWER;
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, fl, true);
                     }
                 } else {
-                    if (fr < 0.22) {
+                    if (fr < 0.07) {
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.TALL_GRASS, true);
-                    } else if (fr >= 0.22 && fr < 0.27) {
+                    } else if (fr >= 0.07 && fr < 0.11) {
                         const r3 = floraRng();
                         const flowerType = r3 < 0.3 ? BLOCKS.RED_FLOWER : (r3 < 0.55 ? BLOCKS.YELLOW_FLOWER : (r3 < 0.75 ? BLOCKS.BLUE_FLOWER : (r3 < 0.9 ? BLOCKS.WHITE_FLOWER : BLOCKS.PURPLE_FLOWER)));
                         safeSetBlock(blocks, tx, surfaceY + 1, tz, flowerType, true);
