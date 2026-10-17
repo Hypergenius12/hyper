@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=136';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=136';
+import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=137';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=137';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -4090,60 +4090,240 @@ export class CloudSystem {
         this.scene = scene;
         this.clouds = new THREE.Group();
         this.scene.add(this.clouds);
-        
-        const geo = new THREE.BoxGeometry(8, 4, 8);
-        const mat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-        
-        this.clusters = [];
-        let totalBlocks = 0;
-        for(let i=0; i<30; i++) {
-            const clusterPos = new THREE.Vector3((Math.random()-0.5)*400, 100 + Math.random()*20, (Math.random()-0.5)*400);
-            const numBlocks = 5 + Math.floor(Math.random()*15);
-            const blocks = [];
-            for(let j=0; j<numBlocks; j++) {
-                const offset = new THREE.Vector3(
-                    Math.floor((Math.random()-0.5)*4)*8,
-                    Math.floor((Math.random()-0.5)*2)*4,
-                    Math.floor((Math.random()-0.5)*4)*8
-                );
-                blocks.push(offset);
-                totalBlocks++;
-            }
-            this.clusters.push({ pos: clusterPos, blocks });
-        }
 
-        // Single InstancedMesh replaces 360 separate transparent draw calls with exactly 1 draw call
-        this.instancedMesh = new THREE.InstancedMesh(geo, mat, totalBlocks);
-        this.instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        this.clouds.add(this.instancedMesh);
-        this._dummy = new THREE.Object3D();
-        this._updateInstances();
+        this.cloudAltitude = 128; // Authentic Minecraft cloud height
+        this.cloudThickness = 4;  // 4 blocks thick (Fancy 3D clouds)
+        this.cellSize = 12;       // 12 blocks per cloud texture pixel
+        this.radius = 24;         // 48x48 cell footprint (576x576 blocks around player)
+        this.gridSize = 256;      // Minecraft 256x256 clouds.png
+
+        this.cloudData = new Uint8Array(256 * 256);
+        this.isLoaded = false;
+        this.cloudOffset = 0;
+        this.lastCellX = null;
+        this.lastCellZ = null;
+
+        // Material with vertex colors for authentic Minecraft face shading
+        this.cloudMat = new THREE.MeshBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.82,
+            fog: true,
+            depthWrite: false,
+            side: THREE.DoubleSide
+        });
+
+        this.cloudsMesh = null;
+
+        // Load authentic Minecraft clouds.png
+        this._loadCloudTexture();
     }
 
-    _updateInstances() {
-        let idx = 0;
-        for (let i = 0; i < this.clusters.length; i++) {
-            const c = this.clusters[i];
-            for (let j = 0; j < c.blocks.length; j++) {
-                const b = c.blocks[j];
-                this._dummy.position.set(c.pos.x + b.x, c.pos.y + b.y, c.pos.z + b.z);
-                this._dummy.updateMatrix();
-                this.instancedMesh.setMatrixAt(idx++, this._dummy.matrix);
+    _loadCloudTexture() {
+        // Fast temporary procedural cloud field so clouds appear immediately on frame 1
+        for (let y = 0; y < 256; y++) {
+            for (let x = 0; x < 256; x++) {
+                const n = Math.sin(x * 0.12) * Math.cos(y * 0.12) + Math.sin(x * 0.05 + y * 0.05);
+                this.cloudData[y * 256 + x] = (n > 0.6) ? 1 : 0;
             }
         }
-        this.instancedMesh.instanceMatrix.needsUpdate = true;
+
+        if (typeof Image === 'undefined') return;
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const imgData = ctx.getImageData(0, 0, 256, 256).data;
+                for (let i = 0; i < 256 * 256; i++) {
+                    // In authentic Minecraft clouds.png, alpha > 128 indicates cloud block
+                    this.cloudData[i] = (imgData[i * 4 + 3] > 128) ? 1 : 0;
+                }
+                this.isLoaded = true;
+                this.lastCellX = null;
+                this.lastCellZ = null;
+            } catch (e) {
+                console.warn('Failed to parse clouds.png, using procedural fallback', e);
+            }
+        };
+        img.onerror = () => {
+            // CDN fallback
+            img.src = 'https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.2/assets/minecraft/textures/environment/clouds.png';
+        };
+        img.src = 'assets/mc/environment/clouds.png';
+    }
+
+    _isCloud(u, v) {
+        const wrapU = ((u % 256) + 256) % 256;
+        const wrapV = ((v % 256) + 256) % 256;
+        return this.cloudData[wrapV * 256 + wrapU] === 1;
+    }
+
+    _buildMesh(centerCX, centerCZ) {
+        const R = this.radius;
+        const CS = this.cellSize;
+        const H = this.cloudThickness;
+
+        const positions = [];
+        const colors = [];
+        const indices = [];
+        let vertCount = 0;
+
+        const addQuad = (p0, p1, p2, p3, shade) => {
+            const base = vertCount;
+            positions.push(
+                p0[0], p0[1], p0[2],
+                p1[0], p1[1], p1[2],
+                p2[0], p2[1], p2[2],
+                p3[0], p3[1], p3[2]
+            );
+            for (let i = 0; i < 4; i++) {
+                colors.push(shade, shade, shade);
+            }
+            indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+            vertCount += 4;
+        };
+
+        for (let dz = -R; dz <= R; dz++) {
+            const cz = centerCZ + dz;
+            for (let dx = -R; dx <= R; dx++) {
+                const cx = centerCX + dx;
+                if (!this._isCloud(cx, cz)) continue;
+
+                const x0 = dx * CS;
+                const x1 = x0 + CS;
+                const z0 = dz * CS;
+                const z1 = z0 + CS;
+                const y0 = 0;
+                const y1 = H;
+
+                // 1. Bottom face (-Y): Minecraft authentic bottom cloud shading (0.70)
+                addQuad(
+                    [x0, y0, z0],
+                    [x1, y0, z0],
+                    [x1, y0, z1],
+                    [x0, y0, z1],
+                    0.70
+                );
+
+                // 2. Top face (+Y): Minecraft authentic top cloud shading (1.00)
+                addQuad(
+                    [x0, y1, z1],
+                    [x1, y1, z1],
+                    [x1, y1, z0],
+                    [x0, y1, z0],
+                    1.00
+                );
+
+                // 3. North face (-Z): if neighbor cell is empty
+                if (!this._isCloud(cx, cz - 1)) {
+                    addQuad(
+                        [x0, y0, z0],
+                        [x0, y1, z0],
+                        [x1, y1, z0],
+                        [x1, y0, z0],
+                        0.80
+                    );
+                }
+
+                // 4. South face (+Z): if neighbor cell is empty
+                if (!this._isCloud(cx, cz + 1)) {
+                    addQuad(
+                        [x1, y0, z1],
+                        [x1, y1, z1],
+                        [x0, y1, z1],
+                        [x0, y0, z1],
+                        0.80
+                    );
+                }
+
+                // 5. West face (-X): if neighbor cell is empty
+                if (!this._isCloud(cx - 1, cz)) {
+                    addQuad(
+                        [x0, y0, z1],
+                        [x0, y1, z1],
+                        [x0, y1, z0],
+                        [x0, y0, z0],
+                        0.85
+                    );
+                }
+
+                // 6. East face (+X): if neighbor cell is empty
+                if (!this._isCloud(cx + 1, cz)) {
+                    addQuad(
+                        [x1, y0, z0],
+                        [x1, y1, z0],
+                        [x1, y1, z1],
+                        [x1, y0, z1],
+                        0.85
+                    );
+                }
+            }
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        geo.setIndex(indices);
+        geo.computeVertexNormals();
+
+        if (this.cloudsMesh) {
+            this.clouds.remove(this.cloudsMesh);
+            this.cloudsMesh.geometry.dispose();
+        }
+
+        this.cloudsMesh = new THREE.Mesh(geo, this.cloudMat);
+        this.cloudsMesh.renderOrder = 5;
+        this.clouds.add(this.cloudsMesh);
     }
 
     update(dt, cameraPos) {
-        for(let i = 0; i < this.clusters.length; i++) {
-            const c = this.clusters[i];
-            c.pos.x += dt * 2;
-            if (c.pos.x - cameraPos.x > 200) c.pos.x -= 400;
-            if (c.pos.x - cameraPos.x < -200) c.pos.x += 400;
-            if (c.pos.z - cameraPos.z > 200) c.pos.z -= 400;
-            if (c.pos.z - cameraPos.z < -200) c.pos.z += 400;
+        // Minecraft cloud drift: smooth drift along +X at 2.5 blocks/second
+        this.cloudOffset += dt * 2.5;
+
+        const worldCamX = cameraPos.x - this.cloudOffset;
+        const worldCamZ = cameraPos.z;
+
+        const cellX = Math.floor(worldCamX / this.cellSize);
+        const cellZ = Math.floor(worldCamZ / this.cellSize);
+
+        // Rebuild mesh when camera or drift crosses a cloud cell boundary
+        if (cellX !== this.lastCellX || cellZ !== this.lastCellZ || !this.cloudsMesh) {
+            this.lastCellX = cellX;
+            this.lastCellZ = cellZ;
+            this._buildMesh(cellX, cellZ);
         }
-        this._updateInstances();
+
+        // Sub-cell continuous smooth translation
+        const fracX = worldCamX - cellX * this.cellSize;
+        const fracZ = worldCamZ - cellZ * this.cellSize;
+        if (this.cloudsMesh) {
+            this.cloudsMesh.position.set(cameraPos.x - fracX, this.cloudAltitude, cameraPos.z - fracZ);
+        }
+
+        // Dynamically tint cloud color to match environmental lighting / time of day
+        if (this.scene && this.scene.fog && this.scene.fog.color) {
+            const fc = this.scene.fog.color;
+            const lum = Math.max(0.20, fc.r * 0.299 + fc.g * 0.587 + fc.b * 0.114);
+            const isWarm = (fc.r > fc.b * 1.25); // Sunrise or sunset warm horizon
+            if (isWarm) {
+                // Soft warm glow during dawn/dusk
+                this.cloudMat.color.setRGB(
+                    Math.min(1.0, fc.r * 1.15),
+                    Math.min(1.0, fc.g * 1.1),
+                    Math.min(1.0, fc.b * 1.2)
+                );
+            } else {
+                // Daytime white or night dark blue-gray
+                const cloudB = Math.min(1.0, lum * 1.25);
+                this.cloudMat.color.setRGB(cloudB, cloudB, Math.min(1.0, cloudB * 1.05));
+            }
+        }
     }
 }
 
