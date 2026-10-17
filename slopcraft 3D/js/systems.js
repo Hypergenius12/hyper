@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=138';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=138';
+import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=139';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=139';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -14,11 +14,11 @@ export class LightingSystem {
         this.weather = 'clear'; // 'clear' | 'rain' | 'thunder'
 
         // Authentic Minecraft lighting: balanced ambient skylight and directional sun for 3D depth
-        this.ambientLight = new THREE.AmbientLight(0xd4def0, 0.52);
+        this.ambientLight = new THREE.AmbientLight(0xd4def0, 0.42);
         this.scene.add(this.ambientLight);
 
         // Warm sun directional light (provides clean 3D block shading and face contrast)
-        this.sunLight = new THREE.DirectionalLight(0xfff8ea, 0.48);
+        this.sunLight = new THREE.DirectionalLight(0xfff8ea, 0.58);
         this.sunLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.sunLight);
         this.caveFactor = 0.0;
@@ -208,7 +208,7 @@ export class LightingSystem {
             // Early morning transition (t=0.28)
             { 
                 t: 0.28, 
-                amb: new THREE.Color(0xe0e8f6), ambIntensity: 0.52, 
+                amb: new THREE.Color(0xe0e8f6), ambIntensity: 0.42, 
                 bg: new THREE.Color(0xc0d8ff), top: new THREE.Color(0x78a7ff), bottom: new THREE.Color(0x182030),
                 sun: 0.46, moon: 0.0,
                 glow: 0.0, glowColor: new THREE.Color(0xffa458)
@@ -216,16 +216,16 @@ export class LightingSystem {
             // Midday Clear Day (t=0.30 to 0.70) - authentic Minecraft Java Plains: soft azure (#78A7FF) and milky pale horizon (#C0D8FF)
             { 
                 t: 0.30, 
-                amb: new THREE.Color(0xdce5f4), ambIntensity: 0.52, 
+                amb: new THREE.Color(0xdce5f4), ambIntensity: 0.42, 
                 bg: new THREE.Color(0xc0d8ff), top: new THREE.Color(0x78a7ff), bottom: new THREE.Color(0x182030),
-                sun: 0.48, moon: 0.0,
+                sun: 0.58, moon: 0.0,
                 glow: 0.0, glowColor: new THREE.Color(0xff9850)
             },
             { 
                 t: 0.70, 
-                amb: new THREE.Color(0xdce5f4), ambIntensity: 0.52, 
+                amb: new THREE.Color(0xdce5f4), ambIntensity: 0.42, 
                 bg: new THREE.Color(0xc0d8ff), top: new THREE.Color(0x78a7ff), bottom: new THREE.Color(0x182030),
-                sun: 0.48, moon: 0.0,
+                sun: 0.58, moon: 0.0,
                 glow: 0.0, glowColor: new THREE.Color(0xff9850)
             },
             // Late Afternoon Golden Hour (t=0.72)

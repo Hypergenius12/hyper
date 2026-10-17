@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=138';
-import { getBiomeParams } from './generation.js?v=138';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=139';
+import { getBiomeParams } from './generation.js?v=139';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -548,6 +548,51 @@ export class Chunk {
             }
         }
 
+        // Minecraft Sky Light & Overhang Occlusion:
+        // Precompute the top opaque/solid block for a 28x28 column grid around the chunk
+        const SKY_PAD = 6;
+        const SKY_DIM = CHUNK_SIZE + SKY_PAD * 2; // 28
+        const topOpaqueY = new Int16Array(SKY_DIM * SKY_DIM);
+
+        for (let gz = 0; gz < SKY_DIM; gz++) {
+            const wz = wzBase + gz - SKY_PAD;
+            for (let gx = 0; gx < SKY_DIM; gx++) {
+                const wx = wxBase + gx - SKY_PAD;
+                let topY = -1;
+                for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) {
+                    const b = getBlockOptimized(wx, y, wz);
+                    if (b !== BLOCKS.AIR && b !== BLOCKS.WATER && b !== BLOCKS.SWAMP_WATER && b !== BLOCKS.GLASS && !getBlockProperties(b).isTransparent) {
+                        topY = y;
+                        break;
+                    }
+                }
+                topOpaqueY[gz * SKY_DIM + gx] = topY;
+            }
+        }
+
+        const getSkyLightFactor = (nx, ny, nz) => {
+            const gx = nx + SKY_PAD;
+            const gz = nz + SKY_PAD;
+            if (gx < 0 || gx >= SKY_DIM || gz < 0 || gz >= SKY_DIM) return 1.0;
+            if (ny > topOpaqueY[gz * SKY_DIM + gx]) return 1.0; // Open directly to the sky
+
+            // Under an overhang or in a cave:
+            // Calculate horizontal distance to nearest column with open sky at altitude ny
+            let minDist = 7;
+            for (let d = 1; d <= 6; d++) {
+                if ((gx + d < SKY_DIM && ny > topOpaqueY[gz * SKY_DIM + (gx + d)]) ||
+                    (gx - d >= 0       && ny > topOpaqueY[gz * SKY_DIM + (gx - d)]) ||
+                    (gz + d < SKY_DIM && ny > topOpaqueY[(gz + d) * SKY_DIM + gx]) ||
+                    (gz - d >= 0       && ny > topOpaqueY[(gz - d) * SKY_DIM + gx])) {
+                    minDist = d;
+                    break;
+                }
+            }
+            // Authentic Minecraft sky light propagation curve under overhangs
+            // Distance 1: 0.82, 2: 0.65, 3: 0.48, 4: 0.32, 5: 0.20, >=6: 0.12 (deep cave darkness)
+            return Math.max(0.12, 1.0 - minDist * 0.15);
+        };
+
         let posCount = 0;
         let uvCount = 0;
         let colorCount = 0;
@@ -833,6 +878,9 @@ export class Chunk {
                             }
                         }
 
+                        const plantSkyLight = getSkyLightFactor(x, y, z);
+                        topAO *= plantSkyLight;
+                        bottomAO *= plantSkyLight;
                         let plantR = 1.0, plantG = 1.0, plantB = 1.0;
                         if (blockType === BLOCKS.VINES) {
                             const bInfo = getBiomeParams(wxBase + x, wzBase + z, planetParams);
@@ -1410,8 +1458,15 @@ export class Chunk {
                                 bMult = fCol[2] / (47 / 255);
                             }
 
+                            // Calculate Minecraft sky light under overhangs and in caves
+                            const nx = x + face.dir[0];
+                            const ny = y + face.dir[1];
+                            const nz = z + face.dir[2];
+                            let skyLight = getSkyLightFactor(nx, ny, nz);
+                            if (face.dir[1] < 0 && skyLight < 1.0) skyLight *= 0.85; // Extra shadow under horizontal overhang ceilings
+
                             for (let i = 0; i < 4; i++) {
-                                let c = (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) ? 1.0 : (aoColor[i] * faceShade);
+                                let c = (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) ? 1.0 : (aoColor[i] * faceShade * skyLight);
                                 // Water: pure white vertex color — biome tint applied via matWater.color so MC texture shows
                                 if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) {
                                     _colors[colorCount++] = 1.0;

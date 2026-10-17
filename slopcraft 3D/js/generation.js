@@ -2,9 +2,9 @@
 // generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=116';
-import { BLOCKS } from './textures.js?v=138';
+import { BLOCKS } from './textures.js?v=139';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=138';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=139';
 
 // Planet configurations
 export const BIOMES = {
@@ -1194,6 +1194,35 @@ function generateMushroomClump(blocks, centerX, startY, centerZ, rng) {
     }
 }
 
+function generateCoalClump(blocks, startX, startY, startZ, rng) {
+    // Large 3D Minecraft coal ore vein (17 to 36 coal blocks clumped in a natural 3D pocket)
+    const rx = 1.8 + rng() * 1.5;
+    const ry = 1.4 + rng() * 1.2;
+    const rz = 1.8 + rng() * 1.5;
+    const irx = Math.ceil(rx);
+    const iry = Math.ceil(ry);
+    const irz = Math.ceil(rz);
+    for (let dx = -irx; dx <= irx; dx++) {
+        for (let dy = -iry; dy <= iry; dy++) {
+            for (let dz = -irz; dz <= irz; dz++) {
+                const distSq = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) + (dz * dz) / (rz * rz);
+                if (distSq <= 1.0 && rng() < 0.84) {
+                    const px = startX + dx;
+                    const py = startY + dy;
+                    const pz = startZ + dz;
+                    if (px >= 0 && px < CHUNK_SIZE && py >= 0 && py < CHUNK_HEIGHT && pz >= 0 && pz < CHUNK_SIZE) {
+                        const idx = (py * CHUNK_SIZE * CHUNK_SIZE) + (pz * CHUNK_SIZE) + px;
+                        const b = blocks[idx];
+                        if (b === BLOCKS.STONE || b === BLOCKS.TERRACOTTA || (b >= BLOCKS.ORANGE_TERRACOTTA && b <= BLOCKS.LIGHT_GRAY_TERRACOTTA)) {
+                            blocks[idx] = BLOCKS.COAL_ORE;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 function generateOreVein(blocks, wx, y, wz, oreType, minSize, maxSize, rng) {
     const size = minSize + Math.floor(rng() * (maxSize - minSize + 1));
     let currentX = wx;
@@ -1938,19 +1967,25 @@ export function generateChunkTerrain(cx, cz, params) {
                 if (isSolidHost && colRng() < 0.011) {
                     let oreType = BLOCKS.IRON_ORE;
                     let minS = 1, maxS = 5;
-                    if (isMountain && y >= 55 && y <= 125 && colRng() < 0.20) {
+                    if (isMountain && y >= 60 && y <= 120 && colRng() < 0.24) {
+                        generateCoalClump(blocks, x, y, z, colRng); // Large exposed coal seams on mountain cliffs!
+                    } else if (isMountain && y >= 55 && y <= 125 && colRng() < 0.20) {
                         oreType = BLOCKS.EMERALD_ORE || BLOCKS.DIAMOND_ORE; minS = 1; maxS = 2; // Mountain exclusive Emerald Ore!
+                        generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng);
                     } else if (isBadlands && y >= 32 && y <= 85 && colRng() < 0.25) {
                         oreType = BLOCKS.GOLD_ORE; minS = 2; maxS = 5; // Badlands extra high altitude gold!
-                    } else if (y < 15 && colRng() < 0.10) { oreType = BLOCKS.DIAMOND_ORE; minS = 1; maxS = 3; }
-                    else if (y < 22 && colRng() < 0.12) { oreType = BLOCKS.RUBY_ORE; minS = 1; maxS = 3; }
-                    else if (y < 22 && colRng() < 0.12) { oreType = BLOCKS.SAPPHIRE_ORE; minS = 1; maxS = 3; }
-                    else if (y < 20 && colRng() < 0.15) { oreType = BLOCKS.CRYSTAL_ORE; minS = 1; maxS = 3; }
-                    else if (y < 30 && colRng() < 0.22) { oreType = BLOCKS.MANA_ORE; minS = 1; maxS = 3; }
-                    else if (colRng() < 0.08) { oreType = BLOCKS.GOLD_ORE; minS = 1; maxS = 4; }
-                    else if (colRng() < 0.28) { oreType = BLOCKS.COAL_ORE; minS = 2; maxS = 7; }
-
-                    generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng);
+                        generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng);
+                    } else if (y < 15 && colRng() < 0.10) { oreType = BLOCKS.DIAMOND_ORE; minS = 1; maxS = 3; generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng); }
+                    else if (y < 22 && colRng() < 0.12) { oreType = BLOCKS.RUBY_ORE; minS = 1; maxS = 3; generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng); }
+                    else if (y < 22 && colRng() < 0.12) { oreType = BLOCKS.SAPPHIRE_ORE; minS = 1; maxS = 3; generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng); }
+                    else if (y < 20 && colRng() < 0.15) { oreType = BLOCKS.CRYSTAL_ORE; minS = 1; maxS = 3; generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng); }
+                    else if (y < 30 && colRng() < 0.22) { oreType = BLOCKS.MANA_ORE; minS = 1; maxS = 3; generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng); }
+                    else if (colRng() < 0.08) { oreType = BLOCKS.GOLD_ORE; minS = 1; maxS = 4; generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng); }
+                    else if (colRng() < 0.30) {
+                        generateCoalClump(blocks, x, y, z, colRng); // Large subterranean coal deposits (17-36 blocks)
+                    } else {
+                        generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng);
+                    }
                 }
             }
         }
