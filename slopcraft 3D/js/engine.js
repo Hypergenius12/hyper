@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=131';
-import { getBiomeParams } from './generation.js?v=131';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=132';
+import { getBiomeParams } from './generation.js?v=132';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -1312,6 +1312,16 @@ export class Chunk {
                                 waterFade = Math.min(1.0, depth / 10.0);
                             }
 
+                            const plainsR = 145 / 255, plainsG = 189 / 255, plainsB = 89 / 255;
+                            let rMult = 1.0, gMult = 1.0, bMult = 1.0;
+                            if ((currentBlockType === BLOCKS.GRASS || currentBlockType === BLOCKS.SWAMP_GRASS || currentBlockType === BLOCKS.SAVANNA_GRASS) && face.dir[1] > 0) {
+                                const bInfo = getBiomeParams(wx, wz, planetParams);
+                                const gCol = (bInfo && bInfo.biome && bInfo.biome.grassColor) ? bInfo.biome.grassColor : [plainsR, plainsG, plainsB];
+                                rMult = gCol[0] / plainsR;
+                                gMult = gCol[1] / plainsG;
+                                bMult = gCol[2] / plainsB;
+                            }
+
                             for (let i = 0; i < 4; i++) {
                                 let c = (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) ? 1.0 : (aoColor[i] * faceShade);
                                 // Water: pure white vertex color — biome tint applied via matWater.color so MC texture shows
@@ -1325,9 +1335,9 @@ export class Chunk {
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.g * waterFade;
                                     _colors[colorCount++] = c * (1 - waterFade) + wc.b * waterFade;
                                 } else {
-                                    _colors[colorCount++] = c;
-                                    _colors[colorCount++] = c;
-                                    _colors[colorCount++] = c;
+                                    _colors[colorCount++] = c * rMult;
+                                    _colors[colorCount++] = c * gMult;
+                                    _colors[colorCount++] = c * bMult;
                                 }
                             }
 

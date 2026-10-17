@@ -2017,7 +2017,13 @@ export async function createTextureAtlas(useMinecraft = true) {
                             } else if (isStem) {
                                 tint = '#c19b33'; // Authentic Minecraft golden-tan/brown stem color
                             } else if (texName === 'grass_block_top') {
-                                tint = '#ffffff'; // Kept clean normalized grayscale in atlas so vertex colors dynamically apply authentic biome grass color per block!
+                                if (bt === BLOCKS.SWAMP_GRASS) {
+                                    tint = '#6A7039'; // Authentic dark murky swamp grass
+                                } else if (bt === BLOCKS.SAVANNA_GRASS) {
+                                    tint = '#BFB755'; // Authentic dry golden savanna grass
+                                } else {
+                                    tint = '#91BD59'; // Authentic official Minecraft plains grass (#91BD59)
+                                }
                             } else if (texName.includes('leaves')) {
                                 if (texName === 'azalea_leaves' || texName === 'flowering_azalea_leaves' || texName === 'cherry_leaves' || texName === 'pale_oak_leaves' || bt === BLOCKS.CHERRY_LEAVES) {
                                     tint = '#ffffff'; // Pre-colored textures in assets/mc/block/

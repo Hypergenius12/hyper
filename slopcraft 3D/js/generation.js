@@ -2,9 +2,9 @@
 // generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=116';
-import { BLOCKS } from './textures.js?v=131';
+import { BLOCKS } from './textures.js?v=132';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=131';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=132';
 
 // Planet configurations
 export const BIOMES = {
@@ -607,7 +607,18 @@ export function getRiverInfo(wx, wz, params, contNoise) {
 
 
 export function getBiomeParams(wx, wz, params) {
-    if (params && params.isSuperflat) {
+    if (!params) {
+        return {
+            biome: BIOMES.PLAINS,
+            terraceWeight: 0,
+            contNoise: 0.8,
+            erosionNoise: 1.0,
+            weirdness: 0,
+            temp: 0.5,
+            moist: 0.5
+        };
+    }
+    if (params.isSuperflat) {
         return {
             biome: params.forcedBiome || BIOMES.PLAINS,
             terraceWeight: 0,
