@@ -2,9 +2,9 @@
 // generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=116';
-import { BLOCKS } from './textures.js?v=142';
+import { BLOCKS } from './textures.js?v=143';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=142';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=143';
 
 // Planet configurations
 export const BIOMES = {
@@ -1604,11 +1604,14 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 }
 
-                // (B) 3D Cheese Caves - FAST single-sample 3D simplex noise (over 2x faster than 2-octave FBM!)
-                if (!carveAir && y <= 58) {
+                // (B) 3D Cheese Caves - FAST single-sample 3D simplex noise
+                const maxCheeseY = (canOpenToSurface && bCave >= 0.55) ? Math.min(col.surfaceY + 1, 80) : 54;
+                if (!carveAir && y <= maxCheeseY) {
                     let th = effectiveThreshold;
                     if (y >= 14 && y <= 42) {
                         th *= 0.86; // deeper chambers
+                    } else if (y > 54) {
+                        th *= 1.25; // only grand chambers breach high hillsides/mountains
                     }
                     const c = params.caveNoise(wx / cheeseScale, y / (cheeseScale * 0.7), wz / cheeseScale);
                     if (c > th) {
@@ -1619,22 +1622,16 @@ export function generateChunkTerrain(cx, cz, params) {
                     }
                 }
 
-                // (C) Winding Noodle / Spaghetti Caves - scaled by biome
-                if (!carveAir && y <= 54 && noodleLimit > 0.001) {
+                // (C) Winding Noodle / Spaghetti Caves - authentic subterranean tunnels
+                const maxNoodleY = (canOpenToSurface && bCave >= 0.40) ? Math.min(col.surfaceY + 1, 68) : 50;
+                if (!carveAir && y <= maxNoodleY && noodleLimit > 0.001) {
+                    let limit = noodleLimit;
+                    if (y > 50) {
+                        limit *= 0.72; // Tunnels narrow slightly at hillside mouths for clean archways
+                    }
                     const nA = params.noise3D(wx * 0.036, y * 0.046, wz * 0.036);
                     const nB = params.caveNoise(wx * 0.036 + 73, y * 0.046 + 73, wz * 0.036 + 73);
-                    if ((nA * nA + nB * nB) < noodleLimit) {
-                        carveAir = true;
-                    }
-                }
-
-                // (D) Surface Openings - Natural open cave mouths & hillside tunnels
-                if (!carveAir && canOpenToSurface && y > 46 && y <= col.surfaceY + 1) {
-                    const breachNoise = params.caveNoise(wx * 0.038, y * 0.038, wz * 0.038);
-                    // Slightly more common surface cave mouths across biomes
-                    const baseThreshold = isPlains ? 0.42 : (0.35 - bCave * 0.08);
-                    const breachThreshold = baseThreshold + (y - 46) * 0.007;
-                    if (breachNoise > breachThreshold) {
+                    if ((nA * nA + nB * nB) < limit) {
                         carveAir = true;
                     }
                 }
@@ -1809,29 +1806,17 @@ export function generateChunkTerrain(cx, cz, params) {
                             type = BLOCKS.GRASS;
                         }
                     } else {
-                        // Check if this exposed surface was created by a cave carving into the terrain
-                        const isCaveFloor = (y < surfaceY - 1);
-                        if (isCaveFloor) {
-                            // Authentic Minecraft Surface Cave Floors:
-                            // Surface caves feature natural exposed stone, cobblestone, and gravel floors
+                        // In Minecraft, outdoor terrain in the sunlight keeps natural biome grass/surface!
+                        // Only deep inside the dark cave tunnel (y < surfaceY - 6) does the floor become stone/gravel/cobblestone.
+                        const isDeepCaveFloor = (y < surfaceY - 6);
+                        if (isDeepCaveFloor) {
                             const caveFloorNoise = params.noise2D(wx * 0.18 + 500, wz * 0.18 + 500);
-                            if (y < surfaceY - 3) {
-                                // Inside the cave mouth: stone floor with gravel and cobblestone accents
-                                if (caveFloorNoise > 0.35) type = BLOCKS.COBBLESTONE;
-                                else if (caveFloorNoise < -0.35) type = BLOCKS.GRAVEL;
-                                else type = BLOCKS.STONE;
-                            } else {
-                                // At the cave entrance / mouth: stone floors mixed with grass/gravel
-                                if (caveFloorNoise > 0.05) {
-                                    type = (caveFloorNoise > 0.45) ? BLOCKS.COBBLESTONE : BLOCKS.STONE;
-                                } else if (caveFloorNoise < -0.35) {
-                                    type = BLOCKS.GRAVEL;
-                                } else {
-                                    type = biome.surface; // grass transition right at the opening lip
-                                }
-                            }
+                            if (caveFloorNoise > 0.35) type = BLOCKS.COBBLESTONE;
+                            else if (caveFloorNoise < -0.35) type = BLOCKS.GRAVEL;
+                            else type = BLOCKS.STONE;
                         } else {
                             type = (biome === BIOMES.BEACH && y > params.seaLevel + 2) ? BLOCKS.GRASS : biome.surface;
+                        }
                             // Natural winding dirt paths meandering through grassy plains and woodlands near water
                             if (type === BLOCKS.GRASS && (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome.name === 'Plains' || biome.name === 'Forest')) {
                                 const pathBand = params.noise2D(wx * 0.008 + 140, wz * 0.008 + 140);
