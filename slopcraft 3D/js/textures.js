@@ -952,10 +952,10 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             generateBlockTexture(ctx, BLOCKS.LIGHT_GRAY_WOOL, face, rng); return;
         case BLOCKS.GRASS:
             if (face === 'top') {
-                fillBase(ctx, 114, 161, 69);
-                addNoise(ctx, rng, 15);
-                addPixels(ctx, rng, 'rgba(90, 130, 50, 0.8)', 20);
-                addPixels(ctx, rng, 'rgba(130, 180, 80, 0.8)', 15);
+                fillBase(ctx, 85, 109, 51);
+                addNoise(ctx, rng, 12);
+                addPixels(ctx, rng, 'rgba(70, 95, 40, 0.8)', 20);
+                addPixels(ctx, rng, 'rgba(95, 120, 60, 0.8)', 15);
             } else if (face === 'bottom') {
                 const id = ctx.createImageData(TEX_SIZE, TEX_SIZE);
                 for (let i = 0; i < id.data.length; i += 4) {
@@ -5076,7 +5076,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                             tCtx.imageSmoothingEnabled = false;
                             
                             // Determine authentic Minecraft tint color
-                            let tint = '#74b44a'; // Default lush Minecraft plains grass green (matches grass_block_side fringe)
+                            let tint = '#556d33'; // Authentic muted Minecraft plains grass green (matches Java edition)
                             
                             if (isWater) {
                                 tint = (bt === BLOCKS.SWAMP_WATER) ? '#617B59' : '#3F76E4';
@@ -5084,36 +5084,36 @@ export async function createTextureAtlas(useMinecraft = true) {
                                 tint = '#c19b33'; // Authentic Minecraft golden-tan/brown stem color
                             } else if (texName === 'grass_block_top') {
                                 if (bt === BLOCKS.SWAMP_GRASS) {
-                                    tint = '#6a7039'; // Authentic dark murky swamp grass
+                                    tint = '#4e5828'; // Authentic dark murky swamp grass
                                 } else if (bt === BLOCKS.SAVANNA_GRASS) {
-                                    tint = '#bfb755'; // Authentic dry golden savanna grass
+                                    tint = '#847e38'; // Authentic dry golden savanna grass
                                 } else {
-                                    tint = '#74b44a'; // Exact match with green grass fringe on grass_block_side.png
+                                    tint = '#556d33'; // Authentic muted Minecraft plains grass
                                 }
                             } else if (texName.includes('leaves')) {
                                 if (texName === 'azalea_leaves' || texName === 'flowering_azalea_leaves' || texName === 'cherry_leaves' || texName === 'pale_oak_leaves' || bt === BLOCKS.CHERRY_LEAVES) {
                                     tint = '#ffffff'; // Pre-colored textures in assets/mc/block/
                                 } else if (bt === BLOCKS.PINE_LEAVES || texName === 'spruce_leaves') {
-                                    tint = '#527852'; // Authentic muted spruce needle green
+                                    tint = '#364c38'; // Authentic dark spruce needle green
                                 } else if (bt === BLOCKS.BIRCH_LEAVES || texName === 'birch_leaves') {
-                                    tint = '#6e8e4a'; // Authentic soft golden-olive birch foliage
+                                    tint = '#4e682e'; // Authentic soft golden-olive birch foliage
                                 } else if (bt === BLOCKS.JUNGLE_LEAVES || texName === 'jungle_leaves') {
-                                    tint = '#3d7a1e'; // Authentic rich rainforest green (not oversaturated neon)
+                                    tint = '#2e5616'; // Authentic jungle foliage
                                 } else if (bt === BLOCKS.DARK_OAK_LEAVES || texName === 'dark_oak_leaves') {
-                                    tint = '#34581c'; // Authentic deep dark forest green
+                                    tint = '#243a14'; // Authentic deep dark forest green
                                 } else if (bt === BLOCKS.ACACIA_LEAVES || texName === 'acacia_leaves') {
-                                    tint = '#547228'; // Authentic dry savanna foliage
+                                    tint = '#4e5620'; // Authentic dry savanna foliage
                                 } else if (bt === BLOCKS.MANGROVE_LEAVES || texName === 'mangrove_leaves') {
-                                    tint = '#5e7a2b'; // Authentic mangrove swamp foliage
+                                    tint = '#445c1e'; // Authentic mangrove swamp foliage
                                 } else {
-                                    tint = '#487428'; // Authentic balanced Minecraft oak foliage (matches in-game Java foliage)
+                                    tint = '#2e4a18'; // Authentic Minecraft oak foliage (matches in-game Java foliage)
                                 }
                             } else if (texName === 'lily_pad') {
-                                tint = '#208030';
+                                tint = '#1e5e24';
                             } else if (texName === 'vine') {
                                 tint = '#ffffff'; // Kept grayscale in atlas so vertex colors dynamically apply authentic biome foliage color!
                             } else {
-                                tint = '#74b44a';
+                                tint = '#556d33';
                             }
 
                             tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);

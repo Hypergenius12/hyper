@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=128';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=128';
+import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=130';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=130';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -13,16 +13,16 @@ export class LightingSystem {
         this.dayLength = 600; // seconds
         this.weather = 'clear'; // 'clear' | 'rain' | 'thunder'
 
-        // Authentic Minecraft uniform skylight: clean, soft, natural ambient fill
-        this.ambientLight = new THREE.AmbientLight(0xf2f5fa, 0.78);
+        // Authentic Minecraft lighting: balanced ambient skylight and directional sun for 3D depth
+        this.ambientLight = new THREE.AmbientLight(0xd4def0, 0.52);
         this.scene.add(this.ambientLight);
 
-        // Subtle warm sun directional light (gentle depth without harsh shadow contrast)
-        this.sunLight = new THREE.DirectionalLight(0xfffaee, 0.22);
+        // Warm sun directional light (provides clean 3D block shading and face contrast)
+        this.sunLight = new THREE.DirectionalLight(0xfff8ea, 0.48);
         this.sunLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.sunLight);
         this.caveFactor = 0.0;
-        this.lastAmbientIntensity = 0.78;
+        this.lastAmbientIntensity = 0.52;
 
         // Load Sun Texture (assets/mc/environment/sun.png with jsdelivr CDN fallback)
         const texLoader = new THREE.TextureLoader();
@@ -165,29 +165,29 @@ export class LightingSystem {
             // Morning ramp into full day
             { 
                 t: 0.28, 
-                amb: new THREE.Color(0xf4f7fc), ambIntensity: 0.82, 
-                bg: new THREE.Color(0xb4d6ff), top: new THREE.Color(0x81aeff), 
-                sun: 0.28, moon: 0.0 
+                amb: new THREE.Color(0xdce5f4), ambIntensity: 0.50, 
+                bg: new THREE.Color(0x90bcfd), top: new THREE.Color(0x80adff), 
+                sun: 0.45, moon: 0.0 
             },
-            // Day - authentic Minecraft sky blue zenith (#81aeff), soft powder horizon fog (#b4d6ff), uniform ambient fill
+            // Day - authentic Minecraft sky blue zenith (#80adff), soft powder horizon fog (#90bcfd), balanced directional sun
             { 
                 t: 0.3, 
-                amb: new THREE.Color(0xf4f7fc), ambIntensity: 0.82, 
-                bg: new THREE.Color(0xb4d6ff), top: new THREE.Color(0x81aeff), 
-                sun: 0.28, moon: 0.0 
+                amb: new THREE.Color(0xdce5f4), ambIntensity: 0.52, 
+                bg: new THREE.Color(0x90bcfd), top: new THREE.Color(0x80adff), 
+                sun: 0.48, moon: 0.0 
             },
             { 
                 t: 0.7, 
-                amb: new THREE.Color(0xf4f7fc), ambIntensity: 0.82, 
-                bg: new THREE.Color(0xb4d6ff), top: new THREE.Color(0x81aeff), 
-                sun: 0.28, moon: 0.0 
+                amb: new THREE.Color(0xdce5f4), ambIntensity: 0.52, 
+                bg: new THREE.Color(0x90bcfd), top: new THREE.Color(0x80adff), 
+                sun: 0.48, moon: 0.0 
             },
             // Sunset - warm dusk horizon
             { 
                 t: 0.75, 
-                amb: new THREE.Color(0xffb890), ambIntensity: 0.58, 
+                amb: new THREE.Color(0xffb890), ambIntensity: 0.42, 
                 bg: new THREE.Color(0xff6633), top: new THREE.Color(0x5878d0), 
-                sun: 0.22, moon: 0.02 
+                sun: 0.35, moon: 0.02 
             },
             // Night
             { 
