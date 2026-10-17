@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=145';
-import { getBiomeParams } from './generation.js?v=145';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=146';
+import { getBiomeParams } from './generation.js?v=146';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -161,6 +161,22 @@ export class InputManager {
     }
 
     onKeyDown(e) {
+        // Shift + Escape: Free cursor without opening pause menu for live tweaking
+        if ((e.code === 'Escape' || e.key === 'Escape') && e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.isLocked) {
+                window._shiftEscapeUnlocked = true;
+                if (document.exitPointerLock) document.exitPointerLock();
+                const studioPanel = document.getElementById('lighting-studio-panel');
+                if (studioPanel) studioPanel.classList.remove('minimized');
+            } else {
+                window._shiftEscapeUnlocked = false;
+                this.requestPointerLock();
+            }
+            return;
+        }
+
         // If the user is typing in an input field (like creative search), ignore game hotkeys!
         const activeTag = document.activeElement ? document.activeElement.tagName : '';
         if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {

@@ -4,13 +4,13 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=145';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=145';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=145';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=145';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=145';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=145';
-import { initLightingStudio } from './lighting-studio.js?v=145';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=146';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=146';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=146';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=146';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=146';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=146';
+import { initLightingStudio } from './lighting-studio.js?v=146';
 import { AudioManager } from './audio.js?v=139';
 import { BiomeMap } from './map.js?v=139';
 import { DevMode } from './dev.js?v=139';
@@ -1023,7 +1023,8 @@ class Game {
             const devModeOpen = this.devMode && this.devMode.isOpen;
             const mapOpen = this.biomeMap && this.biomeMap.isOpen;
             const chatOpen = this.chat && this.chat.isOpen;
-            if (!this.input.isLocked && !this.ui.isOpen && !devModeOpen && !mapOpen && !chatOpen && document.getElementById('start-screen').classList.contains('hidden')) {
+            const shiftEscapeUnlocked = window._shiftEscapeUnlocked;
+            if (!this.input.isLocked && !this.ui.isOpen && !devModeOpen && !mapOpen && !chatOpen && !shiftEscapeUnlocked && document.getElementById('start-screen').classList.contains('hidden')) {
                 // We lost pointer lock but the inventory/map/dev/chat is not open, show pause
                 if (ps) ps.classList.remove('hidden');
                 this.isPaused = true;
@@ -1031,9 +1032,40 @@ class Game {
                 if (ps) ps.classList.add('hidden');
                 if (this.input.isLocked) {
                     this.isPaused = false;
+                    window._shiftEscapeUnlocked = false;
                 }
             }
         });
+
+        // Global Shift + Escape listener to release or reclaim mouse without opening pause menu
+        window.addEventListener('keydown', (e) => {
+            if ((e.code === 'Escape' || e.key === 'Escape') && e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.input.isLocked) {
+                    window._shiftEscapeUnlocked = true;
+                    if (document.exitPointerLock) document.exitPointerLock();
+                    const studioPanel = document.getElementById('lighting-studio-panel');
+                    if (studioPanel) studioPanel.classList.remove('minimized');
+                } else {
+                    window._shiftEscapeUnlocked = false;
+                    this.input.requestPointerLock();
+                }
+            } else if (e.code === 'Escape' && !e.shiftKey) {
+                // Regular Escape cancels Shift+Escape free cursor mode
+                window._shiftEscapeUnlocked = false;
+            }
+        }, true);
+
+        // Clicking the 3D canvas while unlocked via Shift+Escape re-locks the mouse
+        if (this.engine && this.engine.renderer && this.engine.renderer.domElement) {
+            this.engine.renderer.domElement.addEventListener('click', () => {
+                if (window._shiftEscapeUnlocked && !this.input.isLocked) {
+                    window._shiftEscapeUnlocked = false;
+                    this.input.requestPointerLock();
+                }
+            });
+        }
 
         document.addEventListener('pointerlockerror', () => {
             const ps = document.getElementById('pause-screen');

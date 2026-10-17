@@ -340,7 +340,7 @@ export function initLightingStudio() {
     // Toggle Button
     const toggleBtn = document.createElement('button');
     toggleBtn.id = 'lighting-studio-toggle';
-    toggleBtn.innerHTML = `<span>💡</span> <span>Lighting Settings</span>`;
+    toggleBtn.innerHTML = `<span>💡</span> <span>Lighting Settings</span> <span style="font-size: 10px; opacity: 0.7; margin-left: 2px; font-family: monospace;">(Shift+Esc)</span>`;
     container.appendChild(toggleBtn);
 
     // Panel
@@ -349,7 +349,10 @@ export function initLightingStudio() {
     panel.innerHTML = `
         <div class="ls-header">
             <span>🎨 Slopcraft Lighting Studio</span>
-            <button class="ls-close-btn" id="ls-close-btn" title="Minimize Panel">✕</button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 10px; background: rgba(56,139,253,0.2); color: #58a6ff; border: 1px solid rgba(56,139,253,0.4); border-radius: 4px; padding: 2px 6px; font-family: monospace;">Shift+Esc</span>
+                <button class="ls-close-btn" id="ls-close-btn" title="Minimize Panel">✕</button>
+            </div>
         </div>
         <div class="ls-body">
 
