@@ -2,9 +2,9 @@
 // generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=116';
-import { BLOCKS } from './textures.js?v=132';
+import { BLOCKS } from './textures.js?v=133';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=132';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=133';
 
 // Planet configurations
 export const BIOMES = {
@@ -18,9 +18,9 @@ export const BIOMES = {
     ICE_SPIKES: { name: 'Ice Spikes', surface: BLOCKS.SNOW, dirt: BLOCKS.ICE, freq: 0.3, hasTrees: false, hasIceSpikes: true, grassColor: [0.502, 0.706, 0.592], foliageColor: [0.376, 0.631, 0.482] },
     MUSHROOM: { name: 'Mushroom', surface: BLOCKS.MYCELIUM, dirt: BLOCKS.DIRT, freq: 0.2, hasTrees: false, hasMushrooms: true, grassColor: [0.333, 0.788, 0.247], foliageColor: [0.333, 0.788, 0.247] },
     VOLCANIC: { name: 'Volcanic', surface: BLOCKS.BASALT, dirt: BLOCKS.BLACKSTONE, freq: 0.5, hasTrees: false, isVolcanic: true, grassColor: [0.333, 0.333, 0.333], foliageColor: [0.267, 0.267, 0.267] },
-    SWAMP: { name: 'Swamp', surface: BLOCKS.SWAMP_GRASS, dirt: BLOCKS.MUD, freq: 0.6, hasTrees: true, swampFlora: true, grassColor: [0.416, 0.439, 0.224], foliageColor: [0.416, 0.439, 0.224] },
+    SWAMP: { name: 'Swamp', surface: BLOCKS.GRASS, dirt: BLOCKS.MUD, freq: 0.6, hasTrees: true, swampFlora: true, grassColor: [0.416, 0.439, 0.224], foliageColor: [0.416, 0.439, 0.224] },
     JUNGLE: { name: 'Jungle', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, jungleFlora: true, grassColor: [0.349, 0.788, 0.235], foliageColor: [0.188, 0.733, 0.043] },
-    SAVANNA: { name: 'Savanna', surface: BLOCKS.SAVANNA_GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, savannaFlora: true, grassColor: [0.749, 0.718, 0.333], foliageColor: [0.682, 0.643, 0.165] },
+    SAVANNA: { name: 'Savanna', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, savannaFlora: true, grassColor: [0.749, 0.718, 0.333], foliageColor: [0.682, 0.643, 0.165] },
     MOUNTAINS: { name: 'Mountains', surface: BLOCKS.SNOW, dirt: BLOCKS.STONE, freq: 0.4, hasTrees: true, grassColor: [0.541, 0.714, 0.537], foliageColor: [0.427, 0.639, 0.447] },
     DEEP_OCEAN: { name: 'Deep Ocean', surface: BLOCKS.SAND, dirt: BLOCKS.STONE, freq: 0.3, hasTrees: false, grassColor: [0.557, 0.725, 0.443], foliageColor: [0.443, 0.655, 0.302] },
     CHERRY_GROVE: { name: 'Cherry Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, isCherry: true, grassColor: [0.714, 0.859, 0.404], foliageColor: [0.467, 0.671, 0.184] },
@@ -686,21 +686,21 @@ export function getBiomeParams(wx, wz, params) {
     const tempNoise = params.tempNoise;
     const moistNoise = params.moistNoise;
 
-    // Continentalness and Erosion
-    const contNoise = (noise2D(wx * 0.00028, wz * 0.00028) + 1) / 2;
-    const erosionNoise = (noise2D(wx * 0.0004 + 1000, wz * 0.0004 + 1000) + 1) / 2;
-
-    // Domain warp the coordinates to make biome borders wavy and organically fractal
+    // Domain warp coordinates first so continentalness, erosion, temperature and moisture align coherently
     let warpX = noise2D(wx * 0.003 + 2000, wz * 0.003 + 2000) * 60;
     let warpZ = noise2D(wz * 0.003 + 3000, wx * 0.003 + 3000) * 60;
-    // High-frequency micro domain warping (eliminates rectilinear grid seams between biomes)
     warpX += noise2D(wx * 0.015 + 4000, wz * 0.015 + 4000) * 14;
     warpZ += noise2D(wz * 0.015 + 7000, wx * 0.015 + 7000) * 14;
     
-    // Kept large offsets to prevent spawning exactly at (0.5, 0.5) forest every seed
-    const temp = (tempNoise((wx + warpX) * 0.00028 + 5000, (wz + warpZ) * 0.00028 + 5000) + 1) / 2;
-    const moist = (moistNoise((wx + warpX) * 0.00028 + 8000, (wz + warpZ) * 0.00028 + 8000) + 1) / 2;
-    const weirdness = (noise2D((wx + warpX) * 0.0006 + 15000, (wz + warpZ) * 0.0006 + 15000) + 1) / 2;
+    const wxWarp = wx + warpX;
+    const wzWarp = wz + warpZ;
+
+    // Continentalness and Erosion with domain warping for organic merging
+    const contNoise = (noise2D(wxWarp * 0.00028, wzWarp * 0.00028) + 1) / 2;
+    const erosionNoise = (noise2D(wxWarp * 0.0004 + 1000, wzWarp * 0.0004 + 1000) + 1) / 2;
+    const temp = (tempNoise(wxWarp * 0.00028 + 5000, wzWarp * 0.00028 + 5000) + 1) / 2;
+    const moist = (moistNoise(wxWarp * 0.00028 + 8000, wzWarp * 0.00028 + 8000) + 1) / 2;
+    const weirdness = (noise2D(wxWarp * 0.0006 + 15000, wzWarp * 0.0006 + 15000) + 1) / 2;
 
     const isOcean = contNoise < 0.3;
     const isMountain = erosionNoise < 0.35 && contNoise >= 0.38;

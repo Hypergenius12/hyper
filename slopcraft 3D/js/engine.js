@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=132';
-import { getBiomeParams } from './generation.js?v=132';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=133';
+import { getBiomeParams } from './generation.js?v=133';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -398,6 +398,32 @@ const _slightGlowTransparentIndices = new Uint32Array(MAX_INDICES);
 
 const _meshPool = [];
 
+
+// ============================================
+// Shader Customization: Grass Fringe Selective Tinting
+// ============================================
+// Tints only the green grass fringe on grass_block_side and leaves with the interpolated biome vertex color,
+// while preserving 100% authentic brown dirt underneath with directional AO and face shading!
+if (THREE.ShaderChunk && !THREE.ShaderChunk._slopcraftGrassFoliage) {
+    THREE.ShaderChunk._slopcraftGrassFoliage = true;
+    THREE.ShaderChunk.color_fragment = `
+#ifdef USE_COLOR
+    #ifdef USE_MAP
+        // In grass_block_side: dirt has sampledDiffuseColor.r > sampledDiffuseColor.g * 1.15
+        // Grass fringe and grass top have sampledDiffuseColor.g >= sampledDiffuseColor.r * 0.98
+        if (sampledDiffuseColor.r > sampledDiffuseColor.g * 1.15 && sampledDiffuseColor.a > 0.5) {
+            float ao = max(vColor.r, max(vColor.g, vColor.b));
+            diffuseColor.rgb *= ao;
+        } else {
+            diffuseColor.rgb *= vColor;
+        }
+    #else
+        diffuseColor.rgb *= vColor;
+    #endif
+#endif
+`;
+}
+
 export class Chunk {
     constructor(cx, cz) {
         this.cx = cx;
@@ -462,6 +488,62 @@ export class Chunk {
             }
             return 0;
         };
+
+        // 5x5 Biome Color Blending: smooth continuous gradient across biome boundaries
+        const plainsR = 145 / 255, plainsG = 189 / 255, plainsB = 89 / 255;
+        const BLEND_RAD = 2; // 5x5 smoothing kernel
+        const PADDING = 3;
+        const gridDim = CHUNK_SIZE + PADDING * 2;
+        const rawGrassColors = new Float32Array(gridDim * gridDim * 3);
+
+        for (let lz = -PADDING; lz < CHUNK_SIZE + PADDING; lz++) {
+            for (let lx = -PADDING; lx < CHUNK_SIZE + PADDING; lx++) {
+                const bInfo = getBiomeParams(wxBase + lx, wzBase + lz, planetParams);
+                const gCol = (bInfo && bInfo.biome && bInfo.biome.grassColor) ? bInfo.biome.grassColor : [plainsR, plainsG, plainsB];
+                const idx = ((lz + PADDING) * gridDim + (lx + PADDING)) * 3;
+                rawGrassColors[idx] = gCol[0];
+                rawGrassColors[idx + 1] = gCol[1];
+                rawGrassColors[idx + 2] = gCol[2];
+            }
+        }
+
+        const tempGrass = new Float32Array(gridDim * gridDim * 3);
+        const blendedGrass = new Float32Array(CHUNK_SIZE * CHUNK_SIZE * 3);
+        const kSize = BLEND_RAD * 2 + 1; // 5
+
+        for (let gz = 0; gz < gridDim; gz++) {
+            for (let gx = BLEND_RAD; gx < gridDim - BLEND_RAD; gx++) {
+                let sr = 0, sg = 0, sb = 0;
+                for (let dx = -BLEND_RAD; dx <= BLEND_RAD; dx++) {
+                    const idx = (gz * gridDim + (gx + dx)) * 3;
+                    sr += rawGrassColors[idx];
+                    sg += rawGrassColors[idx + 1];
+                    sb += rawGrassColors[idx + 2];
+                }
+                const outIdx = (gz * gridDim + gx) * 3;
+                tempGrass[outIdx] = sr / kSize;
+                tempGrass[outIdx + 1] = sg / kSize;
+                tempGrass[outIdx + 2] = sb / kSize;
+            }
+        }
+
+        for (let bx = 0; bx < CHUNK_SIZE; bx++) {
+            const gx = bx + PADDING;
+            for (let bz = 0; bz < CHUNK_SIZE; bz++) {
+                const gz = bz + PADDING;
+                let sr = 0, sg = 0, sb = 0;
+                for (let dz = -BLEND_RAD; dz <= BLEND_RAD; dz++) {
+                    const idx = ((gz + dz) * gridDim + gx) * 3;
+                    sr += tempGrass[idx];
+                    sg += tempGrass[idx + 1];
+                    sb += tempGrass[idx + 2];
+                }
+                const bIdx = (bz * CHUNK_SIZE + bx) * 3;
+                blendedGrass[bIdx] = sr / kSize;
+                blendedGrass[bIdx + 1] = sg / kSize;
+                blendedGrass[bIdx + 2] = sb / kSize;
+            }
+        }
 
         let posCount = 0;
         let uvCount = 0;
@@ -1312,14 +1394,21 @@ export class Chunk {
                                 waterFade = Math.min(1.0, depth / 10.0);
                             }
 
-                            const plainsR = 145 / 255, plainsG = 189 / 255, plainsB = 89 / 255;
+                            const isGrassBlock = (currentBlockType === BLOCKS.GRASS || currentBlockType === BLOCKS.SWAMP_GRASS || currentBlockType === BLOCKS.SAVANNA_GRASS);
                             let rMult = 1.0, gMult = 1.0, bMult = 1.0;
-                            if ((currentBlockType === BLOCKS.GRASS || currentBlockType === BLOCKS.SWAMP_GRASS || currentBlockType === BLOCKS.SAVANNA_GRASS) && face.dir[1] > 0) {
+                            if (isGrassBlock) {
+                                // Apply smooth 5x5 blended biome color to BOTH top face and side faces!
+                                // The shader selectively tints only the green fringe and keeps dirt brown!
+                                const bIdx = (z * CHUNK_SIZE + x) * 3;
+                                rMult = blendedGrass[bIdx] / plainsR;
+                                gMult = blendedGrass[bIdx + 1] / plainsG;
+                                bMult = blendedGrass[bIdx + 2] / plainsB;
+                            } else if (currentBlockType === BLOCKS.LEAVES) {
                                 const bInfo = getBiomeParams(wx, wz, planetParams);
-                                const gCol = (bInfo && bInfo.biome && bInfo.biome.grassColor) ? bInfo.biome.grassColor : [plainsR, plainsG, plainsB];
-                                rMult = gCol[0] / plainsR;
-                                gMult = gCol[1] / plainsG;
-                                bMult = gCol[2] / plainsB;
+                                const fCol = (bInfo && bInfo.biome && bInfo.biome.foliageColor) ? bInfo.biome.foliageColor : [0.467, 0.671, 0.184];
+                                rMult = fCol[0] / (119 / 255);
+                                gMult = fCol[1] / (171 / 255);
+                                bMult = fCol[2] / (47 / 255);
                             }
 
                             for (let i = 0; i < 4; i++) {
