@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=125';
-import { getBiomeParams } from './generation.js?v=125';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=126';
+import { getBiomeParams } from './generation.js?v=126';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -339,10 +339,10 @@ export class GameEngine {
         this._renderer.shadowMap.enabled = false;
         this._renderer.shadowMap.type = THREE.PCFShadowMap;
 
-        // Color management: ACES Filmic Tone Mapping provides cinematic dynamic range roll-off
+        // Color management: Pure sRGB without tone mapping for authentic pixel art textures and natural Minecraft colors
         this._renderer.outputColorSpace = THREE.SRGBColorSpace;
-        this._renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this._renderer.toneMappingExposure = 1.15;
+        this._renderer.toneMapping = THREE.NoToneMapping;
+        this._renderer.toneMappingExposure = 1.0;
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -1291,13 +1291,13 @@ export class Chunk {
                             // Calculate ambient occlusion
                             const aoColor = calculateVertexAO(wx, y, wz, face, getBlockOptimized, currentBlockType);
 
-                            // Authentic Minecraft directional face shading multipliers (balanced for dynamic sunlight):
-                            // Top (+Y): 1.0, Bottom (-Y): 0.70, Z-sides (South/North): 0.90, X-sides (East/West): 0.82
+                            // Authentic Minecraft directional face shading multipliers:
+                            // Top (+Y): 1.0, Bottom (-Y): 0.55, Z-sides (South/North): 0.85, X-sides (East/West): 0.75
                             let faceShade = 1.0;
                             if (face.dir[1] > 0) faceShade = 1.0;
-                            else if (face.dir[1] < 0) faceShade = 0.70;
-                            else if (face.dir[2] !== 0) faceShade = 0.90;
-                            else if (face.dir[0] !== 0) faceShade = 0.82;
+                            else if (face.dir[1] < 0) faceShade = 0.55;
+                            else if (face.dir[2] !== 0) faceShade = 0.85;
+                            else if (face.dir[0] !== 0) faceShade = 0.75;
                             
                             let waterFade = 0;
                             if (effectiveNeighborType === BLOCKS.WATER || effectiveNeighborType === BLOCKS.SWAMP_WATER || neighborType === BLOCKS.WATER || neighborType === BLOCKS.SWAMP_WATER) {
@@ -1546,9 +1546,9 @@ function _vertexAO(wx, wy, wz, vx, vy, vz, face, getNeighborBlock) {
     const side2 = _isSolid(wx, wy, wz, face.dir[0] + dx2, face.dir[1] + dy2, face.dir[2] + dz2, getNeighborBlock);
     const corner = _isSolid(wx, wy, wz, face.dir[0] + dx1 + dx2, face.dir[1] + dy1 + dy2, face.dir[2] + dz1 + dz2, getNeighborBlock);
 
-    if (side1 && side2) return 0.58;
+    if (side1 && side2) return 0.64;
     const count = (side1 ? 1 : 0) + (side2 ? 1 : 0) + (corner ? 1 : 0);
-    const aoValues = [1.0, 0.86, 0.72, 0.58];
+    const aoValues = [1.0, 0.88, 0.76, 0.64];
     return aoValues[count];
 }
 

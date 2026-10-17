@@ -1891,20 +1891,20 @@ export function generateChunkTerrain(cx, cz, params) {
                 const idx = blockIndex(x, y, z);
                 const curBlock = blocks[idx];
                 const isSolidHost = (curBlock === BLOCKS.STONE || (isBadlands && (curBlock === BLOCKS.TERRACOTTA || (curBlock >= BLOCKS.ORANGE_TERRACOTTA && curBlock <= BLOCKS.LIGHT_GRAY_TERRACOTTA))));
-                if (isSolidHost && colRng() < 0.02) {
+                if (isSolidHost && colRng() < 0.011) {
                     let oreType = BLOCKS.IRON_ORE;
-                    let minS = 1, maxS = 6;
-                    if (isMountain && y >= 55 && y <= 125 && colRng() < 0.28) {
+                    let minS = 1, maxS = 5;
+                    if (isMountain && y >= 55 && y <= 125 && colRng() < 0.20) {
                         oreType = BLOCKS.EMERALD_ORE || BLOCKS.DIAMOND_ORE; minS = 1; maxS = 2; // Mountain exclusive Emerald Ore!
-                    } else if (isBadlands && y >= 32 && y <= 85 && colRng() < 0.30) {
-                        oreType = BLOCKS.GOLD_ORE; minS = 2; maxS = 6; // Badlands extra high altitude gold!
-                    } else if (y < 15 && colRng() < 0.15) { oreType = BLOCKS.DIAMOND_ORE; minS = 1; maxS = 4; }
-                    else if (y < 22 && colRng() < 0.18) { oreType = BLOCKS.RUBY_ORE; minS = 1; maxS = 4; }
-                    else if (y < 22 && colRng() < 0.18) { oreType = BLOCKS.SAPPHIRE_ORE; minS = 1; maxS = 4; }
-                    else if (y < 20 && colRng() < 0.2) { oreType = BLOCKS.CRYSTAL_ORE; minS = 1; maxS = 3; }
-                    else if (y < 30 && colRng() < 0.3) { oreType = BLOCKS.MANA_ORE; minS = 1; maxS = 3; }
-                    else if (colRng() < 0.1) { oreType = BLOCKS.GOLD_ORE; minS = 2; maxS = 5; }
-                    else if (colRng() < 0.3) { oreType = BLOCKS.COAL_ORE; minS = 3; maxS = 10; }
+                    } else if (isBadlands && y >= 32 && y <= 85 && colRng() < 0.25) {
+                        oreType = BLOCKS.GOLD_ORE; minS = 2; maxS = 5; // Badlands extra high altitude gold!
+                    } else if (y < 15 && colRng() < 0.10) { oreType = BLOCKS.DIAMOND_ORE; minS = 1; maxS = 3; }
+                    else if (y < 22 && colRng() < 0.12) { oreType = BLOCKS.RUBY_ORE; minS = 1; maxS = 3; }
+                    else if (y < 22 && colRng() < 0.12) { oreType = BLOCKS.SAPPHIRE_ORE; minS = 1; maxS = 3; }
+                    else if (y < 20 && colRng() < 0.15) { oreType = BLOCKS.CRYSTAL_ORE; minS = 1; maxS = 3; }
+                    else if (y < 30 && colRng() < 0.22) { oreType = BLOCKS.MANA_ORE; minS = 1; maxS = 3; }
+                    else if (colRng() < 0.08) { oreType = BLOCKS.GOLD_ORE; minS = 1; maxS = 4; }
+                    else if (colRng() < 0.28) { oreType = BLOCKS.COAL_ORE; minS = 2; maxS = 7; }
 
                     generateOreVein(blocks, x, y, z, oreType, minS, maxS, colRng);
                 }
