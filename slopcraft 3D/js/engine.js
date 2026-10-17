@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=124';
-import { getBiomeParams } from './generation.js?v=124';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=125';
+import { getBiomeParams } from './generation.js?v=125';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -23,7 +23,10 @@ struct LambertMaterial {
 void RE_Direct_Lambert( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in LambertMaterial material, inout ReflectedLight reflectedLight ) {
 
 \tfloat rawDot = dot( geometryNormal, directLight.direction );
-\tfloat dotNL = saturate( rawDot );
+\t// Cinematic Half-Lambert wrap diffuse: eliminates harsh dark terminators on shaded faces
+\tfloat wrap = 0.38;
+\tfloat wrappedDot = saturate( ( rawDot + wrap ) / ( 1.0 + wrap ) );
+\tfloat dotNL = mix( saturate( rawDot ), wrappedDot, 0.50 );
 
 \t// Slopcraft Dynamic Light Wrapping:
 \t// Allows block tops and voxel surfaces to receive wrap illumination from lights level with or below them.
@@ -336,9 +339,10 @@ export class GameEngine {
         this._renderer.shadowMap.enabled = false;
         this._renderer.shadowMap.type = THREE.PCFShadowMap;
 
-        // Color management
+        // Color management: ACES Filmic Tone Mapping provides cinematic dynamic range roll-off
         this._renderer.outputColorSpace = THREE.SRGBColorSpace;
-        this._renderer.toneMapping = THREE.NoToneMapping;
+        this._renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this._renderer.toneMappingExposure = 1.15;
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -1287,13 +1291,13 @@ export class Chunk {
                             // Calculate ambient occlusion
                             const aoColor = calculateVertexAO(wx, y, wz, face, getBlockOptimized, currentBlockType);
 
-                            // Authentic Minecraft directional face shading multipliers:
-                            // Top (+Y): 1.0, Bottom (-Y): 0.5, Z-sides (South/North): 0.8, X-sides (East/West): 0.6
+                            // Authentic Minecraft directional face shading multipliers (balanced for dynamic sunlight):
+                            // Top (+Y): 1.0, Bottom (-Y): 0.70, Z-sides (South/North): 0.90, X-sides (East/West): 0.82
                             let faceShade = 1.0;
                             if (face.dir[1] > 0) faceShade = 1.0;
-                            else if (face.dir[1] < 0) faceShade = 0.5;
-                            else if (face.dir[2] !== 0) faceShade = 0.8;
-                            else if (face.dir[0] !== 0) faceShade = 0.6;
+                            else if (face.dir[1] < 0) faceShade = 0.70;
+                            else if (face.dir[2] !== 0) faceShade = 0.90;
+                            else if (face.dir[0] !== 0) faceShade = 0.82;
                             
                             let waterFade = 0;
                             if (effectiveNeighborType === BLOCKS.WATER || effectiveNeighborType === BLOCKS.SWAMP_WATER || neighborType === BLOCKS.WATER || neighborType === BLOCKS.SWAMP_WATER) {
@@ -1542,9 +1546,9 @@ function _vertexAO(wx, wy, wz, vx, vy, vz, face, getNeighborBlock) {
     const side2 = _isSolid(wx, wy, wz, face.dir[0] + dx2, face.dir[1] + dy2, face.dir[2] + dz2, getNeighborBlock);
     const corner = _isSolid(wx, wy, wz, face.dir[0] + dx1 + dx2, face.dir[1] + dy1 + dy2, face.dir[2] + dz1 + dz2, getNeighborBlock);
 
-    if (side1 && side2) return 0.45;
+    if (side1 && side2) return 0.58;
     const count = (side1 ? 1 : 0) + (side2 ? 1 : 0) + (corner ? 1 : 0);
-    const aoValues = [1.0, 0.80, 0.62, 0.45];
+    const aoValues = [1.0, 0.86, 0.72, 0.58];
     return aoValues[count];
 }
 

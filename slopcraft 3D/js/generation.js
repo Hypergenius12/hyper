@@ -694,8 +694,8 @@ export function getBiomeParams(wx, wz, params) {
     const isOcean = contNoise < 0.3;
     const isMountain = erosionNoise < 0.35 && contNoise >= 0.38;
     const isFlat = erosionNoise > 0.65;
-    // Authentic Minecraft Beach Biome: coastal boundary ribbon along oceans
-    const isCoast = contNoise >= 0.285 && contNoise < 0.35 && !isMountain;
+    // Authentic Minecraft Beach Biome: narrow coastal boundary ribbon along oceans
+    const isCoast = contNoise >= 0.298 && contNoise < 0.325 && !isMountain;
 
     let biome = BIOMES.PLAINS;
     let terraceWeight = 0;
@@ -921,7 +921,7 @@ export function getColumnInfo(wx, wz, params) {
     // 2. Inland dry biomes (contNoise >= 0.35 and not swamp/water/river) MUST NEVER dip below seaLevel + 1.2 (surfaceY >= 63).
     // 3. Swamps are shallow wetlands: channels dip 1-2 blocks below seaLevel (y=60-61); banks rise 1-3 blocks above (y=63-65).
     // 4. Coastal transitions ramp smoothly up to inland elevation.
-    const isWaterBiome = (biome === BIOMES.DEEP_OCEAN || biome === BIOMES.OCEAN || biome === BIOMES.CORAL_REEF || biome === BIOMES.FROZEN_OCEAN || biome.isOcean || biome.isBeach || biome === BIOMES.BEACH);
+    const isWaterBiome = (biome === BIOMES.DEEP_OCEAN || biome === BIOMES.OCEAN || biome === BIOMES.CORAL_REEF || biome === BIOMES.FROZEN_OCEAN || biome.isOcean);
     const isSwamp = (biome === BIOMES.SWAMP || biome.name === 'Swamp');
 
     if (!isWaterBiome) {
@@ -1730,13 +1730,13 @@ export function generateChunkTerrain(cx, cz, params) {
                             type = (surfaceNoise < -0.3) ? BLOCKS.GRAVEL : BLOCKS.DIRT;
                         }
                     } else if (isNearSeaShore && isActualCoastalBeach) {
-                        // Authentic Minecraft Shoreline: Sandy beach only on actual coastal beaches / beach biomes
-                        if (hasSandyBeach) {
+                        // Authentic Minecraft Shoreline: Sandy beach strictly along water edge (seaLevel + 2)
+                        if (hasSandyBeach && y <= params.seaLevel + 2) {
                             type = BLOCKS.SAND;
                         } else if (y <= params.seaLevel + 1) {
                             type = (surfaceNoise < -0.5) ? BLOCKS.GRAVEL : BLOCKS.SAND;
                         } else {
-                            type = biome.surface;
+                            type = (biome === BIOMES.BEACH) ? BLOCKS.GRASS : biome.surface;
                         }
                     } else if (biome.isVolcanic) {
                         const vRoll = colRng();
@@ -1769,7 +1769,7 @@ export function generateChunkTerrain(cx, cz, params) {
                             type = BLOCKS.GRASS;
                         }
                     } else {
-                        type = biome.surface;
+                        type = (biome === BIOMES.BEACH && y > params.seaLevel + 2) ? BLOCKS.GRASS : biome.surface;
                     }
                     blocks[idx] = type;
                 } else if (depth < soilLimit) {
@@ -1790,7 +1790,7 @@ export function generateChunkTerrain(cx, cz, params) {
                         type = (colRng() < 0.6) ? BLOCKS.MUD : BLOCKS.DIRT;
                     } else if (surfaceBlock === BLOCKS.GRAVEL) {
                         type = BLOCKS.GRAVEL;
-                    } else if (surfaceBlock === BLOCKS.DIRT || surfaceBlock === BLOCKS.ROOTED_DIRT) {
+                    } else if (surfaceBlock === BLOCKS.DIRT || surfaceBlock === BLOCKS.ROOTED_DIRT || surfaceBlock === BLOCKS.GRASS) {
                         type = BLOCKS.DIRT;
                     } else if (surfaceBlock === BLOCKS.SNOW && biome.name === 'Mountains') {
                         type = (colRng() < 0.4) ? BLOCKS.STONE : BLOCKS.DIRT;
@@ -2206,8 +2206,8 @@ export function generateChunkTerrain(cx, cz, params) {
                 if (colInfo.erosionNoise > 0.60) {
                     treeProbability *= Math.max(0.35, 1.0 - (colInfo.erosionNoise - 0.60) / 0.15 * 0.65);
                 }
-            } else if (biome === BIOMES.PLAINS || biome.name === 'Plains') {
-                // Solitary oak trees in plains, more common near water edges (riparian willow/oak) and forest borders
+            } else if (biome === BIOMES.PLAINS || biome.name === 'Plains' || (biome === BIOMES.BEACH && surfaceY > params.seaLevel + 2)) {
+                // Solitary oak trees in plains and elevated coastal bluffs, more common near water edges (riparian willow/oak) and forest borders
                 const isNearWater = surfaceY <= params.seaLevel + 4;
                 treeProbability = isNearWater ? 0.015 : ((colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.006 : 0.002);
             }
@@ -2379,13 +2379,13 @@ export function generateChunkTerrain(cx, cz, params) {
             // Ground cover vegetation
             if (biome.hasDeadBush && r < 0.04) {
                 safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
-            } else if (biome.isBeach) {
-                // Beaches on land are clean sandy shores (seashells are strictly underwater)
+            } else if (biome.isBeach && surfaceY <= params.seaLevel + 2) {
+                // Beaches at water level are clean sandy shores (seashells are strictly underwater)
                 continue;
             } else if (biome.jungleFlora && r < 0.08) {
                 if (floraRng() < 0.5) generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
                 else safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.LEAVES, true);
-            } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && !biome.isVolcanic && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef && !biome.isBeach) {
+            } else if (biome.name !== 'Desert' && biome.name !== 'Badlands' && !biome.isVolcanic && biome.name !== 'Ice Spikes' && biome.name !== 'Deep Ocean' && !biome.isCoralReef && (!biome.isBeach || surfaceY > params.seaLevel + 2)) {
                 let fr = floraRng();
                 if (biome === BIOMES.CHERRY_GROVE && fr < 0.3) {
                     if (fr < 0.05) safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.PINK_PETALS, true);
