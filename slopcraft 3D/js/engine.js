@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=122';
-import { getBiomeParams } from './generation.js?v=122';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=123';
+import { getBiomeParams } from './generation.js?v=123';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -2447,19 +2447,20 @@ export class World {
 
         // Frustum culling
         if (this.camera) {
+            this.camera.updateMatrixWorld();
             this.projScreenMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
             this.frustum.setFromProjectionMatrix(this.projScreenMatrix);
             const _box = this._cullingBox || (this._cullingBox = new THREE.Box3());
             for (const chunk of this.chunks.values()) {
-                if (chunk.mesh) {
-                    const cx = chunk.cx * 16;
-                    const cz = chunk.cz * 16;
-                    _box.min.set(cx, 0, cz);
-                    _box.max.set(cx + 16, 128, cz + 16);
-                    const isVis = this.frustum.intersectsBox(_box);
-                    chunk.mesh.visible = isVis;
-                    if (chunk.waterMesh) chunk.waterMesh.visible = isVis;
-                }
+                const cx = chunk.cx * 16;
+                const cz = chunk.cz * 16;
+                // Generous margin to prevent near-plane / boundary edge-clipping flicker
+                _box.min.set(cx - 2, -2, cz - 2);
+                _box.max.set(cx + 18, 130, cz + 18);
+                const isVis = this.frustum.intersectsBox(_box);
+                if (chunk.mesh) chunk.mesh.visible = isVis;
+                if (chunk.waterMesh) chunk.waterMesh.visible = isVis;
+                if (chunk.endPortalMesh) chunk.endPortalMesh.visible = isVis;
             }
         }
 

@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=122';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=122';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=122';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=122';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=122';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=122';
-import { AudioManager } from './audio.js?v=122';
-import { BiomeMap } from './map.js?v=122';
-import { DevMode } from './dev.js?v=122';
-import { ChatSystem } from './chat.js?v=122';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=123';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=123';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=123';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=123';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=123';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=123';
+import { AudioManager } from './audio.js?v=123';
+import { BiomeMap } from './map.js?v=123';
+import { DevMode } from './dev.js?v=123';
+import { ChatSystem } from './chat.js?v=123';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -4707,10 +4707,12 @@ class Game {
                 // Only render chunks within the minimap viewport (~80 blocks radius, 5 chunks)
                 for (const chunk of this.world.chunks.values()) {
                     const isNear = Math.abs(chunk.cx - pChunkX) <= 5 && Math.abs(chunk.cz - pChunkZ) <= 5;
-                    if (chunk.mesh) {
-                        prevVisibility.push({ chunk, vis: chunk.mesh.visible, waterVis: chunk.waterMesh ? chunk.waterMesh.visible : false });
-                        chunk.mesh.visible = isNear;
-                    }
+                    prevVisibility.push({
+                        chunk,
+                        meshVis: chunk.mesh ? chunk.mesh.visible : false,
+                        waterVis: chunk.waterMesh ? chunk.waterMesh.visible : false
+                    });
+                    if (chunk.mesh) chunk.mesh.visible = isNear;
                     if (chunk.waterMesh) chunk.waterMesh.visible = isNear;
                 }
                 
@@ -4721,7 +4723,7 @@ class Game {
                 // Restore previous frustum culling visibility for main scene
                 for (let i = 0; i < prevVisibility.length; i++) {
                     const pv = prevVisibility[i];
-                    if (pv.chunk.mesh) pv.chunk.mesh.visible = pv.vis;
+                    if (pv.chunk.mesh) pv.chunk.mesh.visible = pv.meshVis;
                     if (pv.chunk.waterMesh) pv.chunk.waterMesh.visible = pv.waterVis;
                 }
             }
@@ -5067,6 +5069,9 @@ class Game {
                     const mesh = chunk.buildMesh(this.world.textureAtlas, neighborChunks, this.world.planetParams);
                     if (mesh && !mesh.parent) {
                         this.world.scene.add(mesh);
+                    }
+                    if (chunk.waterMesh && !chunk.waterMesh.parent) {
+                        this.world.scene.add(chunk.waterMesh);
                     }
                 }
             }

@@ -593,15 +593,15 @@ export function getRiverInfo(wx, wz, params, contNoise) {
         oceanBlend = Math.max(0.0, Math.min(1.0, (contNoise - 0.28) / 0.07));
     }
 
-    const riverFactor = channelCurve * maskWeight * oceanBlend;
-    // Parabolic riverbed carving: center dips 2.8 blocks below seaLevel (y = 59.2), edges rise to seaLevel + 1
-    const carvedElev = (params.seaLevel - 2.8) + Math.pow(norm, 2.0) * 3.8;
-    const isRiver = (riverFactor > 0.18 && norm < 0.85);
+    const blend = maskWeight * oceanBlend;
+    const riverFactor = channelCurve * blend;
+    const isRiver = (blend > 0.20 && norm < 0.70);
 
     return {
         isRiver,
-        riverFactor,
-        carvedElev
+        norm,
+        blend,
+        riverFactor
     };
 }
 
@@ -903,8 +903,17 @@ export function getColumnInfo(wx, wz, params) {
 
     // Carve rare natural winding rivers at seaLevel
     const riverInfo = getRiverInfo(wx, wz, params, contNoise);
-    if (riverInfo.riverFactor > 0) {
-        elevation = elevation * (1.0 - riverInfo.riverFactor) + riverInfo.carvedElev * riverInfo.riverFactor;
+    if (riverInfo.blend > 0) {
+        const norm = riverInfo.norm;
+        // Water channel floor: center dips 2.8 blocks below seaLevel (59.2), edges rise to seaLevel - 1.2 (60.8)
+        const waterFloor = (params.seaLevel - 2.8) + (Math.min(norm, 0.65) / 0.65) * 1.6;
+        const bankT = smoothstep(0.65, 1.0, norm);
+        // Bank rises smoothly up to the surrounding terrain elevation (at least seaLevel + 1.2)
+        const bankElev = Math.max(elevation, params.seaLevel + 1.2);
+        const targetRiverElev = waterFloor * (1.0 - bankT) + bankElev * bankT;
+        // Carve down through any elevated hills/mountains
+        const carved = Math.min(elevation, targetRiverElev);
+        elevation = elevation * (1.0 - riverInfo.blend) + carved * riverInfo.blend;
     }
 
     // Guarantee strict Minecraft terrain boundaries:
@@ -917,8 +926,8 @@ export function getColumnInfo(wx, wz, params) {
 
     if (!isWaterBiome) {
         if (riverInfo.isRiver) {
-            // River channel: water surface is at params.seaLevel, bed dips down to ~59.2
-            elevation = Math.max(params.seaLevel - 3.0, elevation);
+            // River channel: water surface is at params.seaLevel (62), bed is guaranteed to be submerged below seaLevel
+            elevation = Math.min(elevation, params.seaLevel - 1.2);
         } else if (isSwamp || swampInfluence > 0) {
             // Swamp wetland: channels dip 1-2 blocks below seaLevel for shallow water; banks rise 1-3 blocks above
             // Smoothly ramp minimum elevation between swamp channels and inland ground to prevent sharp 3-block border tears
