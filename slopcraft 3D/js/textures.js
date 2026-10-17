@@ -2814,9 +2814,6 @@ const MC_ITEM_MAP = {
     'boss': 'nether_star',
     'gunpowder': 'gunpowder',
     'stick': 'stick',
-    'wand_basic': 'stick',
-    'wand_fire': 'blaze_rod',
-    'wand_ice': 'prismarine_shard',
     'wood': 'oak_log',
     'stone': 'cobblestone',
     'apple': 'apple',
@@ -3046,6 +3043,115 @@ const SPAWN_EGG_COLORS = {
 const _itemTextureCache = new Map();
 const _itemCanvasCache = new Map();
 
+// Palettes and shapes for magic items (wands, spells, spell modifiers)
+const MAGIC_WAND_PALETTES = {
+    'wand':           { c: '#795548', d: '#4e342e', g: '#e0e0e0', h: '#a1887f' },
+    'wand_basic':     { c: '#795548', d: '#4e342e', g: '#e0e0e0', h: '#a1887f' },
+    'wand_fire':      { c: '#795548', d: '#4e342e', g: '#ff3d00', h: '#ff9e80' },
+    'wand_ice':       { c: '#795548', d: '#4e342e', g: '#00b0ff', h: '#80d8ff' },
+    'wand_nature':    { c: '#795548', d: '#4e342e', g: '#00e676', h: '#b9f6ca' },
+    'wand_lightning': { c: '#795548', d: '#4e342e', g: '#ffff00', h: '#ffff88' },
+    'wand_thunder':   { c: '#795548', d: '#4e342e', g: '#ffff00', h: '#ffff88' },
+    'wand_earth':     { c: '#795548', d: '#4e342e', g: '#8b4513', h: '#c4a882' },
+    'wand_wind':      { c: '#795548', d: '#4e342e', g: '#66cc99', h: '#ccffee' },
+    'wand_void':      { c: '#212121', d: '#000000', g: '#aa00ff', h: '#e040fb' },
+    'wand_meteor':    { c: '#bf360c', d: '#5d1000', g: '#ffab00', h: '#ffd54f' },
+    'wand_master':    { c: '#311b92', d: '#1a0c4e', g: '#ffd700', h: '#fff176' }
+};
+
+const MAGIC_WAND_SHAPE = [
+    "            OO  ",
+    "           OGGO ",
+    "          OGGGO ",
+    "         OHGGO  ",
+    "        OHDO    ",
+    "       OHDO     ",
+    "      OHDO      ",
+    "     OHDO       ",
+    "    OHDO        ",
+    "   OHDO         ",
+    "  OHDO          ",
+    "  ODO           ",
+    "  OO            ",
+    "                ",
+    "                ",
+    "                "
+];
+
+const MAGIC_SPELL_PALETTES = {
+    'FIRE':     { c: '#ff3d00', d: '#dd2c00', h: '#ff9e80' },
+    'BURST':    { c: '#ff4422', d: '#cc2200', h: '#ff8866' },
+    'METEOR':   { c: '#ffaa00', d: '#cc6600', h: '#ffdd66' },
+    'ICE':      { c: '#00b0ff', d: '#0091ea', h: '#80d8ff' },
+    'BOLT':     { c: '#0088ff', d: '#0055cc', h: '#66b3ff' },
+    'MISSILE':  { c: '#4488ff', d: '#2255cc', h: '#88bbff' },
+    'HEAL':     { c: '#00e676', d: '#00c853', h: '#b9f6ca' },
+    'NATURE':   { c: '#00e676', d: '#00c853', h: '#b9f6ca' },
+    'EARTH':    { c: '#8B4513', d: '#5D2906', h: '#C4A882' },
+    'THUNDER':  { c: '#FFD700', d: '#CC8800', h: '#FFFF88' },
+    'CHAIN':    { c: '#88CCFF', d: '#3388CC', h: '#DDF0FF' },
+    'DARK':     { c: '#6600CC', d: '#440088', h: '#AA66FF' },
+    'WIND':     { c: '#66CC99', d: '#339966', h: '#CCFFEE' },
+    'POISON':   { c: '#33cc33', d: '#1f7a1f', h: '#80ff80' },
+    'WATER':    { c: '#3399FF', d: '#1166CC', h: '#80CCFF' },
+    'FROST':    { c: '#00FFFF', d: '#008888', h: '#88FFFF' },
+    'LIGHT':    { c: '#FFFFAA', d: '#CCCC55', h: '#FFFFFF' },
+    'VOID':     { c: '#8800CC', d: '#440066', h: '#CC66FF' },
+    'LAVA':     { c: '#CC3300', d: '#991100', h: '#FF6600' },
+    'BUILDER':  { c: '#AAAAAA', d: '#777777', h: '#CCCCCC' },
+    'ARCANE':   { c: '#aa00ff', d: '#6600aa', h: '#e080ff' },
+    'BASIC':    { c: '#e0e0e0', d: '#9e9e9e', h: '#ffffff' }
+};
+
+const MAGIC_SPELL_SHAPE = [
+    "                ",
+    "      OOOO      ",
+    "    OOCHHDOO    ",
+    "   OCHHHHCDDO   ",
+    "  OCHHHHCCCCDO  ",
+    "  OHHHCCCCCCDO  ",
+    " OHHHCCCCCCCCDO ",
+    " OHHCCCCCCCCCDO ",
+    " OHHCCCCCCCCCDO ",
+    " OHCCCCCCCCCCDO ",
+    "  OCCCCCCCCDDO  ",
+    "  OCDDDDDDDCDO  ",
+    "   OODDDDDDOO   ",
+    "    OOOOOOOO    ",
+    "                ",
+    "                "
+];
+
+const MAGIC_MODIFIER_PALETTES = {
+    'DAMAGE_UP': { c: '#ff5555', d: '#aa0000', h: '#ffaaaa' },
+    'SPEED_UP':  { c: '#55ffff', d: '#00aaaa', h: '#aaffff' },
+    'MANA_EFF':  { c: '#ff55ff', d: '#aa00aa', h: '#ffaaff' },
+    'PIERCE':    { c: '#55ff55', d: '#00aa00', h: '#aaffaa' },
+    'HOMING':    { c: '#ffff55', d: '#aaaa00', h: '#ffffaa' },
+    'BURN':      { c: '#ff6600', d: '#cc2200', h: '#ffaa44' },
+    'MULTIPLY':  { c: '#33bbff', d: '#0066cc', h: '#88ddff' },
+    'CAST_TWO':  { c: '#ffaa00', d: '#aa5500', h: '#ffff00' }
+};
+
+const MAGIC_MODIFIER_SHAPE = [
+    "                ",
+    "       OO       ",
+    "      OHHO      ",
+    "     OHCCHO     ",
+    "    OHCCCCHO    ",
+    "   OHCCCCCCHO   ",
+    "  OHCCCCCCCCHO  ",
+    " OHCCCCCCCCCCHO ",
+    " OHCDDDDDDDDCHO ",
+    "  OHDDDDDDDDHO  ",
+    "   OHDDDDDDHO   ",
+    "    OHDDDDHO    ",
+    "     OHDCHO     ",
+    "      OHHO      ",
+    "       OO       ",
+    "                "
+];
+
 export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     if (typeof itemSubtype !== 'string') {
         itemSubtype = (itemSubtype !== undefined && itemSubtype !== null) ? String(itemSubtype) : '';
@@ -3084,6 +3190,90 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     // Clear transparent
     ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
 
+    // 1. Magic Wands (authentic 16x16 pixel art with wood shaft and glowing elemental gem)
+    const isWand = itemType === 'wand' || itemSubtype.startsWith('wand') || itemSubtype === 'wand';
+    if (isWand) {
+        const p = MAGIC_WAND_PALETTES[itemSubtype] || MAGIC_WAND_PALETTES['wand_basic'];
+        for (let y = 0; y < 16; y++) {
+            const row = MAGIC_WAND_SHAPE[y];
+            for (let x = 0; x < 16; x++) {
+                const ch = row[x];
+                if (ch === ' ') continue;
+                if (ch === 'O') ctx.fillStyle = '#222222';
+                else if (ch === 'G') ctx.fillStyle = p.g || '#e0e0e0';
+                else if (ch === 'H') ctx.fillStyle = p.h || '#a1887f';
+                else if (ch === 'D') ctx.fillStyle = p.d || '#4e342e';
+                else if (ch === 'C') ctx.fillStyle = p.c || '#795548';
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+        const savedCvs = document.createElement('canvas');
+        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+        _itemCanvasCache.set(cacheKey, savedCvs);
+        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+        _itemCanvasCache.set(itemSubtype, savedCvs);
+        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+        if (onLoaded) onLoaded(canvas);
+        return canvas;
+    }
+
+    // 2. Magic Spells (radiant elemental orb icons)
+    const cleanSpellKey = itemSubtype.replace(/^spell_/, '').toUpperCase();
+    const isSpell = itemType === 'spell' || itemSubtype.startsWith('spell') || MAGIC_SPELL_PALETTES[cleanSpellKey] !== undefined;
+    if (isSpell) {
+        const p = MAGIC_SPELL_PALETTES[cleanSpellKey] || MAGIC_SPELL_PALETTES['BASIC'];
+        for (let y = 0; y < 16; y++) {
+            const row = MAGIC_SPELL_SHAPE[y];
+            for (let x = 0; x < 16; x++) {
+                const ch = row[x];
+                if (ch === ' ') continue;
+                if (ch === 'O') ctx.fillStyle = '#1a1a2e';
+                else if (ch === 'H') ctx.fillStyle = p.h || p.c;
+                else if (ch === 'C') ctx.fillStyle = p.c;
+                else if (ch === 'D') ctx.fillStyle = p.d;
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+        const savedCvs = document.createElement('canvas');
+        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+        _itemCanvasCache.set(cacheKey, savedCvs);
+        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+        _itemCanvasCache.set(itemSubtype, savedCvs);
+        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+        if (onLoaded) onLoaded(canvas);
+        return canvas;
+    }
+
+    // 3. Wand Modifiers (radiant runic diamond gems)
+    const isModifier = itemType === 'modifier' || MAGIC_MODIFIER_PALETTES[itemSubtype] !== undefined;
+    if (isModifier) {
+        const p = MAGIC_MODIFIER_PALETTES[itemSubtype] || MAGIC_MODIFIER_PALETTES['DAMAGE_UP'];
+        for (let y = 0; y < 16; y++) {
+            const row = MAGIC_MODIFIER_SHAPE[y];
+            for (let x = 0; x < 16; x++) {
+                const ch = row[x];
+                if (ch === ' ') continue;
+                if (ch === 'O') ctx.fillStyle = '#111111';
+                else if (ch === 'H') ctx.fillStyle = p.h;
+                else if (ch === 'C') ctx.fillStyle = p.c;
+                else if (ch === 'D') ctx.fillStyle = p.d;
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+        const savedCvs = document.createElement('canvas');
+        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+        _itemCanvasCache.set(cacheKey, savedCvs);
+        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+        _itemCanvasCache.set(itemSubtype, savedCvs);
+        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+        if (onLoaded) onLoaded(canvas);
+        return canvas;
+    }
+
+    // 4. Vanilla Minecraft Item Textures
     const useMC = true;
     if (useMC) {
         let mcKey = null;
@@ -3115,11 +3305,26 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                     if (onLoaded) onLoaded(canvas);
                 }
             });
+        } else {
+            // Fallback crystal icon so non-Minecraft items are never invisible
+            ctx.fillStyle = '#00e5ff';
+            ctx.fillRect(4, 4, 8, 8);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(5, 5, 3, 3);
+            ctx.fillStyle = '#0091ea';
+            ctx.fillRect(4, 10, 8, 2);
+            ctx.fillRect(10, 4, 2, 8);
+            const savedCvs = document.createElement('canvas');
+            savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+            savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+            _itemCanvasCache.set(cacheKey, savedCvs);
+            _itemTextureCache.set(cacheKey, canvas.toDataURL());
+            _itemCanvasCache.set(itemSubtype, savedCvs);
+            _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+            if (onLoaded) onLoaded(canvas);
         }
     }
 
-
-    // Real Minecraft item texture is loaded asynchronously and cached via loadMinecraftTexture above.
     return canvas;
 }
 
