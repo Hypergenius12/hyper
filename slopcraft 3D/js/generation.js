@@ -2,9 +2,9 @@
 // generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=116';
-import { BLOCKS } from './textures.js?v=143';
+import { BLOCKS } from './textures.js?v=144';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=143';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=144';
 
 // Planet configurations
 export const BIOMES = {
@@ -1817,13 +1817,12 @@ export function generateChunkTerrain(cx, cz, params) {
                         } else {
                             type = (biome === BIOMES.BEACH && y > params.seaLevel + 2) ? BLOCKS.GRASS : biome.surface;
                         }
-                            // Natural winding dirt paths meandering through grassy plains and woodlands near water
-                            if (type === BLOCKS.GRASS && (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome.name === 'Plains' || biome.name === 'Forest')) {
-                                const pathBand = params.noise2D(wx * 0.008 + 140, wz * 0.008 + 140);
-                                const pathTrack = params.noise2D(wx * 0.024 + 320, wz * 0.024 + 320);
-                                if (pathBand > 0.46 && Math.abs(pathTrack) < 0.040 && y < params.seaLevel + 16 && y > params.seaLevel) {
-                                    type = BLOCKS.DIRT_PATH;
-                                }
+                        // Natural winding dirt paths meandering through grassy plains and woodlands near water
+                        if (type === BLOCKS.GRASS && (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome.name === 'Plains' || biome.name === 'Forest')) {
+                            const pathBand = params.noise2D(wx * 0.008 + 140, wz * 0.008 + 140);
+                            const pathTrack = params.noise2D(wx * 0.024 + 320, wz * 0.024 + 320);
+                            if (pathBand > 0.46 && Math.abs(pathTrack) < 0.040 && y < params.seaLevel + 16 && y > params.seaLevel) {
+                                type = BLOCKS.DIRT_PATH;
                             }
                         }
                     }

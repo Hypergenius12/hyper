@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=143';
-import { getBiomeParams } from './generation.js?v=143';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=144';
+import { getBiomeParams } from './generation.js?v=144';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
