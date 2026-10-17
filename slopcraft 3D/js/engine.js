@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=140';
-import { getBiomeParams } from './generation.js?v=140';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=141';
+import { getBiomeParams } from './generation.js?v=141';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -424,6 +424,114 @@ if (THREE.ShaderChunk && !THREE.ShaderChunk._slopcraftGrassFoliage) {
 `;
 }
 
+// Precomputed horizontal neighbor offsets sorted by Euclidean distance
+// Eliminates cardinal-axis stair-stepping and produces smooth circular light propagation
+const SKY_OFFSETS = [
+    // dist 1.0 (4)
+    { dx:  1, dz:  0, dist: 1.000 },
+    { dx: -1, dz:  0, dist: 1.000 },
+    { dx:  0, dz:  1, dist: 1.000 },
+    { dx:  0, dz: -1, dist: 1.000 },
+    // dist 1.414 (4)
+    { dx:  1, dz:  1, dist: 1.414 },
+    { dx: -1, dz:  1, dist: 1.414 },
+    { dx:  1, dz: -1, dist: 1.414 },
+    { dx: -1, dz: -1, dist: 1.414 },
+    // dist 2.0 (4)
+    { dx:  2, dz:  0, dist: 2.000 },
+    { dx: -2, dz:  0, dist: 2.000 },
+    { dx:  0, dz:  2, dist: 2.000 },
+    { dx:  0, dz: -2, dist: 2.000 },
+    // dist 2.236 (8)
+    { dx:  2, dz:  1, dist: 2.236 },
+    { dx:  2, dz: -1, dist: 2.236 },
+    { dx: -2, dz:  1, dist: 2.236 },
+    { dx: -2, dz: -1, dist: 2.236 },
+    { dx:  1, dz:  2, dist: 2.236 },
+    { dx: -1, dz:  2, dist: 2.236 },
+    { dx:  1, dz: -2, dist: 2.236 },
+    { dx: -1, dz: -2, dist: 2.236 },
+    // dist 2.828 (4)
+    { dx:  2, dz:  2, dist: 2.828 },
+    { dx: -2, dz:  2, dist: 2.828 },
+    { dx:  2, dz: -2, dist: 2.828 },
+    { dx: -2, dz: -2, dist: 2.828 },
+    // dist 3.0 (4)
+    { dx:  3, dz:  0, dist: 3.000 },
+    { dx: -3, dz:  0, dist: 3.000 },
+    { dx:  0, dz:  3, dist: 3.000 },
+    { dx:  0, dz: -3, dist: 3.000 },
+    // dist 3.162 (8)
+    { dx:  3, dz:  1, dist: 3.162 },
+    { dx:  3, dz: -1, dist: 3.162 },
+    { dx: -3, dz:  1, dist: 3.162 },
+    { dx: -3, dz: -1, dist: 3.162 },
+    { dx:  1, dz:  3, dist: 3.162 },
+    { dx: -1, dz:  3, dist: 3.162 },
+    { dx:  1, dz: -3, dist: 3.162 },
+    { dx: -1, dz: -3, dist: 3.162 },
+    // dist 3.605 (8)
+    { dx:  3, dz:  2, dist: 3.605 },
+    { dx:  3, dz: -2, dist: 3.605 },
+    { dx: -3, dz:  2, dist: 3.605 },
+    { dx: -3, dz: -2, dist: 3.605 },
+    { dx:  2, dz:  3, dist: 3.605 },
+    { dx: -2, dz:  3, dist: 3.605 },
+    { dx:  2, dz: -3, dist: 3.605 },
+    { dx: -2, dz: -3, dist: 3.605 },
+    // dist 4.0 (4)
+    { dx:  4, dz:  0, dist: 4.000 },
+    { dx: -4, dz:  0, dist: 4.000 },
+    { dx:  0, dz:  4, dist: 4.000 },
+    { dx:  0, dz: -4, dist: 4.000 },
+    // dist 4.123 (8)
+    { dx:  4, dz:  1, dist: 4.123 },
+    { dx:  4, dz: -1, dist: 4.123 },
+    { dx: -4, dz:  1, dist: 4.123 },
+    { dx: -4, dz: -1, dist: 4.123 },
+    { dx:  1, dz:  4, dist: 4.123 },
+    { dx: -1, dz:  4, dist: 4.123 },
+    { dx:  1, dz: -4, dist: 4.123 },
+    { dx: -1, dz: -4, dist: 4.123 },
+    // dist 4.242 (4)
+    { dx:  3, dz:  3, dist: 4.242 },
+    { dx: -3, dz:  3, dist: 4.242 },
+    { dx:  3, dz: -3, dist: 4.242 },
+    { dx: -3, dz: -3, dist: 4.242 },
+    // dist 4.472 (8)
+    { dx:  4, dz:  2, dist: 4.472 },
+    { dx:  4, dz: -2, dist: 4.472 },
+    { dx: -4, dz:  2, dist: 4.472 },
+    { dx: -4, dz: -2, dist: 4.472 },
+    { dx:  2, dz:  4, dist: 4.472 },
+    { dx: -2, dz:  4, dist: 4.472 },
+    { dx:  2, dz: -4, dist: 4.472 },
+    { dx: -2, dz: -4, dist: 4.472 },
+    // dist 5.0 (4)
+    { dx:  5, dz:  0, dist: 5.000 },
+    { dx: -5, dz:  0, dist: 5.000 },
+    { dx:  0, dz:  5, dist: 5.000 },
+    { dx:  0, dz: -5, dist: 5.000 },
+    // dist 5.099 (8)
+    { dx:  5, dz:  1, dist: 5.099 },
+    { dx:  5, dz: -1, dist: 5.099 },
+    { dx: -5, dz:  1, dist: 5.099 },
+    { dx: -5, dz: -1, dist: 5.099 },
+    { dx:  1, dz:  5, dist: 5.099 },
+    { dx: -1, dz:  5, dist: 5.099 },
+    { dx:  1, dz: -5, dist: 5.099 },
+    { dx: -1, dz: -5, dist: 5.099 },
+    // dist 5.385 (8)
+    { dx:  5, dz:  2, dist: 5.385 },
+    { dx:  5, dz: -2, dist: 5.385 },
+    { dx: -5, dz:  2, dist: 5.385 },
+    { dx: -5, dz: -2, dist: 5.385 },
+    { dx:  2, dz:  5, dist: 5.385 },
+    { dx: -2, dz:  5, dist: 5.385 },
+    { dx:  2, dz: -5, dist: 5.385 },
+    { dx: -2, dz: -5, dist: 5.385 }
+];
+
 export class Chunk {
     constructor(cx, cz) {
         this.cx = cx;
@@ -577,20 +685,24 @@ export class Chunk {
             if (ny > topOpaqueY[gz * SKY_DIM + gx]) return 1.0; // Open directly to the sky
 
             // Under an overhang or in a cave:
-            // Calculate horizontal distance to nearest column with open sky at altitude ny
-            let minDist = 7;
-            for (let d = 1; d <= 6; d++) {
-                if ((gx + d < SKY_DIM && ny > topOpaqueY[gz * SKY_DIM + (gx + d)]) ||
-                    (gx - d >= 0       && ny > topOpaqueY[gz * SKY_DIM + (gx - d)]) ||
-                    (gz + d < SKY_DIM && ny > topOpaqueY[(gz + d) * SKY_DIM + gx]) ||
-                    (gz - d >= 0       && ny > topOpaqueY[(gz - d) * SKY_DIM + gx])) {
-                    minDist = d;
-                    break;
+            // Find continuous Euclidean distance to nearest open-sky column at altitude ny
+            let minDist = 6.0;
+            for (let i = 0; i < SKY_OFFSETS.length; i++) {
+                const off = SKY_OFFSETS[i];
+                const ngx = gx + off.dx;
+                const ngz = gz + off.dz;
+                if (ngx >= 0 && ngx < SKY_DIM && ngz >= 0 && ngz < SKY_DIM) {
+                    if (ny > topOpaqueY[ngz * SKY_DIM + ngx]) {
+                        minDist = off.dist;
+                        break;
+                    }
                 }
             }
-            // Authentic Minecraft sky light propagation curve under overhangs
-            // Distance 1: 0.82, 2: 0.65, 3: 0.48, 4: 0.32, 5: 0.20, >=6: 0.12 (deep cave darkness)
-            return Math.max(0.12, 1.0 - minDist * 0.15);
+
+            // Smooth S-curve (cubic Hermite) transition from 1.0 down to 0.52 (ambient overhang/cave light)
+            const t = Math.min(1.0, minDist / 6.0);
+            const smoothT = t * t * (3.0 - 2.0 * t);
+            return 1.0 - smoothT * 0.48;
         };
 
         let posCount = 0;
@@ -1462,11 +1574,21 @@ export class Chunk {
                             const nx = x + face.dir[0];
                             const ny = y + face.dir[1];
                             const nz = z + face.dir[2];
-                            let skyLight = getSkyLightFactor(nx, ny, nz);
-                            if (face.dir[1] < 0 && skyLight < 1.0) skyLight *= 0.85; // Extra shadow under horizontal overhang ceilings
+                            const baseSky = getSkyLightFactor(nx, ny, nz);
 
                             for (let i = 0; i < 4; i++) {
-                                let c = (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) ? 1.0 : (aoColor[i] * faceShade * skyLight);
+                                let vSky = baseSky;
+                                if (baseSky < 0.999) {
+                                    // Smooth per-vertex corner lighting: sample corner air position
+                                    const cdx = (face.dir[0] === 0) ? (face.v[i][0] === 1 ? 1 : -1) : 0;
+                                    const cdy = (face.dir[1] === 0) ? (face.v[i][1] === 1 ? 1 : -1) : 0;
+                                    const cdz = (face.dir[2] === 0) ? (face.v[i][2] === 1 ? 1 : -1) : 0;
+                                    const cornerSky = getSkyLightFactor(nx + cdx, ny + cdy, nz + cdz);
+                                    vSky = (baseSky + cornerSky) * 0.5;
+                                }
+                                if (face.dir[1] < 0 && vSky < 1.0) vSky = Math.max(0.48, vSky * 0.94);
+
+                                let c = (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) ? 1.0 : (aoColor[i] * faceShade * vSky);
                                 // Water: pure white vertex color — biome tint applied via matWater.color so MC texture shows
                                 if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) {
                                     _colors[colorCount++] = 1.0;

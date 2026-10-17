@@ -2,9 +2,9 @@
 // generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=116';
-import { BLOCKS } from './textures.js?v=140';
+import { BLOCKS } from './textures.js?v=141';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=140';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=141';
 
 // Planet configurations
 export const BIOMES = {
