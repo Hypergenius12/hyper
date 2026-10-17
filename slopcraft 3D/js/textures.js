@@ -1121,7 +1121,7 @@ function generateBlockTexture(ctx, blockType, face, rng) {
             break;
         case BLOCKS.LEAVES:
             ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
-            fillBase(ctx, 25, 80, 20); // Darker base green
+            fillBase(ctx, 50, 85, 30); // Authentic balanced Minecraft oak leaves green
             addNoise(ctx, rng, 20);
             
             // Random leafy clusters
@@ -1130,11 +1130,11 @@ function generateBlockTexture(ctx, blockType, face, rng) {
                 const y = (rng() * TEX_SIZE) | 0;
                 const shade = rng();
                 if (shade < 0.3) {
-                    ctx.fillStyle = 'rgba(15, 60, 15, 0.9)'; // deep shadow
+                    ctx.fillStyle = 'rgba(32, 58, 18, 0.95)'; // deep shadow
                 } else if (shade < 0.6) {
-                    ctx.fillStyle = 'rgba(50, 120, 35, 0.9)'; // midtone
+                    ctx.fillStyle = 'rgba(58, 100, 36, 0.95)'; // midtone
                 } else {
-                    ctx.fillStyle = 'rgba(80, 160, 50, 0.9)'; // highlight
+                    ctx.fillStyle = 'rgba(75, 125, 45, 0.95)'; // highlight
                 }
                 const w = 1 + (rng() * 2) | 0;
                 const h = 1 + (rng() * 2) | 0;
@@ -4933,6 +4933,35 @@ function loadMinecraftTexture(name) {
     });
 }
 
+function applyNormalizedTint(ctx, width, height, hexColor) {
+    if (!hexColor || hexColor === '#ffffff') return;
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    const tr = parseInt(hexColor.slice(1, 3), 16);
+    const tg = parseInt(hexColor.slice(3, 5), 16);
+    const tb = parseInt(hexColor.slice(5, 7), 16);
+
+    let sumL = 0, count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 10) {
+            sumL += (data[i] + data[i + 1] + data[i + 2]) / 3;
+            count++;
+        }
+    }
+    const avgL = count > 0 ? (sumL / count) : 128;
+
+    for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 10) {
+            const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
+            const scale = lum / avgL;
+            data[i] = Math.min(255, Math.max(0, Math.round(tr * scale)));
+            data[i + 1] = Math.min(255, Math.max(0, Math.round(tg * scale)));
+            data[i + 2] = Math.min(255, Math.max(0, Math.round(tb * scale)));
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+}
+
 export async function createTextureAtlas(useMinecraft = true) {
     // Calculate atlas layout
     // Each block gets at most 3 faces (top, side, bottom)
@@ -5043,10 +5072,11 @@ export async function createTextureAtlas(useMinecraft = true) {
                             // Draw the image first to a temporary canvas so we can tint it
                             const tCanvas = document.createElement('canvas');
                             tCanvas.width = TEX_SIZE; tCanvas.height = TEX_SIZE;
-                            const tCtx = tCanvas.getContext('2d');
+                            const tCtx = tCanvas.getContext('2d', { willReadFrequently: true });
+                            tCtx.imageSmoothingEnabled = false;
                             
                             // Determine authentic Minecraft tint color
-                            let tint = '#8ee066'; // Default lush Minecraft plains grass green
+                            let tint = '#74b44a'; // Default lush Minecraft plains grass green (matches grass_block_side fringe)
                             
                             if (isWater) {
                                 tint = (bt === BLOCKS.SWAMP_WATER) ? '#617B59' : '#3F76E4';
@@ -5058,26 +5088,39 @@ export async function createTextureAtlas(useMinecraft = true) {
                                 } else if (bt === BLOCKS.SAVANNA_GRASS) {
                                     tint = '#bfb755'; // Authentic dry golden savanna grass
                                 } else {
-                                    tint = '#79c05a'; // Standard vibrant Minecraft plains grass green
+                                    tint = '#74b44a'; // Exact match with green grass fringe on grass_block_side.png
                                 }
                             } else if (texName.includes('leaves')) {
-                                tint = (bt === BLOCKS.CHERRY_LEAVES) ? '#ffffff' : ((bt === BLOCKS.PINE_LEAVES) ? '#4f855f' : ((bt === BLOCKS.JUNGLE_LEAVES) ? '#30bb0b' : '#59ae30'));
+                                if (texName === 'azalea_leaves' || texName === 'flowering_azalea_leaves' || texName === 'cherry_leaves' || texName === 'pale_oak_leaves' || bt === BLOCKS.CHERRY_LEAVES) {
+                                    tint = '#ffffff'; // Pre-colored textures in assets/mc/block/
+                                } else if (bt === BLOCKS.PINE_LEAVES || texName === 'spruce_leaves') {
+                                    tint = '#527852'; // Authentic muted spruce needle green
+                                } else if (bt === BLOCKS.BIRCH_LEAVES || texName === 'birch_leaves') {
+                                    tint = '#6e8e4a'; // Authentic soft golden-olive birch foliage
+                                } else if (bt === BLOCKS.JUNGLE_LEAVES || texName === 'jungle_leaves') {
+                                    tint = '#3d7a1e'; // Authentic rich rainforest green (not oversaturated neon)
+                                } else if (bt === BLOCKS.DARK_OAK_LEAVES || texName === 'dark_oak_leaves') {
+                                    tint = '#34581c'; // Authentic deep dark forest green
+                                } else if (bt === BLOCKS.ACACIA_LEAVES || texName === 'acacia_leaves') {
+                                    tint = '#547228'; // Authentic dry savanna foliage
+                                } else if (bt === BLOCKS.MANGROVE_LEAVES || texName === 'mangrove_leaves') {
+                                    tint = '#5e7a2b'; // Authentic mangrove swamp foliage
+                                } else {
+                                    tint = '#487428'; // Authentic balanced Minecraft oak foliage (matches in-game Java foliage)
+                                }
                             } else if (texName === 'lily_pad') {
                                 tint = '#208030';
                             } else if (texName === 'vine') {
                                 tint = '#ffffff'; // Kept grayscale in atlas so vertex colors dynamically apply authentic biome foliage color!
                             } else {
-                                tint = '#79c05a';
+                                tint = '#74b44a';
                             }
 
                             tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
-                            tCtx.globalCompositeOperation = 'multiply';
                             tintColor = tint;
-                            tCtx.fillStyle = tint;
-                            tCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-                            // Restore alpha channel using destination-in
-                            tCtx.globalCompositeOperation = 'destination-in';
-                            tCtx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, 0, 0, TEX_SIZE, TEX_SIZE);
+                            if (tint && tint !== '#ffffff') {
+                                applyNormalizedTint(tCtx, TEX_SIZE, TEX_SIZE, tint);
+                            }
                             ctx.drawImage(tCanvas, entry.col * TEX_SIZE, entry.row * TEX_SIZE);
                             if (isWater) {
                                 forceOpaque(entry.col * TEX_SIZE, entry.row * TEX_SIZE);
@@ -5678,13 +5721,8 @@ export async function createTextureAtlas(useMinecraft = true) {
             fCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
             fCtx.globalCompositeOperation = 'source-over';
             fCtx.drawImage(frame.img, 0, f * frameSize, frameSize, frameSize, 0, 0, TEX_SIZE, TEX_SIZE);
-            if (frame.tint) {
-                fCtx.globalCompositeOperation = 'multiply';
-                fCtx.fillStyle = frame.tint;
-                fCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-                fCtx.globalCompositeOperation = 'destination-in';
-                fCtx.drawImage(frame.img, 0, f * frameSize, frameSize, frameSize, 0, 0, TEX_SIZE, TEX_SIZE);
-                fCtx.globalCompositeOperation = 'source-over';
+            if (frame.tint && frame.tint !== '#ffffff') {
+                applyNormalizedTint(fCtx, TEX_SIZE, TEX_SIZE, frame.tint);
             }
             if (frame.forceOpaque) {
                 const pd = fCtx.getImageData(0, 0, TEX_SIZE, TEX_SIZE);

@@ -2,9 +2,9 @@
 // generation.js  -  Procedural Generation, Biomes, Dungeons
 // ============================================
 import { createNoise2D, createNoise3D, fbm2D, fbm3D, ridgeFbm2D, seededRandom, hashSeed } from './noise.js?v=116';
-import { BLOCKS } from './textures.js?v=116';
+import { BLOCKS } from './textures.js?v=128';
 
-import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=116';
+import { CHUNK_SIZE, CHUNK_HEIGHT } from './engine.js?v=128';
 
 // Planet configurations
 export const BIOMES = {
@@ -854,9 +854,10 @@ export function getColumnInfo(wx, wz, params) {
     let detailNoise = fbm2D(params.noise2D, wx / (params.terrainScale * 0.3), wz / (params.terrainScale * 0.3), 2);
     hNoise += detailNoise * 0.3;
 
-    // High frequency micro noise
+    // High frequency micro noise (softened in gentle rolling plains/woodlands for authentic smooth Minecraft meadows)
     let microNoise = params.noise2D(wx / 15, wz / 15);
-    hNoise += microNoise * 0.05;
+    const microScale = 0.05 * (1.0 - plainsInfluence * 0.75);
+    hNoise += microNoise * microScale;
 
     let terrainOffset = hNoise * 40 * factor;
 
@@ -1647,7 +1648,7 @@ export function generateChunkTerrain(cx, cz, params) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
             const wx = wxBase + x;
             const wz = wzBase + z;
-            const { biome, colRng, bData, temp, moist, contNoise, erosionNoise, weirdness } = columns[x][z];
+            const { biome, colRng, bData, temp, moist, contNoise, erosionNoise, weirdness, surfaceY } = columns[x][z];
             const isSwamp = (biome === BIOMES.SWAMP || biome.name === 'Swamp' || biome.swampFlora);
 
             // Check if swamp has natural mud bogs here
@@ -1769,7 +1770,38 @@ export function generateChunkTerrain(cx, cz, params) {
                             type = BLOCKS.GRASS;
                         }
                     } else {
-                        type = (biome === BIOMES.BEACH && y > params.seaLevel + 2) ? BLOCKS.GRASS : biome.surface;
+                        // Check if this exposed surface was created by a cave carving into the terrain
+                        const isCaveFloor = (y < surfaceY - 1);
+                        if (isCaveFloor) {
+                            // Authentic Minecraft Surface Cave Floors:
+                            // Surface caves feature natural exposed stone, cobblestone, and gravel floors
+                            const caveFloorNoise = params.noise2D(wx * 0.18 + 500, wz * 0.18 + 500);
+                            if (y < surfaceY - 3) {
+                                // Inside the cave mouth: stone floor with gravel and cobblestone accents
+                                if (caveFloorNoise > 0.35) type = BLOCKS.COBBLESTONE;
+                                else if (caveFloorNoise < -0.35) type = BLOCKS.GRAVEL;
+                                else type = BLOCKS.STONE;
+                            } else {
+                                // At the cave entrance / mouth: stone floors mixed with grass/gravel
+                                if (caveFloorNoise > 0.05) {
+                                    type = (caveFloorNoise > 0.45) ? BLOCKS.COBBLESTONE : BLOCKS.STONE;
+                                } else if (caveFloorNoise < -0.35) {
+                                    type = BLOCKS.GRAVEL;
+                                } else {
+                                    type = biome.surface; // grass transition right at the opening lip
+                                }
+                            }
+                        } else {
+                            type = (biome === BIOMES.BEACH && y > params.seaLevel + 2) ? BLOCKS.GRASS : biome.surface;
+                            // Natural winding dirt paths meandering through grassy plains and woodlands near water
+                            if (type === BLOCKS.GRASS && (biome === BIOMES.PLAINS || biome === BIOMES.FOREST || biome.name === 'Plains' || biome.name === 'Forest')) {
+                                const pathBand = params.noise2D(wx * 0.008 + 140, wz * 0.008 + 140);
+                                const pathTrack = params.noise2D(wx * 0.024 + 320, wz * 0.024 + 320);
+                                if (pathBand > 0.46 && Math.abs(pathTrack) < 0.040 && y < params.seaLevel + 16 && y > params.seaLevel) {
+                                    type = BLOCKS.DIRT_PATH;
+                                }
+                            }
+                        }
                     }
                     blocks[idx] = type;
                 } else if (depth < soilLimit) {
@@ -1781,6 +1813,8 @@ export function generateChunkTerrain(cx, cz, params) {
                         type = colRng() < 0.5 ? BLOCKS.BLACKSTONE : BLOCKS.SMOOTH_BASALT;
                     } else if (biome === BIOMES.ICE_SPIKES || biome.name === 'Ice Spikes') {
                         type = (colRng() < 0.65) ? BLOCKS.PACKED_ICE : BLOCKS.BLUE_ICE;
+                    } else if (surfaceBlock === BLOCKS.STONE || surfaceBlock === BLOCKS.COBBLESTONE) {
+                        type = BLOCKS.STONE; // Cave floors remain solid stone beneath
                     } else if (surfaceBlock === BLOCKS.SAND) {
                         type = (depth >= 3 && (temp > 0.75 || hasSandyBeach)) ? BLOCKS.SANDSTONE : BLOCKS.SAND;
                     } else if (isBadlandsBiome || surfaceBlock === BLOCKS.RED_SAND || surfaceBlock === BLOCKS.TERRACOTTA || (surfaceBlock >= BLOCKS.ORANGE_TERRACOTTA && surfaceBlock <= BLOCKS.LIGHT_GRAY_TERRACOTTA)) {
@@ -1790,7 +1824,7 @@ export function generateChunkTerrain(cx, cz, params) {
                         type = (colRng() < 0.6) ? BLOCKS.MUD : BLOCKS.DIRT;
                     } else if (surfaceBlock === BLOCKS.GRAVEL) {
                         type = BLOCKS.GRAVEL;
-                    } else if (surfaceBlock === BLOCKS.DIRT || surfaceBlock === BLOCKS.ROOTED_DIRT || surfaceBlock === BLOCKS.GRASS) {
+                    } else if (surfaceBlock === BLOCKS.DIRT || surfaceBlock === BLOCKS.ROOTED_DIRT || surfaceBlock === BLOCKS.GRASS || surfaceBlock === BLOCKS.DIRT_PATH) {
                         type = BLOCKS.DIRT;
                     } else if (surfaceBlock === BLOCKS.SNOW && biome.name === 'Mountains') {
                         type = (colRng() < 0.4) ? BLOCKS.STONE : BLOCKS.DIRT;
@@ -2047,6 +2081,16 @@ export function generateChunkTerrain(cx, cz, params) {
     // ============================================
     // PASS 6: Large Features, Trees & Fallen Logs
     // ============================================
+    const chunkTrees = [];
+    const canPlaceTree = (x, z, minDist = 4) => {
+        for (let i = 0; i < chunkTrees.length; i++) {
+            const dx = x - chunkTrees[i].x;
+            const dz = z - chunkTrees[i].z;
+            if (dx * dx + dz * dz < minDist * minDist) return false;
+        }
+        return true;
+    };
+
     for (let tx = -3; tx <= CHUNK_SIZE + 2; tx++) {
         for (let tz = -3; tz <= CHUNK_SIZE + 2; tz++) {
             const wx = wxBase + tx;
@@ -2123,16 +2167,17 @@ export function generateChunkTerrain(cx, cz, params) {
 
             // Dark Forest: Trees, Giant Mushrooms, Fallen Logs with mushrooms & Mushroom Clumps
             if (biome.isDark || biome === BIOMES.DARK_FOREST || biome.name === 'Dark Forest') {
-                if (r < 0.052) {
+                if (r < 0.042 && canPlaceTree(tx, tz, 3.5)) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                    chunkTrees.push({ x: tx, z: tz });
                     continue;
-                } else if (r < 0.056) {
+                } else if (r < 0.050) {
                     generateMushroom(blocks, tx, surfaceY + 1, tz, floraRng);
                     continue;
-                } else if (r < 0.0575) {
+                } else if (r < 0.052) {
                     generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.DARK_OAK_WOOD, floraRng);
                     continue;
-                } else if (r < 0.070) {
+                } else if (r < 0.062) {
                     generateMushroomClump(blocks, tx, surfaceY, tz, floraRng);
                     continue;
                 }
@@ -2140,10 +2185,11 @@ export function generateChunkTerrain(cx, cz, params) {
 
             // Birch Forest: Birch Trees & Fallen Birch Logs with mushrooms
             if (biome.isBirch || biome === BIOMES.BIRCH_FOREST || biome.name === 'Birch Forest') {
-                if (r < 0.028) {
+                if (r < 0.022 && canPlaceTree(tx, tz, 4)) {
                     generateBirchTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    chunkTrees.push({ x: tx, z: tz });
                     continue;
-                } else if (r < 0.0295) {
+                } else if (r < 0.0235) {
                     generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.BIRCH_WOOD, floraRng);
                     continue;
                 }
@@ -2161,8 +2207,9 @@ export function generateChunkTerrain(cx, cz, params) {
                             break;
                         }
                     }
-                    if (!isStacked) {
+                    if (!isStacked && canPlaceTree(tx, tz, 4)) {
                         generatePineTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                        chunkTrees.push({ x: tx, z: tz });
                     }
                 }
                 continue;
@@ -2170,10 +2217,11 @@ export function generateChunkTerrain(cx, cz, params) {
 
             // Taiga (Tiaga): Pine Trees, Fallen Pine Logs with mushrooms & Boulders
             if ((biome === BIOMES.TAIGA || biome.name === 'Taiga' || (biome.isTaiga && !biome.isRedwood))) {
-                if (r < 0.028) {
+                if (r < 0.022 && canPlaceTree(tx, tz, 4)) {
                     generatePineTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                    chunkTrees.push({ x: tx, z: tz });
                     continue;
-                } else if (r < 0.0295) {
+                } else if (r < 0.0235) {
                     generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.PINE_WOOD, floraRng);
                     continue;
                 } else if (r >= 0.08 && r < 0.086) {
@@ -2189,10 +2237,11 @@ export function generateChunkTerrain(cx, cz, params) {
 
             // Normal Forest: Trees & Fallen Oak Logs with mushrooms
             if (biome === BIOMES.FOREST || biome.name === 'Forest') {
-                if (r < 0.028) {
+                if (r < 0.020 && canPlaceTree(tx, tz, 4)) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                    chunkTrees.push({ x: tx, z: tz });
                     continue;
-                } else if (r < 0.0295) {
+                } else if (r < 0.0215) {
                     generateFallenLog(blocks, tx, surfaceY, tz, BLOCKS.WOOD, floraRng);
                     continue;
                 }
@@ -2201,7 +2250,7 @@ export function generateChunkTerrain(cx, cz, params) {
             // Other Biome Trees & Features (with smooth woodland border density feathering)
             let treeProbability = 0;
             if (biome.hasTrees) {
-                treeProbability = 0.022;
+                treeProbability = 0.018;
                 // Feather tree density as we approach flat open plains
                 if (colInfo.erosionNoise > 0.60) {
                     treeProbability *= Math.max(0.35, 1.0 - (colInfo.erosionNoise - 0.60) / 0.15 * 0.65);
@@ -2209,7 +2258,7 @@ export function generateChunkTerrain(cx, cz, params) {
             } else if (biome === BIOMES.PLAINS || biome.name === 'Plains' || (biome === BIOMES.BEACH && surfaceY > params.seaLevel + 2)) {
                 // Solitary oak trees in plains and elevated coastal bluffs, more common near water edges (riparian willow/oak) and forest borders
                 const isNearWater = surfaceY <= params.seaLevel + 4;
-                treeProbability = isNearWater ? 0.015 : ((colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.006 : 0.002);
+                treeProbability = isNearWater ? 0.012 : ((colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.005 : 0.002);
             }
 
             const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || (biome.isOasis && currentGroundBlock === BLOCKS.SAND);
@@ -2225,8 +2274,9 @@ export function generateChunkTerrain(cx, cz, params) {
                         break;
                     }
                 }
-                if (!isStacked) {
+                if (!isStacked && canPlaceTree(tx, tz, 4)) {
                     generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                    chunkTrees.push({ x: tx, z: tz });
                 }
             } else if (biome.hasDeadTrees && r < 0.005) {
                 generateDeadTree(blocks, tx, surfaceY + 1, tz, floraRng);
@@ -2802,25 +2852,25 @@ function generateOakTree(blocks, x, y, z, biome, rng) {
         return;
     }
 
-    // 25% chance in Forest/Plains to generate Fancy Branching Oak ("Balloon Oak")
-    if (rng() < 0.25) {
+    // 8% chance in Forest/Plains to generate Fancy Branching Oak ("Balloon Oak")
+    if (rng() < 0.08) {
         generateFancyOakTree(blocks, x, y, z, rng);
         return;
     }
 
-    // Standard Minecraft Oak Tree (Blob shape)
-    const height = 4 + Math.floor(rng() * 3);
+    // Standard authentic Minecraft Java Oak Tree: 5 to 7 blocks tall trunk with 3+ blocks of clear open trunk below canopy
+    const height = 5 + Math.floor(rng() * 3);
     for (let i = 0; i < height; i++) {
         safeSetBlock(blocks, x, y + i, z, BLOCKS.WOOD, false, 0);
     }
 
     const topY = y + height;
-    // Lower 2 layers: 5x5 with clipped corners
+    // Lower 2 layers: 5x5 with clipped corners (leaves at topY - 2 and topY - 1)
     for (let ly = topY - 2; ly <= topY - 1; ly++) {
         for (let dx = -2; dx <= 2; dx++) {
             for (let dz = -2; dz <= 2; dz++) {
                 if (Math.abs(dx) === 2 && Math.abs(dz) === 2) {
-                    if (ly === topY - 1 || rng() < 0.6) continue;
+                    if (ly === topY - 1 || rng() < 0.5) continue;
                 }
                 safeSetBlock(blocks, x + dx, ly, z + dz, BLOCKS.LEAVES, true);
             }
@@ -2829,11 +2879,11 @@ function generateOakTree(blocks, x, y, z, biome, rng) {
     // Upper layer: 3x3 with clipped corners
     for (let dx = -1; dx <= 1; dx++) {
         for (let dz = -1; dz <= 1; dz++) {
-            if (Math.abs(dx) === 1 && Math.abs(dz) === 1 && rng() < 0.45) continue;
+            if (Math.abs(dx) === 1 && Math.abs(dz) === 1 && rng() < 0.4) continue;
             safeSetBlock(blocks, x + dx, topY, z + dz, BLOCKS.LEAVES, true);
         }
     }
-    // Top cross cap at topY + 1
+    // Top cross cap at topY + 1 (center + 4 cardinal directions)
     safeSetBlock(blocks, x, topY + 1, z, BLOCKS.LEAVES, true);
     safeSetBlock(blocks, x + 1, topY + 1, z, BLOCKS.LEAVES, true);
     safeSetBlock(blocks, x - 1, topY + 1, z, BLOCKS.LEAVES, true);

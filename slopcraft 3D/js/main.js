@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=126';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=126';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=126';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=126';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=126';
-import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=126';
-import { AudioManager } from './audio.js?v=126';
-import { BiomeMap } from './map.js?v=126';
-import { DevMode } from './dev.js?v=126';
-import { ChatSystem } from './chat.js?v=126';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=128';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=128';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=128';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=128';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=128';
+import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=128';
+import { AudioManager } from './audio.js?v=128';
+import { BiomeMap } from './map.js?v=128';
+import { DevMode } from './dev.js?v=128';
+import { ChatSystem } from './chat.js?v=128';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -127,6 +127,13 @@ function findSafeSpawn(params, dimension = 'overworld') {
                                 if (block !== BLOCKS.AIR && block !== BLOCKS.WATER && block !== BLOCKS.LAVA && block !== BLOCKS.SWAMP_WATER) {
                                     const bProps = getBlockProperties(block);
                                     if (!bProps.solid) continue; // Must be solid block to stand on
+                                    
+                                    // In overworld, reject spawning on tree canopies / leaves / logs so player spawns in open meadow
+                                    if (dimension === 'overworld') {
+                                        const isFoliage = bProps.isLeaves || (bProps.name && (bProps.name.toLowerCase().includes('leaves') || bProps.isLog));
+                                        if (isFoliage) break;
+                                    }
+
                                     const idxUp1 = ((y + 1) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                     const idxUp2 = ((y + 2) * CHUNK_SIZE * CHUNK_SIZE) + (z * CHUNK_SIZE) + x;
                                     const bUp1 = centerBlocks[idxUp1];
@@ -958,9 +965,9 @@ class Game {
             new THREE.BoxGeometry(0.2, 0.6, 0.2),
             rightArmMats
         );
-        this.handMesh.position.set(0.4, -0.4, -0.5);
-        this.handMesh.rotation.x = -Math.PI / 4;
-        this.handMesh.rotation.z = -Math.PI / 6;
+        this.handMesh.position.set(0.48, -0.46, -0.62);
+        this.handMesh.rotation.x = -Math.PI / 4.5;
+        this.handMesh.rotation.z = -Math.PI / 6.5;
         this.viewModel.add(this.handMesh);
         this.engine.camera.add(this.viewModel);
         this.engine.scene.add(this.engine.camera); // Needed for child objects to render
@@ -2202,8 +2209,8 @@ class Game {
                 gemLight.position.y = 0.25;
                 this.heldItemMesh.add(gemLight);
 
-                this.heldItemMesh.position.set(0.4, -0.1, -0.8);
-                this.heldItemMesh.rotation.x = Math.PI / 4;
+                this.heldItemMesh.position.set(0.42, -0.30, -0.72);
+                this.heldItemMesh.rotation.x = Math.PI / 4.8;
             } else {
                 const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype, (c) => {
                     // Update extruded mesh if texture loads asynchronously

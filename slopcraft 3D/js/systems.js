@@ -2,8 +2,8 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=126';
-import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=126';
+import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=128';
+import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=128';
 
 export class LightingSystem {
     constructor(scene, world = null) {
@@ -105,10 +105,10 @@ export class LightingSystem {
         const skyGeo = new THREE.SphereGeometry(400, 32, 15);
         this.skyMat = new THREE.ShaderMaterial({
             uniforms: {
-                topColor: { value: new THREE.Color(0x0077ff) },
-                bottomColor: { value: new THREE.Color(0xffffff) },
-                offset: { value: 33 },
-                exponent: { value: 0.6 }
+                topColor: { value: new THREE.Color(0x81aeff) },
+                bottomColor: { value: new THREE.Color(0xb4d6ff) },
+                offset: { value: 20 },
+                exponent: { value: 0.7 }
             },
             vertexShader: `
                 varying vec3 vWorldPosition;
@@ -146,53 +146,60 @@ export class LightingSystem {
             { 
                 t: 0.0, 
                 amb: new THREE.Color(0x354058), ambIntensity: 0.18, 
-                bg: new THREE.Color(0x0a0e18), top: new THREE.Color(0x121a2c), 
+                bg: new THREE.Color(0x0c1220), top: new THREE.Color(0x060810), 
                 sun: 0.0, moon: 0.18 
             },
             { 
                 t: 0.2, 
                 amb: new THREE.Color(0x354058), ambIntensity: 0.18, 
-                bg: new THREE.Color(0x0a0e18), top: new THREE.Color(0x121a2c), 
+                bg: new THREE.Color(0x0c1220), top: new THREE.Color(0x060810), 
                 sun: 0.0, moon: 0.18 
             },
             // Sunrise - warm peach/amber horizon, classic Minecraft sky
             { 
                 t: 0.25, 
-                amb: new THREE.Color(0xffcca8), ambIntensity: 0.60, 
-                bg: new THREE.Color(0xff8833), top: new THREE.Color(0x78a7ff), 
+                amb: new THREE.Color(0xffcca8), ambIntensity: 0.62, 
+                bg: new THREE.Color(0xffaa77), top: new THREE.Color(0x81aeff), 
                 sun: 0.25, moon: 0.0 
             },
-            // Day - authentic Minecraft sky blue (#78a7ff), uniform clean ambient fill and gentle warm sunlight
+            // Morning ramp into full day
+            { 
+                t: 0.28, 
+                amb: new THREE.Color(0xf4f7fc), ambIntensity: 0.82, 
+                bg: new THREE.Color(0xb4d6ff), top: new THREE.Color(0x81aeff), 
+                sun: 0.28, moon: 0.0 
+            },
+            // Day - authentic Minecraft sky blue zenith (#81aeff), soft powder horizon fog (#b4d6ff), uniform ambient fill
             { 
                 t: 0.3, 
-                amb: new THREE.Color(0xf2f5fa), ambIntensity: 0.78, 
-                bg: new THREE.Color(0x78a7ff), top: new THREE.Color(0xdcebff), 
-                sun: 0.22, moon: 0.0 
+                amb: new THREE.Color(0xf4f7fc), ambIntensity: 0.82, 
+                bg: new THREE.Color(0xb4d6ff), top: new THREE.Color(0x81aeff), 
+                sun: 0.28, moon: 0.0 
             },
             { 
                 t: 0.7, 
-                amb: new THREE.Color(0xf2f5fa), ambIntensity: 0.78, 
-                bg: new THREE.Color(0x78a7ff), top: new THREE.Color(0xdcebff), 
-                sun: 0.22, moon: 0.0 
+                amb: new THREE.Color(0xf4f7fc), ambIntensity: 0.82, 
+                bg: new THREE.Color(0xb4d6ff), top: new THREE.Color(0x81aeff), 
+                sun: 0.28, moon: 0.0 
             },
             // Sunset - warm dusk horizon
             { 
                 t: 0.75, 
-                amb: new THREE.Color(0xffb890), ambIntensity: 0.55, 
-                bg: new THREE.Color(0xff5533), top: new THREE.Color(0x5878d0), 
-                sun: 0.20, moon: 0.02 
+                amb: new THREE.Color(0xffb890), ambIntensity: 0.58, 
+                bg: new THREE.Color(0xff6633), top: new THREE.Color(0x5878d0), 
+                sun: 0.22, moon: 0.02 
             },
             // Night
             { 
                 t: 0.8, 
                 amb: new THREE.Color(0x354058), ambIntensity: 0.18, 
-                bg: new THREE.Color(0x0a0e18), top: new THREE.Color(0x121a2c), 
+                bg: new THREE.Color(0x0c1220), top: new THREE.Color(0x060810), 
                 sun: 0.0, moon: 0.18 
             },
             { 
                 t: 1.0, 
                 amb: new THREE.Color(0x354058), ambIntensity: 0.18, 
-                bg: new THREE.Color(0x0a0e18), top: new THREE.Color(0x121a2c), 
+                bg: new THREE.Color(0x0c1220), top: new THREE.Color(0x060810), 
                 sun: 0.0, moon: 0.18 
             }
         ];
