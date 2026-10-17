@@ -2,8 +2,8 @@
 // engine.js — Core Engine, Rendering, Chunks, Physics
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=147';
-import { getBiomeParams } from './generation.js?v=147';
+import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=148';
+import { getBiomeParams } from './generation.js?v=148';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -170,25 +170,6 @@ export class InputManager {
             return;
         }
 
-        // 'L' key or Shift + Escape: Free cursor without opening pause menu so user can adjust lighting
-        const isLKey = (e.code === 'KeyL' || (!e.repeat && (e.key === 'l' || e.key === 'L'))) && !e.ctrlKey && !e.altKey && !e.metaKey;
-        const isShiftEsc = (e.code === 'Escape' || e.key === 'Escape') && e.shiftKey;
-        if (isLKey || isShiftEsc) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (this.isLocked) {
-                window._freeMouse = true;
-                window._shiftEscapeUnlocked = true;
-                if (document.exitPointerLock) document.exitPointerLock();
-                const studioPanel = document.getElementById('lighting-studio-panel');
-                if (studioPanel) studioPanel.classList.remove('minimized');
-            } else {
-                window._freeMouse = false;
-                window._shiftEscapeUnlocked = false;
-                this.requestPointerLock();
-            }
-            return;
-        }
         // Dev Mode sequence tracking
         if (!this.devModeUnlocked) {
             this.keySequence += e.key.toLowerCase();
@@ -1576,12 +1557,17 @@ export class Chunk {
                             const isGrassBlock = (currentBlockType === BLOCKS.GRASS || currentBlockType === BLOCKS.SWAMP_GRASS || currentBlockType === BLOCKS.SAVANNA_GRASS);
                             let rMult = 1.0, gMult = 1.0, bMult = 1.0;
                             if (isGrassBlock) {
-                                // Apply smooth 5x5 blended biome color to BOTH top face and side faces!
-                                // The shader selectively tints only the green fringe and keeps dirt brown!
-                                const bIdx = (z * CHUNK_SIZE + x) * 3;
-                                rMult = blendedGrass[bIdx] / plainsR;
-                                gMult = blendedGrass[bIdx + 1] / plainsG;
-                                bMult = blendedGrass[bIdx + 2] / plainsB;
+                                if (face.name === 'top') {
+                                    const bIdx = (z * CHUNK_SIZE + x) * 3;
+                                    rMult = blendedGrass[bIdx] / plainsR;
+                                    gMult = blendedGrass[bIdx + 1] / plainsG;
+                                    bMult = blendedGrass[bIdx + 2] / plainsB;
+                                } else {
+                                    // Side faces: pre-tinted per biome in atlas, so dirt stays authentic dirt and side fringe matches top!
+                                    rMult = 1.0;
+                                    gMult = 1.0;
+                                    bMult = 1.0;
+                                }
                             } else if (currentBlockType === BLOCKS.LEAVES) {
                                 const bInfo = getBiomeParams(wx, wz, planetParams);
                                 const fCol = (bInfo && bInfo.biome && bInfo.biome.foliageColor) ? bInfo.biome.foliageColor : [0.467, 0.671, 0.184];

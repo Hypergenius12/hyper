@@ -1952,16 +1952,29 @@ export async function createTextureAtlas(useMinecraft = true) {
         const tg = parseInt(hexColor.slice(3, 5), 16);
         const tb = parseInt(hexColor.slice(5, 7), 16);
         
-        for (let y = 0; y < 4; y++) {
+        let sumL = 0, count = 0;
+        for (let y = 0; y < 8; y++) {
             for (let x = 0; x < TEX_SIZE; x++) {
                 const idx = (y * TEX_SIZE + x) * 4;
                 const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-                // Check if green fringe pixel
                 if (g > r && g > b) {
-                    const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 138;
-                    data[idx] = Math.min(255, Math.round(tr * lum));
-                    data[idx + 1] = Math.min(255, Math.round(tg * lum));
-                    data[idx + 2] = Math.min(255, Math.round(tb * lum));
+                    sumL += (r * 0.299 + g * 0.587 + b * 0.114);
+                    count++;
+                }
+            }
+        }
+        const avgL = count > 0 ? (sumL / count) : 119.3;
+        
+        for (let y = 0; y < 8; y++) {
+            for (let x = 0; x < TEX_SIZE; x++) {
+                const idx = (y * TEX_SIZE + x) * 4;
+                const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                if (g > r && g > b) {
+                    const lum = (r * 0.299 + g * 0.587 + b * 0.114);
+                    const scale = lum / avgL;
+                    data[idx] = Math.min(255, Math.max(0, Math.round(tr * scale)));
+                    data[idx + 1] = Math.min(255, Math.max(0, Math.round(tg * scale)));
+                    data[idx + 2] = Math.min(255, Math.max(0, Math.round(tb * scale)));
                 }
             }
         }
@@ -1973,6 +1986,7 @@ export async function createTextureAtlas(useMinecraft = true) {
     if (useMinecraft) {
         const promises = [];
         for (const entry of entries) {
+            if (entry.face.startsWith('side_')) continue; // Sub-biome entries are populated when primary 'side' loads
             const bt = entry.blockType;
             let mcName = MC_TEXTURE_MAP[bt];
             if (!mcName) continue;
@@ -2109,20 +2123,28 @@ export async function createTextureAtlas(useMinecraft = true) {
                             }
                         } else {
                             if (texName === 'grass_block_side') {
-                            const defaultSide = tintGrassSideFringe(img, BIOME_GRASS_HUES['Plains']);
-                            ctx.drawImage(defaultSide, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
-                            // Also generate side for each biome
-                            if (entry.blockType === BLOCKS.GRASS && entry.face === 'side') {
-                                for (const [bName, hex] of Object.entries(BIOME_GRASS_HUES)) {
-                                    const bEntry = entries.find(e => e.blockType === BLOCKS.GRASS && e.face === ('side_' + bName));
-                                    if (bEntry) {
-                                        const bCvs = tintGrassSideFringe(img, hex);
-                                        ctx.clearRect(bEntry.col * TEX_SIZE, bEntry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
-                                        ctx.drawImage(bCvs, 0, 0, TEX_SIZE, TEX_SIZE, bEntry.col * TEX_SIZE, bEntry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                                const defaultSide = tintGrassSideFringe(img, BIOME_GRASS_HUES['Plains']);
+                                ctx.drawImage(defaultSide, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                                // Also generate side for each biome
+                                if (entry.blockType === BLOCKS.GRASS && entry.face === 'side') {
+                                    for (const [bName, hex] of Object.entries(BIOME_GRASS_HUES)) {
+                                        const bEntry = entries.find(e => e.blockType === BLOCKS.GRASS && e.face === ('side_' + bName));
+                                        if (bEntry) {
+                                            const bCvs = tintGrassSideFringe(img, hex);
+                                            ctx.clearRect(bEntry.col * TEX_SIZE, bEntry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                                            ctx.drawImage(bCvs, 0, 0, TEX_SIZE, TEX_SIZE, bEntry.col * TEX_SIZE, bEntry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                                        }
                                     }
+                                } else if (entry.blockType === BLOCKS.SWAMP_GRASS && entry.face === 'side') {
+                                    const swampSide = tintGrassSideFringe(img, BIOME_GRASS_HUES['Swamp']);
+                                    ctx.clearRect(entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                                    ctx.drawImage(swampSide, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                                } else if (entry.blockType === BLOCKS.SAVANNA_GRASS && entry.face === 'side') {
+                                    const savannaSide = tintGrassSideFringe(img, BIOME_GRASS_HUES['Savanna']);
+                                    ctx.clearRect(entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
+                                    ctx.drawImage(savannaSide, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                                 }
-                            }
-                        } else {
+                            } else {
                             ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
                         }
                         }
