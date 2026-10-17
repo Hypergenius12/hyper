@@ -5144,7 +5144,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                             const frameSize = img.width;
                             const numFrames = Math.floor(img.height / frameSize);
                             const forceOpaqueFlag = isWater;
-                            const frameInfo = animatedFrames.find(f => f.x === entry.col * TEX_SIZE && f.y === entry.row * TEX_SIZE);
+                            let frameInfo = animatedFrames.find(f => f.x === entry.col * TEX_SIZE && f.y === entry.row * TEX_SIZE);
                             if (frameInfo) {
                                 frameInfo.isMC = true;
                                 frameInfo.img = img;
@@ -5152,8 +5152,9 @@ export async function createTextureAtlas(useMinecraft = true) {
                                 frameInfo.frames = numFrames;
                                 frameInfo.tint = tintColor;
                                 frameInfo.forceOpaque = forceOpaqueFlag;
+                                frameInfo.preProcessedCanvas = null;
                             } else {
-                                animatedFrames.push({
+                                frameInfo = {
                                     x: entry.col * TEX_SIZE,
                                     y: entry.row * TEX_SIZE,
                                     isMC: true,
@@ -5162,8 +5163,11 @@ export async function createTextureAtlas(useMinecraft = true) {
                                     frames: numFrames,
                                     tint: tintColor,
                                     forceOpaque: forceOpaqueFlag,
-                                });
+                                    preProcessedCanvas: null,
+                                };
+                                animatedFrames.push(frameInfo);
                             }
+                            prepareAnimatedFrame(frameInfo);
                         }
                     }
                 }));
@@ -5654,6 +5658,45 @@ export async function createTextureAtlas(useMinecraft = true) {
         return iconCanvas;
     }
 
+    function prepareAnimatedFrame(frame) {
+        if (frame.preProcessedCanvas) return frame.preProcessedCanvas;
+        const totalFrames = frame.frames || 1;
+        const frameSize = frame.frameSize || TEX_SIZE;
+        const pc = document.createElement('canvas');
+        pc.width = TEX_SIZE;
+        pc.height = totalFrames * TEX_SIZE;
+        const pCtx = pc.getContext('2d', { willReadFrequently: true });
+        pCtx.imageSmoothingEnabled = false;
+
+        const fCanvas = document.createElement('canvas');
+        fCanvas.width = TEX_SIZE;
+        fCanvas.height = TEX_SIZE;
+        const fCtx = fCanvas.getContext('2d', { willReadFrequently: true });
+        fCtx.imageSmoothingEnabled = false;
+
+        for (let f = 0; f < totalFrames; f++) {
+            fCtx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            fCtx.globalCompositeOperation = 'source-over';
+            fCtx.drawImage(frame.img, 0, f * frameSize, frameSize, frameSize, 0, 0, TEX_SIZE, TEX_SIZE);
+            if (frame.tint) {
+                fCtx.globalCompositeOperation = 'multiply';
+                fCtx.fillStyle = frame.tint;
+                fCtx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+                fCtx.globalCompositeOperation = 'destination-in';
+                fCtx.drawImage(frame.img, 0, f * frameSize, frameSize, frameSize, 0, 0, TEX_SIZE, TEX_SIZE);
+                fCtx.globalCompositeOperation = 'source-over';
+            }
+            if (frame.forceOpaque) {
+                const pd = fCtx.getImageData(0, 0, TEX_SIZE, TEX_SIZE);
+                for (let pi = 3; pi < pd.data.length; pi += 4) pd.data[pi] = 255;
+                fCtx.putImageData(pd, 0, 0);
+            }
+            pCtx.drawImage(fCanvas, 0, f * TEX_SIZE);
+        }
+        frame.preProcessedCanvas = pc;
+        return pc;
+    }
+
     function updateAnimatedTextures(time) {
         if (animatedFrames.length === 0) return;
         const shift = Math.floor(time * 0.05) % TEX_SIZE;
@@ -5675,28 +5718,7 @@ export async function createTextureAtlas(useMinecraft = true) {
                 frame.lastFrame = currentFrame;
                 
                 if (!frame.preProcessedCanvas) {
-                    const pc = document.createElement('canvas');
-                    pc.width = TEX_SIZE;
-                    pc.height = totalFrames * TEX_SIZE;
-                    const pCtx = pc.getContext('2d', { willReadFrequently: true });
-                    pCtx.imageSmoothingEnabled = false;
-                    for (let f = 0; f < totalFrames; f++) {
-                        pCtx.drawImage(frame.img, 0, f * frameSize, frameSize, frameSize, 0, f * TEX_SIZE, TEX_SIZE, TEX_SIZE);
-                        if (frame.tint) {
-                            pCtx.globalCompositeOperation = 'multiply';
-                            pCtx.fillStyle = frame.tint;
-                            pCtx.fillRect(0, f * TEX_SIZE, TEX_SIZE, TEX_SIZE);
-                            pCtx.globalCompositeOperation = 'destination-in';
-                            pCtx.drawImage(frame.img, 0, f * frameSize, frameSize, frameSize, 0, f * TEX_SIZE, TEX_SIZE, TEX_SIZE);
-                            pCtx.globalCompositeOperation = 'source-over';
-                        }
-                        if (frame.forceOpaque) {
-                            const pd = pCtx.getImageData(0, f * TEX_SIZE, TEX_SIZE, TEX_SIZE);
-                            for (let pi = 3; pi < pd.data.length; pi += 4) pd.data[pi] = 255;
-                            pCtx.putImageData(pd, 0, f * TEX_SIZE);
-                        }
-                    }
-                    frame.preProcessedCanvas = pc;
+                    prepareAnimatedFrame(frame);
                 }
 
                 ctx.clearRect(frame.x, frame.y, TEX_SIZE, TEX_SIZE);
