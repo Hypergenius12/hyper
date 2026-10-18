@@ -3342,7 +3342,7 @@ class UISystem {
         if (getCount(B.STONE) === 4 && totalItems === 4) return block(B.STONE_BRICKS, 'Stone Bricks', 4);
         if (getCount(B.CLAY) === 4 && totalItems === 4) return block(B.BRICKS, 'Bricks', 4);
         if (countAnyPlank === 4 && totalItems === 4) return block(B.CRAFTING_TABLE, 'Crafting Table', 1);
-        if (getCount('iron_ingot') === 1 && getCount(B.SAND) === 1 && totalItems === 2) return equip('flint_and_steel', { damage: 0 }, 'Flint and Steel', 'Lights fires.');
+        if (getCount('iron_ingot') === 1 && (getCount(B.GRAVEL) === 1 || getCount('flint') === 1) && totalItems === 2) return equip('flint_and_steel', { damage: 0 }, 'Flint and Steel', 'Lights fires.');
         if (getCount(B.COBBLESTONE) === 1 && (getCount(B.LEAVES) === 1 || getCount(B.CHERRY_LEAVES) === 1 || getCount(B.AUTUMN_LEAVES) === 1) && totalItems === 2) return block(B.MOSSY_COBBLESTONE, 'Mossy Cobble', 1);
         
         if (getCount('string') === 4 && totalItems === 4) return block(B.WOOL, 'Wool', 1);
@@ -3795,7 +3795,7 @@ class UISystem {
             { name: "Ice Wand", desc: "Empowers ice magic.", grid: [[_,_,blk(B.SNOW)],[_,wnd('wand_basic'),_],[_,_,_]], out: wnd('wand_ice'), outCount: 1, needs3x3: false },
             { name: "Furnace", desc: "Smelts ores.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),_,blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)]], out: blk(B.FURNACE), outCount: 1, needs3x3: true },
             { name: "Chest", desc: "Stores items.", grid: [[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[blk(B.PLANKS),_,blk(B.PLANKS)],[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)]], out: blk(B.CHEST_BLOCK), outCount: 1, needs3x3: true },
-            { name: "Flint and Steel", desc: "Ignites TNT.", grid: [[_,_,_],[mat('iron_ingot'),_,_],[_,blk(B.SAND),_]], out: eqp('flint_and_steel'), outCount: 1, needs3x3: false },
+            { name: "Flint and Steel", desc: "Ignites TNT.", grid: [[_,_,_],[mat('iron_ingot'),_,_],[_,blk(B.GRAVEL),_]], out: eqp('flint_and_steel'), outCount: 1, needs3x3: false },
             { name: "Bucket", desc: "Holds liquids.", grid: [[_,_,_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('bucket'), outCount: 1, needs3x3: true },
             { name: "Water Bucket", desc: "Crafted from snow.", grid: [[_,blk(B.SNOW),_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('water_bucket'), outCount: 1, needs3x3: true },
             { name: "Lava Bucket", desc: "Crafted from netherrack.", grid: [[_,blk(B.NETHERRACK),_],[mat('iron_ingot'),_,mat('iron_ingot')],[_,mat('iron_ingot'),_]], out: mat('lava_bucket'), outCount: 1, needs3x3: true },
