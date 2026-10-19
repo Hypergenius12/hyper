@@ -6,9 +6,9 @@
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=150';
 import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=148';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=151';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=152';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=148';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=151';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=152';
 import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=148';
 import { AudioManager } from './audio.js?v=139';
 import { BiomeMap } from './map.js?v=139';
@@ -345,7 +345,6 @@ class Game {
 
         this.autoJumpEnabled = localStorage.getItem('slopcraft_autojump') !== 'false';
         this.viewBobbingEnabled = localStorage.getItem('slopcraft_viewbobbing') !== 'false';
-        this.minimapEnabled = localStorage.getItem('slopcraft_minimap') !== 'false';
         this.tpsHistory = [];
         
         this._boundLoop = this.loop.bind(this);
@@ -906,13 +905,6 @@ class Game {
                     // Clean up URL to avoid memory leak
                     setTimeout(() => URL.revokeObjectURL(link.href), 100);
                 });
-            }
-            if (e.code === 'KeyM' && !this.chat?.isOpen && !this.ui?.isOpen) {
-                this.minimapEnabled = !this.minimapEnabled;
-                try { localStorage.setItem('slopcraft_minimap', this.minimapEnabled ? 'true' : 'false'); } catch (err) {}
-                const mmo = document.getElementById('minimap-overlay');
-                if (mmo) mmo.style.display = this.minimapEnabled ? 'block' : 'none';
-                if (this.syncOptionsUI) this.syncOptionsUI();
             }
         });
 
@@ -4683,9 +4675,8 @@ class Game {
 
         // 2. Minimap Render Pass
         const mmo = document.getElementById('minimap-overlay');
-        const minimapActive = this.minimapEnabled !== false && this.minimapCamera && !this.ui.isOpen;
-        if (mmo) mmo.style.display = minimapActive ? 'block' : 'none';
-        if (minimapActive) {
+        if (this.minimapCamera && !this.ui.isOpen) {
+            if (mmo) mmo.style.display = 'block';
             const mapSize = 200;
             const padding = 20;
             const rx = window.innerWidth - mapSize - padding;
@@ -4720,22 +4711,18 @@ class Game {
             if (!isUnderground) {
                 const pChunkX = Math.floor(this.player.position.x / 16);
                 const pChunkZ = Math.floor(this.player.position.z / 16);
-                
-                // Reuse flat array to avoid allocating 100+ objects every single frame
-                if (!this._minimapPrevVis) this._minimapPrevVis = [];
-                this._minimapPrevVis.length = 0;
+                const prevVisibility = [];
 
-                // Minimap orthographic camera only sees 80x80 blocks (radius 2 chunks = 25 chunks max instead of 121)
+                // Only render chunks within the minimap viewport (~80 blocks radius, 5 chunks)
                 for (const chunk of this.world.chunks.values()) {
-                    const isNear = Math.abs(chunk.cx - pChunkX) <= 2 && Math.abs(chunk.cz - pChunkZ) <= 2;
-                    const meshVis = chunk.mesh ? chunk.mesh.visible : false;
-                    const waterVis = chunk.waterMesh ? chunk.waterMesh.visible : false;
-                    
-                    if (isNear || meshVis || waterVis) {
-                        this._minimapPrevVis.push(chunk, meshVis, waterVis);
-                        if (chunk.mesh) chunk.mesh.visible = isNear;
-                        if (chunk.waterMesh) chunk.waterMesh.visible = isNear;
-                    }
+                    const isNear = Math.abs(chunk.cx - pChunkX) <= 5 && Math.abs(chunk.cz - pChunkZ) <= 5;
+                    prevVisibility.push({
+                        chunk,
+                        meshVis: chunk.mesh ? chunk.mesh.visible : false,
+                        waterVis: chunk.waterMesh ? chunk.waterMesh.visible : false
+                    });
+                    if (chunk.mesh) chunk.mesh.visible = isNear;
+                    if (chunk.waterMesh) chunk.waterMesh.visible = isNear;
                 }
                 
                 if (this.particles && this.particles.mesh) this.particles.mesh.visible = false;
@@ -4743,10 +4730,10 @@ class Game {
                 if (this.particles && this.particles.mesh) this.particles.mesh.visible = true;
 
                 // Restore previous frustum culling visibility for main scene
-                for (let i = 0; i < this._minimapPrevVis.length; i += 3) {
-                    const chunk = this._minimapPrevVis[i];
-                    if (chunk.mesh) chunk.mesh.visible = this._minimapPrevVis[i + 1];
-                    if (chunk.waterMesh) chunk.waterMesh.visible = this._minimapPrevVis[i + 2];
+                for (let i = 0; i < prevVisibility.length; i++) {
+                    const pv = prevVisibility[i];
+                    if (pv.chunk.mesh) pv.chunk.mesh.visible = pv.meshVis;
+                    if (pv.chunk.waterMesh) pv.chunk.waterMesh.visible = pv.waterVis;
                 }
             }
             
@@ -5965,21 +5952,6 @@ function setupOptionsUI(game) {
         onApply: (val) => {
             if (game && game.engine && game.engine.setResolutionScale) {
                 game.engine.setResolutionScale(val);
-            }
-        }
-    });
-
-    // 10. Minimap Toggle
-    bindToggleOption({
-        startToggleId: 'start-minimap-toggle',
-        pauseToggleId: 'pause-minimap-toggle',
-        storageKey: 'slopcraft_minimap',
-        defaultVal: true,
-        onApply: (val) => {
-            if (game) {
-                game.minimapEnabled = val;
-                const mmo = document.getElementById('minimap-overlay');
-                if (mmo) mmo.style.display = val ? 'block' : 'none';
             }
         }
     });

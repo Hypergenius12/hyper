@@ -494,8 +494,8 @@ export class PlanetParams {
         this.name = prefix[Math.floor(rng() * prefix.length)] + suffix[Math.floor(rng() * suffix.length)];
 
         // Aesthetics
-        // Pick a realistic, softer daytime sky blue color
-        const skyBlues = ['#829FD4', '#86B2D4', '#8AAFCF', '#7CA0D8', '#94B4D8'];
+        // Pick authentic Minecraft daytime sky blue colors
+        const skyBlues = ['#78A7FF', '#87CEEB', '#88CCEE', '#66B2FF', '#99CCFF'];
         this.skyColor = skyBlues[Math.floor(rng() * skyBlues.length)];
         // Use a much lower fog density so the world looks clearer and less eerie
         this.fogDensity = 0.003 + (rng() * 0.003);
@@ -523,7 +523,7 @@ export class PlanetParams {
             this.terrainHeight = 0;
             this.baseHeight = 4;
             this.seaLevel = -1;
-            this.skyColor = '#829FD4';
+            this.skyColor = '#78A7FF';
         } else if (this.forcedBiome) {
             if (this.forcedBiome === BIOMES.DEEP_OCEAN || this.forcedBiome === BIOMES.CORAL_REEF) {
                 this.baseHeight = 35;
