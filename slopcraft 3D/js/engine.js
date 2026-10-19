@@ -424,9 +424,12 @@ const _glowTransparentIndices = new Uint32Array(MAX_INDICES);
 const _slightGlowOpaqueIndices = new Uint32Array(MAX_INDICES);
 const _slightGlowTransparentIndices = new Uint32Array(MAX_INDICES);
 
+const _rawGrassColors = new Float32Array(22 * 22 * 3);
+const _tempGrass = new Float32Array(22 * 22 * 3);
+const _blendedGrass = new Float32Array(16 * 16 * 3);
+const _topOpaqueY = new Int16Array(28 * 28);
 
 const _meshPool = [];
-
 
 // ============================================
 // Shader Customization: Grass Fringe Selective Tinting
@@ -571,6 +574,12 @@ export class Chunk {
         this.waterMesh = null;
         this.endPortalMesh = null;
         this.dirty = false;
+        this._inBuildQueue = false;
+        this._inGenQueue = false;
+        this.worldBox = new THREE.Box3(
+            new THREE.Vector3(cx * CHUNK_SIZE - 2, -2, cz * CHUNK_SIZE - 2),
+            new THREE.Vector3(cx * CHUNK_SIZE + CHUNK_SIZE + 2, CHUNK_HEIGHT + 2, cz * CHUNK_SIZE + CHUNK_SIZE + 2)
+        );
     }
 
     getBlock(lx, ly, lz) {
@@ -634,7 +643,7 @@ export class Chunk {
         const BLEND_RAD = 2; // 5x5 smoothing kernel
         const PADDING = 3;
         const gridDim = CHUNK_SIZE + PADDING * 2;
-        const rawGrassColors = new Float32Array(gridDim * gridDim * 3);
+        const rawGrassColors = _rawGrassColors;
 
         for (let lz = -PADDING; lz < CHUNK_SIZE + PADDING; lz++) {
             for (let lx = -PADDING; lx < CHUNK_SIZE + PADDING; lx++) {
@@ -647,8 +656,8 @@ export class Chunk {
             }
         }
 
-        const tempGrass = new Float32Array(gridDim * gridDim * 3);
-        const blendedGrass = new Float32Array(CHUNK_SIZE * CHUNK_SIZE * 3);
+        const tempGrass = _tempGrass;
+        const blendedGrass = _blendedGrass;
         const kSize = BLEND_RAD * 2 + 1; // 5
 
         for (let gz = 0; gz < gridDim; gz++) {
@@ -689,7 +698,7 @@ export class Chunk {
         // Precompute the top opaque/solid block for a 28x28 column grid around the chunk
         const SKY_PAD = 6;
         const SKY_DIM = CHUNK_SIZE + SKY_PAD * 2; // 28
-        const topOpaqueY = new Int16Array(SKY_DIM * SKY_DIM);
+        const topOpaqueY = _topOpaqueY;
 
         for (let gz = 0; gz < SKY_DIM; gz++) {
             const wz = wzBase + gz - SKY_PAD;
@@ -1738,6 +1747,8 @@ export class Chunk {
             this.mesh.castShadow = false; // Massive performance gain: voxel terrain doesn't need to cast shadows on itself
             this.mesh.receiveShadow = false; // Voxel terrain uses AO and sunlight baked into colors, receiving shadows kills FPS
         }
+        this.mesh.matrixAutoUpdate = false;
+        this.mesh.updateMatrix();
         this.mesh.userData.isChunkMesh = true;
         this.mesh.visible = true;
 
@@ -1764,6 +1775,8 @@ export class Chunk {
                 this.waterMesh.userData.isChunkMesh = true;
                 this.waterMesh.renderOrder = 1;
             }
+            this.waterMesh.matrixAutoUpdate = false;
+            this.waterMesh.updateMatrix();
             this.waterMesh.visible = true;
             if (this.mesh && this.mesh.parent && !this.waterMesh.parent) {
                 this.mesh.parent.add(this.waterMesh);
@@ -1797,6 +1810,8 @@ export class Chunk {
                 this.endPortalMesh.userData.isChunkMesh = true;
                 this.endPortalMesh.renderOrder = 2;
             }
+            this.endPortalMesh.matrixAutoUpdate = false;
+            this.endPortalMesh.updateMatrix();
             this.endPortalMesh.visible = true;
             if (this.mesh && this.mesh.parent && !this.endPortalMesh.parent) {
                 this.mesh.parent.add(this.endPortalMesh);
@@ -1830,6 +1845,8 @@ export class Chunk {
             this.endPortalMesh.geometry.dispose();
             this.endPortalMesh = null;
         }
+        this._inBuildQueue = false;
+        this._inGenQueue = false;
     }
 }
 
@@ -1892,7 +1909,10 @@ export class World {
         this.chunks = new Map();
         this.chunksToBuild = [];
         this.chunksToGenerate = []; // Chunks waiting for blocks
-        this.renderDistance = 6;
+        this.renderDistance = 10;
+        this.lastPlayerChunkX = null;
+        this.lastPlayerChunkZ = null;
+        this._forceChunkScan = true;
         this.onChunkUnloaded = onChunkUnloaded;
         this.onBlockDestroyed = onBlockDestroyed;
         
@@ -2069,13 +2089,26 @@ export class World {
         this.tickTimer = 0;
     }
 
+    queueChunkToBuild(chunk) {
+        if (!chunk || chunk._inBuildQueue) return;
+        chunk._inBuildQueue = true;
+        this.chunksToBuild.push(chunk);
+    }
+
+    queueChunkToGenerate(chunk) {
+        if (!chunk || chunk._inGenQueue) return;
+        chunk._inGenQueue = true;
+        this.chunksToGenerate.push(chunk);
+    }
+
     setRenderDistance(d) {
         this.renderDistance = d;
+        this._forceChunkScan = true;
         if (this.scene.fog) {
             const blocks = d * 16;
             if (this.scene.fog.isFog) {
-                this.scene.fog.near = blocks * 0.65;
-                this.scene.fog.far = blocks * 0.98;
+                this.scene.fog.near = blocks * 0.75;
+                this.scene.fog.far = blocks * 1.05;
             } else {
                 this.scene.fog.density = 1.0 / (blocks * 0.75);
                 this.scene.fog.baseDensity = this.scene.fog.density;
@@ -2095,6 +2128,9 @@ export class World {
         this.chunksToBuild = [];
         this.chunksToGenerate = [];
         this.liquidUpdates.clear();
+        this.lastPlayerChunkX = null;
+        this.lastPlayerChunkZ = null;
+        this._forceChunkScan = true;
 
         // Also sweep scene for any orphaned chunk meshes or leftover meshes
         const toRemove = [];
@@ -2424,9 +2460,7 @@ export class World {
                 this.checkAdjacentSupports(wx, wy, wz);
             }
 
-            if (!this.chunksToBuild.includes(chunk)) {
-                this.chunksToBuild.push(chunk);
-            }
+            this.queueChunkToBuild(chunk);
             // Trigger neighbor fluid updates
             this.queueLiquidUpdate(wx, wy + 1, wz);
             this.queueLiquidUpdate(wx, wy - 1, wz);
@@ -2447,9 +2481,7 @@ export class World {
         const chunk = this.chunks.get(this.getChunkKey(cx, cz));
         if (chunk) {
             chunk.dirty = true;
-            if (!this.chunksToBuild.includes(chunk)) {
-                this.chunksToBuild.push(chunk);
-            }
+            this.queueChunkToBuild(chunk);
         }
     }
 
@@ -2589,32 +2621,59 @@ export class World {
         const px = Math.floor(playerPos.x / CHUNK_SIZE);
         const pz = Math.floor(playerPos.z / CHUNK_SIZE);
 
-        const chunksToKeep = new Set();
+        const playerMovedChunk = (px !== this.lastPlayerChunkX || pz !== this.lastPlayerChunkZ || this._forceChunkScan);
+        if (playerMovedChunk) {
+            this.lastPlayerChunkX = px;
+            this.lastPlayerChunkZ = pz;
+            this._forceChunkScan = false;
 
-        // Find chunks that should be loaded
-        for (let x = -this.renderDistance; x <= this.renderDistance; x++) {
-            for (let z = -this.renderDistance; z <= this.renderDistance; z++) {
-                if (x * x + z * z <= this.renderDistance * this.renderDistance) {
-                    const cx = px + x;
-                    const cz = pz + z;
-                    const key = this.getChunkKey(cx, cz);
-                    chunksToKeep.add(key);
+            const chunksToKeep = new Set();
+            const r2 = this.renderDistance * this.renderDistance;
 
-                    if (!this.chunks.has(key)) {
-                        const chunk = new Chunk(cx, cz);
-                        this.chunks.set(key, chunk);
-                        this.chunksToGenerate.push(chunk);
+            // Find chunks that should be loaded
+            for (let x = -this.renderDistance; x <= this.renderDistance; x++) {
+                for (let z = -this.renderDistance; z <= this.renderDistance; z++) {
+                    if (x * x + z * z <= r2) {
+                        const cx = px + x;
+                        const cz = pz + z;
+                        const key = this.getChunkKey(cx, cz);
+                        chunksToKeep.add(key);
+
+                        if (!this.chunks.has(key)) {
+                            const chunk = new Chunk(cx, cz);
+                            this.chunks.set(key, chunk);
+                            this.queueChunkToGenerate(chunk);
+                        }
+                    }
+                }
+            }
+
+            // Unload far chunks
+            for (const [key, chunk] of this.chunks.entries()) {
+                if (!chunksToKeep.has(key)) {
+                    chunk.dispose();
+                    if (this.onChunkUnloaded) this.onChunkUnloaded(chunk.cx, chunk.cz);
+                    this.chunks.delete(key);
+                    const index = this.chunksToBuild.indexOf(chunk);
+                    if (index > -1) {
+                        this.chunksToBuild.splice(index, 1);
+                        chunk._inBuildQueue = false;
+                    }
+                    const gIndex = this.chunksToGenerate.indexOf(chunk);
+                    if (gIndex > -1) {
+                        this.chunksToGenerate.splice(gIndex, 1);
+                        chunk._inGenQueue = false;
                     }
                 }
             }
         }
 
-        // Process a few chunks per frame for generating blocks
-        // Process chunks with a time budget to maintain solid 60 FPS
+        // Process chunks with a unified 6ms budget per frame to maintain locked 60 FPS
+        const chunkWorkStart = performance.now();
+        const MAX_CHUNK_WORK_MS = 6.0;
         let gensThisFrame = 0;
-        const genStart = performance.now();
         
-        while (this.chunksToGenerate.length > 0 && gensThisFrame < 3 && (performance.now() - genStart < 8)) {
+        while (this.chunksToGenerate.length > 0 && gensThisFrame < 2 && (performance.now() - chunkWorkStart < MAX_CHUNK_WORK_MS)) {
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToGenerate.length; i++) {
@@ -2634,6 +2693,7 @@ export class World {
             } else {
                 chunk = this.chunksToGenerate.pop();
             }
+            chunk._inGenQueue = false;
             // Don't generate if it was removed
             if (!this.chunks.has(this.getChunkKey(chunk.cx, chunk.cz))) continue;
 
@@ -2654,9 +2714,7 @@ export class World {
             }
 
             chunk.dirty = true;
-            if (!this.chunksToBuild.includes(chunk)) {
-                this.chunksToBuild.push(chunk);
-            }
+            this.queueChunkToBuild(chunk);
 
             // Register chests, doors, torches, furnaces, fence gates, and boss spawners
             if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated || this.onFurnaceGenerated || this.onGateGenerated || true) {
@@ -2695,32 +2753,15 @@ export class World {
                 const nChunk = this.chunks.get(nKey);
                 if (nChunk && nChunk.blocks && nChunk.blocks[0] !== undefined) {
                     nChunk.dirty = true;
-                    if (!this.chunksToBuild.includes(nChunk)) {
-                        this.chunksToBuild.push(nChunk);
-                    }
+                    this.queueChunkToBuild(nChunk);
                 }
             }
             gensThisFrame++;
         }
 
-        // Unload far chunks
-        for (const [key, chunk] of this.chunks.entries()) {
-            if (!chunksToKeep.has(key)) {
-                chunk.dispose();
-                if (this.onChunkUnloaded) this.onChunkUnloaded(chunk.cx, chunk.cz);
-                this.chunks.delete(key);
-                // Remove from build queues
-                const index = this.chunksToBuild.indexOf(chunk);
-                if (index > -1) this.chunksToBuild.splice(index, 1);
-                const gIndex = this.chunksToGenerate.indexOf(chunk);
-                if (gIndex > -1) this.chunksToGenerate.splice(gIndex, 1);
-            }
-        }
-
-        // Process a few chunks per frame with frame-time budgeting (max 8ms to prevent dropped frames)
+        // Process chunk meshing within remaining time budget
         let buildsThisFrame = 0;
-        const buildStart = performance.now();
-        while (this.chunksToBuild.length > 0 && buildsThisFrame < 3 && (performance.now() - buildStart < 8)) {
+        while (this.chunksToBuild.length > 0 && buildsThisFrame < 2 && (performance.now() - chunkWorkStart < MAX_CHUNK_WORK_MS)) {
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToBuild.length; i++) {
@@ -2740,6 +2781,7 @@ export class World {
             } else {
                 chunk = this.chunksToBuild.pop();
             }
+            chunk._inBuildQueue = false;
             if (chunk.dirty) {
                 // Pass shared materials through atlas for convenience
                 this.textureAtlas.sharedMaterials = this.sharedMaterials;
@@ -2768,21 +2810,13 @@ export class World {
             }
         }
 
-        // Frustum culling is immediately after chunk meshing now
-
         // Frustum culling
         if (this.camera) {
             this.camera.updateMatrixWorld();
             this.projScreenMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
             this.frustum.setFromProjectionMatrix(this.projScreenMatrix);
-            const _box = this._cullingBox || (this._cullingBox = new THREE.Box3());
             for (const chunk of this.chunks.values()) {
-                const cx = chunk.cx * 16;
-                const cz = chunk.cz * 16;
-                // Generous margin to prevent near-plane / boundary edge-clipping flicker
-                _box.min.set(cx - 2, -2, cz - 2);
-                _box.max.set(cx + 18, 130, cz + 18);
-                const isVis = this.frustum.intersectsBox(_box);
+                const isVis = this.frustum.intersectsBox(chunk.worldBox);
                 if (chunk.mesh) chunk.mesh.visible = isVis;
                 if (chunk.waterMesh) chunk.waterMesh.visible = isVis;
                 if (chunk.endPortalMesh) chunk.endPortalMesh.visible = isVis;

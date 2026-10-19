@@ -4,16 +4,16 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=150';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=153';
-import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=152';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=153';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=153';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=154';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=154';
+import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=154';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=154';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=154';
 import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=148';
 import { AudioManager } from './audio.js?v=139';
 import { BiomeMap } from './map.js?v=139';
 import { DevMode } from './dev.js?v=139';
-import { ChatSystem } from './chat.js?v=153';
+import { ChatSystem } from './chat.js?v=154';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -328,7 +328,7 @@ class Game {
 
         // Settings / Options defaults and saved state
         const storedRenderDist = localStorage.getItem('slopcraft_render_dist');
-        this.renderDistance = storedRenderDist ? parseInt(storedRenderDist) : 8;
+        this.renderDistance = storedRenderDist ? parseInt(storedRenderDist) : 10;
 
         const storedFov = localStorage.getItem('slopcraft_fov');
         this.fov = storedFov ? parseInt(storedFov) : 75;
@@ -909,8 +909,8 @@ class Game {
         });
 
         // Setup Scene: Use authentic Minecraft linear fog for smooth distant horizon blending without close-range haze
-        const renderDistBlocks = (this.world?.renderDistance || this.engine.renderDistance || 8) * 16;
-        this.engine.scene.fog = new THREE.Fog(this.planetParams.skyColor || 0x87ceeb, renderDistBlocks * 0.65, renderDistBlocks * 0.98);
+        const renderDistBlocks = (this.world?.renderDistance || this.engine.renderDistance || 10) * 16;
+        this.engine.scene.fog = new THREE.Fog(this.planetParams.skyColor || 0x87ceeb, renderDistBlocks * 0.75, renderDistBlocks * 1.05);
 
         // Block outline
         const outlineGeo = new THREE.BoxGeometry(1.02, 1.02, 1.02);
@@ -3302,7 +3302,7 @@ class Game {
                 const isWaterPlant = placeProps.isWaterlogged || [
                     BLOCKS.SEAGRASS, BLOCKS.KELP, BLOCKS.KELP_PLANT, BLOCKS.RED_KELP, BLOCKS.BROWN_KELP,
                     BLOCKS.TUBE_CORAL, BLOCKS.BRAIN_CORAL, BLOCKS.BUBBLE_CORAL, BLOCKS.FIRE_CORAL, BLOCKS.HORN_CORAL,
-                    BLOCKS.SEASHELL_1, BLOCKS.SEASHELL_2, BLOCKS.SEASHELL_3, BLOCKS.ALGAE
+                    BLOCKS.ALGAE
                 ].includes(slot.item.subtype);
 
                 if (isWaterPlant) {
@@ -4771,18 +4771,22 @@ class Game {
             if (!isUnderground) {
                 const pChunkX = Math.floor(this.player.position.x / 16);
                 const pChunkZ = Math.floor(this.player.position.z / 16);
-                const prevVisibility = [];
+                if (!this._minimapPrevVis) this._minimapPrevVis = [];
+                const visArray = this._minimapPrevVis;
+                visArray.length = 0;
 
                 // Only render chunks within the minimap viewport (~80 blocks radius, 5 chunks)
                 for (const chunk of this.world.chunks.values()) {
                     const isNear = Math.abs(chunk.cx - pChunkX) <= 5 && Math.abs(chunk.cz - pChunkZ) <= 5;
-                    prevVisibility.push({
-                        chunk,
-                        meshVis: chunk.mesh ? chunk.mesh.visible : false,
-                        waterVis: chunk.waterMesh ? chunk.waterMesh.visible : false
-                    });
-                    if (chunk.mesh) chunk.mesh.visible = isNear;
-                    if (chunk.waterMesh) chunk.waterMesh.visible = isNear;
+                    const m = chunk.mesh;
+                    const wm = chunk.waterMesh;
+                    const mVis = m ? m.visible : false;
+                    const wmVis = wm ? wm.visible : false;
+                    if (isNear || mVis || wmVis) {
+                        visArray.push(chunk, mVis, wmVis);
+                        if (m) m.visible = isNear;
+                        if (wm) wm.visible = isNear;
+                    }
                 }
                 
                 if (this.particles && this.particles.mesh) this.particles.mesh.visible = false;
@@ -4790,10 +4794,10 @@ class Game {
                 if (this.particles && this.particles.mesh) this.particles.mesh.visible = true;
 
                 // Restore previous frustum culling visibility for main scene
-                for (let i = 0; i < prevVisibility.length; i++) {
-                    const pv = prevVisibility[i];
-                    if (pv.chunk.mesh) pv.chunk.mesh.visible = pv.meshVis;
-                    if (pv.chunk.waterMesh) pv.chunk.waterMesh.visible = pv.waterVis;
+                for (let i = 0; i < visArray.length; i += 3) {
+                    const chunk = visArray[i];
+                    if (chunk.mesh) chunk.mesh.visible = visArray[i + 1];
+                    if (chunk.waterMesh) chunk.waterMesh.visible = visArray[i + 2];
                 }
             }
             
@@ -5874,7 +5878,7 @@ function setupOptionsUI(game) {
         startValId: 'start-render-distance-val',
         pauseValId: 'render-distance-val',
         storageKey: 'slopcraft_render_dist',
-        defaultVal: 8,
+        defaultVal: 10,
         onApply: (val) => {
             if (game) game.renderDistance = val;
             if (game && game.world) game.world.setRenderDistance(val);

@@ -456,7 +456,7 @@ export class LightingSystem {
 
         if (this.scene.fog) {
             this.scene.fog.color.copy(this.scene.background);
-            const renderBlocks = (this.world?.renderDistance || 8) * 16;
+            const renderBlocks = (this.world?.renderDistance || 10) * 16;
             if (this.scene.fog.isFog) {
                 if (isUnderwater) {
                     this.scene.fog.near = 1;
@@ -471,8 +471,8 @@ export class LightingSystem {
                     this.scene.fog.near = 50;
                     this.scene.fog.far = renderBlocks * 1.5;
                 } else {
-                    const caveFar = (this.caveFactor > 0.1) ? Math.max(28, renderBlocks * (1.0 - this.caveFactor * 0.5)) : renderBlocks * 0.98;
-                    const caveNear = (this.caveFactor > 0.1) ? Math.max(6, renderBlocks * 0.65 * (1.0 - this.caveFactor * 0.5)) : renderBlocks * 0.65;
+                    const caveFar = (this.caveFactor > 0.1) ? Math.max(28, renderBlocks * (1.0 - this.caveFactor * 0.5)) : renderBlocks * 1.05;
+                    const caveNear = (this.caveFactor > 0.1) ? Math.max(6, renderBlocks * 0.75 * (1.0 - this.caveFactor * 0.5)) : renderBlocks * 0.75;
                     this.scene.fog.near = caveNear;
                     this.scene.fog.far = caveFar;
                 }

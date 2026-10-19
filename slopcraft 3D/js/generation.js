@@ -2342,20 +2342,6 @@ export function generateChunkTerrain(cx, cz, params) {
             // Aquatic vegetation
             if (isUnderwater) {
                 const isOcean = biome.isOcean || biome.isCoralReef || biome === BIOMES.CORAL_REEF || biome === BIOMES.OCEAN || biome === BIOMES.DEEP_OCEAN || biome === BIOMES.FROZEN_OCEAN;
-                if (isOcean && r < 0.04 && surfaceY < params.seaLevel - 1) {
-                    const floorIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                    const floorBlock = blocks[floorIdx];
-                    if (floorBlock === BLOCKS.SAND || floorBlock === BLOCKS.GRAVEL) {
-                        const aboveIdx = ((surfaceY + 1) * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
-                        const aboveBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[aboveIdx] : BLOCKS.WATER;
-                        if (aboveBlock === BLOCKS.WATER) {
-                            const shellRng = floraRng();
-                            const shell = shellRng < 0.33 ? BLOCKS.SEASHELL_1 : (shellRng < 0.66 ? BLOCKS.SEASHELL_2 : BLOCKS.SEASHELL_3);
-                            safeSetBlock(blocks, tx, surfaceY + 1, tz, shell, false);
-                            continue;
-                        }
-                    }
-                }
                 if (biome.isCoralReef && r < 0.3 && surfaceY < params.seaLevel - 1) {
                     const cRng = floraRng();
                     let coralType;
