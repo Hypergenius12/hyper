@@ -105,6 +105,20 @@
         </div>
     </div>
 
+    <!-- Minecraft Java World Loading Screen -->
+    <div id="mc-loading-screen" class="hidden">
+        <div class="mc-loading-content">
+            <h2 id="mc-loading-title" class="mc-loading-title">Loading world</h2>
+            <div id="mc-chunk-map-container" class="mc-chunk-map-container">
+                <canvas id="mc-chunk-map" width="140" height="140"></canvas>
+            </div>
+            <div id="mc-loading-status" class="mc-loading-status">Preparing spawn area: <span id="mc-loading-percent">0%</span></div>
+            <div id="mc-loading-bar-container">
+                <div id="mc-loading-bar-fill"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Hardcore Game Over Screen -->
     <div id="hardcore-game-over-screen" class="hidden" style="position: fixed; inset: 0; background: rgba(120, 0, 0, 0.72); z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
         <h1 style="color: #ffffff; font-family: 'Minecraftia', sans-serif; font-size: 46px; text-shadow: 3px 3px 0 #3f0000; margin: 0 0 12px 0; letter-spacing: 1px;">Game Over!</h1>

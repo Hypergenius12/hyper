@@ -385,13 +385,162 @@ class Game {
         // UI start is handled in window.onload
     }
 
+    async loadSpawnAreaWithProgress(spawnPos, title = 'Loading world', statusPrefix = 'Preparing spawn area') {
+        const loadingScreen = document.getElementById('mc-loading-screen');
+        const titleEl = document.getElementById('mc-loading-title');
+        const statusEl = document.getElementById('mc-loading-status');
+        const percentEl = document.getElementById('mc-loading-percent');
+        const fillEl = document.getElementById('mc-loading-bar-fill');
+        const canvas = document.getElementById('mc-chunk-map');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+
+        if (loadingScreen) {
+            loadingScreen.classList.remove('hidden');
+            loadingScreen.style.opacity = '1';
+        }
+        if (titleEl) titleEl.textContent = title;
+
+        const spawnChunkX = Math.floor(spawnPos.x / 16);
+        const spawnChunkZ = Math.floor(spawnPos.z / 16);
+
+        // 5x5 chunks around player spawn (25 chunks total = 80x80 blocks area)
+        const radius = 2;
+        const gridSize = radius * 2 + 1; // 5
+        const chunkCoords = [];
+        for (let r = 0; r <= radius; r++) {
+            for (let dx = -r; dx <= r; dx++) {
+                for (let dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+                    chunkCoords.push({ cx: spawnChunkX + dx, cz: spawnChunkZ + dz, dx, dz });
+                }
+            }
+        }
+
+        const totalChunks = chunkCoords.length; // 25
+        const chunkGenFn = this.currentDimension === 'nether' ? generateNetherChunk :
+            (this.currentDimension === 'aether' ? generateAetherChunk :
+            (this.currentDimension === 'end' ? generateEndChunk :
+            (cx, cz) => generateChunkTerrain(cx, cz, this.planetParams)));
+
+        // Colormap rendering for authentic Minecraft Java chunk generator visualizer
+        const cellPixel = canvas ? Math.floor(canvas.width / gridSize) : 26;
+        const chunkStatus = new Map();
+
+        const drawChunkMap = () => {
+            if (!ctx || !canvas) return;
+            ctx.fillStyle = '#181818';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (const { cx, cz, dx, dz } of chunkCoords) {
+                const key = `${cx},${cz}`;
+                const stage = chunkStatus.get(key) || 0;
+                let color = '#2b2b2b'; // Unloaded
+                if (stage === 1) color = '#b07028'; // Surface generated (amber/brown)
+                else if (stage === 2) color = '#55ff55'; // Meshed & solid (Minecraft lime green)
+
+                const gx = (dx + radius) * cellPixel;
+                const gz = (dz + radius) * cellPixel;
+
+                ctx.fillStyle = color;
+                ctx.fillRect(gx + 1, gz + 1, cellPixel - 2, cellPixel - 2);
+
+                // Highlight player spawn chunk in center
+                if (dx === 0 && dz === 0) {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(gx + 1, gz + 1, cellPixel - 2, cellPixel - 2);
+                }
+            }
+        };
+
+        const updateUI = (percent) => {
+            const clamped = Math.min(100, Math.max(0, percent));
+            if (percentEl) percentEl.textContent = `${clamped}%`;
+            if (statusEl) statusEl.innerHTML = `${statusPrefix}: <span id="mc-loading-percent">${clamped}%</span>`;
+            if (fillEl) fillEl.style.width = `${clamped}%`;
+            drawChunkMap();
+        };
+
+        updateUI(0);
+        await new Promise(r => setTimeout(r, 60));
+
+        // Step 1: Generate terrain blocks for the 5x5 chunks
+        let processed = 0;
+        for (const { cx, cz } of chunkCoords) {
+            const key = this.world.getChunkKey(cx, cz);
+            let chunk = this.world.chunks.get(key);
+            if (!chunk) {
+                chunk = new Chunk(cx, cz);
+                this.world.chunks.set(key, chunk);
+            }
+            if (!chunk.blocks || chunk.blocks[0] === undefined) {
+                const genRes = chunkGenFn(cx, cz);
+                chunk.blocks = genRes;
+                if (genRes && genRes.data) chunk.data.set(genRes.data);
+                chunk.dirty = true;
+            }
+            chunkStatus.set(`${cx},${cz}`, 1);
+            processed++;
+            const pct = Math.floor((processed / (totalChunks * 2)) * 100);
+            updateUI(pct);
+
+            if (processed % 2 === 0) {
+                await new Promise(r => requestAnimationFrame(r));
+            }
+        }
+
+        // Step 2: Mesh the 5x5 chunks
+        this.world.textureAtlas.sharedMaterials = this.world.sharedMaterials;
+        for (const { cx, cz } of chunkCoords) {
+            const key = this.world.getChunkKey(cx, cz);
+            const chunk = this.world.chunks.get(key);
+            if (chunk && chunk.dirty) {
+                const neighborChunks = [
+                    [null, null, null],
+                    [null, null, null],
+                    [null, null, null]
+                ];
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dz = -1; dz <= 1; dz++) {
+                        const nkey = this.world.getChunkKey(cx + dx, cz + dz);
+                        neighborChunks[dx + 1][dz + 1] = this.world.chunks.get(nkey) || null;
+                    }
+                }
+                const mesh = chunk.buildMesh(this.world.textureAtlas, neighborChunks, this.planetParams);
+                if (mesh && !mesh.parent) this.engine.scene.add(mesh);
+                if (chunk.waterMesh && !chunk.waterMesh.parent) this.engine.scene.add(chunk.waterMesh);
+                if (chunk.endPortalMesh && !chunk.endPortalMesh.parent) this.engine.scene.add(chunk.endPortalMesh);
+                chunk.dirty = false;
+            }
+            chunkStatus.set(`${cx},${cz}`, 2);
+            processed++;
+            const pct = Math.floor((processed / (totalChunks * 2)) * 100);
+            updateUI(pct);
+
+            if (processed % 2 === 0) {
+                await new Promise(r => requestAnimationFrame(r));
+            }
+        }
+
+        updateUI(100);
+        await new Promise(r => setTimeout(r, 120));
+
+        // Queue remaining distant chunks for smooth background streaming
+        this.world.update(this.player.position, chunkGenFn, 0);
+
+        // Smooth fade out of loading screen
+        if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                loadingScreen.style.opacity = '1';
+            }, 250);
+        }
+    }
+
     async start() {
         if (this.hasStarted) return;
         this.hasStarted = true;
-        
-        // Show hotbar when game begins
-        const hotbar = document.getElementById('geometric-hotbar');
-        if (hotbar) hotbar.classList.remove('hidden');
 
         const canvas = document.getElementById('game-canvas');
         this.engine.init(canvas);
@@ -837,41 +986,8 @@ class Game {
         this.player.velocity.set(0, 0, 0);
         this.player.spawnGraceTimer = 5.0;
 
-        // Immediately preload & mesh surrounding chunks synchronously so terrain is solid & visible on frame 1
-        const initialChunkGenFn = (cx, cz) => generateChunkTerrain(cx, cz, this.planetParams);
-        this.world.update(this.player.position, initialChunkGenFn, 0);
-        while (this.world.chunksToGenerate.length > 0) {
-            const chunk = this.world.chunksToGenerate.shift();
-            if (!this.world.chunks.has(this.world.getChunkKey(chunk.cx, chunk.cz))) continue;
-            const genRes = initialChunkGenFn(chunk.cx, chunk.cz);
-            chunk.blocks = genRes;
-            if (genRes && genRes.data) chunk.data.set(genRes.data);
-            chunk.dirty = true;
-            this.world.queueChunkToBuild(chunk);
-        }
-        while (this.world.chunksToBuild.length > 0) {
-            const chunk = this.world.chunksToBuild.shift();
-            if (!this.world.chunks.has(this.world.getChunkKey(chunk.cx, chunk.cz))) continue;
-            if (chunk.dirty) {
-                this.world.textureAtlas.sharedMaterials = this.world.sharedMaterials;
-                const neighborChunks = [
-                    [null, null, null],
-                    [null, null, null],
-                    [null, null, null]
-                ];
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dz = -1; dz <= 1; dz++) {
-                        const key = this.world.getChunkKey(chunk.cx + dx, chunk.cz + dz);
-                        neighborChunks[dx + 1][dz + 1] = this.world.chunks.get(key) || null;
-                    }
-                }
-                const mesh = chunk.buildMesh(this.world.textureAtlas, neighborChunks, this.planetParams);
-                if (mesh && !mesh.parent) this.engine.scene.add(mesh);
-                if (chunk.waterMesh && !chunk.waterMesh.parent) this.engine.scene.add(chunk.waterMesh);
-                if (chunk.endPortalMesh && !chunk.endPortalMesh.parent) this.engine.scene.add(chunk.endPortalMesh);
-                chunk.dirty = false;
-            }
-        }
+        // Load spawn chunks with authentic Minecraft Java loading screen
+        await this.loadSpawnAreaWithProgress(spawnPos, 'Loading world', 'Preparing spawn area');
 
         // Apply initial options state to systems and player
         if (this.lighting && this.brightnessVal !== undefined) {
@@ -1063,6 +1179,12 @@ class Game {
         this.minimapCamera.position.set(0, 250, 0);
         this.minimapCamera.lookAt(0, 0, 0);
 
+        // Show hotbar and HUD now that world spawn is ready
+        const hotbar = document.getElementById('geometric-hotbar');
+        if (hotbar) hotbar.classList.remove('hidden');
+        const mcHud = document.getElementById('mc-hud-container');
+        if (mcHud) mcHud.classList.remove('hidden');
+
         this.input.requestPointerLock();
         this.isReady = true;
 
@@ -1096,7 +1218,8 @@ class Game {
             const devModeOpen = this.devMode && this.devMode.isOpen;
             const mapOpen = this.biomeMap && this.biomeMap.isOpen;
             const chatOpen = this.chat && this.chat.isOpen;
-            if (!this.input.isLocked && !this.ui.isOpen && !devModeOpen && !mapOpen && !chatOpen && document.getElementById('start-screen').classList.contains('hidden')) {
+            const loadingOpen = !document.getElementById('mc-loading-screen')?.classList.contains('hidden');
+            if (!this.input.isLocked && !this.ui.isOpen && !devModeOpen && !mapOpen && !chatOpen && !loadingOpen && document.getElementById('start-screen').classList.contains('hidden')) {
                 // We lost pointer lock but the inventory/map/dev/chat is not open, show pause
                 if (ps) ps.classList.remove('hidden');
                 this.isPaused = true;
@@ -1111,7 +1234,8 @@ class Game {
         document.addEventListener('pointerlockerror', () => {
             const ps = document.getElementById('pause-screen');
             const chatOpen = this.chat && this.chat.isOpen;
-            if (ps && !chatOpen && document.getElementById('start-screen').classList.contains('hidden')) {
+            const loadingOpen = !document.getElementById('mc-loading-screen')?.classList.contains('hidden');
+            if (ps && !chatOpen && !loadingOpen && document.getElementById('start-screen').classList.contains('hidden')) {
                 ps.classList.remove('hidden');
                 this.isPaused = true;
             }
@@ -5366,42 +5490,55 @@ class Game {
                 this.player.spawnGraceTimer = 5.0;
             }
 
-            // Immediately preload the 3x3 surrounding chunks synchronously so the world is fully solid & visible when fade lifts
+            // Immediately preload the 3x3 surrounding chunks so the destination is solid & visible
             const chunkGenFn = targetDim === 'nether' ? generateNetherChunk : (targetDim === 'aether' ? generateAetherChunk : (targetDim === 'end' ? generateEndChunk : generateChunkTerrain));
-            this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), 0);
-            while (this.world.chunksToGenerate.length > 0) {
-                const chunk = this.world.chunksToGenerate.shift();
-                if (!this.world.chunks.has(this.world.getChunkKey(chunk.cx, chunk.cz))) continue;
-                const genRes = chunkGenFn(chunk.cx, chunk.cz, this.planetParams);
-                chunk.blocks = genRes;
-                if (genRes && genRes.data) chunk.data.set(genRes.data);
-                chunk.dirty = true;
-                this.world.chunksToBuild.push(chunk);
-            }
-            while (this.world.chunksToBuild.length > 0) {
-                const chunk = this.world.chunksToBuild.shift();
-                if (chunk.dirty) {
-                    this.world.textureAtlas.sharedMaterials = this.world.sharedMaterials;
-                    const neighborChunks = [
-                        [null, null, null],
-                        [null, null, null],
-                        [null, null, null]
-                    ];
-                    for (let dx = -1; dx <= 1; dx++) {
-                        for (let dz = -1; dz <= 1; dz++) {
-                            const key = this.world.getChunkKey(chunk.cx + dx, chunk.cz + dz);
-                            neighborChunks[dx + 1][dz + 1] = this.world.chunks.get(key) || null;
-                        }
+            const scx = Math.floor(spawnPos.x / 16);
+            const scz = Math.floor(spawnPos.z / 16);
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dz = -1; dz <= 1; dz++) {
+                    const cx = scx + dx;
+                    const cz = scz + dz;
+                    const key = this.world.getChunkKey(cx, cz);
+                    let chunk = this.world.chunks.get(key);
+                    if (!chunk) {
+                        chunk = new Chunk(cx, cz);
+                        this.world.chunks.set(key, chunk);
                     }
-                    const mesh = chunk.buildMesh(this.world.textureAtlas, neighborChunks, this.world.planetParams);
-                    if (mesh && !mesh.parent) {
-                        this.world.scene.add(mesh);
-                    }
-                    if (chunk.waterMesh && !chunk.waterMesh.parent) {
-                        this.world.scene.add(chunk.waterMesh);
+                    if (!chunk.blocks || chunk.blocks[0] === undefined) {
+                        const genRes = chunkGenFn(cx, cz, this.planetParams);
+                        chunk.blocks = genRes;
+                        if (genRes && genRes.data) chunk.data.set(genRes.data);
+                        chunk.dirty = true;
                     }
                 }
             }
+            this.world.textureAtlas.sharedMaterials = this.world.sharedMaterials;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dz = -1; dz <= 1; dz++) {
+                    const cx = scx + dx;
+                    const cz = scz + dz;
+                    const key = this.world.getChunkKey(cx, cz);
+                    const chunk = this.world.chunks.get(key);
+                    if (chunk && chunk.dirty) {
+                        const neighborChunks = [
+                            [null, null, null],
+                            [null, null, null],
+                            [null, null, null]
+                        ];
+                        for (let ndx = -1; ndx <= 1; ndx++) {
+                            for (let ndz = -1; ndz <= 1; ndz++) {
+                                const nkey = this.world.getChunkKey(cx + ndx, cz + ndz);
+                                neighborChunks[ndx + 1][ndz + 1] = this.world.chunks.get(nkey) || null;
+                            }
+                        }
+                        const mesh = chunk.buildMesh(this.world.textureAtlas, neighborChunks, this.world.planetParams);
+                        if (mesh && !mesh.parent) this.world.scene.add(mesh);
+                        if (chunk.waterMesh && !chunk.waterMesh.parent) this.world.scene.add(chunk.waterMesh);
+                        chunk.dirty = false;
+                    }
+                }
+            }
+            this.world.update(this.player.position, (cx, cz) => chunkGenFn(cx, cz, this.planetParams), 0);
 
             // If death respawn, validate bed spawnpoint and finalize safe position now that Overworld chunks are loaded
             if (isDeathRespawn) {
@@ -6379,10 +6516,11 @@ const initGame = () => {
     if (startBtn) {
         startBtn.onclick = () => {
             document.getElementById('start-screen').classList.add('hidden');
-            const hotbar = document.getElementById('geometric-hotbar');
-            if (hotbar) hotbar.classList.remove('hidden');
-            const mcHud = document.getElementById('mc-hud-container');
-            if (mcHud) mcHud.classList.remove('hidden');
+            const loadingScreen = document.getElementById('mc-loading-screen');
+            if (loadingScreen) {
+                loadingScreen.classList.remove('hidden');
+                loadingScreen.style.opacity = '1';
+            }
 
             game.selectedGameMode = selectedGameMode;
             game.start();
