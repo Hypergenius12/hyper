@@ -19,8 +19,20 @@ export class LightingSystem {
 
         // Warm sun directional light (provides clean 3D block shading and face contrast)
         this.sunLight = new THREE.DirectionalLight(0xfff8ea, 0.78);
-        this.sunLight.castShadow = false; // Disabled for FPS
+        this.sunLight.castShadow = true;
+        this.sunLight.shadow.mapSize.width = 1024;
+        this.sunLight.shadow.mapSize.height = 1024;
+        this.sunLight.shadow.camera.near = 0.5;
+        this.sunLight.shadow.camera.far = 140;
+        const shadowFrustum = 36;
+        this.sunLight.shadow.camera.left = -shadowFrustum;
+        this.sunLight.shadow.camera.right = shadowFrustum;
+        this.sunLight.shadow.camera.top = shadowFrustum;
+        this.sunLight.shadow.camera.bottom = -shadowFrustum;
+        this.sunLight.shadow.bias = -0.001;
+        this.sunLight.shadow.normalBias = 0.02;
         this.scene.add(this.sunLight);
+        this.scene.add(this.sunLight.target);
         this.caveFactor = 0.0;
         this.lastAmbientIntensity = 0.88;
         this.brightnessMultiplier = 1.25;
@@ -450,6 +462,7 @@ export class LightingSystem {
         // Sunlight & moonlight blocked underground
         this.sunLight.intensity = state.sun * (1.0 - this.caveFactor) * brightMult;
         this.moonLight.intensity = state.moon * (1.0 - this.caveFactor) * brightMult;
+        this.sunLight.castShadow = (state.sun > 0.08) && (this.caveFactor < 0.75) && (currentDimension === 'overworld' || currentDimension === 'aether');
         
         const currentBg = isUnderwater ? new THREE.Color(0x3377aa) : (this.caveFactor > 0.05 ? state.bg.clone().lerp(caveColor, this.caveFactor) : state.bg);
         this.scene.background = currentBg;

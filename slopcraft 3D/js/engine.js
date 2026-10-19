@@ -349,9 +349,9 @@ export class GameEngine {
         } catch (e) {}
         this._renderer.setPixelRatio(initialRatio);
 
-        // Shadows disabled for performance. Voxel terrain uses AO and sky colors instead.
-        this._renderer.shadowMap.enabled = false;
-        this._renderer.shadowMap.type = THREE.PCFShadowMap;
+        // Simple light shadows
+        this._renderer.shadowMap.enabled = true;
+        this._renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         // Color management: Pure sRGB without tone mapping for authentic pixel art textures and natural Minecraft colors
         this._renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1744,9 +1744,11 @@ export class Chunk {
         } else {
             this.mesh = new THREE.Mesh(geometry, materials);
             this.mesh.position.set(this.cx * CHUNK_SIZE, 0, this.cz * CHUNK_SIZE);
-            this.mesh.castShadow = false; // Massive performance gain: voxel terrain doesn't need to cast shadows on itself
-            this.mesh.receiveShadow = false; // Voxel terrain uses AO and sunlight baked into colors, receiving shadows kills FPS
+            this.mesh.castShadow = false; // Voxel chunks don't cast shadows to protect 60 FPS
+            this.mesh.receiveShadow = true; // Terrain chunks receive soft light shadows from mobs, player, and entities
         }
+        this.mesh.castShadow = false;
+        this.mesh.receiveShadow = true;
         this.mesh.matrixAutoUpdate = false;
         this.mesh.updateMatrix();
         this.mesh.userData.isChunkMesh = true;
@@ -1775,6 +1777,8 @@ export class Chunk {
                 this.waterMesh.userData.isChunkMesh = true;
                 this.waterMesh.renderOrder = 1;
             }
+            this.waterMesh.castShadow = false;
+            this.waterMesh.receiveShadow = true;
             this.waterMesh.matrixAutoUpdate = false;
             this.waterMesh.updateMatrix();
             this.waterMesh.visible = true;
@@ -2759,9 +2763,12 @@ export class World {
             gensThisFrame++;
         }
 
-        // Process chunk meshing within remaining time budget
+        // Process chunk meshing within dedicated time budget (guarantee at least 2 chunks mesh per frame to prevent blank world)
+        const meshWorkStart = performance.now();
+        const MAX_MESH_WORK_MS = 6.0;
         let buildsThisFrame = 0;
-        while (this.chunksToBuild.length > 0 && buildsThisFrame < 2 && (performance.now() - chunkWorkStart < MAX_CHUNK_WORK_MS)) {
+        while (this.chunksToBuild.length > 0 && (buildsThisFrame < 2 || (performance.now() - meshWorkStart < MAX_MESH_WORK_MS))) {
+            if (buildsThisFrame >= 4) break;
             let bestIdx = -1;
             let bestDist = Infinity;
             for (let i = 0; i < this.chunksToBuild.length; i++) {

@@ -4,11 +4,11 @@
 // ============================================
 // ============================================
 import * as THREE from 'three';
-import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=154';
+import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=158';
 import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh, drawDynamicCompassCanvas, drawDynamicClockCanvas } from './textures.js?v=157';
 import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=154';
 import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=157';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=157';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=158';
 import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=148';
 import { AudioManager } from './audio.js?v=139';
 import { BiomeMap } from './map.js?v=139';
@@ -837,6 +837,42 @@ class Game {
         this.player.velocity.set(0, 0, 0);
         this.player.spawnGraceTimer = 5.0;
 
+        // Immediately preload & mesh surrounding chunks synchronously so terrain is solid & visible on frame 1
+        const initialChunkGenFn = (cx, cz) => generateChunkTerrain(cx, cz, this.planetParams);
+        this.world.update(this.player.position, initialChunkGenFn, 0);
+        while (this.world.chunksToGenerate.length > 0) {
+            const chunk = this.world.chunksToGenerate.shift();
+            if (!this.world.chunks.has(this.world.getChunkKey(chunk.cx, chunk.cz))) continue;
+            const genRes = initialChunkGenFn(chunk.cx, chunk.cz);
+            chunk.blocks = genRes;
+            if (genRes && genRes.data) chunk.data.set(genRes.data);
+            chunk.dirty = true;
+            this.world.queueChunkToBuild(chunk);
+        }
+        while (this.world.chunksToBuild.length > 0) {
+            const chunk = this.world.chunksToBuild.shift();
+            if (!this.world.chunks.has(this.world.getChunkKey(chunk.cx, chunk.cz))) continue;
+            if (chunk.dirty) {
+                this.world.textureAtlas.sharedMaterials = this.world.sharedMaterials;
+                const neighborChunks = [
+                    [null, null, null],
+                    [null, null, null],
+                    [null, null, null]
+                ];
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dz = -1; dz <= 1; dz++) {
+                        const key = this.world.getChunkKey(chunk.cx + dx, chunk.cz + dz);
+                        neighborChunks[dx + 1][dz + 1] = this.world.chunks.get(key) || null;
+                    }
+                }
+                const mesh = chunk.buildMesh(this.world.textureAtlas, neighborChunks, this.planetParams);
+                if (mesh && !mesh.parent) this.engine.scene.add(mesh);
+                if (chunk.waterMesh && !chunk.waterMesh.parent) this.engine.scene.add(chunk.waterMesh);
+                if (chunk.endPortalMesh && !chunk.endPortalMesh.parent) this.engine.scene.add(chunk.endPortalMesh);
+                chunk.dirty = false;
+            }
+        }
+
         // Apply initial options state to systems and player
         if (this.lighting && this.brightnessVal !== undefined) {
             this.lighting.brightnessMultiplier = 0.75 + (this.brightnessVal / 100) * 0.5;
@@ -1008,6 +1044,12 @@ class Game {
 
         // Player 3D Character Model (for 3rd person view)
         this.playerMesh = this.player.createPlayerMesh();
+        this.playerMesh.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
         this.engine.scene.add(this.playerMesh);
         this.playerMesh.visible = false; // Hidden in 1st person
 

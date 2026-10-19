@@ -240,15 +240,30 @@
     </div>
     <script>
         window.onerror = function(msg, url, lineNo, columnNo, error) {
+            var strMsg = String(msg || '');
+            var strUrl = String(url || '');
+            if (strUrl.includes('chrome-extension:') || strUrl.includes('moz-extension:') || strUrl.includes('safari-extension:') || strUrl.includes('content.js') || strMsg.includes('unsafe-eval') || strMsg.includes('Content Security Policy') || strMsg.includes('Script error.')) {
+                console.warn('Ignored external extension error:', msg, url);
+                return true;
+            }
             var el = document.getElementById('error-overlay');
-            el.style.display = 'block';
-            el.innerHTML += "ERROR: " + msg + "\nURL: " + url + "\nLine: " + lineNo + ":" + columnNo + "\n" + (error ? error.stack : "") + "\n\n";
+            if (el) {
+                el.style.display = 'block';
+                el.innerHTML += "ERROR: " + msg + "\nURL: " + url + "\nLine: " + lineNo + ":" + columnNo + "\n" + (error ? error.stack : "") + "\n\n";
+            }
             return false;
         };
         window.addEventListener("unhandledrejection", function(e) {
+            var reasonStr = String((e && e.reason) || '');
+            if (reasonStr.includes('chrome-extension:') || reasonStr.includes('unsafe-eval') || reasonStr.includes('Google tag') || reasonStr.includes('gtag') || reasonStr.includes('Tracking Prevention')) {
+                console.warn('Ignored external rejection:', e.reason);
+                return;
+            }
             var el = document.getElementById('error-overlay');
-            el.style.display = 'block';
-            el.innerHTML += "UNHANDLED PROMISE REJECTION: " + e.reason + "\n\n";
+            if (el) {
+                el.style.display = 'block';
+                el.innerHTML += "UNHANDLED PROMISE REJECTION: " + e.reason + "\n\n";
+            }
         });
     </script>
     
@@ -529,7 +544,7 @@
         }
     }
     </script>
-    <script type="module" src="js/main.js?v=157"></script>
+    <script type="module" src="js/main.js?v=158"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>
 </body>
