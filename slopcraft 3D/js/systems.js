@@ -1577,6 +1577,7 @@ class UISystem {
             { type: 'food',      subtype: 'beetroot_soup',   name: 'Beetroot Soup' },
             { type: 'food',      subtype: 'melon_slice',     name: 'Melon Slice' },
             { type: 'food',      subtype: 'sweet_berries',   name: 'Sweet Berries' },
+            { type: 'food',      subtype: 'chorus_fruit',    name: 'Chorus Fruit' },
             { type: 'food',      subtype: 'cookie',          name: 'Cookie' },
             { type: 'food',      subtype: 'pumpkin_pie',     name: 'Pumpkin Pie' },
         ];
@@ -1689,6 +1690,7 @@ class UISystem {
             { subtype: 'pufferfish',      name: 'Spawn Pufferfish',      mob: 'PUFFERFISH' },
             { subtype: 'swet',            name: 'Spawn Swet',            mob: 'SWET' },
             { subtype: 'aerwhale',        name: 'Spawn Aerwhale',        mob: 'AERWHALE' },
+            { subtype: 'airwhale',        name: 'Spawn Airwhale',        mob: 'AERWHALE' },
         ];
 
         for (const egg of spawnEggs) {

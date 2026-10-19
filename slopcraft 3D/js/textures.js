@@ -1346,15 +1346,56 @@ const LOCAL_ASSET_MAP = {
     "compass": "assets/mc/item/compass.png",
     "clock": "assets/mc/item/clock.png",
     "leather": "assets/mc/item/leather.png",
+    "item/leather": "assets/mc/item/leather.png",
     "head_leather": "assets/mc/item/head_leather.png",
     "helmet_leather": "assets/mc/item/leather_helmet.png",
     "leather_helmet": "assets/mc/item/leather_helmet.png",
+    "item/leather_helmet": "assets/mc/item/leather_helmet.png",
+    "item/head_leather": "assets/mc/item/head_leather.png",
     "chest_leather": "assets/mc/item/chest_leather.png",
     "leather_chestplate": "assets/mc/item/leather_chestplate.png",
+    "item/leather_chestplate": "assets/mc/item/leather_chestplate.png",
+    "item/chest_leather": "assets/mc/item/chest_leather.png",
     "legs_leather": "assets/mc/item/legs_leather.png",
     "leather_leggings": "assets/mc/item/leather_leggings.png",
+    "item/leather_leggings": "assets/mc/item/leather_leggings.png",
+    "item/legs_leather": "assets/mc/item/legs_leather.png",
     "boots_leather": "assets/mc/item/boots_leather.png",
     "leather_boots": "assets/mc/item/leather_boots.png",
+    "item/leather_boots": "assets/mc/item/leather_boots.png",
+    "item/boots_leather": "assets/mc/item/boots_leather.png",
+    "wood_hammer": "assets/mc/item/wood_hammer.png",
+    "wooden_hammer": "assets/mc/item/wooden_hammer.png",
+    "stone_hammer": "assets/mc/item/stone_hammer.png",
+    "iron_hammer": "assets/mc/item/iron_hammer.png",
+    "gold_hammer": "assets/mc/item/gold_hammer.png",
+    "golden_hammer": "assets/mc/item/golden_hammer.png",
+    "diamond_hammer": "assets/mc/item/diamond_hammer.png",
+    "netherite_hammer": "assets/mc/item/netherite_hammer.png",
+    "hammer": "assets/mc/item/hammer.png",
+    "wood_excavator": "assets/mc/item/wood_excavator.png",
+    "wooden_excavator": "assets/mc/item/wooden_excavator.png",
+    "stone_excavator": "assets/mc/item/stone_excavator.png",
+    "iron_excavator": "assets/mc/item/iron_excavator.png",
+    "gold_excavator": "assets/mc/item/gold_excavator.png",
+    "golden_excavator": "assets/mc/item/golden_excavator.png",
+    "diamond_excavator": "assets/mc/item/diamond_excavator.png",
+    "netherite_excavator": "assets/mc/item/netherite_excavator.png",
+    "excavator": "assets/mc/item/excavator.png",
+    "item/hammer": "assets/mc/item/hammer.png",
+    "item/diamond_hammer": "assets/mc/item/diamond_hammer.png",
+    "item/wood_hammer": "assets/mc/item/wood_hammer.png",
+    "item/stone_hammer": "assets/mc/item/stone_hammer.png",
+    "item/iron_hammer": "assets/mc/item/iron_hammer.png",
+    "item/gold_hammer": "assets/mc/item/gold_hammer.png",
+    "item/netherite_hammer": "assets/mc/item/netherite_hammer.png",
+    "item/excavator": "assets/mc/item/excavator.png",
+    "item/diamond_excavator": "assets/mc/item/diamond_excavator.png",
+    "item/wood_excavator": "assets/mc/item/wood_excavator.png",
+    "item/stone_excavator": "assets/mc/item/stone_excavator.png",
+    "item/iron_excavator": "assets/mc/item/iron_excavator.png",
+    "item/gold_excavator": "assets/mc/item/gold_excavator.png",
+    "item/netherite_excavator": "assets/mc/item/netherite_excavator.png",
     "item_frame": "assets/mc/item/item_frame.png",
     "destroy_stage_0": "assets/mc/block/destroy_stage_0.png",
     "destroy_stage_1": "assets/mc/block/destroy_stage_1.png",
@@ -2205,17 +2246,33 @@ export async function createTextureAtlas(useMinecraft = true) {
                         ictx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
                         _itemCanvasCache.set(cacheKey, itemCvs);
                         _itemTextureCache.set(cacheKey, itemCvs.toDataURL());
+                        _itemCanvasCache.set(subtype, itemCvs);
+                        _itemTextureCache.set(subtype, itemCvs.toDataURL());
+                        const bareSubtype = subtype.replace(/^item\//, '');
+                        _itemCanvasCache.set(bareSubtype, itemCvs);
+                        _itemTextureCache.set(bareSubtype, itemCvs.toDataURL());
                         if (isEgg) {
                             _itemCanvasCache.set(`${cleanSub}_spawn_egg`, itemCvs);
                             _itemTextureCache.set(`${cleanSub}_spawn_egg`, itemCvs.toDataURL());
-                            _itemCanvasCache.set(subtype, itemCvs);
-                            _itemTextureCache.set(subtype, itemCvs.toDataURL());
+                            _itemCanvasCache.set(`spawn_egg_${cleanSub}`, itemCvs);
+                            _itemTextureCache.set(`spawn_egg_${cleanSub}`, itemCvs.toDataURL());
                         }
                     }
                 }));
             }
         }
         await Promise.all(itemPromises);
+
+        // Preload authentic spawn eggs for custom Aether mobs
+        for (const eggType of ['swet', 'aerwhale', 'airwhale']) {
+            const eggCvs = renderSpawnEggCanvas(eggType);
+            _itemCanvasCache.set(`spawn_egg_${eggType}`, eggCvs);
+            _itemTextureCache.set(`spawn_egg_${eggType}`, eggCvs.toDataURL());
+            _itemCanvasCache.set(`${eggType}_spawn_egg`, eggCvs);
+            _itemTextureCache.set(`${eggType}_spawn_egg`, eggCvs.toDataURL());
+            _itemCanvasCache.set(eggType, eggCvs);
+            _itemTextureCache.set(eggType, eggCvs.toDataURL());
+        }
     }
 
     // Ensure Steve skin is initialized and fully loaded
@@ -2578,6 +2635,25 @@ export async function createTextureAtlas(useMinecraft = true) {
             // Right face (shaded)
             iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, TEX_SIZE * SCALE);
             iconCtx.drawImage(side2Scaled, 0, 0);
+
+            iconCtx.restore();
+            return iconCanvas;
+        }
+
+        if (blockType === BLOCKS.CACTUS) {
+            iconCtx.save();
+            // Cactus is a 14x16x14 block in Minecraft Java.
+            // Top face (14x14 pixels, centered at top)
+            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 1 * SCALE);
+            iconCtx.drawImage(topScaled, 1 * SCALE, 1 * SCALE, 14 * SCALE, 14 * SCALE, 0, 0, 14 * SCALE, 14 * SCALE);
+
+            // Left face (14 pixels wide, 16 pixels tall, connected to top-left edge)
+            iconCtx.setTransform(1, 0.5, 0, 1, 2 * SCALE, 8 * SCALE);
+            iconCtx.drawImage(side1Scaled, 0, 0, 16 * SCALE, 16 * SCALE, 0, 0, 14 * SCALE, 16 * SCALE);
+
+            // Right face (14 pixels wide, 16 pixels tall, connected to top-right edge)
+            iconCtx.setTransform(1, -0.5, 0, 1, 16 * SCALE, 15 * SCALE);
+            iconCtx.drawImage(side2Scaled, 0, 0, 16 * SCALE, 16 * SCALE, 0, 0, 14 * SCALE, 16 * SCALE);
 
             iconCtx.restore();
             return iconCanvas;
@@ -2964,6 +3040,8 @@ const MC_ITEM_MAP = {
     'gold_hammer': 'gold_hammer',
     'diamond_hammer': 'diamond_hammer',
     'netherite_hammer': 'netherite_hammer',
+    'wooden_hammer': 'wooden_hammer',
+    'golden_hammer': 'golden_hammer',
     'excavator': 'excavator',
     'stone_excavator': 'stone_excavator',
     'wood_excavator': 'wood_excavator',
@@ -2971,6 +3049,8 @@ const MC_ITEM_MAP = {
     'gold_excavator': 'gold_excavator',
     'diamond_excavator': 'diamond_excavator',
     'netherite_excavator': 'netherite_excavator',
+    'wooden_excavator': 'wooden_excavator',
+    'golden_excavator': 'golden_excavator',
     'golden_feather': 'golden_feather',
     'quartz': 'quartz',
     'nether_quartz': 'quartz',
@@ -3080,9 +3160,58 @@ const SPAWN_EGG_COLORS = {
     'salmon':          { c: '#8f2525', d: '#5e1717', h: '#b83b3b', e: '#0e4435' },
     'tropical_fish':   { c: '#ef6915', d: '#ab4609', h: '#ff8a42', e: '#ffffff' },
     'pufferfish':      { c: '#e8a93a', d: '#a87720', h: '#ffc766', e: '#337ab7' },
-    'swet':            { c: '#0284c7', d: '#0369a1', h: '#38bdf8', e: '#bae6fd' },
-    'aerwhale':        { c: '#93c5fd', d: '#60a5fa', h: '#dbeafe', e: '#ffffff' }
+    'swet':            { c: '#1b75bb', d: '#0d4870', h: '#38bdf8', e: '#cceeff' },
+    'aerwhale':        { c: '#70889c', d: '#4b5c6b', h: '#9cb5c9', e: '#ffffff' },
+    'airwhale':        { c: '#70889c', d: '#4b5c6b', h: '#9cb5c9', e: '#ffffff' }
 };
+
+const SPAWN_EGG_TEMPLATE = [
+    " CC   HHHH   CC ",
+    " CCC HSSSSD CCD ",
+    " CCDDSSSSSCDCCD ",
+    " CCDCSSSSSCDDCD ",
+    " DDDCSSSSCCCDDD ",
+    "  DCHSSSHCCSHD  ",
+    "  DCHHSSCCCSSD  ",
+    " HSHHHSHCCCCSHD ",
+    " HSSHHCCCCCCCSD ",
+    " HSSSCCCCCSSCCD ",
+    " HSSSCCCCSSSSCD ",
+    " DSSHCCCSSSSSCD ",
+    " DCCCCCSSSSSSDD ",
+    "  DCCCCSSSSSHD  ",
+    "   DDCCCHSHDD   ",
+    "     DDDDDD     "
+];
+
+function renderSpawnEggCanvas(eggType) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    const clean = String(eggType || '').replace(/^spawn_egg_/, '').replace(/_spawn_egg$/, '');
+    const pal = SPAWN_EGG_COLORS[clean] || SPAWN_EGG_COLORS[eggType] || { c: '#0284c7', d: '#0369a1', h: '#38bdf8', e: '#ffffff' };
+    const cColor = pal.c || '#70889c';
+    const dColor = pal.d || '#4b5c6b';
+    const hColor = pal.h || '#9cb5c9';
+    const sColor = pal.e || pal.s || '#ffffff';
+
+    for (let y = 0; y < 16; y++) {
+        const row = SPAWN_EGG_TEMPLATE[y];
+        for (let x = 0; x < 16; x++) {
+            const ch = row[x];
+            if (ch === ' ' || !ch) continue;
+            if (ch === 'C') ctx.fillStyle = cColor;
+            else if (ch === 'D') ctx.fillStyle = dColor;
+            else if (ch === 'H') ctx.fillStyle = hColor;
+            else if (ch === 'S') ctx.fillStyle = sColor;
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+    return canvas;
+}
 
 // Global cache: subtype -> canvas / data URL
 const _itemTextureCache = new Map();
@@ -3283,9 +3412,21 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
 
     // 0. Tinkers' Construct Hammers & Excavators (authentic tiered color palettes)
+    // 0. Tinkers' Construct Hammers & Excavators
     const isHammer = itemSubtype === 'hammer' || itemSubtype.endsWith('_hammer') || itemSubtype.includes('hammer');
     const isExcavator = itemSubtype === 'excavator' || itemSubtype.endsWith('_excavator') || itemSubtype.includes('excavator');
     if (isHammer || isExcavator) {
+        let cleanName = itemSubtype;
+        if (!cleanName.includes('hammer') && !cleanName.includes('excavator')) {
+            cleanName = isHammer ? `${itemSubtype}_hammer` : `${itemSubtype}_excavator`;
+        }
+        const cached = _itemCanvasCache.get(cleanName) || _itemCanvasCache.get(cacheKey) || _itemCanvasCache.get(itemSubtype);
+        if (cached) {
+            ctx.drawImage(cached, 0, 0);
+            return canvas;
+        }
+
+        // Draw initial fallback so slot is never empty
         let tier = 'stone';
         if (itemSubtype.includes('wood')) tier = 'wood';
         else if (itemSubtype.includes('iron')) tier = 'iron';
@@ -3306,13 +3447,25 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                 ctx.fillRect(x, y, 1, 1);
             }
         }
-        const savedCvs = document.createElement('canvas');
-        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
-        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
-        _itemCanvasCache.set(cacheKey, savedCvs);
-        _itemTextureCache.set(cacheKey, canvas.toDataURL());
-        _itemCanvasCache.set(itemSubtype, savedCvs);
-        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+
+        // Upgrade with authentic mod PNG texture
+        loadMinecraftTexture(cleanName).then(img => {
+            if (img) {
+                ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                const savedCvs = document.createElement('canvas');
+                savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+                savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+                _itemCanvasCache.set(cacheKey, savedCvs);
+                _itemTextureCache.set(cacheKey, canvas.toDataURL());
+                _itemCanvasCache.set(itemSubtype, savedCvs);
+                _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+                _itemCanvasCache.set(cleanName, savedCvs);
+                _itemTextureCache.set(cleanName, canvas.toDataURL());
+                if (onLoaded) onLoaded(canvas);
+            }
+        });
+
         if (onLoaded) onLoaded(canvas);
         return canvas;
     }
@@ -3486,12 +3639,44 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     // 4. Vanilla Minecraft Item Textures
     const useMC = true;
     if (useMC) {
-        let mcKey = null;
         if (isSpawnEgg) {
-            mcKey = MC_ITEM_MAP[`spawn_egg_${cleanEgg}`] || MC_ITEM_MAP[`${cleanEgg}_spawn_egg`] || `${cleanEgg}_spawn_egg`;
-        } else {
-            mcKey = MC_ITEM_MAP[itemSubtype] || MC_ITEM_MAP[cacheKey];
+            const eggCvs = renderSpawnEggCanvas(cleanEgg);
+            ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+            ctx.drawImage(eggCvs, 0, 0);
+            const savedCvs = document.createElement('canvas');
+            savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+            savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+            _itemCanvasCache.set(cacheKey, savedCvs);
+            _itemTextureCache.set(cacheKey, canvas.toDataURL());
+            _itemCanvasCache.set(`${cleanEgg}_spawn_egg`, savedCvs);
+            _itemTextureCache.set(`${cleanEgg}_spawn_egg`, canvas.toDataURL());
+            _itemCanvasCache.set(`spawn_egg_${cleanEgg}`, savedCvs);
+            _itemTextureCache.set(`spawn_egg_${cleanEgg}`, canvas.toDataURL());
+            _itemCanvasCache.set(itemSubtype, savedCvs);
+            _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+
+            // If a local or official PNG exists, allow it to upgrade the texture
+            const mcEggKey = MC_ITEM_MAP[`spawn_egg_${cleanEgg}`] || MC_ITEM_MAP[`${cleanEgg}_spawn_egg`];
+            if (mcEggKey) {
+                loadMinecraftTexture(mcEggKey).then(img => {
+                    if (img) {
+                        ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                        ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                        savedCvs.getContext('2d').clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+                        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+                        _itemTextureCache.set(`${cleanEgg}_spawn_egg`, canvas.toDataURL());
+                        _itemTextureCache.set(`spawn_egg_${cleanEgg}`, canvas.toDataURL());
+                        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+                        if (onLoaded) onLoaded(canvas);
+                    }
+                });
+            }
+            if (onLoaded) onLoaded(canvas);
+            return canvas;
         }
+
+        let mcKey = MC_ITEM_MAP[itemSubtype] || MC_ITEM_MAP[cacheKey] || MC_ITEM_MAP[itemSubtype.replace(/^item\//, '')];
         const mcName = mcKey;
         if (mcName) {
             loadMinecraftTexture(mcName).then(img => {
@@ -3503,15 +3688,8 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
                     savedCvs.getContext('2d').drawImage(canvas, 0, 0);
                     _itemCanvasCache.set(cacheKey, savedCvs);
                     _itemTextureCache.set(cacheKey, canvas.toDataURL());
-                    if (isSpawnEgg) {
-                        _itemCanvasCache.set(`${cleanEgg}_spawn_egg`, savedCvs);
-                        _itemTextureCache.set(`${cleanEgg}_spawn_egg`, canvas.toDataURL());
-                        _itemCanvasCache.set(`spawn_egg_${cleanEgg}`, savedCvs);
-                        _itemTextureCache.set(`spawn_egg_${cleanEgg}`, canvas.toDataURL());
-                    } else {
-                        _itemCanvasCache.set(itemSubtype, savedCvs);
-                        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
-                    }
+                    _itemCanvasCache.set(itemSubtype, savedCvs);
+                    _itemTextureCache.set(itemSubtype, canvas.toDataURL());
                     if (onLoaded) onLoaded(canvas);
                 }
             });

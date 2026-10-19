@@ -473,11 +473,15 @@ class Game {
                 chunk = new Chunk(cx, cz);
                 this.world.chunks.set(key, chunk);
             }
-            if (!chunk.blocks || chunk.blocks[0] === undefined) {
+            if (!chunk._generated) {
                 const genRes = chunkGenFn(cx, cz);
                 chunk.blocks = genRes;
                 if (genRes && genRes.data) chunk.data.set(genRes.data);
+                chunk._generated = true;
                 chunk.dirty = true;
+                if (this.world.registerChunkFeatures) {
+                    this.world.registerChunkFeatures(chunk);
+                }
             }
             chunkStatus.set(`${cx},${cz}`, 1);
             processed++;
@@ -988,6 +992,15 @@ class Game {
 
         // Load spawn chunks with authentic Minecraft Java loading screen
         await this.loadSpawnAreaWithProgress(spawnPos, 'Loading world', 'Preparing spawn area');
+
+        // Ensure player is standing safely on the actual top solid ground of the meshed spawn chunk
+        const groundY = this.world.getHighestBlock(this.player.position.x, this.player.position.z);
+        if (groundY > 0) {
+            this.player.position.y = groundY + 1.05;
+            this.player.fallStartY = this.player.position.y;
+            this.player.fallDistance = 0;
+            this.player.velocity.set(0, 0, 0);
+        }
 
         // Apply initial options state to systems and player
         if (this.lighting && this.brightnessVal !== undefined) {
@@ -2348,9 +2361,9 @@ class Game {
                         for (let v = 0; v < 6; v++) {
                             let baseU = uvs[i * 12 + v * 2];
                             let baseV = uvs[i * 12 + v * 2 + 1];
-                            if (isCactus) {
+                            if (isCactus && (i === 2 || i === 3)) {
                                 baseU = 0.0625 + baseU * 0.875;
-                                if (i === 2 || i === 3) baseV = 0.0625 + baseV * 0.875;
+                                baseV = 0.0625 + baseV * 0.875;
                             }
                             uvs[i * 12 + v * 2] = uvInfo.u + baseU * uvInfo.uSize;
                             uvs[i * 12 + v * 2 + 1] = uvInfo.v + baseV * uvInfo.vSize;
@@ -3840,7 +3853,7 @@ class Game {
                         this.particles.emit(oldPos, 'portal', 30, 0xc469c4);
                         let targetX = oldPos.x, targetY = oldPos.y, targetZ = oldPos.z;
                         let foundSafe = false;
-                        for (let attempt = 0; attempt < 24; attempt++) {
+                        for (let attempt = 0; attempt < 32; attempt++) {
                             const rx = Math.floor(oldPos.x + (Math.random() - 0.5) * 16);
                             const rz = Math.floor(oldPos.z + (Math.random() - 0.5) * 16);
                             const ryBase = Math.floor(oldPos.y + (Math.random() - 0.5) * 12);
@@ -3861,6 +3874,23 @@ class Game {
                                 }
                             }
                             if (foundSafe) break;
+                        }
+                        if (!foundSafe && this.world && this.world.getHighestBlock) {
+                            for (let attempt = 0; attempt < 8; attempt++) {
+                                const rx = Math.floor(oldPos.x + (Math.random() - 0.5) * 16);
+                                const rz = Math.floor(oldPos.z + (Math.random() - 0.5) * 16);
+                                const hY = this.world.getHighestBlock(rx, rz);
+                                if (hY > 0 && hY < 126) {
+                                    const bGround = this.world.getBlock(rx, hY, rz);
+                                    if (bGround !== BLOCKS.LAVA && bGround !== BLOCKS.FIRE) {
+                                        targetX = rx + 0.5;
+                                        targetY = hY + 1.0;
+                                        targetZ = rz + 0.5;
+                                        foundSafe = true;
+                                        break;
+                                    }
+                                }
+                            }
                         }
                         if (foundSafe) {
                             this.player.position.set(targetX, targetY, targetZ);
@@ -5504,11 +5534,15 @@ class Game {
                         chunk = new Chunk(cx, cz);
                         this.world.chunks.set(key, chunk);
                     }
-                    if (!chunk.blocks || chunk.blocks[0] === undefined) {
+                    if (!chunk._generated) {
                         const genRes = chunkGenFn(cx, cz, this.planetParams);
                         chunk.blocks = genRes;
                         if (genRes && genRes.data) chunk.data.set(genRes.data);
+                        chunk._generated = true;
                         chunk.dirty = true;
+                        if (this.world.registerChunkFeatures) {
+                            this.world.registerChunkFeatures(chunk);
+                        }
                     }
                 }
             }

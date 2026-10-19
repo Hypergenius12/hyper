@@ -574,6 +574,7 @@ export class Chunk {
         this.waterMesh = null;
         this.endPortalMesh = null;
         this.dirty = false;
+        this._generated = false;
         this._inBuildQueue = false;
         this._inGenQueue = false;
         this.worldBox = new THREE.Box3(
@@ -1558,15 +1559,22 @@ export class Chunk {
                                 _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = v0;
                                 _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = v0;
                             } else if (currentBlockType === BLOCKS.CACTUS) {
-                                const isTopBot = (face.name === 'top' || face.name === 'bottom');
-                                const u0 = uvInfo.u + uvInfo.uSize * 0.0625;
-                                const u1 = uvInfo.u + uvInfo.uSize * 0.9375;
-                                const v0 = isTopBot ? (uvInfo.v + uvInfo.vSize * 0.0625) : uvInfo.v;
-                                const v1 = isTopBot ? (uvInfo.v + uvInfo.vSize * 0.9375) : (uvInfo.v + uvInfo.vSize);
-                                _uvs[uvCount++] = u0; _uvs[uvCount++] = v0;
-                                _uvs[uvCount++] = u1; _uvs[uvCount++] = v0;
-                                _uvs[uvCount++] = u1; _uvs[uvCount++] = v1;
-                                _uvs[uvCount++] = u0; _uvs[uvCount++] = v1;
+                                if (face.name === 'top' || face.name === 'bottom') {
+                                    const u0 = uvInfo.u + uvInfo.uSize * 0.0625;
+                                    const u1 = uvInfo.u + uvInfo.uSize * 0.9375;
+                                    const v0 = uvInfo.v + uvInfo.vSize * 0.0625;
+                                    const v1 = uvInfo.v + uvInfo.vSize * 0.9375;
+                                    _uvs[uvCount++] = u0; _uvs[uvCount++] = v0;
+                                    _uvs[uvCount++] = u1; _uvs[uvCount++] = v0;
+                                    _uvs[uvCount++] = u1; _uvs[uvCount++] = v1;
+                                    _uvs[uvCount++] = u0; _uvs[uvCount++] = v1;
+                                } else {
+                                    // Side faces map the full 16x16 texture across the 14-pixel wide face (preserving edge needles)
+                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
+                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
+                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                }
                             } else {
                                 _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v; // bottom left
                                 _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v; // bottom right
@@ -1851,6 +1859,7 @@ export class Chunk {
         }
         this._inBuildQueue = false;
         this._inGenQueue = false;
+        this._generated = false;
     }
 }
 
@@ -2612,6 +2621,36 @@ export class World {
         }
     }
 
+    registerChunkFeatures(chunk) {
+        if (!chunk || !chunk.blocks) return;
+        for (let i = 0; i < chunk.blocks.length; i++) {
+            const blockType = chunk.blocks[i];
+            const bProps = getBlockProperties(blockType);
+            if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.FURNACE || blockType === window.BLOCKS.BOSS_SPAWNER || (bProps && bProps.isFenceGate)) {
+                const y = Math.floor(i / (16 * 16));
+                const rem = i % (16 * 16);
+                const z = Math.floor(rem / 16);
+                const x = rem % 16;
+                const wx = chunk.cx * 16 + x;
+                const wz = chunk.cz * 16 + z;
+                if (blockType === window.BLOCKS.CHEST_BLOCK && this.onChestGenerated) {
+                    this.onChestGenerated(wx, y, wz);
+                } else if (blockType === window.BLOCKS.DUNGEON_DOOR && this.onDoorGenerated) {
+                    this.onDoorGenerated(wx, y, wz);
+                } else if ((blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.LANTERN || blockType === window.BLOCKS.SOUL_LANTERN || blockType === window.BLOCKS.GLOWSTONE) && this.onTorchGenerated) {
+                    this.onTorchGenerated(wx, y, wz);
+                } else if (blockType === window.BLOCKS.FURNACE && this.onFurnaceGenerated) {
+                    this.onFurnaceGenerated(wx, y, wz);
+                } else if (blockType === window.BLOCKS.BOSS_SPAWNER) {
+                    if (!this.spawners) this.spawners = new Set();
+                    this.spawners.add(`${wx},${y},${wz}`);
+                } else if (bProps && bProps.isFenceGate && this.onGateGenerated) {
+                    this.onGateGenerated(wx, y, wz, blockType);
+                }
+            }
+        }
+    }
+
     update(playerPos, terrainGenerator, dt) {
         if (this.matEndPortal) {
             this.matEndPortal.uniforms.time.value += (dt || 0.016);
@@ -2706,6 +2745,7 @@ export class World {
             if (genResult && genResult.data) {
                 chunk.data.set(genResult.data);
             }
+            chunk._generated = true;
             
             // Apply persistent modifications
             const chunkKey = this.getChunkKey(chunk.cx, chunk.cz);
@@ -2721,41 +2761,14 @@ export class World {
             this.queueChunkToBuild(chunk);
 
             // Register chests, doors, torches, furnaces, fence gates, and boss spawners
-            if (this.onChestGenerated || this.onDoorGenerated || this.onTorchGenerated || this.onFurnaceGenerated || this.onGateGenerated || true) {
-                for (let i = 0; i < chunk.blocks.length; i++) {
-                    const blockType = chunk.blocks[i];
-                    const bProps = getBlockProperties(blockType);
-                    if (blockType === window.BLOCKS.CHEST_BLOCK || blockType === window.BLOCKS.DUNGEON_DOOR || blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.FURNACE || blockType === window.BLOCKS.BOSS_SPAWNER || bProps.isFenceGate) {
-                        const y = Math.floor(i / (16 * 16));
-                        const rem = i % (16 * 16);
-                        const z = Math.floor(rem / 16);
-                        const x = rem % 16;
-                        const wx = chunk.cx * 16 + x;
-                        const wz = chunk.cz * 16 + z;
-                        if (blockType === window.BLOCKS.CHEST_BLOCK && this.onChestGenerated) {
-                            this.onChestGenerated(wx, y, wz);
-                        } else if (blockType === window.BLOCKS.DUNGEON_DOOR && this.onDoorGenerated) {
-                            this.onDoorGenerated(wx, y, wz);
-                        } else if ((blockType === window.BLOCKS.TORCH || blockType === window.BLOCKS.LANTERN || blockType === window.BLOCKS.SOUL_LANTERN || blockType === window.BLOCKS.GLOWSTONE) && this.onTorchGenerated) {
-                            this.onTorchGenerated(wx, y, wz);
-                        } else if (blockType === window.BLOCKS.FURNACE && this.onFurnaceGenerated) {
-                            this.onFurnaceGenerated(wx, y, wz);
-                        } else if (blockType === window.BLOCKS.BOSS_SPAWNER) {
-                            if (!this.spawners) this.spawners = new Set();
-                            this.spawners.add(`${wx},${y},${wz}`);
-                        } else if (bProps.isFenceGate && this.onGateGenerated) {
-                            this.onGateGenerated(wx, y, wz, blockType);
-                        }
-                    }
-                }
-            }
+            this.registerChunkFeatures(chunk);
 
             // Re-mesh existing neighbor chunks to eliminate boundary seams / water walls (deduplicated)
             const neighbors = [[-1, 0], [1, 0], [0, -1], [0, 1]];
             for (const [dx, dz] of neighbors) {
                 const nKey = this.getChunkKey(chunk.cx + dx, chunk.cz + dz);
                 const nChunk = this.chunks.get(nKey);
-                if (nChunk && nChunk.blocks && nChunk.blocks[0] !== undefined) {
+                if (nChunk && nChunk._generated) {
                     nChunk.dirty = true;
                     this.queueChunkToBuild(nChunk);
                 }
@@ -2856,7 +2869,7 @@ export class World {
 
         // Pick random blocks per active chunk within simulation distance (~64 blocks around player)
         for (const chunk of this.chunks.values()) {
-            if (!chunk.blocks || chunk.blocks[0] === undefined) continue;
+            if (!chunk._generated || !chunk.blocks) continue;
             if (hasCam && (Math.abs(chunk.cx - px) > 4 || Math.abs(chunk.cz - pz) > 4)) continue;
             
             for (let i = 0; i < 80; i++) {
