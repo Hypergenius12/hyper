@@ -334,7 +334,20 @@ export class GameEngine {
     init(canvas) {
         this._renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
         this._renderer.setSize(window.innerWidth, window.innerHeight);
-        this._renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // Default pixel ratio is clamped to 1.0 for smooth 60 FPS across all GPUs
+        let initialRatio = 1.0;
+        try {
+            const stored = localStorage.getItem('slopcraft_resolution');
+            if (stored !== null) {
+                const val = parseInt(stored);
+                if (val <= 50) initialRatio = 0.5;
+                else if (val <= 75) initialRatio = 0.75;
+                else if (val <= 100) initialRatio = 1.0;
+                else if (val <= 125) initialRatio = 1.25;
+                else initialRatio = Math.min(window.devicePixelRatio, 2.0);
+            }
+        } catch (e) {}
+        this._renderer.setPixelRatio(initialRatio);
 
         // Shadows disabled for performance. Voxel terrain uses AO and sky colors instead.
         this._renderer.shadowMap.enabled = false;
@@ -347,6 +360,21 @@ export class GameEngine {
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
+    }
+
+    setResolutionScale(val) {
+        this._resolutionScaleVal = val;
+        let ratio = 1.0;
+        if (val <= 50) ratio = 0.5;
+        else if (val <= 75) ratio = 0.75;
+        else if (val <= 100) ratio = 1.0;
+        else if (val <= 125) ratio = 1.25;
+        else ratio = Math.min(window.devicePixelRatio, 2.0);
+
+        if (this._renderer) {
+            this._renderer.setPixelRatio(ratio);
+            this._renderer.setSize(window.innerWidth, window.innerHeight);
+        }
     }
 
     resize() {

@@ -563,6 +563,10 @@ export class TorchLightSystem {
         this.scene = scene;
         this.torches = new Map();
         this._time = 0;
+        this._cachedTorches = [];
+        this._lastCamPos = new THREE.Vector3();
+        this._sortCooldown = 0;
+        this._torchesDirty = false;
         
         // Light Pool to drastically improve FPS (max 8 dynamic lights ever compiled in shader)
         this.poolSize = 8;
@@ -584,29 +588,42 @@ export class TorchLightSystem {
             position: new THREE.Vector3(x + 0.5, y + 0.92, z + 0.5),
             flickerOffset: Math.random() * 100
         });
+        this._torchesDirty = true;
     }
 
     removeTorch(x, y, z) {
         const key = `${x},${y},${z}`;
         this.torches.delete(key);
+        this._torchesDirty = true;
     }
 
     update(dt, camPos) {
         this._time += dt;
-        
-        const torchDists = [];
-        for (const torch of this.torches.values()) {
-            const distSq = camPos ? torch.position.distanceToSquared(camPos) : 0;
-            torchDists.push({ torch, distSq });
+        this._sortCooldown -= dt;
+
+        // Re-sort only when camera moves > 1 block, on torch placement, or periodically (4 times/sec)
+        const needsResort = this._torchesDirty || this._sortCooldown <= 0 || (camPos && camPos.distanceToSquared(this._lastCamPos) > 1.0);
+        if (needsResort) {
+            this._sortCooldown = 0.25;
+            this._torchesDirty = false;
+            if (camPos) this._lastCamPos.copy(camPos);
+
+            const torchDists = [];
+            for (const torch of this.torches.values()) {
+                const distSq = camPos ? torch.position.distanceToSquared(camPos) : 0;
+                if (!camPos || distSq < 1000) { // ~31 blocks radius
+                    torchDists.push({ torch, distSq });
+                }
+            }
+            torchDists.sort((a, b) => a.distSq - b.distSq);
+            this._cachedTorches = torchDists.slice(0, this.poolSize);
         }
-        
-        torchDists.sort((a, b) => a.distSq - b.distSq);
-        
+
         for (let i = 0; i < this.poolSize; i++) {
             const light = this.lightPool[i];
             
-            if (i < torchDists.length && (!camPos || torchDists[i].distSq < 1000)) { // ~31 blocks radius
-                const torch = torchDists[i].torch;
+            if (i < this._cachedTorches.length) {
+                const torch = this._cachedTorches[i].torch;
                 light.position.copy(torch.position);
                 
                 const t = this._time + torch.flickerOffset;
@@ -4102,7 +4119,7 @@ export class CloudSystem {
         this.cloudAltitude = 128; // Authentic Minecraft cloud height
         this.cloudThickness = 4;  // 4 blocks thick (Fancy 3D clouds)
         this.cellSize = 12;       // 12 blocks per cloud texture pixel
-        this.radius = 24;         // 48x48 cell footprint (576x576 blocks around player)
+        this.radius = 16;         // 32x32 cell footprint (384x384 blocks around player, optimized)
         this.gridSize = 256;      // Minecraft 256x256 clouds.png
 
         this.cloudData = new Uint8Array(256 * 256);
@@ -4278,7 +4295,7 @@ export class CloudSystem {
         geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
         geo.setIndex(indices);
-        geo.computeVertexNormals();
+        // MeshBasicMaterial is unlit with vertex colors and does not use normals, skipping computeVertexNormals saves CPU
 
         if (this.cloudsMesh) {
             this.clouds.remove(this.cloudsMesh);

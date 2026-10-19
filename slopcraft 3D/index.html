@@ -74,6 +74,10 @@
                         <label>Brightness: <span id="start-brightness-val">Bright</span></label>
                         <input type="range" id="start-brightness-slider" min="0" max="100" value="100">
                     </div>
+                    <div class="pause-option-box" style="grid-column: span 2;">
+                        <label>Render Scale: <span id="start-resolution-val">100% (Balanced)</span></label>
+                        <input type="range" id="start-resolution-slider" min="50" max="150" step="25" value="100">
+                    </div>
                 </div>
                 <div class="pause-toggles-row">
                     <div class="pause-toggle-box">
@@ -86,9 +90,14 @@
                             <input type="checkbox" id="start-viewbobbing-toggle" checked> View Bobbing
                         </label>
                     </div>
-                    <div class="pause-toggle-box" style="grid-column: span 2;">
+                    <div class="pause-toggle-box">
                         <label>
                             <input type="checkbox" id="start-blur-toggle"> Distance Blur
+                        </label>
+                    </div>
+                    <div class="pause-toggle-box">
+                        <label>
+                            <input type="checkbox" id="start-minimap-toggle" checked> Minimap
                         </label>
                     </div>
                 </div>
@@ -140,6 +149,10 @@
                         <label>Brightness: <span id="brightness-val">Bright</span></label>
                         <input type="range" id="brightness-slider" min="0" max="100" value="100">
                     </div>
+                    <div class="pause-option-box" style="grid-column: span 2;">
+                        <label>Render Scale: <span id="resolution-val">100% (Balanced)</span></label>
+                        <input type="range" id="resolution-slider" min="50" max="150" step="25" value="100">
+                    </div>
                 </div>
 
                 <!-- Toggles row -->
@@ -154,9 +167,14 @@
                             <input type="checkbox" id="pause-viewbobbing-toggle" checked> View Bobbing
                         </label>
                     </div>
-                    <div class="pause-toggle-box" style="grid-column: span 2;">
+                    <div class="pause-toggle-box">
                         <label>
                             <input type="checkbox" id="pause-blur-toggle"> Distance Blur
+                        </label>
+                    </div>
+                    <div class="pause-toggle-box">
+                        <label>
+                            <input type="checkbox" id="pause-minimap-toggle" checked> Minimap
                         </label>
                     </div>
                 </div>
@@ -520,7 +538,7 @@
         }
     }
     </script>
-    <script type="module" src="js/main.js?v=149"></script>
+    <script type="module" src="js/main.js?v=150"></script>
 <script type="module" src="../js/firebase-config.js"></script>
 <script type="module" src="../js/tracker.js"></script>
 </body>
