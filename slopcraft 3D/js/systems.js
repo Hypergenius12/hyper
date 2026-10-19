@@ -211,22 +211,22 @@ export class LightingSystem {
             { 
                 t: 0.28, 
                 amb: new THREE.Color(0xe0e8f6), ambIntensity: 0.70, 
-                bg: new THREE.Color(0xc0d8ff), top: new THREE.Color(0x78a7ff), bottom: new THREE.Color(0x182030),
+                bg: new THREE.Color(0xc6d7ed), top: new THREE.Color(0x829fd4), bottom: new THREE.Color(0x182030),
                 sun: 0.58, moon: 0.0,
                 glow: 0.0, glowColor: new THREE.Color(0xffa458)
             },
-            // Midday Clear Day (t=0.30 to 0.70) - authentic Minecraft Java Plains: soft azure (#78A7FF) and milky pale horizon (#C0D8FF)
+            // Midday Clear Day (t=0.30 to 0.70) - softer, natural desaturated sky blue
             { 
                 t: 0.30, 
                 amb: new THREE.Color(0xdce5f4), ambIntensity: 0.72, 
-                bg: new THREE.Color(0xc0d8ff), top: new THREE.Color(0x78a7ff), bottom: new THREE.Color(0x182030),
+                bg: new THREE.Color(0xc6d7ed), top: new THREE.Color(0x829fd4), bottom: new THREE.Color(0x182030),
                 sun: 0.65, moon: 0.0,
                 glow: 0.0, glowColor: new THREE.Color(0xff9850)
             },
             { 
                 t: 0.70, 
                 amb: new THREE.Color(0xdce5f4), ambIntensity: 0.72, 
-                bg: new THREE.Color(0xc0d8ff), top: new THREE.Color(0x78a7ff), bottom: new THREE.Color(0x182030),
+                bg: new THREE.Color(0xc6d7ed), top: new THREE.Color(0x829fd4), bottom: new THREE.Color(0x182030),
                 sun: 0.65, moon: 0.0,
                 glow: 0.0, glowColor: new THREE.Color(0xff9850)
             },
@@ -234,7 +234,7 @@ export class LightingSystem {
             { 
                 t: 0.72, 
                 amb: new THREE.Color(0xffd8b8), ambIntensity: 0.66, 
-                bg: new THREE.Color(0xffc090), top: new THREE.Color(0x6a82b4), bottom: new THREE.Color(0x1c1e28),
+                bg: new THREE.Color(0xf2c8a2), top: new THREE.Color(0x7383a4), bottom: new THREE.Color(0x1c1e28),
                 sun: 0.45, moon: 0.0,
                 glow: 0.45, glowColor: new THREE.Color(0xff9850)
             },
@@ -242,7 +242,7 @@ export class LightingSystem {
             { 
                 t: 0.75, 
                 amb: new THREE.Color(0xffbe98), ambIntensity: 0.52, 
-                bg: new THREE.Color(0xf08855), top: new THREE.Color(0x4e5878), bottom: new THREE.Color(0x141822),
+                bg: new THREE.Color(0xde8f68), top: new THREE.Color(0x545c72), bottom: new THREE.Color(0x141822),
                 sun: 0.30, moon: 0.02,
                 glow: 0.75, glowColor: new THREE.Color(0xf57838)
             },
