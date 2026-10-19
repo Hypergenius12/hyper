@@ -1345,6 +1345,17 @@ const LOCAL_ASSET_MAP = {
     "wheat": "assets/mc/item/wheat.png",
     "compass": "assets/mc/item/compass.png",
     "clock": "assets/mc/item/clock.png",
+    "leather": "assets/mc/item/leather.png",
+    "head_leather": "assets/mc/item/head_leather.png",
+    "helmet_leather": "assets/mc/item/leather_helmet.png",
+    "leather_helmet": "assets/mc/item/leather_helmet.png",
+    "chest_leather": "assets/mc/item/chest_leather.png",
+    "leather_chestplate": "assets/mc/item/leather_chestplate.png",
+    "legs_leather": "assets/mc/item/legs_leather.png",
+    "leather_leggings": "assets/mc/item/leather_leggings.png",
+    "boots_leather": "assets/mc/item/boots_leather.png",
+    "leather_boots": "assets/mc/item/leather_boots.png",
+    "item_frame": "assets/mc/item/item_frame.png",
     "destroy_stage_0": "assets/mc/block/destroy_stage_0.png",
     "destroy_stage_1": "assets/mc/block/destroy_stage_1.png",
     "destroy_stage_2": "assets/mc/block/destroy_stage_2.png",
@@ -2879,6 +2890,17 @@ const MC_ITEM_MAP = {
     'snowball': 'snowball',
     'melon_slice': 'melon_slice',
     'emerald': 'emerald',
+    'leather': 'item/leather',
+    'head_leather': 'item/leather_helmet',
+    'helmet_leather': 'item/leather_helmet',
+    'leather_helmet': 'item/leather_helmet',
+    'chest_leather': 'item/leather_chestplate',
+    'leather_chestplate': 'item/leather_chestplate',
+    'legs_leather': 'item/leather_leggings',
+    'leather_leggings': 'item/leather_leggings',
+    'boots_leather': 'item/leather_boots',
+    'leather_boots': 'item/leather_boots',
+    'item_frame': 'item/item_frame',
     'helmet_iron': 'iron_helmet',
     'chest_iron': 'iron_chestplate',
     'legs_iron': 'iron_leggings',
@@ -3312,6 +3334,58 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         _itemTextureCache.set(itemSubtype, canvas.toDataURL());
         // Also allow local PNG to upgrade it if available
         loadMinecraftTexture('item/lead').then(img => {
+            if (img) {
+                ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+                _itemTextureCache.set(cacheKey, canvas.toDataURL());
+                _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+                if (onLoaded) onLoaded(canvas);
+            }
+        });
+        if (onLoaded) onLoaded(canvas);
+        return canvas;
+    }
+
+    // Dynamic Compass
+    if (itemSubtype === 'compass') {
+        const dynCanvas = drawDynamicCompassCanvas(0);
+        ctx.drawImage(dynCanvas, 0, 0);
+        const savedCvs = document.createElement('canvas');
+        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+        _itemCanvasCache.set(cacheKey, savedCvs);
+        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+        _itemCanvasCache.set(itemSubtype, savedCvs);
+        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+        loadMinecraftTexture('item/compass').then(img => {
+            if (img) {
+                ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+                _itemTextureCache.set(cacheKey, canvas.toDataURL());
+                _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+                if (onLoaded) onLoaded(canvas);
+            }
+        });
+        if (onLoaded) onLoaded(canvas);
+        return canvas;
+    }
+
+    // Dynamic Clock
+    if (itemSubtype === 'clock') {
+        const dynCanvas = drawDynamicClockCanvas(0.5);
+        ctx.drawImage(dynCanvas, 0, 0);
+        const savedCvs = document.createElement('canvas');
+        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+        _itemCanvasCache.set(cacheKey, savedCvs);
+        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+        _itemCanvasCache.set(itemSubtype, savedCvs);
+        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+        loadMinecraftTexture('item/clock').then(img => {
             if (img) {
                 ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
                 ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
@@ -4529,6 +4603,157 @@ export function createExtrudedItemMesh(sourceCanvas, scale = 0.5, thickness = 0.
 
     const mesh = new THREE.Mesh(geometry, material);
     return mesh;
+}
+
+// ============================================
+// Dynamic 16x16 Compass & Clock Generators
+// ============================================
+
+export function drawDynamicCompassCanvas(angle = 0) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    // Metallic circular casing
+    ctx.fillStyle = '#20242c';
+    ctx.fillRect(4, 1, 8, 1);
+    ctx.fillRect(2, 2, 12, 1);
+    ctx.fillRect(1, 4, 14, 8);
+    ctx.fillRect(2, 13, 12, 1);
+    ctx.fillRect(4, 14, 8, 1);
+
+    // Bevel highlights & shadow
+    ctx.fillStyle = '#7a8594';
+    ctx.fillRect(4, 2, 8, 1);
+    ctx.fillRect(2, 4, 1, 8);
+    ctx.fillStyle = '#3a4452';
+    ctx.fillRect(4, 13, 8, 1);
+    ctx.fillRect(13, 4, 1, 8);
+
+    // Dial background
+    ctx.fillStyle = '#0f141a';
+    ctx.fillRect(3, 3, 10, 10);
+
+    // Rotating Needle
+    ctx.save();
+    ctx.translate(7.5, 7.5);
+    ctx.rotate(angle);
+
+    // North Needle (red) pointing upwards (-Y)
+    ctx.fillStyle = '#e53935';
+    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(2, 0);
+    ctx.lineTo(0, 1);
+    ctx.lineTo(-2, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // North Needle highlight
+    ctx.fillStyle = '#ff8a80';
+    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(-2, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // South Needle (silver) pointing downwards (+Y)
+    ctx.fillStyle = '#b0bec5';
+    ctx.beginPath();
+    ctx.moveTo(0, 5);
+    ctx.lineTo(2, 0);
+    ctx.lineTo(0, -1);
+    ctx.lineTo(-2, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Pivot center dot
+    ctx.fillStyle = '#ffca28';
+    ctx.fillRect(-1, -1, 2, 2);
+
+    ctx.restore();
+    return canvas;
+}
+
+export function drawDynamicClockCanvas(timeOfDay = 0.5) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    // Golden casing (outer frame)
+    ctx.fillStyle = '#5c4300';
+    ctx.fillRect(4, 1, 8, 1);
+    ctx.fillRect(2, 2, 12, 1);
+    ctx.fillRect(1, 4, 14, 8);
+    ctx.fillRect(2, 13, 12, 1);
+    ctx.fillRect(4, 14, 8, 1);
+
+    // Gold highlights
+    ctx.fillStyle = '#ffd54f';
+    ctx.fillRect(4, 2, 8, 1);
+    ctx.fillRect(2, 4, 1, 8);
+    ctx.fillStyle = '#c48f00';
+    ctx.fillRect(4, 13, 8, 1);
+    ctx.fillRect(13, 4, 1, 8);
+
+    // Lower decorative plate
+    ctx.fillStyle = '#7a5a06';
+    ctx.fillRect(3, 8, 10, 5);
+
+    // Dial aperture window (semicircle window at center: x: 3..12, y: 3..8)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(3, 3, 10, 6);
+    ctx.clip();
+
+    // Rotating celestial disk
+    // timeOfDay = 0.5 (noon) -> sun centered at top (-Y)
+    // timeOfDay = 0.0 (midnight) -> moon centered at top (-Y)
+    const angle = ((timeOfDay - 0.5 + 1.0) % 1.0) * Math.PI * 2;
+    ctx.translate(7.5, 9.0);
+    ctx.rotate(angle);
+
+    // Disk background: top half sky blue, bottom half night navy
+    ctx.fillStyle = '#42a5f5'; // day sky
+    ctx.beginPath();
+    ctx.arc(0, 0, 7.5, -Math.PI, 0);
+    ctx.fill();
+
+    ctx.fillStyle = '#0a1024'; // night sky
+    ctx.beginPath();
+    ctx.arc(0, 0, 7.5, 0, Math.PI);
+    ctx.fill();
+
+    // Sun at top (noon position)
+    ctx.fillStyle = '#ffeb3b';
+    ctx.fillRect(-2, -6, 4, 4);
+    ctx.fillStyle = '#ff9800';
+    ctx.fillRect(-1, -7, 2, 1);
+    ctx.fillRect(-1, -2, 2, 1);
+
+    // Moon at bottom (midnight position)
+    ctx.fillStyle = '#eceff1';
+    ctx.fillRect(-2, 3, 4, 4);
+    ctx.fillStyle = '#90a4ae';
+    ctx.fillRect(-1, 3, 1, 3);
+
+    // Stars around moon
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-5, 4, 1, 1);
+    ctx.fillRect(4, 5, 1, 1);
+
+    ctx.restore();
+
+    // Horizon bar
+    ctx.fillStyle = '#3e2e04';
+    ctx.fillRect(3, 9, 10, 1);
+
+    return canvas;
 }
 
 

@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=116';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=116';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=156';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=157';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -1015,9 +1015,11 @@ export class Player {
         if (!heldContainer) {
             heldContainer = new THREE.Group();
             heldContainer.name = 'heldItemContainer';
-            // Position at Steve's hand (bottom of arm)
-            heldContainer.position.set(0, -0.32, 0.05);
+            // Position at Steve's hand (fist at bottom of right arm)
+            heldContainer.position.set(0, -0.56, -0.05);
             rightArm.add(heldContainer);
+        } else {
+            heldContainer.position.set(0, -0.56, -0.05);
         }
 
         const clearHeld = () => {
@@ -1075,6 +1077,7 @@ export class Player {
                     geom.setIndex(indices);
                     geom.computeVertexNormals();
                     const m = new THREE.Mesh(geom, mat);
+                    m.position.set(0, 0.12, -0.08);
                     heldContainer.add(m);
                 } else {
                     const geom = new THREE.BoxGeometry(0.25, 0.25, 0.25).toNonIndexed();
@@ -1090,6 +1093,7 @@ export class Player {
                         }
                     }
                     const m = new THREE.Mesh(geom, mat);
+                    m.position.set(0, 0.10, -0.12);
                     m.rotation.set(Math.PI / 8, -Math.PI / 4, 0);
                     heldContainer.add(m);
                 }
@@ -1097,18 +1101,40 @@ export class Player {
             return;
         }
 
-        const safeSubtype = String(slot.item.subtype || '');
-        const iconCanvas = generateItemTexture(slot.item.type, safeSubtype, (c) => {
+        const safeSubtype = String(slot.item.subtype || '').toLowerCase();
+        const isTool = slot.item.type === 'tool' ||
+            safeSubtype.includes('sword') ||
+            safeSubtype.includes('pickaxe') ||
+            safeSubtype.includes('axe') ||
+            safeSubtype.includes('shovel') ||
+            safeSubtype.includes('hoe') ||
+            safeSubtype.includes('hammer') ||
+            safeSubtype.includes('excavator') ||
+            safeSubtype.includes('rod');
+
+        const applyTransform = (m) => {
+            if (isTool) {
+                // Handle placed in Steve's fist, tool blade points up and forward
+                m.position.set(0.08, 0.16, -0.05);
+                m.rotation.set(-Math.PI / 3, Math.PI / 4, 0);
+            } else {
+                // Flat item / food / material held in palm
+                m.position.set(0, 0.08, -0.08);
+                m.rotation.set(Math.PI / 6, 0, 0);
+            }
+        };
+
+        const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype, (c) => {
             if (heldContainer.userData.currentKey === currentKey) {
                 clearHeld();
                 const m = createExtrudedItemMesh(c, 0.45, 0.035);
-                m.rotation.set(Math.PI / 4, 0, -Math.PI / 4);
+                applyTransform(m);
                 heldContainer.add(m);
             }
         });
 
         const mesh = createExtrudedItemMesh(iconCanvas, 0.45, 0.035);
-        mesh.rotation.set(Math.PI / 4, 0, -Math.PI / 4);
+        applyTransform(mesh);
         heldContainer.add(mesh);
     }
 
@@ -5926,6 +5952,10 @@ export class EntityManager {
                     this.spawnItem(Item.foodItem('raw_mutton', 12, 'Raw Mutton', 'Heals some health.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 } else if (mob.type === 'COW') {
                     this.spawnItem(Item.foodItem('raw_beef', 15, 'Raw Beef', 'Heals some health.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                    const leatherCount = Math.floor(Math.random() * 3);
+                    if (leatherCount > 0) {
+                        this.spawnItem(Item.materialItem('leather', 'Leather', 'Used for crafting armor and items.'), leatherCount, mob.position.clone());
+                    }
                 } else if (mob.type === 'PIG') {
                     this.spawnItem(Item.foodItem('raw_porkchop', 15, 'Raw Porkchop', 'Heals some health.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 } else if (mob.type === 'CHICKEN') {

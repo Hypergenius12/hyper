@@ -2,7 +2,7 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=156';
+import { BLOCKS, getBlockProperties, generateItemTexture, drawDynamicCompassCanvas, drawDynamicClockCanvas } from './textures.js?v=157';
 import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=148';
 
 export class LightingSystem {
@@ -57,8 +57,8 @@ export class LightingSystem {
         this.sunMesh.renderOrder = -1; // Render before other transparent geometry
         this.scene.add(this.sunMesh);
 
-        // Moon Light (Authentic subtle cool blue Minecraft moonlight)
-        this.moonLight = new THREE.DirectionalLight(0x485878, 0.12);
+        // Moon Light (Authentic soft cool blue Minecraft moonlight)
+        this.moonLight = new THREE.DirectionalLight(0x687898, 0.26);
         this.moonLight.castShadow = false; // Disabled for FPS
         this.scene.add(this.moonLight);
 
@@ -177,27 +177,27 @@ export class LightingSystem {
         // Midday Plains: #78A7FF zenith, #C0D8FF horizon haze (soft, airy, desaturated pastel)
         // 0.0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 1.0 = midnight
         const states = [
-            // Midnight (t=0.0) - authentic dark Minecraft Java celestial vault & night mist
+            // Midnight (t=0.0) - authentic clear Minecraft Java moonlight
             { 
                 t: 0.0, 
-                amb: new THREE.Color(0x182032), ambIntensity: 0.14, 
-                bg: new THREE.Color(0x0b1020), top: new THREE.Color(0x050814), bottom: new THREE.Color(0x020408),
-                sun: 0.0, moon: 0.12,
+                amb: new THREE.Color(0x28344e), ambIntensity: 0.28, 
+                bg: new THREE.Color(0x121a30), top: new THREE.Color(0x091224), bottom: new THREE.Color(0x040810),
+                sun: 0.0, moon: 0.26,
                 glow: 0.0, glowColor: new THREE.Color(0xff9850)
             },
             // Pre-dawn twilight (t=0.18 to 0.22)
             { 
                 t: 0.18, 
-                amb: new THREE.Color(0x182032), ambIntensity: 0.14, 
-                bg: new THREE.Color(0x0b1020), top: new THREE.Color(0x050814), bottom: new THREE.Color(0x020408),
-                sun: 0.0, moon: 0.12,
+                amb: new THREE.Color(0x28344e), ambIntensity: 0.28, 
+                bg: new THREE.Color(0x121a30), top: new THREE.Color(0x091224), bottom: new THREE.Color(0x040810),
+                sun: 0.0, moon: 0.26,
                 glow: 0.0, glowColor: new THREE.Color(0xff9850)
             },
             { 
                 t: 0.22, 
-                amb: new THREE.Color(0x282a3c), ambIntensity: 0.20, 
-                bg: new THREE.Color(0x242a40), top: new THREE.Color(0x181e30), bottom: new THREE.Color(0x060810),
-                sun: 0.05, moon: 0.05,
+                amb: new THREE.Color(0x384058), ambIntensity: 0.32, 
+                bg: new THREE.Color(0x283048), top: new THREE.Color(0x1c2438), bottom: new THREE.Color(0x080c18),
+                sun: 0.08, moon: 0.16,
                 glow: 0.20, glowColor: new THREE.Color(0xe08050)
             },
             // Sunrise (t=0.25) - classic soft warm peach/amber horizon, gentle morning azure zenith
@@ -250,24 +250,24 @@ export class LightingSystem {
             // Post-sunset twilight (t=0.78)
             { 
                 t: 0.78, 
-                amb: new THREE.Color(0x282436), ambIntensity: 0.22, 
-                bg: new THREE.Color(0x202438), top: new THREE.Color(0x181c2c), bottom: new THREE.Color(0x060810),
-                sun: 0.05, moon: 0.08,
+                amb: new THREE.Color(0x383854), ambIntensity: 0.32, 
+                bg: new THREE.Color(0x282c42), top: new THREE.Color(0x1c2034), bottom: new THREE.Color(0x080c18),
+                sun: 0.08, moon: 0.18,
                 glow: 0.15, glowColor: new THREE.Color(0xd86838)
             },
             // Full Night (t=0.80 to 1.0)
             { 
                 t: 0.80, 
-                amb: new THREE.Color(0x182032), ambIntensity: 0.14, 
-                bg: new THREE.Color(0x0b1020), top: new THREE.Color(0x050814), bottom: new THREE.Color(0x020408),
-                sun: 0.0, moon: 0.12,
+                amb: new THREE.Color(0x28344e), ambIntensity: 0.28, 
+                bg: new THREE.Color(0x121a30), top: new THREE.Color(0x091224), bottom: new THREE.Color(0x040810),
+                sun: 0.0, moon: 0.26,
                 glow: 0.0, glowColor: new THREE.Color(0xff9850)
             },
             { 
                 t: 1.0, 
-                amb: new THREE.Color(0x182032), ambIntensity: 0.14, 
-                bg: new THREE.Color(0x0b1020), top: new THREE.Color(0x050814), bottom: new THREE.Color(0x020408),
-                sun: 0.0, moon: 0.12,
+                amb: new THREE.Color(0x28344e), ambIntensity: 0.28, 
+                bg: new THREE.Color(0x121a30), top: new THREE.Color(0x091224), bottom: new THREE.Color(0x040810),
+                sun: 0.0, moon: 0.26,
                 glow: 0.0, glowColor: new THREE.Color(0xff9850)
             }
         ];
@@ -436,7 +436,7 @@ export class LightingSystem {
         }
 
         this.caveFactor = THREE.MathUtils.lerp(this.caveFactor, targetCaveFactor, Math.min(1.0, dt * 3.0));
-        const caveFloor = 0.18;
+        const caveFloor = 0.22;
         this.lastAmbientIntensity = THREE.MathUtils.lerp(state.ambIntensity, caveFloor, this.caveFactor);
 
         const brightMult = (this.brightnessMultiplier !== undefined) ? this.brightnessMultiplier : 1.25;
@@ -1142,6 +1142,126 @@ class UISystem {
         }
     }
 
+    getEquipDataForSubtype(sub) {
+        if (!sub) return { damage: 0, durability: 999 };
+        // Hoes
+        if (sub === 'hoe_netherite' || sub === 'netherite_hoe') return { isHoe: true, damage: 1, durability: 2031, passive: 'Infernal Cultivation (Fireproof)' };
+        if (sub === 'hoe_diamond'   || sub === 'diamond_hoe')   return { isHoe: true, damage: 1, durability: 1561 };
+        if (sub === 'hoe_iron'      || sub === 'iron_hoe')      return { isHoe: true, damage: 1, durability: 250 };
+        if (sub === 'hoe_gold'      || sub === 'golden_hoe')    return { isHoe: true, damage: 1, durability: 32 };
+        if (sub === 'hoe_stone'     || sub === 'stone_hoe')     return { isHoe: true, damage: 1, durability: 131 };
+        if (sub === 'hoe_wood'      || sub === 'wooden_hoe')    return { isHoe: true, damage: 1, durability: 59 };
+        // Netherite
+        if (sub === 'sword_netherite')   return { damage: 11, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Infernal Might (Fireproof & High Knockback)' };
+        if (sub === 'pickaxe_netherite') return { mineSpeed: 5.5, damage: 6, chopSpeed: 1.5, passive: 'Infernal Resilience (Fireproof)' };
+        if (sub === 'axe_netherite')     return { chopSpeed: 5.5, damage: 10, mineSpeed: 1.0, passive: 'Infernal Cleave (Heavy Strike)' };
+        if (sub === 'shovel_netherite')  return { digSpeed: 5.5, damage: 5, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Infernal Excavation' };
+        // Gravitite (Aether)
+        if (sub === 'sword_gravitite')   return { damage: 10, mineSpeed: 1.0, chopSpeed: 1.0, levitate: true, passive: 'Levitation Surge (Launches Mobs Upward)' };
+        if (sub === 'pickaxe_gravitite') return { mineSpeed: 5.0, damage: 5, chopSpeed: 1.5, passive: 'Levitation Core (Zero-G)' };
+        if (sub === 'axe_gravitite')     return { chopSpeed: 5.0, damage: 9, mineSpeed: 1.0, passive: 'Levitation Strike' };
+        if (sub === 'shovel_gravitite')  return { digSpeed: 5.0, damage: 4, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Levitation Scoop' };
+        // Ruby
+        if (sub === 'sword_ruby')        return { damage: 9, mineSpeed: 1.0, chopSpeed: 1.0, fire: true, passive: 'Igniting Edge (Sets Enemies Ablaze)' };
+        if (sub === 'pickaxe_ruby')      return { mineSpeed: 4.5, damage: 5, chopSpeed: 1.5, passive: 'Molten Core (Auto-Smelts Ores to Ingots)' };
+        if (sub === 'axe_ruby')          return { chopSpeed: 4.5, damage: 8, mineSpeed: 1.0, passive: 'Kindling Strike' };
+        if (sub === 'shovel_ruby')       return { digSpeed: 4.5, damage: 4, mineSpeed: 1.0, chopSpeed: 1.0 };
+        // Sapphire
+        if (sub === 'sword_sapphire')    return { damage: 8, mineSpeed: 1.0, chopSpeed: 1.0, frost: true, passive: 'Glacial Frost (Freezes Enemies)' };
+        if (sub === 'pickaxe_sapphire')  return { mineSpeed: 4.0, damage: 4, chopSpeed: 1.5, passive: 'Crystal Precision' };
+        if (sub === 'axe_sapphire')      return { chopSpeed: 4.0, damage: 7, mineSpeed: 1.0, passive: 'Glacial Cleave' };
+        if (sub === 'shovel_sapphire')   return { digSpeed: 4.0, damage: 3, mineSpeed: 1.0, chopSpeed: 1.0 };
+        // Zanite (Aether)
+        if (sub === 'sword_zanite')      return { damage: 7, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Aetherial Surge (Damage Scales With Use)' };
+        if (sub === 'pickaxe_zanite')    return { mineSpeed: 4.2, damage: 4, chopSpeed: 1.5, passive: 'Aetherial Surge (Mines Faster With Use)' };
+        if (sub === 'axe_zanite')        return { chopSpeed: 4.2, damage: 7, mineSpeed: 1.0, passive: 'Aetherial Surge' };
+        if (sub === 'shovel_zanite')     return { digSpeed: 4.2, damage: 3, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Aetherial Surge' };
+        // Diamond
+        if (sub === 'sword_diamond')     return { damage: 12, mineSpeed: 1.0, chopSpeed: 1.0 };
+        if (sub === 'pickaxe_diamond')   return { mineSpeed: 6.0, damage: 5, chopSpeed: 1.5 };
+        if (sub === 'axe_diamond')       return { chopSpeed: 5.0, damage: 7, mineSpeed: 1.0 };
+        if (sub === 'shovel_diamond')    return { digSpeed: 5.0, damage: 4, mineSpeed: 1.0, chopSpeed: 1.0 };
+        // Iron
+        if (sub === 'sword_iron')        return { damage: 8, mineSpeed: 1.0, chopSpeed: 1.0 };
+        if (sub === 'pickaxe_iron')      return { mineSpeed: 3.0, damage: 4, chopSpeed: 1.5 };
+        if (sub === 'axe_iron')          return { chopSpeed: 3.0, damage: 5, mineSpeed: 1.0 };
+        if (sub === 'shovel_iron')       return { digSpeed: 3.0, damage: 3, mineSpeed: 1.0, chopSpeed: 1.0 };
+        // Gold
+        if (sub === 'sword_gold')        return { damage: 7, mineSpeed: 1.0, chopSpeed: 1.0 };
+        if (sub === 'pickaxe_gold')      return { mineSpeed: 2.5, damage: 3, chopSpeed: 2.5 };
+        if (sub === 'axe_gold')          return { chopSpeed: 2.5, damage: 4, mineSpeed: 1.0 };
+        if (sub === 'shovel_gold')       return { digSpeed: 2.5, damage: 2, mineSpeed: 1.0, chopSpeed: 1.0 };
+        // Stone
+        if (sub === 'sword_stone')       return { damage: 5, mineSpeed: 1.0, chopSpeed: 1.0 };
+        if (sub === 'pickaxe_stone')     return { mineSpeed: 2.0, damage: 3, chopSpeed: 1.2 };
+        if (sub === 'axe_stone')         return { chopSpeed: 2.0, damage: 4, mineSpeed: 1.0 };
+        if (sub === 'shovel_stone')      return { digSpeed: 2.0, damage: 2, mineSpeed: 1.0, chopSpeed: 1.0 };
+        // Wood
+        if (sub === 'sword_wood')        return { damage: 3, mineSpeed: 1.0, chopSpeed: 1.0 };
+        if (sub === 'pickaxe_wood')      return { mineSpeed: 1.5, damage: 2, chopSpeed: 1.0 };
+        if (sub === 'axe_wood')          return { chopSpeed: 1.5, damage: 3, mineSpeed: 1.0 };
+        if (sub === 'shovel_wood')       return { digSpeed: 1.5, damage: 1, mineSpeed: 1.0, chopSpeed: 1.0 };
+        if (sub === 'bow')               return { range: 25, damage: 6, passive: 'Ranged Weapon' };
+        // Armor
+        if (sub.startsWith('head_') || sub.startsWith('helmet_') || sub.includes('helmet')) {
+            if (sub.includes('leather')) return { protection: 1 };
+            return { protection: sub.includes('diamond') ? 5 : (sub.includes('gold') ? 3 : 2) };
+        }
+        if (sub.startsWith('chest_') || sub.includes('chestplate')) {
+            if (sub.includes('leather')) return { protection: 3 };
+            return { protection: sub.includes('diamond') ? 10 : (sub.includes('gold') ? 7 : 5) };
+        }
+        if (sub.startsWith('legs_') || sub.includes('leggings')) {
+            if (sub.includes('leather')) return { protection: 2 };
+            return { protection: sub.includes('diamond') ? 7 : (sub.includes('gold') ? 4 : 3) };
+        }
+        if (sub.startsWith('boots_') || sub.includes('boots')) {
+            if (sub.includes('slime')) return { protection: 2, passive: 'Bouncy Slime Absorber' };
+            if (sub.includes('leather')) return { protection: 1 };
+            return { protection: sub.includes('diamond') ? 5 : (sub.includes('gold') ? 3 : 2) };
+        }
+        // Mod Items
+        if (sub === 'hammer' || sub.endsWith('_hammer') || sub.includes('hammer')) {
+            let tier = 'stone';
+            if (sub.includes('wood')) tier = 'wood';
+            else if (sub.includes('iron')) tier = 'iron';
+            else if (sub.includes('gold')) tier = 'gold';
+            else if (sub.includes('diamond')) tier = 'diamond';
+            else if (sub.includes('netherite')) tier = 'netherite';
+            const s = {
+                wood: { damage: 5, mineSpeed: 2.5, durability: 120 },
+                stone: { damage: 6, mineSpeed: 4.0, durability: 260 },
+                iron: { damage: 7, mineSpeed: 6.0, durability: 500 },
+                gold: { damage: 5, mineSpeed: 9.0, durability: 70 },
+                diamond: { damage: 8, mineSpeed: 8.0, durability: 1561 },
+                netherite: { damage: 9, mineSpeed: 9.5, durability: 2031 }
+            }[tier] || { damage: 6, mineSpeed: 4.0, durability: 260 };
+            return { ...s, chopSpeed: 1.0, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' };
+        }
+        if (sub === 'excavator' || sub.endsWith('_excavator') || sub.includes('excavator')) {
+            let tier = 'stone';
+            if (sub.includes('wood')) tier = 'wood';
+            else if (sub.includes('iron')) tier = 'iron';
+            else if (sub.includes('gold')) tier = 'gold';
+            else if (sub.includes('diamond')) tier = 'diamond';
+            else if (sub.includes('netherite')) tier = 'netherite';
+            const s = {
+                wood: { damage: 4, digSpeed: 2.5, durability: 120 },
+                stone: { damage: 5, digSpeed: 4.0, durability: 260 },
+                iron: { damage: 6, digSpeed: 6.0, durability: 500 },
+                gold: { damage: 4, digSpeed: 9.0, durability: 70 },
+                diamond: { damage: 7, digSpeed: 8.0, durability: 1561 },
+                netherite: { damage: 8, digSpeed: 9.5, durability: 2031 }
+            }[tier] || { damage: 5, digSpeed: 4.0, durability: 260 };
+            return { ...s, mineSpeed: 1.0, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' };
+        }
+        if (sub === 'slime_boots' || sub === 'boots_slime') return { protection: 2, slot: 'boots', bouncy: true, passive: 'Super Bouncy & No Fall Damage' };
+        if (sub === 'cloud_parachute' || sub === 'cold_parachute') return { slowFall: true, passive: 'Slow Fall Gliding' };
+        if (sub === 'golden_feather')   return { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' };
+
+        return { damage: 0, durability: 999 };
+    }
+
     _renderCreativeInventory() {
         const panel = this.elements.creativeItemsGrid || document.getElementById('creative-items-grid');
         if (!panel) return;
@@ -1272,111 +1392,7 @@ class UISystem {
         }
 
         // --- Equipment / Items Section ---
-        const getEquipDataForSubtype = (sub) => {
-            // Hoes
-            if (sub === 'hoe_netherite' || sub === 'netherite_hoe') return { isHoe: true, damage: 1, durability: 2031, passive: 'Infernal Cultivation (Fireproof)' };
-            if (sub === 'hoe_diamond'   || sub === 'diamond_hoe')   return { isHoe: true, damage: 1, durability: 1561 };
-            if (sub === 'hoe_iron'      || sub === 'iron_hoe')      return { isHoe: true, damage: 1, durability: 250 };
-            if (sub === 'hoe_gold'      || sub === 'golden_hoe')    return { isHoe: true, damage: 1, durability: 32 };
-            if (sub === 'hoe_stone'     || sub === 'stone_hoe')     return { isHoe: true, damage: 1, durability: 131 };
-            if (sub === 'hoe_wood'      || sub === 'wooden_hoe')    return { isHoe: true, damage: 1, durability: 59 };
-            // Netherite
-            if (sub === 'sword_netherite')   return { damage: 11, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Infernal Might (Fireproof & High Knockback)' };
-            if (sub === 'pickaxe_netherite') return { mineSpeed: 5.5, damage: 6, chopSpeed: 1.5, passive: 'Infernal Resilience (Fireproof)' };
-            if (sub === 'axe_netherite')     return { chopSpeed: 5.5, damage: 10, mineSpeed: 1.0, passive: 'Infernal Cleave (Heavy Strike)' };
-            if (sub === 'shovel_netherite')  return { digSpeed: 5.5, damage: 5, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Infernal Excavation' };
-            // Gravitite (Aether)
-            if (sub === 'sword_gravitite')   return { damage: 10, mineSpeed: 1.0, chopSpeed: 1.0, levitate: true, passive: 'Levitation Surge (Launches Mobs Upward)' };
-            if (sub === 'pickaxe_gravitite') return { mineSpeed: 5.0, damage: 5, chopSpeed: 1.5, passive: 'Levitation Core (Zero-G)' };
-            if (sub === 'axe_gravitite')     return { chopSpeed: 5.0, damage: 9, mineSpeed: 1.0, passive: 'Levitation Strike' };
-            if (sub === 'shovel_gravitite')  return { digSpeed: 5.0, damage: 4, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Levitation Scoop' };
-            // Ruby
-            if (sub === 'sword_ruby')        return { damage: 9, mineSpeed: 1.0, chopSpeed: 1.0, fire: true, passive: 'Igniting Edge (Sets Enemies Ablaze)' };
-            if (sub === 'pickaxe_ruby')      return { mineSpeed: 4.5, damage: 5, chopSpeed: 1.5, passive: 'Molten Core (Auto-Smelts Ores to Ingots)' };
-            if (sub === 'axe_ruby')          return { chopSpeed: 4.5, damage: 8, mineSpeed: 1.0, passive: 'Kindling Strike' };
-            if (sub === 'shovel_ruby')       return { digSpeed: 4.5, damage: 4, mineSpeed: 1.0, chopSpeed: 1.0 };
-            // Sapphire
-            if (sub === 'sword_sapphire')    return { damage: 8, mineSpeed: 1.0, chopSpeed: 1.0, frost: true, passive: 'Glacial Frost (Freezes Enemies)' };
-            if (sub === 'pickaxe_sapphire')  return { mineSpeed: 4.0, damage: 4, chopSpeed: 1.5, passive: 'Crystal Precision' };
-            if (sub === 'axe_sapphire')      return { chopSpeed: 4.0, damage: 7, mineSpeed: 1.0, passive: 'Glacial Cleave' };
-            if (sub === 'shovel_sapphire')   return { digSpeed: 4.0, damage: 3, mineSpeed: 1.0, chopSpeed: 1.0 };
-            // Zanite (Aether)
-            if (sub === 'sword_zanite')      return { damage: 7, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Aetherial Surge (Damage Scales With Use)' };
-            if (sub === 'pickaxe_zanite')    return { mineSpeed: 4.2, damage: 4, chopSpeed: 1.5, passive: 'Aetherial Surge (Mines Faster With Use)' };
-            if (sub === 'axe_zanite')        return { chopSpeed: 4.2, damage: 7, mineSpeed: 1.0, passive: 'Aetherial Surge' };
-            if (sub === 'shovel_zanite')     return { digSpeed: 4.2, damage: 3, mineSpeed: 1.0, chopSpeed: 1.0, passive: 'Aetherial Surge' };
-            // Diamond
-            if (sub === 'sword_diamond')     return { damage: 12, mineSpeed: 1.0, chopSpeed: 1.0 };
-            if (sub === 'pickaxe_diamond')   return { mineSpeed: 6.0, damage: 5, chopSpeed: 1.5 };
-            if (sub === 'axe_diamond')       return { chopSpeed: 5.0, damage: 7, mineSpeed: 1.0 };
-            if (sub === 'shovel_diamond')    return { digSpeed: 5.0, damage: 4, mineSpeed: 1.0, chopSpeed: 1.0 };
-            // Iron
-            if (sub === 'sword_iron')        return { damage: 8, mineSpeed: 1.0, chopSpeed: 1.0 };
-            if (sub === 'pickaxe_iron')      return { mineSpeed: 3.0, damage: 4, chopSpeed: 1.5 };
-            if (sub === 'axe_iron')          return { chopSpeed: 3.0, damage: 5, mineSpeed: 1.0 };
-            if (sub === 'shovel_iron')       return { digSpeed: 3.0, damage: 3, mineSpeed: 1.0, chopSpeed: 1.0 };
-            // Gold
-            if (sub === 'sword_gold')        return { damage: 7, mineSpeed: 1.0, chopSpeed: 1.0 };
-            if (sub === 'pickaxe_gold')      return { mineSpeed: 2.5, damage: 3, chopSpeed: 2.5 };
-            if (sub === 'axe_gold')          return { chopSpeed: 2.5, damage: 4, mineSpeed: 1.0 };
-            if (sub === 'shovel_gold')       return { digSpeed: 2.5, damage: 2, mineSpeed: 1.0, chopSpeed: 1.0 };
-            // Stone
-            if (sub === 'sword_stone')       return { damage: 5, mineSpeed: 1.0, chopSpeed: 1.0 };
-            if (sub === 'pickaxe_stone')     return { mineSpeed: 2.0, damage: 3, chopSpeed: 1.2 };
-            if (sub === 'axe_stone')         return { chopSpeed: 2.0, damage: 4, mineSpeed: 1.0 };
-            if (sub === 'shovel_stone')      return { digSpeed: 2.0, damage: 2, mineSpeed: 1.0, chopSpeed: 1.0 };
-            // Wood
-            if (sub === 'sword_wood')        return { damage: 3, mineSpeed: 1.0, chopSpeed: 1.0 };
-            if (sub === 'pickaxe_wood')      return { mineSpeed: 1.5, damage: 2, chopSpeed: 1.0 };
-            if (sub === 'axe_wood')          return { chopSpeed: 1.5, damage: 3, mineSpeed: 1.0 };
-            if (sub === 'shovel_wood')       return { digSpeed: 1.5, damage: 1, mineSpeed: 1.0, chopSpeed: 1.0 };
-            if (sub === 'bow')               return { range: 25, damage: 6, passive: 'Ranged Weapon' };
-            // Armor
-            if (sub.startsWith('head_') || sub.startsWith('helmet_')) return { protection: sub.includes('diamond') ? 5 : (sub.includes('gold') ? 3 : 2) };
-            if (sub.startsWith('chest_')) return { protection: sub.includes('diamond') ? 10 : (sub.includes('gold') ? 7 : 5) };
-            if (sub.startsWith('legs_')) return { protection: sub.includes('diamond') ? 7 : (sub.includes('gold') ? 4 : 3) };
-            if (sub.startsWith('boots_')) return { protection: sub.includes('diamond') ? 5 : (sub.includes('gold') ? 3 : 2) };
-            // Mod Items
-            if (sub === 'hammer' || sub.endsWith('_hammer') || sub.includes('hammer')) {
-                let tier = 'stone';
-                if (sub.includes('wood')) tier = 'wood';
-                else if (sub.includes('iron')) tier = 'iron';
-                else if (sub.includes('gold')) tier = 'gold';
-                else if (sub.includes('diamond')) tier = 'diamond';
-                else if (sub.includes('netherite')) tier = 'netherite';
-                const s = {
-                    wood: { damage: 5, mineSpeed: 2.5, durability: 120 },
-                    stone: { damage: 6, mineSpeed: 4.0, durability: 260 },
-                    iron: { damage: 7, mineSpeed: 6.0, durability: 500 },
-                    gold: { damage: 5, mineSpeed: 9.0, durability: 70 },
-                    diamond: { damage: 8, mineSpeed: 8.0, durability: 1561 },
-                    netherite: { damage: 9, mineSpeed: 9.5, durability: 2031 }
-                }[tier] || { damage: 6, mineSpeed: 4.0, durability: 260 };
-                return { ...s, chopSpeed: 1.0, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' };
-            }
-            if (sub === 'excavator' || sub.endsWith('_excavator') || sub.includes('excavator')) {
-                let tier = 'stone';
-                if (sub.includes('wood')) tier = 'wood';
-                else if (sub.includes('iron')) tier = 'iron';
-                else if (sub.includes('gold')) tier = 'gold';
-                else if (sub.includes('diamond')) tier = 'diamond';
-                else if (sub.includes('netherite')) tier = 'netherite';
-                const s = {
-                    wood: { damage: 4, digSpeed: 2.5, durability: 120 },
-                    stone: { damage: 5, digSpeed: 4.0, durability: 260 },
-                    iron: { damage: 6, digSpeed: 6.0, durability: 500 },
-                    gold: { damage: 4, digSpeed: 9.0, durability: 70 },
-                    diamond: { damage: 7, digSpeed: 8.0, durability: 1561 },
-                    netherite: { damage: 8, digSpeed: 9.5, durability: 2031 }
-                }[tier] || { damage: 5, digSpeed: 4.0, durability: 260 };
-                return { ...s, mineSpeed: 1.0, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' };
-            }
-            if (sub === 'slime_boots' || sub === 'boots_slime') return { protection: 2, slot: 'boots', bouncy: true, passive: 'Super Bouncy & No Fall Damage' };
-            if (sub === 'cloud_parachute' || sub === 'cold_parachute') return { slowFall: true, passive: 'Slow Fall Gliding' };
-            if (sub === 'golden_feather')   return { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' };
-
-            return { damage: 0, durability: 999 };
-        };
+        const getEquipDataForSubtype = (sub) => this.getEquipDataForSubtype(sub);
 
         const equipItems = [
             { type: 'equipment', subtype: 'flint_and_steel', name: 'Flint and Steel' },
@@ -1457,6 +1473,10 @@ class UISystem {
             { type: 'equipment', subtype: 'shovel_wood',     name: 'Wooden Shovel' },
             { type: 'equipment', subtype: 'hoe_wood',        name: 'Wooden Hoe' },
             // Armor
+            { type: 'equipment', subtype: 'helmet_leather',  name: 'Leather Cap' },
+            { type: 'equipment', subtype: 'chest_leather',   name: 'Leather Tunic' },
+            { type: 'equipment', subtype: 'legs_leather',    name: 'Leather Pants' },
+            { type: 'equipment', subtype: 'boots_leather',   name: 'Leather Boots' },
             { type: 'equipment', subtype: 'helmet_iron',     name: 'Iron Helmet' },
             { type: 'equipment', subtype: 'chest_iron',      name: 'Iron Chestplate' },
             { type: 'equipment', subtype: 'legs_iron',       name: 'Iron Leggings' },
@@ -1470,6 +1490,8 @@ class UISystem {
             { type: 'equipment', subtype: 'legs_diamond',    name: 'Diamond Leggings' },
             { type: 'equipment', subtype: 'boots_diamond',   name: 'Diamond Boots' },
             // Materials
+            { type: 'material',  subtype: 'leather',         name: 'Leather' },
+            { type: 'material',  subtype: 'item_frame',      name: 'Item Frame' },
             { type: 'material',  subtype: 'netherite_ingot', name: 'Netherite Ingot' },
             { type: 'material',  subtype: 'netherite_scrap', name: 'Netherite Scrap' },
             { type: 'material',  subtype: 'ruby',            name: 'Ruby' },
@@ -2260,6 +2282,26 @@ class UISystem {
             }
         }
 
+        // Dynamic compass and clock refresh in hotbar HUD
+        if (player && player.inventory) {
+            if (!this._lastHudCompassTick || performance.now() - this._lastHudCompassTick > 150) {
+                this._lastHudCompassTick = performance.now();
+                if (this.elements.mainHotbar) {
+                    for (let i = 0; i < 9; i++) {
+                        const s = player.inventory.slots[i];
+                        if (s && s.item && (s.item.subtype === 'compass' || s.item.subtype === 'clock')) {
+                            const el = this.elements.mainHotbar.children[i];
+                            if (el) this.renderSlotItem(el, s);
+                        }
+                    }
+                }
+                if (player.inventory.offhand && (player.inventory.offhand.item.subtype === 'compass' || player.inventory.offhand.item.subtype === 'clock')) {
+                    const offhandHud = document.getElementById('mc-hotbar-offhand');
+                    if (offhandHud) this.renderSlotItem(offhandHud, player.inventory.offhand);
+                }
+            }
+        }
+
         // Hide mana bar in spectator mode
         const manaContainer = document.getElementById('mc-mana-container');
         if (manaContainer && player && player.isSpectator) {
@@ -2331,7 +2373,22 @@ class UISystem {
         const itm = (slot && slot.item) ? slot.item : slot;
         const cnt = (slot && slot.count !== undefined) ? slot.count : 1;
         const itemId = itm.id || `${itm.type || 'item'}_${itm.subtype || 'none'}`;
-        const cacheKey = `${itemId}_${cnt}`;
+        let cacheKey = `${itemId}_${cnt}`;
+        if (itm.subtype === 'compass') {
+            let angle = 0;
+            if (this.currentPlayer) {
+                const spawn = this.currentPlayer.spawnPoint || { x: 0, y: 64, z: 0 };
+                const dx = spawn.x - this.currentPlayer.position.x;
+                const dz = spawn.z - this.currentPlayer.position.z;
+                angle = Math.atan2(dx, dz) - (this.currentPlayer.rotation ? this.currentPlayer.rotation.yaw : 0);
+            }
+            const qAngle = Math.round((angle || 0) * 8);
+            cacheKey += `_${qAngle}`;
+        } else if (itm.subtype === 'clock') {
+            const time = (window.game && window.game.lighting) ? window.game.lighting.timeOfDay : 0.5;
+            const qTime = Math.round((time || 0) * 32);
+            cacheKey += `_${qTime}`;
+        }
         if (!forceUpdate && el._cacheKey === cacheKey) return;
         el._cacheKey = cacheKey;
         if (itm) {
@@ -2349,7 +2406,19 @@ class UISystem {
                         if (img) img.src = canvas.toDataURL();
                     }
                 };
-                if (itm.type === 'wand') cvs = generateItemTexture('wand', itm.subtype || 'wand_basic', updateImg);
+                if (itm.subtype === 'compass') {
+                    let angle = 0;
+                    if (this.currentPlayer) {
+                        const spawn = this.currentPlayer.spawnPoint || { x: 0, y: 64, z: 0 };
+                        const dx = spawn.x - this.currentPlayer.position.x;
+                        const dz = spawn.z - this.currentPlayer.position.z;
+                        angle = Math.atan2(dx, dz) - (this.currentPlayer.rotation ? this.currentPlayer.rotation.yaw : 0);
+                    }
+                    cvs = drawDynamicCompassCanvas(angle);
+                } else if (itm.subtype === 'clock') {
+                    const time = (window.game && window.game.lighting) ? window.game.lighting.timeOfDay : 0.5;
+                    cvs = drawDynamicClockCanvas(time);
+                } else if (itm.type === 'wand') cvs = generateItemTexture('wand', itm.subtype || 'wand_basic', updateImg);
                 else if (itm.type === 'spell') cvs = generateItemTexture('spell', (itm.data && itm.data.spell && itm.data.spell.element) || 'spell_basic', updateImg);
                 else if (itm.type === 'material') cvs = generateItemTexture('material', itm.subtype, updateImg);
                 else if (itm.type === 'equipment') cvs = generateItemTexture('equipment', itm.subtype, updateImg);
@@ -3423,11 +3492,15 @@ class UISystem {
                 return equip(subType, { protection }, name, `Protection: ${protection}`);
             return null;
         };
-        // Armor Boots: 4 mat sides
+        // Armor Boots: 4 mat sides (top two rows or bottom two rows)
         const armorRecipeBoots = (matType, name, subType, protection) => {
-            if (!s[0] && !s[1] && !s[2] &&
+            const row23 = (!s[0] && !s[1] && !s[2] &&
                 s[3] === matType && !s[4] && s[5] === matType &&
-                s[6] === matType && !s[7] && s[8] === matType)
+                s[6] === matType && !s[7] && s[8] === matType);
+            const row12 = (s[0] === matType && !s[1] && s[2] === matType &&
+                s[3] === matType && !s[4] && s[5] === matType &&
+                !s[6] && !s[7] && !s[8]);
+            if (row23 || row12)
                 return equip(subType, { protection }, name, `Protection: ${protection}`);
             return null;
         };
@@ -3707,6 +3780,12 @@ class UISystem {
             r = hoeRecipe(B.COBBLESTONE, 'Stone Hoe'); if (r) return r;
             r = hoeRecipe(B.PLANKS, 'Wooden Hoe'); if (r) return r;
 
+            // Leather Armor
+            r = armorRecipe2H('leather', 'Leather Cap', 'helmet_leather', 1); if (r) return r;
+            r = armorRecipeFull('leather', 'Leather Tunic', 'chest_leather', 3); if (r) return r;
+            r = armorRecipeLegs('leather', 'Leather Pants', 'legs_leather', 2); if (r) return r;
+            r = armorRecipeBoots('leather', 'Leather Boots', 'boots_leather', 1); if (r) return r;
+
             r = armorRecipe2H('iron_ingot', 'Iron Helmet', 'head_iron', 2); if (r) return r;
             r = armorRecipeFull('iron_ingot', 'Iron Chestplate', 'chest_iron', 5); if (r) return r;
             r = armorRecipeLegs('iron_ingot', 'Iron Leggings', 'legs_iron', 3); if (r) return r;
@@ -3829,6 +3908,7 @@ class UISystem {
             if (getCount('iron_nugget') === 8 && (getCount(B.SOUL_SAND) === 1 || getCount('soul_sand') === 1 || getCount(B.SOUL_TORCH) === 1 || getCount('soul_torch') === 1) && totalItems === 9) return block(B.SOUL_LANTERN, 'Soul Lantern', 1);
 
             // Utilities & Weapons
+            if (getCount('stick') === 8 && getCount('leather') === 1 && totalItems === 9) return mat('item_frame', 'Item Frame', 1);
             if (getCount('iron_ingot') === 4 && getCount('redstone') === 1 && totalItems === 5) return mat('compass', 'Compass', 1);
             if (getCount('gold_ingot') === 4 && getCount('redstone') === 1 && totalItems === 5) return mat('clock', 'Clock', 1);
             if (getCount('stick') === 3 && getCount('string') === 3 && totalItems === 6) return equip('bow', { range: 25, damage: 6, passive: 'Ranged Weapon' }, 'Bow', 'Fires arrows at distant foes.');
@@ -4054,6 +4134,11 @@ class UISystem {
             { name: "Diamond Excavator", desc: "High-durability 3x3 excavation.", grid: [[_,mat('diamond'),_],[mat('diamond'),mat('stick'),mat('diamond')],[_,mat('stick'),_]], out: eqp('diamond_excavator'), outCount: 1, needs3x3: true },
             { name: "Netherite Excavator", desc: "Ultimate fireproof 3x3 excavator.", grid: [[_,_,_],[eqp('diamond_excavator'),mat('netherite_ingot'),_],[_,_,_]], out: eqp('netherite_excavator'), outCount: 1, needs3x3: false },
 
+            { name: "Leather Cap", desc: "Basic protective cap.", grid: [[mat('leather'),mat('leather'),mat('leather')],[mat('leather'),_,mat('leather')],[_,_,_]], out: eqp('helmet_leather'), outCount: 1, needs3x3: true },
+            { name: "Leather Tunic", desc: "Basic protective tunic.", grid: [[mat('leather'),_,mat('leather')],[mat('leather'),mat('leather'),mat('leather')],[mat('leather'),mat('leather'),mat('leather')]], out: eqp('chest_leather'), outCount: 1, needs3x3: true },
+            { name: "Leather Pants", desc: "Basic protective pants.", grid: [[mat('leather'),mat('leather'),mat('leather')],[mat('leather'),_,mat('leather')],[mat('leather'),_,mat('leather')]], out: eqp('legs_leather'), outCount: 1, needs3x3: true },
+            { name: "Leather Boots", desc: "Basic protective boots.", grid: [[_,_,_],[mat('leather'),_,mat('leather')],[mat('leather'),_,mat('leather')]], out: eqp('boots_leather'), outCount: 1, needs3x3: true },
+
             { name: "Gold Helmet", desc: "Shiny protection.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')],[_,_,_]], out: eqp('helmet_gold'), outCount: 1, needs3x3: true },
             { name: "Gold Chestplate", desc: "Shiny protection.", grid: [[mat('gold_ingot'),_,mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: eqp('chest_gold'), outCount: 1, needs3x3: true },
             { name: "Gold Leggings", desc: "Shiny protection.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')]], out: eqp('legs_gold'), outCount: 1, needs3x3: true },
@@ -4074,6 +4159,7 @@ class UISystem {
             { name: "Sugar", desc: "Sweet dust.", grid: [[_,_,_],[blk(B.SUGARCANE),_,_],[_,_,_]], out: mat('sugar'), outCount: 1, needs3x3: false },
             { name: "Paper (3)", desc: "Writing material.", grid: [[_,_,_],[blk(B.SUGARCANE),blk(B.SUGARCANE),_],[_,blk(B.SUGARCANE),_]], out: mat('paper'), outCount: 3, needs3x3: false },
             { name: "Book", desc: "A readable item.", grid: [[_,_,_],[mat('paper'),mat('paper'),_],[mat('paper'),mat('leather'),_]], out: mat('book'), outCount: 1, needs3x3: false },
+            { name: "Item Frame", desc: "Displays items on walls.", grid: [[mat('stick'),mat('stick'),mat('stick')],[mat('stick'),mat('leather'),mat('stick')],[mat('stick'),mat('stick'),mat('stick')]], out: mat('item_frame'), outCount: 1, needs3x3: true },
             
             { name: "Iron Block", desc: "Storage block.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')]], out: blk(B.IRON_BLOCK), outCount: 1, needs3x3: true },
             { name: "Gold Block", desc: "Storage block.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: blk(B.GOLD_BLOCK), outCount: 1, needs3x3: true },

@@ -5,15 +5,15 @@
 // ============================================
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=154';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=156';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh, drawDynamicCompassCanvas, drawDynamicClockCanvas } from './textures.js?v=157';
 import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=154';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=156';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=156';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=157';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=157';
 import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=148';
 import { AudioManager } from './audio.js?v=139';
 import { BiomeMap } from './map.js?v=139';
 import { DevMode } from './dev.js?v=139';
-import { ChatSystem } from './chat.js?v=156';
+import { ChatSystem } from './chat.js?v=157';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -28,6 +28,8 @@ window.MOB_TYPES = MOB_TYPES;
 window.Item = Item;
 window.getBlockProperties = getBlockProperties;
 window.getBlockName = getBlockName;
+window.drawDynamicCompassCanvas = drawDynamicCompassCanvas;
+window.drawDynamicClockCanvas = drawDynamicClockCanvas;
 
 const FOOD_HEAL_MAP = {
     'apple': 15,
@@ -2059,7 +2061,19 @@ class Game {
         }
     }
 
-    // UI functions removed by user request
+    _refreshHeldExtrudedMesh(canvas, item) {
+        if (!this.heldItemMesh || !this.viewModel) return;
+        const newMesh = createExtrudedItemMesh(canvas, 0.45, 0.035);
+        newMesh.position.copy(this.heldItemMesh.position);
+        newMesh.rotation.copy(this.heldItemMesh.rotation);
+        newMesh.userData = Object.assign({}, this.heldItemMesh.userData);
+        newMesh.userData.item = item;
+        this.viewModel.remove(this.heldItemMesh);
+        if (this.heldItemMesh.geometry) this.heldItemMesh.geometry.dispose();
+        if (this.heldItemMesh.material) this.heldItemMesh.material.dispose();
+        this.heldItemMesh = newMesh;
+        this.viewModel.add(this.heldItemMesh);
+    }
 
     handleInput(dt) {
         if (!this.input.isPointerLocked()) return;
@@ -2097,6 +2111,9 @@ class Game {
 
         // Update held item visual
         const slot = this.player.inventory.slots[this.player.selectedSlot];
+        if (this.handMesh) {
+            this.handMesh.visible = !slot;
+        }
         if (!slot && this.heldItemMesh) {
             this.viewModel.remove(this.heldItemMesh);
             this.heldItemMesh = null;
@@ -2243,26 +2260,62 @@ class Game {
                 this.heldItemMesh.position.set(0.42, -0.30, -0.72);
                 this.heldItemMesh.rotation.x = Math.PI / 4.8;
             } else {
-                const iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype, (c) => {
-                    // Update extruded mesh if texture loads asynchronously
-                    if (this.heldItemMesh && this.heldItemMesh.userData && this.heldItemMesh.userData.item === slot.item) {
-                        const newExtruded = createExtrudedItemMesh(c, 0.45, 0.035);
-                        newExtruded.position.copy(this.heldItemMesh.position);
-                        newExtruded.rotation.copy(this.heldItemMesh.rotation);
-                        newExtruded.userData.item = slot.item;
-                        this.viewModel.remove(this.heldItemMesh);
-                        if (this.heldItemMesh.geometry) this.heldItemMesh.geometry.dispose();
-                        if (this.heldItemMesh.material) this.heldItemMesh.material.dispose();
-                        this.heldItemMesh = newExtruded;
-                        this.viewModel.add(this.heldItemMesh);
+                const safeSub = String(slot.item.subtype || '').toLowerCase();
+                const isTool = slot.item.type === 'tool' ||
+                    safeSub.includes('sword') ||
+                    safeSub.includes('pickaxe') ||
+                    safeSub.includes('axe') ||
+                    safeSub.includes('shovel') ||
+                    safeSub.includes('hoe') ||
+                    safeSub.includes('hammer') ||
+                    safeSub.includes('excavator') ||
+                    safeSub.includes('rod');
+
+                const applyViewTransform = (m) => {
+                    if (isTool) {
+                        m.position.set(0.38, -0.32, -0.60);
+                        m.rotation.set(-0.25, 0.35, -0.78);
+                    } else {
+                        m.position.set(0.35, -0.28, -0.55);
+                        m.rotation.set(-0.15, 0.20, -0.35);
                     }
-                });
+                };
+
+                let iconCanvas;
+                if (slot.item.subtype === 'compass') {
+                    let angle = 0;
+                    if (this.planet === 'nether' || this.planet === 'end') {
+                        angle = (performance.now() * 0.006) % (Math.PI * 2);
+                    } else {
+                        const spawn = this.player.spawnPoint || { x: 0, y: 64, z: 0 };
+                        const dx = spawn.x - this.player.position.x;
+                        const dz = spawn.z - this.player.position.z;
+                        angle = Math.atan2(dx, dz) - this.player.rotation.yaw;
+                    }
+                    iconCanvas = drawDynamicCompassCanvas(angle);
+                } else if (slot.item.subtype === 'clock') {
+                    const time = (this.planet === 'nether' || this.planet === 'end') ? ((performance.now() * 0.001) % 1.0) : (this.lighting ? this.lighting.timeOfDay : 0.5);
+                    iconCanvas = drawDynamicClockCanvas(time);
+                } else {
+                    iconCanvas = generateItemTexture(slot.item.type, slot.item.subtype, (c) => {
+                        // Update extruded mesh if texture loads asynchronously
+                        if (this.heldItemMesh && this.heldItemMesh.userData && this.heldItemMesh.userData.item === slot.item) {
+                            const newExtruded = createExtrudedItemMesh(c, 0.45, 0.035);
+                            applyViewTransform(newExtruded);
+                            newExtruded.userData = Object.assign({}, this.heldItemMesh.userData);
+                            newExtruded.userData.item = slot.item;
+                            this.viewModel.remove(this.heldItemMesh);
+                            if (this.heldItemMesh.geometry) this.heldItemMesh.geometry.dispose();
+                            if (this.heldItemMesh.material) this.heldItemMesh.material.dispose();
+                            this.heldItemMesh = newExtruded;
+                            this.viewModel.add(this.heldItemMesh);
+                        }
+                    });
+                }
 
                 // Create extruded 3D pixelated mesh
                 this.heldItemMesh = createExtrudedItemMesh(iconCanvas, 0.45, 0.035);
-                // Position diagonally in Steve's hand pointing forward and slightly tilted
-                this.heldItemMesh.position.set(0.35, -0.32, -0.58);
-                this.heldItemMesh.rotation.set(-0.2, 0.35, -0.75); // Diagonal sword/tool grip
+                applyViewTransform(this.heldItemMesh);
             }
             this.heldItemMesh.userData.item = slot.item;
             this.viewModel.add(this.heldItemMesh);
@@ -2270,6 +2323,38 @@ class Game {
 
         // Ensure first-person hand & held weapon are strictly hidden in 3rd person
         this.viewModel.visible = (this.cameraMode === 0);
+
+        // Continuous live update of held compass / clock needle/dial
+        if (slot && slot.item && this.heldItemMesh && this.cameraMode === 0) {
+            if (slot.item.subtype === 'compass') {
+                let angle = 0;
+                if (this.planet === 'nether' || this.planet === 'end') {
+                    angle = (performance.now() * 0.006) % (Math.PI * 2);
+                } else {
+                    const spawn = this.player.spawnPoint || { x: 0, y: 64, z: 0 };
+                    const dx = spawn.x - this.player.position.x;
+                    const dz = spawn.z - this.player.position.z;
+                    angle = Math.atan2(dx, dz) - this.player.rotation.yaw;
+                }
+                if (this.heldItemMesh.userData.lastAngle === undefined || Math.abs(this.heldItemMesh.userData.lastAngle - angle) > 0.08) {
+                    this.heldItemMesh.userData.lastAngle = angle;
+                    const dynCvs = drawDynamicCompassCanvas(angle);
+                    this._refreshHeldExtrudedMesh(dynCvs, slot.item);
+                }
+            } else if (slot.item.subtype === 'clock') {
+                let time = 0.5;
+                if (this.planet === 'nether' || this.planet === 'end') {
+                    time = (performance.now() * 0.001) % 1.0;
+                } else if (this.lighting) {
+                    time = this.lighting.timeOfDay;
+                }
+                if (this.heldItemMesh.userData.lastTime === undefined || Math.abs(this.heldItemMesh.userData.lastTime - time) > 0.005) {
+                    this.heldItemMesh.userData.lastTime = time;
+                    const dynCvs = drawDynamicClockCanvas(time);
+                    this._refreshHeldExtrudedMesh(dynCvs, slot.item);
+                }
+            }
+        }
 
         // Track and animate authentic Minecraft swing arc
         if (!this.swingProgress) this.swingProgress = 0;
@@ -3637,6 +3722,56 @@ class Game {
                     if (this.ui.isOpen) {
                         this.ui.renderGrid(this.ui.elements.invHotbar, this.player.inventory.slots.slice(0, 9), 0, this.player, 'inventory');
                     }
+                }
+            } else if (slot && (slot.item.subtype === 'compass' || slot.item.subtype === 'clock')) {
+                if (slot.item.subtype === 'compass') {
+                    if (this.planet === 'nether' || this.planet === 'end') {
+                        if (this.chat && this.chat.addMessage) this.chat.addMessage('§cThe compass needle spins wildly! (No magnetic field in this dimension)');
+                    } else {
+                        const spawn = this.player.spawnPoint || { x: 0, y: 64, z: 0 };
+                        const dx = spawn.x - this.player.position.x;
+                        const dz = spawn.z - this.player.position.z;
+                        const dist = Math.round(Math.hypot(dx, dz));
+                        const rad = Math.atan2(dx, dz);
+                        const deg = ((rad * 180 / Math.PI) + 360) % 360;
+                        const dirs = ['North', 'North-East', 'East', 'South-East', 'South', 'South-West', 'West', 'North-West'];
+                        const dirIdx = Math.round(deg / 45) % 8;
+                        const dirName = dirs[dirIdx];
+                        if (this.chat && this.chat.addMessage) {
+                            this.chat.addMessage(`§bCompass pointing to World Spawn §7[X: ${Math.round(spawn.x)}, Z: ${Math.round(spawn.z)}] §f— §e${dist}m ${dirName}`);
+                        }
+                    }
+                    if (this.audio && this.audio.playPop) this.audio.playPop(this.player.position);
+                    this.isSwinging = true;
+                    this.swingProgress = 0;
+                    this.input.mouse.rightClick = false;
+                    return;
+                } else if (slot.item.subtype === 'clock') {
+                    if (this.planet === 'nether' || this.planet === 'end') {
+                        if (this.chat && this.chat.addMessage) this.chat.addMessage('§cThe clock dial spins erratically! (No day/night cycle in this dimension)');
+                    } else {
+                        const t = this.lighting ? this.lighting.timeOfDay : 0.5;
+                        const totalTicks = Math.floor(t * 24000);
+                        const totalMinutes = Math.floor(t * 24 * 60);
+                        const hour24 = (Math.floor(totalMinutes / 60) + 6) % 24;
+                        const minute = totalMinutes % 60;
+                        const hour12 = (hour24 % 12) === 0 ? 12 : (hour24 % 12);
+                        const ampm = hour24 >= 12 ? 'PM' : 'AM';
+                        const timeStr = `${hour12}:${minute.toString().padStart(2, '0')} ${ampm}`;
+                        let phase = 'Day';
+                        if (t < 0.05 || t > 0.95) phase = 'Sunrise / Dawn';
+                        else if (t < 0.45) phase = 'Day';
+                        else if (t < 0.55) phase = 'Sunset / Dusk';
+                        else phase = 'Night';
+                        if (this.chat && this.chat.addMessage) {
+                            this.chat.addMessage(`§eClock Time: §f${timeStr} §7(${phase}) §e— Day Tick §f${totalTicks}§7/24000`);
+                        }
+                    }
+                    if (this.audio && this.audio.playPop) this.audio.playPop(this.player.position);
+                    this.isSwinging = true;
+                    this.swingProgress = 0;
+                    this.input.mouse.rightClick = false;
+                    return;
                 }
             }
             this.input.mouse.rightClick = false; // single action

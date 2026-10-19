@@ -894,6 +894,7 @@ export class ChatSystem {
             'golden_feather': { type: 'equipment', subtype: 'golden_feather', name: 'Golden Feather', stackable: false, maxStack: 1, data: { equipData: { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' } } },
             'feather_golden': { type: 'equipment', subtype: 'golden_feather', name: 'Golden Feather', stackable: false, maxStack: 1, data: { equipData: { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' } } },
             'lead': { type: 'material', subtype: 'lead', name: 'Lead', stackable: true, maxStack: 64 },
+            'item_frame': { type: 'material', subtype: 'item_frame', name: 'Item Frame', stackable: true, maxStack: 64 },
 
             // Hammers (all 6 tiers)
             'wood_hammer': { type: 'equipment', subtype: 'wood_hammer', name: 'Wooden Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 5, mineSpeed: 2.5, chopSpeed: 1.0, durability: 120, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
@@ -929,12 +930,14 @@ export class ChatSystem {
         // Armor (helmet, chestplate, leggings, boots)
         const armors = ['helmet', 'chestplate', 'leggings', 'boots'];
         const armorPrefix = { 'helmet': 'head', 'chestplate': 'chest', 'leggings': 'legs', 'boots': 'boots' };
-        for (const m of mats) {
+        const armorMats = ['leather', 'diamond', 'netherite', 'iron', 'gold', 'stone', 'wood', 'ruby', 'sapphire', 'zanite', 'gravitite'];
+        for (const m of armorMats) {
             for (const a of armors) {
                 const sub = `${armorPrefix[a]}_${m}`;
                 const name = `${m.charAt(0).toUpperCase() + m.slice(1)} ${a.charAt(0).toUpperCase() + a.slice(1)}`;
                 itemMap[`${m}_${a}`] = { type: 'equipment', subtype: sub, name, stackable: false, maxStack: 1 };
                 itemMap[`${sub}`] = { type: 'equipment', subtype: sub, name, stackable: false, maxStack: 1 };
+                itemMap[`${a}_${m}`] = { type: 'equipment', subtype: sub, name, stackable: false, maxStack: 1 };
             }
         }
 
