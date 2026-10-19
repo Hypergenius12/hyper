@@ -883,6 +883,19 @@ export class ChatSystem {
             'lava_bucket': { type: 'equipment', subtype: 'lava_bucket', name: 'Lava Bucket', stackable: false, maxStack: 1 },
             'flint_and_steel': { type: 'equipment', subtype: 'flint_and_steel', name: 'Flint and Steel', stackable: false, maxStack: 1 },
             'shears': { type: 'equipment', subtype: 'shears', name: 'Shears', stackable: false, maxStack: 1 },
+            'slime_ball': { type: 'material', subtype: 'slime_ball', name: 'Slimeball', stackable: true, maxStack: 64 },
+            'slimeball': { type: 'material', subtype: 'slime_ball', name: 'Slimeball', stackable: true, maxStack: 64 },
+
+            // Mod Items
+            'slime_boots': { type: 'equipment', subtype: 'slime_boots', name: 'Slime Boots', stackable: false, maxStack: 1, data: { equipData: { protection: 2, slot: 'boots', bouncy: true, passive: 'Super Bouncy & No Fall Damage' } } },
+            'boots_slime': { type: 'equipment', subtype: 'slime_boots', name: 'Slime Boots', stackable: false, maxStack: 1, data: { equipData: { protection: 2, slot: 'boots', bouncy: true, passive: 'Super Bouncy & No Fall Damage' } } },
+            'cloud_parachute': { type: 'equipment', subtype: 'cloud_parachute', name: 'Cloud Parachute', stackable: false, maxStack: 1, data: { equipData: { slowFall: true, passive: 'Slow Fall Gliding' } } },
+            'parachute': { type: 'equipment', subtype: 'cloud_parachute', name: 'Cloud Parachute', stackable: false, maxStack: 1, data: { equipData: { slowFall: true, passive: 'Slow Fall Gliding' } } },
+            'golden_feather': { type: 'equipment', subtype: 'golden_feather', name: 'Golden Feather', stackable: false, maxStack: 1, data: { equipData: { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' } } },
+            'feather_golden': { type: 'equipment', subtype: 'golden_feather', name: 'Golden Feather', stackable: false, maxStack: 1, data: { equipData: { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' } } },
+            'hammer': { type: 'equipment', subtype: 'hammer', name: 'Stone Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 7, mineSpeed: 4.5, chopSpeed: 1.0, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
+            'stone_hammer': { type: 'equipment', subtype: 'hammer', name: 'Stone Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 7, mineSpeed: 4.5, chopSpeed: 1.0, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
+            'excavator': { type: 'equipment', subtype: 'excavator', name: 'Excavator', stackable: false, maxStack: 1, data: { equipData: { digSpeed: 4.5, damage: 5, mineSpeed: 1.0, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' } } },
         };
 
         // Tools (sword, pickaxe, axe, shovel)
@@ -922,7 +935,7 @@ export class ChatSystem {
         // Check match in itemMap
         if (itemMap[clean]) {
             const proto = itemMap[clean];
-            return new Item(proto.type, proto.subtype, proto.data || {}, proto.name);
+            return new Item(proto.type, proto.subtype, proto.data ? JSON.parse(JSON.stringify(proto.data)) : {}, proto.name);
         }
 
         // Check BLOCKS

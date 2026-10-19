@@ -257,15 +257,37 @@ export class Player {
         let speedMult = 1.0;
         let flying = false;
         
-        // Boots
-        const boots = this.inventory.armor[3];
-        if (boots && boots.item.data.equipData) {
+        // Boots & Equipment checks
+        const boots = this.inventory && this.inventory.armor ? this.inventory.armor[3] : null;
+        if (boots && boots.item && boots.item.data && boots.item.data.equipData) {
             if (boots.item.data.equipData.speedMult) speedMult = boots.item.data.equipData.speedMult;
             if (boots.item.data.equipData.flying) flying = true;
         }
         if (keys && keys._creativeFlying) {
             flying = true;
         }
+
+        const heldSlot = (this.inventory && this.inventory.slots) ? this.inventory.slots[this.selectedSlot] : null;
+        const heldItem = (heldSlot && heldSlot.item) ? heldSlot.item : null;
+        const bootsItem = (boots && boots.item) ? boots.item : null;
+
+        const hasSlimeBoots = (bootsItem && (bootsItem.subtype === 'slime_boots' || bootsItem.subtype === 'boots_slime')) ||
+                              (heldItem && (heldItem.subtype === 'slime_boots' || heldItem.subtype === 'boots_slime'));
+
+        const hasItemAnywhere = (sub) => {
+            if (!this.inventory) return false;
+            if (heldItem && (heldItem.subtype === sub || heldItem.type === sub)) return true;
+            if (this.inventory.slots) {
+                for (let i = 0; i < this.inventory.slots.length; i++) {
+                    const s = this.inventory.slots[i];
+                    if (s && s.item && (s.item.subtype === sub || s.item.type === sub)) return true;
+                }
+            }
+            return false;
+        };
+
+        const hasGoldenFeather = hasItemAnywhere('golden_feather');
+        const hasParachute = hasItemAnywhere('cloud_parachute') || hasItemAnywhere('cold_parachute');
 
         // Creative mode movement speed boost
         if (this.isCreative) {
@@ -399,8 +421,41 @@ export class Player {
         this.velocity.x *= friction;
         this.velocity.z *= friction;
 
-        // Y velocity update (gravity)
+        // Y velocity update (gravity & slow fall effects)
+        if (hasGoldenFeather) {
+            gravity *= 0.65; // Soft Aether low gravity
+        }
         this.velocity.y += gravity * dt;
+
+        // Golden feather passive slow falling
+        if (hasGoldenFeather && !this.grounded && !inWater && !inLava && !flying) {
+            if (this.velocity.y < -3.2) {
+                this.velocity.y = -3.2;
+                this.fallDistance = 0;
+            }
+            if (Math.random() < 0.22 && window.game && window.game.particles) {
+                window.game.particles.emit(this.position, 'magic', 2, 0xffd700);
+            }
+        }
+
+        // Cloud parachute active gliding
+        if (hasParachute && !this.grounded && !inWater && !inLava && !flying) {
+            const isHoldingParachute = (heldItem && (heldItem.subtype === 'cloud_parachute' || heldItem.subtype === 'cold_parachute'));
+            if (keys.jump || isHoldingParachute) {
+                if (this.velocity.y < -1.8) {
+                    this.velocity.y = Math.max(this.velocity.y, -1.8);
+                    this.fallDistance = 0;
+                    // Forward glide boost in viewing direction
+                    const lookX = -Math.sin(this.rotation.yaw);
+                    const lookZ = -Math.cos(this.rotation.yaw);
+                    this.velocity.x += lookX * 4.5 * dt;
+                    this.velocity.z += lookZ * 4.5 * dt;
+                    if (Math.random() < 0.35 && window.game && window.game.particles) {
+                        window.game.particles.emit(this.position, 'cloud', 2, 0xffffff);
+                    }
+                }
+            }
+        }
 
         // Jumping and Climbing
         if (onLadder) {
@@ -421,8 +476,12 @@ export class Player {
             }
         } else if (keys.jump) {
             if (this.grounded) {
-                this.velocity.y = this.jumpSpeed; // Normal jump force for regular ground
+                // If wearing or holding slime boots, jump 50% higher with bouncy force!
+                this.velocity.y = hasSlimeBoots ? 11.2 : this.jumpSpeed;
                 this.grounded = false;
+                if (hasSlimeBoots && window.game && window.game.particles) {
+                    window.game.particles.emit(this.position, 'magic', 6, 0x76d435);
+                }
                 if (!this.isCreative) {
                     this.exhaustion += (isSprinting ? 0.2 : 0.05);
                 }
@@ -469,6 +528,30 @@ export class Player {
         if (colResult.velocity.y === 0) this.velocity.y = 0;
 
         if (!wasGrounded && this.grounded) {
+            // Slime Boots landing: bounce back up into air with springy physics & zero fall damage!
+            if (hasSlimeBoots) {
+                const distFell = this.fallDistance;
+                this.fallDistance = 0;
+                if (distFell > 0.8) {
+                    const bounceForce = Math.min(22, Math.max(9.0, Math.sqrt(distFell * 28) * 0.82));
+                    this.velocity.y = bounceForce;
+                    this.grounded = false;
+                    this.fallStartY = this.position.y;
+                    if (window.game && window.game.particles) {
+                        window.game.particles.emit(this.position, 'magic', 16, 0x76d435);
+                    }
+                    if (window.game && window.game.audio && window.game.audio.playSquish) {
+                        window.game.audio.playSquish(this.position);
+                    }
+                    return;
+                }
+            }
+
+            // Golden Feather & Cloud Parachute 100% fall damage immunity
+            if (hasGoldenFeather || hasParachute) {
+                this.fallDistance = 0;
+            }
+
             // Check block under feet for Aercloud bounce or cushioning
             const blockUnder = world ? world.getBlock(Math.floor(this.position.x), Math.floor(this.position.y - 0.2), Math.floor(this.position.z)) : 0;
             const isBlueCloud = (blockUnder === BLOCKS.BLUE_AERCLOUD || (window.BLOCKS && blockUnder === window.BLOCKS.BLUE_AERCLOUD));
@@ -499,7 +582,7 @@ export class Player {
                     }
                 }
             }
-            if (!this.isCreative && !flying && !inWater && !inLava && !onLadder) {
+            if (!this.isCreative && !flying && !inWater && !inLava && !onLadder && !hasSlimeBoots && !hasGoldenFeather && !hasParachute) {
                 const dist = this.fallDistance;
                 if (dist > 15) {
                     // Fall damage: only when falling from > 15 blocks. Kill height is 70 blocks.
@@ -1042,6 +1125,7 @@ export class Player {
             if (sub.includes('ruby')) return 0xe0115f;
             if (sub.includes('sapphire')) return 0x1e60ff;
             if (sub.includes('zanite')) return 0x9d4edd;
+            if (sub.includes('slime')) return 0x76d435;
             if (sub.includes('leather')) return 0x93512b;
             return 0xdcdcdc;
         };
@@ -4731,6 +4815,12 @@ export class Mob {
         this.hostile = config.hostile;
         this.color = config.color;
         this.size = config.size;
+        this.width = config.width || config.size || 0.8;
+        this.height = config.height || (config.size ? Math.max(config.size * 1.4, 0.8) : 1.8);
+        this.depth = config.depth || this.width;
+        this.hitboxWidth = this.width;
+        this.hitboxHeight = this.height;
+        this.hitboxDepth = this.depth;
         this.flying = config.flying || false;
         this.mesh = null;
         this.alive = true;
@@ -4797,6 +4887,19 @@ export class Mob {
                 });
             }
 
+            // Measure actual mesh geometry bounds to compute accurate 3D hitbox
+            const geomBox = new THREE.Box3().setFromObject(this.mesh);
+            const sizeVec = new THREE.Vector3();
+            geomBox.getSize(sizeVec);
+            
+            // Set generous hitbox dimensions matching actual 3D visual bounds with generous minimums for small animals
+            this.hitboxWidth = Math.max(this.width, sizeVec.x, 0.6);
+            this.hitboxHeight = Math.max(this.height, sizeVec.y, 0.7);
+            this.hitboxDepth = Math.max(this.depth, sizeVec.z, 0.6);
+            this.height = this.hitboxHeight;
+            this.width = this.hitboxWidth;
+            this.depth = this.hitboxDepth;
+
             // Add health bar above mob
             const barGroup = new THREE.Group();
             const bgGeo = new THREE.PlaneGeometry(0.6, 0.06);
@@ -4811,7 +4914,7 @@ export class Mob {
             this.healthBar = fg;
             barGroup.add(fg);
             
-            barGroup.position.y = this.size + 0.3;
+            barGroup.position.y = this.hitboxHeight + 0.3;
             barGroup.name = 'healthBar';
             this.mesh.add(barGroup);
             
@@ -5945,9 +6048,14 @@ export class EntityManager {
         for (const mob of this.mobs) {
             if (!mob.alive) continue;
             
-            // Mob AABB
-            _tempMin.set(mob.position.x - mob.size/2, mob.position.y, mob.position.z - mob.size/2);
-            _tempMax.set(mob.position.x + mob.size/2, mob.position.y + mob.size, mob.position.z + mob.size/2);
+            // Mob AABB using accurate 3D geometry dimensions + forgiving margin
+            const w = (mob.hitboxWidth || mob.width || mob.size || 0.8);
+            const h = (mob.hitboxHeight || mob.height || (mob.size * 1.5) || 1.8);
+            const d = (mob.hitboxDepth || mob.depth || w);
+            const pad = 0.12; // Hitbox margin so attacks never phantom-miss small animals
+            
+            _tempMin.set(mob.position.x - w/2 - pad, mob.position.y - pad, mob.position.z - d/2 - pad);
+            _tempMax.set(mob.position.x + w/2 + pad, mob.position.y + h + pad, mob.position.z + d/2 + pad);
             _tempBox.set(_tempMin, _tempMax);
             _tempRay.set(origin, direction);
             

@@ -5,15 +5,15 @@
 // ============================================
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=150';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=148';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=153';
 import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=152';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=148';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=152';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=153';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=153';
 import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=148';
 import { AudioManager } from './audio.js?v=139';
 import { BiomeMap } from './map.js?v=139';
 import { DevMode } from './dev.js?v=139';
-import { ChatSystem } from './chat.js?v=139';
+import { ChatSystem } from './chat.js?v=153';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -2446,6 +2446,66 @@ class Game {
                         }
                     } else if (blockType === BLOCKS.KELP || blockType === BLOCKS.KELP_PLANT) {
                         this.world.checkAdjacentSupports(hit.blockPos.x, hit.blockPos.y, hit.blockPos.z);
+                    }
+
+                    // Tinkers' Construct 3x3 Area Mining (Hammer & Excavator)
+                    if (slot && slot.item && (slot.item.subtype === 'hammer' || slot.item.subtype === 'excavator')) {
+                        const isHammer = slot.item.subtype === 'hammer';
+                        const face = hit.face || { x: 0, y: 1, z: 0 };
+                        const offsets = [];
+                        
+                        if (Math.abs(face.y) > 0.5) {
+                            // Hit from top or bottom -> horizontal 3x3 plane (X and Z)
+                            for (let dx = -1; dx <= 1; dx++) {
+                                for (let dz = -1; dz <= 1; dz++) {
+                                    if (dx === 0 && dz === 0) continue;
+                                    offsets.push({ x: dx, y: 0, z: dz });
+                                }
+                            }
+                        } else if (Math.abs(face.z) > 0.5) {
+                            // Hit North or South -> vertical 3x3 wall (X and Y)
+                            for (let dx = -1; dx <= 1; dx++) {
+                                for (let dy = -1; dy <= 1; dy++) {
+                                    if (dx === 0 && dy === 0) continue;
+                                    offsets.push({ x: dx, y: dy, z: 0 });
+                                }
+                            }
+                        } else {
+                            // Hit East or West -> vertical 3x3 wall (Z and Y)
+                            for (let dz = -1; dz <= 1; dz++) {
+                                for (let dy = -1; dy <= 1; dy++) {
+                                    if (dz === 0 && dy === 0) continue;
+                                    offsets.push({ x: 0, y: dy, z: dz });
+                                }
+                            }
+                        }
+
+                        for (const off of offsets) {
+                            const nx = hit.blockPos.x + off.x;
+                            const ny = hit.blockPos.y + off.y;
+                            const nz = hit.blockPos.z + off.z;
+                            const nb = this.world.getBlock(nx, ny, nz);
+                            if (!nb || nb === BLOCKS.AIR || nb === BLOCKS.BEDROCK || nb === BLOCKS.WATER || nb === BLOCKS.LAVA) continue;
+                            
+                            const nProps = getBlockProperties(nb);
+                            let canBreak = false;
+                            if (isHammer) {
+                                // Break stone/ore/rock materials
+                                canBreak = (nProps && (nProps.tool === 'pickaxe' || nProps.hardness >= 1.5)) && nb !== BLOCKS.OBSIDIAN;
+                            } else {
+                                // Break dirt/sand/gravel soil materials
+                                canBreak = (nProps && (nProps.tool === 'shovel' || nProps.hardness < 1.0 || nProps.isSoil || nProps.isSand));
+                            }
+                            
+                            if (canBreak) {
+                                const nReplace = (nProps && nProps.isWaterlogged) ? BLOCKS.WATER : BLOCKS.AIR;
+                                this.world.setBlock(nx, ny, nz, nReplace);
+                                this.particles.emit({ x: nx + 0.5, y: ny + 0.5, z: nz + 0.5 }, 'block_break', 2, isHammer ? 0x888888 : 0x8b5a2b);
+                                if (nb === BLOCKS.TORCH || nb === BLOCKS.GLOWSTONE || nb === BLOCKS.LANTERN || nb === BLOCKS.SOUL_LANTERN) {
+                                    if (this.torchSystem) this.torchSystem.removeTorch(nx, ny, nz);
+                                }
+                            }
+                        }
                     }
                     
                     this.audio.playBreak(blockType);

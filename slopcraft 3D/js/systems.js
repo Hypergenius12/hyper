@@ -1336,12 +1336,25 @@ class UISystem {
             if (sub.startsWith('chest_')) return { protection: sub.includes('diamond') ? 10 : (sub.includes('gold') ? 7 : 5) };
             if (sub.startsWith('legs_')) return { protection: sub.includes('diamond') ? 7 : (sub.includes('gold') ? 4 : 3) };
             if (sub.startsWith('boots_')) return { protection: sub.includes('diamond') ? 5 : (sub.includes('gold') ? 3 : 2) };
+            // Mod Items
+            if (sub === 'hammer')            return { damage: 7, mineSpeed: 4.5, chopSpeed: 1.0, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' };
+            if (sub === 'excavator')         return { digSpeed: 4.5, damage: 5, mineSpeed: 1.0, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' };
+            if (sub === 'slime_boots' || sub === 'boots_slime') return { protection: 2, slot: 'boots', bouncy: true, passive: 'Super Bouncy & No Fall Damage' };
+            if (sub === 'cloud_parachute' || sub === 'cold_parachute') return { slowFall: true, passive: 'Slow Fall Gliding' };
+            if (sub === 'golden_feather')   return { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' };
 
             return { damage: 0, durability: 999 };
         };
 
         const equipItems = [
             { type: 'equipment', subtype: 'flint_and_steel', name: 'Flint and Steel' },
+            // Mod Items
+            { type: 'equipment', subtype: 'slime_boots',     name: 'Slime Boots' },
+            { type: 'equipment', subtype: 'cloud_parachute', name: 'Cloud Parachute' },
+            { type: 'equipment', subtype: 'golden_feather',   name: 'Golden Feather' },
+            { type: 'equipment', subtype: 'hammer',          name: 'Stone Hammer' },
+            { type: 'equipment', subtype: 'excavator',       name: 'Excavator' },
+            { type: 'material',  subtype: 'slime_ball',      name: 'Slimeball' },
             // Netherite
             { type: 'equipment', subtype: 'sword_netherite',   name: 'Netherite Sword' },
             { type: 'equipment', subtype: 'pickaxe_netherite', name: 'Netherite Pickaxe' },
@@ -3386,6 +3399,20 @@ class UISystem {
         if (getCount('string') === 4 && (getCount('slime_ball') === 1 || getCount('slimeball') === 1) && totalItems === 5) return mat('lead', 'Lead', 2);
         if (getCount('gunpowder') === 5 && getCount(B.SAND) === 4 && totalItems === 9) return block(B.TNT, 'TNT', 1);
 
+        // Mod Items (Shared / Shapeless)
+        if ((getCount('slime_ball') === 2 || getCount('slimeball') === 2) && (getCount('boots_iron') === 1 || getCount('boots_diamond') === 1 || getCount('boots_gold') === 1) && totalItems === 3) {
+            return equip('slime_boots', { protection: 2, slot: 'boots', bouncy: true, passive: 'Super Bouncy & No Fall Damage' }, 'Slime Boots', 'Bouncy boots that negate fall damage.');
+        }
+        if ((getCount(B.WHITE_WOOL) === 4 || getCount(B.WOOL) === 4 || getCount('feather') === 4 || getCount(B.AETHER_CLOUD) === 4) && getCount('string') === 1 && totalItems === 5) {
+            return equip('cloud_parachute', { slowFall: true, passive: 'Slow Fall Gliding' }, 'Cloud Parachute', 'Slow fall gliding in mid-air.');
+        }
+        if ((getCount(B.WHITE_WOOL) === 3 || getCount(B.WOOL) === 3 || getCount('feather') === 3 || getCount(B.AETHER_CLOUD) === 3) && getCount('string') === 2 && totalItems === 5) {
+            return equip('cloud_parachute', { slowFall: true, passive: 'Slow Fall Gliding' }, 'Cloud Parachute', 'Slow fall gliding in mid-air.');
+        }
+        if (getCount('feather') === 1 && (getCount('gold_ingot') === 8 || getCount('gold_ingot') === 4) && totalItems === (1 + getCount('gold_ingot'))) {
+            return equip('golden_feather', { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' }, 'Golden Feather', 'Passive low gravity and fall damage immunity.');
+        }
+
         // Reverse Storage is 1 item -> 9 items.
         if (getCount(B.IRON_BLOCK) === 1 && totalItems === 1) return mat('iron_ingot', 'Iron Ingot', 9);
         if (getCount('iron_ingot') === 1 && totalItems === 1) return mat('iron_nugget', 'Iron Nugget', 9);
@@ -3592,6 +3619,17 @@ class UISystem {
             r = armorRecipeFull('gold_ingot', 'Gold Chestplate', 'chest_gold', 7); if (r) return r;
             r = armorRecipeLegs('gold_ingot', 'Gold Leggings', 'legs_gold', 4); if (r) return r;
             r = armorRecipeBoots('gold_ingot', 'Gold Boots', 'boots_gold', 3); if (r) return r;
+
+            // Mod Items (3x3 Shaped)
+            r = armorRecipeBoots('slime_ball', 'Slime Boots', 'slime_boots', 2); if (r) return r;
+            // Stone Hammer (5 or 6 stone/cobble + 2 sticks)
+            if ((getCount(B.COBBLESTONE) >= 5 || getCount(B.STONE) >= 5) && getCount('stick') === 2 && totalItems === (getCount(B.COBBLESTONE) + getCount(B.STONE) + 2)) {
+                return equip('hammer', { damage: 7, mineSpeed: 4.5, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' }, 'Stone Hammer', 'Mines a 3x3 area of stone and ores.');
+            }
+            // Excavator (3 stone/cobble/iron + 2 sticks)
+            if ((getCount(B.COBBLESTONE) === 3 || getCount(B.STONE) === 3 || getCount('iron_ingot') === 3) && getCount('stick') === 2 && totalItems === 5) {
+                return equip('excavator', { digSpeed: 4.5, damage: 5, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' }, 'Excavator', 'Digs a 3x3 area of dirt, sand, and gravel.');
+            }
 
             if (!s[0] && !s[1] && !s[2] && 
                 s[3] === 'iron_ingot' && !s[4] && s[5] === 'iron_ingot' && 
@@ -3855,6 +3893,11 @@ class UISystem {
             { name: "TNT", desc: "Explosive block.", grid: [[mat('gunpowder'),blk(B.SAND),mat('gunpowder')],[blk(B.SAND),mat('gunpowder'),blk(B.SAND)],[mat('gunpowder'),blk(B.SAND),mat('gunpowder')]], out: blk(B.TNT), outCount: 1, needs3x3: true },
             { name: "Lead (2)", desc: "Leash for creatures.", grid: [[mat('string'),mat('string'),_],[mat('string'),mat('slime_ball'),_],[_,_,mat('string')]], out: mat('lead'), outCount: 2, needs3x3: true },
             { name: "Pumpkin Seeds (4)", desc: "Plant to grow pumpkins.", grid: [[_,_,_],[_,blk(B.PUMPKIN),_],[_,_,_]], out: mat('pumpkin_seeds'), outCount: 4, needs3x3: false },
+            { name: "Slime Boots", desc: "Bouncy jumps & no fall damage.", grid: [[_,_,_],[mat('slime_ball'),_,mat('slime_ball')],[mat('slime_ball'),_,mat('slime_ball')]], out: eqp('slime_boots'), outCount: 1, needs3x3: true },
+            { name: "Cloud Parachute", desc: "Slow fall glide through the air.", grid: [[mat('feather'),mat('feather'),mat('feather')],[mat('string'),_,mat('string')],[_,_,_]], out: eqp('cloud_parachute'), outCount: 1, needs3x3: true },
+            { name: "Golden Feather", desc: "Passive low gravity & fall immunity.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('feather'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: eqp('golden_feather'), outCount: 1, needs3x3: true },
+            { name: "Stone Hammer", desc: "Mines a 3x3 area of stone & ores.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),mat('stick'),blk(B.COBBLESTONE)],[_,mat('stick'),_]], out: eqp('hammer'), outCount: 1, needs3x3: true },
+            { name: "Excavator", desc: "Digs a 3x3 area of dirt, sand & gravel.", grid: [[_,blk(B.COBBLESTONE),_],[blk(B.COBBLESTONE),mat('stick'),blk(B.COBBLESTONE)],[_,mat('stick'),_]], out: eqp('excavator'), outCount: 1, needs3x3: true },
 
             { name: "Gold Helmet", desc: "Shiny protection.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')],[_,_,_]], out: eqp('helmet_gold'), outCount: 1, needs3x3: true },
             { name: "Gold Chestplate", desc: "Shiny protection.", grid: [[mat('gold_ingot'),_,mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: eqp('chest_gold'), outCount: 1, needs3x3: true },

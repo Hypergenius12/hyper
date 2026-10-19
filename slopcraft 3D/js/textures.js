@@ -1782,7 +1782,16 @@ const LOCAL_ASSET_MAP = {
     "polished_blackstone_bricks": "assets/mc/block/polished_blackstone_bricks.png",
     "polished_blackstone": "assets/mc/block/polished_blackstone.png",
     "warped_planks": "assets/mc/block/warped_planks.png",
-    "chiseled_polished_blackstone": "assets/mc/block/chiseled_polished_blackstone.png"
+    "chiseled_polished_blackstone": "assets/mc/block/chiseled_polished_blackstone.png",
+
+    // Mod Items: Tinkers' Construct & Aether
+    "slime_boots": "assets/mc/item/slime_boots.png",
+    "boots_slime": "assets/mc/item/slime_boots.png",
+    "cloud_parachute": "assets/mc/item/cloud_parachute.png",
+    "cold_parachute": "assets/mc/item/cloud_parachute.png",
+    "hammer": "assets/mc/item/hammer.png",
+    "excavator": "assets/mc/item/excavator.png",
+    "golden_feather": "assets/mc/item/golden_feather.png"
 };
 
 function loadMinecraftTexture(name) {
@@ -1810,11 +1819,28 @@ function loadMinecraftTexture(name) {
                 rawImg.src = MINECRAFT_ASSETS_BASE + subPath + '.png';
             };
             const subPath = cleanName.includes('/') ? cleanName : ('block/' + cleanName);
-            remoteImg.src = "https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/" + subPath + '.png';
+            if (cleanName === 'slime_boots' || cleanName === 'boots_slime') {
+                remoteImg.src = "https://raw.githubusercontent.com/SlimeKnights/TinkersConstruct/1.12/resources/assets/tconstruct/textures/items/armor/slime_boots.png";
+            } else if (cleanName === 'cloud_parachute' || cleanName === 'cold_parachute') {
+                remoteImg.src = "https://raw.githubusercontent.com/Mr-Aerod/Jappafied-Aethers/1.20/assets/aether/textures/item/miscellaneous/cold_parachute.png";
+            } else if (cleanName === 'golden_feather') {
+                remoteImg.src = "https://raw.githubusercontent.com/Mr-Aerod/Jappafied-Aethers/1.20/assets/aether/textures/item/accessories/golden_feather.png";
+            } else {
+                remoteImg.src = "https://cdn.jsdelivr.net/gh/InventivetalentDev/minecraft-assets@1.21.4/assets/minecraft/textures/" + subPath + '.png';
+            }
         };
 
         if (localPath) {
             img.src = localPath;
+        } else if (cleanName === 'slime_boots' || cleanName === 'boots_slime') {
+            img.crossOrigin = 'anonymous';
+            img.src = "https://raw.githubusercontent.com/SlimeKnights/TinkersConstruct/1.12/resources/assets/tconstruct/textures/items/armor/slime_boots.png";
+        } else if (cleanName === 'cloud_parachute' || cleanName === 'cold_parachute') {
+            img.crossOrigin = 'anonymous';
+            img.src = "https://raw.githubusercontent.com/Mr-Aerod/Jappafied-Aethers/1.20/assets/aether/textures/item/miscellaneous/cold_parachute.png";
+        } else if (cleanName === 'golden_feather') {
+            img.crossOrigin = 'anonymous';
+            img.src = "https://raw.githubusercontent.com/Mr-Aerod/Jappafied-Aethers/1.20/assets/aether/textures/item/accessories/golden_feather.png";
         } else {
             img.crossOrigin = 'anonymous';
             const subPath = cleanName.includes('/') ? cleanName : ('block/' + cleanName);
@@ -2949,6 +2975,13 @@ const MC_ITEM_MAP = {
     'pickaxe_gravitite': 'gravitite_pickaxe',
     'axe_gravitite': 'gravitite_axe',
     'shovel_gravitite': 'gravitite_shovel',
+    'slime_boots': 'slime_boots',
+    'boots_slime': 'slime_boots',
+    'cloud_parachute': 'cloud_parachute',
+    'cold_parachute': 'cloud_parachute',
+    'hammer': 'hammer',
+    'excavator': 'excavator',
+    'golden_feather': 'golden_feather',
     'quartz': 'quartz',
     'nether_quartz': 'quartz',
     'item/quartz': 'quartz',
