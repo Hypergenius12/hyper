@@ -893,9 +893,25 @@ export class ChatSystem {
             'parachute': { type: 'equipment', subtype: 'cloud_parachute', name: 'Cloud Parachute', stackable: false, maxStack: 1, data: { equipData: { slowFall: true, passive: 'Slow Fall Gliding' } } },
             'golden_feather': { type: 'equipment', subtype: 'golden_feather', name: 'Golden Feather', stackable: false, maxStack: 1, data: { equipData: { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' } } },
             'feather_golden': { type: 'equipment', subtype: 'golden_feather', name: 'Golden Feather', stackable: false, maxStack: 1, data: { equipData: { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' } } },
-            'hammer': { type: 'equipment', subtype: 'hammer', name: 'Stone Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 7, mineSpeed: 4.5, chopSpeed: 1.0, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
-            'stone_hammer': { type: 'equipment', subtype: 'hammer', name: 'Stone Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 7, mineSpeed: 4.5, chopSpeed: 1.0, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
-            'excavator': { type: 'equipment', subtype: 'excavator', name: 'Excavator', stackable: false, maxStack: 1, data: { equipData: { digSpeed: 4.5, damage: 5, mineSpeed: 1.0, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' } } },
+            'lead': { type: 'material', subtype: 'lead', name: 'Lead', stackable: true, maxStack: 64 },
+
+            // Hammers (all 6 tiers)
+            'wood_hammer': { type: 'equipment', subtype: 'wood_hammer', name: 'Wooden Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 5, mineSpeed: 2.5, chopSpeed: 1.0, durability: 120, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
+            'stone_hammer': { type: 'equipment', subtype: 'stone_hammer', name: 'Stone Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 6, mineSpeed: 4.0, chopSpeed: 1.0, durability: 260, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
+            'iron_hammer': { type: 'equipment', subtype: 'iron_hammer', name: 'Iron Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 7, mineSpeed: 6.0, chopSpeed: 1.0, durability: 500, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
+            'gold_hammer': { type: 'equipment', subtype: 'gold_hammer', name: 'Golden Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 5, mineSpeed: 9.0, chopSpeed: 1.0, durability: 70, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
+            'diamond_hammer': { type: 'equipment', subtype: 'diamond_hammer', name: 'Diamond Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 8, mineSpeed: 8.0, chopSpeed: 1.0, durability: 1561, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
+            'netherite_hammer': { type: 'equipment', subtype: 'netherite_hammer', name: 'Netherite Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 9, mineSpeed: 9.5, chopSpeed: 1.0, durability: 2031, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
+            'hammer': { type: 'equipment', subtype: 'stone_hammer', name: 'Stone Hammer', stackable: false, maxStack: 1, data: { equipData: { damage: 6, mineSpeed: 4.0, chopSpeed: 1.0, durability: 260, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' } } },
+
+            // Excavators (all 6 tiers)
+            'wood_excavator': { type: 'equipment', subtype: 'wood_excavator', name: 'Wooden Excavator', stackable: false, maxStack: 1, data: { equipData: { digSpeed: 2.5, damage: 4, mineSpeed: 1.0, durability: 120, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' } } },
+            'stone_excavator': { type: 'equipment', subtype: 'stone_excavator', name: 'Stone Excavator', stackable: false, maxStack: 1, data: { equipData: { digSpeed: 4.0, damage: 5, mineSpeed: 1.0, durability: 260, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' } } },
+            'iron_excavator': { type: 'equipment', subtype: 'iron_excavator', name: 'Iron Excavator', stackable: false, maxStack: 1, data: { equipData: { digSpeed: 6.0, damage: 6, mineSpeed: 1.0, durability: 500, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' } } },
+            'gold_excavator': { type: 'equipment', subtype: 'gold_excavator', name: 'Golden Excavator', stackable: false, maxStack: 1, data: { equipData: { digSpeed: 9.0, damage: 4, mineSpeed: 1.0, durability: 70, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' } } },
+            'diamond_excavator': { type: 'equipment', subtype: 'diamond_excavator', name: 'Diamond Excavator', stackable: false, maxStack: 1, data: { equipData: { digSpeed: 8.0, damage: 7, mineSpeed: 1.0, durability: 1561, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' } } },
+            'netherite_excavator': { type: 'equipment', subtype: 'netherite_excavator', name: 'Netherite Excavator', stackable: false, maxStack: 1, data: { equipData: { digSpeed: 9.5, damage: 8, mineSpeed: 1.0, durability: 2031, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' } } },
+            'excavator': { type: 'equipment', subtype: 'stone_excavator', name: 'Stone Excavator', stackable: false, maxStack: 1, data: { equipData: { digSpeed: 4.0, damage: 5, mineSpeed: 1.0, durability: 260, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' } } },
         };
 
         // Tools (sword, pickaxe, axe, shovel)

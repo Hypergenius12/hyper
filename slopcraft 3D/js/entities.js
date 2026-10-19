@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { CHUNK_HEIGHT, CHUNK_SIZE } from './constants.js?v=116';
 import { generateRandomWand, generateRandomSpell, generateRandomModifier } from './magic.js?v=116';
-import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=148';
+import { getBlockProperties, BLOCKS, generateItemTexture, generateMobTexture, generatePlayerSkinTextures, createSteveBodyMaterials, getMobBoxMaterials, createExtrudedItemMesh } from './textures.js?v=156';
 
 // Pre-allocated buffers for GC-free math
 const _tempMin = new THREE.Vector3();
@@ -5256,7 +5256,13 @@ export class Mob {
         }
         
         if (this.mesh) {
-            this.mesh.position.copy(this.position);
+            // Smoothly interpolate mob mesh position to eliminate physics micro-stutters
+            const distSq = this.mesh.position.distanceToSquared(this.position);
+            if (distSq > 9 || distSq < 0.00005) {
+                this.mesh.position.copy(this.position);
+            } else {
+                this.mesh.position.lerp(this.position, Math.min(1.0, dt * 25));
+            }
             
             // Animate
             if (this.config.animate) {

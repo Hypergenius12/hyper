@@ -365,8 +365,6 @@ export const BLOCKS = {
     DARK_OAK_SAPLING: 378,
     SCULK: 379,
     SCULK_CATALYST: 380,
-    SCULK_SHRIEKER: 381,
-    SCULK_SENSOR: 382,
     DIRT_PATH: 383,
     SLIME_BLOCK: 384
 };
@@ -726,8 +724,6 @@ const BLOCK_PROPS = {
     // Sculk Blocks
     [BLOCKS.SCULK]:            { name: 'Sculk',            health: 1.5, transparent: false, emissive: 0.1, solid: true, drops: BLOCKS.SCULK },
     [BLOCKS.SCULK_CATALYST]:   { name: 'Sculk Catalyst',   health: 4, transparent: false, emissive: 0.4, solid: true, drops: BLOCKS.SCULK_CATALYST },
-    [BLOCKS.SCULK_SHRIEKER]:   { name: 'Sculk Shrieker',   health: 4, transparent: true, emissive: 0.3, solid: true, drops: BLOCKS.SCULK_SHRIEKER },
-    [BLOCKS.SCULK_SENSOR]:     { name: 'Sculk Sensor',     health: 2, transparent: false, emissive: 0.35, solid: true, drops: BLOCKS.SCULK_SENSOR },
     [BLOCKS.DIRT_PATH]:        { name: 'Dirt Path',        health: 2, transparent: true, emissive: 0, solid: true, isDirtPath: true, drops: BLOCKS.DIRT }
 };
 
@@ -786,7 +782,7 @@ function hasFaceVariants(blockType) {
         BLOCKS.FLETCHING_TABLE, BLOCKS.SMOKER, BLOCKS.STONECUTTER,
         BLOCKS.MANGROVE_LOG, BLOCKS.MANGROVE_ROOTS, BLOCKS.MUDDY_MANGROVE_ROOTS, BLOCKS.ENCHANTED_AETHER_LOG,
         BLOCKS.BIRCH_WOOD, BLOCKS.FARMLAND, BLOCKS.FARMLAND_MOIST, BLOCKS.DIRT_PATH, BLOCKS.PUMPKIN, BLOCKS.JUNGLE_LOG,
-        BLOCKS.SCULK_CATALYST, BLOCKS.SCULK_SHRIEKER, BLOCKS.SCULK_SENSOR,
+        BLOCKS.SCULK_CATALYST,
         BLOCKS.POINTED_DRIPSTONE_DOWN, BLOCKS.POINTED_DRIPSTONE_UP
     ].includes(blockType);
 }
@@ -1166,8 +1162,6 @@ const MC_TEXTURE_MAP = {
     // Sculk
     [BLOCKS.SCULK]: 'sculk',
     [BLOCKS.SCULK_CATALYST]: { top: 'sculk_catalyst_top', side: 'sculk_catalyst_side', bottom: 'sculk_catalyst_bottom' },
-    [BLOCKS.SCULK_SHRIEKER]: { top: 'sculk_shrieker_top', side: 'sculk_shrieker_side', bottom: 'sculk_shrieker_bottom' },
-    [BLOCKS.SCULK_SENSOR]: { top: 'sculk_sensor_top', side: 'sculk_sensor_side', bottom: 'sculk_sensor_bottom' },
     [BLOCKS.SLIME_BLOCK]: 'slime_block',
     [BLOCKS.DIRT_PATH]: { top: 'dirt_path_top', side: 'dirt_path_side', bottom: 'dirt' },
     [BLOCKS.OAK_PLANKS]: 'oak_planks',
@@ -1240,16 +1234,6 @@ const LOCAL_ASSET_MAP = {
     "sculk_catalyst_side": "assets/mc/block/sculk_catalyst_side.png",
     "sculk_catalyst_top": "assets/mc/block/sculk_catalyst_top.png",
     "sculk_catalyst_bottom": "assets/mc/block/sculk_catalyst_bottom.png",
-    "sculk_shrieker_side": "assets/mc/block/sculk_shrieker_side.png",
-    "sculk_shrieker_top": "assets/mc/block/sculk_shrieker_top.png",
-    "sculk_shrieker_inner_top": "assets/mc/block/sculk_shrieker_inner_top.png",
-    "sculk_shrieker_bottom": "assets/mc/block/sculk_shrieker_bottom.png",
-    "sculk_sensor_side": "assets/mc/block/sculk_sensor_side.png",
-    "sculk_sensor_top": "assets/mc/block/sculk_sensor_top.png",
-    "sculk_sensor_bottom": "assets/mc/block/sculk_sensor_bottom.png",
-    "sculk_sensor_tendril_active": "assets/mc/block/sculk_sensor_tendril_active.png",
-    "sculk_sensor_tendril_inactive": "assets/mc/block/sculk_sensor_tendril_inactive.png",
-
     "lantern": "assets/mc/block/lantern.png",
     "soul_lantern": "assets/mc/block/soul_lantern.png",
     "item/lantern": "assets/mc/item/lantern.png",
@@ -1783,8 +1767,22 @@ const LOCAL_ASSET_MAP = {
     "boots_slime": "assets/mc/item/slime_boots.png",
     "cloud_parachute": "assets/mc/item/cloud_parachute.png",
     "cold_parachute": "assets/mc/item/cloud_parachute.png",
+    "lead": "assets/mc/item/lead.png",
+    "item/lead": "assets/mc/item/lead.png",
     "hammer": "assets/mc/item/hammer.png",
+    "stone_hammer": "assets/mc/item/stone_hammer.png",
+    "wood_hammer": "assets/mc/item/wood_hammer.png",
+    "iron_hammer": "assets/mc/item/iron_hammer.png",
+    "gold_hammer": "assets/mc/item/gold_hammer.png",
+    "diamond_hammer": "assets/mc/item/diamond_hammer.png",
+    "netherite_hammer": "assets/mc/item/netherite_hammer.png",
     "excavator": "assets/mc/item/excavator.png",
+    "stone_excavator": "assets/mc/item/stone_excavator.png",
+    "wood_excavator": "assets/mc/item/wood_excavator.png",
+    "iron_excavator": "assets/mc/item/iron_excavator.png",
+    "gold_excavator": "assets/mc/item/gold_excavator.png",
+    "diamond_excavator": "assets/mc/item/diamond_excavator.png",
+    "netherite_excavator": "assets/mc/item/netherite_excavator.png",
     "golden_feather": "assets/mc/item/golden_feather.png"
 };
 
@@ -2095,36 +2093,6 @@ export async function createTextureAtlas(useMinecraft = true) {
                             }
                         } else if (texName === 'end_portal_frame_side') {
                             ctx.drawImage(img, 0, 3, TEX_SIZE, 13, entry.col * TEX_SIZE, entry.row * TEX_SIZE, TEX_SIZE, TEX_SIZE);
-                        } else if (texName === 'sculk_sensor_top') {
-                            const ax = entry.col * TEX_SIZE;
-                            const ay = entry.row * TEX_SIZE;
-                            ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, ax, ay, TEX_SIZE, TEX_SIZE);
-                            // Paint the 4 acoustic sensor tendrils
-                            ctx.fillStyle = '#00e1d9';
-                            ctx.fillRect(ax + 3, ay + 3, 3, 3);
-                            ctx.fillRect(ax + 10, ay + 3, 3, 3);
-                            ctx.fillRect(ax + 3, ay + 10, 3, 3);
-                            ctx.fillRect(ax + 10, ay + 10, 3, 3);
-                            ctx.fillStyle = '#005b63';
-                            ctx.fillRect(ax + 4, ay + 4, 1, 1);
-                            ctx.fillRect(ax + 11, ay + 4, 1, 1);
-                            ctx.fillRect(ax + 4, ay + 11, 1, 1);
-                            ctx.fillRect(ax + 11, ay + 11, 1, 1);
-                        } else if (texName === 'sculk_sensor_side') {
-                            const ax = entry.col * TEX_SIZE;
-                            const ay = entry.row * TEX_SIZE;
-                            // Solid dark sculk backdrop so it's not transparent/see-through
-                            ctx.fillStyle = '#071015';
-                            ctx.fillRect(ax, ay, TEX_SIZE, TEX_SIZE);
-                            // Draw base slab texture (rows 8-15)
-                            ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE, ax, ay, TEX_SIZE, TEX_SIZE);
-                            // Draw acoustic tendril silhouettes rising above the base
-                            ctx.fillStyle = '#005b63';
-                            ctx.fillRect(ax + 3, ay + 3, 3, 5);
-                            ctx.fillRect(ax + 10, ay + 3, 3, 5);
-                            ctx.fillStyle = '#00e1d9';
-                            ctx.fillRect(ax + 3, ay + 1, 3, 2);
-                            ctx.fillRect(ax + 10, ay + 1, 3, 2);
                         } else if (texName === 'stonecutter_side') {
                             const ax = entry.col * TEX_SIZE;
                             const ay = entry.row * TEX_SIZE;
@@ -2370,11 +2338,36 @@ export async function createTextureAtlas(useMinecraft = true) {
             const key = props.isSoulLantern ? 'soul_lantern' : 'lantern';
             const lanternItem = _itemCanvasCache.get(key) || _itemCanvasCache.get(`item/${key}`);
             if (lanternItem) {
+                iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
                 const pad = 2 * SCALE;
                 const drawSize = (TEX_SIZE * 2 - 4) * SCALE;
                 iconCtx.drawImage(lanternItem, 0, 0, TEX_SIZE, TEX_SIZE, pad, pad, drawSize, drawSize);
                 return iconCanvas;
             }
+            if (typeof loadMinecraftTexture === 'function') {
+                loadMinecraftTexture(`item/${key}`).then(img => {
+                    if (img) {
+                        const itemCvs = document.createElement('canvas');
+                        itemCvs.width = TEX_SIZE; itemCvs.height = TEX_SIZE;
+                        const ictx = itemCvs.getContext('2d');
+                        ictx.imageSmoothingEnabled = false;
+                        ictx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                        _itemCanvasCache.set(key, itemCvs);
+                        _itemCanvasCache.set(`item/${key}`, itemCvs);
+                        if (onLoaded) onLoaded(getBlockIcon(blockType));
+                    }
+                });
+            }
+            // Draw clean 2D lantern silhouette while loading so it never renders a distorted cube
+            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
+            iconCtx.fillStyle = '#3c3c3c';
+            iconCtx.fillRect(6 * SCALE, 2 * SCALE, 4 * SCALE, 2 * SCALE);
+            iconCtx.fillRect(4 * SCALE, 4 * SCALE, 8 * SCALE, 3 * SCALE);
+            iconCtx.fillStyle = props.isSoulLantern ? '#00e5ff' : '#ffa000';
+            iconCtx.fillRect(5 * SCALE, 7 * SCALE, 6 * SCALE, 6 * SCALE);
+            iconCtx.fillStyle = '#222222';
+            iconCtx.fillRect(4 * SCALE, 13 * SCALE, 8 * SCALE, 2 * SCALE);
+            return iconCanvas;
         }
 
         if (props.isBed || props.isBedHead) {
@@ -2574,37 +2567,6 @@ export async function createTextureAtlas(useMinecraft = true) {
             // Right face (shaded)
             iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, TEX_SIZE * SCALE);
             iconCtx.drawImage(side2Scaled, 0, 0);
-
-            iconCtx.restore();
-            return iconCanvas;
-        }
-
-        if (blockType === BLOCKS.SCULK_SENSOR) {
-            iconCtx.save();
-            iconCtx.clearRect(0, 0, iconCanvas.width, iconCanvas.height);
-            // Draw 3D isometric base slab (8 pixels high)
-            iconCtx.setTransform(1, 0.5, -1, 0.5, TEX_SIZE * SCALE, 8 * SCALE);
-            iconCtx.drawImage(topScaled, 0, 0);
-
-            iconCtx.setTransform(1, 0.5, 0, 1, 0, 16 * SCALE);
-            iconCtx.drawImage(side1Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
-
-            iconCtx.setTransform(1, -0.5, 0, 1, TEX_SIZE * SCALE, 24 * SCALE);
-            iconCtx.drawImage(side2Scaled, 0, 8 * SCALE, 16 * SCALE, 8 * SCALE, 0, 0, 16 * SCALE, 8 * SCALE);
-
-            // Draw 4 glowing acoustic tendrils standing on the top face
-            const s = iconCanvas.width / 16;
-            const drawTendril = (tx, ty) => {
-                iconCtx.fillStyle = '#00ffff';
-                iconCtx.fillRect(tx * s, (ty - 3.2) * s, 1.8 * s, 3.5 * s);
-                iconCtx.fillStyle = '#00a8a0';
-                iconCtx.fillRect((tx + 0.4) * s, (ty - 1.8) * s, 1.0 * s, 2.0 * s);
-            };
-            iconCtx.resetTransform();
-            drawTendril(5.5, 7.5);
-            drawTendril(10.5, 7.5);
-            drawTendril(3.5, 10.5);
-            drawTendril(8.5, 12.5);
 
             iconCtx.restore();
             return iconCanvas;
@@ -2972,9 +2934,21 @@ const MC_ITEM_MAP = {
     'slime_boots': 'slime_boots',
     'boots_slime': 'slime_boots',
     'cloud_parachute': 'cloud_parachute',
-    'cold_parachute': 'cloud_parachute',
+    'lead': 'item/lead',
     'hammer': 'hammer',
+    'stone_hammer': 'stone_hammer',
+    'wood_hammer': 'wood_hammer',
+    'iron_hammer': 'iron_hammer',
+    'gold_hammer': 'gold_hammer',
+    'diamond_hammer': 'diamond_hammer',
+    'netherite_hammer': 'netherite_hammer',
     'excavator': 'excavator',
+    'stone_excavator': 'stone_excavator',
+    'wood_excavator': 'wood_excavator',
+    'iron_excavator': 'iron_excavator',
+    'gold_excavator': 'gold_excavator',
+    'diamond_excavator': 'diamond_excavator',
+    'netherite_excavator': 'netherite_excavator',
     'golden_feather': 'golden_feather',
     'quartz': 'quartz',
     'nether_quartz': 'quartz',
@@ -3201,6 +3175,53 @@ const MAGIC_MODIFIER_SHAPE = [
     "                "
 ];
 
+const TOOL_TIER_PALETTES = {
+    wood: { H: '#b8945f', C: '#8e6c3e', D: '#684e29', O: '#423016' },
+    stone: { H: '#b4b4b4', C: '#888888', D: '#5f5f5f', O: '#373737' },
+    iron: { H: '#ffffff', C: '#d8d8d8', D: '#969696', O: '#505050' },
+    gold: { H: '#ffffaa', C: '#fed83d', D: '#ca9517', O: '#7a560a' },
+    diamond: { H: '#befffa', C: '#2ce4ce', D: '#169c97', O: '#0c5a5e' },
+    netherite: { H: '#72686e', C: '#453d41', D: '#2e282b', O: '#1a1618' }
+};
+
+const HAMMER_SHAPE = [
+  '                ',
+  '          OOOO  ',
+  '        OOHHHHO ',
+  '       OOHCCCCDO',
+  '     OOOHCCCCCDO',
+  '    OOHHCCCCCDDO',
+  '   OHHHCCCCDDDDO',
+  '   OHHCCCCDDDDDO',
+  '   OHCCCCDDDDOO ',
+  '   OHCCCDDDO    ',
+  '    ODDDOO  S   ',
+  '     OOO   sS   ',
+  '          sS    ',
+  '         sS     ',
+  '        sS      ',
+  '       sS       '
+];
+
+const EXCAVATOR_SHAPE = [
+  '                ',
+  '           OOO  ',
+  '         OOHHHO ',
+  '       OOHCCCCDO',
+  '      OHHCCCCDDO',
+  '     OHHCCCCDDDO',
+  '    OHCCCCCDDDO ',
+  '    OHCCCCDDDO  ',
+  '    OHCCCDDDO   ',
+  '     ODDDDOO    ',
+  '      OOOO  S   ',
+  '           sS   ',
+  '          sS    ',
+  '         sS     ',
+  '        sS      ',
+  '       sS       '
+];
+
 export function generateItemTexture(itemType, itemSubtype, onLoaded) {
     if (typeof itemSubtype !== 'string') {
         itemSubtype = (itemSubtype !== undefined && itemSubtype !== null) ? String(itemSubtype) : '';
@@ -3238,6 +3259,72 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
 
     // Clear transparent
     ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+
+    // 0. Tinkers' Construct Hammers & Excavators (authentic tiered color palettes)
+    const isHammer = itemSubtype === 'hammer' || itemSubtype.endsWith('_hammer') || itemSubtype.includes('hammer');
+    const isExcavator = itemSubtype === 'excavator' || itemSubtype.endsWith('_excavator') || itemSubtype.includes('excavator');
+    if (isHammer || isExcavator) {
+        let tier = 'stone';
+        if (itemSubtype.includes('wood')) tier = 'wood';
+        else if (itemSubtype.includes('iron')) tier = 'iron';
+        else if (itemSubtype.includes('gold')) tier = 'gold';
+        else if (itemSubtype.includes('diamond')) tier = 'diamond';
+        else if (itemSubtype.includes('netherite')) tier = 'netherite';
+        
+        const palette = TOOL_TIER_PALETTES[tier] || TOOL_TIER_PALETTES['stone'];
+        const shape = isHammer ? HAMMER_SHAPE : EXCAVATOR_SHAPE;
+        for (let y = 0; y < 16; y++) {
+            const row = shape[y];
+            for (let x = 0; x < 16; x++) {
+                const ch = row[x];
+                if (ch === ' ' || !ch) continue;
+                if (ch === 'S') ctx.fillStyle = '#89663f';
+                else if (ch === 's') ctx.fillStyle = '#573b20';
+                else if (palette[ch]) ctx.fillStyle = palette[ch];
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+        const savedCvs = document.createElement('canvas');
+        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+        _itemCanvasCache.set(cacheKey, savedCvs);
+        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+        _itemCanvasCache.set(itemSubtype, savedCvs);
+        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+        if (onLoaded) onLoaded(canvas);
+        return canvas;
+    }
+
+    // Lead (authentic 16x16 pixel art with looped brown cord & silver clasp)
+    if (itemSubtype === 'lead') {
+        ctx.fillStyle = '#4a4a4a'; ctx.fillRect(4, 3, 3, 3);
+        ctx.fillStyle = '#8e8e8e'; ctx.fillRect(5, 4, 1, 1);
+        ctx.fillStyle = '#8b5a2b'; ctx.fillRect(6, 4, 6, 2); ctx.fillRect(11, 6, 2, 4); ctx.fillRect(8, 9, 4, 2); ctx.fillRect(7, 7, 2, 3);
+        ctx.fillStyle = '#b8860b'; ctx.fillRect(7, 4, 4, 1); ctx.fillRect(11, 7, 1, 3); ctx.fillRect(9, 10, 3, 1);
+        ctx.fillStyle = '#8b5a2b'; ctx.fillRect(4, 6, 2, 4); ctx.fillRect(3, 9, 2, 4); ctx.fillRect(2, 12, 2, 2);
+        ctx.fillStyle = '#653e1a'; ctx.fillRect(4, 7, 1, 3); ctx.fillRect(3, 10, 1, 3);
+        const savedCvs = document.createElement('canvas');
+        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+        _itemCanvasCache.set(cacheKey, savedCvs);
+        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+        _itemCanvasCache.set(itemSubtype, savedCvs);
+        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+        // Also allow local PNG to upgrade it if available
+        loadMinecraftTexture('item/lead').then(img => {
+            if (img) {
+                ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+                _itemTextureCache.set(cacheKey, canvas.toDataURL());
+                _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+                if (onLoaded) onLoaded(canvas);
+            }
+        });
+        if (onLoaded) onLoaded(canvas);
+        return canvas;
+    }
 
     // 1. Magic Wands (authentic 16x16 pixel art with wood shaft and glowing elemental gem)
     const isWand = itemType === 'wand' || itemSubtype.startsWith('wand') || itemSubtype === 'wand';

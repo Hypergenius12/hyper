@@ -5,15 +5,15 @@
 // ============================================
 import * as THREE from 'three';
 import { GameEngine, InputManager, CHUNK_SIZE, CHUNK_HEIGHT, World, Chunk, growSapling } from './engine.js?v=154';
-import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=154';
+import { createTextureAtlas, getBlockProperties, getBlockName, BLOCKS, generateItemTexture, generateMobTexture, generateDetailedHandTexture, generateWandShaftTexture, createSteveBodyMaterials, createExtrudedItemMesh } from './textures.js?v=156';
 import { generatePlanetParams, generateChunkTerrain, generateNetherChunk, generateAetherChunk, generateEndChunk, getBiomeParams, getStrongholdPosition, getClosestStrongholdPosition } from './generation.js?v=154';
-import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=154';
-import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=154';
+import { Player, EntityManager, Mob, MOB_TYPES, Item } from './entities.js?v=156';
+import { LightingSystem, ParticleSystem, UISystem, TorchLightSystem, CloudSystem, MeteorShowerSystem } from './systems.js?v=156';
 import { ProjectileManager, SpellProjectile, Spell, Wand, SPELL_TYPES, MODIFIER_TYPES, generateRandomSpell, generateRandomModifier, generateRandomWand } from './magic.js?v=148';
 import { AudioManager } from './audio.js?v=139';
 import { BiomeMap } from './map.js?v=139';
 import { DevMode } from './dev.js?v=139';
-import { ChatSystem } from './chat.js?v=154';
+import { ChatSystem } from './chat.js?v=156';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
@@ -89,6 +89,37 @@ const FOOD_PARTICLE_COLORS = {
     'pumpkin_pie': [0xc96924, 0xde873e, 0xb87b40, 0x884310],
     'honey_bottle': [0xf39c12, 0xe67e22, 0xf1c40f, 0xffeaa7]
 };
+
+// Tinkers' Construct Target Helpers for 3x3 Mining
+function isExcavatorTarget(blockId) {
+    if (!blockId || blockId === BLOCKS.AIR || blockId === BLOCKS.BEDROCK || blockId === BLOCKS.WATER || blockId === BLOCKS.LAVA || blockId === BLOCKS.SWAMP_WATER) return false;
+    const soilSet = [
+        BLOCKS.DIRT, BLOCKS.GRASS, BLOCKS.SAND, BLOCKS.RED_SAND, BLOCKS.GRAVEL, BLOCKS.CLAY,
+        BLOCKS.MUD, BLOCKS.ROOTED_DIRT, BLOCKS.MUDDY_MANGROVE_ROOTS, BLOCKS.SOUL_SAND,
+        BLOCKS.SOUL_SOIL, BLOCKS.MYCELIUM, BLOCKS.PODZOL, BLOCKS.DIRT_PATH, BLOCKS.FARMLAND,
+        BLOCKS.FARMLAND_MOIST, BLOCKS.SNOW, BLOCKS.AETHER_DIRT, BLOCKS.AETHER_GRASS,
+        BLOCKS.QUICKSOIL, BLOCKS.SAVANNA_GRASS, BLOCKS.SWAMP_GRASS, BLOCKS.HIGHLANDS_DIRT,
+        BLOCKS.HIGHLANDS_GRASS, BLOCKS.CAVERN_DIRT, BLOCKS.ALIEN_GRASS
+    ];
+    if (soilSet.includes(blockId)) return true;
+    const p = getBlockProperties(blockId);
+    if (p && !p.isCross && !p.isFlora && !p.isCoral && p.solid) {
+        if (p.isFarmland || (p.name && /Dirt|Sand|Gravel|Clay|Mud|Soil|Grass|Path/i.test(p.name))) return true;
+    }
+    return false;
+}
+
+function isHammerTarget(blockId, tier) {
+    if (!blockId || blockId === BLOCKS.AIR || blockId === BLOCKS.BEDROCK || blockId === BLOCKS.WATER || blockId === BLOCKS.LAVA || blockId === BLOCKS.SWAMP_WATER || blockId === BLOCKS.PORTAL || blockId === BLOCKS.END_PORTAL || blockId === BLOCKS.END_GATEWAY || blockId === BLOCKS.AETHER_PORTAL || blockId === BLOCKS.CAVERN_PORTAL || blockId === BLOCKS.HIGHLANDS_PORTAL) return false;
+    if (blockId === BLOCKS.OBSIDIAN || blockId === BLOCKS.CRYING_OBSIDIAN) {
+        return tier === 'diamond' || tier === 'netherite';
+    }
+    if (isExcavatorTarget(blockId)) return false;
+    const p = getBlockProperties(blockId);
+    if (!p || !p.solid) return false;
+    if (p.flammable || p.isLog || p.isPlank || p.isWood || p.isFence || p.isFenceGate || p.isBed || p.isBedHead || p.isDoor || p.isWool || p.isFlora || p.isCross) return false;
+    return true;
+}
 
 // Helper: find safe spawn location
 function findSafeSpawn(params, dimension = 'overworld') {
@@ -2399,7 +2430,7 @@ class Game {
                     const eq = slot.item.data.equipData;
                     if (eq.mineSpeed) mineMult = eq.mineSpeed;
                     if (blockProps.flammable && eq.chopSpeed) mineMult = Math.max(mineMult, eq.chopSpeed);
-                    if (eq.digSpeed && (blockProps.isDirt || hit.blockType === BLOCKS.DIRT || hit.blockType === BLOCKS.GRASS || hit.blockType === BLOCKS.SAND || hit.blockType === BLOCKS.SOUL_SAND || hit.blockType === BLOCKS.SOUL_SOIL)) {
+                    if (eq.digSpeed && (blockProps.isDirt || isExcavatorTarget(hit.blockType))) {
                         mineMult = Math.max(mineMult, eq.digSpeed);
                     }
                 }
@@ -2449,8 +2480,17 @@ class Game {
                     }
 
                     // Tinkers' Construct 3x3 Area Mining (Hammer & Excavator)
-                    if (slot && slot.item && (slot.item.subtype === 'hammer' || slot.item.subtype === 'excavator')) {
-                        const isHammer = slot.item.subtype === 'hammer';
+                    const toolSub = (slot && slot.item && slot.item.subtype) ? String(slot.item.subtype).toLowerCase() : '';
+                    const isHammer = toolSub === 'hammer' || toolSub.endsWith('_hammer') || toolSub.includes('hammer');
+                    const isExcavator = toolSub === 'excavator' || toolSub.endsWith('_excavator') || toolSub.includes('excavator');
+                    if (slot && slot.item && (isHammer || isExcavator)) {
+                        let toolTier = 'stone';
+                        if (toolSub.includes('wood')) toolTier = 'wood';
+                        else if (toolSub.includes('iron')) toolTier = 'iron';
+                        else if (toolSub.includes('gold')) toolTier = 'gold';
+                        else if (toolSub.includes('diamond')) toolTier = 'diamond';
+                        else if (toolSub.includes('netherite')) toolTier = 'netherite';
+
                         const face = hit.face || { x: 0, y: 1, z: 0 };
                         const offsets = [];
                         
@@ -2480,31 +2520,41 @@ class Game {
                             }
                         }
 
+                        let extraBrokenCount = 0;
                         for (const off of offsets) {
                             const nx = hit.blockPos.x + off.x;
                             const ny = hit.blockPos.y + off.y;
                             const nz = hit.blockPos.z + off.z;
                             const nb = this.world.getBlock(nx, ny, nz);
-                            if (!nb || nb === BLOCKS.AIR || nb === BLOCKS.BEDROCK || nb === BLOCKS.WATER || nb === BLOCKS.LAVA) continue;
+                            if (!nb || nb === BLOCKS.AIR) continue;
                             
-                            const nProps = getBlockProperties(nb);
-                            let canBreak = false;
-                            if (isHammer) {
-                                // Break stone/ore/rock materials
-                                canBreak = (nProps && (nProps.tool === 'pickaxe' || nProps.hardness >= 1.5)) && nb !== BLOCKS.OBSIDIAN;
-                            } else {
-                                // Break dirt/sand/gravel soil materials
-                                canBreak = (nProps && (nProps.tool === 'shovel' || nProps.hardness < 1.0 || nProps.isSoil || nProps.isSand));
-                            }
-                            
+                            const canBreak = isHammer ? isHammerTarget(nb, toolTier) : isExcavatorTarget(nb);
                             if (canBreak) {
+                                const nProps = getBlockProperties(nb);
                                 const nReplace = (nProps && nProps.isWaterlogged) ? BLOCKS.WATER : BLOCKS.AIR;
                                 this.world.setBlock(nx, ny, nz, nReplace);
                                 this.particles.emit({ x: nx + 0.5, y: ny + 0.5, z: nz + 0.5 }, 'block_break', 2, isHammer ? 0x888888 : 0x8b5a2b);
                                 if (nb === BLOCKS.TORCH || nb === BLOCKS.GLOWSTONE || nb === BLOCKS.LANTERN || nb === BLOCKS.SOUL_LANTERN) {
                                     if (this.torchSystem) this.torchSystem.removeTorch(nx, ny, nz);
                                 }
+                                extraBrokenCount++;
+
+                                // Deduct tool durability in survival
+                                if (!this.input.creativeMode && slot.item.data && slot.item.data.equipData) {
+                                    const eq = slot.item.data.equipData;
+                                    if (eq.durability !== undefined) {
+                                        eq.durability -= 1;
+                                        if (eq.durability <= 0) {
+                                            this.player.inventory.slots[this.player.selectedSlot] = null;
+                                            if (this.audio && this.audio.playHit) this.audio.playHit(this.player.position);
+                                            break; // Tool broke!
+                                        }
+                                    }
+                                }
                             }
+                        }
+                        if (extraBrokenCount > 0 && this.ui) {
+                            this.ui.renderHotbar(this.player);
                         }
                     }
                     
@@ -3681,6 +3731,24 @@ class Game {
             }
         }
 
+        if (this.input.menuKeys.spellConfig) {
+            this.input.menuKeys.spellConfig = false;
+            // Minecraft 'F' key: Swap main hand (selected hotbar slot) and offhand
+            if (this.player && this.player.inventory) {
+                const curSlot = this.player.selectedSlot;
+                const mainItem = this.player.inventory.slots[curSlot];
+                const offhandItem = this.player.inventory.offhand;
+                this.player.inventory.slots[curSlot] = offhandItem;
+                this.player.inventory.offhand = mainItem;
+                if (this.ui) {
+                    if (typeof this.ui._updateInventory === 'function') this.ui._updateInventory(true);
+                    if (typeof this.ui._updateArmorSlots === 'function') this.ui._updateArmorSlots();
+                    if (typeof this.ui.updateMinecraftHUD === 'function') this.ui.updateMinecraftHUD(this.player);
+                }
+                if (this.audio && this.audio.playHit) this.audio.playHit();
+            }
+        }
+
         if (this.input.menuKeys.map) {
             if (this.biomeMap.isOpen) {
                 this.biomeMap.close();
@@ -3824,6 +3892,8 @@ class Game {
         const lookDir = this.player.getLookDirection();
 
         if (this.cameraMode === 0) {
+            this._lastCamPos = null;
+            this._lastCamMode = 0;
             // First Person
             this.engine.camera.position.copy(eyePos);
             this.engine.camera.position.y += Math.abs(bobOffset); // Upward bounce
@@ -3849,7 +3919,14 @@ class Game {
                 }
                 actualPos.copy(sample);
             }
-            this.engine.camera.position.copy(actualPos);
+            if (!this._lastCamPos || this._lastCamMode !== this.cameraMode) {
+                this._lastCamPos = actualPos.clone();
+                this._lastCamMode = this.cameraMode;
+            } else {
+                const camLerp = Math.min(1.0, dt * 25);
+                this._lastCamPos.lerp(actualPos, camLerp);
+            }
+            this.engine.camera.position.copy(this._lastCamPos);
             if (isFront) {
                 this.engine.camera.lookAt(eyePos.clone().add(new THREE.Vector3(0, -0.1, 0)));
             } else {

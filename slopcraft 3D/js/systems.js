@@ -2,7 +2,7 @@
 // systems.js — Lighting, Particles, Audio, UI
 // ============================================
 import * as THREE from 'three';
-import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=148';
+import { BLOCKS, getBlockProperties, generateItemTexture } from './textures.js?v=156';
 import { Spell, SPELL_TYPES, Wand, Modifier, MODIFIER_TYPES } from './magic.js?v=148';
 
 export class LightingSystem {
@@ -1337,8 +1337,40 @@ class UISystem {
             if (sub.startsWith('legs_')) return { protection: sub.includes('diamond') ? 7 : (sub.includes('gold') ? 4 : 3) };
             if (sub.startsWith('boots_')) return { protection: sub.includes('diamond') ? 5 : (sub.includes('gold') ? 3 : 2) };
             // Mod Items
-            if (sub === 'hammer')            return { damage: 7, mineSpeed: 4.5, chopSpeed: 1.0, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' };
-            if (sub === 'excavator')         return { digSpeed: 4.5, damage: 5, mineSpeed: 1.0, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' };
+            if (sub === 'hammer' || sub.endsWith('_hammer') || sub.includes('hammer')) {
+                let tier = 'stone';
+                if (sub.includes('wood')) tier = 'wood';
+                else if (sub.includes('iron')) tier = 'iron';
+                else if (sub.includes('gold')) tier = 'gold';
+                else if (sub.includes('diamond')) tier = 'diamond';
+                else if (sub.includes('netherite')) tier = 'netherite';
+                const s = {
+                    wood: { damage: 5, mineSpeed: 2.5, durability: 120 },
+                    stone: { damage: 6, mineSpeed: 4.0, durability: 260 },
+                    iron: { damage: 7, mineSpeed: 6.0, durability: 500 },
+                    gold: { damage: 5, mineSpeed: 9.0, durability: 70 },
+                    diamond: { damage: 8, mineSpeed: 8.0, durability: 1561 },
+                    netherite: { damage: 9, mineSpeed: 9.5, durability: 2031 }
+                }[tier] || { damage: 6, mineSpeed: 4.0, durability: 260 };
+                return { ...s, chopSpeed: 1.0, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' };
+            }
+            if (sub === 'excavator' || sub.endsWith('_excavator') || sub.includes('excavator')) {
+                let tier = 'stone';
+                if (sub.includes('wood')) tier = 'wood';
+                else if (sub.includes('iron')) tier = 'iron';
+                else if (sub.includes('gold')) tier = 'gold';
+                else if (sub.includes('diamond')) tier = 'diamond';
+                else if (sub.includes('netherite')) tier = 'netherite';
+                const s = {
+                    wood: { damage: 4, digSpeed: 2.5, durability: 120 },
+                    stone: { damage: 5, digSpeed: 4.0, durability: 260 },
+                    iron: { damage: 6, digSpeed: 6.0, durability: 500 },
+                    gold: { damage: 4, digSpeed: 9.0, durability: 70 },
+                    diamond: { damage: 7, digSpeed: 8.0, durability: 1561 },
+                    netherite: { damage: 8, digSpeed: 9.5, durability: 2031 }
+                }[tier] || { damage: 5, digSpeed: 4.0, durability: 260 };
+                return { ...s, mineSpeed: 1.0, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' };
+            }
             if (sub === 'slime_boots' || sub === 'boots_slime') return { protection: 2, slot: 'boots', bouncy: true, passive: 'Super Bouncy & No Fall Damage' };
             if (sub === 'cloud_parachute' || sub === 'cold_parachute') return { slowFall: true, passive: 'Slow Fall Gliding' };
             if (sub === 'golden_feather')   return { slowFall: true, lowGravity: true, passive: 'Passive Low Gravity & Fall Immunity' };
@@ -1352,9 +1384,22 @@ class UISystem {
             { type: 'equipment', subtype: 'slime_boots',     name: 'Slime Boots' },
             { type: 'equipment', subtype: 'cloud_parachute', name: 'Cloud Parachute' },
             { type: 'equipment', subtype: 'golden_feather',   name: 'Golden Feather' },
-            { type: 'equipment', subtype: 'hammer',          name: 'Stone Hammer' },
-            { type: 'equipment', subtype: 'excavator',       name: 'Excavator' },
-            { type: 'material',  subtype: 'slime_ball',      name: 'Slimeball' },
+            // Mod Items - Hammers (all 6 tiers)
+            { type: 'equipment', subtype: 'wood_hammer',      name: 'Wooden Hammer' },
+            { type: 'equipment', subtype: 'stone_hammer',     name: 'Stone Hammer' },
+            { type: 'equipment', subtype: 'iron_hammer',      name: 'Iron Hammer' },
+            { type: 'equipment', subtype: 'gold_hammer',      name: 'Golden Hammer' },
+            { type: 'equipment', subtype: 'diamond_hammer',   name: 'Diamond Hammer' },
+            { type: 'equipment', subtype: 'netherite_hammer', name: 'Netherite Hammer' },
+            // Mod Items - Excavators (all 6 tiers)
+            { type: 'equipment', subtype: 'wood_excavator',      name: 'Wooden Excavator' },
+            { type: 'equipment', subtype: 'stone_excavator',     name: 'Stone Excavator' },
+            { type: 'equipment', subtype: 'iron_excavator',      name: 'Iron Excavator' },
+            { type: 'equipment', subtype: 'gold_excavator',      name: 'Golden Excavator' },
+            { type: 'equipment', subtype: 'diamond_excavator',   name: 'Diamond Excavator' },
+            { type: 'equipment', subtype: 'netherite_excavator', name: 'Netherite Excavator' },
+            { type: 'material',  subtype: 'lead',             name: 'Lead' },
+            { type: 'material',  subtype: 'slime_ball',        name: 'Slimeball' },
             // Netherite
             { type: 'equipment', subtype: 'sword_netherite',   name: 'Netherite Sword' },
             { type: 'equipment', subtype: 'pickaxe_netherite', name: 'Netherite Pickaxe' },
@@ -2203,6 +2248,18 @@ class UISystem {
             }
         }
 
+        // 5. Offhand HUD Slot (displayed next to hotbar when holding an offhand item)
+        const offhandHud = document.getElementById('mc-hotbar-offhand');
+        if (offhandHud) {
+            if (player && player.inventory && player.inventory.offhand) {
+                offhandHud.classList.remove('hidden');
+                this.renderSlotItem(offhandHud, player.inventory.offhand);
+            } else {
+                offhandHud.classList.add('hidden');
+                offhandHud.innerHTML = '';
+            }
+        }
+
         // Hide mana bar in spectator mode
         const manaContainer = document.getElementById('mc-mana-container');
         if (manaContainer && player && player.isSpectator) {
@@ -2264,14 +2321,24 @@ class UISystem {
     }
 
     renderSlotItem(el, slot, forceUpdate) {
-        const cacheKey = slot ? `${slot.item.id}_${slot.count}` : 'empty';
+        if (!slot) {
+            if (el._cacheKey !== 'empty') {
+                el._cacheKey = 'empty';
+                el.innerHTML = '';
+            }
+            return;
+        }
+        const itm = (slot && slot.item) ? slot.item : slot;
+        const cnt = (slot && slot.count !== undefined) ? slot.count : 1;
+        const itemId = itm.id || `${itm.type || 'item'}_${itm.subtype || 'none'}`;
+        const cacheKey = `${itemId}_${cnt}`;
         if (!forceUpdate && el._cacheKey === cacheKey) return;
         el._cacheKey = cacheKey;
-        if (slot && slot.item) {
+        if (itm) {
             let inner = '';
-            if (slot.item.type === 'block' && this.atlas) {
+            if (itm.type === 'block' && this.atlas) {
                 // Use the 3D isometric icon canvas
-                const iconCanvas = this.atlas.getBlockIcon(slot.item.subtype);
+                const iconCanvas = this.atlas.getBlockIcon(itm.subtype);
                 const dataURL = iconCanvas.toDataURL();
                 inner = `<img src="${dataURL}" class="item-icon" draggable="false" style="image-rendering:pixelated;width:76%;height:76%;object-fit:contain;" />`;
             } else {
@@ -2282,21 +2349,21 @@ class UISystem {
                         if (img) img.src = canvas.toDataURL();
                     }
                 };
-                if (slot.item.type === 'wand') cvs = generateItemTexture('wand', slot.item.subtype || 'wand_basic', updateImg);
-                else if (slot.item.type === 'spell') cvs = generateItemTexture('spell', slot.item.data.spell.element || 'spell_basic', updateImg);
-                else if (slot.item.type === 'material') cvs = generateItemTexture('material', slot.item.subtype, updateImg);
-                else if (slot.item.type === 'equipment') cvs = generateItemTexture('equipment', slot.item.subtype, updateImg);
-                else if (slot.item.type === 'modifier') cvs = generateItemTexture('modifier', slot.item.subtype, updateImg);
-                else if (slot.item.type === 'food') cvs = generateItemTexture('food', slot.item.subtype, updateImg);
-                else if (slot.item.type === 'spawn_egg') cvs = generateItemTexture('spawn_egg', slot.item.subtype, updateImg);
+                if (itm.type === 'wand') cvs = generateItemTexture('wand', itm.subtype || 'wand_basic', updateImg);
+                else if (itm.type === 'spell') cvs = generateItemTexture('spell', (itm.data && itm.data.spell && itm.data.spell.element) || 'spell_basic', updateImg);
+                else if (itm.type === 'material') cvs = generateItemTexture('material', itm.subtype, updateImg);
+                else if (itm.type === 'equipment') cvs = generateItemTexture('equipment', itm.subtype, updateImg);
+                else if (itm.type === 'modifier') cvs = generateItemTexture('modifier', itm.subtype, updateImg);
+                else if (itm.type === 'food') cvs = generateItemTexture('food', itm.subtype, updateImg);
+                else if (itm.type === 'spawn_egg') cvs = generateItemTexture('spawn_egg', itm.subtype, updateImg);
                 
                 if (cvs) {
                     inner = `<img src="${cvs.toDataURL()}" class="item-icon" draggable="false" style="image-rendering: pixelated; width: 76%; height: 76%; object-fit: contain;" />`;
                 } else {
-                    inner = `<div style="text-align:center; line-height:100%;">${slot.item.name.substring(0,2).toUpperCase()}</div>`;
+                    inner = `<div style="text-align:center; line-height:100%;">${(itm.name || 'IT').substring(0,2).toUpperCase()}</div>`;
                 }
             }
-            if (slot.count > 1) inner += `<span class="item-count">${slot.count}</span>`;
+            if (cnt > 1) inner += `<span class="item-count">${cnt}</span>`;
             el.innerHTML = inner;
         } else {
             el.innerHTML = '';
@@ -2336,7 +2403,10 @@ class UISystem {
             }
             return;
         } else if (type === 'armor') {
-            slot = this.currentPlayer.inventory.armor[index];
+            if (index === -1) slot = this.currentPlayer.inventory.offhand;
+            else slot = this.currentPlayer.inventory.armor[index];
+        } else if (type === 'offhand') {
+            slot = this.currentPlayer.inventory.offhand;
         } else if (type === 'wand') {
             const w = this.currentPlayer.inventory.slots[this.currentPlayer.selectedSlot];
             if (w && w.item.type === 'wand') {
@@ -2385,7 +2455,12 @@ class UISystem {
                 if (type === 'inventory') this.currentPlayer.inventory.slots[index] = null;
                 else if (type === 'crafting') this.craftingSlots[index] = null;
                 else if (type === 'chest') this.chestInventory[index] = null;
-                else if (type === 'armor') this.currentPlayer.inventory.armor[index] = null;
+                else if (type === 'armor') {
+                    if (index === -1) this.currentPlayer.inventory.offhand = null;
+                    else this.currentPlayer.inventory.armor[index] = null;
+                } else if (type === 'offhand') {
+                    this.currentPlayer.inventory.offhand = null;
+                }
                 else if (type === 'wand') {
                     const w = this.currentPlayer.inventory.slots[this.currentPlayer.selectedSlot];
                     w.item.data.wand.spellSlots[index] = null;
@@ -2471,7 +2546,10 @@ class UISystem {
                     this.craftingSlots[srcIndex] = itemData;
                 }
             } else if (srcType === 'armor') {
-                this.currentPlayer.inventory.armor[srcIndex] = itemData;
+                if (srcIndex === -1) this.currentPlayer.inventory.offhand = itemData;
+                else this.currentPlayer.inventory.armor[srcIndex] = itemData;
+            } else if (srcType === 'offhand') {
+                this.currentPlayer.inventory.offhand = itemData;
             } else if (srcType === 'chest' && this.chestInventory) {
                 if (this.dragState.isSplit) {
                     this.chestInventory[srcIndex].count += itemData.count;
@@ -2501,9 +2579,12 @@ class UISystem {
     onSlotMouseUp(e, targetType, targetIndex) {
         if (!this.dragState.isDragging) return;
         
-        const srcType = this.dragState.sourceType;
-        const srcIndex = this.dragState.sourceIndex;
+        let srcType = this.dragState.sourceType;
+        let srcIndex = this.dragState.sourceIndex;
         const itemData = this.dragState.itemData;
+
+        if (targetType === 'armor' && targetIndex === -1) { targetType = 'offhand'; targetIndex = 0; }
+        if (srcType === 'armor' && srcIndex === -1) { srcType = 'offhand'; srcIndex = 0; }
         
         // Prevent dropping onto self
         if (srcType === targetType && srcIndex === targetIndex) {
@@ -2533,9 +2614,17 @@ class UISystem {
             const temp = this.currentPlayer.inventory.armor[targetIndex];
             this.currentPlayer.inventory.armor[targetIndex] = this.currentPlayer.inventory.armor[srcIndex];
             this.currentPlayer.inventory.armor[srcIndex] = temp;
+        } else if (srcType === 'armor' && targetType === 'offhand') {
+            const targetSlot = this.currentPlayer.inventory.offhand;
+            this.currentPlayer.inventory.offhand = itemData;
+            this.currentPlayer.inventory.armor[srcIndex] = targetSlot;
+        } else if (srcType === 'offhand' && targetType === 'armor') {
+            const targetArmor = this.currentPlayer.inventory.armor[targetIndex];
+            this.currentPlayer.inventory.armor[targetIndex] = itemData;
+            this.currentPlayer.inventory.offhand = targetArmor;
         }
 
-        const standardTypes = ['inventory', 'crafting', 'chest', 'furnace', 'wand', 'stonecutter'];
+        const standardTypes = ['inventory', 'crafting', 'chest', 'furnace', 'wand', 'stonecutter', 'offhand'];
         if ((standardTypes.includes(srcType) || srcType === 'creative') && standardTypes.includes(targetType)) {
             if ((targetType === 'furnace' && targetIndex === 2) || targetType === 'crafting_output' || targetType === 'stonecutter_output') {
                 // Cannot drop into output slots
@@ -2549,6 +2638,7 @@ class UISystem {
 
             const getListSlot = (lType, idx) => {
                 if (lType === 'inventory') return inv[idx];
+                if (lType === 'offhand') return this.currentPlayer.inventory.offhand;
                 if (lType === 'crafting') return this.craftingSlots[idx];
                 if (lType === 'chest') return this.chestInventory[idx];
                 if (lType === 'stonecutter') return this.stonecutterSlot;
@@ -2573,6 +2663,7 @@ class UISystem {
             const setListSlot = (lType, idx, val) => {
                 if (lType === 'creative') return; // Endless creative source, discard swaps
                 if (lType === 'inventory') inv[idx] = val;
+                else if (lType === 'offhand') this.currentPlayer.inventory.offhand = val;
                 else if (lType === 'crafting') this.craftingSlots[idx] = val;
                 else if (lType === 'chest') this.chestInventory[idx] = val;
                 else if (lType === 'stonecutter') {
@@ -2680,6 +2771,7 @@ class UISystem {
         if (type === 'inventory') slot = this.currentPlayer.inventory.slots[index];
         else if (type === 'crafting') slot = this.craftingSlots[index];
         else if (type === 'crafting_output') slot = this._matchRecipe();
+        else if (type === 'offhand' || (type === 'armor' && index === -1)) slot = this.currentPlayer.inventory.offhand;
         else if (type === 'armor') slot = this.currentPlayer.inventory.armor[index];
         else if (type === 'stonecutter') slot = this.stonecutterSlot;
         else if (type === 'stonecutter_output') {
@@ -2814,17 +2906,23 @@ class UISystem {
 
     _initArmorSlots() {
         // Find all armor/offhand slots in the DOM and wire them up
-        const ARMOR_NAMES = ['head', 'chest', 'legs', 'boots', 'offhand'];
+        const ARMOR_NAMES = ['head', 'chest', 'legs', 'boots'];
         ARMOR_NAMES.forEach((slotName, i) => {
-            const isOffhand = slotName === 'offhand';
-            const el = document.querySelector(isOffhand ? '.offhand-slot' : `[data-slot="${slotName}"]`);
+            const el = document.querySelector(`[data-slot="${slotName}"]`);
             if (!el) return;
-            const armorIndex = isOffhand ? -1 : i;
-            el.onmousedown = (e) => this.onSlotMouseDown(e, 'armor', armorIndex);
-            el.onmouseup = (e) => this.onSlotMouseUp(e, 'armor', armorIndex);
-            el.onmouseenter = (e) => this.onSlotEnter(e, 'armor', armorIndex);
+            el.onmousedown = (e) => this.onSlotMouseDown(e, 'armor', i);
+            el.onmouseup = (e) => this.onSlotMouseUp(e, 'armor', i);
+            el.onmouseenter = (e) => this.onSlotEnter(e, 'armor', i);
             el.onmouseleave = () => this.onSlotLeave();
         });
+
+        const offhandEl = document.querySelector('.offhand-slot');
+        if (offhandEl) {
+            offhandEl.onmousedown = (e) => this.onSlotMouseDown(e, 'offhand', 0);
+            offhandEl.onmouseup = (e) => this.onSlotMouseUp(e, 'offhand', 0);
+            offhandEl.onmouseenter = (e) => this.onSlotEnter(e, 'offhand', 0);
+            offhandEl.onmouseleave = () => this.onSlotLeave();
+        }
     }
 
     _initFurnaceSlots() {
@@ -3045,6 +3143,10 @@ class UISystem {
             if (!el) return;
             this.renderSlotItem(el, this.currentPlayer.inventory.armor[i]);
         });
+        const offhandEl = document.querySelector('.offhand-slot');
+        if (offhandEl) {
+            this.renderSlotItem(offhandEl, this.currentPlayer.inventory.offhand);
+        }
     }
 
     _renderPlayerPreview(player) {
@@ -3622,13 +3724,53 @@ class UISystem {
 
             // Mod Items (3x3 Shaped)
             r = armorRecipeBoots('slime_ball', 'Slime Boots', 'slime_boots', 2); if (r) return r;
-            // Stone Hammer (5 or 6 stone/cobble + 2 sticks)
-            if ((getCount(B.COBBLESTONE) >= 5 || getCount(B.STONE) >= 5) && getCount('stick') === 2 && totalItems === (getCount(B.COBBLESTONE) + getCount(B.STONE) + 2)) {
-                return equip('hammer', { damage: 7, mineSpeed: 4.5, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' }, 'Stone Hammer', 'Mines a 3x3 area of stone and ores.');
+
+            // --- Tinkers' Construct Hammers (all 6 tiers) ---
+            // Netherite Hammer upgrade: diamond hammer + netherite ingot
+            if ((getCount('diamond_hammer') === 1 || getCount('hammer') === 1) && getCount('netherite_ingot') === 1 && totalItems === 2) {
+                return equip('netherite_hammer', { damage: 9, mineSpeed: 9.5, durability: 2031, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' }, 'Netherite Hammer', 'Mines a 3x3 area of stone & ores.');
             }
-            // Excavator (3 stone/cobble/iron + 2 sticks)
-            if ((getCount(B.COBBLESTONE) === 3 || getCount(B.STONE) === 3 || getCount('iron_ingot') === 3) && getCount('stick') === 2 && totalItems === 5) {
-                return equip('excavator', { digSpeed: 4.5, damage: 5, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' }, 'Excavator', 'Digs a 3x3 area of dirt, sand, and gravel.');
+            if (getCount('netherite_ingot') === 5 && getCount('stick') === 2 && totalItems === 7) {
+                return equip('netherite_hammer', { damage: 9, mineSpeed: 9.5, durability: 2031, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' }, 'Netherite Hammer', 'Mines a 3x3 area of stone & ores.');
+            }
+            if (getCount('diamond') === 5 && getCount('stick') === 2 && totalItems === 7) {
+                return equip('diamond_hammer', { damage: 8, mineSpeed: 8.0, durability: 1561, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' }, 'Diamond Hammer', 'Mines a 3x3 area of stone & ores.');
+            }
+            if (getCount('gold_ingot') === 5 && getCount('stick') === 2 && totalItems === 7) {
+                return equip('gold_hammer', { damage: 5, mineSpeed: 9.0, durability: 70, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' }, 'Golden Hammer', 'Mines a 3x3 area of stone & ores.');
+            }
+            if (getCount('iron_ingot') === 5 && getCount('stick') === 2 && totalItems === 7) {
+                return equip('iron_hammer', { damage: 7, mineSpeed: 6.0, durability: 500, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' }, 'Iron Hammer', 'Mines a 3x3 area of stone & ores.');
+            }
+            if ((getCount(B.COBBLESTONE) + getCount(B.STONE) + getCount(B.COBBLED_DEEPSLATE)) >= 5 && getCount('stick') === 2 && totalItems === (getCount(B.COBBLESTONE) + getCount(B.STONE) + getCount(B.COBBLED_DEEPSLATE) + 2)) {
+                return equip('stone_hammer', { damage: 6, mineSpeed: 4.0, durability: 260, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' }, 'Stone Hammer', 'Mines a 3x3 area of stone & ores.');
+            }
+            if (countAnyPlank === 5 && getCount('stick') === 2 && totalItems === 7) {
+                return equip('wood_hammer', { damage: 5, mineSpeed: 2.5, durability: 120, is3x3: true, toolType: 'pickaxe', passive: '3x3 Area Miner' }, 'Wooden Hammer', 'Mines a 3x3 area of stone & ores.');
+            }
+
+            // --- Tinkers' Construct Excavators (all 6 tiers) ---
+            // Netherite Excavator upgrade: diamond excavator + netherite ingot
+            if ((getCount('diamond_excavator') === 1 || getCount('excavator') === 1) && getCount('netherite_ingot') === 1 && totalItems === 2) {
+                return equip('netherite_excavator', { digSpeed: 9.5, damage: 8, durability: 2031, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' }, 'Netherite Excavator', 'Digs a 3x3 area of dirt, sand & gravel.');
+            }
+            if (getCount('netherite_ingot') === 3 && getCount('stick') === 2 && totalItems === 5) {
+                return equip('netherite_excavator', { digSpeed: 9.5, damage: 8, durability: 2031, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' }, 'Netherite Excavator', 'Digs a 3x3 area of dirt, sand & gravel.');
+            }
+            if (getCount('diamond') === 3 && getCount('stick') === 2 && totalItems === 5) {
+                return equip('diamond_excavator', { digSpeed: 8.0, damage: 7, durability: 1561, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' }, 'Diamond Excavator', 'Digs a 3x3 area of dirt, sand & gravel.');
+            }
+            if (getCount('gold_ingot') === 3 && getCount('stick') === 2 && totalItems === 5) {
+                return equip('gold_excavator', { digSpeed: 9.0, damage: 4, durability: 70, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' }, 'Golden Excavator', 'Digs a 3x3 area of dirt, sand & gravel.');
+            }
+            if (getCount('iron_ingot') === 3 && getCount('stick') === 2 && totalItems === 5) {
+                return equip('iron_excavator', { digSpeed: 6.0, damage: 6, durability: 500, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' }, 'Iron Excavator', 'Digs a 3x3 area of dirt, sand & gravel.');
+            }
+            if ((getCount(B.COBBLESTONE) + getCount(B.STONE) + getCount(B.COBBLED_DEEPSLATE)) === 3 && getCount('stick') === 2 && totalItems === 5) {
+                return equip('stone_excavator', { digSpeed: 4.0, damage: 5, durability: 260, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' }, 'Stone Excavator', 'Digs a 3x3 area of dirt, sand & gravel.');
+            }
+            if (countAnyPlank === 3 && getCount('stick') === 2 && totalItems === 5) {
+                return equip('wood_excavator', { digSpeed: 2.5, damage: 4, durability: 120, is3x3: true, toolType: 'shovel', passive: '3x3 Area Excavation' }, 'Wooden Excavator', 'Digs a 3x3 area of dirt, sand & gravel.');
             }
 
             if (!s[0] && !s[1] && !s[2] && 
@@ -3682,9 +3824,9 @@ class UISystem {
             if (getCount('coal') === 9 && totalItems === 9) return block(B.COAL_BLOCK, 'Coal Block', 1);
             if ((getCount('bone_meal') === 9 || getCount('bone') === 9) && totalItems === 9) return block(B.BONE_BLOCK, 'Bone Block', 1);
 
-            // Lanterns (8 Iron Nuggets surrounding 1 Torch or Soul Torch)
+            // Lanterns (8 Iron Nuggets surrounding 1 Torch or Soul Sand/Soul Torch)
             if (getCount('iron_nugget') === 8 && (getCount(B.TORCH) === 1 || getCount('torch') === 1) && totalItems === 9) return block(B.LANTERN, 'Lantern', 1);
-            if (getCount('iron_nugget') === 8 && (getCount(B.SOUL_TORCH) === 1 || getCount('soul_torch') === 1) && totalItems === 9) return block(B.SOUL_LANTERN, 'Soul Lantern', 1);
+            if (getCount('iron_nugget') === 8 && (getCount(B.SOUL_SAND) === 1 || getCount('soul_sand') === 1 || getCount(B.SOUL_TORCH) === 1 || getCount('soul_torch') === 1) && totalItems === 9) return block(B.SOUL_LANTERN, 'Soul Lantern', 1);
 
             // Utilities & Weapons
             if (getCount('iron_ingot') === 4 && getCount('redstone') === 1 && totalItems === 5) return mat('compass', 'Compass', 1);
@@ -3840,7 +3982,7 @@ class UISystem {
             { name: "Torch (4)", desc: "Lights up the dark.", grid: [[_,_,_],[_,mat('coal'),_],[_,mat('stick'),_]], out: blk(B.TORCH), outCount: 4, needs3x3: false },
             { name: "Iron Nugget (9)", desc: "Crafted from 1 iron ingot.", grid: [[_,_,_],[_,mat('iron_ingot'),_],[_,_,_]], out: mat('iron_nugget'), outCount: 9, needs3x3: false },
             { name: "Lantern", desc: "Authentic Minecraft lantern.", grid: [[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')],[mat('iron_nugget'),blk(B.TORCH),mat('iron_nugget')],[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')]], out: blk(B.LANTERN), outCount: 1, needs3x3: true },
-            { name: "Soul Lantern", desc: "Soul fire lantern.", grid: [[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')],[mat('iron_nugget'),blk(B.SOUL_TORCH),mat('iron_nugget')],[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')]], out: blk(B.SOUL_LANTERN), outCount: 1, needs3x3: true },
+            { name: "Soul Lantern", desc: "Soul fire lantern crafted with soul sand.", grid: [[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')],[mat('iron_nugget'),blk(B.SOUL_SAND),mat('iron_nugget')],[mat('iron_nugget'),mat('iron_nugget'),mat('iron_nugget')]], out: blk(B.SOUL_LANTERN), outCount: 1, needs3x3: true },
             { name: "Iron Sword", desc: "Deals moderate damage.", grid: [[_,mat('iron_ingot'),_],[_,mat('iron_ingot'),_],[_,mat('stick'),_]], out: eqp('sword_iron'), outCount: 1, needs3x3: true },
             { name: "Shark Sword", desc: "High damage weapon.", grid: [[_,mat('shark_tooth'),_],[_,mat('shark_tooth'),_],[_,mat('stick'),_]], out: eqp('sword_shark'), outCount: 1, needs3x3: true },
             { name: "Iron Pickaxe", desc: "Mines ores.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[_,mat('stick'),_],[_,mat('stick'),_]], out: eqp('pickaxe_iron'), outCount: 1, needs3x3: true },
@@ -3896,8 +4038,21 @@ class UISystem {
             { name: "Slime Boots", desc: "Bouncy jumps & no fall damage.", grid: [[_,_,_],[mat('slime_ball'),_,mat('slime_ball')],[mat('slime_ball'),_,mat('slime_ball')]], out: eqp('slime_boots'), outCount: 1, needs3x3: true },
             { name: "Cloud Parachute", desc: "Slow fall glide through the air.", grid: [[mat('feather'),mat('feather'),mat('feather')],[mat('string'),_,mat('string')],[_,_,_]], out: eqp('cloud_parachute'), outCount: 1, needs3x3: true },
             { name: "Golden Feather", desc: "Passive low gravity & fall immunity.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('feather'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: eqp('golden_feather'), outCount: 1, needs3x3: true },
-            { name: "Stone Hammer", desc: "Mines a 3x3 area of stone & ores.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),mat('stick'),blk(B.COBBLESTONE)],[_,mat('stick'),_]], out: eqp('hammer'), outCount: 1, needs3x3: true },
-            { name: "Excavator", desc: "Digs a 3x3 area of dirt, sand & gravel.", grid: [[_,blk(B.COBBLESTONE),_],[blk(B.COBBLESTONE),mat('stick'),blk(B.COBBLESTONE)],[_,mat('stick'),_]], out: eqp('excavator'), outCount: 1, needs3x3: true },
+            // Hammers (all 6 tiers)
+            { name: "Wooden Hammer", desc: "Mines a 3x3 area of stone & ores.", grid: [[blk(B.PLANKS),blk(B.PLANKS),blk(B.PLANKS)],[blk(B.PLANKS),mat('stick'),blk(B.PLANKS)],[_,mat('stick'),_]], out: eqp('wood_hammer'), outCount: 1, needs3x3: true },
+            { name: "Stone Hammer", desc: "Mines a 3x3 area of stone & ores.", grid: [[blk(B.COBBLESTONE),blk(B.COBBLESTONE),blk(B.COBBLESTONE)],[blk(B.COBBLESTONE),mat('stick'),blk(B.COBBLESTONE)],[_,mat('stick'),_]], out: eqp('stone_hammer'), outCount: 1, needs3x3: true },
+            { name: "Iron Hammer", desc: "Mines a 3x3 area of stone & ores.", grid: [[mat('iron_ingot'),mat('iron_ingot'),mat('iron_ingot')],[mat('iron_ingot'),mat('stick'),mat('iron_ingot')],[_,mat('stick'),_]], out: eqp('iron_hammer'), outCount: 1, needs3x3: true },
+            { name: "Golden Hammer", desc: "Fast 3x3 area mining.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('stick'),mat('gold_ingot')],[_,mat('stick'),_]], out: eqp('gold_hammer'), outCount: 1, needs3x3: true },
+            { name: "Diamond Hammer", desc: "High-durability 3x3 area mining.", grid: [[mat('diamond'),mat('diamond'),mat('diamond')],[mat('diamond'),mat('stick'),mat('diamond')],[_,mat('stick'),_]], out: eqp('diamond_hammer'), outCount: 1, needs3x3: true },
+            { name: "Netherite Hammer", desc: "Ultimate fireproof 3x3 area miner.", grid: [[_,_,_],[eqp('diamond_hammer'),mat('netherite_ingot'),_],[_,_,_]], out: eqp('netherite_hammer'), outCount: 1, needs3x3: false },
+
+            // Excavators (all 6 tiers)
+            { name: "Wooden Excavator", desc: "Digs a 3x3 area of dirt, sand & gravel.", grid: [[_,blk(B.PLANKS),_],[blk(B.PLANKS),mat('stick'),blk(B.PLANKS)],[_,mat('stick'),_]], out: eqp('wood_excavator'), outCount: 1, needs3x3: true },
+            { name: "Stone Excavator", desc: "Digs a 3x3 area of dirt, sand & gravel.", grid: [[_,blk(B.COBBLESTONE),_],[blk(B.COBBLESTONE),mat('stick'),blk(B.COBBLESTONE)],[_,mat('stick'),_]], out: eqp('stone_excavator'), outCount: 1, needs3x3: true },
+            { name: "Iron Excavator", desc: "Digs a 3x3 area of dirt, sand & gravel.", grid: [[_,mat('iron_ingot'),_],[mat('iron_ingot'),mat('stick'),mat('iron_ingot')],[_,mat('stick'),_]], out: eqp('iron_excavator'), outCount: 1, needs3x3: true },
+            { name: "Golden Excavator", desc: "Fast 3x3 excavation.", grid: [[_,mat('gold_ingot'),_],[mat('gold_ingot'),mat('stick'),mat('gold_ingot')],[_,mat('stick'),_]], out: eqp('gold_excavator'), outCount: 1, needs3x3: true },
+            { name: "Diamond Excavator", desc: "High-durability 3x3 excavation.", grid: [[_,mat('diamond'),_],[mat('diamond'),mat('stick'),mat('diamond')],[_,mat('stick'),_]], out: eqp('diamond_excavator'), outCount: 1, needs3x3: true },
+            { name: "Netherite Excavator", desc: "Ultimate fireproof 3x3 excavator.", grid: [[_,_,_],[eqp('diamond_excavator'),mat('netherite_ingot'),_],[_,_,_]], out: eqp('netherite_excavator'), outCount: 1, needs3x3: false },
 
             { name: "Gold Helmet", desc: "Shiny protection.", grid: [[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),_,mat('gold_ingot')],[_,_,_]], out: eqp('helmet_gold'), outCount: 1, needs3x3: true },
             { name: "Gold Chestplate", desc: "Shiny protection.", grid: [[mat('gold_ingot'),_,mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')],[mat('gold_ingot'),mat('gold_ingot'),mat('gold_ingot')]], out: eqp('chest_gold'), outCount: 1, needs3x3: true },
