@@ -1344,6 +1344,78 @@ function generateAncientPyramid(blocks, baseX, baseY, baseZ, rng) {
     safeSetBlock(blocks, baseX, baseY + 1, baseZ, BLOCKS.CHEST_BLOCK);
     safeSetBlock(blocks, baseX, baseY + 2, baseZ, BLOCKS.TORCH);
 }
+
+// ============================================
+// Biome Boundary Merging & Dithering Helpers
+// ============================================
+
+export function getBiomeDefaultSurface(b, y, surfaceNoise, seaLevel) {
+    if (!b) return BLOCKS.GRASS;
+    if (b.isVolcanic || b === BIOMES.VOLCANIC) return BLOCKS.BASALT;
+    if (b === BIOMES.DESERT || b.name === 'Desert' || b === BIOMES.BEACH || b.name === 'Beach' || b === BIOMES.OASIS) return BLOCKS.SAND;
+    if (b === BIOMES.BADLANDS || b.name === 'Badlands') return BLOCKS.RED_SAND;
+    if (b === BIOMES.TUNDRA || b.name === 'Tundra' || b === BIOMES.ICE_SPIKES || b.name === 'Ice Spikes') return BLOCKS.SNOW;
+    if (b.isRedwood || b === BIOMES.REDWOOD_FOREST || b.name === 'Redwood Forest') return BLOCKS.PODZOL;
+    if (b === BIOMES.MUSHROOM || b.name === 'Mushroom') return BLOCKS.MYCELIUM;
+    if (b === BIOMES.SWAMP || b.name === 'Swamp') return BLOCKS.SWAMP_GRASS;
+    if (b === BIOMES.MOUNTAINS || b.name === 'Mountains') {
+        if (y >= 95) return (surfaceNoise > 0.2) ? BLOCKS.STONE : BLOCKS.SNOW;
+        if (y >= 80) return (surfaceNoise > 0.1) ? BLOCKS.STONE : BLOCKS.GRASS;
+        return BLOCKS.GRASS;
+    }
+    return b.surface || BLOCKS.GRASS;
+}
+
+export function getTransitionBlock(curBlock, neighborBlock) {
+    const isCurGrass = (curBlock === BLOCKS.GRASS || curBlock === BLOCKS.SWAMP_GRASS || curBlock === BLOCKS.SAVANNA_GRASS);
+    const isNeighGrass = (neighborBlock === BLOCKS.GRASS || neighborBlock === BLOCKS.SWAMP_GRASS || neighborBlock === BLOCKS.SAVANNA_GRASS);
+    
+    const isCurSand = (curBlock === BLOCKS.SAND);
+    const isNeighSand = (neighborBlock === BLOCKS.SAND);
+
+    const isCurRedSand = (curBlock === BLOCKS.RED_SAND);
+    const isNeighRedSand = (neighborBlock === BLOCKS.RED_SAND);
+
+    const isCurPodzol = (curBlock === BLOCKS.PODZOL);
+    const isNeighPodzol = (neighborBlock === BLOCKS.PODZOL);
+
+    const isCurSnow = (curBlock === BLOCKS.SNOW);
+    const isNeighSnow = (neighborBlock === BLOCKS.SNOW);
+
+    const isCurStone = (curBlock === BLOCKS.STONE);
+    const isNeighStone = (neighborBlock === BLOCKS.STONE);
+
+    // Grass <-> Sand (Desert / Beach) -> Coarse dirt transition
+    if ((isCurGrass && isNeighSand) || (isCurSand && isNeighGrass)) {
+        return BLOCKS.COARSE_DIRT;
+    }
+    // Grass <-> Red Sand (Badlands) -> Coarse dirt transition
+    if ((isCurGrass && isNeighRedSand) || (isCurRedSand && isNeighGrass)) {
+        return BLOCKS.COARSE_DIRT;
+    }
+    // Sand <-> Red Sand (Desert <-> Badlands)
+    if ((isCurSand && isNeighRedSand) || (isCurRedSand && isNeighSand)) {
+        return BLOCKS.RED_SAND;
+    }
+    // Grass <-> Podzol (Redwood Forest) -> Coarse dirt transition
+    if ((isCurGrass && isNeighPodzol) || (isCurPodzol && isNeighGrass)) {
+        return BLOCKS.COARSE_DIRT;
+    }
+    // Grass <-> Snow (Tundra) -> Coarse dirt transition
+    if ((isCurGrass && isNeighSnow) || (isCurSnow && isNeighGrass)) {
+        return BLOCKS.COARSE_DIRT;
+    }
+    // Grass <-> Stone (Mountains) -> Gravel transition
+    if ((isCurGrass && isNeighStone) || (isCurStone && isNeighGrass)) {
+        return BLOCKS.GRAVEL;
+    }
+    // Grass <-> Swamp -> Mud transition
+    if ((isCurGrass && neighborBlock === BLOCKS.SWAMP_GRASS) || (curBlock === BLOCKS.SWAMP_GRASS && isNeighGrass)) {
+        return BLOCKS.MUD;
+    }
+    return BLOCKS.COARSE_DIRT;
+}
+
 // Generate the chunk terrain via Multi-Pass Feature Placement Pipeline
 export function generateChunkTerrain(cx, cz, params) {
     const blocks = new Uint16Array(CHUNK_SIZE * CHUNK_HEIGHT * CHUNK_SIZE);
@@ -1378,6 +1450,14 @@ export function generateChunkTerrain(cx, cz, params) {
             columns[x][z] = getColumnInfo(wxBase + x, wzBase + z, params);
         }
     }
+
+    // Fast column biome query helper (reads chunk columns cache or calculates outside chunk perimeter)
+    const getChunkColBiome = (lx, lz) => {
+        if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+            return columns[lx][lz].biome;
+        }
+        return getBiomeParams(wxBase + lx, wzBase + lz, params).biome;
+    };
 
     // Helper to query actual top solid ground block in chunk for placing features
     function getTopGround(tx, tz) {
@@ -1687,6 +1767,33 @@ export function generateChunkTerrain(cx, cz, params) {
             const { biome, colRng, bData, temp, moist, contNoise, erosionNoise, weirdness, surfaceY } = columns[x][z];
             const isSwamp = (biome === BIOMES.SWAMP || biome.name === 'Swamp' || biome.swampFlora);
 
+            // Biome boundary detection for organic subtle ground dithering
+            let neighborBiome = null;
+            let borderDist = 999;
+            const d1 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+            for (let i = 0; i < 4; i++) {
+                const nb = getChunkColBiome(x + d1[i][0], z + d1[i][1]);
+                if (nb && nb !== biome && nb.name !== biome.name) {
+                    neighborBiome = nb;
+                    borderDist = 1;
+                    break;
+                }
+            }
+            if (borderDist > 1) {
+                const d2 = [
+                    [2, 0], [-2, 0], [0, 2], [0, -2],
+                    [1, 1], [-1, 1], [1, -1], [-1, -1]
+                ];
+                for (let i = 0; i < 8; i++) {
+                    const nb = getChunkColBiome(x + d2[i][0], z + d2[i][1]);
+                    if (nb && nb !== biome && nb.name !== biome.name) {
+                        neighborBiome = nb;
+                        borderDist = 2;
+                        break;
+                    }
+                }
+            }
+
             // Check if swamp has natural mud bogs here
             let isSwampMud = false;
             if (isSwamp) {
@@ -1734,6 +1841,7 @@ export function generateChunkTerrain(cx, cz, params) {
                     const isUnderwater = aboveBlock === BLOCKS.WATER || aboveBlock === BLOCKS.SWAMP_WATER || aboveBlock === BLOCKS.ICE;
                     const isNearSeaShore = (y <= params.seaLevel + 3 && y >= params.seaLevel - 4);
                     const isActualCoastalBeach = hasSandyBeach || (contNoise < 0.35 && !isColdBiome && !isSwamp && biome.name !== 'Mountains');
+                    const isDeepCaveFloor = (y < surfaceY - 6);
 
                     let type;
                     if (isUnderwater) {
@@ -1808,7 +1916,6 @@ export function generateChunkTerrain(cx, cz, params) {
                     } else {
                         // In Minecraft, outdoor terrain in the sunlight keeps natural biome grass/surface!
                         // Only deep inside the dark cave tunnel (y < surfaceY - 6) does the floor become stone/gravel/cobblestone.
-                        const isDeepCaveFloor = (y < surfaceY - 6);
                         if (isDeepCaveFloor) {
                             const caveFloorNoise = params.noise2D(wx * 0.18 + 500, wz * 0.18 + 500);
                             if (caveFloorNoise > 0.35) type = BLOCKS.COBBLESTONE;
@@ -1826,6 +1933,29 @@ export function generateChunkTerrain(cx, cz, params) {
                             }
                         }
                     }
+
+                    // Subtle organic biome ground dithering near boundaries
+                    if (!isUnderwater && !isDeepCaveFloor && type !== BLOCKS.DIRT_PATH && borderDist <= 2 && neighborBiome) {
+                        const curSurface = type;
+                        const neighborSurface = getBiomeDefaultSurface(neighborBiome, y, surfaceNoise, params.seaLevel);
+                        if (curSurface !== neighborSurface) {
+                            const ditherHash = (((wx * 374761393 + wz * 668265263) ^ 0x5bf03635) >>> 0) / 4294967296;
+                            const blendScore = surfaceNoise * 0.65 + (ditherHash - 0.5) * 0.7;
+
+                            if (borderDist === 1) {
+                                if (blendScore > 0.55) {
+                                    type = neighborSurface;
+                                } else if (blendScore > 0.25) {
+                                    type = getTransitionBlock(curSurface, neighborSurface);
+                                }
+                            } else if (borderDist === 2) {
+                                if (blendScore > 0.55) {
+                                    type = getTransitionBlock(curSurface, neighborSurface);
+                                }
+                            }
+                        }
+                    }
+
                     blocks[idx] = type;
                 } else if (depth < soilLimit) {
                     // Subsurface soil layer (depth 1 to soilLimit)
@@ -1847,7 +1977,7 @@ export function generateChunkTerrain(cx, cz, params) {
                         type = (colRng() < 0.6) ? BLOCKS.MUD : BLOCKS.DIRT;
                     } else if (surfaceBlock === BLOCKS.GRAVEL) {
                         type = BLOCKS.GRAVEL;
-                    } else if (surfaceBlock === BLOCKS.DIRT || surfaceBlock === BLOCKS.ROOTED_DIRT || surfaceBlock === BLOCKS.GRASS || surfaceBlock === BLOCKS.DIRT_PATH) {
+                    } else if (surfaceBlock === BLOCKS.DIRT || surfaceBlock === BLOCKS.ROOTED_DIRT || surfaceBlock === BLOCKS.GRASS || surfaceBlock === BLOCKS.DIRT_PATH || surfaceBlock === BLOCKS.COARSE_DIRT || surfaceBlock === BLOCKS.PODZOL || surfaceBlock === BLOCKS.MYCELIUM || surfaceBlock === BLOCKS.SWAMP_GRASS || surfaceBlock === BLOCKS.SAVANNA_GRASS) {
                         type = BLOCKS.DIRT;
                     } else if (surfaceBlock === BLOCKS.SNOW && biome.name === 'Mountains') {
                         type = (colRng() < 0.4) ? BLOCKS.STONE : BLOCKS.DIRT;
@@ -2146,13 +2276,20 @@ export function generateChunkTerrain(cx, cz, params) {
             // Ground validity check
             const currentGroundIdx = (surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx;
             const currentGroundBlock = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[currentGroundIdx] : BLOCKS.AIR;
-            const isValidGround = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.SAND || currentGroundBlock === BLOCKS.SNOW || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.ALIEN_GRASS || currentGroundBlock === BLOCKS.ALIEN_STONE || currentGroundBlock === BLOCKS.RED_SAND || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.BASALT || currentGroundBlock === BLOCKS.SMOOTH_BASALT || currentGroundBlock === BLOCKS.BLACKSTONE || currentGroundBlock === BLOCKS.MUD || currentGroundBlock === BLOCKS.SWAMP_WATER || currentGroundBlock === BLOCKS.PACKED_ICE || currentGroundBlock === BLOCKS.BLUE_ICE || currentGroundBlock === BLOCKS.ICE;
+            const isValidGround = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.SAND || currentGroundBlock === BLOCKS.SNOW || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.ALIEN_GRASS || currentGroundBlock === BLOCKS.ALIEN_STONE || currentGroundBlock === BLOCKS.RED_SAND || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.BASALT || currentGroundBlock === BLOCKS.SMOOTH_BASALT || currentGroundBlock === BLOCKS.BLACKSTONE || currentGroundBlock === BLOCKS.MUD || currentGroundBlock === BLOCKS.SWAMP_WATER || currentGroundBlock === BLOCKS.PACKED_ICE || currentGroundBlock === BLOCKS.BLUE_ICE || currentGroundBlock === BLOCKS.ICE || currentGroundBlock === BLOCKS.COARSE_DIRT;
             if (!isValidGround) continue;
 
-            // Border tree density feathering (prevents abrupt walls of trees hitting desert borders)
+            // Border tree density feathering (prevents abrupt walls of trees hitting desert/open meadow borders)
             if (colInfo.temp > 0.69 && !biome.jungleFlora && biome !== BIOMES.JUNGLE && biome.name !== 'Jungle') {
                 const heatTaper = Math.max(0, Math.min(1, (0.76 - colInfo.temp) / 0.07));
                 if (floraRng() > heatTaper) continue;
+            }
+            if (biome.hasTrees) {
+                const edgeNb1 = getBiomeParams(wx + 2, wz, params).biome;
+                const edgeNb2 = getBiomeParams(wx, wz + 2, params).biome;
+                if (!edgeNb1.hasTrees || !edgeNb2.hasTrees) {
+                    if (floraRng() < 0.35) continue; // 35% natural thinning along forest boundary
+                }
             }
 
             // Volcanic Spire Columns
@@ -2290,7 +2427,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 treeProbability = isNearWater ? 0.012 : ((colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.005 : 0.002);
             }
 
-            const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || (biome.isOasis && currentGroundBlock === BLOCKS.SAND);
+            const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || currentGroundBlock === BLOCKS.COARSE_DIRT || (biome.isOasis && currentGroundBlock === BLOCKS.SAND);
             if (treeProbability > 0 && r < treeProbability && isSoilForTree) {
                 let isStacked = false;
                 for (let cy = surfaceY; cy >= Math.max(1, surfaceY - 14); cy--) {
@@ -2427,12 +2564,20 @@ export function generateChunkTerrain(cx, cz, params) {
             const curGround = (tx >= 0 && tx < CHUNK_SIZE && tz >= 0 && tz < CHUNK_SIZE) ? blocks[curGroundIdx] : BLOCKS.AIR;
             const isSoil = curGround === BLOCKS.GRASS || curGround === BLOCKS.DIRT || curGround === BLOCKS.PODZOL || curGround === BLOCKS.MYCELIUM || curGround === BLOCKS.SWAMP_GRASS || curGround === BLOCKS.SAVANNA_GRASS || curGround === BLOCKS.MUD;
             const isSandSoil = curGround === BLOCKS.SAND || curGround === BLOCKS.RED_SAND;
-            const canSupportFlora = isSoil || isSandSoil;
+            const canSupportFlora = isSoil || isSandSoil || curGround === BLOCKS.COARSE_DIRT;
             if (!canSupportFlora) continue;
+
+            // Coarse dirt in Minecraft remains exposed rugged soil; very rarely an occasional dead bush in arid zones
+            if (curGround === BLOCKS.COARSE_DIRT) {
+                if (colInfo.temp > 0.65 && r < 0.03) {
+                    safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
+                }
+                continue;
+            }
 
             // Sand blocks on land: only place dead bushes in desert/badlands (never seashells on land!)
             if (isSandSoil) {
-                if (biome.hasDeadBush && r < 0.04) {
+                if ((biome.hasDeadBush || colInfo.temp > 0.65) && r < 0.04) {
                     safeSetBlock(blocks, tx, surfaceY + 1, tz, BLOCKS.DEAD_BUSH, true);
                 }
                 continue;

@@ -3,7 +3,7 @@
 // ============================================
 import * as THREE from 'three';
 import { BLOCKS, getBlockProperties, ATLAS_SIZE } from './textures.js?v=148';
-import { getBiomeParams } from './generation.js?v=148';
+import { getBiomeParams } from './generation.js?v=155';
 
 // ============================================
 // Shader Customization: Wrapped Diffuse Lighting
@@ -427,6 +427,9 @@ const _slightGlowTransparentIndices = new Uint32Array(MAX_INDICES);
 const _rawGrassColors = new Float32Array(22 * 22 * 3);
 const _tempGrass = new Float32Array(22 * 22 * 3);
 const _blendedGrass = new Float32Array(16 * 16 * 3);
+const _rawFoliageColors = new Float32Array(22 * 22 * 3);
+const _tempFoliage = new Float32Array(22 * 22 * 3);
+const _blendedFoliage = new Float32Array(16 * 16 * 3);
 const _topOpaqueY = new Int16Array(28 * 28);
 
 const _meshPool = [];
@@ -641,39 +644,54 @@ export class Chunk {
 
         // 5x5 Biome Color Blending: smooth continuous gradient across biome boundaries
         const plainsR = 145 / 255, plainsG = 189 / 255, plainsB = 89 / 255;
+        const folPlainsR = 119 / 255, folPlainsG = 171 / 255, folPlainsB = 47 / 255;
         const BLEND_RAD = 2; // 5x5 smoothing kernel
         const PADDING = 3;
         const gridDim = CHUNK_SIZE + PADDING * 2;
         const rawGrassColors = _rawGrassColors;
+        const rawFoliageColors = _rawFoliageColors;
 
         for (let lz = -PADDING; lz < CHUNK_SIZE + PADDING; lz++) {
             for (let lx = -PADDING; lx < CHUNK_SIZE + PADDING; lx++) {
                 const bInfo = getBiomeParams(wxBase + lx, wzBase + lz, planetParams);
                 const gCol = (bInfo && bInfo.biome && bInfo.biome.grassColor) ? bInfo.biome.grassColor : [plainsR, plainsG, plainsB];
+                const fCol = (bInfo && bInfo.biome && bInfo.biome.foliageColor) ? bInfo.biome.foliageColor : [folPlainsR, folPlainsG, folPlainsB];
                 const idx = ((lz + PADDING) * gridDim + (lx + PADDING)) * 3;
                 rawGrassColors[idx] = gCol[0];
                 rawGrassColors[idx + 1] = gCol[1];
                 rawGrassColors[idx + 2] = gCol[2];
+                rawFoliageColors[idx] = fCol[0];
+                rawFoliageColors[idx + 1] = fCol[1];
+                rawFoliageColors[idx + 2] = fCol[2];
             }
         }
 
         const tempGrass = _tempGrass;
         const blendedGrass = _blendedGrass;
+        const tempFoliage = _tempFoliage;
+        const blendedFoliage = _blendedFoliage;
         const kSize = BLEND_RAD * 2 + 1; // 5
 
         for (let gz = 0; gz < gridDim; gz++) {
             for (let gx = BLEND_RAD; gx < gridDim - BLEND_RAD; gx++) {
                 let sr = 0, sg = 0, sb = 0;
+                let fr = 0, fg = 0, fb = 0;
                 for (let dx = -BLEND_RAD; dx <= BLEND_RAD; dx++) {
                     const idx = (gz * gridDim + (gx + dx)) * 3;
                     sr += rawGrassColors[idx];
                     sg += rawGrassColors[idx + 1];
                     sb += rawGrassColors[idx + 2];
+                    fr += rawFoliageColors[idx];
+                    fg += rawFoliageColors[idx + 1];
+                    fb += rawFoliageColors[idx + 2];
                 }
                 const outIdx = (gz * gridDim + gx) * 3;
                 tempGrass[outIdx] = sr / kSize;
                 tempGrass[outIdx + 1] = sg / kSize;
                 tempGrass[outIdx + 2] = sb / kSize;
+                tempFoliage[outIdx] = fr / kSize;
+                tempFoliage[outIdx + 1] = fg / kSize;
+                tempFoliage[outIdx + 2] = fb / kSize;
             }
         }
 
@@ -682,16 +700,23 @@ export class Chunk {
             for (let bz = 0; bz < CHUNK_SIZE; bz++) {
                 const gz = bz + PADDING;
                 let sr = 0, sg = 0, sb = 0;
+                let fr = 0, fg = 0, fb = 0;
                 for (let dz = -BLEND_RAD; dz <= BLEND_RAD; dz++) {
                     const idx = ((gz + dz) * gridDim + gx) * 3;
                     sr += tempGrass[idx];
                     sg += tempGrass[idx + 1];
                     sb += tempGrass[idx + 2];
+                    fr += tempFoliage[idx];
+                    fg += tempFoliage[idx + 1];
+                    fb += tempFoliage[idx + 2];
                 }
                 const bIdx = (bz * CHUNK_SIZE + bx) * 3;
                 blendedGrass[bIdx] = sr / kSize;
                 blendedGrass[bIdx + 1] = sg / kSize;
                 blendedGrass[bIdx + 2] = sb / kSize;
+                blendedFoliage[bIdx] = fr / kSize;
+                blendedFoliage[bIdx + 1] = fg / kSize;
+                blendedFoliage[bIdx + 2] = fb / kSize;
             }
         }
 
@@ -1034,9 +1059,8 @@ export class Chunk {
                         bottomAO *= plantSkyLight;
                         let plantR = 1.0, plantG = 1.0, plantB = 1.0;
                         if (blockType === BLOCKS.VINES) {
-                            const bInfo = getBiomeParams(wxBase + x, wzBase + z, planetParams);
-                            const fCol = (bInfo && bInfo.biome && bInfo.biome.foliageColor) ? bInfo.biome.foliageColor : [0.416, 0.439, 0.224];
-                            plantR = fCol[0]; plantG = fCol[1]; plantB = fCol[2];
+                            const bColIdx = (z * CHUNK_SIZE + x) * 3;
+                            plantR = blendedFoliage[bColIdx]; plantG = blendedFoliage[bColIdx + 1]; plantB = blendedFoliage[bColIdx + 2];
                         } else if (blockType === BLOCKS.TALL_GRASS || blockType === BLOCKS.FERN || blockType === BLOCKS.OASIS_FERN) {
                             const bColIdx = (z * CHUNK_SIZE + x) * 3;
                             plantR = blendedGrass[bColIdx]; plantG = blendedGrass[bColIdx + 1]; plantB = blendedGrass[bColIdx + 2];
@@ -1614,11 +1638,10 @@ export class Chunk {
                                     bMult = 1.0;
                                 }
                             } else if (currentBlockType === BLOCKS.LEAVES) {
-                                const bInfo = getBiomeParams(wx, wz, planetParams);
-                                const fCol = (bInfo && bInfo.biome && bInfo.biome.foliageColor) ? bInfo.biome.foliageColor : [0.467, 0.671, 0.184];
-                                rMult = fCol[0] / (119 / 255);
-                                gMult = fCol[1] / (171 / 255);
-                                bMult = fCol[2] / (47 / 255);
+                                const bIdx = (z * CHUNK_SIZE + x) * 3;
+                                rMult = blendedFoliage[bIdx] / folPlainsR;
+                                gMult = blendedFoliage[bIdx + 1] / folPlainsG;
+                                bMult = blendedFoliage[bIdx + 2] / folPlainsB;
                             }
 
                             // Calculate Minecraft sky light under overhangs and in caves
