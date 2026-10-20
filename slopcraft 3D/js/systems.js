@@ -928,7 +928,8 @@ class UISystem {
             active: false,
             button: -1,
             slots: new Map(),
-            startCount: 0
+            startCount: 0,
+            startSlot: null
         };
         this.hoveredSlot = null;
         this.selectedRecipe = null;
@@ -2368,6 +2369,7 @@ class UISystem {
                 const el = document.createElement('div');
                 el.className = 'inv-slot';
                 const actualIndex = offsetIndex + i;
+                el._slotInfo = { type, index: actualIndex };
                 
                 el.onmousedown = (e) => this.onSlotMouseDown(e, type, actualIndex);
                 el.onmouseenter = (e) => this.onSlotEnter(e, type, actualIndex);
@@ -2381,6 +2383,7 @@ class UISystem {
         for (let i = 0; i < slotsData.length; i++) {
             const el = container.children[i];
             const actualIndex = offsetIndex + i;
+            el._slotInfo = { type, index: actualIndex };
             const slot = slotsData[i];
             
             if (type === 'inventory' && actualIndex === player.selectedSlot) el.classList.add('active');
@@ -2730,6 +2733,28 @@ class UISystem {
         return null;
     }
 
+    _canSlotAcceptDraggedItem(type, index) {
+        if (!this.dragState.isDragging || !this.dragState.itemData) return false;
+        if (type === 'crafting_output' || type === 'stonecutter_output') return false;
+        if (type === 'furnace' && index === 2) return false;
+        if (type === 'furnace' && index === 1) {
+            if (!this.furnaceData) return false;
+            const fs = this.dragState.itemData.item.subtype;
+            const isFuelItem = (fs === 'coal' || fs === 'stick' || (typeof BLOCKS !== 'undefined' && (fs === BLOCKS.PLANKS || fs === BLOCKS.COAL_BLOCK || fs === BLOCKS.WOOD)));
+            if (!isFuelItem) return false;
+        }
+
+        const existing = this._getSlotData(type, index);
+        const held = this.dragState.itemData;
+        if (existing && existing.item) {
+            if (existing.item.type !== held.item.type || existing.item.subtype !== held.item.subtype || !held.item.stackable) {
+                return false;
+            }
+            if (existing.count >= (existing.item.maxStack || 64)) return false;
+        }
+        return true;
+    }
+
     _handleSlotDragEnter(arg1, arg2, arg3, arg4) {
         let e, type, index, el;
         if (typeof arg1 === 'string') {
@@ -2745,37 +2770,38 @@ class UISystem {
         if (!el && e && e.currentTarget) el = e.currentTarget;
         if (!el) el = this._getSlotElement(type, index);
 
-        if (!this.dragState.isDragging || !this.dragState.itemData) return;
-        if (type === 'crafting_output' || type === 'stonecutter_output') return;
-        if (type === 'furnace' && index === 2) return;
+        if (!this._canSlotAcceptDraggedItem(type, index)) return;
 
-        if (type === 'furnace') {
-            if (!this.furnaceData) return;
-            const fs = this.dragState.itemData.item.subtype;
-            if (index === 1) {
-                const isFuelItem = (fs === 'coal' || fs === 'stick' || (typeof BLOCKS !== 'undefined' && (fs === BLOCKS.PLANKS || fs === BLOCKS.COAL_BLOCK || fs === BLOCKS.WOOD)));
-                if (!isFuelItem) return;
+        const start = this.dragDistribution.startSlot;
+        if (start && !this.dragDistribution.active) {
+            if (type !== start.type || index !== start.index) {
+                this.dragDistribution.active = true;
+                this._pendingClickAction = null;
+                if (this._canSlotAcceptDraggedItem(start.type, start.index)) {
+                    const startKey = `${start.type}_${start.index}`;
+                    if (!this.dragDistribution.slots.has(startKey)) {
+                        this.dragDistribution.slots.set(startKey, {
+                            type: start.type,
+                            index: start.index,
+                            el: start.el,
+                            originalCount: start.originalCount
+                        });
+                    }
+                }
             }
         }
 
-        const existing = this._getSlotData(type, index);
-        const held = this.dragState.itemData;
-        if (existing && existing.item) {
-            if (existing.item.type !== held.item.type || existing.item.subtype !== held.item.subtype || !held.item.stackable) {
-                return;
-            }
-            if (existing.count >= (existing.item.maxStack || 64)) return;
-        }
+        if (!this.dragDistribution.active) return;
 
         const key = `${type}_${index}`;
         if (!this.dragDistribution.slots.has(key)) {
+            const existing = this._getSlotData(type, index);
             this.dragDistribution.slots.set(key, {
                 type,
                 index,
                 el,
                 originalCount: existing ? existing.count : 0
             });
-            this.dragDistribution.active = true;
             this._updateDragDistributionPreview();
             if (window.game && window.game.audio) window.game.audio.playClick();
         }
@@ -2790,6 +2816,7 @@ class UISystem {
 
         const isRightClick = (this.dragDistribution.button === 2);
         const held = this.dragState.itemData;
+        const maxStack = held.item.maxStack || 64;
 
         if (isRightClick) {
             const canGive = Math.min(totalItems, slotCount);
@@ -2806,16 +2833,19 @@ class UISystem {
             this._updateDragIconCount(remaining);
         } else {
             const itemsPerSlot = Math.floor(totalItems / slotCount);
-            const totalDistributed = itemsPerSlot * slotCount;
-            const remaining = totalItems - totalDistributed;
+            let totalDistributed = 0;
 
             slotsArray.forEach(info => {
                 if (info.el) info.el.classList.add('drag-highlight');
-                info.itemsToAdd = itemsPerSlot;
-                const previewCount = info.originalCount + itemsPerSlot;
+                const maxCanTake = Math.max(0, maxStack - info.originalCount);
+                const add = Math.min(itemsPerSlot, maxCanTake);
+                info.itemsToAdd = add;
+                totalDistributed += add;
+                const previewCount = info.originalCount + add;
                 info.previewCount = previewCount;
                 if (info.el) this._renderSlotCountPreview(info.el, held.item, previewCount);
             });
+            const remaining = Math.max(0, totalItems - totalDistributed);
             this._updateDragIconCount(remaining);
         }
     }
@@ -2824,7 +2854,7 @@ class UISystem {
         if (!el) return;
         let countEl = el.querySelector('.item-count');
         if (count > 0) {
-            if (!el.querySelector('.item-icon')) {
+            if (!el.querySelector('.item-icon') && !el.querySelector('canvas') && !el.querySelector('img')) {
                 this.renderSlotItem(el, { item, count }, true);
                 return;
             }
@@ -2904,15 +2934,82 @@ class UISystem {
         for (const info of this.dragDistribution.slots.values()) {
             if (info.el) info.el.classList.remove('drag-highlight');
         }
+        if (this.dragDistribution.startSlot && this.dragDistribution.startSlot.el) {
+            this.dragDistribution.startSlot.el.classList.remove('drag-highlight');
+        }
         this.dragDistribution.active = false;
         this.dragDistribution.slots.clear();
         this.dragDistribution.startCount = 0;
+        this.dragDistribution.startSlot = null;
         this.dragDistribution.button = -1;
         this._updateInventory();
         this._updateCraftingSlots();
         this._updateArmorSlots();
         this._updateFurnaceSlots();
         this._updateChestSlots();
+    }
+
+    _executeSingleClickPlacement(type, index, button) {
+        const held = this.dragState.itemData;
+        if (!held) return;
+        const targetSlot = this._getSlotData(type, index);
+
+        if (button === 2) {
+            // Right click: deposit 1 item
+            if (!targetSlot) {
+                this._setSlotData(type, index, {
+                    item: Object.assign({}, held.item),
+                    count: 1
+                });
+                held.count -= 1;
+            } else if (targetSlot.item.type === held.item.type && targetSlot.item.subtype === held.item.subtype && targetSlot.item.stackable && targetSlot.count < (targetSlot.item.maxStack || 64)) {
+                targetSlot.count += 1;
+                held.count -= 1;
+            }
+            if (held.count <= 0) {
+                this.dragState.isDragging = false;
+                this.dragState.itemData = null;
+                this.elements.dragIcon.classList.add('hidden');
+            } else {
+                this.renderSlotItem(this.elements.dragIcon, held, true);
+            }
+        } else if (button === 0) {
+            // Left click: deposit all, merge, or swap
+            if (!targetSlot) {
+                this._setSlotData(type, index, held);
+                this.dragState.isDragging = false;
+                this.dragState.itemData = null;
+                this.elements.dragIcon.classList.add('hidden');
+            } else if (targetSlot.item.type === held.item.type && targetSlot.item.subtype === held.item.subtype && targetSlot.item.stackable) {
+                const maxSt = targetSlot.item.maxStack || 64;
+                const canTake = Math.min(held.count, maxSt - targetSlot.count);
+                if (canTake > 0) {
+                    targetSlot.count += canTake;
+                    held.count -= canTake;
+                }
+                if (held.count <= 0) {
+                    this.dragState.isDragging = false;
+                    this.dragState.itemData = null;
+                    this.elements.dragIcon.classList.add('hidden');
+                } else {
+                    this.renderSlotItem(this.elements.dragIcon, held, true);
+                }
+            } else {
+                // Swap
+                this._setSlotData(type, index, held);
+                this.dragState.itemData = targetSlot;
+                this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData, true);
+            }
+        }
+
+        this._clearDragDistribution();
+        this._updateInventory();
+        this._updateCraftingSlots();
+        this._updateCraftingOutput();
+        this._updateArmorSlots();
+        this._updateFurnaceSlots();
+        this._updateChestSlots();
+        if (window.game && window.game.audio) window.game.audio.playClick();
     }
 
     // --- Drag & Drop ---
@@ -2956,15 +3053,16 @@ class UISystem {
         // CASE 1: Cursor ALREADY has an item (Click-to-place or start of drag)
         if (this.dragState.isDragging && this.dragState.itemData) {
             const held = this.dragState.itemData;
+            this.dragDistribution.active = false;
             this.dragDistribution.button = e.button;
             this.dragDistribution.startCount = held.count;
             this.dragDistribution.slots.clear();
-            this.dragDistribution.slots.set(`${type}_${index}`, {
+            this.dragDistribution.startSlot = {
                 type,
                 index,
                 el: e.currentTarget,
                 originalCount: slot ? slot.count : 0
-            });
+            };
 
             this._pendingClickAction = {
                 type,
@@ -2991,15 +3089,13 @@ class UISystem {
             this.dragState.sourceIndex = index;
             this.dragState.itemData = { item: Object.assign({}, slot.item), count: takeCount };
 
-            this.dragDistribution.button = e.button;
-            this.dragDistribution.startCount = takeCount;
+            // Crucial fix: Reset drag distribution completely on item pickup
+            this.dragDistribution.active = false;
+            this.dragDistribution.button = -1;
+            this.dragDistribution.startCount = 0;
+            this.dragDistribution.startSlot = null;
             this.dragDistribution.slots.clear();
-            this.dragDistribution.slots.set(`${type}_${index}`, {
-                type,
-                index,
-                el: e.currentTarget,
-                originalCount: this._getSlotData(type, index) ? this._getSlotData(type, index).count : 0
-            });
+            this._pendingClickAction = null;
 
             this.elements.dragIcon.classList.remove('hidden');
             this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData, true);
@@ -3019,6 +3115,14 @@ class UISystem {
     onMouseMove(e) {
         if (this.dragState.isDragging) {
             this.updateDragIconPos(e.clientX, e.clientY);
+
+            if ((e.buttons & 1 || e.buttons & 2) && this.dragDistribution.startSlot) {
+                const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+                const slotEl = targetEl ? targetEl.closest('.inv-slot') : null;
+                if (slotEl && slotEl._slotInfo) {
+                    this._handleSlotDragEnter(e, slotEl._slotInfo.type, slotEl._slotInfo.index, slotEl);
+                }
+            }
         } else if (this.isOpen && !this.elements.tooltip.classList.contains('hidden')) {
             this.elements.tooltip.style.left = (e.clientX + 15) + 'px';
             this.elements.tooltip.style.top = (e.clientY + 15) + 'px';
@@ -3036,7 +3140,10 @@ class UISystem {
             return;
         }
         if (this._pendingClickAction) {
+            const act = this._pendingClickAction;
             this._pendingClickAction = null;
+            this._executeSingleClickPlacement(act.type, act.index, act.button);
+            return;
         }
         if (this.dragDistribution.active) {
             this._clearDragDistribution();
@@ -3067,71 +3174,15 @@ class UISystem {
 
     onSlotMouseUp(e, targetType, targetIndex) {
         if (this.dragDistribution.active && this.dragDistribution.slots.size > 1) {
+            this._commitDragDistribution();
             return;
         }
 
         if (this._pendingClickAction) {
             const act = this._pendingClickAction;
             this._pendingClickAction = null;
-
             if (act.type === targetType && act.index === targetIndex) {
-                const held = this.dragState.itemData;
-                if (!held) return;
-                const targetSlot = this._getSlotData(targetType, targetIndex);
-
-                if (act.button === 2) {
-                    // Right click: deposit 1 item
-                    if (!targetSlot) {
-                        this._setSlotData(targetType, targetIndex, {
-                            item: Object.assign({}, held.item),
-                            count: 1
-                        });
-                        held.count -= 1;
-                    } else if (targetSlot.item.type === held.item.type && targetSlot.item.subtype === held.item.subtype && targetSlot.item.stackable && targetSlot.count < targetSlot.item.maxStack) {
-                        targetSlot.count += 1;
-                        held.count -= 1;
-                    }
-                    if (held.count <= 0) {
-                        this.dragState.isDragging = false;
-                        this.dragState.itemData = null;
-                        this.elements.dragIcon.classList.add('hidden');
-                    } else {
-                        this.renderSlotItem(this.elements.dragIcon, held, true);
-                    }
-                } else if (act.button === 0) {
-                    // Left click: deposit all or swap
-                    if (!targetSlot) {
-                        this._setSlotData(targetType, targetIndex, held);
-                        this.dragState.isDragging = false;
-                        this.dragState.itemData = null;
-                        this.elements.dragIcon.classList.add('hidden');
-                    } else if (targetSlot.item.type === held.item.type && targetSlot.item.subtype === held.item.subtype && targetSlot.item.stackable) {
-                        const canTake = Math.min(held.count, targetSlot.item.maxStack - targetSlot.count);
-                        targetSlot.count += canTake;
-                        held.count -= canTake;
-                        if (held.count <= 0) {
-                            this.dragState.isDragging = false;
-                            this.dragState.itemData = null;
-                            this.elements.dragIcon.classList.add('hidden');
-                        } else {
-                            this.renderSlotItem(this.elements.dragIcon, held, true);
-                        }
-                    } else {
-                        // Swap
-                        this._setSlotData(targetType, targetIndex, held);
-                        this.dragState.itemData = targetSlot;
-                        this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData, true);
-                    }
-                }
-
-                this._clearDragDistribution();
-                this._updateInventory();
-                this._updateCraftingSlots();
-                this._updateCraftingOutput();
-                this._updateArmorSlots();
-                this._updateFurnaceSlots();
-                this._updateChestSlots();
-                if (window.game && window.game.audio) window.game.audio.playClick();
+                this._executeSingleClickPlacement(act.type, act.index, act.button);
                 return;
             }
         }
@@ -3538,6 +3589,7 @@ class UISystem {
         for (let i = 0; i < 9; i++) {
             const el = document.createElement('div');
             el.className = 'inv-slot';
+            el._slotInfo = { type: 'crafting', index: i };
             el.onmousedown = (e) => this.onSlotMouseDown(e, 'crafting', i);
             el.onmouseup = (e) => this.onSlotMouseUp(e, 'crafting', i);
             el.onmouseenter = (e) => this.onSlotEnter(e, 'crafting', i);
@@ -3548,6 +3600,7 @@ class UISystem {
 
         const out = this.elements.craftingOutput;
         if (out) {
+            out._slotInfo = { type: 'crafting_output', index: 0 };
             out.onmousedown = (e) => this.onSlotMouseDown(e, 'crafting_output', 0);
             out.onmouseup = (e) => this.onSlotMouseUp(e, 'crafting_output', 0);
             out.onmouseenter = (e) => this.onSlotEnter(e, 'crafting_output', 0);
@@ -3561,6 +3614,7 @@ class UISystem {
         ARMOR_NAMES.forEach((slotName, i) => {
             const el = document.querySelector(`[data-slot="${slotName}"]`);
             if (!el) return;
+            el._slotInfo = { type: 'armor', index: i };
             el.onmousedown = (e) => this.onSlotMouseDown(e, 'armor', i);
             el.onmouseup = (e) => this.onSlotMouseUp(e, 'armor', i);
             el.onmouseenter = (e) => this.onSlotEnter(e, 'armor', i);
@@ -3569,6 +3623,7 @@ class UISystem {
 
         const offhandEl = document.querySelector('.offhand-slot');
         if (offhandEl) {
+            offhandEl._slotInfo = { type: 'offhand', index: 0 };
             offhandEl.onmousedown = (e) => this.onSlotMouseDown(e, 'offhand', 0);
             offhandEl.onmouseup = (e) => this.onSlotMouseUp(e, 'offhand', 0);
             offhandEl.onmouseenter = (e) => this.onSlotEnter(e, 'offhand', 0);
@@ -3578,18 +3633,21 @@ class UISystem {
 
     _initFurnaceSlots() {
         if (this.elements.furnaceInput) {
+            this.elements.furnaceInput._slotInfo = { type: 'furnace', index: 0 };
             this.elements.furnaceInput.onmousedown = (e) => this.onSlotMouseDown(e, 'furnace', 0);
             this.elements.furnaceInput.onmouseup = (e) => this.onSlotMouseUp(e, 'furnace', 0);
             this.elements.furnaceInput.onmouseenter = (e) => this.onSlotEnter(e, 'furnace', 0);
             this.elements.furnaceInput.onmouseleave = () => this.onSlotLeave();
         }
         if (this.elements.furnaceFuel) {
+            this.elements.furnaceFuel._slotInfo = { type: 'furnace', index: 1 };
             this.elements.furnaceFuel.onmousedown = (e) => this.onSlotMouseDown(e, 'furnace', 1);
             this.elements.furnaceFuel.onmouseup = (e) => this.onSlotMouseUp(e, 'furnace', 1);
             this.elements.furnaceFuel.onmouseenter = (e) => this.onSlotEnter(e, 'furnace', 1);
             this.elements.furnaceFuel.onmouseleave = () => this.onSlotLeave();
         }
         if (this.elements.furnaceOutput) {
+            this.elements.furnaceOutput._slotInfo = { type: 'furnace', index: 2 };
             this.elements.furnaceOutput.onmousedown = (e) => this.onSlotMouseDown(e, 'furnace', 2);
             this.elements.furnaceOutput.onmouseup = (e) => this.onSlotMouseUp(e, 'furnace', 2);
             this.elements.furnaceOutput.onmouseenter = (e) => this.onSlotEnter(e, 'furnace', 2);
@@ -3599,12 +3657,14 @@ class UISystem {
 
     _initStonecutterSlots() {
         if (this.elements.stonecutterInput) {
+            this.elements.stonecutterInput._slotInfo = { type: 'stonecutter', index: 0 };
             this.elements.stonecutterInput.onmousedown = (e) => this.onSlotMouseDown(e, 'stonecutter', 0);
             this.elements.stonecutterInput.onmouseup = (e) => this.onSlotMouseUp(e, 'stonecutter', 0);
             this.elements.stonecutterInput.onmouseenter = (e) => this.onSlotEnter(e, 'stonecutter', 0);
             this.elements.stonecutterInput.onmouseleave = () => this.onSlotLeave();
         }
         if (this.elements.stonecutterOutput) {
+            this.elements.stonecutterOutput._slotInfo = { type: 'stonecutter_output', index: 0 };
             this.elements.stonecutterOutput.onmousedown = (e) => this.onSlotMouseDown(e, 'stonecutter_output', 0);
             this.elements.stonecutterOutput.onmouseup = (e) => this.onSlotMouseUp(e, 'stonecutter_output', 0);
             this.elements.stonecutterOutput.onmouseenter = (e) => this.onSlotEnter(e, 'stonecutter_output', 0);

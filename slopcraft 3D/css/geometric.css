@@ -101,6 +101,10 @@
     image-rendering: pixelated;
 }
 
+.inv-slot * {
+    pointer-events: none;
+}
+
 .inv-slot:hover::before {
     content: '';
     position: absolute;

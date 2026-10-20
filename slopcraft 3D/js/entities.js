@@ -5998,6 +5998,10 @@ export class EntityManager {
                     this.spawnItem(Item.materialItem('rotten_flesh', 'Rotten Flesh', 'Gross.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 } else if (mob.type === 'SKELETON') {
                     this.spawnItem(Item.materialItem('bone', 'Bone', 'Calcium rich.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                    const arrowCount = Math.floor(Math.random() * 3);
+                    if (arrowCount > 0) {
+                        this.spawnItem(Item.materialItem('arrow', 'Arrow', 'Ammunition for bows.'), arrowCount, mob.position.clone());
+                    }
                 } else if (mob.type === 'SPIDER') {
                     this.spawnItem(Item.materialItem('string', 'String', 'Silk thread.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 } else if (mob.type === 'SLIME') {
@@ -6005,10 +6009,11 @@ export class EntityManager {
                 } else if (mob.type === 'LAVASLIME') {
                     this.spawnItem(Item.materialItem('lavaslime_ball', 'Magma Cream', 'Hot and sticky.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                 } else if (mob.type === 'PIGLIN_BRUISER') {
-                    this.spawnItem(Item.materialItem('nether_scrap', 'Nether Scrap', 'Tough nether metal.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
+                    this.spawnItem(Item.materialItem('netherite_scrap', 'Netherite Scrap', 'Tough nether metal.'), 1 + Math.floor(Math.random() * 2), mob.position.clone());
                     if (Math.random() < 0.2) this.spawnItem(Item.materialItem('gold_ingot', 'Gold Ingot', 'Shiny.'), 1, mob.position.clone());
                 } else if (mob.type === 'WARDEN') {
-                    this.spawnItem(Item.materialItem('nether_scrap', 'Sculk Catalyst', 'Deep dark energy.'), 1, mob.position.clone());
+                    const sculkBlock = (window.BLOCKS && window.BLOCKS.SCULK_CATALYST) ? window.BLOCKS.SCULK_CATALYST : 380;
+                    this.spawnItem(Item.blockItem(sculkBlock, 'Sculk Catalyst'), 1, mob.position.clone());
                     this.spawnItem(Item.materialItem('diamond', 'Diamond', 'Precious gem.'), 2 + Math.floor(Math.random() * 3), mob.position.clone());
                 } else if (mob.type === 'GOLEM') {
                     this.spawnItem(Item.materialItem('iron_ingot', 'Iron Ingot', 'Solid iron.'), 3 + Math.floor(Math.random() * 3), mob.position.clone());

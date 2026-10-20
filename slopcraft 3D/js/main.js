@@ -754,15 +754,98 @@ class Game {
                 return;
             }
 
-            // Tall grass / Fern / Tall Fern drop wheat seeds (50% chance, 20% chance of dropping 2)
-            if (oldType === BLOCKS.TALL_GRASS || oldType === BLOCKS.FERN || oldType === BLOCKS.TALL_FERN) {
-                if (Math.random() < 0.50) {
-                    const count = Math.random() < 0.20 ? 2 : 1;
+            const selSlot = this.player ? this.player.inventory.slots[this.player.selectedSlot] : null;
+            const isShears = selSlot && selSlot.item && (selSlot.item.subtype === 'shears' || selSlot.item.type === 'shears');
+
+            // Ferns: do NOT drop wheat seeds! With shears, drops fern block; without shears, drops nothing.
+            if (oldType === BLOCKS.FERN) {
+                if (isShears) {
+                    this.entityManager.spawnItem(Item.blockItem(BLOCKS.FERN, 'Fern'), 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+            if (oldType === BLOCKS.TALL_FERN || oldType === BLOCKS.TALL_FERN_TOP) {
+                if (isShears) {
+                    this.entityManager.spawnItem(Item.blockItem(BLOCKS.FERN, 'Fern'), 2, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
+            // Tall grass: drops itself with shears, drops wheat seeds (20% chance) without shears
+            if (oldType === BLOCKS.TALL_GRASS) {
+                if (isShears) {
+                    this.entityManager.spawnItem(Item.blockItem(BLOCKS.TALL_GRASS, 'Grass'), 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                } else if (Math.random() < 0.20) {
                     const seedItem = new Item('material', 'wheat_seeds', {}, 'Wheat Seeds');
                     seedItem.stackable = true;
                     seedItem.maxStack = 64;
-                    this.entityManager.spawnItem(seedItem, count, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                    this.entityManager.spawnItem(seedItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
                 }
+                return;
+            }
+
+            // Dead Bush: drops itself with shears, drops 0-2 sticks without shears
+            if (oldType === BLOCKS.DEAD_BUSH) {
+                if (isShears) {
+                    this.entityManager.spawnItem(Item.blockItem(BLOCKS.DEAD_BUSH, 'Dead Bush'), 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                } else {
+                    const stickCount = Math.floor(Math.random() * 3);
+                    if (stickCount > 0) {
+                        const stickItem = new Item('material', 'stick', {}, 'Stick');
+                        stickItem.stackable = true;
+                        stickItem.maxStack = 64;
+                        this.entityManager.spawnItem(stickItem, stickCount, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                    }
+                }
+                return;
+            }
+
+            // Bookshelf drops 3 books
+            if (oldType === BLOCKS.BOOKSHELF) {
+                const bookItem = new Item('material', 'book', {}, 'Book');
+                bookItem.stackable = true;
+                bookItem.maxStack = 64;
+                this.entityManager.spawnItem(bookItem, 3, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                return;
+            }
+
+            // Gravel: 10% chance for flint, otherwise gravel block
+            if (oldType === BLOCKS.GRAVEL) {
+                if (Math.random() < 0.10) {
+                    const flintItem = new Item('material', 'flint', {}, 'Flint');
+                    flintItem.stackable = true;
+                    flintItem.maxStack = 64;
+                    this.entityManager.spawnItem(flintItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                } else {
+                    this.entityManager.spawnItem(Item.blockItem(BLOCKS.GRAVEL, 'Gravel'), 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
+            // Chorus plant drops chorus fruit (50% chance)
+            if (oldType === BLOCKS.CHORUS_PLANT) {
+                if (Math.random() < 0.50) {
+                    const fruitItem = new Item('food', 'chorus_fruit', { heal: 4, hunger: 4 }, 'Chorus Fruit');
+                    fruitItem.stackable = true;
+                    fruitItem.maxStack = 64;
+                    this.entityManager.spawnItem(fruitItem, 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                }
+                return;
+            }
+
+            // Chorus flower drops itself
+            if (oldType === BLOCKS.CHORUS_FLOWER) {
+                this.entityManager.spawnItem(Item.blockItem(BLOCKS.CHORUS_FLOWER, 'Chorus Flower'), 1, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
+                return;
+            }
+
+            // Sweet berry bush drops 1-2 berries
+            if (oldType === BLOCKS.SWEET_BERRY_BUSH) {
+                const berryCount = 1 + Math.floor(Math.random() * 2);
+                const berryItem = new Item('food', 'sweet_berries', { heal: 2, hunger: 2 }, 'Sweet Berries');
+                berryItem.stackable = true;
+                berryItem.maxStack = 64;
+                this.entityManager.spawnItem(berryItem, berryCount, new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5));
                 return;
             }
 
@@ -878,7 +961,6 @@ class Game {
                 BLOCKS.BEDROCK,
                 BLOCKS.PORTAL,
                 window.BLOCKS.AETHER_PORTAL,
-                BLOCKS.TNT,
                 BLOCKS.GLASS,
                 BLOCKS.BOSS_SPAWNER,
                 BLOCKS.DUNGEON_DOOR_TOP,
@@ -896,7 +978,6 @@ class Game {
             const props = getBlockProperties(oldType);
             
             // Check held tool for special attributes (e.g. Ruby auto-smelt)
-            const selSlot = this.player ? this.player.inventory.slots[this.player.selectedSlot] : null;
             const isRubyPickaxe = selSlot && selSlot.item && selSlot.item.subtype === 'pickaxe_ruby';
 
             // Ore blocks drop material items instead of themselves
@@ -906,6 +987,7 @@ class Game {
                 [BLOCKS.NETHER_GOLD_ORE]:   { subtype: isRubyPickaxe ? 'gold_ingot' : 'gold_nugget', name: isRubyPickaxe ? 'Gold Ingot' : 'Gold Nugget' },
                 [BLOCKS.CRYSTAL_ORE]:       { subtype: 'diamond', name: 'Diamond' },
                 [BLOCKS.DIAMOND_ORE]:       { subtype: 'diamond', name: 'Diamond' },
+                [BLOCKS.EMERALD_ORE]:       { subtype: 'emerald', name: 'Emerald' },
                 [BLOCKS.MANA_ORE]:          { subtype: 'mana_crystal', name: 'Mana Crystal' },
                 [BLOCKS.COAL_ORE]:          { subtype: 'coal', name: 'Coal' },
                 [BLOCKS.RUBY_ORE]:          { subtype: 'ruby', name: 'Ruby' },

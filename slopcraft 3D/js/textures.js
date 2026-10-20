@@ -398,7 +398,7 @@ const BLOCK_PROPS = {
     [BLOCKS.MELON_STEM]:            { name: 'Melon Stem',            health: 0.1, transparent: true, emissive: 0, solid: false, isCross: true, isCrop: true, drops: 'melon_seeds' },
     [BLOCKS.NETHER_QUARTZ_ORE]:     { name: 'Nether Quartz Ore',     health: 6, transparent: false, emissive: 0, solid: true, drops: 'quartz' },
     [BLOCKS.NETHER_GOLD_ORE]:       { name: 'Nether Gold Ore',       health: 6, transparent: false, emissive: 0, solid: true, drops: 'gold_nugget' },
-    [BLOCKS.EMERALD_ORE]:           { name: 'Emerald Ore',           health: 8, transparent: false, emissive: 0.1, solid: true, drops: 'emerald' },
+    [BLOCKS.EMERALD_ORE]:           { name: 'Emerald Ore',           health: 8, transparent: false, emissive: 0.1, solid: true, drops: null },
     [BLOCKS.MELON]:                 { name: 'Melon',                 health: 4, transparent: false, emissive: 0, solid: true, drops: 'melon_slice' },
     [BLOCKS.JUNGLE_LOG]:            { name: 'Jungle Log',            health: 6, transparent: false, emissive: 0, solid: true, drops: BLOCKS.JUNGLE_LOG, isLog: true, hasFacing: true },
     [BLOCKS.JUNGLE_LEAVES]:         { name: 'Jungle Leaves',         health: 1, transparent: true, emissive: 0, solid: true, drops: null, isLeaves: true, flammable: true },
@@ -412,11 +412,11 @@ const BLOCK_PROPS = {
     [BLOCKS.END_PORTAL]:            { name: 'End Portal',            health: 0, transparent: true, emissive: 1.0, solid: false, drops: null, isEndPortal: true },
     [BLOCKS.END_STONE]:             { name: 'End Stone',             health: 15, transparent: false, emissive: 0, solid: true, drops: BLOCKS.END_STONE },
     [BLOCKS.DRAGON_EGG]:            { name: 'Dragon Egg',            health: 15, transparent: true, emissive: 0.4, solid: true, drops: BLOCKS.DRAGON_EGG },
-    [BLOCKS.CHORUS_PLANT]:          { name: 'Chorus Plant',          health: 1, transparent: true, emissive: 0, solid: true, drops: 'chorus_fruit', isChorusPlant: true },
+    [BLOCKS.CHORUS_PLANT]:          { name: 'Chorus Plant',          health: 1, transparent: true, emissive: 0, solid: true, drops: null, isChorusPlant: true },
     [BLOCKS.CHORUS_FLOWER]:         { name: 'Chorus Flower',         health: 1, transparent: true, emissive: 0.25, solid: true, drops: BLOCKS.CHORUS_FLOWER, isChorusFlower: true },
     [BLOCKS.CHORUS_FLOWER_DEAD]:    { name: 'Dead Chorus Flower',    health: 1, transparent: true, emissive: 0, solid: true, drops: null },
     [BLOCKS.END_GATEWAY]:           { name: 'End Gateway',           health: -1, transparent: true, emissive: 1.0, solid: false, drops: null, isEndGateway: true },
-    [BLOCKS.SWEET_BERRY_BUSH]:      { name: 'Sweet Berry Bush',      health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isFlora: true, drops: 'sweet_berries' },
+    [BLOCKS.SWEET_BERRY_BUSH]:      { name: 'Sweet Berry Bush',      health: 1, transparent: true, emissive: 0, solid: false, isCross: true, isFlora: true, drops: null },
     [BLOCKS.PACKED_ICE]:            { name: 'Packed Ice',            health: 4, transparent: false, emissive: 0, solid: true, drops: BLOCKS.PACKED_ICE },
     [BLOCKS.BLUE_ICE]:              { name: 'Blue Ice',              health: 5, transparent: false, emissive: 0.05, solid: true, drops: BLOCKS.BLUE_ICE },
     [BLOCKS.LANTERN]:               { name: 'Lantern',               health: 4, transparent: true, emissive: 1.0, solid: false, drops: BLOCKS.LANTERN, isLantern: true, lightLevel: 15 },
@@ -3085,6 +3085,10 @@ const MC_ITEM_MAP = {
     'slimeball': 'slime_ball',
     'magma_cream': 'magma_cream',
     'lavaslime_ball': 'magma_cream',
+    'rotten_flesh': 'rotten_flesh',
+    'item/rotten_flesh': 'rotten_flesh',
+    'glowstone_dust': 'glowstone_dust',
+    'item/glowstone_dust': 'glowstone_dust',
     'cocoa_beans': 'cocoa_beans',
     'stonecutter': 'stonecutter_side',
     'lantern': 'item/lantern',
@@ -3374,6 +3378,9 @@ const EXCAVATOR_SHAPE = [
 ];
 
 export function generateItemTexture(itemType, itemSubtype, onLoaded) {
+    if (typeof window !== 'undefined' && !window.generateItemTexture) {
+        window.generateItemTexture = generateItemTexture;
+    }
     if (typeof itemSubtype !== 'string') {
         itemSubtype = (itemSubtype !== undefined && itemSubtype !== null) ? String(itemSubtype) : '';
     }
@@ -3539,6 +3546,62 @@ export function generateItemTexture(itemType, itemSubtype, onLoaded) {
         _itemCanvasCache.set(itemSubtype, savedCvs);
         _itemTextureCache.set(itemSubtype, canvas.toDataURL());
         loadMinecraftTexture('item/clock').then(img => {
+            if (img) {
+                ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+                _itemTextureCache.set(cacheKey, canvas.toDataURL());
+                _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+                if (onLoaded) onLoaded(canvas);
+            }
+        });
+        if (onLoaded) onLoaded(canvas);
+        return canvas;
+    }
+
+    // Rotten Flesh (authentic zombie drop pixel art)
+    if (itemSubtype === 'rotten_flesh' || itemSubtype.includes('rotten_flesh')) {
+        ctx.fillStyle = '#834c38'; ctx.fillRect(4, 5, 8, 7);
+        ctx.fillStyle = '#593222'; ctx.fillRect(3, 7, 2, 5); ctx.fillRect(11, 4, 2, 6);
+        ctx.fillStyle = '#a05844'; ctx.fillRect(5, 4, 6, 2);
+        ctx.fillStyle = '#4f7942'; ctx.fillRect(6, 6, 2, 2); ctx.fillRect(9, 8, 2, 2);
+        const savedCvs = document.createElement('canvas');
+        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+        _itemCanvasCache.set(cacheKey, savedCvs);
+        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+        _itemCanvasCache.set(itemSubtype, savedCvs);
+        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+        loadMinecraftTexture('item/rotten_flesh').then(img => {
+            if (img) {
+                ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').clearRect(0, 0, TEX_SIZE, TEX_SIZE);
+                savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+                _itemTextureCache.set(cacheKey, canvas.toDataURL());
+                _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+                if (onLoaded) onLoaded(canvas);
+            }
+        });
+        if (onLoaded) onLoaded(canvas);
+        return canvas;
+    }
+
+    // Glowstone Dust (authentic glowing powder pixel art)
+    if (itemSubtype === 'glowstone_dust' || itemSubtype.includes('glowstone_dust')) {
+        ctx.fillStyle = '#e5a024'; ctx.fillRect(5, 7, 6, 6);
+        ctx.fillStyle = '#ffdf40'; ctx.fillRect(6, 5, 4, 4);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(7, 6, 2, 2);
+        ctx.fillStyle = '#b37812'; ctx.fillRect(4, 10, 8, 3);
+        const savedCvs = document.createElement('canvas');
+        savedCvs.width = TEX_SIZE; savedCvs.height = TEX_SIZE;
+        savedCvs.getContext('2d').drawImage(canvas, 0, 0);
+        _itemCanvasCache.set(cacheKey, savedCvs);
+        _itemTextureCache.set(cacheKey, canvas.toDataURL());
+        _itemCanvasCache.set(itemSubtype, savedCvs);
+        _itemTextureCache.set(itemSubtype, canvas.toDataURL());
+        loadMinecraftTexture('item/glowstone_dust').then(img => {
             if (img) {
                 ctx.clearRect(0, 0, TEX_SIZE, TEX_SIZE);
                 ctx.drawImage(img, 0, 0, TEX_SIZE, TEX_SIZE);
