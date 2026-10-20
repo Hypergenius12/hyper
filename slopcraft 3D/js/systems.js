@@ -891,10 +891,13 @@ class UISystem {
             furnaceOutput: document.getElementById('furnace-output'),
             furnaceProgress: document.getElementById('furnace-progress'),
             furnaceFire: document.getElementById('furnace-fire'),
+            furnaceFireFill: document.getElementById('furnace-fire-fill'),
             stonecutterPanel: document.getElementById('stonecutter-panel'),
             stonecutterInput: document.getElementById('stonecutter-input'),
             stonecutterRecipesContainer: document.getElementById('stonecutter-recipes-container'),
-            stonecutterOutput: document.getElementById('stonecutter-output')
+            stonecutterOutput: document.getElementById('stonecutter-output'),
+            btnAutofillRecipe: document.getElementById('btn-autofill-recipe'),
+            recipeAutofillStatus: document.getElementById('recipe-autofill-status')
         };
         this.isOpen = false;
         this.chestPos = null;
@@ -921,11 +924,22 @@ class UISystem {
             offsetX: 0, offsetY: 0
         };
 
+        this.dragDistribution = {
+            active: false,
+            button: -1,
+            slots: new Map(),
+            startCount: 0
+        };
+        this.hoveredSlot = null;
+        this.selectedRecipe = null;
+        this._pendingClickAction = null;
+
         this.currentPlayer = null;
         this.isCreativeOpen = false;
 
         document.addEventListener('mousemove', (e) => this.onMouseMove(e));
         document.addEventListener('mouseup', (e) => this.onMouseUp(e));
+        window.addEventListener('keydown', (e) => this.onKeyDown(e));
 
         this._initCraftingGrid();
         this._initArmorSlots();
@@ -944,6 +958,28 @@ class UISystem {
             if (btnRecipeBook) btnRecipeBook.onclick = openRecipes;
             if (btnRecipeBookWand) btnRecipeBookWand.onclick = openRecipes;
             btnCloseRecipes.onclick = () => modalRecipeBook.classList.add('hidden');
+        }
+
+        const btnAutofill = document.getElementById('btn-autofill-recipe');
+        if (btnAutofill) {
+            btnAutofill.onclick = () => {
+                if (this.selectedRecipe) {
+                    this.autofillRecipe(this.selectedRecipe);
+                }
+            };
+        }
+
+        if (this.elements.geometricUI) {
+            this.elements.geometricUI.addEventListener('mousedown', (e) => {
+                if (e.target === this.elements.geometricUI) {
+                    if (this.dragState.isDragging && this.dragState.itemData) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const isRightClick = e.button === 2;
+                        this.dropCursorItem(!isRightClick);
+                    }
+                }
+            });
         }
 
         this.updateMinecraftHUD(null);
@@ -2454,134 +2490,529 @@ class UISystem {
         }
     }
 
-    // --- Drag & Drop ---
-    onSlotMouseDown(e, type, index) {
-        if (!this.isOpen || (e.button !== 0 && e.button !== 2)) return;
-        let slot = null;
-        if (type === 'inventory') slot = this.currentPlayer.inventory.slots[index];
-        else if (type === 'crafting') slot = this.craftingSlots[index];
-        else if (type === 'chest') slot = this.chestInventory[index];
-        else if (type === 'crafting_output') {
-            const result = this._matchRecipe();
-            if (result) {
-                // Prevent partial stack dupe by checking if we have space first
-                const inv = this.currentPlayer.inventory;
-                let space = 0;
-                if (result.item.stackable) {
-                    for (const s of inv.slots) {
-                        if (!s) space += result.item.maxStack;
-                        else if (s.item.type === result.item.type && s.item.subtype === result.item.subtype) {
-                            space += (s.item.maxStack - s.count);
+    // =============================
+    // Slot Data Helpers
+    // =============================
+    _getSlotData(lType, idx) {
+        if (!this.currentPlayer && window.game) this.currentPlayer = window.game.player;
+        if (!this.currentPlayer || !this.currentPlayer.inventory) return null;
+        const inv = this.currentPlayer.inventory.slots;
+        if (lType === 'inventory') return inv[idx];
+        if (lType === 'offhand') return this.currentPlayer.inventory.offhand;
+        if (lType === 'armor') return idx === -1 ? this.currentPlayer.inventory.offhand : this.currentPlayer.inventory.armor[idx];
+        if (lType === 'crafting') return this.craftingSlots[idx];
+        if (lType === 'crafting_output') return this._matchRecipe();
+        if (lType === 'chest') return this.chestInventory ? this.chestInventory[idx] : null;
+        if (lType === 'stonecutter') return this.stonecutterSlot;
+        if (lType === 'furnace') {
+            if (!this.furnaceData) return null;
+            return idx === 0 ? this.furnaceData.input : (idx === 1 ? this.furnaceData.fuel : this.furnaceData.output);
+        }
+        if (lType === 'wand') {
+            const w = inv[this.currentPlayer.selectedSlot];
+            if (!w || w.item.type !== 'wand') return null;
+            const obj = w.item.data.wand.spellSlots[idx];
+            if (!obj) return null;
+            let wrapped = obj;
+            if (wrapped.type !== 'spell' && wrapped.type !== 'modifier') {
+                const itemType = wrapped.rarity ? 'modifier' : 'spell';
+                wrapped = { type: itemType, subtype: wrapped.type, name: wrapped.name, stackable: false, id: wrapped.id, data: { spell: wrapped, mod: wrapped } };
+            }
+            return { item: wrapped, count: 1 };
+        }
+        return null;
+    }
+
+    _setSlotData(lType, idx, val) {
+        if (!this.currentPlayer && window.game) this.currentPlayer = window.game.player;
+        if (!this.currentPlayer || !this.currentPlayer.inventory) return;
+        const inv = this.currentPlayer.inventory.slots;
+        if (lType === 'creative') return;
+        if (lType === 'inventory') inv[idx] = val;
+        else if (lType === 'offhand') this.currentPlayer.inventory.offhand = val;
+        else if (lType === 'armor') {
+            if (idx === -1) this.currentPlayer.inventory.offhand = val;
+            else this.currentPlayer.inventory.armor[idx] = val;
+        }
+        else if (lType === 'crafting') this.craftingSlots[idx] = val;
+        else if (lType === 'chest' && this.chestInventory) this.chestInventory[idx] = val;
+        else if (lType === 'stonecutter') {
+            this.stonecutterSlot = val;
+            this._renderStonecutter();
+        }
+        else if (lType === 'furnace' && this.furnaceData) {
+            if (idx === 0) this.furnaceData.input = val;
+            else if (idx === 1) this.furnaceData.fuel = val;
+            else if (idx === 2) this.furnaceData.output = val;
+        }
+        else if (lType === 'wand') {
+            const w = inv[this.currentPlayer.selectedSlot];
+            if (w && w.item.type === 'wand') {
+                w.item.data.wand.spellSlots[idx] = val ? val.item : null;
+            }
+        }
+    }
+
+    // =============================
+    // Shift-Click Quick Transfer
+    // =============================
+    _handleShiftClick(type, index, slot) {
+        if (!this.currentPlayer && window.game) this.currentPlayer = window.game.player;
+        if (!slot || !slot.item || !this.currentPlayer || !this.currentPlayer.inventory) return;
+        const inv = this.currentPlayer.inventory;
+        const B = (typeof BLOCKS !== 'undefined') ? BLOCKS : window.BLOCKS;
+
+        if (type === 'crafting_output') {
+            let craftedAny = false;
+            while (true) {
+                const res = this._matchRecipe();
+                if (!res) break;
+                const added = inv.addItem(res.item, res.count);
+                if (!added) break; // Inventory full
+                this._consumeCraftingSlots();
+                craftedAny = true;
+            }
+            if (craftedAny) {
+                this._updateCraftingSlots();
+                this._updateCraftingOutput();
+                this._updateInventory();
+                if (window.game && window.game.audio) window.game.audio.playClick();
+            }
+            return;
+        }
+
+        if (type === 'inventory') {
+            // 1. If chest is open, quick-move to chest
+            if (this.chestInventory) {
+                let moved = false;
+                for (let i = 0; i < this.chestInventory.length; i++) {
+                    const c = this.chestInventory[i];
+                    if (c && c.item.type === slot.item.type && c.item.subtype === slot.item.subtype && c.item.stackable && c.count < c.item.maxStack) {
+                        const canTake = Math.min(slot.count, c.item.maxStack - c.count);
+                        c.count += canTake;
+                        slot.count -= canTake;
+                        if (slot.count <= 0) {
+                            inv.slots[index] = null;
+                            moved = true;
+                            break;
                         }
                     }
-                } else {
-                    space = inv.slots.filter(s => !s).length;
                 }
-                
-                if (space >= result.count) {
-                    this._consumeCraftingSlots();
-                    inv.addItem(result.item, result.count);
+                if (slot.count > 0) {
+                    for (let i = 0; i < this.chestInventory.length; i++) {
+                        if (!this.chestInventory[i]) {
+                            this.chestInventory[i] = slot;
+                            inv.slots[index] = null;
+                            moved = true;
+                            break;
+                        }
+                    }
+                }
+                if (moved && window.game && window.game.audio) window.game.audio.playClick();
+                this._updateInventory();
+                this._updateChestSlots();
+                return;
+            }
+
+            // 2. If furnace is open, quick-move to furnace input or fuel
+            if (this.furnaceData) {
+                const isFuel = (slot.item.subtype === 'coal' || slot.item.subtype === 'stick' || (B && (slot.item.subtype === B.PLANKS || slot.item.subtype === B.WOOD || slot.item.subtype === B.COAL_BLOCK)));
+                const fKey = isFuel ? 'fuel' : 'input';
+                const currentF = this.furnaceData[fKey];
+                if (!currentF) {
+                    this.furnaceData[fKey] = slot;
+                    inv.slots[index] = null;
+                } else if (currentF.item.type === slot.item.type && currentF.item.subtype === slot.item.subtype && currentF.count < currentF.item.maxStack) {
+                    const canTake = Math.min(slot.count, currentF.item.maxStack - currentF.count);
+                    currentF.count += canTake;
+                    slot.count -= canTake;
+                    if (slot.count <= 0) inv.slots[index] = null;
+                }
+                this._updateInventory();
+                this._updateFurnaceSlots();
+                if (window.game && window.game.audio) window.game.audio.playClick();
+                return;
+            }
+
+            // 3. Armor auto-equip
+            if (slot.item.type === 'equipment') {
+                const sub = slot.item.subtype || '';
+                let armorIdx = -1;
+                if (sub.includes('helmet') || sub.includes('head') || sub.includes('cap')) armorIdx = 0;
+                else if (sub.includes('chest') || sub.includes('tunic')) armorIdx = 1;
+                else if (sub.includes('leg') || sub.includes('pants')) armorIdx = 2;
+                else if (sub.includes('boot')) armorIdx = 3;
+
+                if (armorIdx !== -1 && !inv.armor[armorIdx]) {
+                    inv.armor[armorIdx] = slot;
+                    inv.slots[index] = null;
+                    this._updateInventory();
+                    this._updateArmorSlots();
+                    if (window.game && window.game.audio) window.game.audio.playClick();
+                    return;
+                }
+            }
+
+            // 4. Move between hotbar (0..8) and main inventory (9..35)
+            const targetStart = (index < 9) ? 9 : 0;
+            const targetEnd = (index < 9) ? 36 : 9;
+            let moved = false;
+
+            for (let i = targetStart; i < targetEnd; i++) {
+                const targetSlot = inv.slots[i];
+                if (targetSlot && targetSlot.item.type === slot.item.type && targetSlot.item.subtype === slot.item.subtype && targetSlot.item.stackable && targetSlot.count < targetSlot.item.maxStack) {
+                    const canTake = Math.min(slot.count, targetSlot.item.maxStack - targetSlot.count);
+                    targetSlot.count += canTake;
+                    slot.count -= canTake;
+                    if (slot.count <= 0) {
+                        inv.slots[index] = null;
+                        moved = true;
+                        break;
+                    }
+                }
+            }
+            if (slot.count > 0) {
+                for (let i = targetStart; i < targetEnd; i++) {
+                    if (!inv.slots[i]) {
+                        inv.slots[i] = slot;
+                        inv.slots[index] = null;
+                        moved = true;
+                        break;
+                    }
+                }
+            }
+            if (moved && window.game && window.game.audio) window.game.audio.playClick();
+            this._updateInventory();
+            return;
+        }
+
+        // Chest/Furnace/Crafting/Armor/Offhand to Inventory
+        if (type === 'chest' || type === 'furnace' || type === 'crafting' || type === 'armor' || type === 'offhand') {
+            const added = inv.addItem(slot.item, slot.count);
+            if (added) {
+                this._setSlotData(type, index, null);
+                if (type === 'crafting') {
                     this._updateCraftingSlots();
                     this._updateCraftingOutput();
                 }
+                this._updateInventory();
+                this._updateArmorSlots();
+                this._updateFurnaceSlots();
+                this._updateChestSlots();
+                if (window.game && window.game.audio) window.game.audio.playClick();
             }
-            return;
-        } else if (type === 'armor') {
-            if (index === -1) slot = this.currentPlayer.inventory.offhand;
-            else slot = this.currentPlayer.inventory.armor[index];
-        } else if (type === 'offhand') {
-            slot = this.currentPlayer.inventory.offhand;
-        } else if (type === 'wand') {
-            const w = this.currentPlayer.inventory.slots[this.currentPlayer.selectedSlot];
-            if (w && w.item.type === 'wand') {
-                const obj = w.item.data.wand.spellSlots[index];
-                if (obj) {
-                    let wrapped = obj;
-                    if (wrapped.type !== 'spell' && wrapped.type !== 'modifier') {
-                        const itemType = wrapped.rarity ? 'modifier' : 'spell';
-                        wrapped = { type: itemType, subtype: wrapped.type, name: wrapped.name, stackable: false, id: wrapped.id, data: { spell: wrapped, mod: wrapped } };
-                    }
-                    slot = { item: wrapped, count: 1 };
-                }
-            }
-        } else if (type === 'furnace') {
-            if (this.furnaceData) {
-                if (index === 0) slot = this.furnaceData.input;
-                else if (index === 1) slot = this.furnaceData.fuel;
-                else if (index === 2) {
-                    slot = this.furnaceData.output; // Can pick up output
-                }
-            }
-        } else if (type === 'stonecutter_output') {
-            this._craftFromStonecutter(e.shiftKey);
-            return;
-        } else if (type === 'stonecutter') {
-            slot = this.stonecutterSlot;
         }
-        
-        if (slot) {
+    }
+
+    // =============================
+    // Drag Crafting & Mouse Distribution
+    // =============================
+    _getSlotElement(type, index) {
+        if (type === 'crafting') {
+            const grid = document.getElementById('crafting-grid');
+            return grid ? grid.children[index] : null;
+        }
+        if (type === 'inventory' || type === 'hotbar') {
+            const totalIdx = (type === 'hotbar') ? index : index + 9;
+            const slots = document.querySelectorAll('.inv-grid-section .inv-slot');
+            return slots[totalIdx] || null;
+        }
+        if (type === 'armor') {
+            const ARMOR_NAMES = ['head', 'chest', 'legs', 'boots'];
+            return document.querySelector(`[data-slot="${ARMOR_NAMES[index]}"]`);
+        }
+        if (type === 'offhand') return document.querySelector('.offhand-slot');
+        if (type === 'furnace') {
+            if (index === 0) return document.getElementById('furnace-input');
+            if (index === 1) return document.getElementById('furnace-fuel');
+            if (index === 2) return document.getElementById('furnace-output');
+        }
+        return null;
+    }
+
+    _handleSlotDragEnter(arg1, arg2, arg3, arg4) {
+        let e, type, index, el;
+        if (typeof arg1 === 'string') {
+            type = arg1;
+            index = arg2;
+            el = arg3;
+        } else {
+            e = arg1;
+            type = arg2;
+            index = arg3;
+            el = arg4;
+        }
+        if (!el && e && e.currentTarget) el = e.currentTarget;
+        if (!el) el = this._getSlotElement(type, index);
+
+        if (!this.dragState.isDragging || !this.dragState.itemData) return;
+        if (type === 'crafting_output' || type === 'stonecutter_output') return;
+        if (type === 'furnace' && index === 2) return;
+
+        if (type === 'furnace') {
+            if (!this.furnaceData) return;
+            const fs = this.dragState.itemData.item.subtype;
+            if (index === 1) {
+                const isFuelItem = (fs === 'coal' || fs === 'stick' || (typeof BLOCKS !== 'undefined' && (fs === BLOCKS.PLANKS || fs === BLOCKS.COAL_BLOCK || fs === BLOCKS.WOOD)));
+                if (!isFuelItem) return;
+            }
+        }
+
+        const existing = this._getSlotData(type, index);
+        const held = this.dragState.itemData;
+        if (existing && existing.item) {
+            if (existing.item.type !== held.item.type || existing.item.subtype !== held.item.subtype || !held.item.stackable) {
+                return;
+            }
+            if (existing.count >= (existing.item.maxStack || 64)) return;
+        }
+
+        const key = `${type}_${index}`;
+        if (!this.dragDistribution.slots.has(key)) {
+            this.dragDistribution.slots.set(key, {
+                type,
+                index,
+                el,
+                originalCount: existing ? existing.count : 0
+            });
+            this.dragDistribution.active = true;
+            this._updateDragDistributionPreview();
+            if (window.game && window.game.audio) window.game.audio.playClick();
+        }
+    }
+
+    _updateDragDistributionPreview() {
+        if (!this.dragDistribution.active || !this.dragState.itemData) return;
+        const totalItems = this.dragDistribution.startCount || this.dragState.itemData.count;
+        const slotsArray = Array.from(this.dragDistribution.slots.values());
+        const slotCount = slotsArray.length;
+        if (slotCount === 0) return;
+
+        const isRightClick = (this.dragDistribution.button === 2);
+        const held = this.dragState.itemData;
+
+        if (isRightClick) {
+            const canGive = Math.min(totalItems, slotCount);
+            const remaining = totalItems - canGive;
+
+            slotsArray.forEach((info, idx) => {
+                if (info.el) info.el.classList.add('drag-highlight');
+                const willReceive = (idx < canGive) ? 1 : 0;
+                info.itemsToAdd = willReceive;
+                const previewCount = info.originalCount + willReceive;
+                info.previewCount = previewCount;
+                if (info.el) this._renderSlotCountPreview(info.el, held.item, previewCount);
+            });
+            this._updateDragIconCount(remaining);
+        } else {
+            const itemsPerSlot = Math.floor(totalItems / slotCount);
+            const totalDistributed = itemsPerSlot * slotCount;
+            const remaining = totalItems - totalDistributed;
+
+            slotsArray.forEach(info => {
+                if (info.el) info.el.classList.add('drag-highlight');
+                info.itemsToAdd = itemsPerSlot;
+                const previewCount = info.originalCount + itemsPerSlot;
+                info.previewCount = previewCount;
+                if (info.el) this._renderSlotCountPreview(info.el, held.item, previewCount);
+            });
+            this._updateDragIconCount(remaining);
+        }
+    }
+
+    _renderSlotCountPreview(el, item, count) {
+        if (!el) return;
+        let countEl = el.querySelector('.item-count');
+        if (count > 0) {
+            if (!el.querySelector('.item-icon')) {
+                this.renderSlotItem(el, { item, count }, true);
+                return;
+            }
+            if (!countEl) {
+                countEl = document.createElement('span');
+                countEl.className = 'item-count';
+                el.appendChild(countEl);
+            }
+            countEl.textContent = count > 1 ? count : '';
+        }
+    }
+
+    _updateDragIconCount(count) {
+        if (!this.elements.dragIcon) return;
+        let countEl = this.elements.dragIcon.querySelector('.item-count');
+        if (count > 0) {
+            if (!countEl) {
+                countEl = document.createElement('span');
+                countEl.className = 'item-count';
+                this.elements.dragIcon.appendChild(countEl);
+            }
+            countEl.textContent = count > 1 ? count : '';
+            this.elements.dragIcon.style.opacity = '1.0';
+        } else {
+            if (countEl) countEl.textContent = '';
+            this.elements.dragIcon.style.opacity = '0.35';
+        }
+    }
+
+    _commitDragDistribution() {
+        if (!this.dragState.itemData) {
+            this._clearDragDistribution();
+            return;
+        }
+
+        const held = this.dragState.itemData;
+        const slotsArray = Array.from(this.dragDistribution.slots.values());
+        let totalGiven = 0;
+
+        for (const info of slotsArray) {
+            const add = info.itemsToAdd || 0;
+            if (add <= 0) continue;
+
+            totalGiven += add;
+            const targetSlot = this._getSlotData(info.type, info.index);
+
+            if (!targetSlot) {
+                this._setSlotData(info.type, info.index, {
+                    item: Object.assign({}, held.item),
+                    count: add
+                });
+            } else {
+                targetSlot.count += add;
+            }
+        }
+
+        held.count -= totalGiven;
+        if (held.count <= 0) {
+            this.dragState.isDragging = false;
+            this.dragState.itemData = null;
+            this.elements.dragIcon.classList.add('hidden');
+        } else {
+            this.renderSlotItem(this.elements.dragIcon, held, true);
+        }
+
+        this._clearDragDistribution();
+        this._updateInventory();
+        this._updateCraftingSlots();
+        this._updateCraftingOutput();
+        this._updateArmorSlots();
+        this._updateFurnaceSlots();
+        this._updateChestSlots();
+        if (window.game && window.game.audio) window.game.audio.playClick();
+    }
+
+    _clearDragDistribution() {
+        for (const info of this.dragDistribution.slots.values()) {
+            if (info.el) info.el.classList.remove('drag-highlight');
+        }
+        this.dragDistribution.active = false;
+        this.dragDistribution.slots.clear();
+        this.dragDistribution.startCount = 0;
+        this.dragDistribution.button = -1;
+        this._updateInventory();
+        this._updateCraftingSlots();
+        this._updateArmorSlots();
+        this._updateFurnaceSlots();
+        this._updateChestSlots();
+    }
+
+    // --- Drag & Drop ---
+    onSlotMouseDown(e, type, index) {
+        if (!this.isOpen || (e.button !== 0 && e.button !== 2)) return;
+
+        let slot = this._getSlotData(type, index);
+
+        // Shift click handling (instant transfer)
+        if (e.shiftKey) {
+            this._handleShiftClick(type, index, slot);
+            return;
+        }
+
+        // Crafting output click (craft 1)
+        if (type === 'crafting_output') {
+            const result = this._matchRecipe();
+            if (result) {
+                const inv = this.currentPlayer.inventory;
+                if (!this.dragState.isDragging) {
+                    this._consumeCraftingSlots();
+                    this.dragState.isDragging = true;
+                    this.dragState.sourceType = 'crafting_output';
+                    this.dragState.sourceIndex = 0;
+                    this.dragState.itemData = { item: Object.assign({}, result.item), count: result.count };
+                    this.elements.dragIcon.classList.remove('hidden');
+                    this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData);
+                    this.updateDragIconPos(e.clientX, e.clientY);
+                } else if (this.dragState.itemData && this.dragState.itemData.item.type === result.item.type && this.dragState.itemData.item.subtype === result.item.subtype && this.dragState.itemData.count + result.count <= result.item.maxStack) {
+                    this._consumeCraftingSlots();
+                    this.dragState.itemData.count += result.count;
+                    this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData, true);
+                }
+                this._updateCraftingSlots();
+                this._updateCraftingOutput();
+                if (window.game && window.game.audio) window.game.audio.playClick();
+            }
+            return;
+        }
+
+        // CASE 1: Cursor ALREADY has an item (Click-to-place or start of drag)
+        if (this.dragState.isDragging && this.dragState.itemData) {
+            const held = this.dragState.itemData;
+            this.dragDistribution.button = e.button;
+            this.dragDistribution.startCount = held.count;
+            this.dragDistribution.slots.clear();
+            this.dragDistribution.slots.set(`${type}_${index}`, {
+                type,
+                index,
+                el: e.currentTarget,
+                originalCount: slot ? slot.count : 0
+            });
+
+            this._pendingClickAction = {
+                type,
+                index,
+                button: e.button,
+                slot,
+                heldCount: held.count
+            };
+            return;
+        }
+
+        // CASE 2: Cursor is EMPTY (Pick up item)
+        if (slot && slot.item) {
+            let takeCount = slot.count;
+            if (e.button === 2 && slot.count > 1) {
+                takeCount = Math.ceil(slot.count / 2);
+                slot.count -= takeCount;
+            } else {
+                this._setSlotData(type, index, null);
+            }
+
             this.dragState.isDragging = true;
             this.dragState.sourceType = type;
             this.dragState.sourceIndex = index;
+            this.dragState.itemData = { item: Object.assign({}, slot.item), count: takeCount };
 
-            if ((e.button === 2 || e.shiftKey) && slot.item.stackable && slot.count > 1) {
-                let dragCount = 1;
-                if (!e.shiftKey && e.button === 2) {
-                    dragCount = Math.floor(slot.count / 2);
-                }
-                slot.count -= dragCount;
-                this.dragState.itemData = { item: slot.item, count: dragCount };
-                this.dragState.isSplit = true;
-            } else {
-                this.dragState.itemData = slot;
-                this.dragState.isSplit = false;
-                // If not split, temporarily clear the source slot so it doesn't render while dragging
-                if (type === 'inventory') this.currentPlayer.inventory.slots[index] = null;
-                else if (type === 'crafting') this.craftingSlots[index] = null;
-                else if (type === 'chest') this.chestInventory[index] = null;
-                else if (type === 'armor') {
-                    if (index === -1) this.currentPlayer.inventory.offhand = null;
-                    else this.currentPlayer.inventory.armor[index] = null;
-                } else if (type === 'offhand') {
-                    this.currentPlayer.inventory.offhand = null;
-                }
-                else if (type === 'wand') {
-                    const w = this.currentPlayer.inventory.slots[this.currentPlayer.selectedSlot];
-                    w.item.data.wand.spellSlots[index] = null;
-                }
-                else if (type === 'furnace') {
-                    if (index === 0) this.furnaceData.input = null;
-                    else if (index === 1) this.furnaceData.fuel = null;
-                    else if (index === 2) this.furnaceData.output = null;
-                }
-                else if (type === 'stonecutter') {
-                    this.stonecutterSlot = null;
-                    this._renderStonecutter();
-                }
-            }
-            
-            this._updateInventory();
-            this._updateCraftingSlots();
-            this._updateArmorSlots();
-            this._updateFurnaceSlots();
-            if (this.stonecutterPos) this._renderStonecutter();
-            
-            if (type === 'wand') {
-                if (window.game && window.game.heldItemMesh) {
-                    window.game.viewModel.remove(window.game.heldItemMesh);
-                    window.game.heldItemMesh = null;
-                }
-            }
-            
-            const el = e.currentTarget;
-            const rect = el.getBoundingClientRect();
-            this.dragState.offsetX = e.clientX - rect.left - rect.width/2;
-            this.dragState.offsetY = e.clientY - rect.top - rect.height/2;
-            
+            this.dragDistribution.button = e.button;
+            this.dragDistribution.startCount = takeCount;
+            this.dragDistribution.slots.clear();
+            this.dragDistribution.slots.set(`${type}_${index}`, {
+                type,
+                index,
+                el: e.currentTarget,
+                originalCount: this._getSlotData(type, index) ? this._getSlotData(type, index).count : 0
+            });
+
             this.elements.dragIcon.classList.remove('hidden');
-            this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData);
+            this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData, true);
             this.updateDragIconPos(e.clientX, e.clientY);
             this.elements.tooltip.classList.add('hidden');
+
+            this._updateInventory();
+            this._updateCraftingSlots();
+            this._updateCraftingOutput();
+            this._updateArmorSlots();
+            this._updateFurnaceSlots();
+            this._updateChestSlots();
+            if (window.game && window.game.audio) window.game.audio.playClick();
         }
     }
 
@@ -2595,65 +3026,39 @@ class UISystem {
     }
 
     updateDragIconPos(x, y) {
-        this.elements.dragIcon.style.left = (x - this.dragState.offsetX) + 'px';
-        this.elements.dragIcon.style.top = (y - this.dragState.offsetY) + 'px';
+        this.elements.dragIcon.style.left = (x - 20) + 'px';
+        this.elements.dragIcon.style.top = (y - 20) + 'px';
     }
 
     onMouseUp(e) {
-        if (this.dragState.isDragging) {
-            // Handled mostly by onSlotMouseUp if dropped on a slot.
-            // If dropped outside, cancel drag (or throw item).
-            // Small timeout allows onSlotMouseUp to fire first if over a slot.
-            setTimeout(() => {
-                if (this.dragState.isDragging) this.cancelDrag();
-            }, 10);
+        if (this.dragDistribution.active && this.dragDistribution.slots.size > 1) {
+            this._commitDragDistribution();
+            return;
+        }
+        if (this._pendingClickAction) {
+            this._pendingClickAction = null;
+        }
+        if (this.dragDistribution.active) {
+            this._clearDragDistribution();
         }
     }
 
     cancelDrag() {
         if (this.dragState.isDragging && this.dragState.itemData) {
-            // Return item to source
-            const srcType = this.dragState.sourceType;
-            const srcIndex = this.dragState.sourceIndex;
-            const itemData = this.dragState.itemData;
-            
-            if (srcType === 'inventory') {
-                if (this.dragState.isSplit) {
-                    this.currentPlayer.inventory.slots[srcIndex].count += itemData.count;
-                } else {
-                    this.currentPlayer.inventory.slots[srcIndex] = itemData;
-                }
-            } else if (srcType === 'crafting') {
-                if (this.dragState.isSplit) {
-                    this.craftingSlots[srcIndex].count += itemData.count;
-                } else {
-                    this.craftingSlots[srcIndex] = itemData;
-                }
-            } else if (srcType === 'armor') {
-                if (srcIndex === -1) this.currentPlayer.inventory.offhand = itemData;
-                else this.currentPlayer.inventory.armor[srcIndex] = itemData;
-            } else if (srcType === 'offhand') {
-                this.currentPlayer.inventory.offhand = itemData;
-            } else if (srcType === 'chest' && this.chestInventory) {
-                if (this.dragState.isSplit) {
-                    this.chestInventory[srcIndex].count += itemData.count;
-                } else {
-                    this.chestInventory[srcIndex] = itemData;
-                }
-            } else if (srcType === 'furnace' && this.furnaceData) {
-                const mapKey = ['input', 'fuel', 'output'][srcIndex];
-                if (this.dragState.isSplit) {
-                    this.furnaceData[mapKey].count += itemData.count;
-                } else {
-                    this.furnaceData[mapKey] = itemData;
+            const held = this.dragState.itemData;
+            if (this.currentPlayer && this.currentPlayer.inventory) {
+                const added = this.currentPlayer.inventory.addItem(held.item, held.count);
+                if (!added && this.currentPlayer.manager) {
+                    this.currentPlayer.manager.spawnItem(held.item, held.count, this.currentPlayer.position);
                 }
             }
             this._updateInventory();
             this._updateCraftingSlots();
             this._updateArmorSlots();
             this._updateFurnaceSlots();
-            // Since there's no _updateChest, we rely on the main loop's updateHUD for chest redraw
+            this._updateChestSlots();
         }
+        this._clearDragDistribution();
         this.dragState.isDragging = false;
         this.elements.dragIcon.classList.add('hidden');
         this.dragState.itemData = null;
@@ -2661,235 +3066,99 @@ class UISystem {
     }
 
     onSlotMouseUp(e, targetType, targetIndex) {
-        if (!this.dragState.isDragging) return;
-        
-        let srcType = this.dragState.sourceType;
-        let srcIndex = this.dragState.sourceIndex;
-        const itemData = this.dragState.itemData;
-
-        if (targetType === 'armor' && targetIndex === -1) { targetType = 'offhand'; targetIndex = 0; }
-        if (srcType === 'armor' && srcIndex === -1) { srcType = 'offhand'; srcIndex = 0; }
-        
-        // Prevent dropping onto self
-        if (srcType === targetType && srcIndex === targetIndex) {
-            this.cancelDrag();
+        if (this.dragDistribution.active && this.dragDistribution.slots.size > 1) {
             return;
         }
 
-        const inv = this.currentPlayer.inventory.slots;
-        let wand = null;
-        if (targetType === 'wand' || srcType === 'wand') {
-            const wSlot = inv[this.currentPlayer.selectedSlot];
-            if (wSlot && wSlot.item.type === 'wand') wand = wSlot.item.data.wand;
-        }
+        if (this._pendingClickAction) {
+            const act = this._pendingClickAction;
+            this._pendingClickAction = null;
 
-        // --- Execute Move/Swap ---
-        if (srcType === 'inventory' && targetType === 'armor') {
-            // Equip from inventory to armor
-            const targetArmor = this.currentPlayer.inventory.armor[targetIndex];
-            this.currentPlayer.inventory.armor[targetIndex] = itemData;
-            inv[srcIndex] = targetArmor; // swap back
-        } else if (srcType === 'armor' && targetType === 'inventory') {
-            // Unequip armor to inventory
-            const targetSlot = inv[targetIndex];
-            inv[targetIndex] = this.currentPlayer.inventory.armor[srcIndex];
-            this.currentPlayer.inventory.armor[srcIndex] = targetSlot;
-        } else if (srcType === 'armor' && targetType === 'armor') {
-            const temp = this.currentPlayer.inventory.armor[targetIndex];
-            this.currentPlayer.inventory.armor[targetIndex] = this.currentPlayer.inventory.armor[srcIndex];
-            this.currentPlayer.inventory.armor[srcIndex] = temp;
-        } else if (srcType === 'armor' && targetType === 'offhand') {
-            const targetSlot = this.currentPlayer.inventory.offhand;
-            this.currentPlayer.inventory.offhand = itemData;
-            this.currentPlayer.inventory.armor[srcIndex] = targetSlot;
-        } else if (srcType === 'offhand' && targetType === 'armor') {
-            const targetArmor = this.currentPlayer.inventory.armor[targetIndex];
-            this.currentPlayer.inventory.armor[targetIndex] = itemData;
-            this.currentPlayer.inventory.offhand = targetArmor;
-        }
+            if (act.type === targetType && act.index === targetIndex) {
+                const held = this.dragState.itemData;
+                if (!held) return;
+                const targetSlot = this._getSlotData(targetType, targetIndex);
 
-        const standardTypes = ['inventory', 'crafting', 'chest', 'furnace', 'wand', 'stonecutter', 'offhand'];
-        if ((standardTypes.includes(srcType) || srcType === 'creative') && standardTypes.includes(targetType)) {
-            if ((targetType === 'furnace' && targetIndex === 2) || targetType === 'crafting_output' || targetType === 'stonecutter_output') {
-                // Cannot drop into output slots
-                this.cancelDrag();
-                return;
-            }
-            if (targetType === 'furnace' && !this.furnaceData) {
-                this.cancelDrag();
-                return;
-            }
-
-            const getListSlot = (lType, idx) => {
-                if (lType === 'inventory') return inv[idx];
-                if (lType === 'offhand') return this.currentPlayer.inventory.offhand;
-                if (lType === 'crafting') return this.craftingSlots[idx];
-                if (lType === 'chest') return this.chestInventory[idx];
-                if (lType === 'stonecutter') return this.stonecutterSlot;
-                if (lType === 'furnace') {
-                    if (!this.furnaceData) return null;
-                    return idx === 0 ? this.furnaceData.input : (idx === 1 ? this.furnaceData.fuel : this.furnaceData.output);
-                }
-                if (lType === 'wand') {
-                    const w = inv[this.currentPlayer.selectedSlot];
-                    if (!w || w.item.type !== 'wand') return null;
-                    const obj = w.item.data.wand.spellSlots[idx];
-                    if (!obj) return null;
-                    let wrapped = obj;
-                    if (wrapped.type !== 'spell' && wrapped.type !== 'modifier') {
-                        const itemType = wrapped.rarity ? 'modifier' : 'spell';
-                        wrapped = { type: itemType, subtype: wrapped.type, name: wrapped.name, stackable: false, id: wrapped.id, data: { spell: wrapped, mod: wrapped } };
+                if (act.button === 2) {
+                    // Right click: deposit 1 item
+                    if (!targetSlot) {
+                        this._setSlotData(targetType, targetIndex, {
+                            item: Object.assign({}, held.item),
+                            count: 1
+                        });
+                        held.count -= 1;
+                    } else if (targetSlot.item.type === held.item.type && targetSlot.item.subtype === held.item.subtype && targetSlot.item.stackable && targetSlot.count < targetSlot.item.maxStack) {
+                        targetSlot.count += 1;
+                        held.count -= 1;
                     }
-                    return { item: wrapped, count: 1 };
-                }
-                return null;
-            };
-            const setListSlot = (lType, idx, val) => {
-                if (lType === 'creative') return; // Endless creative source, discard swaps
-                if (lType === 'inventory') inv[idx] = val;
-                else if (lType === 'offhand') this.currentPlayer.inventory.offhand = val;
-                else if (lType === 'crafting') this.craftingSlots[idx] = val;
-                else if (lType === 'chest') this.chestInventory[idx] = val;
-                else if (lType === 'stonecutter') {
-                    this.stonecutterSlot = val;
-                    this._renderStonecutter();
-                }
-                else if (lType === 'furnace') {
-                    if (!this.furnaceData) return;
-                    if (idx === 0) this.furnaceData.input = val;
-                    else if (idx === 1) this.furnaceData.fuel = val;
-                    else if (idx === 2) this.furnaceData.output = val;
-                }
-                else if (lType === 'wand') {
-                    const w = inv[this.currentPlayer.selectedSlot];
-                    if (w && w.item.type === 'wand') {
-                        w.item.data.wand.spellSlots[idx] = val ? val.item : null;
-                    }
-                }
-            };
-
-            const targetSlot = getListSlot(targetType, targetIndex);
-            let keepDragging = false;
-
-            if (!targetSlot) {
-                if (e.shiftKey && itemData.count > 1) {
-                    setListSlot(targetType, targetIndex, { item: itemData.item, count: 1 });
-                    itemData.count -= 1;
-                    keepDragging = true;
-                } else {
-                    setListSlot(targetType, targetIndex, itemData);
-                }
-            } else if (targetSlot.item.type === itemData.item.type && targetSlot.item.subtype === itemData.item.subtype && targetSlot.item.stackable) {
-                const add = (e.shiftKey && itemData.count > 1) ? 1 : Math.min(itemData.count, targetSlot.item.maxStack - targetSlot.count);
-                if (add > 0) {
-                    targetSlot.count += add;
-                    itemData.count -= add;
-                }
-                if (itemData.count > 0) {
-                    if (e.shiftKey && add > 0) {
-                        keepDragging = true;
+                    if (held.count <= 0) {
+                        this.dragState.isDragging = false;
+                        this.dragState.itemData = null;
+                        this.elements.dragIcon.classList.add('hidden');
                     } else {
-                        if (this.dragState.isSplit) {
-                            const s = getListSlot(srcType, srcIndex);
-                            if (s) s.count += itemData.count;
-                            else setListSlot(srcType, srcIndex, itemData);
+                        this.renderSlotItem(this.elements.dragIcon, held, true);
+                    }
+                } else if (act.button === 0) {
+                    // Left click: deposit all or swap
+                    if (!targetSlot) {
+                        this._setSlotData(targetType, targetIndex, held);
+                        this.dragState.isDragging = false;
+                        this.dragState.itemData = null;
+                        this.elements.dragIcon.classList.add('hidden');
+                    } else if (targetSlot.item.type === held.item.type && targetSlot.item.subtype === held.item.subtype && targetSlot.item.stackable) {
+                        const canTake = Math.min(held.count, targetSlot.item.maxStack - targetSlot.count);
+                        targetSlot.count += canTake;
+                        held.count -= canTake;
+                        if (held.count <= 0) {
+                            this.dragState.isDragging = false;
+                            this.dragState.itemData = null;
+                            this.elements.dragIcon.classList.add('hidden');
                         } else {
-                            setListSlot(srcType, srcIndex, itemData);
+                            this.renderSlotItem(this.elements.dragIcon, held, true);
                         }
+                    } else {
+                        // Swap
+                        this._setSlotData(targetType, targetIndex, held);
+                        this.dragState.itemData = targetSlot;
+                        this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData, true);
                     }
                 }
-            } else {
-                // Swap or Merge
-                const canMerge = targetSlot.item.type === itemData.item.type && 
-                                 targetSlot.item.subtype === itemData.item.subtype && 
-                                 targetSlot.item.stackable;
-                if (canMerge) {
-                    // Merge
-                    const s = getListSlot(srcType, srcIndex);
-                    if (s) s.count += itemData.count;
-                    else setListSlot(srcType, srcIndex, itemData);
-                } else {
-                    if (srcType !== 'creative') {
-                    setListSlot(srcType, srcIndex, targetSlot);
-                }
-                setListSlot(targetType, targetIndex, itemData);
-                }
-            }
-            
-            if (srcType === 'wand' || targetType === 'wand') {
-                if (window.game && window.game.heldItemMesh) {
-                    window.game.viewModel.remove(window.game.heldItemMesh);
-                    window.game.heldItemMesh = null;
-                }
-            }
 
-            if (keepDragging) {
-                this.elements.dragIcon._cacheKey = null; // force update
-                this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData);
+                this._clearDragDistribution();
                 this._updateInventory();
                 this._updateCraftingSlots();
+                this._updateCraftingOutput();
                 this._updateArmorSlots();
                 this._updateFurnaceSlots();
-                return; // Exit early, do not clear drag state
+                this._updateChestSlots();
+                if (window.game && window.game.audio) window.game.audio.playClick();
+                return;
             }
         }
-
-        // Drag successful, clean up without restoring
-        this.dragState.isDragging = false;
-        this.dragState.itemData = null;
-        this.dragState.isSplit = false;
-        this.elements.dragIcon.classList.add('hidden');
-
-        this._updateInventory(true);
-        this._updateCraftingSlots(true);
-        this._updateArmorSlots();
-        this._updateFurnaceSlots();
-        this._updateChestSlots();
-        if (this.stonecutterPos) this._renderStonecutter();
     }
 
-    // --- Tooltips ---
+    // --- Tooltips & Drag Enter ---
     onSlotEnter(e, type, index) {
+        const el = e.currentTarget;
+        this.hoveredSlot = { type, index, el };
+
+        // Handle Drag Distribution (Drag Crafting)
+        if (this.dragState.isDragging && (e.buttons & 1 || e.buttons & 2)) {
+            this._handleSlotDragEnter(e, type, index, el);
+            return;
+        }
+
         if (this.dragState.isDragging || !this.isOpen) return;
-        let slot = null;
-        if (type === 'inventory') slot = this.currentPlayer.inventory.slots[index];
-        else if (type === 'crafting') slot = this.craftingSlots[index];
-        else if (type === 'crafting_output') slot = this._matchRecipe();
-        else if (type === 'offhand' || (type === 'armor' && index === -1)) slot = this.currentPlayer.inventory.offhand;
-        else if (type === 'armor') slot = this.currentPlayer.inventory.armor[index];
-        else if (type === 'stonecutter') slot = this.stonecutterSlot;
-        else if (type === 'stonecutter_output') {
-            const rec = this.stonecutterSelectedRecipe;
-            if (rec) slot = { item: { type: 'block', subtype: rec.block, name: rec.name }, count: rec.count };
-        }
-        else if (type === 'furnace') {
-            if (!this.furnaceData) return;
-            if (index === 0) slot = this.furnaceData.input;
-            else if (index === 1) slot = this.furnaceData.fuel;
-            else if (index === 2) slot = this.furnaceData.output;
-        }
-        else if (type === 'wand') {
-            const w = this.currentPlayer.inventory.slots[this.currentPlayer.selectedSlot];
-            if (w && w.item.type === 'wand') {
-                const spell = w.item.data.wand.spellSlots[index];
-                if (spell) slot = { item: spell, count: 1 };
-            }
-        }
+        let slot = this._getSlotData(type, index);
 
         if (slot) {
             let html = `<strong style="color:#7c5cff; font-size:16px;">${slot.item.name}</strong><br/>`;
             if (slot.item.type === 'spell') {
-                const sp = slot.item.data.spell || slot.item; // handle both wrapped and unwrapped spell obj
+                const sp = slot.item.data.spell || slot.item;
                 html += `<span style="color:#aaa;">Element: ${sp.element || 'Arcane'}</span><br/>`;
                 html += `<span style="color:#ff8844;">Damage: ${sp.baseDamage || 0}</span><br/>`;
                 html += `<span style="color:#4488ff;">Mana: ${sp.baseManaCost || 0}</span><br/>`;
                 if (sp.description) html += `<span style="color:#ccc; font-style:italic;">${sp.description}</span><br/>`;
-                if (sp.modifiers && sp.modifiers.length > 0) {
-                    html += `<span style="color:#ffcc00;">Modifiers:</span><br/>`;
-                    for (const m of sp.modifiers) {
-                        html += `<span style="color:#ddaa00;">- ${m.name || m.type}</span><br/>`;
-                    }
-                }
             } else if (slot.item.type === 'wand') {
                 const w = slot.item.data.wand;
                 html += `<span style="color:#aaa;">Spell Slots: ${w.maxSlots}</span>`;
@@ -2908,12 +3177,8 @@ class UISystem {
                 if (ed.flying) html += `<span style="color:#88ffff;">🕊 Can fly</span><br/>`;
                 if (ed.passive) html += `<span style="color:#ffd166; font-weight:bold;">★ ${ed.passive}</span><br/>`;
                 if (slot.item.description) html += `<span style="color:#aaa;">${slot.item.description}</span>`;
-            } else if (slot.item.type === 'modifier') {
-                const mod = slot.item.data.mod || slot.item;
-                html += `<span style="color:#ffcc00;">Modifier</span><br/>`;
-                if (mod.config && mod.config.description) html += `<span style="color:#ccc; font-style:italic;">${mod.config.description}</span><br/>`;
-                else if (mod.description) html += `<span style="color:#ccc; font-style:italic;">${mod.description}</span><br/>`;
-                if (mod.rarity) html += `<span style="color:#aaa;">Rarity: ${mod.rarity}</span>`;
+            } else if (slot.item.type === 'food') {
+                html += `<span style="color:#aaa;">Food</span><br/><span style="color:#88ff88;">Restores hunger & health</span>`;
             } else if (slot.item.type === 'spawn_egg') {
                 html += `<span style="color:#aaccff;">Spawn Egg</span><br/><span style="color:#aaa;">Right-click to spawn mob</span>`;
             }
@@ -2925,7 +3190,303 @@ class UISystem {
     }
 
     onSlotLeave() {
+        this.hoveredSlot = null;
         this.elements.tooltip.classList.add('hidden');
+    }
+
+    // =============================
+    // Keyboard Shortcuts (1-9 Swap & Q Drop)
+    // =============================
+    onKeyDown(e) {
+        if (!this.isOpen) return;
+        const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea') return;
+
+        // Space: Autofill recipe
+        if (e.code === 'Space') {
+            const modalRecipeBook = document.getElementById('recipe-book-modal');
+            if (modalRecipeBook && !modalRecipeBook.classList.contains('hidden')) {
+                if (this.selectedRecipe) {
+                    e.preventDefault();
+                    this.autofillRecipe(this.selectedRecipe, e.shiftKey);
+                }
+            }
+        }
+
+        // Digits 1-9: Hotbar quick swap
+        if (e.code.startsWith('Digit') && !e.ctrlKey && !e.altKey) {
+            const num = parseInt(e.code.replace('Digit', ''), 10);
+            if (num >= 1 && num <= 9 && this.hoveredSlot) {
+                e.preventDefault();
+                this.swapSlotWithHotbar(this.hoveredSlot, num - 1);
+            }
+        }
+
+        // Key Q: Drop item into world
+        if (e.code === 'KeyQ' && this.hoveredSlot) {
+            e.preventDefault();
+            this.dropHoveredSlotItem(this.hoveredSlot, e.ctrlKey);
+        }
+    }
+
+    swapSlotWithHotbar(hoveredSlot, hotbarIdx) {
+        if (!this.currentPlayer && window.game) this.currentPlayer = window.game.player;
+        if (!hoveredSlot || !this.currentPlayer || !this.currentPlayer.inventory) return;
+        const inv = this.currentPlayer.inventory.slots;
+        if (hotbarIdx < 0 || hotbarIdx > 8) return;
+
+        const srcType = hoveredSlot.type;
+        const srcIndex = hoveredSlot.index;
+        if (srcType === 'crafting_output' || srcType === 'stonecutter_output') return;
+
+        const currentHotbarItem = inv[hotbarIdx];
+        const currentTargetItem = this._getSlotData(srcType, srcIndex);
+
+        this._setSlotData(srcType, srcIndex, currentHotbarItem);
+        inv[hotbarIdx] = currentTargetItem;
+
+        this._updateInventory();
+        this._updateCraftingSlots();
+        this._updateCraftingOutput();
+        this._updateArmorSlots();
+        this._updateFurnaceSlots();
+        this._updateChestSlots();
+        if (window.game && window.game.audio) window.game.audio.playClick();
+    }
+
+    dropHoveredSlotItem(hoveredSlot, dropStack = false) {
+        if (!this.currentPlayer && window.game) this.currentPlayer = window.game.player;
+        if (!hoveredSlot || !this.currentPlayer) return;
+        const slotData = this._getSlotData(hoveredSlot.type, hoveredSlot.index);
+        if (!slotData || !slotData.item || slotData.count <= 0) return;
+
+        const dropCount = dropStack ? slotData.count : 1;
+        slotData.count -= dropCount;
+        if (slotData.count <= 0) {
+            this._setSlotData(hoveredSlot.type, hoveredSlot.index, null);
+        }
+
+        const p = this.currentPlayer;
+        const lookDir = p.getLookDirection ? p.getLookDirection() : new THREE.Vector3(0, 0, -1);
+        const eyePos = p.getEyePosition ? p.getEyePosition() : p.position.clone().add(new THREE.Vector3(0, 1.6, 0));
+        const dropPos = eyePos.clone().add(lookDir.clone().multiplyScalar(0.5));
+        const velocity = lookDir.clone().multiplyScalar(8);
+
+        if (window.game && window.game.entityManager) {
+            window.game.entityManager.spawnItem(slotData.item, dropCount, dropPos, velocity);
+        }
+        if (window.game && window.game.audio) window.game.audio.playClick();
+
+        this._updateInventory();
+        this._updateCraftingSlots();
+        this._updateCraftingOutput();
+        this._updateArmorSlots();
+        this._updateFurnaceSlots();
+        this._updateChestSlots();
+    }
+
+    dropCursorItem(dropStack = false) {
+        if (!this.currentPlayer && window.game) this.currentPlayer = window.game.player;
+        if (!this.dragState.isDragging || !this.dragState.itemData || !this.currentPlayer) return;
+        const held = this.dragState.itemData;
+        const dropCount = dropStack ? held.count : 1;
+        held.count -= dropCount;
+
+        const p = this.currentPlayer;
+        const lookDir = p.getLookDirection ? p.getLookDirection() : new THREE.Vector3(0, 0, -1);
+        const eyePos = p.getEyePosition ? p.getEyePosition() : p.position.clone().add(new THREE.Vector3(0, 1.6, 0));
+        const dropPos = eyePos.clone().add(lookDir.clone().multiplyScalar(0.5));
+        const velocity = lookDir.clone().multiplyScalar(8);
+
+        if (window.game && window.game.entityManager) {
+            window.game.entityManager.spawnItem(held.item, dropCount, dropPos, velocity);
+        }
+        if (window.game && window.game.audio) window.game.audio.playClick();
+
+        if (held.count <= 0) {
+            this.dragState.isDragging = false;
+            this.dragState.itemData = null;
+            this.elements.dragIcon.classList.add('hidden');
+        } else {
+            this.renderSlotItem(this.elements.dragIcon, this.dragState.itemData, true);
+        }
+    }
+
+    // =============================
+    // Recipe Autofill
+    // =============================
+    autofillRecipe(recipe, shiftMax = false) {
+        if (!this.currentPlayer && window.game) this.currentPlayer = window.game.player;
+        if (!recipe || !this.currentPlayer || !this.currentPlayer.inventory) return;
+        const inv = this.currentPlayer.inventory;
+        const B = (typeof BLOCKS !== 'undefined') ? BLOCKS : window.BLOCKS;
+
+        const statusEl = document.getElementById('recipe-autofill-status');
+        const setStatus = (msg, isError = false) => {
+            if (statusEl) {
+                statusEl.textContent = msg;
+                statusEl.style.color = isError ? '#cc2222' : '#2e7d32';
+            }
+        };
+
+        if (recipe.needs3x3 && !this.is3x3Crafting) {
+            setStatus("★ Requires Crafting Table (3x3 Grid)", true);
+            if (window.game && window.game.audio) window.game.audio.playClick();
+            return;
+        }
+
+        let targetSlots = new Array(9).fill(null);
+        if (this.is3x3Crafting) {
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    targetSlots[r * 3 + c] = recipe.grid[r] ? recipe.grid[r][c] : null;
+                }
+            }
+        } else {
+            let minX = 2, maxX = 0, minY = 2, maxY = 0;
+            let hasItem = false;
+            for (let y = 0; y < 3; y++) {
+                for (let x = 0; x < 3; x++) {
+                    if (recipe.grid[y] && recipe.grid[y][x]) {
+                        hasItem = true;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+            if (!hasItem) return;
+            if ((maxX - minX > 1) || (maxY - minY > 1)) {
+                setStatus("★ Recipe cannot fit into 2x2 grid", true);
+                return;
+            }
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    const targetIdx = (y - minY) * 2 + (x - minX);
+                    targetSlots[targetIdx] = recipe.grid[y] ? recipe.grid[y][x] : null;
+                }
+            }
+        }
+
+        const isPlank = (t) => B && [
+            B.PLANKS, B.ACACIA_PLANKS, B.CHERRY_PLANKS, B.AUTUMN_PLANKS, B.PALM_PLANKS,
+            B.PINE_PLANKS, B.CRIMSON_PLANKS, B.DARK_OAK_PLANKS, B.BIRCH_PLANKS, B.MANGROVE_PLANKS,
+            B.MAGIC_PLANKS, B.REDWOOD_PLANKS, B.WARPED_PLANKS, B.GOLDEN_OAK_PLANKS, B.AETHER_PLANKS
+        ].includes(t);
+
+        const isLog = (t) => B && [
+            B.WOOD, B.ACACIA_WOOD, B.CHERRY_LOG, B.AUTUMN_WOOD, B.PALM_WOOD,
+            B.JUNGLE_LOG, B.PINE_WOOD, B.CRIMSON_STEM, B.DARK_OAK_WOOD, B.BIRCH_WOOD,
+            B.MANGROVE_LOG, B.MAGIC_WOOD, B.REDWOOD_LOG, B.WARPED_STEM, B.GOLDEN_OAK_WOOD,
+            B.ENCHANTED_AETHER_LOG, B.AETHER_WOOD
+        ].includes(t);
+
+        const matchesReq = (item, req) => {
+            if (!item || !req) return false;
+            if (req.subtype === (B && B.PLANKS)) {
+                return item.type === 'block' && isPlank(item.subtype);
+            }
+            if (req.subtype === (B && B.WOOD)) {
+                return item.type === 'block' && isLog(item.subtype);
+            }
+            if (req.subtype === (B && B.COBBLESTONE)) {
+                return item.type === 'block' && (item.subtype === B.COBBLESTONE || item.subtype === B.MOSSY_COBBLESTONE);
+            }
+            return item.type === req.type && item.subtype === req.subtype;
+        };
+
+        // Return existing crafting items to inventory
+        for (let i = 0; i < 9; i++) {
+            if (this.craftingSlots[i]) {
+                const added = inv.addItem(this.craftingSlots[i].item, this.craftingSlots[i].count);
+                if (!added && this.currentPlayer.manager) {
+                    this.currentPlayer.manager.spawnItem(this.craftingSlots[i].item, this.craftingSlots[i].count, this.currentPlayer.position);
+                }
+                this.craftingSlots[i] = null;
+            }
+        }
+
+        const requiredReqs = [];
+        for (let i = 0; i < 9; i++) {
+            if (targetSlots[i]) requiredReqs.push({ slotIndex: i, req: targetSlots[i] });
+        }
+
+        if (requiredReqs.length === 0) return;
+
+        let canFulfill = true;
+        const missingList = [];
+        const usedCounts = new Map();
+
+        for (const { req } of requiredReqs) {
+            let found = false;
+            for (let invIdx = 0; invIdx < inv.slots.length; invIdx++) {
+                const invSlot = inv.slots[invIdx];
+                if (!invSlot || !invSlot.item) continue;
+                const alreadyUsed = usedCounts.get(invIdx) || 0;
+                const available = invSlot.count - alreadyUsed;
+                if (available > 0 && matchesReq(invSlot.item, req)) {
+                    usedCounts.set(invIdx, alreadyUsed + 1);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                canFulfill = false;
+                const reqName = (req.subtype ? String(req.subtype).replace(/_/g, ' ') : 'Item');
+                if (!missingList.includes(reqName)) missingList.push(reqName);
+            }
+        }
+
+        if (!canFulfill) {
+            setStatus(`Missing: ${missingList.join(', ')}`, true);
+            if (window.game && window.game.audio) window.game.audio.playClick();
+            return;
+        }
+
+        let craftsCount = 1;
+        if (shiftMax) {
+            let maxPossible = 64;
+            for (const { req } of requiredReqs) {
+                let totalInInv = 0;
+                for (const s of inv.slots) {
+                    if (s && s.item && matchesReq(s.item, req)) totalInInv += s.count;
+                }
+                const occurrences = requiredReqs.filter(r => matchesReq({ type: r.req.type, subtype: r.req.subtype }, req)).length;
+                const possibleForThis = Math.floor(totalInInv / occurrences);
+                if (possibleForThis < maxPossible) maxPossible = possibleForThis;
+            }
+            craftsCount = Math.max(1, Math.min(64, maxPossible));
+        }
+
+        for (const { slotIndex, req } of requiredReqs) {
+            let needed = craftsCount;
+            let placedItem = null;
+            for (let invIdx = 0; invIdx < inv.slots.length; invIdx++) {
+                const invSlot = inv.slots[invIdx];
+                if (!invSlot || !invSlot.item) continue;
+                if (matchesReq(invSlot.item, req)) {
+                    const take = Math.min(needed, invSlot.count);
+                    invSlot.count -= take;
+                    placedItem = invSlot.item;
+                    needed -= take;
+                    if (invSlot.count <= 0) inv.slots[invIdx] = null;
+                    if (needed <= 0) break;
+                }
+            }
+            this.craftingSlots[slotIndex] = {
+                item: placedItem || { type: req.type, subtype: req.subtype, name: req.subtype, stackable: true, maxStack: 64 },
+                count: craftsCount
+            };
+        }
+
+        this._updateCraftingSlots();
+        this._updateInventory();
+        this._matchRecipe();
+        this._updateCraftingOutput();
+
+        setStatus(`✓ Autofilled: ${recipe.name}${craftsCount > 1 ? ' (x' + craftsCount + ')' : ''}!`);
+        if (window.game && window.game.audio) window.game.audio.playClick();
     }
 
     // =============================
@@ -2936,17 +3497,23 @@ class UISystem {
         if (!grid) return;
         
         if (this.is3x3Crafting) {
-            grid.style.gridTemplateColumns = 'repeat(3, 50px)';
-            grid.style.gridTemplateRows = 'repeat(3, 50px)';
+            grid.style.gridTemplateColumns = 'repeat(3, 40px)';
+            grid.style.gridTemplateRows = 'repeat(3, 40px)';
+            if (this.elements.survivalTopPanel) {
+                this.elements.survivalTopPanel.classList.add('crafting-table-mode');
+            }
             for (let i = 0; i < 9; i++) {
-                if (grid.children[i]) grid.children[i].style.display = 'block';
+                if (grid.children[i]) grid.children[i].style.display = 'flex';
             }
         } else {
-            grid.style.gridTemplateColumns = 'repeat(2, 50px)';
-            grid.style.gridTemplateRows = 'repeat(2, 50px)';
+            grid.style.gridTemplateColumns = 'repeat(2, 40px)';
+            grid.style.gridTemplateRows = 'repeat(2, 40px)';
+            if (this.elements.survivalTopPanel) {
+                this.elements.survivalTopPanel.classList.remove('crafting-table-mode');
+            }
             for (let i = 0; i < 9; i++) {
                 if (!grid.children[i]) continue;
-                if (i < 4) grid.children[i].style.display = 'block';
+                if (i < 4) grid.children[i].style.display = 'flex';
                 else grid.children[i].style.display = 'none';
                 
                 // If switching to 2x2, drop items in hidden slots
@@ -3311,15 +3878,27 @@ class UISystem {
         this.renderSlotItem(this.elements.furnaceFuel, this.furnaceData.fuel);
         this.renderSlotItem(this.elements.furnaceOutput, this.furnaceData.output);
         if (this.elements.furnaceProgress) {
-            this.elements.furnaceProgress.style.width = `${Math.floor(this.furnaceData.progress * 100)}%`;
+            const prog = Math.max(0, Math.min(1, this.furnaceData.progress || 0));
+            this.elements.furnaceProgress.style.width = `${Math.floor(prog * 100)}%`;
         }
         if (this.elements.furnaceFire) {
-            if (this.furnaceData.isSmelting) {
+            const f = this.furnaceData;
+            const burnTime = f.burnTime || 0;
+            const maxBurnTime = f.maxBurnTime || 0;
+            const burnRatio = (maxBurnTime > 0 && burnTime > 0) ? Math.max(0, Math.min(1, burnTime / maxBurnTime)) : 0;
+            
+            if (this.elements.furnaceFireFill) {
+                this.elements.furnaceFireFill.style.height = `${Math.round(burnRatio * 100)}%`;
+            }
+            if (burnTime > 0 || f.isSmelting) {
                 this.elements.furnaceFire.classList.add('lit');
                 this.elements.furnaceFire.style.opacity = '1.0';
             } else {
                 this.elements.furnaceFire.classList.remove('lit');
-                this.elements.furnaceFire.style.opacity = '0.35';
+                this.elements.furnaceFire.style.opacity = '1.0';
+                if (this.elements.furnaceFireFill) {
+                    this.elements.furnaceFireFill.style.height = '0%';
+                }
             }
         }
     }
@@ -4304,6 +4883,14 @@ class UISystem {
                 const idx = parseInt(item.getAttribute('data-idx'));
                 this.showRecipeDetails(filteredRecipes[idx]);
             });
+            item.addEventListener('dblclick', () => {
+                const idx = parseInt(item.getAttribute('data-idx'));
+                const rec = filteredRecipes[idx];
+                if (rec) {
+                    this.showRecipeDetails(rec);
+                    this.autofillRecipe(rec);
+                }
+            });
         });
 
         // Select first automatically
@@ -4312,6 +4899,12 @@ class UISystem {
 
     showRecipeDetails(recipe) {
         if (!recipe) return;
+        this.selectedRecipe = recipe;
+        const statusEl = document.getElementById('recipe-autofill-status');
+        if (statusEl) {
+            statusEl.textContent = 'Press [Space] to autofill';
+            statusEl.style.color = '#404040';
+        }
         document.getElementById('recipe-viewer-title').innerText = recipe.name;
         let descHtml = recipe.desc || '';
         if (recipe.needs3x3 && !this.is3x3Crafting) {
@@ -4332,22 +4925,25 @@ class UISystem {
             el.className = 'inv-slot';
             if (!def) return el;
             
+            const atlas = this.atlas || (window.game ? window.game.atlas : null);
             let dataURL = null;
-            if (def.type === 'block') {
-                const iconCanvas = this.atlas.getBlockIcon(def.subtype);
-                dataURL = iconCanvas.toDataURL();
+            if (def.type === 'block' && atlas && atlas.getBlockIcon) {
+                const iconCanvas = atlas.getBlockIcon(def.subtype);
+                if (iconCanvas) dataURL = iconCanvas.toDataURL();
             } else {
                 const iconCanvas = generateItemTexture(def.type, def.subtype, (c) => {
                     const elImg = el.querySelector('img');
-                    if (elImg) elImg.src = c.toDataURL();
+                    if (elImg && c) elImg.src = c.toDataURL();
                 });
-                dataURL = iconCanvas.toDataURL();
+                if (iconCanvas) dataURL = iconCanvas.toDataURL();
             }
             
-            const img = document.createElement('img');
-            img.src = dataURL;
-            img.className = 'item-icon';
-            el.appendChild(img);
+            if (dataURL) {
+                const img = document.createElement('img');
+                img.src = dataURL;
+                img.className = 'item-icon';
+                el.appendChild(img);
+            }
             return el;
         };
 
@@ -4407,6 +5003,11 @@ class UISystem {
             num.innerText = recipe.outCount;
             outContainer.appendChild(num);
         }
+        outContainer.style.cursor = 'pointer';
+        outContainer.title = 'Click to autofill into crafting grid (or press Space)';
+        outContainer.onclick = () => {
+            this.autofillRecipe(recipe);
+        };
     }
 }
 

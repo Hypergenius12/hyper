@@ -24,19 +24,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     background: var(--mc-gui-bg, #c6c6c6);
-    padding: 16px 20px;
+    padding: 14px 18px;
     border: 4px solid #c6c6c6;
     border-top-color: #ffffff;
     border-left-color: #ffffff;
     border-right-color: #555555;
     border-bottom-color: #555555;
-    box-shadow: inset 2px 2px 0 #dbdbdb, inset -2px -2px 0 #373737, 0 12px 35px rgba(0, 0, 0, 0.85);
+    box-shadow: inset 2px 2px 0 #dbdbdb, inset -2px -2px 0 #373737, 0 16px 40px rgba(0, 0, 0, 0.85);
     font-family: 'Minecraftia', monospace, sans-serif;
     color: #404040;
     box-sizing: border-box;
-    width: 464px;
+    width: 428px;
 }
 
 .mc-container-title {
@@ -58,8 +58,17 @@
 .main-inv-col {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    width: 100%;
+    align-items: flex-start;
+    width: 392px;
+    margin: 0 auto;
+}
+
+.inv-hotbar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 392px;
+    margin: 2px auto 0 auto;
 }
 
 /* Grids */
@@ -92,8 +101,28 @@
     image-rendering: pixelated;
 }
 
-.inv-slot:hover {
-    background: #a4a4a4;
+.inv-slot:hover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.32);
+    pointer-events: none;
+    z-index: 5;
+}
+
+.inv-slot.drag-highlight {
+    background: #a8a8a8 !important;
+    outline: 2px solid #ffffff !important;
+    outline-offset: -2px;
+}
+
+.inv-slot.drag-highlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.45);
+    pointer-events: none;
+    z-index: 5;
 }
 
 .inv-slot.active {
@@ -828,10 +857,29 @@
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    align-items: flex-start;
-    width: 100%;
+    align-items: center;
+    width: 392px;
+    margin: 0 auto;
     padding: 0 4px;
     gap: 12px;
+}
+
+#survival-top-panel.crafting-table-mode {
+    justify-content: center !important;
+    align-items: center !important;
+    width: 392px !important;
+    margin: 0 auto !important;
+}
+
+#survival-top-panel.crafting-table-mode #crafting-panel {
+    align-items: center !important;
+    width: 100% !important;
+}
+
+#survival-top-panel.crafting-table-mode .crafting-grid {
+    grid-template-columns: repeat(3, 40px) !important;
+    grid-template-rows: repeat(3, 40px) !important;
+    gap: 4px !important;
 }
 
 #player-preview-box {
@@ -887,7 +935,8 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    width: 100%;
+    width: 392px;
+    margin: 0 auto;
 }
 
 /* Furnace Panel */
@@ -895,14 +944,15 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
+    width: 392px;
+    margin: 0 auto;
 }
 
 .furnace-body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: 24px;
     margin: 8px 0 12px 0;
     width: 100%;
 }
@@ -918,21 +968,36 @@
     width: 28px;
     height: 28px;
     background-image: url('../assets/mc/container/furnace_fire.png');
-    background-size: 100% 100%;
+    background-size: 28px 28px;
     background-repeat: no-repeat;
     image-rendering: pixelated;
-    transition: opacity 0.15s ease;
+    position: relative;
+    overflow: hidden;
 }
 
-.furnace-fire-sprite.lit {
+.furnace-fire-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
     background-image: url('../assets/mc/container/furnace_fire_lit.png');
+    background-size: 28px 28px;
+    background-position: bottom;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    transition: height 0.08s linear;
+}
+
+.furnace-fire-sprite.lit .furnace-fire-fill {
+    filter: drop-shadow(0 0 4px rgba(255, 120, 0, 0.75));
 }
 
 .furnace-arrow-container {
     width: 48px;
     height: 34px;
     background-image: url('../assets/mc/container/furnace_arrow.png');
-    background-size: 100% 100%;
+    background-size: 48px 34px;
     background-repeat: no-repeat;
     image-rendering: pixelated;
     position: relative;

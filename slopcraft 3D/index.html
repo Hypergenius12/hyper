@@ -343,7 +343,9 @@
                         <div class="furnace-body">
                             <div class="furnace-fire-col">
                                 <div class="inv-slot" id="furnace-input"></div>
-                                <div id="furnace-fire" class="furnace-fire-sprite"></div>
+                                <div id="furnace-fire" class="furnace-fire-sprite">
+                                    <div id="furnace-fire-fill" class="furnace-fire-fill"></div>
+                                </div>
                                 <div class="inv-slot" id="furnace-fuel"></div>
                             </div>
                             <div class="furnace-arrow-container">
@@ -413,10 +415,9 @@
                 </div>
             </div>
 
-            <!-- SHARED HOTBAR SECTION (Always at bottom of container) -->
+            <!-- SHARED HOTBAR SECTION (Directly beneath main inventory, exactly like Minecraft Java) -->
             <div class="inv-hotbar-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 6px; margin-bottom: 4px;">
-                    <div class="mc-container-title" style="margin: 0; font-size: 12px;">Hotbar</div>
+                <div class="inv-hotbar-top-bar" style="display: flex; justify-content: flex-end; align-items: center; width: 100%; min-height: 4px; margin-bottom: 4px;">
                     <div class="inv-slot creative-trash-slot hidden" id="creative-trash-slot" title="Destroy Item (Click or Drop item here to delete)">🗑️</div>
                 </div>
                 <div class="main-grid" id="inv-hotbar-grid" style="grid-template-rows: 40px;">
@@ -444,12 +445,20 @@
                 <div id="recipe-viewer-desc" style="font-family: 'Minecraftia'; font-size: 10px; color: #666; margin-bottom: 14px; text-align: center; min-height: 24px;"></div>
                 
                 <!-- 3x3 Grid -->
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
                     <div id="recipe-viewer-grid" class="crafting-grid" style="display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(3, 40px); gap: 4px;">
                         <!-- 9 slots filled by JS -->
                     </div>
                     <div style="font-size: 1.5rem; color: #404040; font-family: 'Minecraftia';">→</div>
-                    <div id="recipe-viewer-output" class="inv-slot crafting-output"></div>
+                    <div id="recipe-viewer-output" class="inv-slot crafting-output" style="cursor: pointer;" title="Click to autofill grid"></div>
+                </div>
+
+                <!-- Autofill Button & Status -->
+                <div id="recipe-autofill-container" style="margin-top: 14px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                    <button id="btn-autofill-recipe" class="mc-btn autofill-btn" style="width: 100%; height: 32px; font-size: 11px; background: #2e7d32; color: #ffffff; border-top: 2px solid #66bb6a; border-left: 2px solid #66bb6a; border-right: 2px solid #1b5e20; border-bottom: 2px solid #1b5e20; font-family: 'Minecraftia', monospace; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <span>▶</span> <span>Autofill Grid</span> <span style="background: rgba(0,0,0,0.25); padding: 2px 6px; border-radius: 2px; font-size: 9px;">[Space]</span>
+                    </button>
+                    <div id="recipe-autofill-status" style="font-size: 10px; font-family: 'Minecraftia', monospace; text-align: center; min-height: 16px; color: #404040;">Press [Space] to autofill</div>
                 </div>
             </div>
         </div>
