@@ -69,7 +69,8 @@ const PROJECT_NAMES = {
     'color-pallete-generator': 'ChromaCraft',
     'joyful-rutherford': 'Seleste',
     'neurotrack': 'NeuroTrack AI Racing',
-    'dust': 'Dust Sandbox'
+    'dust': 'Dust Sandbox',
+    'satisfy': 'Satisfy'
 };
 
 function getDisplayProjectName(rawName) {

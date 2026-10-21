@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Satisfy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #05060d;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #viewer {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+    background: transparent;
+  }
+  
+  /* Non-AI Custom CSS Menu */
+  .menu-nav {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 20, 25, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 6px;
+    border-radius: 40px;
+    display: flex;
+    gap: 8px;
+    z-index: 10000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.1);
+  }
+  .menu-btn {
+    background: transparent;
+    color: #8892b0;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .menu-btn:hover {
+    color: #e2e8f0;
+    background: rgba(255,255,255,0.08);
+  }
+  .menu-btn.active {
+    background: #e2e8f0;
+    color: #0f1419;
+    box-shadow: 0 2px 10px rgba(255,255,255,0.25);
+  }
+</style>
+</head>
+<body>
+
+<div class="menu-nav">
+  <button class="menu-btn active" id="btn-globs">Globs</button>
+  <button class="menu-btn" id="btn-filings">Filings</button>
+</div>
+
+<iframe id="viewer"></iframe>
+
+<!-- Source 1: globs3.html (stored safely to prevent DOM interference) -->
+<script type="text/plain" id="src-globs">
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Globs</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+html,body{margin:0;height:100%;background:#05060d;overflow:hidden;touch-action:none}
+canvas{width:100%;height:100%;display:block;cursor:grab}
+#h{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));text-align:center;color:#fff9;font:13px system-ui,sans-serif;letter-spacing:.15em;text-transform:uppercase;pointer-events:none;transition:opacity 1.5s}
+</style></head><body>
+<canvas id="c"></canvas><div id="h">grab the goo · fling it · scroll or pinch to zoom</div>
+<script>
+const c=document.getElementById('c'),gl=c.getContext('webgl');
+function rs(){const d=Math.min(devicePixelRatio||1,1.25);c.width=innerWidth*d;c.height=innerHeight*d;gl.viewport(0,0,c.width,c.height)}
+addEventListener('resize',rs);rs();
+const sh=(t,s)=>{const h=gl.createShader(t);gl.shaderSource(h,s);gl.compileShader(h);return h};
+const P=gl.createProgram();
+gl.attachShader(P,sh(gl.VERTEX_SHADER,'attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}'));
+gl.attachShader(P,sh(gl.FRAGMENT_SHADER,`precision highp float;
+uniform vec2 R;uniform float T,K,H;uniform vec3 RO;uniform vec4 B[14];uniform vec4 RP[4];
+float gd;
+float smin(float a,float b,float k){float h=max(k-abs(a-b),0.)/k;return min(a,b)-h*h*k*.25;}
+float map(vec3 p){float d=1e5;for(int i=0;i<14;i++){d=smin(d,length(p-B[i].xyz)-B[i].w,K);}gd=d;return smin(d,p.y+1.5,K*.8);}
+vec3 nor(vec3 p){vec2 e=vec2(.004,-.004);return normalize(e.xyy*map(p+e.xyy)+e.yyx*map(p+e.yyx)+e.yxy*map(p+e.yxy)+e.xxx*map(p+e.xxx));}
+vec3 pal(float x){return .5+.5*cos(6.283*(x+H+vec3(0.,.33,.67)));}
+vec3 env(vec3 r){
+ vec3 c=mix(vec3(.02,.03,.09),vec3(.25,.15,.45),smoothstep(-.6,.9,r.y));
+ c+=pal(.1)*exp(-pow((r.y-.15)*7.,2.))*.5*(.5+.5*sin(r.x*3.+T*.3));
+ c+=vec3(1.,.95,.85)*pow(max(dot(r,normalize(vec3(.5,.8,.6))),0.),60.)*4.;
+ c+=vec3(.4,.8,1.)*pow(max(dot(r,normalize(vec3(-.7,.3,.5))),0.),30.)*2.;
+ return c;}
+void main(){
+ vec2 uv=(gl_FragCoord.xy*2.-R)/R.y;
+ vec3 f=normalize(vec3(0.,-.3,0.)-RO),rt=normalize(cross(f,vec3(0.,1.,0.))),up=cross(rt,f);
+ vec3 ro=RO,rd=normalize(uv.x*rt+uv.y*up+1.6*f);
+ float t=0.,d=0.,glow=0.;bool hit=false;
+ for(int i=0;i<64;i++){d=map(ro+rd*t);glow+=exp(-gd*2.2)*.011;if(d<.003){hit=true;break;}t+=d*.9;if(t>40.)break;}
+ vec3 bg=env(rd)*.28;
+ vec3 col=bg+pal(T*.03)*glow*.8;
+ if(hit){
+  vec3 p=ro+rd*t,n=nor(p),v=-rd;
+  float nv=max(dot(n,v),0.),fr=pow(1.-nv,3.);
+  vec3 r=reflect(rd,n),ir=pal(nv*1.3+p.y*.15+T*.05);
+  float fl=smoothstep(-1.15,-1.45,p.y)*step(.6,n.y);
+  float ao=clamp(.4+.6*map(p+n*.3)/.3,0.,1.);
+  vec3 blob=mix(vec3(.03,.04,.08),ir*.5,.5)+env(refract(rd,n,.75))*ir*.35+env(r)*(.3+.7*fr)*mix(vec3(1.),ir,.45)+ir*fr*.6;
+  blob+=pow(max(dot(r,normalize(vec3(.5,.8,.6))),0.),120.)*3.;blob*=.6+.4*ao;
+  vec3 rc=env(r);
+  if(fl>.01){vec3 q=p+n*.02;float u=0.;bool h2=false;
+   for(int i=0;i<28;i++){float e=map(q+r*u);if(e<.004){h2=true;break;}u+=e;if(u>8.)break;}
+   if(h2){vec3 s=q+r*u,n2=nor(s);float nv2=max(dot(n2,-r),0.);rc=pal(nv2*1.3+s.y*.15+T*.05)*(.5+.5*n2.y)+env(reflect(r,n2))*.4+pal(nv2)*pow(1.-nv2,2.)*.7;}
+  }
+  float rg=0.;for(int i=0;i<4;i++){float rr=length(p.xz-RP[i].xy);rg+=exp(-pow((rr-RP[i].z*3.5)*5.,2.))*RP[i].w*exp(-RP[i].z*1.6);}
+  vec2 g=abs(fract(p.xz*.7)-.5);float grid=smoothstep(.47,.5,max(g.x,g.y));
+  vec3 flr=vec3(.015,.02,.045)+pal(p.x*.05)*grid*.12*exp(-length(p.xz)*.12)+rc*(.18+.75*fr)+pal(.3)*rg*.8;
+  col=mix(blob,flr*(.3+.7*ao),fl);
+  col=mix(col,bg,smoothstep(10.,38.,t));
+ }
+ col*=1.-.3*dot(uv,uv)*.4;
+ col=pow(col/(1.+col*.35),vec3(.9));
+ gl_FragColor=vec4(col,1.);}`));
+gl.linkProgram(P);if(!gl.getProgramParameter(P,gl.LINK_STATUS))console.error(gl.getProgramInfoLog(P));gl.useProgram(P);
+gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const a=gl.getAttribLocation(P,'p');gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,2,gl.FLOAT,false,0,0);
+const U=n=>gl.getUniformLocation(P,n),uR=U('R'),uT=U('T'),uK=U('K'),uH=U('H'),uRO=U('RO'),uB=U('B'),uRP=U('RP'),RPa=new Float32Array(16);
+const NB=14,bl=[],FY=-1.5;
+for(let i=0;i<NB;i++)bl.push({x:(Math.random()-.5)*4,y:1+Math.random()*4,z:(Math.random()-.5)*.6,vx:0,vy:0,vz:0,r:.5-(i%7)*.028,ls:0});
+const m={x:0,y:0,px:0,py:0,vx:0,vy:0,on:false,down:false,h:0,t0:0,cx:0,cy:0};
+let hue=0,hueT=0,idle=0;
+let zoom=6,zT=6;const cam=()=>[m.cx*.5,.7+m.cy*.2,zoom];
+function pos(e){const ux=(e.clientX*2-innerWidth)/innerHeight,uy=-(e.clientY*2-innerHeight)/innerHeight;m.cx+=(ux-m.cx)*.2;m.cy+=(uy-m.cy)*.2;
+const ro=cam(),tg=[0,-.3,0];let f=[tg[0]-ro[0],tg[1]-ro[1],tg[2]-ro[2]];const nn=v=>{const l=Math.hypot(...v);return v.map(x=>x/l)};f=nn(f);
+const r=nn([-f[2],0,f[0]]);const u=[r[1]*f[2]-r[2]*f[1],r[2]*f[0]-r[0]*f[2],r[0]*f[1]-r[1]*f[0]];
+const rd=nn([ux*r[0]+uy*u[0]+1.6*f[0],ux*r[1]+uy*u[1]+1.6*f[1],ux*r[2]+uy*u[2]+1.6*f[2]]);
+const t=-ro[2]/rd[2];m.x=ro[0]+rd[0]*t;m.y=ro[1]+rd[1]*t;m.on=true;idle=0}
+let ac;
+function bloop(f,v,d,sw){if(!ac)return;const o=ac.createOscillator(),g=ac.createGain(),n=ac.currentTime;o.type='sine';
+o.frequency.setValueAtTime(f,n);o.frequency.exponentialRampToValueAtTime(f*sw,n+d*.6);
+g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(v,n+.006);g.gain.exponentialRampToValueAtTime(.0001,n+d);
+o.connect(g).connect(ac.destination);o.start(n);o.stop(n+d+.05)}
+const pent=[0,2,4,7,9];const pf=i=>160*Math.pow(2,(pent[i%5]+12*Math.floor(i/5))/12);
+const pts=new Map();let pd=0,dr,dg;const dist2=()=>{const[a,b]=[...pts.values()];return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)};const cz=v=>Math.min(14,Math.max(2.6,v));
+c.addEventListener('wheel',e=>{e.preventDefault();zT=cz(zT*Math.exp(e.deltaY*.0012))},{passive:false});
+c.addEventListener('pointerdown',e=>{pts.set(e.pointerId,e);if(pts.size==2){pd=dist2();m.down=false;return}try{ac=ac||new (window.AudioContext||webkitAudioContext)()}catch(_){}pos(e);m.px=m.x;m.py=m.y;m.down=true;m.t0=performance.now();
+c.setPointerCapture(e.pointerId);c.style.cursor='grabbing';hueT+=.17;if(ac&&!dr){dr=ac.createOscillator();dg=ac.createGain();dr.type='sine';dg.gain.value=0;dr.connect(dg).connect(ac.destination);dr.start()}bloop(120,.22,.5,.6);document.getElementById('h').style.opacity=0});
+c.addEventListener('pointermove',e=>{if(pts.has(e.pointerId))pts.set(e.pointerId,e);if(pts.size==2){const d=dist2();zT=cz(zT*pd/d);pd=d;return}pos(e)});
+c.addEventListener('pointerup',e=>{pts.delete(e.pointerId);if(!m.down)return;m.down=false;c.style.cursor='grab';
+const s=performance.now()-m.t0<220?1:.25;
+for(const b of bl){const dx=b.x-m.x,dy=b.y-m.y,d=Math.hypot(dx,dy)+.05;b.vx+=dx/d*4*s+(Math.random()-.5);b.vy+=dy/d*4*s+2*s+Math.random()*2;b.vx*=1.15;b.vy*=1.15}
+bloop(220,.2,.4,2.2)});
+c.addEventListener('pointerleave',e=>{pts.delete(e.pointerId);m.on=false});
+const rip=[0,0,0,0].map(()=>({x:0,z:0,t:-9,s:0}));let ri=0;const F=new Float32Array(NB*4);let T=0,pt=performance.now();
+function sim(dt){
+ const hw=Math.max(zoom,6)*.6*innerWidth/innerHeight*.95;
+ for(let i=0;i<NB;i++){const b=bl[i];let ax=0,ay=-10,az=-b.z*6;
+  const held=m.down;
+  if(held){const an=T*2.5+i*2.4,rr=.05+.045*(i%6),tx=m.x+Math.cos(an)*rr,ty=m.y+Math.sin(an)*rr;ax=(tx-b.x)*(60+i*3)-b.vx*13;ay=(ty-b.y)*(60+i*3)-b.vy*13}
+  for(let j=0;j<NB;j++){if(j==i)continue;const o=bl[j],dx=b.x-o.x,dy=b.y-o.y,d=Math.hypot(dx,dy)+.001,lim=(b.r+o.r)*(held?.3:.8);
+   if(d<lim){const f=(lim-d)*30;ax+=dx/d*f;ay+=dy/d*f}else if(d<1.8){const f=(d-lim)*(held?0:2.2);ax-=dx/d*f;ay-=dy/d*f}}
+  if(m.on&&!held){const dx=b.x-m.x,dy=b.y-m.y,d=Math.hypot(dx,dy)+.05,w=Math.exp(-d*d*2.5);ax+=dx/d*w*30;ay+=dy/d*w*20;b.vx+=m.vx*w*.06;b.vy+=m.vy*w*.06}
+  b.vx+=ax*dt;b.vy+=ay*dt;b.vz+=az*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;
+  const fy=FY+b.r*.5;
+  if(b.y<fy){b.y=fy;if(b.vy<-1.2){const now=performance.now();if(now-b.ls>110){b.ls=now;bloop(pf(i%10)*(b.r>.4?1:1.5),Math.min(.16,-b.vy*.028),.3,1.7)}
+   b.vz+=(Math.random()-.5)*2;rip[ri=(ri+1)%4]={x:b.x,z:b.z,t:T,s:Math.min(1,-b.vy*.15)}}b.vy=-b.vy*.4}
+  if(b.y<fy+.06){const fr=Math.pow(.25,dt);b.vx*=fr}
+  if(b.x>hw){b.x=hw;b.vx*=-.5}else if(b.x<-hw){b.x=-hw;b.vx*=-.5}
+  const dmp = Math.pow(.6, dt);
+  b.vx *= dmp;
+  b.vz *= dmp;
+  b.vx*=Math.pow(.6,dt)}
+}
+function frame(){
+ const n=performance.now(),dt=Math.min((n-pt)/1000,.033);pt=n;T+=dt;idle+=dt;zoom+=(zT-zoom)*Math.min(1,dt*7);
+ m.vx+=((m.x-m.px)/dt-m.vx)*.3;m.vy+=((m.y-m.py)/dt-m.vy)*.3;m.px=m.x;m.py=m.y;
+ m.h+=((m.down?1:0)-m.h)*Math.min(1,dt*8);hue+=(hueT-hue)*dt*2;if(dr){dg.gain.value+=(m.h*.07-dg.gain.value)*.1;dr.frequency.value=80+m.h*30+Math.min(Math.hypot(m.vx,m.vy),40)*1.5}
+ if(idle>2.5&&!m.down){idle=1.8;const b=bl[Math.floor(Math.random()*NB)];b.vy=6+Math.random()*3;b.vx=(Math.random()-.5)*4;bloop(pf(Math.floor(Math.random()*10)),.08,.3,1.6)}
+ sim(dt/2);sim(dt/2);
+ for(let i=0;i<NB;i++){const b=bl[i],sp=Math.min(Math.hypot(b.vx,b.vy),12);
+  F[i*4]=b.x;F[i*4+1]=b.y;F[i*4+2]=b.z;F[i*4+3]=b.r*(1+.06*Math.sin(T*3+i*1.7)+.15*m.h)*(1+sp*.008)}
+ gl.uniform2f(uR,c.width,c.height);gl.uniform1f(uT,T);gl.uniform1f(uK,.5+.35*m.h);gl.uniform1f(uH,hue);gl.uniform3fv(uRO,cam());gl.uniform4fv(uB,F);rip.forEach((r,i)=>{const a=T-r.t;RPa.set([r.x,r.z,a,a>3?0:r.s],i*4)});gl.uniform4fv(uRP,RPa);
+ gl.drawArrays(gl.TRIANGLES,0,3);requestAnimationFrame(frame)}
+frame();
+<//script></body></html>
+</script>
+
+<!-- Source 2: filings.html (stored safely to prevent DOM interference) -->
+<script type="text/plain" id="src-filings">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Filings - WebGL Realism Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1&display=swap">
+<style>
+:root {
+  --bg: #05070a;
+  --ink: #a9bccb;
+  --panel-bg: rgba(12, 17, 24, 0.94);
+  --panel-border: rgba(170, 195, 215, 0.22);
+}
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+#st { position: fixed; inset: 0; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#c { cursor: crosshair; touch-action: none; }
+#gl { mix-blend-mode: screen; opacity: 0.85; pointer-events: none; filter: blur(5px); }
+
+.vig {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 46%, transparent 30%, rgba(0,0,0,0.55) 76%, rgba(0,0,0,0.94) 100%);
+}
+.grain {
+  position: fixed;
+  left: -50%;
+  top: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  animation: g .9s steps(6) infinite;
+}
+@keyframes g {
+  0% { transform: translate(0,0); }
+  25% { transform: translate(-4%,3%); }
+  50% { transform: translate(3%,-5%); }
+  75% { transform: translate(5%,4%); }
+  100% { transform: translate(0,0); }
+}
+
+/* Control Dock */
+.dock {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+  display: flex;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 40px;
+  background: rgba(8, 11, 15, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px var(--panel-border);
+  z-index: 10;
+}
+.dock button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(170, 195, 215, 0.16);
+  transition: box-shadow .25s, background .25s, transform .18s, color .25s;
+}
+.dock button:hover { box-shadow: inset 0 0 0 1px rgba(200, 225, 245, 0.6); color: #fff; }
+.dock button:active { transform: scale(0.88); }
+.dock button[aria-pressed="true"] {
+  background: rgba(190, 220, 245, 0.16);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(220, 240, 255, 0.7);
+}
+.dock svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Settings Panel and High-Contrast Dropdowns */
+.settings-panel {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  width: 290px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  background: var(--panel-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  padding: 18px;
+  color: #e0ecf8;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.85);
+  transform: translateX(340px);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 20;
+  font-size: 13px;
+}
+.settings-panel.open { transform: translateX(0); }
+.settings-panel h3 {
+  margin: 0 0 14px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 8px;
+}
+.setting-row { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+.setting-row label { display: flex; justify-content: space-between; font-weight: 500; opacity: 0.9; }
+.setting-row input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  outline: none;
+}
+.setting-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #cfe6ff;
+  cursor: pointer;
+}
+
+/* Fix for invisible dropdown text */
+.setting-row select {
+  background-color: #0d131c !important;
+  border: 1px solid var(--panel-border) !important;
+  color: #e6f0fa !important;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+}
+.setting-row select option {
+  background-color: #0d131c !important;
+  color: #e6f0fa !important;
+  padding: 8px;
+}
+
+.setting-checkbox { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.setting-checkbox input { cursor: pointer; accent-color: #6bb0ff; width: 16px; height: 16px; }
+
+.cap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+  text-align: center;
+  font: italic 21px/1.3 "Instrument Serif", Georgia, serif;
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s;
+  z-index: 5;
+}
+.cap.on { opacity: 0.85; transition-duration: 0.15s; }
+</style>
+</head>
+<body>
+
+<div id="st"><canvas id="c"></canvas><canvas id="gl"></canvas></div>
+<div class="vig"></div>
+<canvas class="grain" id="gr" width="256" height="256"></canvas>
+<div class="cap" id="cap"></div>
+
+<!-- Dock Controls -->
+<div class="dock" id="dock">
+  <button data-a="flip" title="Flip Polarity (Space)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><path d="M12 4.5v15M8 9h-.01M16 15h-.01"/></svg></button>
+  <button data-a="scatter" title="Scatter Filings (S)"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg></button>
+  <button data-a="swirl" title="Swirl Force Field (V)" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 12m0 0c0-1.5 2-1.5 2 0s-1 3-3 3-4-1.5-4-4 2.5-5 5.5-5 6.5 2.5 6.5 6.5"/></svg></button>
+  <button data-a="orbit" title="Orbit Active Poles (O)" aria-pressed="false"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(-25 12 12)"/><circle cx="12" cy="12" r="1.6"/></svg></button>
+  <button data-a="pal" title="Cycle Theme (P)"><svg viewBox="0 0 24 24"><circle cx="7.5" cy="14" r="3.5"/><circle cx="16.5" cy="14" r="3.5"/><circle cx="12" cy="7.5" r="3.5"/></svg></button>
+  <button data-a="settings" title="Settings Panel" id="setBtn"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+  <button data-a="snd" title="Audio Feedback (M)" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M4 10v4h3.5L12 18V6L7.5 10zM15.5 9.5a4 4 0 010 5M18 7a7.5 7.5 0 010 10"/></svg></button>
+  <button data-a="clear" title="Clear Field (C)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
+
+<!-- Settings Panel -->
+<div class="settings-panel" id="panel">
+  <h3>Configuration Options</h3>
+  <div class="setting-row">
+    <label for="cfgStyle">Material Render Style</label>
+    <select id="cfgStyle">
+      <option value="steel" selected>Realistic Steel (Metallic)</option>
+      <option value="classic">Classic Glow Filings</option>
+    </select>
+  </div>
+  <div class="setting-row">
+    <label for="cfgMode">Interaction Mode</label>
+    <select id="cfgMode">
+      <option value="single" selected>Single Magnetic Pole</option>
+      <option value="dipole">Dipole Magnet Pair</option>
+      <option value="quadrupole">Quadrupole Grid</option>
+    </select>
+  </div>
+  <div class="setting-row">
+    <label>Field Density <span id="densityVal">1.0x</span></label>
+    <input type="range" id="cfgDensity" min="0.4" max="2.2" step="0.2" value="1.0">
+  </div>
+  <div class="setting-row">
+    <label>Viscosity (Damping) <span id="viscVal">7.0</span></label>
+    <input type="range" id="cfgViscosity" min="1.0" max="15.0" step="0.5" value="7.0">
+  </div>
+  <div class="setting-row">
+    <label class="setting-checkbox">
+      <span>Show Magnetic Flux Lines</span>
+      <input type="checkbox" id="cfgFluxLines">
+    </label>
+  </div>
+  <div class="setting-row">
+    <label class="setting-checkbox">
+      <span>Bloom Dynamic Glow</span>
+      <input type="checkbox" id="cfgGlow" checked>
+    </label>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id),cv=$('c'),ctx=cv.getContext('2d'),gl=$('gl'),gx=gl.getContext('2d'),st=$('st'),cap=$('cap');
+let W,H,D,S,F=[],poles=[],rip=[],sp=[],pol=1,mx=0,my=0,smx=0,smy=0,live=false,seen=false,down=false,charge=0,shake=0,speed=0,swirl=false,orbit=false,mute=false,pi=0,ang=0;
+
+/* Configuration Parameters */
+let cfg = { density: 1.0, damping: 7.0, fluxLines: false, glow: true, mode: 'single', style: 'steel' };
+
+const rnd=(a,b)=>a+Math.random()*(b-a),TAU=Math.PI*2;
+const PAL=[
+  {n:'steel',p:[168,205,240],q:[236,150,86]},
+  {n:'ember',p:[255,196,120],q:[255,78,52]},
+  {n:'aurora',p:[110,255,200],q:[180,120,255]},
+  {n:'bone',p:[240,238,225],q:[150,160,170]}
+];
+
+function size(){
+  D=Math.min(devicePixelRatio||1,2);W=cv.width=innerWidth*D;H=cv.height=innerHeight*D;gl.width=W>>2;gl.height=H>>2;
+  S=Math.max(9,Math.sqrt(innerWidth*innerHeight/(11000 * cfg.density)))*D;F=[];
+  for(let y=S/2;y<H;y+=S)for(let x=S/2;x<W;x+=S){const hx=x+rnd(-.5,.5)*S,hy=y+rnd(-.5,.5)*S;
+    F.push({hx,hy,ox:0,oy:0,mx:0,my:0,a:rnd(0,Math.PI),v:0,l:rnd(.5,1.5)*S*.62,k:rnd(-.22,.22),t:Math.random()<.4?1:0,b:0})}
+  ctx.fillStyle='#05070a';ctx.fillRect(0,0,W,H);
+}
+addEventListener('resize',size);size();
+
+/* Noise Overlay */
+(()=>{const x=$('gr').getContext('2d'),d=x.createImageData(256,256);for(let i=0;i<d.data.length;i+=4){d.data[i]=d.data[i+1]=d.data[i+2]=Math.random()*255;d.data[i+3]=255}x.putImageData(d,0,0)})();
+
+/* Audio Engine */
+let ac,out,nG,nF,cO,cG,cF;
+function initAudio(){
+  if(ac)return;try{ac=new (window.AudioContext||window.webkitAudioContext)();out=ac.createGain();out.gain.value=mute?0:.6;
+  const dl=ac.createDelay(1),fb=ac.createGain(),lp=ac.createBiquadFilter();dl.delayTime.value=.38;fb.gain.value=.5;lp.type='lowpass';lp.frequency.value=1500;
+  out.connect(ac.destination);out.connect(dl);dl.connect(lp);lp.connect(fb);fb.connect(dl);lp.connect(ac.destination);
+  const b=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const n=ac.createBufferSource();n.buffer=b;n.loop=true;nF=ac.createBiquadFilter();nF.type='bandpass';nF.frequency.value=500;nF.Q.value=.8;
+  nG=ac.createGain();nG.gain.value=0;n.connect(nF);nF.connect(nG);nG.connect(out);n.start();
+  const dr=ac.createOscillator(),dg=ac.createGain();dr.frequency.value=49;dg.gain.value=.05;dr.connect(dg);dg.connect(out);dr.start();}catch(e){ac=null}
+}
+
+const scale=[0,3,5,7,10,12,15,17,19,22];
+function chOn(){if(!ac)return;cO=ac.createOscillator();cG=ac.createGain();cF=ac.createBiquadFilter();cO.type='sawtooth';cO.frequency.value=70;cF.type='lowpass';cF.frequency.value=200;cG.gain.value=0;cO.connect(cF);cF.connect(cG);cG.connect(out);cO.start()}
+function chSet(c){if(!cO)return;const t=ac.currentTime;cO.frequency.setTargetAtTime(70+c*c*330,t,.05);cF.frequency.setTargetAtTime(200+c*2600,t,.05);cG.gain.setTargetAtTime(.02+c*.09,t,.05)}
+function chOff(){if(!cO)return;cG.gain.setTargetAtTime(0,ac.currentTime,.03);cO.stop(ac.currentTime+.2);cO=null}
+function boom(y,s,c){
+  if(!ac)return;const now=ac.currentTime,f=(s>0?146.8:130.8)*Math.pow(2,scale[Math.min(9,Math.floor((1-y/H)*10))]/12);
+  [1,2.005,3.01,4.02].forEach((m,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.type=i?'sine':'triangle';o.frequency.value=f*m;
+    g.gain.setValueAtTime(1e-4,now);g.gain.exponentialRampToValueAtTime((.13+c*.1)/(i+1),now+.01);g.gain.exponentialRampToValueAtTime(1e-4,now+(2.2+c*2)/(i+1));o.connect(g);g.connect(out);o.start(now);o.stop(now+4.5)});
+}
+function rattle(){
+  if(!ac)return;const now=ac.currentTime,b=ac.createBuffer(1,ac.sampleRate,ac.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3)*(Math.random()<.35?1:.2);
+  const s=ac.createBufferSource(),f=ac.createBiquadFilter(),g=ac.createGain();s.buffer=b;f.type='highpass';f.frequency.value=2500;g.gain.value=.5;s.connect(f);f.connect(g);g.connect(out);s.start(now);
+}
+
+function say(t){cap.textContent=t;cap.classList.add('on');clearTimeout(say.t);say.t=setTimeout(()=>cap.classList.remove('on'),1100)}
+
+const act={
+  flip(){pol=-pol;say(pol>0?'north':'south')},
+  scatter(){initAudio();for(const f of F){const a=rnd(0,TAU),v=rnd(.2,1)*2600*D;f.mx=Math.cos(a)*v;f.my=Math.sin(a)*v;f.v+=rnd(-60,60)}shake=Math.max(shake,14);rattle();say('scatter')},
+  swirl(b){swirl=!swirl;b.setAttribute('aria-pressed',swirl);say(swirl?'swirl':'attract')},
+  orbit(b){orbit=!orbit;b.setAttribute('aria-pressed',orbit);say(orbit?'orbit':'still')},
+  pal(){pi=(pi+1)%PAL.length;buildCols();say(PAL[pi].n)},
+  settings(){$('panel').classList.toggle('open')},
+  snd(b){mute=!mute;b.setAttribute('aria-pressed',!mute);if(out)out.gain.setTargetAtTime(mute?0:.6,ac.currentTime,.05);say(mute?'muted':'sound on')},
+  clear(){poles=[];say('cleared')}
+};
+
+$('dock').addEventListener('click',e=>{const b=e.target.closest('button');if(b){act[b.dataset.a](b);b.blur()}});
+const keys={' ':'flip',s:'scatter',v:'swirl',o:'orbit',p:'pal',m:'snd',c:'clear',Escape:'clear'};
+addEventListener('keydown',e=>{const k=keys[e.key.length>1?e.key:e.key.toLowerCase()];if(k&&!e.repeat){e.preventDefault();act[k](document.querySelector(`[data-a=${k}]`))}});
+
+/* Dynamic Settings Handlers */
+$('cfgDensity').addEventListener('change', e=>{ cfg.density = parseFloat(e.target.value);$('densityVal').textContent = cfg.density + 'x'; size(); });
+$('cfgViscosity').addEventListener('input', e=>{ cfg.damping = parseFloat(e.target.value);$('viscVal').textContent = cfg.damping; });
+$('cfgMode').addEventListener('change', e=>{ cfg.mode = e.target.value; say('mode: ' + cfg.mode); });$('cfgStyle').addEventListener('change', e=>{ cfg.style = e.target.value; say('style: ' + cfg.style); });
+$('cfgFluxLines').addEventListener('change', e=>{ cfg.fluxLines = e.target.checked; });$('cfgGlow').addEventListener('change', e=>{ cfg.glow = e.target.checked; gl.style.display = cfg.glow ? 'block' : 'none'; });
+
+function move(e){mx=e.clientX*D;my=e.clientY*D;if(!seen){seen=true;smx=mx;smy=my}live=true}
+cv.addEventListener('pointermove',move);
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);move(e);initAudio();if(ac&&ac.state==='suspended')ac.resume();down=true;charge=0;chOn()});
+
+function addPoleAt(x, y, polarity, c) {
+  poles.push({x, y, q: polarity*(1+c*1.6), born:performance.now(), ph:rnd(0,TAU)});
+  if(poles.length > 8) poles.shift();
+  rip.push({x, y, t:0, s:polarity, a:.6+c*1.4, sp:.5+c*.6});
+  const n=Math.floor(20+c*140),P=PAL[pi];
+  for(let i=0;i<n;i++){const a=rnd(0,TAU),v=rnd(.2,1)*(300+c*1300)*D;sp.push({x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, l:rnd(.5,1.4), c:polarity>0?P.p:P.q})}
+}
+
+function release(){
+  if(!down)return;down=false;const c=Math.min(1,charge);chOff();
+  if(cfg.mode === 'single') {
+    addPoleAt(smx, smy, pol, c);
+  } else if(cfg.mode === 'dipole') {
+    addPoleAt(smx - 40*D, smy, pol, c);
+    addPoleAt(smx + 40*D, smy, -pol, c);
+  } else if(cfg.mode === 'quadrupole') {
+    addPoleAt(smx - 35*D, smy - 35*D, pol, c);
+    addPoleAt(smx + 35*D, smy - 35*D, -pol, c);
+    addPoleAt(smx - 35*D, smy + 35*D, -pol, c);
+    addPoleAt(smx + 35*D, smy + 35*D, pol, c);
+  }
+  shake=Math.max(shake,4+c*22);boom(smy,pol,c);
+  pol=-pol;charge=0;
+}
+addEventListener('pointerup',release);addEventListener('pointercancel',release);
+
+const NB=6;let cols=[];
+function buildCols(){const P=PAL[pi];cols=[];
+  for(const rgb of [P.p,P.q]){const row=[];for(let i=0;i<NB;i++){const k=(i+1)/NB,m=.3+.7*k;
+    row.push(`rgba(${(rgb[0]*m+40*(1-k))|0},${(rgb[1]*m+46*(1-k))|0},${(rgb[2]*m+54*(1-k))|0},${.3+k*.7})`)}cols.push(row)}}
+buildCols();
+
+const paths=[];for(let i=0;i<NB*4;i++)paths.push([]);
+let last=performance.now();
+
+function frame(now){
+  const dt=Math.min(.033,(now-last)/1e3),T=now/1e3;
+  last=now;let tx=mx,ty=my;
+  if(!live){tx=W*(.5+.3*Math.sin(T*.55));ty=H*(.5+.24*Math.sin(T*.83+1));if(!seen){seen=true;smx=tx;smy=ty}}
+  const px=smx,py=smy;smx+=(tx-smx)*.14;smy+=(ty-smy)*.14;
+  speed+=(Math.min(1,Math.hypot(smx-px,smy-py)/D/dt/1800)-speed)*.15;
+  if(down){charge=Math.min(1.25,charge+dt/1.1);chSet(Math.min(1,charge));shake=Math.max(shake,Math.min(1,charge)*3)}
+  if(ac&&nG){nG.gain.setTargetAtTime(speed*.09,ac.currentTime,.05);nF.frequency.setTargetAtTime(300+speed*1800,ac.currentTime,.05)}
+  
+  shake*=Math.pow(.02,dt);
+  st.style.transform=shake>.05?`translate(${rnd(-1,1)*shake}px,${rnd(-1,1)*shake}px) scale(${1+shake*.0007})`:'none';
+
+  if(orbit){ang+=dt*.6;const cx=W/2,cy=H/2;for(const p of poles){if(p.ox===undefined){p.ox=p.x-cx;p.oy=p.y-cy}const c=Math.cos(dt*.6),s=Math.sin(dt*.6),nx=p.ox*c-p.oy*s,ny=p.ox*s+p.oy*c;p.ox=nx;p.oy=ny;p.x=cx+nx;p.y=cy+ny}}
+  else for(const p of poles)p.ox=undefined;
+
+  ctx.globalCompositeOperation='source-over';ctx.fillStyle='rgba(5,7,10,.34)';ctx.fillRect(0,0,W,H);
+  const c=Math.min(1,charge);
+  const P=poles.map(p=>({x:p.x,y:p.y,q:p.q*(1+Math.max(0,1-(now-p.born)/600)*1.6)}));
+  P.push({x:smx,y:smy,q:pol*.9*(1+c*2.4)});
+
+  for(let i=rip.length-1;i>=0;i--){rip[i].t+=dt;if(rip[i].t>2.6)rip.splice(i,1)}
+  const wd=100*D,base=Math.max(W,H)*.6,e0=800*D*D;
+  for(let i=0;i<NB*4;i++)paths[i].length=0;
+
+  for(const f of F){
+    const x=f.hx+f.ox,y=f.hy+f.oy;let fx=0,fy=0,pot=0;
+    for(const p of P){const dx=p.x-x,dy=p.y-y,d2=dx*dx+dy*dy+e0,inv=p.q/d2;fx+=dx*inv;fy+=dy*inv;pot+=p.q/Math.sqrt(d2)}
+    if(swirl){const t=fx;fx=-fy;fy=t}
+    const m=Math.sqrt(fx*fx+fy*fy),tgt=Math.atan2(fy,fx);
+    let kick=0,wv=0;
+    for(const r of rip){const d=Math.hypot(x-r.x,y-r.y),e=(d-r.t*base*r.sp)/wd,w=Math.exp(-e*e)*(1-r.t/2.6)*r.a;if(w>.01){wv+=w;kick+=w*r.s}}
+    const diff=((tgt-f.a+Math.PI*1.5)%Math.PI)-Math.PI/2;
+    f.v+=diff*(30*dt)+kick*(dt*80)*Math.sin(f.hx*.011+f.hy*.014);f.v*=Math.pow(.003,dt);f.a+=f.v*dt*6;
+    
+    const dr=Math.min(1,m*D*280),pull=Math.min(S*1.4,m*D*S*95)*(pot>0||swirl?1:.7);
+    const tox=m>0?fx/m*pull:0,toy=m>0?fy/m*pull:0;
+    f.mx+=((tox-f.ox)*70-f.mx*cfg.damping)*dt;f.my+=((toy-f.oy)*70-f.my*cfg.damping)*dt;f.ox+=f.mx*dt;f.oy+=f.my*dt;
+    const it=Math.min(1,Math.pow(dr,.7)*.7+wv*.85+Math.min(.4,Math.abs(f.v)*.06));f.b+=(it-f.b)*.3;
+    const len=f.l*(.55+f.b*.8),cs=Math.cos(f.a),sn=Math.sin(f.a),h=len/2,kx=-sn*f.k*len,ky=cs*f.k*len,X=f.hx+f.ox,Y=f.hy+f.oy;
+    paths[((pot>=0?0:NB)+Math.min(NB-1,Math.floor(f.b*NB)))+f.t*NB*2].push(X-cs*h,Y-sn*h,X+kx,Y+ky,X+cs*h,Y+sn*h);
+  }
+
+  /* Material Style Rendering Pipeline */
+  if(cfg.style === 'steel') {
+    ctx.globalCompositeOperation='source-over';
+    ctx.lineCap='round';ctx.lineJoin='round';
+    for(let i=0;i<NB*4;i++){
+      const a=paths[i];if(!a.length)continue;
+      const highlight = Math.min(255, 180 + (i % 6) * 12);
+      ctx.strokeStyle = `rgba(${highlight}, ${highlight + 10}, ${highlight + 20}, 0.95)`;
+      ctx.lineWidth = (i >= NB*2 ? 2.2 : 1.3) * D;
+      ctx.beginPath();
+      for(let j=0;j<a.length;j+=6){ctx.moveTo(a[j],a[j+1]);ctx.lineTo(a[j+2],a[j+3]);ctx.lineTo(a[j+4],a[j+5])}
+      ctx.stroke();
+    }
+  } else {
+    ctx.globalCompositeOperation='lighter';
+    ctx.lineCap='round';ctx.lineJoin='round';
+    for(let i=0;i<NB*4;i++){
+      const a=paths[i];if(!a.length)continue;
+      const pl=i%(NB*2);
+      ctx.strokeStyle=cols[pl<NB?0:1][pl%NB];
+      ctx.lineWidth=(i>=NB*2?1.9:1.1)*D;
+      ctx.beginPath();
+      for(let j=0;j<a.length;j+=6){ctx.moveTo(a[j],a[j+1]);ctx.lineTo(a[j+2],a[j+3]);ctx.lineTo(a[j+4],a[j+5])}
+      ctx.stroke();
+    }
+  }
+
+  /* Flux Connecting Vector Lines */
+  if(cfg.fluxLines && P.length > 1) {
+    ctx.globalCompositeOperation='source-over';
+    ctx.lineWidth = 1.0 * D;
+    ctx.strokeStyle = 'rgba(180, 210, 240, 0.25)';
+    ctx.beginPath();
+    for(let i = 0; i < P.length; i++) {
+      for(let j = i + 1; j < P.length; j++) {
+        ctx.moveTo(P[i].x, P[i].y);
+        ctx.lineTo(P[j].x, P[j].y);
+      }
+    }
+    ctx.stroke();
+  }
+
+  ctx.lineWidth=1.6*D;
+  for(let i=sp.length-1;i>=0;i--){const s=sp[i];s.l-=dt;if(s.l<=0){sp.splice(i,1);continue}
+    s.vx*=Math.pow(.05,dt);s.vy*=Math.pow(.05,dt);s.x+=s.vx*dt;s.y+=s.vy*dt;
+    ctx.strokeStyle=`rgba(${s.c[0]},${s.c[1]},${s.c[2]},${Math.min(1,s.l)})`;ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s.x-s.vx*.03,s.y-s.vy*.03);ctx.stroke()}
+
+  const PL=PAL[pi];
+  P.forEach((p,i)=>{
+    const cur=i===P.length-1,r=(46+(cur?c*70:0))*D,col=(p.q>0?PL.p:PL.q).join(',');
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+    g.addColorStop(0,`rgba(${col},.55)`);
+    g.addColorStop(1,`rgba(${col},0)`);
+    ctx.fillStyle=g;ctx.fillRect(p.x-r,p.y-r,r*2,r*2);
+  });
+
+  if(down){
+    const r=(160-c*130)*D;
+    ctx.strokeStyle=`rgba(255,255,255,${.15+c*.5})`;
+    ctx.lineWidth=1.5*D;
+    ctx.beginPath();ctx.arc(smx,smy,Math.max(8*D,r),0,TAU);ctx.stroke();
+  }
+
+  if(cfg.glow) {
+    gx.clearRect(0,0,gl.width,gl.height);
+    gx.filter='blur(3px) brightness(1.5)';
+    gx.drawImage(cv,0,0,gl.width,gl.height);
+  }
+  
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+setTimeout(()=>say('press and hold. let go.'),1600);
+})();
+<//script>
+</body>
+</html>
+</script>
+
+<script>
+  // UI and Context Management Script
+  const viewer = document.getElementById('viewer');
+  const btnGlobs = document.getElementById('btn-globs');
+  const btnFilings = document.getElementById('btn-filings');
+  
+  // Extracting the HTML sources while safely reverting the anti-termination tag to its original state
+  const srcGlobs = document.getElementById('src-globs').textContent.replaceAll('<//script>', '</' + 'script>');
+  const srcFilings = document.getElementById('src-filings').textContent.replaceAll('<//script>', '</' + 'script>');
+
+  function loadInteractive(src, activeBtn) {
+    // Setting srcdoc completely overwrites the context, destroying old WebGL loops/event listeners naturally
+    viewer.srcdoc = src;
+    btnGlobs.classList.remove('active');
+    btnFilings.classList.remove('active');
+    activeBtn.classList.add('active');
+  }
+
+  // Bind Menu Interactions
+  btnGlobs.addEventListener('click', () => loadInteractive(srcGlobs, btnGlobs));
+  btnFilings.addEventListener('click', () => loadInteractive(srcFilings, btnFilings));
+
+  // Initialize Default State
+  loadInteractive(srcGlobs, btnGlobs);
+</script>
+
+<script type="module" src="../js/firebase-config.js"></script>
+<script type="module" src="../js/tracker.js"></script>
+</body>
+</html>
