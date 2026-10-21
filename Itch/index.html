@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ItchLink - Direct itch.io Downloader &amp; Link Extractor</title>
+    <meta name="description" content="Paste any itch.io game or asset link to extract direct file download URLs, sizes, platform builds, and external mirrors without navigating through itch.io." />
+    <meta name="referrer" content="no-referrer" />
+    <meta property="og:title" content="ItchLink - Direct itch.io Downloader &amp; Link Extractor" />
+    <meta property="og:description" content="Paste any itch.io game or asset link to extract direct file download URLs, sizes, platform builds, and external mirrors without navigating through itch.io." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <script>
+      // Client-side fallback for preset examples on static hosting
+      const _origFetch = window.fetch;
+      window.fetch = async function(url, options) {
+        if (typeof url === 'string' && url.includes('/api/examples')) {
+          return new Response(JSON.stringify([
+            {
+              title: 'Z.A.T.O. (Free Indie Game & Full OST)',
+              url: 'https://nopanamaman.itch.io/z-a-t-o-i-love-the-world-and-everything-in-it',
+              category: 'Game + Soundtrack'
+            },
+            {
+              title: 'Tamaweb: Virtual Pet Game (Client + Android APK)',
+              url: 'https://samandev.itch.io/tamaweb',
+              category: 'Multi-platform'
+            },
+            {
+              title: 'Booster Pack Heroes (WebGL Web Game)',
+              url: 'https://funday-games.itch.io/booster-pack-heroes',
+              category: 'Web Playable'
+            },
+            {
+              title: 'Kenney Game Assets All-in-1',
+              url: 'https://kenney.itch.io/kenney-game-assets',
+              category: 'Asset Pack'
+            }
+          ]), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        return _origFetch.apply(this, arguments);
+      };
+    </script>
+    <script type="module" crossorigin src="./assets/index-CcZai2-6.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DCIZOvxk.css">
+  </head>
+  <body>
+    <div id="root"></div>
+
+      <script type="module" src="../js/firebase-config.js"></script>
+    <script type="module" src="../js/tracker.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,6 @@
+{
+  "name": "ItchLink - Direct itch.io Downloader & Link Extractor",
+  "description": "Paste any itch.io game or asset link to extract direct file download URLs, sizes, platform builds, and external mirrors without navigating through itch.io.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

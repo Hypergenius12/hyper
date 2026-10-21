@@ -70,7 +70,8 @@ const PROJECT_NAMES = {
     'joyful-rutherford': 'Seleste',
     'neurotrack': 'NeuroTrack AI Racing',
     'dust': 'Dust Sandbox',
-    'satisfy': 'Satisfy'
+    'satisfy': 'Satisfy',
+    'Itch': 'ItchLink'
 };
 
 function getDisplayProjectName(rawName) {

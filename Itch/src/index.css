@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --bg-base: #13141b;
+    --neu-surface: #171922;
+    --neu-shadow-dark: #090a0e;
+    --neu-shadow-light: rgba(255, 255, 255, 0.04);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-base);
+    color: #e6e8ed;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(250, 92, 92, 0.04) 0%, transparent 60%);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Sharp Dark Neumorphism Utilities */
+.neu-card {
+  background: #161821;
+  box-shadow: 6px 6px 14px #0a0b0e, -3px -3px 8px rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.neu-inset {
+  background: #101117;
+  box-shadow: inset 3px 3px 6px #07080b, inset -2px -2px 5px rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.neu-button {
+  background: #191b24;
+  box-shadow: 3px 3px 7px #090a0d, -2px -2px 5px rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.12s ease;
+}
+.neu-button:hover {
+  background: #1d202b;
+  box-shadow: 4px 4px 10px #07080a, -3px -3px 7px rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+.neu-button:active {
+  box-shadow: inset 2px 2px 5px #07080a, inset -1px -1px 3px rgba(255, 255, 255, 0.03);
+  transform: translateY(1px);
+}
+
+.neu-button-active {
+  background: #111218 !important;
+  box-shadow: inset 2px 2px 5px #07080a, inset -1px -1px 4px rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(250, 92, 92, 0.3) !important;
+  color: #ffffff !important;
+}
+
+.neu-btn-accent {
+  background: linear-gradient(135deg, #fa5c5c 0%, #e03838 100%);
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.6), -2px -2px 6px rgba(255, 255, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.12s ease;
+}
+.neu-btn-accent:hover {
+  background: linear-gradient(135deg, #ff6b6b 0%, #eb4444 100%);
+  box-shadow: 4px 4px 11px rgba(0, 0, 0, 0.7), -2px -2px 7px rgba(255, 255, 255, 0.18);
+}
+.neu-btn-accent:active {
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.6), inset 0 0 4px rgba(0, 0, 0, 0.4);
+  transform: translateY(1px);
+}
+
+/* Tabular numbers for accurate data alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #0f1015;
+}
+::-webkit-scrollbar-thumb {
+  background: #252834;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #353949;
+}
