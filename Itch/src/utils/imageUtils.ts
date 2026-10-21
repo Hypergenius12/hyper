@@ -1,15 +1,23 @@
 /**
- * Resolves an image URL through the server-side image proxy
- * to bypass CORS, strict Referer policies, and iframe cross-origin restrictions.
+ * Resolves an image URL directly with no-referrer
+ * to bypass CORS and avoid 404 proxy errors on static hosting.
  */
 export function getProxiedImageUrl(url?: string): string {
   if (!url) return '';
-  if (url.startsWith('data:') || url.startsWith('/api/image-proxy')) {
+  if (url.startsWith('data:')) {
     return url;
   }
   let target = url;
   if (target.startsWith('//')) {
     target = 'https:' + target;
   }
-  return `/api/image-proxy?url=${encodeURIComponent(target)}`;
+  if (target.includes('/api/image-proxy?url=')) {
+    try {
+      const idx = target.indexOf('url=');
+      if (idx !== -1) {
+        return decodeURIComponent(target.slice(idx + 4));
+      }
+    } catch {}
+  }
+  return target;
 }

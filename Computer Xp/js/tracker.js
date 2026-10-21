@@ -71,7 +71,7 @@ const PROJECT_NAMES = {
     'neurotrack': 'NeuroTrack AI Racing',
     'dust': 'Dust Sandbox',
     'satisfy': 'Satisfy',
-    'Itch': 'ItchLink'
+    'Itch': 'Itch.io Unblocked'
 };
 
 function getDisplayProjectName(rawName) {
