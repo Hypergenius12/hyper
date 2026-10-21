@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Florr.io Crafting Simulator</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="style.css?v=75">
+</head>
+<body>
+    <div class="top-bar">
+        <span id="top-bar-title">Craft</span>
+        <div id="mode-toggle" class="mode-toggle slot filled">
+            <img class="bg-img" src="https://florr.io/mobs/0_9.svg">
+            <img class="petal-img" src="titan.png">
+        </div>
+    </div>
+    <div class="main-layout">
+        <!-- Crafting UI (Left) -->
+        <div class="crafting-area">
+            <div class="crafting-core">
+                <div class="pentagon-container" id="pentagon-container">
+                    <div class="slot pentagon-slot" id="slot-0" style="left: 50%; top: 0%;"></div>
+                    <div class="slot pentagon-slot" id="slot-1" style="left: 100%; top: 38%;"></div>
+                    <div class="slot pentagon-slot" id="slot-2" style="left: 81%; top: 100%;"></div>
+                    <div class="slot pentagon-slot" id="slot-3" style="left: 19%; top: 100%;"></div>
+                    <div class="slot pentagon-slot" id="slot-4" style="left: 0%; top: 38%;"></div>
+                    <div class="craft-center-effect" id="craft-center"></div>
+                </div>
+                
+                <div class="craft-controls">
+                    <button id="craft-btn" class="craft-btn" disabled>Craft</button>
+                    <div id="craft-chance" class="craft-chance">0% success chance</div>
+                </div>
+            </div>
+            
+            <div id="craft-helper-text" class="craft-helper-text">
+                Combine 5 of the same petal to craft an upgrade<br>
+                Failure will destroy 1-4 petals
+            </div>
+            <div id="forge-helper-text" class="craft-helper-text" style="display: none;">
+                Unique petals will last until another player forges the same petal.<br>
+                When that happens, you will receive your Super petals back,<br>
+                but one will be permanently destroyed.
+            </div>
+        </div>
+
+        <!-- Inventory (Right) -->
+        <div class="inventory-area">
+            <div id="inventory-grid" class="inventory-grid"></div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip">
+        <div id="tt-header">
+            <span id="tt-name"></span>
+            <span id="tt-count"></span>
+            <div id="tt-right">
+                <img id="tt-icon" src="" style="display:none;">
+                <span id="tt-cooldown"></span>
+            </div>
+        </div>
+        <div id="tt-rarity"></div>
+        <div id="tt-desc"></div>
+        <div id="tt-stats"></div>
+    </div>
+
+    <!-- Command Console -->
+    <div class="console-area">
+        <div class="console-log" id="console-log"></div>
+        <div class="console-input-wrapper">
+            <span class="prompt">></span>
+            <input type="text" id="console-input" placeholder="Type 'help' for commands (e.g. 'super ankh 150', 'forge all')" autocomplete="off" spellcheck="false">
+        </div>
+    </div>
+    <script src="script.js?v=75"></script>
+    <script type="module" src="../js/firebase-config.js"></script>
+    <script type="module" src="../js/tracker.js"></script>
+</body>
+</html>
