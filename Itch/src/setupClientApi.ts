@@ -615,7 +615,8 @@ export function setupClientApi(): void {
         const parsed = new URL(url, window.location.origin);
         const realImg = parsed.searchParams.get('url');
         if (realImg) {
-          return originalFetch(realImg, { referrerPolicy: 'no-referrer' });
+          const proxied = `https://wsrv.nl/?url=${encodeURIComponent(realImg)}`;
+          return originalFetch(proxied);
         }
       } catch {}
     }

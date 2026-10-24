@@ -403,7 +403,7 @@ export const BrowseCatalog: React.FC<BrowseCatalogProps> = ({ onSelectGameUrl })
       {/* Grid of Browse Items */}
       {!isLoading && visibleItems.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {visibleItems.map((item) => (
+          {visibleItems.map((item, idx) => (
             <div
               key={item.id}
               className="group relative rounded-xl neu-card transition flex flex-col justify-between overflow-hidden"
@@ -414,7 +414,7 @@ export const BrowseCatalog: React.FC<BrowseCatalogProps> = ({ onSelectGameUrl })
                   <img
                     src={getProxiedImageUrl(item.thumbnail)}
                     alt={item.title}
-                    loading="lazy"
+                    loading={idx < 12 ? "eager" : "lazy"}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
                     onError={(e) => {
