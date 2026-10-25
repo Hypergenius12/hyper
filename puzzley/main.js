@@ -10,6 +10,7 @@ import { launchConfetti } from './src/confetti.js';
 
 class WordplayArcadeApp {
   constructor() {
+    window.app = this;
     this.storageKey = 'wordplay_arcade_v2';
     this.state = this.loadState();
 
@@ -190,6 +191,7 @@ class WordplayArcadeApp {
     this.beeDeleteBtn = document.getElementById('beeDeleteBtn');
     this.beeShuffleBtn = document.getElementById('beeShuffleBtn');
     this.beeHintBtn = document.getElementById('beeHintBtn');
+    this.beeNewHiveBtn = document.getElementById('beeNewHiveBtn');
     this.beeEnterBtn = document.getElementById('beeEnterBtn');
 
     this.standardSlotsAssembly = document.getElementById('standardSlotsAssembly');
@@ -338,6 +340,12 @@ class WordplayArcadeApp {
     }
     if (this.beeHintBtn) {
       this.beeHintBtn.addEventListener('click', () => this.handleBeeHint());
+    }
+    if (this.beeNewHiveBtn) {
+      this.beeNewHiveBtn.addEventListener('click', () => {
+        sound.playPop(520);
+        this.loadSpellingBeeGame();
+      });
     }
     if (this.beeEnterBtn) {
       this.beeEnterBtn.addEventListener('click', () => this.handleBeeSubmit());
@@ -1898,6 +1906,16 @@ class WordplayArcadeApp {
 
   renderSpellingBeeBoard() {
     if (!this.spellingBeeBoard || !this.beeCurrentHive) return;
+
+    if (this.puzzleTypeBadge) {
+      this.puzzleTypeBadge.textContent = 'SPELLING BEE';
+    }
+    if (this.puzzleIdLabel) {
+      this.puzzleIdLabel.textContent = '#' + this.beeCurrentHive.id;
+    }
+    if (this.puzzleProgressPill) {
+      this.puzzleProgressPill.textContent = this.beeCurrentHive.theme || 'Honeycomb Discovery';
+    }
 
     // 1. Center & Outer letter cells
     if (this.beeCellCenter) {
