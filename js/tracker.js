@@ -128,7 +128,14 @@ const projectName = getProjectName();
 let username = localStorage.getItem('hyper_username') || getCookie('hyper_username');
 let isTemp = localStorage.getItem('hyper_is_temp') === 'true' || getCookie('hyper_is_temp') === 'true';
 
-if (username && username.toLowerCase() === 'hypergenius12') {
+const DEV_USERNAMES = ['hypergenius12', 'ptechlocal'];
+
+function isDevName(name) {
+    if (!name) return false;
+    return DEV_USERNAMES.includes(name.toLowerCase().trim());
+}
+
+if (isDevName(username)) {
     isTemp = false;
     localStorage.removeItem('hyper_is_temp');
     setCookie('hyper_is_temp', '', -1);
@@ -154,14 +161,14 @@ if (!username) {
 let isOptedOut = localStorage.getItem('hyper_tracking_optout') === 'true';
 
 function isDevUser() {
-    return (username && username.toLowerCase() === 'hypergenius12') || window.hyperShowAllUsers === true;
+    return isDevName(username) || window.hyperShowAllUsers === true;
 }
 
-// Global flag and listener for hypergenius12 to toggle developer mode
+// Global flag and listener for developers to toggle developer mode
 window.hyperShowAllUsers = false;
 window.loadLeaderboard = loadLeaderboard;
 document.addEventListener('keyup', (e) => {
-    if (e.key === 'L' && e.shiftKey && username && username.toLowerCase() === 'hypergenius12') {
+    if (e.key === 'L' && e.shiftKey && isDevName(username)) {
         window.hyperShowAllUsers = !window.hyperShowAllUsers;
         loadLeaderboard();
     }
@@ -231,8 +238,8 @@ if (isHome) {
                 const userRef = doc(db, 'users', targetKey);
                 const userSnap = await getDoc(userRef);
 
-                // Allow logging into hypergenius12 or re-claiming current user
-                const isClaimingDev = targetKey === 'hypergenius12';
+                // Allow logging into dev accounts (hypergenius12, ptechlocal) or re-claiming current user
+                const isClaimingDev = isDevName(targetKey);
                 const isSelf = username && targetKey === username.toLowerCase();
 
                 if (userSnap.exists() && !isClaimingDev && !isSelf) {
@@ -465,9 +472,9 @@ function renderDevDashboard(container, users, globalVisits) {
     const { popularGames, totalEverSeconds } = aggregateProjectData(users);
 
     // Filter online visitors (active within last 2 minutes / 120s)
-    // Always include hypergenius12 as online if currently viewing
+    // Always include current active dev user if viewing
     const onlineUsers = users.filter(u => {
-        if (u.username && u.username.toLowerCase() === 'hypergenius12') return true;
+        if (u.username && username && u.username.toLowerCase() === username.toLowerCase()) return true;
         return u.lastActive && (now - u.lastActive <= 120000);
     });
 
@@ -485,7 +492,7 @@ function renderDevDashboard(container, users, globalVisits) {
                     <strong style="color: #a855f7; font-family: monospace; font-size: 1rem; letter-spacing: 1px;">DEVELOPER TELEMETRY &amp; LIVE AUDIT</strong>
                 </div>
                 <div style="font-size: 0.8rem; opacity: 0.8; font-family: monospace;">
-                    Logged in as <strong style="color: #22c55e;">hypergenius12</strong>
+                    Logged in as <strong style="color: #22c55e;">${sanitizeHTML(username || 'Developer')}</strong>
                 </div>
             </div>
 
@@ -527,13 +534,15 @@ function renderDevDashboard(container, users, globalVisits) {
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                     ${onlineUsers.length > 0 ? onlineUsers.map(u => {
-                        const isMe = u.username && u.username.toLowerCase() === 'hypergenius12';
+                        const isMe = username && u.username && u.username.toLowerCase() === username.toLowerCase();
+                        const isDev = isDevName(u.username);
                         const currentProj = getDisplayProjectName(u.currentProject || 'Home');
                         const activeAgo = formatRelativeTime(u.lastActive || now);
                         return `
-                            <div style="background: ${isMe ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${isMe ? '#22c55e' : 'var(--border-color)'}; border-radius: 6px; padding: 6px 10px; font-family: monospace; font-size: 0.8rem; display: flex; align-items: center; gap: 8px;">
+                            <div style="background: ${isMe ? 'rgba(34, 197, 94, 0.2)' : isDev ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${isMe ? '#22c55e' : isDev ? '#a855f7' : 'var(--border-color)'}; border-radius: 6px; padding: 6px 10px; font-family: monospace; font-size: 0.8rem; display: flex; align-items: center; gap: 8px;">
                                 <span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%;"></span>
                                 <strong>${sanitizeHTML(u.username || u.id)}</strong>
+                                ${isDev ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(168, 85, 247, 0.3); color: #c084fc; border-radius: 3px;">DEV</span>' : ''}
                                 <span style="opacity: 0.7;">in ${sanitizeHTML(currentProj)}</span>
                                 <span style="font-size: 0.7rem; opacity: 0.5;">(${activeAgo})</span>
                             </div>
@@ -609,8 +618,9 @@ function renderDevDashboard(container, users, globalVisits) {
         }
 
         listEl.innerHTML = filtered.map((u, idx) => {
-            const isOnline = (u.username && u.username.toLowerCase() === 'hypergenius12') || (u.lastActive && (now - u.lastActive <= 120000));
-            const isMe = u.username && u.username.toLowerCase() === 'hypergenius12';
+            const isOnline = (username && u.username && u.username.toLowerCase() === username.toLowerCase()) || (u.lastActive && (now - u.lastActive <= 120000));
+            const isMe = username && u.username && u.username.toLowerCase() === username.toLowerCase();
+            const isDev = isDevName(u.username);
             const displayUsername = u.username || u.id || 'Anonymous';
             const activeAgo = formatRelativeTime(u.lastActive);
             const currentProj = getDisplayProjectName(u.currentProject || 'None');
@@ -620,9 +630,10 @@ function renderDevDashboard(container, users, globalVisits) {
                     <div style="display: flex; align-items: center; gap: 8px; flex-grow: 1; min-width: 0;">
                         <span style="opacity: 0.5; width: 32px; font-size: 0.75rem;">#${idx + 1}</span>
                         <span style="width: 8px; height: 8px; border-radius: 50%; background: ${isOnline ? '#22c55e' : '#71717a'}; display: inline-block; shrink: 0;" title="${isOnline ? 'Online now' : 'Offline'}"></span>
-                        <strong style="color: ${isMe ? '#22c55e' : 'inherit'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <strong style="color: ${isMe ? '#22c55e' : isDev ? '#a855f7' : 'inherit'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             ${sanitizeHTML(displayUsername)}
                         </strong>
+                        ${isDev ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(168, 85, 247, 0.2); color: #c084fc; border-radius: 3px;">DEV</span>' : ''}
                         ${u.totalTime < 15 ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border-radius: 3px;">&lt;15s</span>' : ''}
                     </div>
                     <div style="display: flex; align-items: center; gap: 14px; shrink: 0;">
@@ -713,7 +724,7 @@ if (isHome) {
             displayUsername = 'User #' + displayUsername.substring(5);
         }
         nameEl.innerText = displayUsername || "Unknown";
-        nameEl.style.color = (username && username.toLowerCase() === 'hypergenius12') ? "#22c55e" : "#a855f7";
+        nameEl.style.color = isDevName(username) ? "#22c55e" : "#a855f7";
         rankEl.innerText = "Rank: Calculating...";
 
         try {

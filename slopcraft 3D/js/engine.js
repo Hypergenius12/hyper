@@ -424,6 +424,14 @@ const _glowTransparentIndices = new Uint32Array(MAX_INDICES);
 const _slightGlowOpaqueIndices = new Uint32Array(MAX_INDICES);
 const _slightGlowTransparentIndices = new Uint32Array(MAX_INDICES);
 
+const MAX_CAVE_VERTICES = 400000;
+const MAX_CAVE_INDICES = Math.floor(MAX_CAVE_VERTICES / 4 * 6);
+const _cavePositions = new Float32Array(MAX_CAVE_VERTICES * 3);
+const _caveNormals = new Float32Array(MAX_CAVE_VERTICES * 3);
+const _caveUvs = new Float32Array(MAX_CAVE_VERTICES * 2);
+const _caveColors = new Float32Array(MAX_CAVE_VERTICES * 3);
+const _caveOpaqueIndices = new Uint32Array(MAX_CAVE_INDICES);
+
 const _rawGrassColors = new Float32Array(22 * 22 * 3);
 const _tempGrass = new Float32Array(22 * 22 * 3);
 const _blendedGrass = new Float32Array(16 * 16 * 3);
@@ -447,7 +455,7 @@ if (THREE.ShaderChunk && !THREE.ShaderChunk._slopcraftGrassFoliage) {
         // In grass_block_side: dirt has sampledDiffuseColor.r > sampledDiffuseColor.g * 1.15
         // Grass fringe and grass top have sampledDiffuseColor.g >= sampledDiffuseColor.r * 0.98
         if (sampledDiffuseColor.r > sampledDiffuseColor.g * 1.15 && sampledDiffuseColor.a > 0.5) {
-            float ao = max(vColor.r, max(vColor.g, vColor.b));
+            float ao = dot(vColor.rgb, vec3(0.299, 0.587, 0.114));
             diffuseColor.rgb *= ao;
         } else {
             diffuseColor.rgb *= vColor;
@@ -576,6 +584,8 @@ export class Chunk {
         this.mesh = null;
         this.waterMesh = null;
         this.endPortalMesh = null;
+        this.caveMesh = null;
+        this.caveBox = null;
         this.dirty = false;
         this._generated = false;
         this._inBuildQueue = false;
@@ -783,6 +793,14 @@ export class Chunk {
         let glowTransparentIndexCount = 0;
         let slightGlowOpaqueIndexCount = 0;
         let slightGlowTransparentIndexCount = 0;
+
+        let cavePosCount = 0;
+        let caveUvCount = 0;
+        let caveColorCount = 0;
+        let caveOpaqueIndexCount = 0;
+        let caveVertexCount = 0;
+        let actualMinY = Infinity, actualMaxY = -Infinity;
+        let caveMinY = Infinity, caveMaxY = -Infinity;
 
         let vertexCount = 0;
 
@@ -1533,78 +1551,16 @@ export class Chunk {
 
                             let uvInfo;
                             if ((currentBlockType === BLOCKS.GRASS || currentBlockType === BLOCKS.SWAMP_GRASS || currentBlockType === BLOCKS.SAVANNA_GRASS) && face.name !== 'top' && face.name !== 'bottom') {
-                                const bInfo = getBiomeParams(wx, wz, planetParams);
-                                const bName = (bInfo && bInfo.biome && bInfo.biome.name) ? bInfo.biome.name : 'Plains';
-                                uvInfo = atlas.getUV(currentBlockType, 'side', bName);
+                                uvInfo = atlas.getUV(currentBlockType, 'side');
                             } else {
                                 uvInfo = atlas.getUV(currentBlockType, texName);
                             }
 
-                            // 4 vertices per face
-                            for (let i = 0; i < 4; i++) {
-                                const v = face.v[i];
-                                let vx = x + v[0];
-                                let vy = y + v[1];
-                                let vz = z + v[2];
-
-                                if (currentProps.isLiquid) {
-                                    if (isLiquidStep) {
-                                        vy = (v[1] === 0) ? (y + nTop) : (y + liquidTopY);
-                                    } else {
-                                        if (v[1] === 1) vy = y + liquidTopY;
-                                    }
-                                } else if (currentBlockType === BLOCKS.CACTUS) {
-                                    if (v[0] === 0) vx = x + 0.0625;
-                                    else if (v[0] === 1) vx = x + 0.9375;
-                                    if (v[2] === 0) vz = z + 0.0625;
-                                    else if (v[2] === 1) vz = z + 0.9375;
-                                }
-
-                                _positions[posCount++] = vx;
-                                _positions[posCount++] = vy;
-                                _positions[posCount++] = vz;
-                                
-                                _normals[posCount - 3] = face.dir[0];
-                                _normals[posCount - 2] = face.dir[1];
-                                _normals[posCount - 1] = face.dir[2];
-                            }
-
-                            // UVs mapping
-                            if (rotateUV) {
-                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
-                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
-                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
-                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
-                            } else if (isLiquidStep) {
-                                const v0 = uvInfo.v + uvInfo.vSize * (1 - liquidTopY);
-                                const v1 = uvInfo.v + uvInfo.vSize * (1 - nTop);
-                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = v1;
-                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = v1;
-                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = v0;
-                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = v0;
-                            } else if (currentBlockType === BLOCKS.CACTUS) {
-                                if (face.name === 'top' || face.name === 'bottom') {
-                                    const u0 = uvInfo.u + uvInfo.uSize * 0.0625;
-                                    const u1 = uvInfo.u + uvInfo.uSize * 0.9375;
-                                    const v0 = uvInfo.v + uvInfo.vSize * 0.0625;
-                                    const v1 = uvInfo.v + uvInfo.vSize * 0.9375;
-                                    _uvs[uvCount++] = u0; _uvs[uvCount++] = v0;
-                                    _uvs[uvCount++] = u1; _uvs[uvCount++] = v0;
-                                    _uvs[uvCount++] = u1; _uvs[uvCount++] = v1;
-                                    _uvs[uvCount++] = u0; _uvs[uvCount++] = v1;
-                                } else {
-                                    // Side faces map the full 16x16 texture across the 14-pixel wide face (preserving edge needles)
-                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
-                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
-                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
-                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
-                                }
-                            } else {
-                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v; // bottom left
-                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v; // bottom right
-                                _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize; // top right
-                                _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize; // top left
-                            }
+                            // Calculate directional face shading and sky lighting first so subterranean face check is accurate
+                            const nx = x + face.dir[0];
+                            const ny = y + face.dir[1];
+                            const nz = z + face.dir[2];
+                            const baseSky = getSkyLightFactor(nx, ny, nz);
 
                             // Calculate ambient occlusion
                             const aoColor = calculateVertexAO(wx, y, wz, face, getBlockOptimized, currentBlockType);
@@ -1626,16 +1582,11 @@ export class Chunk {
                             const isGrassBlock = (currentBlockType === BLOCKS.GRASS || currentBlockType === BLOCKS.SWAMP_GRASS || currentBlockType === BLOCKS.SAVANNA_GRASS);
                             let rMult = 1.0, gMult = 1.0, bMult = 1.0;
                             if (isGrassBlock) {
-                                if (face.name === 'top') {
+                                if (face.name !== 'bottom') {
                                     const bIdx = (z * CHUNK_SIZE + x) * 3;
                                     rMult = blendedGrass[bIdx] / plainsR;
                                     gMult = blendedGrass[bIdx + 1] / plainsG;
                                     bMult = blendedGrass[bIdx + 2] / plainsB;
-                                } else {
-                                    // Side faces: pre-tinted per biome in atlas, so dirt stays authentic dirt and side fringe matches top!
-                                    rMult = 1.0;
-                                    gMult = 1.0;
-                                    bMult = 1.0;
                                 }
                             } else if (currentBlockType === BLOCKS.LEAVES) {
                                 const bIdx = (z * CHUNK_SIZE + x) * 3;
@@ -1644,78 +1595,184 @@ export class Chunk {
                                 bMult = blendedFoliage[bIdx + 2] / folPlainsB;
                             }
 
-                            // Calculate Minecraft sky light under overhangs and in caves
-                            const nx = x + face.dir[0];
-                            const ny = y + face.dir[1];
-                            const nz = z + face.dir[2];
-                            const baseSky = getSkyLightFactor(nx, ny, nz);
+                            // Subterranean face check: blocks completely underground in dark caves with no direct/ambient sky view
+                            const colTopY = topOpaqueY[(z + SKY_PAD) * SKY_DIM + (x + SKY_PAD)];
+                            const isSubterraneanFace = (y < colTopY - 2) && (baseSky < 0.85) && !currentProps.transparent && !currentProps.emissive && !currentProps.isLiquid && (currentBlockType !== BLOCKS.CACTUS);
 
-                            for (let i = 0; i < 4; i++) {
-                                let vSky = baseSky;
-                                if (baseSky < 0.999) {
-                                    // Smooth per-vertex corner lighting: sample corner air position
-                                    const cdx = (face.dir[0] === 0) ? (face.v[i][0] === 1 ? 1 : -1) : 0;
-                                    const cdy = (face.dir[1] === 0) ? (face.v[i][1] === 1 ? 1 : -1) : 0;
-                                    const cdz = (face.dir[2] === 0) ? (face.v[i][2] === 1 ? 1 : -1) : 0;
-                                    const cornerSky = getSkyLightFactor(nx + cdx, ny + cdy, nz + cdz);
-                                    vSky = (baseSky + cornerSky) * 0.5;
-                                }
-                                if (face.dir[1] < 0 && vSky < 1.0) vSky = Math.max(0.48, vSky * 0.94);
-
-                                let c = (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) ? 1.0 : (aoColor[i] * faceShade * vSky);
-                                // Water: pure white vertex color — biome tint applied via matWater.color so MC texture shows
-                                if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) {
-                                    _colors[colorCount++] = 1.0;
-                                    _colors[colorCount++] = 1.0;
-                                    _colors[colorCount++] = 1.0;
-                                } else if (waterFade > 0) {
-                                    const wc = { r: 0x11/255, g: 0x33/255, b: 0x66/255 };
-                                    _colors[colorCount++] = c * (1 - waterFade) + wc.r * waterFade;
-                                    _colors[colorCount++] = c * (1 - waterFade) + wc.g * waterFade;
-                                    _colors[colorCount++] = c * (1 - waterFade) + wc.b * waterFade;
-                                } else {
-                                    _colors[colorCount++] = c * rMult;
-                                    _colors[colorCount++] = c * gMult;
-                                    _colors[colorCount++] = c * bMult;
-                                }
-                            }
-
-                            // Add indices — use currentProps/currentBlockType so waterlogged blocks sort as water
-                            // Flip quad triangulation if diagonal 0-2 has higher AO than 1-3 to eliminate diagonal shadow creases
                             const flipQuad = (aoColor[0] + aoColor[2] > aoColor[1] + aoColor[3]);
-                            const i0 = vertexCount, i1 = vertexCount + 1, i2 = vertexCount + 2, i3 = vertexCount + 3;
 
-                            const pushQuadIndices = (arr, count) => {
+                            if (isSubterraneanFace) {
+                                // Add to dedicated subterranean cave mesh (culled when player is outdoors on surface)
+                                for (let i = 0; i < 4; i++) {
+                                    const v = face.v[i];
+                                    let vx = x + v[0], vy = y + v[1], vz = z + v[2];
+                                    if (vy < caveMinY) caveMinY = vy;
+                                    if (vy > caveMaxY) caveMaxY = vy;
+
+                                    _cavePositions[cavePosCount++] = vx;
+                                    _cavePositions[cavePosCount++] = vy;
+                                    _cavePositions[cavePosCount++] = vz;
+
+                                    _caveNormals[cavePosCount - 3] = face.dir[0];
+                                    _caveNormals[cavePosCount - 2] = face.dir[1];
+                                    _caveNormals[cavePosCount - 1] = face.dir[2];
+
+                                    let vSky = baseSky;
+                                    if (face.dir[1] < 0 && vSky < 1.0) vSky = Math.max(0.48, vSky * 0.94);
+                                    let c = aoColor[i] * faceShade * vSky;
+                                    _caveColors[caveColorCount++] = c * rMult;
+                                    _caveColors[caveColorCount++] = c * gMult;
+                                    _caveColors[caveColorCount++] = c * bMult;
+                                }
+
+                                if (rotateUV) {
+                                    _caveUvs[caveUvCount++] = uvInfo.u; _caveUvs[caveUvCount++] = uvInfo.v + uvInfo.vSize;
+                                    _caveUvs[caveUvCount++] = uvInfo.u; _caveUvs[caveUvCount++] = uvInfo.v;
+                                    _caveUvs[caveUvCount++] = uvInfo.u + uvInfo.uSize; _caveUvs[caveUvCount++] = uvInfo.v;
+                                    _caveUvs[caveUvCount++] = uvInfo.u + uvInfo.uSize; _caveUvs[caveUvCount++] = uvInfo.v + uvInfo.vSize;
+                                } else {
+                                    _caveUvs[caveUvCount++] = uvInfo.u; _caveUvs[caveUvCount++] = uvInfo.v;
+                                    _caveUvs[caveUvCount++] = uvInfo.u + uvInfo.uSize; _caveUvs[caveUvCount++] = uvInfo.v;
+                                    _caveUvs[caveUvCount++] = uvInfo.u + uvInfo.uSize; _caveUvs[caveUvCount++] = uvInfo.v + uvInfo.vSize;
+                                    _caveUvs[caveUvCount++] = uvInfo.u; _caveUvs[caveUvCount++] = uvInfo.v + uvInfo.vSize;
+                                }
+
+                                const ci0 = caveVertexCount, ci1 = caveVertexCount + 1, ci2 = caveVertexCount + 2, ci3 = caveVertexCount + 3;
                                 if (flipQuad) {
-                                    arr[count++] = i1; arr[count++] = i2; arr[count++] = i3;
-                                    arr[count++] = i1; arr[count++] = i3; arr[count++] = i0;
+                                    _caveOpaqueIndices[caveOpaqueIndexCount++] = ci1; _caveOpaqueIndices[caveOpaqueIndexCount++] = ci2; _caveOpaqueIndices[caveOpaqueIndexCount++] = ci3;
+                                    _caveOpaqueIndices[caveOpaqueIndexCount++] = ci1; _caveOpaqueIndices[caveOpaqueIndexCount++] = ci3; _caveOpaqueIndices[caveOpaqueIndexCount++] = ci0;
                                 } else {
-                                    arr[count++] = i0; arr[count++] = i1; arr[count++] = i2;
-                                    arr[count++] = i0; arr[count++] = i2; arr[count++] = i3;
+                                    _caveOpaqueIndices[caveOpaqueIndexCount++] = ci0; _caveOpaqueIndices[caveOpaqueIndexCount++] = ci1; _caveOpaqueIndices[caveOpaqueIndexCount++] = ci2;
+                                    _caveOpaqueIndices[caveOpaqueIndexCount++] = ci0; _caveOpaqueIndices[caveOpaqueIndexCount++] = ci2; _caveOpaqueIndices[caveOpaqueIndexCount++] = ci3;
                                 }
-                                return count;
-                            };
-
-                            if (currentProps.transparent) {
-                                if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER || currentBlockType === BLOCKS.LAVA) {
-                                    waterIndexCount = pushQuadIndices(_waterIndices, waterIndexCount);
-                                } else if (currentProps.emissive >= 0.8) {
-                                    glowTransparentIndexCount = pushQuadIndices(_glowTransparentIndices, glowTransparentIndexCount);
-                                } else if (currentProps.emissive > 0) {
-                                    slightGlowTransparentIndexCount = pushQuadIndices(_slightGlowTransparentIndices, slightGlowTransparentIndexCount);
-                                } else {
-                                    transparentIndexCount = pushQuadIndices(_transparentIndices, transparentIndexCount);
-                                }
+                                caveVertexCount += 4;
                             } else {
-                                if (currentProps.emissive >= 0.8) {
-                                    glowOpaqueIndexCount = pushQuadIndices(_glowOpaqueIndices, glowOpaqueIndexCount);
-                                } else if (currentProps.emissive > 0) {
-                                    slightGlowOpaqueIndexCount = pushQuadIndices(_slightGlowOpaqueIndices, slightGlowOpaqueIndexCount);
-                                } else {
-                                    opaqueIndexCount = pushQuadIndices(_opaqueIndices, opaqueIndexCount);
+                                // Add to main surface mesh
+                                for (let i = 0; i < 4; i++) {
+                                    const v = face.v[i];
+                                    let vx = x + v[0];
+                                    let vy = y + v[1];
+                                    let vz = z + v[2];
+
+                                    if (currentProps.isLiquid) {
+                                        if (isLiquidStep) {
+                                            vy = (v[1] === 0) ? (y + nTop) : (y + liquidTopY);
+                                        } else {
+                                            if (v[1] === 1) vy = y + liquidTopY;
+                                        }
+                                    } else if (currentBlockType === BLOCKS.CACTUS) {
+                                        if (v[0] === 0) vx = x + 0.0625;
+                                        else if (v[0] === 1) vx = x + 0.9375;
+                                        if (v[2] === 0) vz = z + 0.0625;
+                                        else if (v[2] === 1) vz = z + 0.9375;
+                                    }
+
+                                    if (vy < actualMinY) actualMinY = vy;
+                                    if (vy > actualMaxY) actualMaxY = vy;
+
+                                    _positions[posCount++] = vx;
+                                    _positions[posCount++] = vy;
+                                    _positions[posCount++] = vz;
+                                    
+                                    _normals[posCount - 3] = face.dir[0];
+                                    _normals[posCount - 2] = face.dir[1];
+                                    _normals[posCount - 1] = face.dir[2];
+
+                                    let vSky = baseSky;
+                                    if (baseSky < 0.999) {
+                                        const cdx = (face.dir[0] === 0) ? (face.v[i][0] === 1 ? 1 : -1) : 0;
+                                        const cdy = (face.dir[1] === 0) ? (face.v[i][1] === 1 ? 1 : -1) : 0;
+                                        const cdz = (face.dir[2] === 0) ? (face.v[i][2] === 1 ? 1 : -1) : 0;
+                                        const cornerSky = getSkyLightFactor(nx + cdx, ny + cdy, nz + cdz);
+                                        vSky = (baseSky + cornerSky) * 0.5;
+                                    }
+                                    if (face.dir[1] < 0 && vSky < 1.0) vSky = Math.max(0.48, vSky * 0.94);
+
+                                    let c = (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) ? 1.0 : (aoColor[i] * faceShade * vSky);
+                                    if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER) {
+                                        _colors[colorCount++] = 1.0;
+                                        _colors[colorCount++] = 1.0;
+                                        _colors[colorCount++] = 1.0;
+                                    } else if (waterFade > 0) {
+                                        const wc = { r: 0x11/255, g: 0x33/255, b: 0x66/255 };
+                                        _colors[colorCount++] = c * (1 - waterFade) + wc.r * waterFade;
+                                        _colors[colorCount++] = c * (1 - waterFade) + wc.g * waterFade;
+                                        _colors[colorCount++] = c * (1 - waterFade) + wc.b * waterFade;
+                                    } else {
+                                        _colors[colorCount++] = c * rMult;
+                                        _colors[colorCount++] = c * gMult;
+                                        _colors[colorCount++] = c * bMult;
+                                    }
                                 }
+
+                                if (rotateUV) {
+                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
+                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
+                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                } else if (isLiquidStep) {
+                                    const v0 = uvInfo.v + uvInfo.vSize * (1 - liquidTopY);
+                                    const v1 = uvInfo.v + uvInfo.vSize * (1 - nTop);
+                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = v1;
+                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = v1;
+                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = v0;
+                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = v0;
+                                } else if (currentBlockType === BLOCKS.CACTUS) {
+                                    if (face.name === 'top' || face.name === 'bottom') {
+                                        const u0 = uvInfo.u + uvInfo.uSize * 0.0625;
+                                        const u1 = uvInfo.u + uvInfo.uSize * 0.9375;
+                                        const v0 = uvInfo.v + uvInfo.vSize * 0.0625;
+                                        const v1 = uvInfo.v + uvInfo.vSize * 0.9375;
+                                        _uvs[uvCount++] = u0; _uvs[uvCount++] = v0;
+                                        _uvs[uvCount++] = u1; _uvs[uvCount++] = v0;
+                                        _uvs[uvCount++] = u1; _uvs[uvCount++] = v1;
+                                        _uvs[uvCount++] = u0; _uvs[uvCount++] = v1;
+                                    } else {
+                                        _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
+                                        _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
+                                        _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                        _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                    }
+                                } else {
+                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v;
+                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v;
+                                    _uvs[uvCount++] = uvInfo.u + uvInfo.uSize; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                    _uvs[uvCount++] = uvInfo.u; _uvs[uvCount++] = uvInfo.v + uvInfo.vSize;
+                                }
+
+                                const i0 = vertexCount, i1 = vertexCount + 1, i2 = vertexCount + 2, i3 = vertexCount + 3;
+                                const pushQuadIndices = (arr, count) => {
+                                    if (flipQuad) {
+                                        arr[count++] = i1; arr[count++] = i2; arr[count++] = i3;
+                                        arr[count++] = i1; arr[count++] = i3; arr[count++] = i0;
+                                    } else {
+                                        arr[count++] = i0; arr[count++] = i1; arr[count++] = i2;
+                                        arr[count++] = i0; arr[count++] = i2; arr[count++] = i3;
+                                    }
+                                    return count;
+                                };
+
+                                if (currentProps.transparent) {
+                                    if (currentBlockType === BLOCKS.WATER || currentBlockType === BLOCKS.SWAMP_WATER || currentBlockType === BLOCKS.LAVA) {
+                                        waterIndexCount = pushQuadIndices(_waterIndices, waterIndexCount);
+                                    } else if (currentProps.emissive >= 0.8) {
+                                        glowTransparentIndexCount = pushQuadIndices(_glowTransparentIndices, glowTransparentIndexCount);
+                                    } else if (currentProps.emissive > 0) {
+                                        slightGlowTransparentIndexCount = pushQuadIndices(_slightGlowTransparentIndices, slightGlowTransparentIndexCount);
+                                    } else {
+                                        transparentIndexCount = pushQuadIndices(_transparentIndices, transparentIndexCount);
+                                    }
+                                } else {
+                                    if (currentProps.emissive >= 0.8) {
+                                        glowOpaqueIndexCount = pushQuadIndices(_glowOpaqueIndices, glowOpaqueIndexCount);
+                                    } else if (currentProps.emissive > 0) {
+                                        slightGlowOpaqueIndexCount = pushQuadIndices(_slightGlowOpaqueIndices, slightGlowOpaqueIndexCount);
+                                    } else {
+                                        opaqueIndexCount = pushQuadIndices(_opaqueIndices, opaqueIndexCount);
+                                    }
+                                }
+                                vertexCount += 4;
                             }
-                            vertexCount += 4;
                         }
                     }
                 }
@@ -1756,11 +1813,52 @@ export class Chunk {
         geometry.setAttribute('uv', new THREE.BufferAttribute(_uvs.slice(0, uvCount), 2));
         geometry.setAttribute('color', new THREE.BufferAttribute(_colors.slice(0, colorCount), 3));
 
-        geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(CHUNK_SIZE/2, CHUNK_HEIGHT/2, CHUNK_SIZE/2), 65);
-        geometry.boundingBox = new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE));
-
         // Use shared materials instead of allocating new ones
         const materials = atlas.sharedMaterials;
+
+        if (actualMinY === Infinity) { actualMinY = 0; actualMaxY = CHUNK_HEIGHT; }
+        geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(CHUNK_SIZE/2, (actualMinY + actualMaxY)/2, CHUNK_SIZE/2), Math.max(16, (actualMaxY - actualMinY)/2 + 16));
+        geometry.boundingBox = new THREE.Box3(new THREE.Vector3(0, actualMinY - 0.5, 0), new THREE.Vector3(CHUNK_SIZE, actualMaxY + 0.5, CHUNK_SIZE));
+        this.worldBox.min.set(this.cx * CHUNK_SIZE - 1, actualMinY - 1, this.cz * CHUNK_SIZE - 1);
+        this.worldBox.max.set(this.cx * CHUNK_SIZE + CHUNK_SIZE + 1, actualMaxY + 1, this.cz * CHUNK_SIZE + CHUNK_SIZE + 1);
+
+        // Dedicated subterranean cave mesh (culled when player is outdoors on the surface)
+        if (caveOpaqueIndexCount > 0) {
+            const caveGeometry = new THREE.BufferGeometry();
+            caveGeometry.setIndex(new THREE.BufferAttribute(_caveOpaqueIndices.slice(0, caveOpaqueIndexCount), 1));
+            caveGeometry.setAttribute('position', new THREE.BufferAttribute(_cavePositions.slice(0, cavePosCount), 3));
+            caveGeometry.setAttribute('normal', new THREE.BufferAttribute(_caveNormals.slice(0, cavePosCount), 3));
+            caveGeometry.setAttribute('uv', new THREE.BufferAttribute(_caveUvs.slice(0, caveUvCount), 2));
+            caveGeometry.setAttribute('color', new THREE.BufferAttribute(_caveColors.slice(0, caveColorCount), 3));
+            caveGeometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(CHUNK_SIZE/2, (caveMinY + caveMaxY)/2, CHUNK_SIZE/2), Math.max(16, (caveMaxY - caveMinY)/2 + 16));
+            caveGeometry.boundingBox = new THREE.Box3(new THREE.Vector3(0, caveMinY - 0.5, 0), new THREE.Vector3(CHUNK_SIZE, caveMaxY + 0.5, CHUNK_SIZE));
+            this.caveBox = new THREE.Box3(
+                new THREE.Vector3(this.cx * CHUNK_SIZE - 1, caveMinY - 1, this.cz * CHUNK_SIZE - 1),
+                new THREE.Vector3(this.cx * CHUNK_SIZE + CHUNK_SIZE + 1, caveMaxY + 1, this.cz * CHUNK_SIZE + CHUNK_SIZE + 1)
+            );
+            if (this.caveMesh) {
+                this.caveMesh.geometry.dispose();
+                this.caveMesh.geometry = caveGeometry;
+                this.caveMesh.material = materials[0];
+            } else {
+                this.caveMesh = new THREE.Mesh(caveGeometry, materials[0]);
+                this.caveMesh.position.set(this.cx * CHUNK_SIZE, 0, this.cz * CHUNK_SIZE);
+                this.caveMesh.userData.isChunkMesh = true;
+                this.caveMesh.castShadow = false;
+                this.caveMesh.receiveShadow = true;
+                this.caveMesh.matrixAutoUpdate = false;
+                this.caveMesh.updateMatrix();
+            }
+            this.caveMesh.visible = false;
+            if (this.mesh && this.mesh.parent && !this.caveMesh.parent) {
+                this.mesh.parent.add(this.caveMesh);
+            }
+        } else if (this.caveMesh) {
+            if (this.caveMesh.parent) this.caveMesh.parent.remove(this.caveMesh);
+            this.caveMesh.geometry.dispose();
+            this.caveMesh = null;
+            this.caveBox = null;
+        }
 
         if (this.mesh) {
             this.mesh.geometry.dispose();
@@ -1879,6 +1977,12 @@ export class Chunk {
             if (this.endPortalMesh.parent) this.endPortalMesh.parent.remove(this.endPortalMesh);
             this.endPortalMesh.geometry.dispose();
             this.endPortalMesh = null;
+        }
+        if (this.caveMesh) {
+            if (this.caveMesh.parent) this.caveMesh.parent.remove(this.caveMesh);
+            this.caveMesh.geometry.dispose();
+            this.caveMesh = null;
+            this.caveBox = null;
         }
         this._inBuildQueue = false;
         this._inGenQueue = false;
@@ -2848,21 +2952,43 @@ export class World {
                 }
                 if (chunk.endPortalMesh && !chunk.endPortalMesh.parent) {
                     this.scene.add(chunk.endPortalMesh);
+                }
+                if (chunk.caveMesh && !chunk.caveMesh.parent) {
+                    this.scene.add(chunk.caveMesh);
                 }
                 buildsThisFrame++;
             }
         }
 
-        // Frustum culling
+        // Frustum culling and subterranean cave occlusion culling
         if (this.camera) {
             this.camera.updateMatrixWorld();
             this.projScreenMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
             this.frustum.setFromProjectionMatrix(this.projScreenMatrix);
+
+            const camX = this.camera.position.x;
+            const camY = this.camera.position.y;
+            const camZ = this.camera.position.z;
+            const surfaceY = this.getHighestBlock(camX, camZ);
+            // Player is underground when camera is 1.5+ blocks below highest surface block
+            const isPlayerUnderground = (camY < surfaceY - 1.5);
+
             for (const chunk of this.chunks.values()) {
                 const isVis = this.frustum.intersectsBox(chunk.worldBox);
                 if (chunk.mesh) chunk.mesh.visible = isVis;
                 if (chunk.waterMesh) chunk.waterMesh.visible = isVis;
                 if (chunk.endPortalMesh) chunk.endPortalMesh.visible = isVis;
+
+                if (chunk.caveMesh) {
+                    if (!isPlayerUnderground) {
+                        // Player is outdoors on the surface: NEVER render hidden subterranean blocks under the ground!
+                        chunk.caveMesh.visible = false;
+                    } else {
+                        // Player is underground: render cave meshes if within cave range and inside camera frustum!
+                        const dChunk = Math.max(Math.abs(chunk.cx - px), Math.abs(chunk.cz - pz));
+                        chunk.caveMesh.visible = (dChunk <= 4) && this.frustum.intersectsBox(chunk.caveBox || chunk.worldBox);
+                    }
+                }
             }
         }
 

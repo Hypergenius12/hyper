@@ -51,7 +51,7 @@ All interactive sub-projects are connected to a unified Firestore database (`hyp
   - Spoof protection: Sessions with > 365 days of playtime are ignored.
   - Public filter: Users with < 15 seconds are hidden from public ranking.
   - Profanity filtering via `censorName()` and HTML sanitization via `sanitizeHTML()`.
-  - Admin inspection: Pressing `Shift + L` when logged in as `hypergenius12` toggles viewing all users including <15s sessions.
+  - Admin inspection: Pressing `Shift + L` when logged in as `hypergenius12` or `ptechlocal` toggles viewing the full developer dashboard and all users.
 
 ---
 
