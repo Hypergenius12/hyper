@@ -97,23 +97,14 @@ export const BatchExtractor: React.FC<BatchExtractorProps> = ({
     setTimeout(() => setCopiedBatch(false), 2000);
   };
 
-  const handleDownloadBatchSequentially = () => {
-    allSuccessfulFiles.forEach(({ file, game }, idx) => {
-      setTimeout(() => {
-        const downloadUrl = file.uploadId
-          ? `/api/download?gameUrl=${encodeURIComponent(game.canonicalUrl)}&uploadId=${file.uploadId}`
-          : file.directUrl || '';
-        if (downloadUrl) {
-          const a = document.createElement('a');
-          a.href = downloadUrl;
-          a.download = file.filename;
-          a.target = '_blank';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }
-      }, idx * 1200);
-    });
+  const handleDownloadBatchSequentially = async () => {
+    for (let idx = 0; idx < allSuccessfulFiles.length; idx++) {
+      const { file, game } = allSuccessfulFiles[idx];
+      await downloadGameFile(file, game);
+      if (idx < allSuccessfulFiles.length - 1) {
+        await new Promise((r) => setTimeout(r, 600));
+      }
+    }
   };
 
   return (
@@ -332,17 +323,14 @@ export const BatchExtractor: React.FC<BatchExtractorProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <a
-                          href={
-                            file.uploadId
-                              ? `/api/download?gameUrl=${encodeURIComponent(game.canonicalUrl)}&uploadId=${file.uploadId}`
-                              : file.directUrl || '#'
-                          }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md neu-btn-accent text-white font-medium text-[11px] transition"
+                        <button
+                          type="button"
+                          onClick={() => downloadGameFile(file, game)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md neu-btn-accent text-white font-medium text-[11px] transition cursor-pointer"
                         >
                           <Download className="w-3 h-3" />
                           <span>Download</span>
-                        </a>
+                        </button>
                       </div>
                     </div>
                   ))}

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ExtractedGame, ExamplePreset, ItchFile, ItchComment } from '../types';
 import { FileCard } from './FileCard';
+import { downloadGameFile } from '../utils/downloadUtils';
 import { PlatformBadge } from './PlatformBadge';
 import { ExportModal } from './ExportModal';
 import { ScreenshotModal } from './ScreenshotModal';
@@ -243,36 +244,23 @@ export const SingleInspector: React.FC<SingleInspectorProps> = ({
     return list;
   }, [game?.comments, commentFilter, commentSearchTerm]);
 
-  // Sequential download trigger
-  const handleDownloadSelectedFiles = () => {
+  // Sequential direct download trigger (straight to computer)
+  const handleDownloadSelectedFiles = async () => {
     if (!game) return;
     const filesToDownload = game.files.filter((f) => selectedFileIds.includes(f.id));
     if (filesToDownload.length === 0) return;
 
     setDownloadQueueProgress({ current: 0, total: filesToDownload.length });
 
-    filesToDownload.forEach((file, index) => {
-      setTimeout(() => {
-        const downloadUrl = file.uploadId
-          ? `/api/download?gameUrl=${encodeURIComponent(game.canonicalUrl)}&uploadId=${file.uploadId}`
-          : file.directUrl || '';
-
-        if (downloadUrl) {
-          const a = document.createElement('a');
-          a.href = downloadUrl;
-          a.download = file.filename;
-          a.target = '_blank';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }
-
-        setDownloadQueueProgress({ current: index + 1, total: filesToDownload.length });
-        if (index === filesToDownload.length - 1) {
-          setTimeout(() => setDownloadQueueProgress(null), 2000);
-        }
-      }, index * 1200);
-    });
+    for (let index = 0; index < filesToDownload.length; index++) {
+      const file = filesToDownload[index];
+      await downloadGameFile(file, game);
+      setDownloadQueueProgress({ current: index + 1, total: filesToDownload.length });
+      if (index < filesToDownload.length - 1) {
+        await new Promise((r) => setTimeout(r, 600));
+      }
+    }
+    setTimeout(() => setDownloadQueueProgress(null), 2000);
   };
 
   return (
@@ -753,6 +741,9 @@ export const SingleInspector: React.FC<SingleInspectorProps> = ({
                     key={file.id}
                     file={file}
                     gameUrl={game.canonicalUrl}
+                    gameTitle={game.title}
+                    authorName={game.author?.name}
+                    game={game}
                     isSelected={selectedFileIds.includes(file.id)}
                     onToggleSelect={() => handleToggleSelectFile(file.id)}
                   />

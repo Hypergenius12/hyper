@@ -9,12 +9,16 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { ItchFile } from '../types';
+import { ItchFile, ExtractedGame } from '../types';
+import { downloadGameFile } from '../utils/downloadUtils';
 import { PlatformBadge } from './PlatformBadge';
 
 interface FileCardProps {
   file: ItchFile;
   gameUrl: string;
+  gameTitle?: string;
+  authorName?: string;
+  game?: Partial<ExtractedGame>;
   isSelected?: boolean;
   onToggleSelect?: () => void;
   onDownloadFile?: (file: ItchFile) => void;
@@ -23,10 +27,14 @@ interface FileCardProps {
 export const FileCard: React.FC<FileCardProps> = ({
   file,
   gameUrl,
+  gameTitle,
+  authorName,
+  game,
   isSelected,
   onToggleSelect,
   onDownloadFile,
 }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showUrlDetails, setShowUrlDetails] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
@@ -35,16 +43,24 @@ export const FileCard: React.FC<FileCardProps> = ({
   // Detect file extension
   const extension = file.filename.split('.').pop()?.toUpperCase() || 'FILE';
 
-  // Handle direct download
-  const handleDownload = () => {
+  // Handle direct download straight to computer (no redirect to itch.io)
+  const handleDownload = async () => {
     if (onDownloadFile) {
       onDownloadFile(file);
       return;
     }
-    const downloadEndpoint = file.uploadId
-      ? `/api/download?gameUrl=${encodeURIComponent(gameUrl)}&uploadId=${file.uploadId}`
-      : currentDirectUrl || '#';
-    window.location.href = downloadEndpoint;
+    setIsDownloading(true);
+    try {
+      await downloadGameFile(file, game || {
+        title: gameTitle || file.filename,
+        canonicalUrl: gameUrl,
+        author: { name: authorName || 'Creator' }
+      });
+    } catch (err) {
+      console.error('Download error:', err);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   // Handle copying direct link
@@ -172,10 +188,20 @@ export const FileCard: React.FC<FileCardProps> = ({
           <button
             type="button"
             onClick={handleDownload}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg neu-btn-accent text-white cursor-pointer"
+            disabled={isDownloading}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg neu-btn-accent text-white cursor-pointer disabled:opacity-60"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Download</span>
+            {isDownloading ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Downloading...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                <span>Download</span>
+              </>
+            )}
           </button>
 
           <button

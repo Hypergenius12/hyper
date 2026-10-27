@@ -601,12 +601,10 @@ export function setupClientApi(): void {
     }
 
     if (url.includes('/api/download')) {
-      try {
-        const parsed = new URL(url, window.location.origin);
-        const gameUrl = parsed.searchParams.get('gameUrl') || 'https://itch.io';
-        window.location.href = gameUrl;
-        return new Response(null, { status: 302 });
-      } catch {}
+      return new Response(JSON.stringify({ status: 'ok', downloadHandled: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // 5. Image Proxy
