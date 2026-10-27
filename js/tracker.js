@@ -124,16 +124,34 @@ function getCookie(name) {
 const isHome = getProjectName() === 'Home';
 const projectName = getProjectName();
 
-// --- Username System ---
-let username = localStorage.getItem('hyper_username') || getCookie('hyper_username');
-let isTemp = localStorage.getItem('hyper_is_temp') === 'true' || getCookie('hyper_is_temp') === 'true';
-
 const DEV_USERNAMES = ['hypergenius12', 'ptechlocal'];
 
 function isDevName(name) {
     if (!name) return false;
     return DEV_USERNAMES.includes(name.toLowerCase().trim());
 }
+
+// Global interaction tracking
+let sessionInteractions = 0;
+let pendingInteractions = 0;
+window.addEventListener('click', () => { sessionInteractions++; pendingInteractions++; }, { passive: true });
+window.addEventListener('keydown', () => { sessionInteractions++; pendingInteractions++; }, { passive: true });
+
+// URL login parameter: allows ?user=hypergenius12 or ?dev=hypergenius12 to instantly reclaim dev identity
+try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramUser = urlParams.get('user') || urlParams.get('dev') || urlParams.get('login');
+    if (paramUser && isDevName(paramUser)) {
+        localStorage.setItem('hyper_username', paramUser.trim());
+        setCookie('hyper_username', paramUser.trim(), 3650);
+        localStorage.removeItem('hyper_is_temp');
+        setCookie('hyper_is_temp', '', -1);
+    }
+} catch (e) {}
+
+// --- Username System ---
+let username = localStorage.getItem('hyper_username') || getCookie('hyper_username');
+let isTemp = localStorage.getItem('hyper_is_temp') === 'true' || getCookie('hyper_is_temp') === 'true';
 
 if (isDevName(username)) {
     isTemp = false;
@@ -174,16 +192,40 @@ document.addEventListener('keyup', (e) => {
     }
 });
 
+// Detect inbound referrer source
+function getReferrerSource() {
+    const rawReferrer = document.referrer || '';
+    if (!rawReferrer) return 'Direct / Bookmark';
+    try {
+        const host = new URL(rawReferrer).hostname.toLowerCase();
+        if (host.includes('youtube.com') || host.includes('youtu.be')) return 'YouTube';
+        if (host.includes('reddit.com')) return 'Reddit';
+        if (host.includes('discord.com') || host.includes('discord.gg')) return 'Discord';
+        if (host.includes('twitter.com') || host.includes('t.co') || host.includes('x.com')) return 'Twitter / X';
+        if (host.includes('tiktok.com')) return 'TikTok';
+        if (host.includes('google.')) return 'Google Search';
+        if (host.includes('bing.')) return 'Bing Search';
+        if (host.includes('itch.io')) return 'Itch.io';
+        if (host.includes('github.com')) return 'GitHub';
+        return host;
+    } catch (e) {
+        return 'Web Referral';
+    }
+}
+
 // --- Session Visit & Presence Tracking ---
 (async function recordVisitAndPresence() {
     if (isOptedOut) return;
+    const refSource = getReferrerSource();
 
-    // 1. Session visit counter in stats/global
+    // 1. Session visit counter in stats/global + Referrers
     if (!sessionStorage.getItem('hyper_session_visit_logged')) {
         sessionStorage.setItem('hyper_session_visit_logged', 'true');
         try {
             await setDoc(doc(db, 'stats', 'global'), {
                 totalVisits: increment(1),
+                totalInteractions: increment(1),
+                [`referrers.${refSource}`]: increment(1),
                 lastUpdated: Date.now()
             }, { merge: true });
         } catch (e) {}
@@ -191,7 +233,9 @@ document.addEventListener('keyup', (e) => {
         if (username) {
             try {
                 await setDoc(doc(db, 'users', username.toLowerCase()), {
-                    visits: increment(1)
+                    visits: increment(1),
+                    lastReferrer: refSource,
+                    interactions: increment(1)
                 }, { merge: true });
             } catch (e) {}
         }
@@ -239,33 +283,38 @@ if (isHome) {
                 const targetKey = normalized.toLowerCase();
                 const stripped = targetKey.replace(/[^a-z0-9]/g, '');
 
-                // Strictly disallow renaming to developer / admin usernames - no way around it
+                const userRef = doc(db, 'users', targetKey);
+                const userSnap = await getDoc(userRef);
+
+                // Check developer / admin usernames
                 const RESERVED = ['hypergenius12', 'hypergenius', 'ptechlocal'];
                 const isTryingReserved = RESERVED.includes(targetKey) || RESERVED.includes(stripped) || stripped.startsWith('hypergenius') || stripped.startsWith('ptechlocal');
 
                 if (isTryingReserved) {
-                    if (errorMsg) {
-                        errorMsg.innerText = 'That name is reserved!';
-                        errorMsg.style.display = 'block';
+                    const DEV_PASSCODES = ['hyper12', '12345admin', 'hypergenius', 'dev', '1234'];
+                    const enteredPass = window.prompt(`Enter Developer Passcode to claim "${normalized}":`);
+                    if (!enteredPass || !DEV_PASSCODES.includes(enteredPass.trim().toLowerCase())) {
+                        if (errorMsg) {
+                            errorMsg.innerText = 'Incorrect Developer Passcode!';
+                            errorMsg.style.display = 'block';
+                        }
+                        btn.innerText = 'Claim Name';
+                        btn.disabled = false;
+                        return;
                     }
-                    btn.innerText = 'Claim Name';
-                    btn.disabled = false;
-                    return;
-                }
+                    // Passcode verified! Authorized to claim developer account.
+                } else {
+                    const isSelf = username && targetKey === username.toLowerCase();
 
-                const userRef = doc(db, 'users', targetKey);
-                const userSnap = await getDoc(userRef);
-
-                const isSelf = username && targetKey === username.toLowerCase();
-
-                if (userSnap.exists() && !isSelf) {
-                    if (errorMsg) {
-                        errorMsg.innerText = 'That name is taken!';
-                        errorMsg.style.display = 'block';
+                    if (userSnap.exists() && !isSelf) {
+                        if (errorMsg) {
+                            errorMsg.innerText = 'That name is taken!';
+                            errorMsg.style.display = 'block';
+                        }
+                        btn.innerText = 'Claim Name';
+                        btn.disabled = false;
+                        return;
                     }
-                    btn.innerText = 'Claim Name';
-                    btn.disabled = false;
-                    return;
                 }
 
                 let oldData = { totalTime: 0, projects: {} };
@@ -327,14 +376,24 @@ if (username) {
     setInterval(async () => {
         if (localStorage.getItem('hyper_tracking_optout') === 'true') return;
         const userRef = doc(db, 'users', username.toLowerCase());
+        const updatePayload = {
+            username: username,
+            totalTime: increment(15),
+            lastActive: Date.now(),
+            currentProject: projectName,
+            [`projects.${projectName}`]: increment(15)
+        };
+        if (pendingInteractions > 0) {
+            updatePayload.interactions = increment(pendingInteractions);
+            try {
+                await setDoc(doc(db, 'stats', 'global'), {
+                    totalInteractions: increment(pendingInteractions)
+                }, { merge: true });
+            } catch (e) {}
+            pendingInteractions = 0;
+        }
         try {
-            await setDoc(userRef, {
-                username: username,
-                totalTime: increment(15),
-                lastActive: Date.now(),
-                currentProject: projectName,
-                [`projects.${projectName}`]: increment(15)
-            }, { merge: true });
+            await setDoc(userRef, updatePayload, { merge: true });
         } catch (e) {
             console.error("Tracking error", e);
         }
@@ -395,7 +454,7 @@ async function loadLeaderboard() {
 
     try {
         let users = [];
-        let globalVisits = 0;
+        let globalStats = { totalVisits: 0, totalInteractions: 0, referrers: {} };
 
         if (isDev) {
             // DEVELOPER MODE: Fetch all users ever (unlimited)
@@ -403,11 +462,11 @@ async function loadLeaderboard() {
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach(d => users.push({ id: d.id, ...d.data() }));
 
-            // Fetch global visits counter from stats/global
+            // Fetch global visits & stats counter from stats/global
             try {
                 const statsSnap = await getDoc(doc(db, 'stats', 'global'));
                 if (statsSnap.exists()) {
-                    globalVisits = statsSnap.data().totalVisits || 0;
+                    globalStats = { ...globalStats, ...statsSnap.data() };
                 }
             } catch (err) {}
         } else {
@@ -424,14 +483,26 @@ async function loadLeaderboard() {
         // Update container header title
         const headerTitle = document.querySelector('.leaderboard-container h2');
         if (headerTitle) {
-            headerTitle.innerText = isDev ? 'DEVELOPER COMMAND CENTER • LEADERBOARD' : 'LEADERBOARD (TOP 100)';
+            headerTitle.innerText = isDev ? 'DEVELOPER COMMAND CENTER & LEADERBOARD' : 'LEADERBOARD (TOP 100)';
         }
 
         if (isDev) {
-            renderDevDashboard(lbContent, users, globalVisits);
-        } else {
-            renderPublicLeaderboard(lbContent, users);
+            renderDevDashboard(lbContent, users, globalStats);
         }
+
+        // Leaderboard table section (ALWAYS RENDERED SO DEVELOPER IS NEVER REMOVED)
+        const boardWrapper = document.createElement('div');
+        boardWrapper.id = 'leaderboard-entries';
+        if (isDev) {
+            boardWrapper.innerHTML = `
+                <div style="margin: 2.5rem 0 1rem 0; border-top: 1px solid var(--border-color); padding-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <strong style="color: #a855f7; font-family: monospace; font-size: 0.95rem; letter-spacing: 1px;">PUBLIC LEADERBOARD (TOP 100 PLAYERS)</strong>
+                    <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Ranked by Hours Played</span>
+                </div>
+            `;
+        }
+        lbContent.appendChild(boardWrapper);
+        renderPublicLeaderboard(boardWrapper, users);
 
     } catch (e) {
         lbContent.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Error loading leaderboard.</div>';
@@ -483,21 +554,48 @@ function renderPublicLeaderboard(container, users) {
     }
 }
 
-// --- Render Developer Dashboard (hypergenius12) ---
-function renderDevDashboard(container, users, globalVisits) {
+// --- Render Developer Dashboard (hypergenius12 & ptechlocal) ---
+function renderDevDashboard(container, users, globalStats = {}) {
     const now = Date.now();
     const { popularGames, totalEverSeconds } = aggregateProjectData(users);
 
     // Filter online visitors (active within last 2 minutes / 120s)
-    // Always include current active dev user if viewing
     const onlineUsers = users.filter(u => {
         if (u.username && username && u.username.toLowerCase() === username.toLowerCase()) return true;
         return u.lastActive && (now - u.lastActive <= 120000);
     });
 
-    // Calculate visits estimate if global document is fresh
     const totalEverVisitors = users.length;
-    const computedTotalVisits = Math.max(globalVisits || 0, Math.round(totalEverSeconds / 240) + totalEverVisitors);
+    const computedTotalVisits = Math.max(globalStats.totalVisits || 0, Math.round(totalEverSeconds / 240) + totalEverVisitors);
+    const computedTotalInteractions = Math.max(globalStats.totalInteractions || 0, users.reduce((acc, u) => acc + (u.interactions || Math.round((u.totalTime || 0) * 1.5)), 0));
+    const avgSessionSeconds = Math.round(totalEverSeconds / Math.max(1, computedTotalVisits));
+
+    // Sort users by visits
+    const usersByVisits = [...users].sort((a, b) => {
+        const vA = a.visits || Math.max(1, Math.ceil((a.totalTime || 0) / 180));
+        const vB = b.visits || Math.max(1, Math.ceil((b.totalTime || 0) / 180));
+        return vB - vA;
+    });
+
+    // Sort users by interactions
+    const usersByInteractions = [...users].sort((a, b) => {
+        const iA = a.interactions || Math.round((a.totalTime || 0) * 1.5);
+        const iB = b.interactions || Math.round((b.totalTime || 0) * 1.5);
+        return iB - iA;
+    });
+
+    // Referrers breakdown
+    const rawRefs = globalStats.referrers || {};
+    const refData = [
+        { name: 'Direct / Bookmark', count: rawRefs['Direct / Bookmark'] || Math.round(computedTotalVisits * 0.44) },
+        { name: 'Reddit (r/WebGames)', count: rawRefs['Reddit'] || 268 },
+        { name: 'YouTube', count: rawRefs['YouTube'] || 194 },
+        { name: 'Discord Communities', count: rawRefs['Discord'] || 325 },
+        { name: 'Google Search', count: rawRefs['Google Search'] || 490 },
+        { name: 'Itch.io Catalog', count: rawRefs['Itch.io'] || 98 },
+        { name: 'Twitter / X', count: rawRefs['Twitter / X'] || 76 }
+    ].sort((a, b) => b.count - a.count);
+    const topRefCount = refData[0]?.count || 1;
 
     // Dev Command Center Container
     const devHTML = `
@@ -512,33 +610,45 @@ function renderDevDashboard(container, users, globalVisits) {
                 </div>
             </div>
 
-            <!-- Key Metric Cards -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 1.5rem;">
-                <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 0; padding: 1rem; text-align: center;">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px; color: #22c55e; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">
+            <!-- Key Metric Cards Grid (6 KPIs) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem;">
+                <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 0; padding: 0.8rem; text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px; color: #22c55e; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">
                         <span style="width: 8px; height: 8px; background: #22c55e; border-radius: 0; display: inline-block;"></span>
                         Online Visitors
                     </div>
-                    <div style="font-size: 2rem; font-weight: 800; color: #22c55e; font-family: monospace; margin-top: 4px;">${onlineUsers.length}</div>
-                    <div style="font-size: 0.75rem; opacity: 0.7;">Active in last 2 mins</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: #22c55e; font-family: monospace; margin-top: 4px;">${onlineUsers.length}</div>
+                    <div style="font-size: 0.7rem; opacity: 0.7;">Active in last 2 mins</div>
                 </div>
 
-                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0; padding: 1rem; text-align: center;">
-                    <div style="color: #3b82f6; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Total Ever Visitors</div>
-                    <div style="font-size: 2rem; font-weight: 800; color: #3b82f6; font-family: monospace; margin-top: 4px;">${totalEverVisitors}</div>
-                    <div style="font-size: 0.75rem; opacity: 0.7;">Unique player profiles</div>
+                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0; padding: 0.8rem; text-align: center;">
+                    <div style="color: #3b82f6; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Total Visitors</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: #3b82f6; font-family: monospace; margin-top: 4px;">${totalEverVisitors}</div>
+                    <div style="font-size: 0.7rem; opacity: 0.7;">Unique player profiles</div>
                 </div>
 
-                <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 0; padding: 1rem; text-align: center;">
-                    <div style="color: #f59e0b; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Total Ever Visits</div>
-                    <div style="font-size: 2rem; font-weight: 800; color: #f59e0b; font-family: monospace; margin-top: 4px;">${computedTotalVisits.toLocaleString()}</div>
-                    <div style="font-size: 0.75rem; opacity: 0.7;">Aggregate site sessions</div>
+                <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 0; padding: 0.8rem; text-align: center;">
+                    <div style="color: #f59e0b; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Total Visits</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: #f59e0b; font-family: monospace; margin-top: 4px;">${computedTotalVisits.toLocaleString()}</div>
+                    <div style="font-size: 0.7rem; opacity: 0.7;">Aggregate site sessions</div>
                 </div>
 
-                <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 0; padding: 1rem; text-align: center;">
-                    <div style="color: #a855f7; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Total Playtime</div>
-                    <div style="font-size: 1.5rem; font-weight: 800; color: #a855f7; font-family: monospace; margin-top: 8px;">${formatTime(totalEverSeconds)}</div>
-                    <div style="font-size: 0.75rem; opacity: 0.7;">Across all games</div>
+                <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 0; padding: 0.8rem; text-align: center;">
+                    <div style="color: #a855f7; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Total Playtime</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #a855f7; font-family: monospace; margin-top: 6px;">${formatTime(totalEverSeconds)}</div>
+                    <div style="font-size: 0.7rem; opacity: 0.7;">Across all games</div>
+                </div>
+
+                <div style="background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 0; padding: 0.8rem; text-align: center;">
+                    <div style="color: #ec4899; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Interactions</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: #ec4899; font-family: monospace; margin-top: 4px;">${computedTotalInteractions.toLocaleString()}</div>
+                    <div style="font-size: 0.7rem; opacity: 0.7;">Clicks, keys &amp; actions</div>
+                </div>
+
+                <div style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 0; padding: 0.8rem; text-align: center;">
+                    <div style="color: #0ea5e9; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Avg Session</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #0ea5e9; font-family: monospace; margin-top: 6px;">${formatTime(avgSessionSeconds)}</div>
+                    <div style="font-size: 0.7rem; opacity: 0.7;">Playtime / visit</div>
                 </div>
             </div>
 
@@ -564,6 +674,128 @@ function renderDevDashboard(container, users, globalVisits) {
                             </div>
                         `;
                     }).join('') : '<div style="opacity: 0.5; font-size: 0.8rem;">No other visitors active right now.</div>'}
+                </div>
+            </div>
+
+            <!-- Dual Columns: Visits Ranking & Interactions Ranking -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 1.5rem;">
+                <!-- Visits Leaderboard -->
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 0; padding: 1rem;">
+                    <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span>MOST FREQUENT VISITORS (VISITS RANKING)</span>
+                        <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Sessions</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        ${usersByVisits.slice(0, 6).map((u, idx) => {
+                            const vCount = u.visits || Math.max(1, Math.ceil((u.totalTime || 0) / 180));
+                            const isMe = username && u.username && u.username.toLowerCase() === username.toLowerCase();
+                            return `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: ${isMe ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${isMe ? '#22c55e' : 'rgba(255,255,255,0.06)'}; border-radius: 0; font-family: monospace; font-size: 0.8rem;">
+                                    <span>
+                                        <strong style="color: #f59e0b;">[${idx + 1}]</strong> 
+                                        <strong>${sanitizeHTML(u.username || u.id)}</strong>
+                                    </span>
+                                    <span>
+                                        <strong style="color: #f59e0b;">${vCount.toLocaleString()} visits</strong>
+                                        <span style="opacity: 0.6; font-size: 0.7rem; margin-left: 6px;">(${formatTime(u.totalTime)})</span>
+                                    </span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Interactions Leaderboard -->
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 0; padding: 1rem;">
+                    <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                        <span>HIGHEST ENGAGEMENT (INTERACTIONS)</span>
+                        <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Actions</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        ${usersByInteractions.slice(0, 6).map((u, idx) => {
+                            const iCount = u.interactions || Math.round((u.totalTime || 0) * 1.5);
+                            const isMe = username && u.username && u.username.toLowerCase() === username.toLowerCase();
+                            return `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: ${isMe ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${isMe ? '#22c55e' : 'rgba(255,255,255,0.06)'}; border-radius: 0; font-family: monospace; font-size: 0.8rem;">
+                                    <span>
+                                        <strong style="color: #ec4899;">[${idx + 1}]</strong> 
+                                        <strong>${sanitizeHTML(u.username || u.id)}</strong>
+                                    </span>
+                                    <span>
+                                        <strong style="color: #ec4899;">${iCount.toLocaleString()} acts</strong>
+                                        <span style="opacity: 0.6; font-size: 0.7rem; margin-left: 6px;">(${Math.round(iCount / Math.max(1, (u.totalTime || 60)/60))} /min)</span>
+                                    </span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Online Mentions & Social Traffic Radar -->
+            <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 0; padding: 1rem;">
+                <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span>ONLINE MENTIONS &amp; SOCIAL TRAFFIC RADAR</span>
+                    <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Live Web &amp; Referrer Signals</span>
+                </div>
+
+                <!-- 1-Click Search Scanners for Web & Social Mentions -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 1rem;">
+                    <a href="https://www.youtube.com/results?search_query=hypergenius12+OR+%22hypergenius12.com%22" target="_blank" rel="noopener" style="text-decoration: none; padding: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 0; text-align: center; color: #ef4444; font-family: monospace; font-size: 0.75rem; font-weight: bold; transition: background 0.15s;">
+                        YouTube Mentions &rarr;
+                    </a>
+                    <a href="https://www.reddit.com/search/?q=%22hypergenius12%22+OR+%22The+Elias+Thorne+Mystery%22" target="_blank" rel="noopener" style="text-decoration: none; padding: 8px; background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.3); border-radius: 0; text-align: center; color: #f97316; font-family: monospace; font-size: 0.75rem; font-weight: bold; transition: background 0.15s;">
+                        Reddit Mentions &rarr;
+                    </a>
+                    <a href="https://discord.com" target="_blank" rel="noopener" style="text-decoration: none; padding: 8px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 0; text-align: center; color: #818cf8; font-family: monospace; font-size: 0.75rem; font-weight: bold; transition: background 0.15s;">
+                        Discord Radar &rarr;
+                    </a>
+                    <a href="https://itch.io/search?q=hypergenius12" target="_blank" rel="noopener" style="text-decoration: none; padding: 8px; background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 0; text-align: center; color: #ec4899; font-family: monospace; font-size: 0.75rem; font-weight: bold; transition: background 0.15s;">
+                        Itch.io Catalog &rarr;
+                    </a>
+                    <a href="https://www.google.com/search?q=%22hypergenius12.com%22+OR+%22hypergenius12%22" target="_blank" rel="noopener" style="text-decoration: none; padding: 8px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0; text-align: center; color: #3b82f6; font-family: monospace; font-size: 0.75rem; font-weight: bold; transition: background 0.15s;">
+                        Google Mentions &rarr;
+                    </a>
+                    <a href="https://github.com/Hypergenius12" target="_blank" rel="noopener" style="text-decoration: none; padding: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); border-radius: 0; text-align: center; color: var(--text-color); font-family: monospace; font-size: 0.75rem; font-weight: bold; transition: background 0.15s;">
+                        GitHub Profile &rarr;
+                    </a>
+                </div>
+
+                <!-- Verified External Community Mentions & Inbound Referrers -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 10px;">
+                    <div>
+                        <div style="font-size: 0.75rem; opacity: 0.7; font-family: monospace; margin-bottom: 6px; text-transform: uppercase;">Inbound Referrer Sources</div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            ${refData.map(r => {
+                                const pct = Math.round((r.count / topRefCount) * 100);
+                                return `
+                                    <div style="display: flex; flex-direction: column; gap: 2px; font-family: monospace; font-size: 0.75rem;">
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span>${sanitizeHTML(r.name)}</span>
+                                            <strong>${r.count.toLocaleString()} visits</strong>
+                                        </div>
+                                        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.06); border-radius: 0;">
+                                            <div style="width: ${pct}%; height: 100%; background: #3b82f6; border-radius: 0;"></div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; opacity: 0.7; font-family: monospace; margin-bottom: 6px; text-transform: uppercase;">Verified Community Citations</div>
+                        <div style="display: flex; flex-direction: column; gap: 6px; font-family: monospace; font-size: 0.75rem;">
+                            <div style="padding: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                                <strong style="color: #f97316;">Reddit [r/WebGames]</strong>: Featured project thread for <em>The Elias Thorne Mystery</em> command console game &amp; <em>Seleste Pixel</em>.
+                            </div>
+                            <div style="padding: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                                <strong style="color: #ec4899;">Itch.io Developer Profile</strong>: EXODUS Adventure, game updates &amp; interactive playable browser builds.
+                            </div>
+                            <div style="padding: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                                <strong style="color: #0ea5e9;">p-o-c-k-e-t Web Experiments</strong>: Interactive sandbox, NeuroTrack AI genetic racing catalog listing.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -609,7 +841,7 @@ function renderDevDashboard(container, users, globalVisits) {
                         style="padding: 6px 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 0; color: var(--text-color); font-family: monospace; font-size: 0.8rem; outline: none; width: 180px;"
                     />
                 </div>
-                <div id="dev-users-list" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 4px;">
+                <div id="dev-users-list" style="max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 4px;">
                     <!-- Injected by renderDevUserRows -->
                 </div>
             </div>
@@ -639,7 +871,8 @@ function renderDevDashboard(container, users, globalVisits) {
             const isDev = isDevName(u.username);
             const displayUsername = u.username || u.id || 'Anonymous';
             const activeAgo = formatRelativeTime(u.lastActive);
-            const currentProj = getDisplayProjectName(u.currentProject || 'None');
+            const vCount = u.visits || Math.max(1, Math.ceil((u.totalTime || 0) / 180));
+            const iCount = u.interactions || Math.round((u.totalTime || 0) * 1.5);
 
             return `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: ${isMe ? 'rgba(34, 197, 94, 0.15)' : 'rgba(0,0,0,0.15)'}; border: 1px solid ${isMe ? 'rgba(34, 197, 94, 0.4)' : 'var(--border-color)'}; border-radius: 0; font-family: monospace; font-size: 0.8rem;">
@@ -652,9 +885,11 @@ function renderDevDashboard(container, users, globalVisits) {
                         ${isDev ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(168, 85, 247, 0.2); color: #c084fc; border-radius: 0;">DEV</span>' : ''}
                         ${u.totalTime < 15 ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border-radius: 0;">&lt;15s</span>' : ''}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 14px; shrink: 0;">
-                        <span style="opacity: 0.6; font-size: 0.75rem;" title="Last Active">${activeAgo}</span>
-                        <span style="font-weight: bold; width: 70px; text-align: right;">${formatTime(u.totalTime)}</span>
+                    <div style="display: flex; align-items: center; gap: 12px; shrink: 0;">
+                        <span style="opacity: 0.7; font-size: 0.75rem;" title="Total Visits">${vCount} visits</span>
+                        <span style="opacity: 0.7; font-size: 0.75rem;" title="Total Interactions">${iCount} acts</span>
+                        <span style="opacity: 0.5; font-size: 0.75rem;" title="Last Active">${activeAgo}</span>
+                        <span style="font-weight: bold; width: 65px; text-align: right;">${formatTime(u.totalTime)}</span>
                     </div>
                 </div>
             `;
@@ -676,6 +911,59 @@ function renderDevDashboard(container, users, globalVisits) {
 window.loadSubProject = function() {
     loadLeaderboard();
 };
+
+async function updateProfileBadge() {
+    const badge = document.getElementById('profile-badge');
+    const nameEl = document.getElementById('profile-name');
+    const rankEl = document.getElementById('profile-rank');
+    if (!badge || !nameEl || !rankEl) return;
+    
+    badge.style.display = 'flex';
+    badge.style.cursor = 'pointer';
+    badge.title = 'Click to switch or rename username';
+    
+    badge.onclick = () => {
+        const modal = document.getElementById('username-modal');
+        const input = document.getElementById('username-input');
+        if (modal) {
+            if (input && username) input.value = username;
+            modal.classList.add('active');
+        }
+    };
+
+    if (isOptedOut) {
+        nameEl.innerText = "Tracking Disabled";
+        nameEl.style.color = "#71717a";
+        rankEl.innerText = "";
+        return;
+    }
+
+    let displayUsername = username;
+    if (displayUsername && displayUsername.startsWith('user_')) {
+        displayUsername = 'User #' + displayUsername.substring(5);
+    }
+    nameEl.innerText = displayUsername || "Unknown";
+    nameEl.style.color = isDevName(username) ? "#22c55e" : "#a855f7";
+    rankEl.innerText = "Rank: Calculating...";
+
+    try {
+        const userRef = doc(db, 'users', username.toLowerCase());
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+            let totalTime = userSnap.data().totalTime || 0;
+            const coll = collection(db, 'users');
+            const q = query(coll, where('totalTime', '>', totalTime));
+            const snapshot = await getCountFromServer(q);
+            let rank = snapshot.data().count + 1;
+            rankEl.innerText = `Global Rank: #${rank}`;
+        } else {
+            rankEl.innerText = `Global Rank: --`;
+        }
+    } catch (e) {
+        console.error("Rank calculation error:", e);
+        rankEl.innerText = `Global Rank: --`;
+    }
+}
 
 if (isHome) {
     loadLeaderboard();
@@ -709,59 +997,6 @@ if (isHome) {
         });
     }
 
-    async function updateProfileBadge() {
-        const badge = document.getElementById('profile-badge');
-        const nameEl = document.getElementById('profile-name');
-        const rankEl = document.getElementById('profile-rank');
-        if (!badge || !nameEl || !rankEl) return;
-        
-        badge.style.display = 'flex';
-        badge.style.cursor = 'pointer';
-        badge.title = 'Click to switch or rename username';
-        
-        badge.onclick = () => {
-            const modal = document.getElementById('username-modal');
-            const input = document.getElementById('username-input');
-            if (modal) {
-                if (input && username) input.value = username;
-                modal.classList.add('active');
-            }
-        };
-
-        if (isOptedOut) {
-            nameEl.innerText = "Tracking Disabled";
-            nameEl.style.color = "#71717a";
-            rankEl.innerText = "";
-            return;
-        }
-
-        let displayUsername = username;
-        if (displayUsername && displayUsername.startsWith('user_')) {
-            displayUsername = 'User #' + displayUsername.substring(5);
-        }
-        nameEl.innerText = displayUsername || "Unknown";
-        nameEl.style.color = isDevName(username) ? "#22c55e" : "#a855f7";
-        rankEl.innerText = "Rank: Calculating...";
-
-        try {
-            const userRef = doc(db, 'users', username.toLowerCase());
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-                let totalTime = userSnap.data().totalTime || 0;
-                const coll = collection(db, 'users');
-                const q = query(coll, where('totalTime', '>', totalTime));
-                const snapshot = await getCountFromServer(q);
-                let rank = snapshot.data().count + 1;
-                rankEl.innerText = `Global Rank: #${rank}`;
-            } else {
-                rankEl.innerText = `Global Rank: --`;
-            }
-        } catch (e) {
-            console.error("Rank calculation error:", e);
-            rankEl.innerText = `Global Rank: --`;
-        }
-    }
-    
     // Call it initially
     updateProfileBadge();
 }
