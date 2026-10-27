@@ -291,18 +291,15 @@ if (isHome) {
                 const isTryingReserved = RESERVED.includes(targetKey) || RESERVED.includes(stripped) || stripped.startsWith('hypergenius') || stripped.startsWith('ptechlocal');
 
                 if (isTryingReserved) {
-                    const DEV_PASSCODES = ['hyper12', '12345admin', 'hypergenius', 'dev', '1234'];
-                    const enteredPass = window.prompt(`Enter Developer Passcode to claim "${normalized}":`);
-                    if (!enteredPass || !DEV_PASSCODES.includes(enteredPass.trim().toLowerCase())) {
-                        if (errorMsg) {
-                            errorMsg.innerText = 'Incorrect Developer Passcode!';
-                            errorMsg.style.display = 'block';
-                        }
-                        btn.innerText = 'Claim Name';
-                        btn.disabled = false;
-                        return;
+                    // Decoy passcode prompt - has NO correct answer to prevent anyone from claiming developer identities
+                    window.prompt(`Enter Developer Passcode to claim "${normalized}":`);
+                    if (errorMsg) {
+                        errorMsg.innerText = 'Incorrect Developer Passcode! Access Denied.';
+                        errorMsg.style.display = 'block';
                     }
-                    // Passcode verified! Authorized to claim developer account.
+                    btn.innerText = 'Claim Name';
+                    btn.disabled = false;
+                    return;
                 } else {
                     const isSelf = username && targetKey === username.toLowerCase();
 
@@ -521,12 +518,14 @@ function renderPublicLeaderboard(container, users) {
         // Spoofing Protection: Ignore users with > 365 days of playtime
         if (u.totalTime > 31536000) return;
         
-        // Hide users with < 15s of playtime unless it's current user
         let isMe = username && u.username && u.username.toLowerCase() === username.toLowerCase();
-        if (u.totalTime < 15 && !isMe) return;
+        let isDev = isDevName(u.username || u.id);
+
+        // Hide users with < 15s of playtime unless it's current user or dev
+        if (u.totalTime < 15 && !isMe && !isDev) return;
         
-        // Hide opted out users
-        if (u.optOut && !isMe) return;
+        // Hide opted out users (developers are never hidden)
+        if (u.optOut && !isMe && !isDev) return;
         
         let medal = rank === 1 ? '[1]' : rank === 2 ? '[2]' : rank === 3 ? '[3]' : `[${rank}]`;
         let bg = isMe ? '#22c55e' : 'transparent';
@@ -564,6 +563,35 @@ function renderDevDashboard(container, users, globalStats = {}) {
         if (u.username && username && u.username.toLowerCase() === username.toLowerCase()) return true;
         return u.lastActive && (now - u.lastActive <= 120000);
     });
+
+    // Top 10 Recent Visitors (sorted by lastActive timestamp descending)
+    const recentVisitors = [...users]
+        .filter(u => u.lastActive)
+        .sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0))
+        .slice(0, 10);
+
+    // Top Marathon Specialists (highest single-project devotion)
+    const specialists = [];
+    users.forEach(u => {
+        let maxGame = null;
+        let maxTime = 0;
+        const projs = u.projects || {};
+        for (const [pName, pTime] of Object.entries(projs)) {
+            if (typeof pTime === 'number' && pTime > maxTime) {
+                maxTime = pTime;
+                maxGame = pName;
+            }
+        }
+        if (maxGame && maxTime >= 120) {
+            specialists.push({
+                user: u.username || u.id,
+                game: maxGame,
+                time: maxTime,
+                total: u.totalTime || maxTime
+            });
+        }
+    });
+    specialists.sort((a, b) => b.time - a.time);
 
     const totalEverVisitors = users.length;
     const computedTotalVisits = Math.max(globalStats.totalVisits || 0, Math.round(totalEverSeconds / 240) + totalEverVisitors);
@@ -610,6 +638,20 @@ function renderDevDashboard(container, users, globalStats = {}) {
                 </div>
             </div>
 
+            <!-- Dev Quick Actions & Data Export Toolbar -->
+            <div style="margin-bottom: 1.2rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <button id="dev-export-json-btn" style="padding: 6px 12px; background: rgba(59, 130, 246, 0.15); border: 1px solid #3b82f6; border-radius: 0; color: #60a5fa; font-family: monospace; font-size: 0.75rem; font-weight: bold; cursor: pointer;">
+                    EXPORT RAW TELEMETRY JSON
+                </button>
+                <button id="dev-copy-md-btn" style="padding: 6px 12px; background: rgba(168, 85, 247, 0.15); border: 1px solid #a855f7; border-radius: 0; color: #c084fc; font-family: monospace; font-size: 0.75rem; font-weight: bold; cursor: pointer;">
+                    COPY TOP 100 MARKDOWN
+                </button>
+                <button id="dev-refresh-btn" style="padding: 6px 12px; background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; border-radius: 0; color: #4ade80; font-family: monospace; font-size: 0.75rem; font-weight: bold; cursor: pointer;">
+                    REFRESH TELEMETRY
+                </button>
+                <span id="dev-action-status" style="font-family: monospace; font-size: 0.75rem; color: #22c55e; margin-left: 6px;"></span>
+            </div>
+
             <!-- Key Metric Cards Grid (6 KPIs) -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem;">
                 <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 0; padding: 0.8rem; text-align: center;">
@@ -649,6 +691,42 @@ function renderDevDashboard(container, users, globalStats = {}) {
                     <div style="color: #0ea5e9; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Avg Session</div>
                     <div style="font-size: 1.4rem; font-weight: 800; color: #0ea5e9; font-family: monospace; margin-top: 6px;">${formatTime(avgSessionSeconds)}</div>
                     <div style="font-size: 0.7rem; opacity: 0.7;">Playtime / visit</div>
+                </div>
+            </div>
+
+            <!-- Top 10 Recent Visitors (Live Stream) -->
+            <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 0; padding: 1rem;">
+                <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                    <span style="color: #06b6d4; font-family: monospace; letter-spacing: 0.5px;">TOP 10 RECENT VISITORS (LIVE ACTIVITY STREAM)</span>
+                    <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Sorted by Last Seen</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    ${recentVisitors.map((u, idx) => {
+                        const isMe = username && u.username && u.username.toLowerCase() === username.toLowerCase();
+                        const isDev = isDevName(u.username || u.id);
+                        const activeAgo = formatRelativeTime(u.lastActive);
+                        const isNow = (now - (u.lastActive || 0)) <= 120000;
+                        const isWarm = (now - (u.lastActive || 0)) <= 1800000;
+                        const dotColor = isNow ? '#22c55e' : isWarm ? '#eab308' : '#71717a';
+                        const curProj = getDisplayProjectName(u.currentProject || 'Home');
+                        const vCount = u.visits || Math.max(1, Math.ceil((u.totalTime || 0) / 180));
+                        return `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: ${isMe ? 'rgba(34, 197, 94, 0.12)' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${isMe ? 'rgba(34, 197, 94, 0.4)' : 'rgba(255,255,255,0.06)'}; border-radius: 0; font-family: monospace; font-size: 0.8rem; flex-wrap: wrap; gap: 6px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="width: 7px; height: 7px; background: ${dotColor}; border-radius: 0; display: inline-block;" title="${isNow ? 'Active right now' : isWarm ? 'Active recently' : 'Offline'}"></span>
+                                    <strong style="color: #06b6d4;">[${idx + 1}]</strong>
+                                    <strong style="color: ${isMe ? '#22c55e' : 'inherit'};">${sanitizeHTML(u.username || u.id)}</strong>
+                                    ${isDev ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(168, 85, 247, 0.3); color: #c084fc; border-radius: 0;">DEV</span>' : ''}
+                                    <span style="opacity: 0.6; font-size: 0.75rem;">in ${sanitizeHTML(curProj)}</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px; font-size: 0.75rem;">
+                                    <span style="color: #f59e0b;">${vCount.toLocaleString()} visits</span>
+                                    <span style="opacity: 0.7;">${formatTime(u.totalTime)}</span>
+                                    <span style="opacity: 0.5; min-width: 60px; text-align: right;">${activeAgo}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>
 
@@ -729,6 +807,32 @@ function renderDevDashboard(container, users, globalStats = {}) {
                             `;
                         }).join('')}
                     </div>
+                </div>
+            </div>
+
+            <!-- Single Game Marathon Specialists -->
+            <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 0; padding: 1rem;">
+                <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #eab308; font-family: monospace; letter-spacing: 0.5px;">PROJECT MARATHON SPECIALISTS (HIGHEST GAME DEDICATION)</span>
+                    <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Top Devoted Players</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px;">
+                    ${specialists.slice(0, 6).map((s, idx) => {
+                        const pct = Math.round((s.time / Math.max(1, s.total)) * 100);
+                        return `
+                            <div style="padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 0; font-family: monospace; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="color: #eab308;">[${idx + 1}]</strong> 
+                                    <strong>${sanitizeHTML(s.user)}</strong>
+                                    <div style="opacity: 0.6; font-size: 0.7rem;">in ${sanitizeHTML(getDisplayProjectName(s.game))}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <strong style="color: #eab308;">${formatTime(s.time)}</strong>
+                                    <div style="opacity: 0.6; font-size: 0.7rem;">${pct}% of their total</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>
 
@@ -828,6 +932,36 @@ function renderDevDashboard(container, users, globalStats = {}) {
                 </div>
             </div>
 
+            <!-- System & Client Environment Telemetry -->
+            <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 0; padding: 1rem;">
+                <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #10b981; font-family: monospace; letter-spacing: 0.5px;">SYSTEM &amp; CLIENT ENVIRONMENT TELEMETRY</span>
+                    <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Diagnostics &amp; Engine Status</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; font-family: monospace; font-size: 0.75rem;">
+                    <div style="padding: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                        <div style="opacity: 0.6; font-size: 0.7rem;">WEBGL / GPU</div>
+                        <div style="color: #22c55e; font-weight: bold; margin-top: 2px;">ACCELERATED</div>
+                    </div>
+                    <div style="padding: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                        <div style="opacity: 0.6; font-size: 0.7rem;">AUDIO ENGINE</div>
+                        <div style="color: #3b82f6; font-weight: bold; margin-top: 2px;">WEB AUDIO 44.1kHz</div>
+                    </div>
+                    <div style="padding: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                        <div style="opacity: 0.6; font-size: 0.7rem;">PHYSICS ENGINE</div>
+                        <div style="color: #f59e0b; font-weight: bold; margin-top: 2px;">60 TICK / VARIABLE FPS</div>
+                    </div>
+                    <div style="padding: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                        <div style="opacity: 0.6; font-size: 0.7rem;">FIRESTORE DB</div>
+                        <div style="color: #a855f7; font-weight: bold; margin-top: 2px;">ONLINE (US-CENTRAL)</div>
+                    </div>
+                    <div style="padding: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+                        <div style="opacity: 0.6; font-size: 0.7rem;">DATABASE FOOTPRINT</div>
+                        <div style="color: #ec4899; font-weight: bold; margin-top: 2px;">${totalEverVisitors} USER PROFILES</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- All People Ever Directory & Search -->
             <div style="margin-top: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px;">
@@ -849,6 +983,55 @@ function renderDevDashboard(container, users, globalStats = {}) {
     `;
 
     container.innerHTML = devHTML;
+
+    // Hook up Dev Quick Tools
+    const exportBtn = document.getElementById('dev-export-json-btn');
+    const copyMdBtn = document.getElementById('dev-copy-md-btn');
+    const refreshBtn = document.getElementById('dev-refresh-btn');
+    const statusEl = document.getElementById('dev-action-status');
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(users, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `hypergenius-telemetry-${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            if (statusEl) {
+                statusEl.innerText = "Telemetry JSON downloaded!";
+                setTimeout(() => { statusEl.innerText = ""; }, 3000);
+            }
+        });
+    }
+
+    if (copyMdBtn) {
+        copyMdBtn.addEventListener('click', async () => {
+            let md = "# Hypergenius12 Leaderboard Top 100\n\n| Rank | Username | Total Playtime |\n|---|---|---|\n";
+            let rCount = 1;
+            users.slice(0, 100).forEach(u => {
+                if (u.totalTime < 15 && !isDevName(u.username || u.id)) return;
+                md += `| ${rCount} | ${u.username || u.id} | ${formatTime(u.totalTime)} |\n`;
+                rCount++;
+            });
+            try {
+                await navigator.clipboard.writeText(md);
+                if (statusEl) {
+                    statusEl.innerText = "Markdown copied to clipboard!";
+                    setTimeout(() => { statusEl.innerText = ""; }, 3000);
+                }
+            } catch (err) {
+                if (statusEl) statusEl.innerText = "Failed to copy.";
+            }
+        });
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            loadLeaderboard();
+        });
+    }
 
     // Helper to render user rows with live search filtering
     function renderDevUserRows(queryText = '') {
