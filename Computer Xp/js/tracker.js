@@ -234,64 +234,81 @@ if (isHome) {
             if (errorMsg) errorMsg.style.display = 'none';
 
             try {
-                const targetKey = input.toLowerCase();
+                // Strict normalization to prevent any bypasses (homoglyphs, invisible spaces, zero-width chars)
+                const normalized = input.normalize('NFKC').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+                const targetKey = normalized.toLowerCase();
+                const stripped = targetKey.replace(/[^a-z0-9]/g, '');
+
+                // Strictly disallow renaming to developer / admin usernames - no way around it
+                const RESERVED = ['hypergenius12', 'hypergenius', 'ptechlocal'];
+                const isTryingReserved = RESERVED.includes(targetKey) || RESERVED.includes(stripped) || stripped.startsWith('hypergenius') || stripped.startsWith('ptechlocal');
+
+                if (isTryingReserved) {
+                    if (errorMsg) {
+                        errorMsg.innerText = 'That name is reserved!';
+                        errorMsg.style.display = 'block';
+                    }
+                    btn.innerText = 'Claim Name';
+                    btn.disabled = false;
+                    return;
+                }
+
                 const userRef = doc(db, 'users', targetKey);
                 const userSnap = await getDoc(userRef);
 
-                // Allow logging into dev accounts (hypergenius12, ptechlocal) or re-claiming current user
-                const isClaimingDev = isDevName(targetKey);
                 const isSelf = username && targetKey === username.toLowerCase();
 
-                if (userSnap.exists() && !isClaimingDev && !isSelf) {
+                if (userSnap.exists() && !isSelf) {
                     if (errorMsg) {
                         errorMsg.innerText = 'That name is taken!';
                         errorMsg.style.display = 'block';
                     }
                     btn.innerText = 'Claim Name';
                     btn.disabled = false;
-                } else {
-                    let oldData = { totalTime: 0, projects: {} };
-                    if (isTemp && username && !isClaimingDev) {
-                        try {
-                            const oldRef = doc(db, 'users', username.toLowerCase());
-                            const oldSnap = await getDoc(oldRef);
-                            if (oldSnap.exists()) {
-                                oldData = oldSnap.data();
-                                await deleteDoc(oldRef);
-                            }
-                        } catch (err) {
-                            console.error("Migration error:", err);
-                        }
-                    }
-
-                    // Register or sync user doc
-                    if (!userSnap.exists()) {
-                        await setDoc(userRef, {
-                            username: input,
-                            totalTime: oldData.totalTime || 0,
-                            projects: oldData.projects || {},
-                            lastActive: Date.now(),
-                            currentProject: projectName
-                        }, { merge: true });
-                    } else {
-                        await setDoc(userRef, {
-                            lastActive: Date.now(),
-                            currentProject: projectName
-                        }, { merge: true });
-                    }
-                    
-                    localStorage.setItem('hyper_username', input);
-                    setCookie('hyper_username', input, 3650);
-                    localStorage.removeItem('hyper_is_temp');
-                    setCookie('hyper_is_temp', '', -1);
-                    
-                    username = input;
-                    isTemp = false;
-                    
-                    if (modal) modal.classList.remove('active');
-                    updateProfileBadge();
-                    loadLeaderboard();
+                    return;
                 }
+
+                let oldData = { totalTime: 0, projects: {} };
+                if (isTemp && username) {
+                    try {
+                        const oldRef = doc(db, 'users', username.toLowerCase());
+                        const oldSnap = await getDoc(oldRef);
+                        if (oldSnap.exists()) {
+                            oldData = oldSnap.data();
+                            await deleteDoc(oldRef);
+                        }
+                    } catch (err) {
+                        console.error("Migration error:", err);
+                    }
+                }
+
+                // Register or sync user doc
+                if (!userSnap.exists()) {
+                    await setDoc(userRef, {
+                        username: normalized,
+                        totalTime: oldData.totalTime || 0,
+                        projects: oldData.projects || {},
+                        lastActive: Date.now(),
+                        currentProject: projectName
+                    }, { merge: true });
+                } else {
+                    await setDoc(userRef, {
+                        lastActive: Date.now(),
+                        currentProject: projectName
+                    }, { merge: true });
+                }
+                
+                localStorage.setItem('hyper_username', normalized);
+                setCookie('hyper_username', normalized, 3650);
+                localStorage.removeItem('hyper_is_temp');
+                setCookie('hyper_is_temp', '', -1);
+                
+                username = normalized;
+                isTemp = false;
+                
+                if (modal) modal.classList.remove('active');
+                updateProfileBadge();
+                loadLeaderboard();
             } catch (err) {
                 console.error("Firebase Auth/DB Error:", err);
                 if (errorMsg) {
@@ -407,7 +424,7 @@ async function loadLeaderboard() {
         // Update container header title
         const headerTitle = document.querySelector('.leaderboard-container h2');
         if (headerTitle) {
-            headerTitle.innerText = isDev ? '👑 DEVELOPER COMMAND CENTER • LEADERBOARD' : 'LEADERBOARD (TOP 100)';
+            headerTitle.innerText = isDev ? 'DEVELOPER COMMAND CENTER • LEADERBOARD' : 'LEADERBOARD (TOP 100)';
         }
 
         if (isDev) {
@@ -440,7 +457,7 @@ function renderPublicLeaderboard(container, users) {
         // Hide opted out users
         if (u.optOut && !isMe) return;
         
-        let medal = rank === 1 ? '🥇 [1]' : rank === 2 ? '🥈 [2]' : rank === 3 ? '🥉 [3]' : `[${rank}]`;
+        let medal = rank === 1 ? '[1]' : rank === 2 ? '[2]' : rank === 3 ? '[3]' : `[${rank}]`;
         let bg = isMe ? '#22c55e' : 'transparent';
         let color = isMe ? '#000' : 'inherit';
         let border = '1px solid var(--border-color, #333)';
@@ -451,9 +468,9 @@ function renderPublicLeaderboard(container, users) {
         }
         
         container.innerHTML += `
-            <div style="display: flex; justify-content: space-between; padding: 0.75rem 1rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 8px; align-items: center; margin-bottom: 6px; font-family: monospace; letter-spacing: 0.5px; transition: transform 0.15s ease;">
-                <span style="font-weight: bold; width: 60px; text-align: left;">${medal}</span>
-                <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${sanitizeHTML(censorName(displayUsername))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 6px; padding: 2px 6px; background: rgba(0,0,0,0.2); border-radius: 4px;">&lt;YOU&gt;</span>' : ''}</span>
+            <div style="display: flex; justify-content: space-between; padding: 0.75rem 1rem; background: ${bg}; color: ${color}; border: ${border}; border-radius: 0; align-items: center; margin-bottom: 4px; font-family: monospace; letter-spacing: 0.5px;">
+                <span style="font-weight: bold; width: 50px; text-align: left;">${medal}</span>
+                <span style="flex-grow: 1; margin-left: 10px; font-weight: ${isMe ? 'bold': 'normal'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${sanitizeHTML(censorName(displayUsername))} ${isMe ? '<span style="font-size: 0.8rem; margin-left: 6px; padding: 2px 6px; background: rgba(0,0,0,0.2); border-radius: 0;">&lt;YOU&gt;</span>' : ''}</span>
                 <span style="font-family: monospace; font-weight: 600; margin-left: 10px;">${formatTime(u.totalTime)}</span>
             </div>
         `;
@@ -484,11 +501,10 @@ function renderDevDashboard(container, users, globalVisits) {
 
     // Dev Command Center Container
     const devHTML = `
-        <div id="dev-analytics-panel" style="margin-bottom: 2rem; background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 1.5rem; backdrop-filter: blur(10px);">
+        <div id="dev-analytics-panel" style="margin-bottom: 2rem; background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 0; padding: 1.5rem; backdrop-filter: blur(10px);">
             <!-- Admin Header -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(168, 85, 247, 0.2); padding-bottom: 0.8rem; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 8px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 1.3rem;">⚡</span>
                     <strong style="color: #a855f7; font-family: monospace; font-size: 1rem; letter-spacing: 1px;">DEVELOPER TELEMETRY &amp; LIVE AUDIT</strong>
                 </div>
                 <div style="font-size: 0.8rem; opacity: 0.8; font-family: monospace;">
@@ -498,28 +514,28 @@ function renderDevDashboard(container, users, globalVisits) {
 
             <!-- Key Metric Cards -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 1.5rem;">
-                <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
+                <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 0; padding: 1rem; text-align: center;">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 6px; color: #22c55e; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">
-                        <span style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e; display: inline-block;"></span>
+                        <span style="width: 8px; height: 8px; background: #22c55e; border-radius: 0; display: inline-block;"></span>
                         Online Visitors
                     </div>
                     <div style="font-size: 2rem; font-weight: 800; color: #22c55e; font-family: monospace; margin-top: 4px;">${onlineUsers.length}</div>
                     <div style="font-size: 0.75rem; opacity: 0.7;">Active in last 2 mins</div>
                 </div>
 
-                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
+                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0; padding: 1rem; text-align: center;">
                     <div style="color: #3b82f6; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Total Ever Visitors</div>
                     <div style="font-size: 2rem; font-weight: 800; color: #3b82f6; font-family: monospace; margin-top: 4px;">${totalEverVisitors}</div>
                     <div style="font-size: 0.75rem; opacity: 0.7;">Unique player profiles</div>
                 </div>
 
-                <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
+                <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 0; padding: 1rem; text-align: center;">
                     <div style="color: #f59e0b; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Total Ever Visits</div>
                     <div style="font-size: 2rem; font-weight: 800; color: #f59e0b; font-family: monospace; margin-top: 4px;">${computedTotalVisits.toLocaleString()}</div>
                     <div style="font-size: 0.75rem; opacity: 0.7;">Aggregate site sessions</div>
                 </div>
 
-                <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
+                <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 0; padding: 1rem; text-align: center;">
                     <div style="color: #a855f7; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Total Playtime</div>
                     <div style="font-size: 1.5rem; font-weight: 800; color: #a855f7; font-family: monospace; margin-top: 8px;">${formatTime(totalEverSeconds)}</div>
                     <div style="font-size: 0.75rem; opacity: 0.7;">Across all games</div>
@@ -527,10 +543,10 @@ function renderDevDashboard(container, users, globalVisits) {
             </div>
 
             <!-- Current Visitors Detail Section -->
-            <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+            <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 0; padding: 1rem;">
                 <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span>🟢 CURRENTLY ON SITE (${onlineUsers.length} ONLINE)</span>
-                    <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Live Heartbeat: 15s</span>
+                    <span>CURRENTLY ON SITE (${onlineUsers.length} ONLINE)</span>
+                    <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Heartbeat: 15s</span>
                 </div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                     ${onlineUsers.length > 0 ? onlineUsers.map(u => {
@@ -539,10 +555,10 @@ function renderDevDashboard(container, users, globalVisits) {
                         const currentProj = getDisplayProjectName(u.currentProject || 'Home');
                         const activeAgo = formatRelativeTime(u.lastActive || now);
                         return `
-                            <div style="background: ${isMe ? 'rgba(34, 197, 94, 0.2)' : isDev ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${isMe ? '#22c55e' : isDev ? '#a855f7' : 'var(--border-color)'}; border-radius: 6px; padding: 6px 10px; font-family: monospace; font-size: 0.8rem; display: flex; align-items: center; gap: 8px;">
-                                <span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%;"></span>
+                            <div style="background: ${isMe ? 'rgba(34, 197, 94, 0.2)' : isDev ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${isMe ? '#22c55e' : isDev ? '#a855f7' : 'var(--border-color)'}; border-radius: 0; padding: 6px 10px; font-family: monospace; font-size: 0.8rem; display: flex; align-items: center; gap: 8px;">
+                                <span style="width: 6px; height: 6px; background: #22c55e; border-radius: 0;"></span>
                                 <strong>${sanitizeHTML(u.username || u.id)}</strong>
-                                ${isDev ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(168, 85, 247, 0.3); color: #c084fc; border-radius: 3px;">DEV</span>' : ''}
+                                ${isDev ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(168, 85, 247, 0.3); color: #c084fc; border-radius: 0;">DEV</span>' : ''}
                                 <span style="opacity: 0.7;">in ${sanitizeHTML(currentProj)}</span>
                                 <span style="font-size: 0.7rem; opacity: 0.5;">(${activeAgo})</span>
                             </div>
@@ -552,9 +568,9 @@ function renderDevDashboard(container, users, globalVisits) {
             </div>
 
             <!-- Most Popular Games Ranking -->
-            <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+            <div style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 0; padding: 1rem;">
                 <div style="font-weight: bold; font-size: 0.85rem; margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span>🔥 MOST POPULAR GAMES &amp; PROJECTS (PLAYTIME RANKING)</span>
+                    <span>MOST POPULAR GAMES &amp; PROJECTS (PLAYTIME RANKING)</span>
                     <span style="font-size: 0.75rem; opacity: 0.6; font-family: monospace;">Ranked by Hours</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -565,14 +581,14 @@ function renderDevDashboard(container, users, globalVisits) {
                             <div style="display: flex; flex-direction: column; gap: 3px; font-family: monospace; font-size: 0.8rem;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <span>
-                                        <strong style="color: #a855f7;">#${idx + 1}</strong> 
+                                        <strong style="color: #a855f7;">[${idx + 1}]</strong> 
                                         <strong>${sanitizeHTML(g.displayName)}</strong> 
                                         <span style="opacity: 0.6; font-size: 0.75rem;">(${g.players} players)</span>
                                     </span>
                                     <span style="font-weight: bold;">${formatTime(g.time)}</span>
                                 </div>
-                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
-                                    <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #a855f7); border-radius: 3px;"></div>
+                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 0; overflow: hidden;">
+                                    <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #a855f7); border-radius: 0;"></div>
                                 </div>
                             </div>
                         `;
@@ -584,13 +600,13 @@ function renderDevDashboard(container, users, globalVisits) {
             <div style="margin-top: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px;">
                     <div style="font-weight: bold; font-size: 0.85rem;">
-                        📋 ALL PEOPLE EVER (${users.length} TOTAL USERS)
+                        ALL PEOPLE EVER (${users.length} TOTAL USERS)
                     </div>
                     <input 
                         type="text" 
                         id="dev-user-search" 
                         placeholder="Search any user..." 
-                        style="padding: 6px 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-color); font-family: monospace; font-size: 0.8rem; outline: none; width: 180px;"
+                        style="padding: 6px 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 0; color: var(--text-color); font-family: monospace; font-size: 0.8rem; outline: none; width: 180px;"
                     />
                 </div>
                 <div id="dev-users-list" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 4px;">
@@ -626,15 +642,15 @@ function renderDevDashboard(container, users, globalVisits) {
             const currentProj = getDisplayProjectName(u.currentProject || 'None');
 
             return `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: ${isMe ? 'rgba(34, 197, 94, 0.15)' : 'rgba(0,0,0,0.15)'}; border: 1px solid ${isMe ? 'rgba(34, 197, 94, 0.4)' : 'var(--border-color)'}; border-radius: 6px; font-family: monospace; font-size: 0.8rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: ${isMe ? 'rgba(34, 197, 94, 0.15)' : 'rgba(0,0,0,0.15)'}; border: 1px solid ${isMe ? 'rgba(34, 197, 94, 0.4)' : 'var(--border-color)'}; border-radius: 0; font-family: monospace; font-size: 0.8rem;">
                     <div style="display: flex; align-items: center; gap: 8px; flex-grow: 1; min-width: 0;">
-                        <span style="opacity: 0.5; width: 32px; font-size: 0.75rem;">#${idx + 1}</span>
-                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${isOnline ? '#22c55e' : '#71717a'}; display: inline-block; shrink: 0;" title="${isOnline ? 'Online now' : 'Offline'}"></span>
+                        <span style="opacity: 0.5; width: 32px; font-size: 0.75rem;">[${idx + 1}]</span>
+                        <span style="width: 8px; height: 8px; border-radius: 0; background: ${isOnline ? '#22c55e' : '#71717a'}; display: inline-block; shrink: 0;" title="${isOnline ? 'Online now' : 'Offline'}"></span>
                         <strong style="color: ${isMe ? '#22c55e' : isDev ? '#a855f7' : 'inherit'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             ${sanitizeHTML(displayUsername)}
                         </strong>
-                        ${isDev ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(168, 85, 247, 0.2); color: #c084fc; border-radius: 3px;">DEV</span>' : ''}
-                        ${u.totalTime < 15 ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border-radius: 3px;">&lt;15s</span>' : ''}
+                        ${isDev ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(168, 85, 247, 0.2); color: #c084fc; border-radius: 0;">DEV</span>' : ''}
+                        ${u.totalTime < 15 ? '<span style="font-size: 0.65rem; padding: 1px 4px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border-radius: 0;">&lt;15s</span>' : ''}
                     </div>
                     <div style="display: flex; align-items: center; gap: 14px; shrink: 0;">
                         <span style="opacity: 0.6; font-size: 0.75rem;" title="Last Active">${activeAgo}</span>
