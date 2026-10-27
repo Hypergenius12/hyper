@@ -21,7 +21,7 @@ export const BIOMES = {
     SWAMP: { name: 'Swamp', surface: BLOCKS.GRASS, dirt: BLOCKS.MUD, freq: 0.6, hasTrees: true, swampFlora: true, grassColor: [0.416, 0.439, 0.224], foliageColor: [0.416, 0.439, 0.224] },
     JUNGLE: { name: 'Jungle', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, jungleFlora: true, grassColor: [0.349, 0.788, 0.235], foliageColor: [0.188, 0.733, 0.043] },
     SAVANNA: { name: 'Savanna', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.8, hasTrees: true, savannaFlora: true, grassColor: [0.749, 0.718, 0.333], foliageColor: [0.682, 0.643, 0.165] },
-    MOUNTAINS: { name: 'Mountains', surface: BLOCKS.SNOW, dirt: BLOCKS.STONE, freq: 0.4, hasTrees: true, grassColor: [0.541, 0.714, 0.537], foliageColor: [0.427, 0.639, 0.447] },
+    MOUNTAINS: { name: 'Mountains', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.4, hasTrees: true, grassColor: [0.520, 0.745, 0.490], foliageColor: [0.380, 0.650, 0.380] },
     DEEP_OCEAN: { name: 'Deep Ocean', surface: BLOCKS.SAND, dirt: BLOCKS.STONE, freq: 0.3, hasTrees: false, grassColor: [0.557, 0.725, 0.443], foliageColor: [0.443, 0.655, 0.302] },
     CHERRY_GROVE: { name: 'Cherry Grove', surface: BLOCKS.GRASS, dirt: BLOCKS.DIRT, freq: 0.7, hasTrees: true, isCherry: true, grassColor: [0.714, 0.859, 0.404], foliageColor: [0.467, 0.671, 0.184] },
     OASIS: { name: 'Oasis', surface: BLOCKS.SAND, dirt: BLOCKS.SAND, freq: 0.2, hasTrees: true, isOasis: true, grassColor: [0.380, 0.776, 0.278], foliageColor: [0.282, 0.714, 0.157] },
@@ -2413,6 +2413,28 @@ export function generateChunkTerrain(cx, cz, params) {
                 }
             }
 
+            // Mountains (Windswept Hills / Slopes): Alpine Pine (Spruce) & Mountain Oak trees
+            if (biome === BIOMES.MOUNTAINS || biome.name === 'Mountains') {
+                if (surfaceY <= 96 && canPlaceTree(tx, tz, 4)) {
+                    const mountainTreeProb = (surfaceY < 80) ? 0.024 : 0.015;
+                    if (r < mountainTreeProb) {
+                        const isMtnGround = (currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.COARSE_DIRT || currentGroundBlock === BLOCKS.STONE || currentGroundBlock === BLOCKS.SNOW);
+                        if (isMtnGround) {
+                            if (currentGroundBlock === BLOCKS.STONE || currentGroundBlock === BLOCKS.SNOW) {
+                                blocks[(surfaceY * CHUNK_SIZE * CHUNK_SIZE) + (tz * CHUNK_SIZE) + tx] = BLOCKS.DIRT;
+                            }
+                            if (floraRng() < 0.75) {
+                                generatePineTree(blocks, tx, surfaceY + 1, tz, floraRng);
+                            } else {
+                                generateTree(blocks, tx, surfaceY + 1, tz, biome, floraRng);
+                            }
+                            chunkTrees.push({ x: tx, z: tz });
+                            continue;
+                        }
+                    }
+                }
+            }
+
             // Other Biome Trees & Features (with smooth woodland border density feathering)
             let treeProbability = 0;
             if (biome.hasTrees) {
@@ -2427,7 +2449,7 @@ export function generateChunkTerrain(cx, cz, params) {
                 treeProbability = isNearWater ? 0.012 : ((colInfo.weirdness > 0.48 && colInfo.weirdness < 0.58) ? 0.005 : 0.002);
             }
 
-            const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || currentGroundBlock === BLOCKS.COARSE_DIRT || (biome.isOasis && currentGroundBlock === BLOCKS.SAND);
+            const isSoilForTree = currentGroundBlock === BLOCKS.GRASS || currentGroundBlock === BLOCKS.DIRT || currentGroundBlock === BLOCKS.PODZOL || currentGroundBlock === BLOCKS.MYCELIUM || currentGroundBlock === BLOCKS.SWAMP_GRASS || currentGroundBlock === BLOCKS.SAVANNA_GRASS || currentGroundBlock === BLOCKS.MUD || currentGroundBlock === BLOCKS.COARSE_DIRT || (biome.isOasis && currentGroundBlock === BLOCKS.SAND) || (biome.name === 'Mountains' && (currentGroundBlock === BLOCKS.STONE || currentGroundBlock === BLOCKS.SNOW));
             if (treeProbability > 0 && r < treeProbability && isSoilForTree) {
                 let isStacked = false;
                 for (let cy = surfaceY; cy >= Math.max(1, surfaceY - 14); cy--) {

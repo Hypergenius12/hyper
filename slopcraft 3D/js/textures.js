@@ -754,7 +754,7 @@ export const BIOME_GRASS_HUES = {
     'Tundra': '#80B497',
     'Ice Spikes': '#80B497',
     'Taiga': '#86B783',
-    'Mountains': '#8AB689',
+    'Mountains': '#84BE7D',
     'Beach': '#91BD59',
     'Deep Ocean': '#91BD59',
     'Cherry Grove': '#B6DB67',
@@ -2279,19 +2279,19 @@ export async function createTextureAtlas(useMinecraft = true) {
     await initSteveSkin();
 
     const texture = new THREE.CanvasTexture(canvas);
-    texture.generateMipmaps = false;
+    texture.generateMipmaps = true;
     texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
-    texture.anisotropy = 1;
+    texture.minFilter = THREE.NearestMipmapLinearFilter;
+    texture.anisotropy = 4;
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.needsUpdate = true;
 
     // UV helper: returns u,v coordinates (0-1) and size for a face
     const uUnit = TEX_SIZE / atlasW;
     const vUnit = TEX_SIZE / atlasH;
-    // Half-texel border inset guarantees no cross-tile texture atlas bleeding
-    const epsU = 0.15 / atlasW;
-    const epsV = 0.15 / atlasH;
+    // Half-texel border inset guarantees no cross-tile texture atlas bleeding with mipmaps
+    const epsU = 0.35 / atlasW;
+    const epsV = 0.35 / atlasH;
 
     function getUV(blockType, face, biomeName = null) {
         const map = uvMap[blockType];
