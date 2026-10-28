@@ -13,11 +13,12 @@
   <h1>The Backrooms</h1>
   <div class="sub">LEVEL 0 &mdash; THE LOBBY</div>
   <div class="cgrid">
-    <span class="k">W A S D</span><span>move</span>
-    <span class="k">Mouse</span><span>look</span>
-    <span class="k">Shift</span><span>sprint</span>
-    <span class="k">ESC</span><span>pause</span>
+    <span class="k"><span class="keycap">W</span> <span class="keycap">A</span> <span class="keycap">S</span> <span class="keycap">D</span></span><span>move</span>
+    <span class="k"><span class="keycap">Mouse</span></span><span>look</span>
+    <span class="k"><span class="keycap">Shift</span></span><span>sprint</span>
+    <span class="k"><span class="keycap">ESC</span></span><span>pause</span>
   </div>
+  <div class="signal-hint">searching for signal...</div>
   <button class="enter-btn" id="startBtn">ENTER THE BACKROOMS</button>
   <p class="lore">
     If you're not careful and you noclip out of reality in the wrong areas,
@@ -26,12 +27,13 @@
     God save you if you hear something wandering around nearby,
     because it sure as hell has heard you.
   </p>
+  <p class="no-exit">There is no exit.</p>
 </div>
 
 <div id="deathScreen" class="overlay-ui">
-  <h1 class="blood">YOU DIED</h1>
-  <p>The Backrooms claimed another.</p>
-  <button class="enter-btn" id="respawnBtn">TRY AGAIN</button>
+  <div class="death-msg">you have been found.</div>
+  <div id="deathCoords" class="death-coords">X 0.0 &nbsp; Z 0.0</div>
+  <button class="retry-btn" id="respawnBtn">[ try again ]</button>
 </div>
 
 <div id="flashOverlay"></div>
@@ -73,13 +75,15 @@
   <div id="xhair"></div>
   <div id="hud-tr">LEVEL 0</div>
   <div id="hud-bl"><div>X <span id="cx">0.0</span></div><div>Z <span id="cz">0.0</span></div></div>
+  <div id="sanityContainer"><div id="sanityBar"></div></div>
 </div>
 <div id="warn"></div>
 <div id="vignette"></div>
+<div id="scanlines"></div>
 <canvas id="grain" width="320" height="180"></canvas>
 
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js"}}</script>
-<script type="module" src="main.js?v=14"></script>
+<script type="module" src="main.js?v=15"></script>
 
 <!-- Tracker Scripts -->
 <script type="module" src="../js/tracker.js"></script>

@@ -1,6 +1,18 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#000;overflow:hidden;font-family:'Courier New',monospace;user-select:none}
-canvas#three{display:block;position:fixed;inset:0;z-index:0}
+canvas#three{display:block;position:fixed;inset:0;z-index:0;transition:filter .2s ease-out}
+
+@keyframes camshake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-3px, 2px) rotate(-0.5deg); }
+  40% { transform: translate(3px, -2px) rotate(0.5deg); }
+  60% { transform: translate(-2px, -1px) rotate(-0.3deg); }
+  80% { transform: translate(2px, 2px) rotate(0.3deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+body.shake {
+  animation: camshake 0.07s infinite linear;
+}
 
 #vignette{
   position:fixed;inset:0;pointer-events:none;z-index:2;transition:opacity .4s;
@@ -8,20 +20,37 @@ canvas#three{display:block;position:fixed;inset:0;z-index:0}
 }
 canvas#grain{
   position:fixed;inset:0;width:100%;height:100%;
-  pointer-events:none;z-index:3;image-rendering:pixelated;opacity:0.032;
+  pointer-events:none;z-index:3;image-rendering:pixelated;opacity:0.055;
+  transition:opacity .3s;
 }
+#scanlines{
+  position:fixed;inset:0;pointer-events:none;z-index:4;
+  background:repeating-linear-gradient(to bottom,transparent 0px,transparent 2px,rgba(0,0,0,0.4) 3px);
+  opacity:0.055;
+}
+
 #hud{position:fixed;inset:0;pointer-events:none;z-index:5;color:#c8b040}
 #xhair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px}
 #xhair::before,#xhair::after{content:'';position:absolute;background:rgba(200,175,60,0.5);border-radius:1px}
 #xhair::before{width:2px;height:100%;left:50%;transform:translateX(-50%)}
 #xhair::after{height:2px;width:100%;top:50%;transform:translateY(-50%)}
-#hud-tr{position:absolute;top:14px;right:16px;font-size:10px;color:rgba(200,175,60,0.28);letter-spacing:.2em}
+#hud-tr{position:absolute;top:14px;right:16px;font-size:10px;color:rgba(200,175,60,0.35);letter-spacing:.2em;font-family:inherit}
 #hud-bl{position:absolute;bottom:14px;left:16px;font-size:10px;color:rgba(200,175,60,0.35);line-height:1.9}
+
+/* sanity meter */
+#sanityContainer{
+  position:absolute;bottom:14px;right:16px;width:120px;height:2px;
+  background:rgba(200,175,60,0.12);border-radius:1px;overflow:hidden;
+}
+#sanityBar{
+  width:100%;height:100%;background:#c8b040;opacity:0.75;
+  transition:width .15s ease-out, background-color .4s;
+}
 
 /* warning flash when entity is near */
 #warn{
   position:fixed;inset:0;pointer-events:none;z-index:6;
-  background:radial-gradient(ellipse at 50% 50%,rgba(180,40,20,0.08),transparent 70%);
+  background:radial-gradient(ellipse at 50% 50%,rgba(180,40,20,0.12),transparent 70%);
   opacity:0;transition:opacity .3s;
 }
 
@@ -29,49 +58,119 @@ canvas#grain{
 #overlay{
   position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
   align-items:center;justify-content:center;
-  background:linear-gradient(160deg,#0c0900,#060400);color:#c8b040;gap:8px;
+  background:linear-gradient(160deg,#0c0900,#060400);
+  background-size:200% 200%;
+  animation:overlayPulse 16s ease-in-out infinite alternate;
+  color:#c8b040;gap:8px;
 }
+@keyframes overlayPulse {
+  0% { background: linear-gradient(160deg, #0c0900 0%, #060400 100%); }
+  50% { background: linear-gradient(150deg, #110d02 0%, #050300 100%); }
+  100% { background: linear-gradient(170deg, #0e0a01 0%, #080500 100%); }
+}
+
 #overlay h1{
   font-size:clamp(28px,5vw,54px);letter-spacing:.4em;text-transform:uppercase;
-  text-shadow:0 0 60px rgba(200,176,64,.35);animation:hflk 14s infinite;
+  text-shadow:0 0 50px rgba(200,176,64,.35);animation:hflkDramatic 10s infinite;
 }
-@keyframes hflk{0%,84%,86%,90%,100%{opacity:1}85%,88%{opacity:.18}}
+@keyframes hflkDramatic {
+  0%, 82%, 84%, 86%, 90%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 50px rgba(200,176,64,0.4), 0 0 90px rgba(200,176,64,0.18);
+  }
+  83% {
+    opacity: 0.22;
+    text-shadow: 0 0 8px rgba(200,176,64,0.1);
+  }
+  85% {
+    opacity: 0.12;
+    text-shadow: none;
+  }
+  87% {
+    opacity: 0.45;
+    text-shadow: 0 0 20px rgba(200,176,64,0.2);
+  }
+}
+
 .sub{font-size:11px;opacity:.4;letter-spacing:.28em;margin-top:4px}
-.cgrid{margin-top:18px;display:grid;grid-template-columns:auto 1fr;gap:5px 22px;font-size:11px;opacity:.42}
-.cgrid .k{color:#fff;text-align:right}
+.cgrid{margin-top:18px;display:grid;grid-template-columns:auto 1fr;gap:6px 20px;font-size:11px;opacity:.5;align-items:center}
+.cgrid .k{display:flex;gap:4px;justify-content:flex-end}
+.keycap{
+  display:inline-block;padding:2px 7px;border:1px solid rgba(200,176,64,0.32);border-radius:3px;
+  background:rgba(200,176,64,0.06);color:#e8dcad;font-size:10px;letter-spacing:0.06em;
+}
+
+.signal-hint{
+  margin-top:8px;font-size:10px;color:rgba(200,175,60,0.32);letter-spacing:0.22em;
+  white-space:nowrap;overflow:hidden;border-right:1px solid rgba(200,175,60,0.45);
+  width:24ch;animation:typeSignal 4s steps(24,end) infinite, blinkCursor 0.8s step-end infinite;
+}
+@keyframes typeSignal {
+  0% { width: 0; }
+  50%, 85% { width: 24ch; }
+  100% { width: 0; }
+}
+@keyframes blinkCursor {
+  from, to { border-color: transparent; }
+  50% { border-color: rgba(200,175,60,0.45); }
+}
+
 .enter-btn{
-  margin-top:26px;padding:11px 42px;border:1px solid rgba(200,176,64,.42);background:transparent;
+  margin-top:20px;padding:11px 42px;border:1px solid rgba(200,176,64,.42);background:transparent;
   color:#c8b040;font-family:inherit;font-size:12px;letter-spacing:.26em;cursor:pointer;transition:all .3s;
 }
 .enter-btn:hover{border-color:#c8b040;background:rgba(200,176,64,.07);box-shadow:0 0 28px rgba(200,176,64,.12)}
 .lore{
-  margin-top:18px;font-size:10px;color:rgba(200,175,60,.62);
-  letter-spacing:.06em;max-width:420px;text-align:center;line-height:1.9;
+  margin-top:18px;font-size:10px;color:rgba(200,175,60,.55);
+  letter-spacing:.06em;max-width:440px;text-align:center;line-height:1.85;
+}
+.no-exit{
+  margin-top:6px;font-size:9px;color:rgba(200,175,60,.3);
+  letter-spacing:.26em;text-align:center;font-style:italic;
 }
 
 /* pause */
 #pause{
   position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
-  background:rgba(4,3,0,.72);backdrop-filter:blur(8px);
+  background:rgba(4,3,0,.78);
+  background-image:repeating-radial-gradient(circle at 50% 50%, rgba(200,175,60,0.012), rgba(0,0,0,0.04) 1px);
+  backdrop-filter:blur(8px);
 }
 
 /* Death & Overlays */
 #deathScreen {
   position: absolute; top:0; left:0; width:100%; height:100%;
-  background: rgba(10,0,0,0.85); display: none; flex-direction: column;
+  background: #000000; display: none; flex-direction: column;
   justify-content: center; align-items: center; z-index: 1000;
   text-align: center;
 }
-#deathScreen h1.blood {
-  font-size: 6rem; color: #ff0000; letter-spacing: 12px; margin-bottom: 10px;
-  text-shadow: 0 0 20px #ff0000, 2px 2px 0px #400;
+.death-msg {
+  font-size: 14px; color: #cc2200; letter-spacing: .35em;
+  margin-bottom: 12px; font-weight: normal; text-transform: lowercase;
 }
-#deathScreen p { font-size: 1.5rem; color: #aaa; margin-bottom: 40px; }
+.death-coords {
+  font-size: 10px; color: rgba(200, 175, 60, .32);
+  letter-spacing: .2em; margin-bottom: 38px;
+}
+.retry-btn {
+  background: transparent; border: none; color: rgba(200, 175, 60, .45);
+  font-family: inherit; font-size: 11px; letter-spacing: .3em;
+  cursor: pointer; padding: 8px 16px; opacity: 0;
+  animation: fadeInRetry 1s ease 2s forwards;
+  transition: color .25s, text-shadow .25s;
+}
+.retry-btn:hover {
+  color: #c8b040;
+  text-shadow: 0 0 16px rgba(200, 176, 64, .4);
+}
+@keyframes fadeInRetry {
+  to { opacity: 1; }
+}
 
 #flashOverlay {
   position: absolute; top:0; left:0; width:100%; height:100%;
   background: white; opacity: 0; pointer-events: none; z-index: 999;
-  transition: opacity 1s ease-in-out;
+  transition: opacity .4s ease-in-out;
 }
 
 #jumpscareStatic {
@@ -85,12 +184,13 @@ canvas#grain{
   100% { background-position: 100% 100%; }
 }
 .is-dead #jumpscareStatic {
-  opacity: 0.4;
+  opacity: 0.35;
   animation: staticFlicker 0.1s infinite;
 }
 
 .pcard{
   background:#090700;border:1px solid rgba(200,176,64,.18);
+  box-shadow: 0 0 60px rgba(200,176,64,0.06);
   min-width:370px;max-width:420px;width:90%;padding:34px 38px;color:#c8b040;
 }
 .pcard h2{font-size:20px;letter-spacing:.42em;text-align:center;margin-bottom:26px;text-shadow:0 0 18px rgba(200,176,64,.2)}
