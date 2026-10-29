@@ -19,7 +19,11 @@ import {
   Maximize2,
   ImageIcon,
   ThumbsUp,
+  ThumbsDown,
   Filter,
+  Plus,
+  Send,
+  Check,
 } from 'lucide-react';
 import { ExtractedGame, ExamplePreset, ItchFile, ItchComment } from '../types';
 import { FileCard } from './FileCard';
@@ -62,6 +66,25 @@ export const SingleInspector: React.FC<SingleInspectorProps> = ({
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [commentSearchTerm, setCommentSearchTerm] = useState('');
   const [commentFilter, setCommentFilter] = useState<'all' | 'top'>('all');
+  const [userComments, setUserComments] = useState<ItchComment[]>([]);
+  const [showCommentForm, setShowCommentForm] = useState(false);
+  const [newCommentName, setNewCommentName] = useState(() => {
+    try {
+      return localStorage.getItem('itchlink_username') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [newCommentRating, setNewCommentRating] = useState(5);
+  const [newCommentBody, setNewCommentBody] = useState('');
+  const [commentPostSuccess, setCommentPostSuccess] = useState(false);
+  const [commentVotes, setCommentVotes] = useState<Record<string, number>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('itchlink_votes') || '{}');
+    } catch {
+      return {};
+    }
+  });
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [downloadQueueProgress, setDownloadQueueProgress] = useState<{
@@ -223,13 +246,84 @@ export const SingleInspector: React.FC<SingleInspectorProps> = ({
     });
   }, [game, platformFilter, fileExtensionFilter, fileSearchTerm]);
 
-  // Filtered comments
+  // Load user-posted comments for current game
+  useEffect(() => {
+    if (!game) {
+      setUserComments([]);
+      return;
+    }
+    const key = `itchlink_comments_${game.slug || game.canonicalUrl}`;
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        setUserComments(JSON.parse(stored));
+      } else {
+        setUserComments([]);
+      }
+    } catch {
+      setUserComments([]);
+    }
+  }, [game?.slug, game?.canonicalUrl]);
+
+  const handlePostComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentBody.trim() || !game) return;
+    const authorName = newCommentName.trim() || 'Anonymous Player';
+    try {
+      localStorage.setItem('itchlink_username', authorName);
+    } catch {}
+
+    const newComment: ItchComment = {
+      id: `user_${Date.now()}`,
+      author: {
+        name: authorName,
+      },
+      date: 'Just now',
+      body: newCommentBody.trim(),
+      votes: '+1',
+      isReply: false,
+    };
+
+    const updated = [newComment, ...userComments];
+    setUserComments(updated);
+    const key = `itchlink_comments_${game.slug || game.canonicalUrl}`;
+    try {
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch {}
+
+    setNewCommentBody('');
+    setCommentPostSuccess(true);
+    setTimeout(() => {
+      setCommentPostSuccess(false);
+      setShowCommentForm(false);
+    }, 1500);
+  };
+
+  const handleVoteComment = (commentId: string, delta: number) => {
+    const current = commentVotes[commentId] || 0;
+    const nextVote = current === delta ? 0 : delta;
+    const updated = { ...commentVotes, [commentId]: nextVote };
+    setCommentVotes(updated);
+    try {
+      localStorage.setItem('itchlink_votes', JSON.stringify(updated));
+    } catch {}
+  };
+
+  // Combined and filtered comments
+  const allComments = useMemo(() => {
+    const base = game?.comments || [];
+    return [...userComments, ...base];
+  }, [game?.comments, userComments]);
+
   const filteredComments = useMemo(() => {
-    if (!game?.comments) return [];
-    let list = [...game.comments];
+    let list = [...allComments];
 
     if (commentFilter === 'top') {
-      list = list.filter((c) => c.votes && !c.votes.includes('-'));
+      list = list.filter((c) => {
+        const v = commentVotes[c.id] || 0;
+        const num = parseInt((c.votes || '+1').replace('+', ''), 10);
+        return num + v > 0;
+      });
     }
 
     if (commentSearchTerm.trim()) {
@@ -242,7 +336,7 @@ export const SingleInspector: React.FC<SingleInspectorProps> = ({
     }
 
     return list;
-  }, [game?.comments, commentFilter, commentSearchTerm]);
+  }, [allComments, commentFilter, commentSearchTerm, commentVotes]);
 
   // Sequential direct download trigger (straight to computer)
   const handleDownloadSelectedFiles = async () => {
@@ -808,143 +902,275 @@ export const SingleInspector: React.FC<SingleInspectorProps> = ({
                 </span>
                 <div>
                   <h3 className="text-sm sm:text-base font-semibold text-zinc-100 flex items-center gap-2">
-                    <span>Community Comments</span>
+                    <span>Community Comments &amp; Reviews</span>
                     <span className="text-xs font-mono text-zinc-400">
-                      ({game.comments?.length || 0})
+                      ({allComments.length})
                     </span>
                   </h3>
                   <p className="text-[11px] text-zinc-400">
-                    Player reviews, tips, and feedback extracted from itch.io
+                    Player reviews, tips, and discussion extracted directly from itch.io
                   </p>
                 </div>
               </div>
 
-              {/* Comment search and sort filters */}
-              {game.comments && game.comments.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <div className="relative">
+              {/* Action Buttons & Filters */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCommentForm(!showCommentForm)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                    showCommentForm
+                      ? 'neu-button-active text-[#fa5c5c]'
+                      : 'neu-btn-accent text-white'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{showCommentForm ? 'Cancel' : 'Add Review'}</span>
+                </button>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={commentSearchTerm}
+                    onChange={(e) => setCommentSearchTerm(e.target.value)}
+                    placeholder="Filter comments..."
+                    className="w-32 sm:w-44 pl-7 pr-6 py-1 rounded-lg neu-inset text-xs font-mono text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-[#fa5c5c]"
+                  />
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+                  {commentSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setCommentSearchTerm('')}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCommentFilter(commentFilter === 'all' ? 'top' : 'all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono transition cursor-pointer flex items-center gap-1 ${
+                    commentFilter === 'top'
+                      ? 'neu-button-active text-amber-400'
+                      : 'neu-button text-zinc-400 hover:text-zinc-200'
+                  }`}
+                  title="Filter top upvoted comments"
+                >
+                  <ThumbsUp className="w-3 h-3" />
+                  <span>Top</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Comment / Review Composer Form */}
+            {showCommentForm && (
+              <form
+                onSubmit={handlePostComment}
+                className="p-4 rounded-xl neu-inset border border-zinc-800 space-y-3"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 max-w-xs">
+                    <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                      Your Name / Handle:
+                    </label>
                     <input
                       type="text"
-                      value={commentSearchTerm}
-                      onChange={(e) => setCommentSearchTerm(e.target.value)}
-                      placeholder="Filter comments..."
-                      className="w-36 sm:w-48 pl-7 pr-6 py-1 rounded-lg neu-inset text-xs font-mono text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-[#fa5c5c]"
+                      value={newCommentName}
+                      onChange={(e) => setNewCommentName(e.target.value)}
+                      placeholder="e.g. GamerTag42"
+                      className="w-full px-3 py-1.5 rounded-lg neu-card text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-[#fa5c5c]"
                     />
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
-                    {commentSearchTerm && (
-                      <button
-                        type="button"
-                        onClick={() => setCommentSearchTerm('')}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setCommentFilter(commentFilter === 'all' ? 'top' : 'all')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-mono transition cursor-pointer flex items-center gap-1 ${
-                      commentFilter === 'top'
-                        ? 'neu-button-active text-amber-400'
-                        : 'neu-button text-zinc-400 hover:text-zinc-200'
-                    }`}
-                    title="Filter upvoted comments"
-                  >
-                    <ThumbsUp className="w-3 h-3" />
-                    <span>Top</span>
-                  </button>
+                  <div>
+                    <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                      Rating:
+                    </label>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setNewCommentRating(star)}
+                          className="p-1 transition text-amber-400 hover:scale-110 cursor-pointer"
+                        >
+                          <Star
+                            className={`w-4 h-4 ${
+                              star <= newCommentRating
+                                ? 'fill-amber-400 text-amber-400'
+                                : 'text-zinc-600'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                    Your Thoughts or Tips:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={newCommentBody}
+                    onChange={(e) => setNewCommentBody(e.target.value)}
+                    placeholder="Write your review, feedback, or helpful tips for this game..."
+                    className="w-full p-3 rounded-lg neu-card text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-[#fa5c5c] resize-none"
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-zinc-500 font-mono">
+                    {commentPostSuccess ? (
+                      <span className="text-emerald-400 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Review posted successfully!</span>
+                      </span>
+                    ) : (
+                      'Saved locally and pinned to this game.'
+                    )}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCommentForm(false)}
+                      className="px-3 py-1.5 rounded-lg text-xs neu-button text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!newCommentBody.trim()}
+                      className="px-4 py-1.5 rounded-lg text-xs font-semibold neu-btn-accent text-white flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Post Review</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
 
             {/* Comments List */}
             {filteredComments.length > 0 ? (
-              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                {filteredComments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className={`p-3.5 rounded-xl neu-card transition text-xs space-y-2 ${
-                      comment.isReply ? 'ml-4 sm:ml-8 border-l-2 border-[#fa5c5c]/40' : ''
-                    }`}
-                  >
-                    {/* Comment Header */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {comment.author.avatar ? (
-                          <img
-                            src={getProxiedImageUrl(comment.author.avatar)}
-                            alt={comment.author.name}
-                            loading="lazy"
-                            className="w-6 h-6 rounded-full object-cover neu-inset shrink-0 bg-zinc-800"
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              if (target.src.includes('/api/image-proxy')) {
-                                target.src = comment.author.avatar || '';
-                              }
-                            }}
-                          />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full neu-inset flex items-center justify-center font-bold text-[10px] text-zinc-400 shrink-0">
-                            {comment.author.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
+              <div className="space-y-3 max-h-[550px] overflow-y-auto pr-1">
+                {filteredComments.map((comment) => {
+                  const userVote = commentVotes[comment.id] || 0;
+                  const baseNum = parseInt((comment.votes || '+1').replace('+', ''), 10) || 1;
+                  const effectiveVotes = baseNum + userVote;
 
-                        <div className="min-w-0 flex items-center gap-2">
-                          {comment.author.url ? (
-                            <a
-                              href={comment.author.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="font-semibold text-zinc-200 hover:text-[#fa5c5c] transition truncate"
-                            >
-                              {comment.author.name}
-                            </a>
+                  return (
+                    <div
+                      key={comment.id}
+                      className={`p-3.5 rounded-xl neu-card transition text-xs space-y-2 ${
+                        comment.isReply ? 'ml-4 sm:ml-8 border-l-2 border-[#fa5c5c]/40' : ''
+                      }`}
+                    >
+                      {/* Comment Header */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {comment.author.avatar ? (
+                            <img
+                              src={getProxiedImageUrl(comment.author.avatar)}
+                              alt={comment.author.name}
+                              loading="lazy"
+                              className="w-6 h-6 rounded-full object-cover neu-inset shrink-0 bg-zinc-800"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                target.style.display = 'none';
+                              }}
+                            />
                           ) : (
-                            <span className="font-semibold text-zinc-200 truncate">
-                              {comment.author.name}
-                            </span>
+                            <div className="w-6 h-6 rounded-full neu-inset flex items-center justify-center font-bold text-[10px] text-zinc-300 shrink-0 bg-zinc-800">
+                              {comment.author.name.charAt(0).toUpperCase()}
+                            </div>
                           )}
 
-                          {comment.isReply && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono neu-inset text-zinc-400">
-                              reply
-                            </span>
-                          )}
+                          <div className="min-w-0 flex items-center gap-2">
+                            {comment.author.url ? (
+                              <a
+                                href={comment.author.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-semibold text-zinc-200 hover:text-[#fa5c5c] transition truncate"
+                              >
+                                {comment.author.name}
+                              </a>
+                            ) : (
+                              <span className="font-semibold text-zinc-200 truncate">
+                                {comment.author.name}
+                              </span>
+                            )}
+
+                            {comment.id.startsWith('user_') && (
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono neu-inset text-amber-400 flex items-center gap-1">
+                                <Star className="w-2.5 h-2.5 fill-amber-400" />
+                                <span>Verified Review</span>
+                              </span>
+                            )}
+
+                            {comment.isReply && (
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono neu-inset text-zinc-400">
+                                reply
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          {/* Upvote / Downvote action */}
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleVoteComment(comment.id, 1)}
+                              className={`p-1 rounded transition cursor-pointer flex items-center gap-1 text-[11px] font-mono ${
+                                userVote === 1
+                                  ? 'text-emerald-400 bg-emerald-950/40'
+                                  : 'text-zinc-500 hover:text-emerald-400'
+                              }`}
+                              title="Upvote comment"
+                            >
+                              <ThumbsUp className="w-3 h-3" />
+                              <span>{effectiveVotes > 0 ? `+${effectiveVotes}` : effectiveVotes}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleVoteComment(comment.id, -1)}
+                              className={`p-1 rounded transition cursor-pointer text-[11px] font-mono ${
+                                userVote === -1
+                                  ? 'text-rose-400 bg-rose-950/40'
+                                  : 'text-zinc-600 hover:text-rose-400'
+                              }`}
+                              title="Downvote comment"
+                            >
+                              <ThumbsDown className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          <span
+                            className="text-[11px] font-mono text-zinc-500"
+                            title={comment.timestamp || comment.date}
+                          >
+                            {comment.date}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        {comment.votes && (
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
-                              comment.votes.includes('-')
-                                ? 'text-rose-400 neu-inset'
-                                : 'text-emerald-400 neu-inset'
-                            }`}
-                          >
-                            {comment.votes}
-                          </span>
-                        )}
-
-                        <span
-                          className="text-[11px] font-mono text-zinc-500"
-                          title={comment.timestamp || comment.date}
-                        >
-                          {comment.date}
-                        </span>
+                      {/* Comment Body */}
+                      <div className="text-zinc-300 leading-relaxed break-words whitespace-pre-wrap pl-8">
+                        {comment.body}
                       </div>
                     </div>
-
-                    {/* Comment Body */}
-                    <div className="text-zinc-300 leading-relaxed break-words whitespace-pre-wrap pl-8">
-                      {comment.body}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-            ) : game.comments && game.comments.length > 0 ? (
+            ) : allComments.length > 0 ? (
               <div className="p-6 text-center rounded-xl neu-inset text-xs text-zinc-400 space-y-1">
                 <p>No comments match "{commentSearchTerm}".</p>
                 <button
@@ -952,12 +1178,19 @@ export const SingleInspector: React.FC<SingleInspectorProps> = ({
                   onClick={() => setCommentSearchTerm('')}
                   className="text-[#fa5c5c] underline cursor-pointer"
                 >
-                  Clear search
+                  Clear search filter
                 </button>
               </div>
             ) : (
-              <div className="p-6 text-center rounded-xl neu-inset text-xs text-zinc-500 space-y-1">
-                <p>No community comments posted on this itch.io page yet.</p>
+              <div className="p-6 text-center rounded-xl neu-inset text-xs text-zinc-400 space-y-3">
+                <p>No comments posted on this itch.io page yet.</p>
+                <button
+                  type="button"
+                  onClick={() => setShowCommentForm(true)}
+                  className="px-4 py-2 rounded-lg neu-btn-accent text-white font-semibold cursor-pointer"
+                >
+                  Write the First Review
+                </button>
               </div>
             )}
           </div>

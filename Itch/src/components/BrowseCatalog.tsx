@@ -98,10 +98,9 @@ export const BrowseCatalog: React.FC<BrowseCatalogProps> = ({ onSelectGameUrl })
 
       if (activeQuery.trim()) {
         params.set('query', activeQuery.trim());
-      } else {
-        if (selectedPlatform !== 'all') params.set('platform', selectedPlatform);
-        if (selectedGenre !== 'all') params.set('genre', selectedGenre);
       }
+      if (selectedPlatform !== 'all') params.set('platform', selectedPlatform);
+      if (selectedGenre !== 'all') params.set('genre', selectedGenre);
 
       const res = await fetch(`/api/browse?${params.toString()}`);
       if (!res.ok) {
@@ -419,8 +418,10 @@ export const BrowseCatalog: React.FC<BrowseCatalogProps> = ({ onSelectGameUrl })
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
                     onError={(e) => {
                       const target = e.currentTarget;
-                      if (target.src.includes('/api/image-proxy')) {
-                        target.src = item.thumbnail || '';
+                      if (target.src.includes('wsrv.nl') && item.thumbnail) {
+                        target.src = item.thumbnail;
+                      } else {
+                        target.style.opacity = '0';
                       }
                     }}
                   />
